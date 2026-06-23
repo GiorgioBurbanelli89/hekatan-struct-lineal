@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
   server: {
     port: 4600,
-    open: "workspace3/index.html",
+    open: "workspace/index.html",
   },
   // Resolve base path. Fix MSYS/Git-Bash path mangling: si DEPLOY_BASE fue
   // convertido a "C:/Program Files/Git/hekatan-struct/" (conversión POSIX→Windows
@@ -40,7 +40,6 @@ export default defineConfig({
         "advanced-truss": "src/advanced-truss/index.html",
         beams: "src/beams/index.html",
         workspace: "src/workspace/index.html",
-        workspace3: "src/workspace3/index.html",
         curves: "src/curves/index.html",
         "1d-mesh": "src/1d-mesh/index.html",
         truss: "src/truss/index.html",

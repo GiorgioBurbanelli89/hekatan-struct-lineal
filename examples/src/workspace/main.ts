@@ -53,6 +53,7 @@ import { exportEdificioCimentacionF2k, downloadEdificioCimentacionF2k } from "..
 // Expose F2K builder a window para test/debug via DOM
 (window as any).__hekatanExportF2kCim = exportEdificioCimentacionF2k;
 (window as any).__hekatanDownloadF2kCim = downloadEdificioCimentacionF2k;
+
 // Helper completo: lee estado actual (reacciones, params) y genera el F2K
 // Devuelve el texto del F2K — accesible via window.__hekatanGenF2k() en el DOM.
 (window as any).__hekatanGenF2k = async function() {
@@ -1734,6 +1735,13 @@ document.body.appendChild(paneHost);
      * scrollear la lista de herramientas/settings con el dedo. */
     #settings, #hk-pane-host, #hk-pane-host * {
       touch-action: pan-y pinch-zoom !important;
+    }
+    /* FIX MÓVIL: el <select> nativo debe CONSUMIR su toque (touch-action:none),
+     * no permitir pan. Con pan-y, un micro-movimiento del dedo reclasificaba el
+     * tap como scroll y CANCELABA el picker → "abre y se cierra en ms".
+     * 'none' en el select = tap limpio → el picker abre y se queda. */
+    select, .tp-lstv_s, #hk-pane-host select, #settings select {
+      touch-action: none !important;
     }
     /* El canvas mantiene touch-action:none — OrbitControls maneja todo.
      * cursor:crosshair en lugar de none — estilo AutoCAD: el puntero del
@@ -5363,7 +5371,46 @@ const viewerElm = getViewer({
   // Mantenemos el input enfocado para poder tipear comandos sin clickear,
   // EXCEPTO cuando: (a) hay otro input/textarea activo (Tweakpane), o (b) estás
   // dibujando (ahí manda la cajita de coordenadas #hk-rubber-label).
+  // Al abrir un <select> nativo, document.activeElement pasa a <body>, así que
+  // el guard de abajo no basta: re-enfocaría el comando y CERRARÍA el dropdown.
+  // Solución: al tocar (mousedown) cualquier control de Tweakpane o un <select>,
+  // suprimimos el re-foco unos segundos para que la lista se pueda abrir/usar.
+  let tpInteractUntil = 0;
+  const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+
+  // ¿el target está dentro de CUALQUIER pane Tweakpane (izq Settings o der Tools)
+  // o es un <select>? Caminamos hacia arriba buscando una clase tp- o un SELECT.
+  // (El panel izquierdo no estaba dentro de .tp-rotv → el dropdown se cerraba.)
+  const inTweakpane = (el: HTMLElement | null): boolean => {
+    for (let n: HTMLElement | null = el; n; n = n.parentElement) {
+      if (n.tagName === "SELECT") return true;
+      const c = n.className;
+      if (typeof c === "string" && /(^|\s)tp-/.test(c)) return true;
+    }
+    return false;
+  };
+  // pointerdown cubre mouse Y touch (mousedown NO dispara en móvil).
+  document.addEventListener("pointerdown", (e) => {
+    if (inTweakpane(e.target as HTMLElement | null)) tpInteractUntil = Date.now() + 5000;
+  }, true);
+  // SEÑAL DIRECTA Y ROBUSTA: cuando CUALQUIER <select> gana el foco (= su popup
+  // nativo está por abrirse / abierto), bloqueamos TODO robo de foco por 4s. Esto
+  // cierra la carrera que se daba en producción (minificado, más rápido) y NO en
+  // dev (más lento): el `<select>` perdía el foco por una fracción y un focus()
+  // ajeno (pointerleave/pointermove) cerraba el popup antes de poder elegir.
+  let selectFocusUntil = 0;
+  document.addEventListener("focusin", (e) => {
+    if ((e.target as HTMLElement | null)?.tagName === "SELECT") selectFocusUntil = Date.now() + 4000;
+  }, true);
+  // ¿Está prohibido robar el foco AHORA? (interactuando con Tweakpane, un select
+  // recién enfocado, o un select actualmente enfocado.)
+  const stealBlocked = (): boolean => {
+    if (Date.now() < tpInteractUntil || Date.now() < selectFocusUntil) return true;
+    const ae = document.activeElement as HTMLElement | null;
+    return !!(ae && ae.tagName === "SELECT");
+  };
   const keepCmdFocus = () => {
+    if (stealBlocked()) return;   // interactuando con Tweakpane / select abierto → no robar el foco
     const ae = document.activeElement as HTMLElement | null;
     // SOLO re-enfocar si NADA tiene el foco (body/null). Si hay un select
     // (ej. dropdown "Categoría"), botón, slider o cualquier control de
@@ -5374,13 +5421,17 @@ const viewerElm = getViewer({
     if (rl && rl.style.display === "block") return; // dibujando → coords manda
     try { input.focus({ preventScroll: true }); } catch {}
   };
-  input.addEventListener("blur", () => setTimeout(keepCmdFocus, 60));
-  setTimeout(keepCmdFocus, 500);                       // foco inicial
-  // Re-tomar el foco SOLO si no hay nada enfocado (body) — no roba a nadie.
-  setInterval(() => {
-    const ae = document.activeElement;
-    if (!ae || ae === document.body) keepCmdFocus();
-  }, 900);
+  // En MÓVIL (touch) NO auto-enfocamos: el teclado virtual es intrusivo y el
+  // re-foco cierra los <select> nativos. El usuario toca el comando para escribir.
+  if (!isTouch) {
+    input.addEventListener("blur", () => setTimeout(keepCmdFocus, 60));
+    setTimeout(keepCmdFocus, 500);                       // foco inicial
+    // Re-tomar el foco SOLO si no hay nada enfocado (body) — no roba a nadie.
+    setInterval(() => {
+      const ae = document.activeElement;
+      if (!ae || ae === document.body) keepCmdFocus();
+    }, 900);
+  }
 
   const flash = (msg: string, ok: boolean) => {
     label.textContent = msg;
@@ -5520,13 +5571,18 @@ const viewerElm = getViewer({
       dyn.style.top = Math.max(4, y) + "px";
     }
     dyn.style.display = "flex";
+    // CRÍTICO: si estás interactuando con un <select> de Tweakpane (Shell/Frame
+    // results), NO robar el foco — sino el pointermove/pointerleave cierra la lista.
+    if (stealBlocked()) return;
     const ae = document.activeElement as HTMLElement | null;
+    if (ae && ae.tagName === "BUTTON") return;
     if (ae !== dynInput && !(ae && ae.tagName === "INPUT" && ae !== input)) {
       try { dynInput.focus({ preventScroll: true }); } catch {}
     }
   });
   viewerElm.addEventListener("pointerleave", () => {
     dyn.style.display = "none";
+    if (stealBlocked()) return;   // select abierto → NO robar foco (cerraba el popup)
     try { input.focus({ preventScroll: true }); } catch {}
   });
 
@@ -5536,7 +5592,8 @@ const viewerElm = getViewer({
     // Si YA hay un input/textarea enfocado (incluidos nuestros 2 inputs de
     // comando), NO interceptar → la tecla se agrega normal al input enfocado.
     // Sólo arrancamos la palabra cuando NADA está enfocado.
-    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")) return;
+    if (stealBlocked()) return;   // tocando un select de Tweakpane → no interceptar
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (/^[a-zA-Z]$/.test(ev.key)) {
       const target = (dyn.style.display !== "none") ? dynInput : input;
