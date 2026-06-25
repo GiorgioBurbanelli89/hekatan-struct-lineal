@@ -44,6 +44,7 @@
   const path = window.location.pathname;
   const fname = path.split("/").pop() || "index.html";
   const idx = SLIDES.findIndex(s => s.file === fname);
+  const embedded = window.self !== window.top;   // ¿corre dentro del deck maestro (iframe)?
 
   const bar = document.createElement("div");
   bar.className = "nav-bar";
@@ -79,16 +80,39 @@
     bar.appendChild(next);
   }
 
-  document.body.appendChild(bar);
+  // Dentro del deck maestro (iframe): no mostrar barra propia ni capturar flechas
+  // (el deck controla la navegación). Suelto: barra + atajos normales.
+  if (!embedded) {
+    document.body.appendChild(bar);
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowRight" && idx >= 0 && idx < SLIDES.length - 1) {
+        window.location.href = "./" + SLIDES[idx + 1].file;
+      } else if (e.key === "ArrowLeft" && idx > 0) {
+        window.location.href = "./" + SLIDES[idx - 1].file;
+      } else if (e.key === "h" || e.key === "H") {
+        window.location.href = "./index.html";
+      }
+    });
+  }
 
-  // Atajos de teclado: ← / →
-  document.addEventListener("keydown", e => {
-    if (e.key === "ArrowRight" && idx >= 0 && idx < SLIDES.length - 1) {
-      window.location.href = "./" + SLIDES[idx + 1].file;
-    } else if (e.key === "ArrowLeft" && idx > 0) {
-      window.location.href = "./" + SLIDES[idx - 1].file;
-    } else if (e.key === "h" || e.key === "H") {
-      window.location.href = "./index.html";
-    }
-  });
+  // ── Auto-ajuste a pantalla: cada slide cabe en UNA pantalla, SIN scroll ──
+  // (el índice queda excluido: es un menú largo que sí scrollea)
+  if (fname !== "index.html" && !embedded) {
+    const fitSlide = () => {
+      const c = document.querySelector(".container");
+      if (!c) return;
+      c.style.zoom = "";                          // reset para medir tamaño natural
+      const naturalH = c.offsetHeight;
+      const z = Math.min(1, (window.innerHeight * 0.985) / naturalH);
+      // 'zoom' escala el layout SIN romper el arrastre de los sliders
+      // (a diferencia de transform:scale, que desincroniza el thumb)
+      c.style.zoom = z.toFixed(4);
+    };
+    window.addEventListener("resize", fitSlide);
+    if (document.readyState === "complete") fitSlide();
+    else window.addEventListener("load", fitSlide);
+    // re-ajustar tras render asíncrono (MathJax, fuentes, SVG)
+    setTimeout(fitSlide, 400);
+    setTimeout(fitSlide, 1500);
+  }
 })();

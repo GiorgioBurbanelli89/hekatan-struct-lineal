@@ -3,344 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hekatan Struct · Charla Maestría UPS</title>
+<title>Índice · Hekatan · CEINCI-LAB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./shared/style.css">
-
 <style>
-  .toc-list { list-style: none; padding: 0; }
-  .toc-item {
-    display: flex; align-items: center;
-    background: var(--paper-dark); border: 1px solid var(--ink-fade);
-    border-radius: 4px; padding: 12px 16px;
-    margin-bottom: 6px;
-    text-decoration: none; color: var(--ink);
-    transition: all 0.2s;
-  }
-  .toc-item:hover {
-    border-color: var(--gold);
-    background: var(--highlight);
-    transform: translateX(4px);
-  }
-  .toc-num {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    color: var(--gold);
-    font-weight: 700;
-    min-width: 36px;
-  }
-  .toc-content { flex: 1; }
-  .toc-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--ink);
-  }
-  .toc-desc {
-    font-size: 0.82rem;
-    color: var(--ink-soft);
-    margin-top: 2px;
-  }
-  .toc-icon { font-size: 1.3rem; margin-left: 12px; color: var(--ink-fade); }
-  .toc-time {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--gold);
-    background: var(--ink);
-    padding: 2px 8px;
-    border-radius: 3px;
-    margin-left: 10px;
-  }
-
-  .bloque-divider {
-    margin: 18px 0 8px;
-    padding: 8px 12px;
-    background: var(--ink);
-    color: var(--paper);
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-  .bloque-divider .b-time {
-    float: right;
-    color: var(--gold);
-  }
-
-  .info-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px; margin: 14px 0;
-  }
-  .info-card {
-    background: var(--paper-dark);
-    border: 1px solid var(--ink-fade);
-    border-radius: 4px;
-    padding: 12px 16px;
-  }
-  .info-card h3 { color: var(--gold); margin-bottom: 6px; }
-  .info-card p { font-size: 0.85rem; color: var(--ink-soft); }
+  :root{ --ink:#1a2942; --ink-soft:#3d4f6f; --paper:#f4ecd8; --paper-dark:#e9dfc4; --gold:#b08d4f; --blue:#2c5e8e; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ background:var(--paper); color:var(--ink); font-family:'Newsreader',serif; padding:26px 34px 60px; }
+  .head{ text-align:center; border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:18px; }
+  .head .pre{ font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--gold); }
+  .head h1{ font-family:'Cormorant Garamond',serif; font-size:2.4rem; margin-top:4px; }
+  .head .sub{ font-style:italic; color:var(--ink-soft); font-size:1.0rem; margin-top:4px; }
+  .play{ display:inline-block; margin-top:14px; background:var(--ink); color:var(--paper); text-decoration:none;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.95rem; padding:11px 26px; border-radius:30px; border:2px solid var(--gold); }
+  .play:hover{ background:var(--gold); color:var(--ink); }
+  .sec{ margin-top:22px; }
+  .sec h2{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold);
+    border-bottom:1px solid var(--gold); padding-bottom:5px; margin-bottom:11px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:9px; }
+  a.slide{ display:flex; align-items:center; gap:11px; background:var(--paper-dark); border:1.5px solid var(--ink); border-radius:6px;
+    padding:9px 13px; text-decoration:none; color:var(--ink); transition:background .12s; }
+  a.slide:hover{ background:#fff; border-color:var(--gold); }
+  a.slide .n{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:0.8rem; color:#fff; background:var(--blue);
+    border-radius:5px; min-width:30px; height:30px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  a.slide .t{ font-size:0.96rem; line-height:1.25; }
+  .foot{ text-align:center; margin-top:30px; font-family:'JetBrains Mono',monospace; font-size:0.74rem; color:var(--ink-soft); }
 </style>
 </head>
 <body>
-
-<div class="container">
-
-  <header>
-    <div class="pre-title">Charla invitada · Maestría UPS · Aplicaciones Computacionales · Dra. Betzabeth Suquillo</div>
-    <h1>Hekatan Struct</h1>
-    <div class="subtitle">Herramientas computacionales para análisis sísmico — del Método de Elementos Finitos al workspace web · 90–120 min + Q&amp;A</div>
-  </header>
-
-  <section>
-    <h2>📚 Plan de la sesión</h2>
-    <p>19 diapositivas organizadas en <strong>4 bloques</strong>: <em>concepto → derivación matemática → implementación → demostración</em>. Cada slide tiene sliders, tablas o ecuaciones interactivas. Use <code>← →</code> para navegar, <code>H</code> para volver al índice.</p>
-  </section>
-
-  <section>
-    <h2>Índice</h2>
-    <ol class="toc-list">
-
-      <li><a class="toc-item" href="./00_portada.html">
-        <span class="toc-num">00</span>
-        <span class="toc-content">
-          <span class="toc-title">Portada · Tema de la sesión</span>
-          <span class="toc-desc">Charla invitada · Ing. Jorge Burbano · Fundador de Hekatan Computers</span>
-        </span>
-        <span class="toc-time">2′</span>
-      </a></li>
-
-      <div class="bloque-divider">Bloque 1 · Fundamento del FEM <span class="b-time">~15 min</span></div>
-
-      <li><a class="toc-item" href="./01_fundamentos_fem.html">
-        <span class="toc-num">01</span>
-        <span class="toc-content">
-          <span class="toc-title">Fundamentos del Método de Elementos Finitos</span>
-          <span class="toc-desc">Discretizar, interpolar, ensamblar, resolver · concepto antes de herramientas</span>
-        </span>
-        <span class="toc-time">8′</span>
-      </a></li>
-      <li><a class="toc-item" href="./02_intro_fem.html">
-        <span class="toc-num">02</span>
-        <span class="toc-content">
-          <span class="toc-title">Discretización en acción · sliders</span>
-          <span class="toc-desc">Cantilever bajo carga puntual · convergencia con N elementos · tonf·mm·kgf/cm²</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-
-      <div class="bloque-divider">Bloque 2 · Derivación paso a paso <span class="b-time">~35 min</span></div>
-
-      <li><a class="toc-item" href="./03_funciones_forma.html">
-        <span class="toc-num">03</span>
-        <span class="toc-content">
-          <span class="toc-title">Funciones de forma N<sub>i</sub>(ξ)</span>
-          <span class="toc-desc">Lagrange lineales · Hermite cúbicas · forma simbólica + verificación numérica</span>
-        </span>
-        <span class="toc-time">8′</span>
-      </a></li>
-      <li><a class="toc-item" href="./04_jacobiano_natural.html">
-        <span class="toc-num">04</span>
-        <span class="toc-content">
-          <span class="toc-title">Coordenadas naturales y Jacobiano</span>
-          <span class="toc-desc">ξ ∈ [−1,+1] · isoparamétrico · J = L/2 · cambio de variable en integrales</span>
-        </span>
-        <span class="toc-time">8′</span>
-      </a></li>
-      <li><a class="toc-item" href="./05_matriz_rigidez_paso.html">
-        <span class="toc-num">05</span>
-        <span class="toc-content">
-          <span class="toc-title">Matriz de rigidez K<sub>e</sub> &mdash; paso a paso</span>
-          <span class="toc-desc">Energía → B → cuadratura → resultado simbólico → resultado numérico W14×84</span>
-        </span>
-        <span class="toc-time">10′</span>
-      </a></li>
-      <li><a class="toc-item" href="./06_matriz_masa_dinamica.html">
-        <span class="toc-num">06</span>
-        <span class="toc-content">
-          <span class="toc-title">Matriz de masa M<sub>e</sub> y análisis dinámico</span>
-          <span class="toc-desc">Consistente vs lumped · (K − ω²M)φ = 0 · 6 modos Paz &amp; Kim 6.3 · sísmico</span>
-        </span>
-        <span class="toc-time">9′</span>
-      </a></li>
-
-      <div class="bloque-divider">Bloque 3 · Implementación numérica <span class="b-time">~15 min</span></div>
-
-      <li><a class="toc-item" href="./07_cuadratura_gauss.html">
-        <span class="toc-num">07</span>
-        <span class="toc-content">
-          <span class="toc-title">Cuadratura de Gauss interactiva</span>
-          <span class="toc-desc">Cómo el solver integra B^T·E·B con sumas de pesos · sliders</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./08_loops_fem.html">
-        <span class="toc-num">08</span>
-        <span class="toc-content">
-          <span class="toc-title">Loops del FEM en acción</span>
-          <span class="toc-desc">Visualización del ensamblaje K<sub>global</sub> elemento por elemento</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./09_cpp_vs_matlab.html">
-        <span class="toc-num">09</span>
-        <span class="toc-content">
-          <span class="toc-title">C++ vs MATLAB lado a lado</span>
-          <span class="toc-desc">Mismo K_local · sliders · misma matemática, distinta velocidad</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-
-      <div class="bloque-divider">Bloque 4 · Hekatan en la práctica <span class="b-time">~40 min</span></div>
-
-      <li><a class="toc-item" href="./10_matematica_dada.html">
-        <span class="toc-num">10</span>
-        <span class="toc-content">
-          <span class="toc-title">La matemática ya está dada (contexto histórico)</span>
-          <span class="toc-desc">Galerkin (1909), Wilson, Bathe, Paz · 70 años de FEM</span>
-        </span>
-        <span class="toc-time">3′</span>
-      </a></li>
-      <li><a class="toc-item" href="./11_arquitectura_hekatan.html">
-        <span class="toc-num">11</span>
-        <span class="toc-content">
-          <span class="toc-title">Arquitectura de Hekatan Struct</span>
-          <span class="toc-desc">TypeScript → C++ Eigen → WebAssembly → navegador</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./11b_estructura_e2k.html">
-        <span class="toc-num">11b</span>
-        <span class="toc-content">
-          <span class="toc-title">Anatomía del archivo .e2k (ETABS)</span>
-          <span class="toc-desc">19 secciones canónicas · STORYs · POINT/LINE/AREA · LoadPatterns</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./11c_estructura_f2k.html">
-        <span class="toc-num">11c</span>
-        <span class="toc-content">
-          <span class="toc-title">Anatomía del archivo .f2k (SAFE)</span>
-          <span class="toc-desc">Cimentaciones · Winkler · SOIL PROPERTIES · AREA SPRINGS · diseño ACI</span>
-        </span>
-        <span class="toc-time">4′</span>
-      </a></li>
-      <li><a class="toc-item" href="./11d_estructura_s2k.html">
-        <span class="toc-num">11d</span>
-        <span class="toc-content">
-          <span class="toc-title">Anatomía del archivo .s2k (SAP2000)</span>
-          <span class="toc-desc">3D libre · TABLES · JOINT/FRAME/AREA/SOLID · pushover · time-history NL</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./12_paz_kim_6_3.html">
-        <span class="toc-num">12</span>
-        <span class="toc-content">
-          <span class="toc-title">Demo en vivo: Paz &amp; Kim 6.3 Space Frame</span>
-          <span class="toc-desc">Modelado, materiales, cargas, modal · workspace en vivo</span>
-        </span>
-        <span class="toc-time">10′</span>
-      </a></li>
-      <li><a class="toc-item" href="./12b_paz_13_1_space_frame.html">
-        <span class="toc-num">12b</span>
-        <span class="toc-content">
-          <span class="toc-title">Paz Cap. 13.1 — Space Frame 3D paso a paso</span>
-          <span class="toc-desc">5 nodos · 4 elementos · K_e simbólico → numérico · M_e consistente · respuesta dinámica</span>
-        </span>
-        <span class="toc-time">7′</span>
-      </a></li>
-      <li><a class="toc-item" href="./13_analisis_estatico_dinamico.html">
-        <span class="toc-num">13</span>
-        <span class="toc-content">
-          <span class="toc-title">Análisis estático y dinámico — capacidades de Hekatan</span>
-          <span class="toc-desc">deform · analyze · modalAnalysis · time-history Newmark · APIs reales</span>
-        </span>
-        <span class="toc-time">5′</span>
-      </a></li>
-      <li><a class="toc-item" href="./14_modal_participacion_masa.html">
-        <span class="toc-num">14</span>
-        <span class="toc-content">
-          <span class="toc-title">Modal · participación de masa · modos de vibración</span>
-          <span class="toc-desc">$(K-\omega^2 M)\phi=0$ · ortogonalidad · $\Gamma_i,\,M_{eff}$ · ejemplo Paz 7.1</span>
-        </span>
-        <span class="toc-time">8′</span>
-      </a></li>
-      <li><a class="toc-item" href="./15_diafragma_centros_pendiente.html">
-        <span class="toc-num">15</span>
-        <span class="toc-content">
-          <span class="toc-title">Diafragma rígido / flexible · CM · CR</span>
-          <span class="toc-desc">Matriz $\mathbf{T}$ · $\mathbf{K}_{red}=\mathbf{T}^T\mathbf{K}\mathbf{T}$ · excentricidad · θ regularidad</span>
-        </span>
-        <span class="toc-time">7′</span>
-      </a></li>
-      <li><a class="toc-item" href="./16_validacion_cruzada.html">
-        <span class="toc-num">16</span>
-        <span class="toc-content">
-          <span class="toc-title">Validación cruzada — 5 fuentes</span>
-          <span class="toc-desc">Octave + ETABS + SAP + OpenSees + Python = Hekatan · Δ 0.00%</span>
-        </span>
-        <span class="toc-time">4′</span>
-      </a></li>
-      <li><a class="toc-item" href="./17_hekatan_lab.html">
-        <span class="toc-num">17</span>
-        <span class="toc-content">
-          <span class="toc-title">Hekatan Lab — Octave/MATLAB en navegador</span>
-          <span class="toc-desc">Scripts del libro Paz &amp; Kim sin instalación</span>
-        </span>
-        <span class="toc-time">3′</span>
-      </a></li>
-      <li><a class="toc-item" href="./18_vista_workspace.html">
-        <span class="toc-num">18</span>
-        <span class="toc-content">
-          <span class="toc-title">Vista rápida del workspace 2D + 3D</span>
-          <span class="toc-desc">Muros · losas · zapatas · puentes · edificios · cierre</span>
-        </span>
-        <span class="toc-time">3′</span>
-      </a></li>
-
-      <div class="bloque-divider">Bloque 5 · Sesión adicional <span class="b-time">~20 min</span></div>
-
-      <li><a class="toc-item" href="./24_fem_2d_explicado.html">
-        <span class="toc-num">24</span>
-        <span class="toc-content">
-          <span class="toc-title">Elementos Finitos 2D — del solver al navegador</span>
-          <span class="toc-desc">Stack: Julia/C++ → WASM → JS · loop por elemento · Tweakpane reactivo · ensamblaje Q4 paso a paso</span>
-        </span>
-        <span class="toc-time">15′</span>
-      </a></li>
-    </ol>
-  </section>
-
-  <section>
-    <h2>🔗 Enlaces de la sesión</h2>
-    <div class="info-grid">
-      <div class="info-card">
-        <h3>Hekatan Struct (workspace público)</h3>
-        <p><a href="https://giorgioburbanelli89.github.io/hekatan-struct/workspace/" target="_blank" style="color:var(--blue)">giorgioburbanelli89.github.io/hekatan-struct/workspace/</a></p>
-      </div>
-      <div class="info-card">
-        <h3>Hekatan Computers</h3>
-        <p>Suite de herramientas: Hekatan Struct, Hekatan Lab, Calcpad-Symbolic. Análisis estructural en el navegador.</p>
-      </div>
-      <div class="info-card">
-        <h3>Libro de referencia</h3>
-        <p>Paz, M. &amp; Kim, Y.H. (2019). <em>Structural Dynamics: Theory &amp; Computation</em>, 6ª ed. Springer.</p>
-      </div>
-      <div class="info-card">
-        <h3>Software comparado</h3>
-        <p>Octave · ETABS · SAP2000 · OpenSees · Python+SciPy · Hekatan Struct (Eigen+WASM).</p>
-      </div>
-    </div>
-  </section>
-
-  <div class="footer-note">
-    HEKATAN STRUCT · CHARLA INVITADA · MAESTRÍA UPS · DRA. BETZABETH SUQUILLO · 8 MAYO 2026
+  <div class="head">
+    <div class="pre">CEINCI-LAB · «El conocimiento no se detiene» · Dr. Roberto Aguiar</div>
+    <h1>Hekatan — Índice de diapositivas</h1>
+    <div class="sub">Herramientas computacionales para ingeniería estructural · 32 diapositivas (Parte 1: FEM · Parte 2: el modelo validado al 1%)</div>
+    <a class="play" href="./presentacion_hekatan.html">▶ Iniciar presentación completa</a>
   </div>
 
-</div>
+  <div class="sec"><h2>① Apertura</h2><div class="grid" id="g1"></div></div>
+  <div class="sec"><h2>② El problema y el motor (loops · solver · C++ · formatos)</h2><div class="grid" id="g2"></div></div>
+  <div class="sec"><h2>③ Funciones de forma y la coordenada ξ</h2><div class="grid" id="g3"></div></div>
+  <div class="sec"><h2>④ 2D y el Jacobiano</h2><div class="grid" id="g4"></div></div>
+  <div class="sec"><h2>⑥ El modelo matemático-numérico (Parte 2 · validado al 1%)</h2><div class="grid" id="g6"></div></div>
+  <div class="sec"><h2>⑤ Cierre</h2><div class="grid" id="g5"></div></div>
 
-<script src="./shared/nav.js"></script>
+  <div class="foot">HEKATAN · CEINCI-LAB · 22 JUNIO 2026 — clic en cualquier diapositiva para abrirla</div>
+
+<script>
+// ── MENÚ DE 20 DIAPOSITIVAS (simplificadas · 🎚️ = slider) ──
+const SL = [
+ ["00_portada_ceincilab","Portada",1],
+ ["00a_de_que_trata","De qué trata esta charla (agenda)",1],
+ ["00b_hekatan_que_es","Qué es Hekatan",1],
+ ["01_fundamentos_fem","Los 4 pasos del FEM",2],
+ ["01a0_que_metodo_usa","¿Qué método usa? (Galerkin · Gauss)",2],
+ ["01b0_para_que_sirve_area","¿Para qué sirve el área? (= la rigidez)",2],
+ ["01b00_dos_tareas_forma_rigidez","Las 2 tareas: FORMA vs RIGIDEZ",2],
+ ["01b0a_que_son_xi_w","¿Cómo se calcula el área? 🎚️",2],
+ ["01b0a1_por_que_0577_slider","¿Por qué 0.577? (arrástralo) 🎚️",2],
+ ["01b0z_lagrange_vs_legendre","Lagrange interpola · Legendre integra",3],
+ ["03d2a_y_mx_b_a_xi","y = m·x + b ↔ ξ 🎚️",3],
+ ["03a_que_es_funcion_forma","¿Qué es una función de forma N? 🎚️",3],
+ ["05_matriz_rigidez_paso","La matriz de rigidez: ensamblar = sumar 🎚️",3],
+ ["01a2_loop_5_lenguajes","El mismo loop en 5 lenguajes",2],
+ ["01c4_motor_hekatan_cpp","El motor de Hekatan (C++/Eigen → WASM)",2],
+ ["14b_como_corre_web","¿Cómo corre en la web? (WASM + Vite + GitHub Pages)",2],
+ ["01c_solver_mkl_re","El solver da la velocidad (MKL)",2],
+ ["15b_reducida_gauss","La reducida de Gauss (resolver K·u=F)",2],
+ ["20a_caja_negra","La caja negra de los programas comerciales",2],
+ ["20b_solver_1973","El solver = la matemática de 1973 (SAP IV)",2],
+ ["01d_formatos_interop","Los formatos: el modelo es texto",2],
+ ["04b_isoparametrico_jacobiano","Isoparamétrico y Jacobiano [-1,+1] 🎚️",4],
+ ["20z_intro_modelo","Parte 2: lo que voy a mostrar y demostrar",6],
+ ["21_matriz_frame_completa","La matriz del frame (axial+cortante+flexión+torsión+brazos)",6],
+ ["22_brazos_rigidos","Brazos rígidos (la zona del nudo no se deforma)",6],
+ ["22b_end_releases","End releases (qué fuerzas pasa el frame al nudo)",6],
+ ["23_aporte_losa_dke","El aporte de la losa: ShellThin DKE (3 capas)",6],
+ ["24_waffle_ribbed","Losas waffle y nervadas (placa equivalente)",6],
+ ["25_diafragma_cm_cr","Diafragma rígido: centro de masa y rigidez",6],
+ ["26_condensacion_ke","Condensación → matriz de piso K_E (torsión)",6],
+ ["27_modal_masa_modos","Masa concentrada → modos → participación modal",6],
+ ["28_lo_que_demostre","Lo que demostré: todo da igual — al 1%",6],
+ ["34_acoplamiento_global_local","Cierre: acoplamiento global-local",5],
+];
+SL.forEach((s,i)=>{
+  const a=document.createElement('a'); a.className='slide'; a.href='./'+s[0]+'.html';
+  a.innerHTML=`<span class="n">${i+1}</span><span class="t">${s[1]}</span>`;
+  document.getElementById('g'+s[2]).appendChild(a);
+});
+</script>
 </body>
 </html>

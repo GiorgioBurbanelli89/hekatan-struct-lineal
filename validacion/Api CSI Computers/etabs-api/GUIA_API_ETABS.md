@@ -37,16 +37,45 @@ tasklist | grep -i etabs
 ## 2. Apertura de modelos
 
 ```python
-SM.File.OpenFile(r"C:\path\to\modelo.e2k")   # texto e2k
+SM.File.OpenFile(r"C:\path\to\modelo.e2k")   # texto e2k (recomendado para scripting)
 SM.File.OpenFile(r"C:\path\to\modelo.EDB")   # binario EDB
 ```
 
 `OpenFile` retorna `0` si OK.
 
+### 🔑 REGLA DE ORO para scripting API: **abrir .e2k, no .EDB**
+
+```
+✅ FUENTE DE VERDAD = .e2k (texto plano, versionable, indestructible)
+❌ NUNCA modificar el .EDB del usuario — se corrompe con runs API repetidos
+```
+
+El binario EDB es muy frágil: cualquier `RunAnalysis()` desde la API
+escribe estado interno (mesh post-auto-mesh, K_J, Y00..Y05, .LOG, .OUT)
+que la GUI puede no poder leer la próxima vez ("Error in performing miOpen").
+
+**Patrón seguro y reproducible**:
+
+```python
+E2K = "modelo.e2k"                              # source of truth, NO se toca
+WORKCOPY = "_workcopy_modelo.EDB"               # archivo generado, descartable
+
+SM.File.OpenFile(E2K)         # parsea el e2k → carga modelo en memoria
+SM.File.Save(WORKCOPY)        # serializa a EDB workcopy
+SM.SetModelIsLocked(False)
+SM.Analyze.RunAnalysis()      # afecta WORKCOPY, e2k intacto
+
+# … extracción de resultados …
+
+# Si algo sale mal: borrar WORKCOPY + aux files (.K_*, .Y*, .LOG, .OUT, .$et,
+# .msh, .ico, .ebk) y rehacer desde el e2k. Una línea:
+#   ls _workcopy_modelo.* | xargs rm
+```
+
 ### Save (CSI exige save antes de analyze)
 
 ```python
-SM.File.Save(r"C:\path\to\modelo_workcopy.EDB")
+SM.File.Save(r"C:\path\to\_workcopy_modelo.EDB")
 ```
 
 ---
@@ -362,7 +391,154 @@ Ver `python-verificado/15_mesa_torsion.py` y
 
 ---
 
-## 14. Recursos
+## 13b. Shell forces (M11, M22, M12, V13, V23)
+
+### ❌ Lo que NO funciona
+
+```python
+# ItemTypeElm=0 (Object) → retorna 0 results aunque el Object existe
+SM.Results.AreaForceShell("F1", 0)  # n=0
+```
+
+### ✅ Lo que SÍ funciona — iterar AreaElm individualmente
+
+```python
+# Tras RunAnalysis(), AreaObj "F1" se auto-mesha en N AreaElm numerados "1".."N"
+n_area_elm = SM.AreaElm.Count()
+for i in range(n_area_elm):
+    elm_name = str(i + 1)
+    ret = SM.Results.AreaForceShell(elm_name, 1)  # ItemTypeElm=1 = Element
+```
+
+### Estructura del tuple devuelto
+
+**ETABS 22** (24 campos):
+```
+[0]  NumberResults
+[1]  Obj[]              # AreaObj original
+[2]  Elm[]              # AreaElm name
+[3]  PointElm[]         # corner point of element (4 per Q4)
+[4]  LoadCase[]
+[5]  StepType[]
+[6]  StepNum[]
+[7]  F11[]   [8]  F22[]   [9]  F12[]      # membrane forces (tonf/m)
+[10] FMax[]  [11] FMin[]  [12] FAngle[]   [13] FVM[]   # principal + von Mises
+[14] M11[]   [15] M22[]   [16] M12[]      # BENDING moments (tonf·m/m) ← KEY
+[17] MMax[]  [18] MMin[]  [19] MAngle[]
+[20] V13[]   [21] V23[]                    # transverse SHEAR (tonf/m) ← KEY
+[22] VMax[]  [23] VAngle[]
+```
+
+**SAP2000** (21 campos, sin FVM): todos los M shift -1.
+
+### Convención sign Shell
+
+| Componente | Significado físico |
+|---|---|
+| M11 > 0 | Fibra inferior en tracción en cara perpendicular al eje 1 local |
+| M22 > 0 | Fibra inferior en tracción en cara perpendicular al eje 2 local |
+| M12    | Torsión de placa (twisting moment) |
+| F11/F22 | Membrane stress × thickness (in-plane) |
+| V13/V23 | Out-of-plane shear (Mindlin-Reissner Q4) |
+
+### ⚠️ Gotcha de naming: AreaObj se RENOMBRA tras Save
+
+```python
+# En el e2k del usuario: AREA "F1" → AreaObj name = "F1"
+# Tras File.Save() vía API → ETABS renombra a "2" (siguiente numérico libre)
+# Y los AreaElm auto-mesheados son "2-1", "2-2"..."2-25"
+
+# Bug comtypes: AreaObj.GetNameFromIndex CRASHEA, pero AreaObj.GetNameList SÍ FUNCIONA
+ret = SM.AreaObj.GetNameList(0, [])  # ret[1] = ('2',)
+ret = SM.AreaElm.GetNameList(0, [])  # ret[1] = ('2-1','2-2',...'2-25')
+```
+
+### 🔴 RIGID DIAPHRAGM bloquea shell results de la losa
+
+Si el AreaObj está asignado a un `DIAPHRAGM "X" TYPE RIGID`, **ETABS NO
+calcula M11/M22/M12 de bending** para esa losa. Razón: el diafragma rígido
+reemplaza la rigidez de membrana del shell — internamente la losa pasa a ser
+una restricción cinemática (UX, UY, Rz amarrados al master node), no un
+elemento con stiffness propio.
+
+```python
+# Detectar el caso:
+ret = SM.Results.AreaForceShell("2", 0)
+# Si retorna n=0 a pesar de que el análisis está finished y los frames sí
+# devuelven resultados → probablemente diafragma rígido absorbe la losa.
+
+# Solución estructural (cambiar el modelo):
+# - En GUI: Define → Diaphragm → cambiar TYPE RIGID → SEMIRIGID
+# - O remover la asignación de diafragma del Story
+# - Re-correr análisis
+# Con SEMIRIGID, la losa contribuye con su shell stiffness y ETABS reporta
+# M11/M22/M12. Pero esto puede cambiar la dinámica modal (más modos verticales).
+```
+
+**Para "Mesa de Torsión" didáctica**: el `RIGID` es deliberado — fuerza
+compatibilidad de UX/UY/Rz al master, mostrando claramente la torsión global
+del sistema cols+vigas. Aceptar que la losa NO tiene shell results es parte
+del modelo. La torsión que querés ver aparece en `T` de las VIGAS perimetrales
+(no en `M12` de la losa).
+
+---
+
+## 14. Gotchas de GUI tras correr API
+
+### ⚠️ "Error in performing miOpen" después de `RunAnalysis()` por API
+
+Después de que un script Python corre `SM.Analyze.RunAnalysis()`, si seguís
+con ETABS GUI abierto y intentás ver el modelo, puede aparecer:
+
+```
+Warning: Error in performing miOpen
+Status bar: "Reading Mesh information"
+```
+
+**Causas**:
+- ETABS GUI re-lee el mesh tras un analyze externo y el formato post-auto-mesh
+  no siempre coincide con lo que la GUI espera mostrar
+- Versión de EDB del usuario es ligeramente distinta a la GUI activa
+  (ej. EDB creado en 22.5.0 abierto en 22.6.0)
+
+**Es no-fatal**: los resultados ya extraídos via API son válidos. El JSON
+producido sigue siendo correcto.
+
+**Workarounds**:
+1. Click `Aceptar` — el modelo queda en memoria pero la display puede quedar
+   en blanco. Para volver a ver:
+   - `File → Close model` (NO save)
+   - `File → Open` → reabrir el EDB
+   - F5 (Run Analysis) desde la GUI esta vez
+2. Para evitarlo en futuras corridas API: hacer `SM.File.Save()` con un nombre
+   distinto (workcopy.EDB) antes del análisis, así el archivo original queda
+   intacto y reabrible desde la GUI.
+
+### 🔴 Si el popup persiste cada vez que abrís el EDB original
+
+Significa que el archivo del usuario quedó **corrompido** tras un
+RunAnalysis previo que guardó estado interno mal-meshado. La GUI lo
+detecta al cargar y se atasca en "Reading Mesh information".
+
+**Fix definitivo**:
+1. Restaurar el EDB original desde fuente limpia (la copia que el usuario
+   te pasó, ej. Downloads).
+2. Modificar el script para que SIEMPRE haga `Save` con un nombre distinto
+   (`_workcopy_*.EDB`) **inmediatamente después** de `OpenFile`, antes de
+   `RunAnalysis`. Así todas las modificaciones del script van al workcopy
+   y el original queda intacto.
+
+```python
+# Patrón seguro:
+SM.File.OpenFile(EDB_original)
+SM.File.Save(EDB_workcopy)  # ← inmediato, antes de tocar nada
+SM.SetModelIsLocked(False)
+SM.Analyze.RunAnalysis()    # afecta workcopy, no original
+```
+
+---
+
+## 15. Recursos
 
 - `CSI API ETABS v1.chm` (en `etabs-api/`)
 - CSI Analysis Reference Manual (en `Pdf/CSI/`)

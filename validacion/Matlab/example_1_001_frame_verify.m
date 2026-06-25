@@ -109,13 +109,18 @@ function Kg = beam3D_global(xi, xj, E, G, A, Iy, Iz, J)
         Ke(idx_by(ii), idx_by(jj)) = Ke(idx_by(ii), idx_by(jj)) + by(ii,jj);
     end; end
 
-    % Matriz de rotación local -> global
+    % Convención CSi/SAP2000/ETABS:
+    %   axis 1 (ex) = a lo largo del miembro (i → j)
+    %   axis 2 (ey) = proyección de +Z global sobre plano perp a ex.
+    %                 Si miembro vertical: ey = +X global.
+    %   axis 3 (ez) = ex × ey
     ex = [dx, dy, dz] / L;
-    % Eje y local: vertical proyectado (Z global) si elem no es vertical
     if abs(ex(3)) > 0.99
-        ey = [0, 1, 0];                 % vertical: tomar y global
+        ey = [1, 0, 0];                       % vertical: ey = +X
     else
-        ey = cross([0, 0, 1], ex); ey = ey / norm(ey);
+        proj = ex(3);                          % ex · [0,0,1]
+        ey = [-proj*ex(1), -proj*ex(2), 1 - proj*ex(3)];
+        ey = ey / norm(ey);
     end
     ez = cross(ex, ey);
     R = [ex; ey; ez];
@@ -166,82 +171,129 @@ function F = apply_pt(F, n, d, val)
     F(6*(n-1)+d) = F(6*(n-1)+d) + val;
 end
 
-% Helper: equivalentes nodales de carga distribuida q uniforme en frame
-% n_i -> n_j: cada extremo recibe q*L/2 en la dirección global +Z (si Global).
-% Para 'Local' transformamos al frame local primero.
+% Helper: equivalentes nodales CONSISTENTES (con momentos) para carga
+% trapezoidal q_i → q_j en frame n_i → n_j. Replica las fórmulas clásicas
+% fixed-end (incluye q*L^2/12 momentos para uniforme, fórmula trapezoid
+% L^2(3q_i+2q_j)/60 y -L^2(2q_i+3q_j)/60 para extremos).
+% IMPORTANTE: usa convención CSi para ejes locales (igual que beam3D_global).
 function F = apply_dist(F, nodes_arr, n_i, n_j, q_ix, q_iy, q_iz, q_jx, q_jy, q_jz, frame)
     xi_ = nodes_arr(n_i, :); xj_ = nodes_arr(n_j, :);
-    dx = xj_-xi_; L = norm(dx); ex = dx / L;
+    dvec = xj_ - xi_; L = norm(dvec); ex = dvec / L;
     if abs(ex(3)) > 0.99
-        ey = [0, 1, 0];
+        ey = [1, 0, 0];
     else
-        ey = cross([0,0,1], ex); ey = ey / norm(ey);
+        proj = ex(3);
+        ey = [-proj*ex(1), -proj*ex(2), 1 - proj*ex(3)];
+        ey = ey / norm(ey);
     end
     ez = cross(ex, ey);
-    if strcmp(frame, 'Local')
-        % Convertir local -> global
-        q_i = q_ix*ex + q_iy*ey + q_iz*ez;
-        q_j = q_jx*ex + q_jy*ey + q_jz*ez;
+    R = [ex; ey; ez];
+    % Convertir a componentes locales
+    if strcmp(frame, 'Global')
+        q_i_g = [q_ix, q_iy, q_iz]; q_j_g = [q_jx, q_jy, q_jz];
+        qx_i = dot(q_i_g, ex); qy_i = dot(q_i_g, ey); qz_i = dot(q_i_g, ez);
+        qx_j = dot(q_j_g, ex); qy_j = dot(q_j_g, ey); qz_j = dot(q_j_g, ez);
     else
-        q_i = [q_ix, q_iy, q_iz];
-        q_j = [q_jx, q_jy, q_jz];
+        qx_i = q_ix; qy_i = q_iy; qz_i = q_iz;
+        qx_j = q_jx; qy_j = q_jy; qz_j = q_jz;
     end
-    % Cargas equivalentes nodales: (avg de q_i,q_j) * L/2 a cada extremo
-    qm = (q_i + q_j) / 2;
-    F_per = qm * L / 2;
+    % Fixed-end forces locales (DOFs por extremo: Fx, Fy, Fz, Mx, My, Mz)
+    fe_i = zeros(1,6); fe_j = zeros(1,6);
+    % Axial
+    fe_i(1) = L * (2*qx_i + qx_j) / 6;
+    fe_j(1) = L * (qx_i + 2*qx_j) / 6;
+    % Carga local Y → bending sobre Mz local (axis 6)
+    fe_i(2) = L * (7*qy_i + 3*qy_j) / 20;
+    fe_j(2) = L * (3*qy_i + 7*qy_j) / 20;
+    fe_i(6) = +L^2 * (3*qy_i + 2*qy_j) / 60;
+    fe_j(6) = -L^2 * (2*qy_i + 3*qy_j) / 60;
+    % Carga local Z → bending sobre My local (axis 5, signo cambia)
+    fe_i(3) = L * (7*qz_i + 3*qz_j) / 20;
+    fe_j(3) = L * (3*qz_i + 7*qz_j) / 20;
+    fe_i(5) = -L^2 * (3*qz_i + 2*qz_j) / 60;
+    fe_j(5) = +L^2 * (2*qz_i + 3*qz_j) / 60;
+    % Rotar a global: f_global = R^T * f_local (force y moment por separado)
+    fg_iF = (R' * fe_i(1:3)')'; fg_iM = (R' * fe_i(4:6)')';
+    fg_jF = (R' * fe_j(1:3)')'; fg_jM = (R' * fe_j(4:6)')';
     for d = 1:3
-        F(6*(n_i-1)+d) = F(6*(n_i-1)+d) + F_per(d);
-        F(6*(n_j-1)+d) = F(6*(n_j-1)+d) + F_per(d);
+        F(6*(n_i-1)+d)   = F(6*(n_i-1)+d)   + fg_iF(d);
+        F(6*(n_i-1)+3+d) = F(6*(n_i-1)+3+d) + fg_iM(d);
+        F(6*(n_j-1)+d)   = F(6*(n_j-1)+d)   + fg_jF(d);
+        F(6*(n_j-1)+3+d) = F(6*(n_j-1)+3+d) + fg_jM(d);
     end
 end
 
-% ── Load Pattern 1: self-weight (multiplier=1)
-% SW = unit_weight * Volume * g. CSi default unit weight para "CONC" via
-% SetMaterial es 0 si no se setea, pero el SAP por defecto asigna
-% 150 pcf = 150 lb/ft^3. Aquí asumimos modifier(1)=1000 NO afecta peso:
-% el peso usa A geom = 144 in^2.
+% NOTA UNIDADES: CSi Example 1-001 verbatim define cargas en kip/ft y momentos
+% en kip-ft. Como el modelo usa INCHES, convertimos: dist /12, momentos *12.
+
+% ── Load Pattern 1: self-weight (gravity, multiplier=1, unit weight=150 pcf)
 gamma = 150 / 12^3 / 1000;        % pcf -> kip/in^3
-A_geom = b_in * h_in;             % geom (no afectado por modifier)
-% Para cada frame: peso = gamma * A * L distribuido (-Z global)
+A_geom = b_in * h_in;
 for e = 1:size(elems, 1)
     n_i = elems(e, 1); n_j = elems(e, 2);
-    L_e = norm(nodes(n_j,:) - nodes(n_i,:));
-    w = gamma * A_geom * L_e / 2;   % en cada extremo
-    F_cases(6*(n_i-1)+3, 1) = F_cases(6*(n_i-1)+3, 1) - w;
-    F_cases(6*(n_j-1)+3, 1) = F_cases(6*(n_j-1)+3, 1) - w;
+    w_load = gamma * A_geom;       % kip/in (en -Z global)
+    F_cases(:, 1) = apply_dist(F_cases(:, 1), nodes, n_i, n_j, ...
+                               0, 0, -w_load, 0, 0, -w_load, 'Global');
 end
 
-% ── Load Pattern 2: -10 puntual en U3 al nodo 4 + dist 1.8 en frame 3
+% ── Load Pattern 2: -10 kip puntual U3 al i-end de Frame 3 (= nodo 4),
+%    + 1.8 kip/ft GRAVITY (Dir=10 = global -Z, NOT +Z) sobre Frame 3
 F_cases(6*(4-1)+3, 2) = F_cases(6*(4-1)+3, 2) - 10;
-F_cases(:, 2) = apply_dist(F_cases(:, 2), nodes, 4, 2, 0,0,1.8, 0,0,1.8, 'Global');
+F_cases(:, 2) = apply_dist(F_cases(:, 2), nodes, 4, 2, ...
+                            0, 0, -1.8/12, 0, 0, -1.8/12, 'Global');
 
-% ── Load Pattern 3: en nodo 3 (top frame 2), U3=-17.2 y R2=-54.4
-F_cases(6*(3-1)+3, 3) = F_cases(6*(3-1)+3, 3) - 17.2;
-F_cases(6*(3-1)+5, 3) = F_cases(6*(3-1)+5, 3) - 54.4;
+% ── Load Pattern 3: PointName2 of Frame 3 = NODO 2 (knee, NO nodo 3).
+%    -17.2 kip U3 y -54.4 kip-ft R2 (×12 → kip-in)
+F_cases(6*(2-1)+3, 3) = F_cases(6*(2-1)+3, 3) - 17.2;
+F_cases(6*(2-1)+5, 3) = F_cases(6*(2-1)+5, 3) - 54.4*12;
 
-% ── Load Pattern 4: distribuida +2 (global +Z) en frame 2
-F_cases(:, 4) = apply_dist(F_cases(:, 4), nodes, 2, 3, 0,0,2, 0,0,2, 'Global');
+% ── Load Pattern 4: PROJECTED GRAVITY (Dir=11) sobre Frame 2.
+%    2 kip/ft por unidad de proyección horizontal. Frame 2: L_proj=8ft, L=10ft.
+%    → q_actual = 2 × (L_proj/L) = 1.6 kip/ft en -Z global uniforme.
+xi_p4 = nodes(2,:); xj_p4 = nodes(3,:);
+dvec_p4 = xj_p4 - xi_p4;
+L_p4 = norm(dvec_p4);
+L_proj_xy_p4 = sqrt(dvec_p4(1)^2 + dvec_p4(2)^2);
+q_pg = 2/12 * (L_proj_xy_p4 / L_p4);     % kip/in actual
+F_cases(:, 4) = apply_dist(F_cases(:, 4), nodes, 2, 3, ...
+                            0, 0, -q_pg, 0, 0, -q_pg, 'Global');
 
-% ── Load Pattern 5: distribuidas en local frames 1 y 2 (eje local 2)
-F_cases(:, 5) = apply_dist(F_cases(:, 5), nodes, 1, 2, 0,2,0,  0,2,0,  'Local');
-F_cases(:, 5) = apply_dist(F_cases(:, 5), nodes, 2, 3, 0,-2,0, 0,-2,0, 'Local');
+% ── Load Pattern 5: 2 kip/ft local axis 2 sobre Frame 1, -2 sobre Frame 2
+F_cases(:, 5) = apply_dist(F_cases(:, 5), nodes, 1, 2, 0,  2/12, 0, 0,  2/12, 0, 'Local');
+F_cases(:, 5) = apply_dist(F_cases(:, 5), nodes, 2, 3, 0, -2/12, 0, 0, -2/12, 0, 'Local');
 
-% ── Load Pattern 6: distribuidas trapezoidales (eje local 2)
-F_cases(:, 6) = apply_dist(F_cases(:, 6), nodes, 1, 2, 0, 0.9984, 0, 0, 0.3744, 0, 'Local');
-F_cases(:, 6) = apply_dist(F_cases(:, 6), nodes, 2, 3, 0,-0.3744, 0, 0, 0,      0, 'Local');
+% ── Load Pattern 6: trapezoidales locales kip/ft (/12)
+F_cases(:, 6) = apply_dist(F_cases(:, 6), nodes, 1, 2, 0,  0.9984/12, 0, 0,  0.3744/12, 0, 'Local');
+F_cases(:, 6) = apply_dist(F_cases(:, 6), nodes, 2, 3, 0, -0.3744/12, 0, 0,  0,         0, 'Local');
 
-% ── Load Pattern 7: punto interior en frame 2 (a 50% del span, P_z_local=-15)
-% Equivalente nodal: -15/2 a cada extremo (proyectado en el local 2)
-xi_ = nodes(2,:); xj_ = nodes(3,:);
-ex_2 = (xj_ - xi_) / norm(xj_ - xi_);
-if abs(ex_2(3)) > 0.99
-    ey_2 = [0,1,0];
+% ── Load Pattern 7: -15 kip punto interior mid-span Frame 2 (local axis 2).
+% Fixed-end equivalente: F_i = F_j = P/2; M_i = +P*L/8, M_j = -P*L/8 (Mz local).
+xi_p7 = nodes(2,:); xj_p7 = nodes(3,:);
+ex_p7 = (xj_p7 - xi_p7) / norm(xj_p7 - xi_p7);
+if abs(ex_p7(3)) > 0.99
+    ey_p7 = [1, 0, 0];
 else
-    ey_2 = cross([0,0,1], ex_2); ey_2 = ey_2 / norm(ey_2);
+    proj7 = ex_p7(3);
+    ey_p7 = [-proj7*ex_p7(1), -proj7*ex_p7(2), 1 - proj7*ex_p7(3)];
+    ey_p7 = ey_p7 / norm(ey_p7);
 end
-P_glob = -15 * ey_2;     % -15 en eje local 2 (= ey_2 en globales)
-F_cases(6*(2-1)+1:6*(2-1)+3, 7) = F_cases(6*(2-1)+1:6*(2-1)+3, 7) + P_glob' / 2;
-F_cases(6*(3-1)+1:6*(3-1)+3, 7) = F_cases(6*(3-1)+1:6*(3-1)+3, 7) + P_glob' / 2;
+ez_p7 = cross(ex_p7, ey_p7);
+R_p7 = [ex_p7; ey_p7; ez_p7];
+P_y = -15;
+L_p7 = norm(xj_p7 - xi_p7);
+fe_i_p7 = zeros(1,6); fe_j_p7 = zeros(1,6);
+fe_i_p7(2) = P_y / 2;
+fe_j_p7(2) = P_y / 2;
+fe_i_p7(6) = +P_y * L_p7 / 8;
+fe_j_p7(6) = -P_y * L_p7 / 8;
+fg_i_F = (R_p7' * fe_i_p7(1:3)')'; fg_i_M = (R_p7' * fe_i_p7(4:6)')';
+fg_j_F = (R_p7' * fe_j_p7(1:3)')'; fg_j_M = (R_p7' * fe_j_p7(4:6)')';
+for d = 1:3
+    F_cases(6*(2-1)+d, 7)   = F_cases(6*(2-1)+d, 7)   + fg_i_F(d);
+    F_cases(6*(2-1)+3+d, 7) = F_cases(6*(2-1)+3+d, 7) + fg_i_M(d);
+    F_cases(6*(3-1)+d, 7)   = F_cases(6*(3-1)+d, 7)   + fg_j_F(d);
+    F_cases(6*(3-1)+3+d, 7) = F_cases(6*(3-1)+3+d, 7) + fg_j_M(d);
+end
 
 %% ── Resolver ────────────────────────────────────────────────
 U_all = inv(K) * F_cases;

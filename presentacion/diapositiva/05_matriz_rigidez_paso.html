@@ -3,412 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>05 · Matriz de rigidez paso a paso</title>
+<title>05 · La matriz de rigidez (ensamblar = sumar)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/style.css">
-
-<script>
-MathJax = {
-  tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
-  svg: { fontCache: 'global' }
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
-
 <style>
-  .step-card {
-    background: var(--paper-dark);
-    border: 1.5px solid var(--ink);
-    border-radius: 4px;
-    padding: 14px 18px;
-    margin: 12px 0;
-    position: relative;
-  }
-  .step-card .step-tag {
-    position: absolute;
-    top: -10px; left: 14px;
-    background: var(--gold);
-    color: var(--ink);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    padding: 2px 10px;
-    border-radius: 3px;
-    letter-spacing: 0.12em;
-    font-weight: 700;
-  }
-  .step-card h3 {
-    font-family: 'Cormorant Garamond', serif;
-    color: var(--blue);
-    margin: 4px 0 6px;
-  }
-  .step-card .note {
-    font-size: 0.85rem;
-    color: var(--ink-soft);
-    margin-top: 6px;
-    font-style: italic;
-  }
-
-  .compare {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 8px 0;
-  }
-  .compare > div {
-    background: var(--paper);
-    border: 1px solid var(--ink-fade);
-    border-radius: 3px;
-    padding: 8px 12px;
-  }
-  .compare h4 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.66rem;
-    letter-spacing: 0.16em;
-    color: var(--gold);
-    margin: 0 0 4px;
-    text-transform: uppercase;
-  }
+  html,body{ height:100%; overflow:hidden; }
+  .wrap{ height:100vh; display:flex; flex-direction:column; padding:14px 30px 44px; }
+  .head{ text-align:center; border-bottom:1.5px solid var(--ink); padding-bottom:6px; margin-bottom:10px; flex:0 0 auto; }
+  .head .pre{ font-family:'JetBrains Mono',monospace; font-size:0.64rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gold); }
+  .head h1{ font-size:1.5rem; margin-top:2px; }
+  .head .sub{ font-style:italic; color:var(--ink-soft); font-size:0.86rem; margin-top:2px; }
+  .body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1.05fr 0.95fr; gap:22px; align-items:center; }
+  .card{ background:var(--paper-dark); border:1.5px solid var(--ink); border-radius:7px; padding:11px 13px; }
+  .card svg{ width:100%; height:auto; max-height:30vh; display:block; }
+  .sld{ margin-top:9px; } .sld label{ font-family:'JetBrains Mono',monospace; font-size:0.78rem; display:flex; justify-content:space-between; margin-bottom:3px; }
+  .sld label .v{ color:#a23232; font-weight:700; }
+  .sld input[type=range]{ -webkit-appearance:none; appearance:none; width:100%; height:22px; margin:-9px 0; background:transparent; cursor:pointer; }
+  .sld input[type=range]::-webkit-slider-runnable-track{ height:7px; background:#d8c9a8; border:1px solid var(--ink); border-radius:4px; }
+  .sld input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:22px; height:22px; margin-top:-9px; border-radius:50%; background:var(--gold); border:2px solid var(--ink); }
+  .now{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; text-align:center; margin-top:6px; color:#2d6a4f; min-height:1.1em; }
+  .mat{ display:grid; grid-template-columns:repeat(3,1fr); gap:5px; max-width:280px; margin:0 auto; }
+  .cell{ aspect-ratio:1.5; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--ink); border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:0.86rem; font-weight:700; background:var(--paper); transition:.15s; }
+  .cell.z{ color:#bbb; font-weight:400; } .cell.hot{ background:#fff3cf; border-color:#b08d4f; color:#7a4f12; }
+  .cell.mid{ background:#e7f6ea; border-color:#2d6a4f; color:#1c4a33; }
+  .rule{ background:var(--ink); color:var(--paper); border-radius:6px; padding:8px 12px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.84rem; margin:10px 0; }
+  .rule .y{ color:#f4d35e; }
+  .note{ font-size:0.88rem; line-height:1.42; } .note b{ color:var(--blue); } .note .mid{ color:#2d6a4f; font-weight:700; }
+  .dnav{ position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:var(--ink); padding:6px 12px; border-radius:30px; }
+  .dnav a{ color:var(--paper); text-decoration:none; font-family:'JetBrains Mono',monospace; font-size:0.74rem; padding:3px 10px; }
 </style>
 </head>
 <body>
-
-<div class="container">
-
-  <header>
-    <div class="pre-title">Diapositiva 05 · Bloque 2 — derivación paso a paso</div>
-    <h1>De donde sale $K_e$ &mdash; viga Bernoulli, paso por paso</h1>
-    <div class="subtitle">Energía de deformación → matriz $\mathbf{B}$ → integral con $J$ → cuadratura de Gauss → resultado simbólico → resultado numérico</div>
-  </header>
-
-  <section>
-    <h2>Punto de partida — energía de deformación</h2>
-    <p>La rigidez de un elemento es la "huella" de su energía elástica:</p>
-    $$ U_e = \tfrac{1}{2} \mathbf{q}^T\,\mathbf{K}_e\,\mathbf{q}, \qquad \mathbf{K}_e = \int_{V_e} \mathbf{B}^T\,\mathbf{D}\,\mathbf{B}\,dV $$
-    <p>donde $\mathbf{q}$ son los GDL nodales, $\mathbf{B}$ relaciona deformaciones con $\mathbf{q}$, y $\mathbf{D}$ es la matriz constitutiva del material.</p>
-  </section>
-
-  <section>
-    <h2>5 pasos para obtener $K_e$ de una viga Bernoulli</h2>
-
-    <div class="step-card">
-      <span class="step-tag">PASO 1 · CINEMÁTICA</span>
-      <h3>Curvatura desde Hermite</h3>
-      <p>Para Bernoulli, $\varepsilon = -y\,\kappa$ con $\kappa = d^2 v / dx^2$. Sustituyendo $v = \mathbf{N}\,\mathbf{q}$:</p>
-      $$ \kappa(x) = \frac{d^2 \mathbf{N}}{dx^2}\,\mathbf{q} \;=\; \mathbf{B}\,\mathbf{q} $$
-      <div class="compare">
-        <div>
-          <h4>Cambio a coord natural</h4>
-          $$ \frac{d^2}{dx^2} = \frac{1}{J^2}\,\frac{d^2}{d\xi^2}, \;\; J=\tfrac{L}{2} $$
-        </div>
-        <div>
-          <h4>Resultado</h4>
-          $$ \mathbf{B}(\xi) = \frac{4}{L^2}\,\frac{d^2 \mathbf{N}}{d\xi^2} $$
-        </div>
-      </div>
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">PASO 2 · CALCULAR $\mathbf{B}(\xi)$</span>
-      <h3>Segundas derivadas de las Hermite</h3>
-      <p>De las funciones de forma de la slide 03, derivando dos veces respecto a $\xi$:</p>
-      $$ \mathbf{B}(\xi) = \frac{1}{L^2}\,\Big[\,6\xi,\;\; L(3\xi-1),\;\; -6\xi,\;\; L(3\xi+1)\,\Big] $$
-      <p class="note">Vector fila 1×4 que multiplica al vector $\mathbf{q} = [v_1, \theta_1, v_2, \theta_2]^T$.</p>
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">PASO 3 · MATERIAL</span>
-      <h3>Constitutiva $\mathbf{D}$ y volumen</h3>
-      <p>Para una viga 1D Bernoulli, $\mathbf{D} = E\,I$ (escalar). El volumen integrado en la sección queda absorbido en $I$:</p>
-      $$ \mathbf{K}_e = \int_{x_1}^{x_2} \mathbf{B}^T (EI)\, \mathbf{B}\, dx \;=\; \int_{-1}^{+1} \mathbf{B}^T\,EI\,\mathbf{B}\,J\,d\xi $$
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">PASO 4 · CUADRATURA DE GAUSS</span>
-      <h3>Reducir la integral a una suma</h3>
-      <p>$\mathbf{B}^T\,\mathbf{B}$ es polinomio de grado 2 en $\xi$. <strong>2 puntos de Gauss</strong> son <em>exactos</em> hasta grado 3:</p>
-      <div class="compare">
-        <div>
-          <h4>Puntos &amp; pesos</h4>
-          $$ \xi_{1,2} = \mp\tfrac{1}{\sqrt{3}},\;\; w_{1,2} = 1 $$
-        </div>
-        <div>
-          <h4>Aplicación</h4>
-          $$ \mathbf{K}_e = J\,EI\sum_{g=1}^{2} w_g\,\mathbf{B}(\xi_g)^T\,\mathbf{B}(\xi_g) $$
-        </div>
-      </div>
-      <p class="note">Ver detalles en la diapositiva <em>Cuadratura de Gauss</em>.</p>
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">PASO 5 · RESULTADO SIMBÓLICO</span>
-      <h3>La matriz 4×4 clásica de viga Bernoulli</h3>
-      $$ \mathbf{K}_e = \frac{EI}{L^3}\begin{bmatrix} 12 & 6L & -12 & 6L \\ 6L & 4L^2 & -6L & 2L^2 \\ -12 & -6L & 12 & -6L \\ 6L & 2L^2 & -6L & 4L^2 \end{bmatrix} $$
-      <p class="note">Misma fórmula desde 1956 (Turner-Clough). MATLAB, ETABS, SAP2000, OpenSees y Hekatan ejecutan <em>esta misma matriz</em>.</p>
-    </div>
-  </section>
-
-  <section>
-    <h2>Ejemplo numérico interactivo &mdash; mueve los sliders</h2>
-    <p>Cambia $E$, $I$ y $L$ y observa cómo se reconstruye toda la matriz $\mathbf{K}_e$ en vivo. Sistema de unidades: <strong>E en kgf/cm², I en cm⁴, L en m</strong>; resultado en <strong>tonf/m</strong> y <strong>tonf·m/rad</strong>.</p>
-
-    <div class="controls">
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><span class="symbol">L</span> Longitud del elemento (m)</span>
-          <span id="ke-l-val" class="slider-value">5.0</span>
-        </div>
-        <input type="range" id="ke-l-slider" min="1" max="10" step="0.5" value="5">
-        <div class="slider-hint">↞ corta · larga ↠</div>
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><span class="symbol">E</span> Módulo de Young (kgf/cm²)</span>
-          <span id="ke-e-val" class="slider-value">2,100,000</span>
-        </div>
-        <input type="range" id="ke-e-slider" min="200000" max="2200000" step="100000" value="2100000">
-        <div class="slider-hint">↞ hormigón ~250,000 · acero ~2,100,000 ↠</div>
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label"><span class="symbol">I</span> Momento de inercia (cm⁴)</span>
-          <span id="ke-i-val" class="slider-value">8,500</span>
-        </div>
-        <input type="range" id="ke-i-slider" min="500" max="50000" step="500" value="8500">
-        <div class="slider-hint">↞ sección pequeña · grande ↠</div>
-      </div>
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">PREFACTOR EI/L³</span>
-      <h3>Cálculo paso a paso</h3>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:0.92rem;line-height:1.7;color:var(--ink);background:var(--paper);padding:12px 16px;border-radius:4px;border:1px solid var(--ink-fade)">
-        EI / L³ &nbsp;=&nbsp; (<span id="ke-E" style="color:var(--blue);font-weight:700">2,100,000</span> &times; <span id="ke-I" style="color:var(--blue);font-weight:700">8,500</span>) / <span id="ke-Lcm" style="color:var(--blue);font-weight:700">500</span>³<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp; <span id="ke-num" style="color:var(--gold)">1.785·10¹⁰</span> / <span id="ke-den" style="color:var(--gold)">1.25·10⁸</span><br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp; <strong id="ke-pref-kgfcm" style="color:var(--green);font-size:1.05rem">142.80 kgf/cm</strong>
-      </div>
-      <p class="note">≈ <strong id="ke-pref-tonfm" style="color:var(--green)">14.28 tonf/m</strong>. Cada componente de la matriz se obtiene multiplicando el prefactor por el coeficiente entero (12, 6L, 4L², ...).</p>
-    </div>
-
-    <div class="step-card">
-      <span class="step-tag">VALORES NUMÉRICOS</span>
-      <h3>$\mathbf{K}_e$ &mdash; matriz 4×4 reconstruida en vivo</h3>
-      <div style="overflow-x:auto">
-        <table id="ke-matrix" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:0.88rem">
-          <thead>
-            <tr>
-              <th></th>
-              <th>v₁</th>
-              <th>θ₁</th>
-              <th>v₂</th>
-              <th>θ₂</th>
-            </tr>
-          </thead>
-          <tbody id="ke-matrix-body">
-            <!-- populated by JS -->
-          </tbody>
-        </table>
-      </div>
-      <p class="note">Filas/columnas <strong>v</strong> en <strong>tonf/m</strong>, filas/columnas <strong>θ</strong> en <strong>tonf·m/rad</strong>. La <em>simetría</em> y la <em>singularidad</em> ($K_e$ es semi-definida positiva &mdash; un movimiento de cuerpo rígido en $v$ no genera fuerzas) son inherentes a la forma $\mathbf{B}^T\mathbf{D}\mathbf{B}$.</p>
-    </div>
-
-    <div id="ke-explanation" class="explanation-box" style="margin-top:14px"></div>
-  </section>
-
-  <section>
-    <h2>Lo que cambia en otros elementos</h2>
-    <table>
-      <tr>
-        <th>Elemento</th>
-        <th>Funciones $N_i$</th>
-        <th>Constitutiva $\mathbf{D}$</th>
-        <th>Tamaño $\mathbf{K}_e$</th>
-      </tr>
-      <tr>
-        <td>Barra axial 1D</td>
-        <td>Lagrange lineal (2)</td>
-        <td>$EA$</td>
-        <td>2×2</td>
-      </tr>
-      <tr>
-        <td>Viga Bernoulli</td>
-        <td>Hermite cúbica (4)</td>
-        <td>$EI$</td>
-        <td>4×4</td>
-      </tr>
-      <tr>
-        <td>Frame 3D</td>
-        <td>Hermite + Lagrange + torsión</td>
-        <td>$E$, $G$, $A$, $I_y$, $I_z$, $J$</td>
-        <td>12×12</td>
-      </tr>
-      <tr>
-        <td>Membrana Q4</td>
-        <td>Lagrange bilineal (4)</td>
-        <td>$\mathbf{D}_{plane\,stress}$ (3×3)</td>
-        <td>8×8</td>
-      </tr>
-      <tr>
-        <td>Placa Mindlin Q4</td>
-        <td>Lagrange bilineal con $\beta_x, \beta_y$</td>
-        <td>$\mathbf{D}_b$, $\mathbf{D}_s$</td>
-        <td>12×12</td>
-      </tr>
-      <tr>
-        <td>Sólido H8</td>
-        <td>Lagrange trilineal (8)</td>
-        <td>$\mathbf{D}_{3D}$ (6×6)</td>
-        <td>24×24</td>
-      </tr>
-    </table>
-    <p style="font-size:0.88rem;color:var(--ink-soft)">El procedimiento es <strong>idéntico</strong>: $\mathbf{K}_e = \int \mathbf{B}^T \mathbf{D} \mathbf{B}\,dV$. Solo cambian las $N_i$, el orden de Gauss y la dimensión.</p>
-  </section>
-
-  <div class="quote">
-    <strong>Hekatan ejecuta exactamente este procedimiento</strong> en C++ con Eigen. La diferencia con MATLAB no está en la matemática — está en que el bucle sobre miles de elementos corre en milisegundos en lugar de minutos.
+<div class="wrap">
+  <div class="head">
+    <div class="pre">Cómo se arma la matriz global</div>
+    <h1>La matriz de rigidez: <span style="color:#b08d4f">ensamblar = SUMAR</span> en los nudos</h1>
+    <div class="sub">Pórtico 2 vanos + muro. Agrega los elementos uno a uno y mira el nudo del medio SUMAR.</div>
   </div>
-
-  <div class="footer-note">
-    HEKATAN STRUCT · DIAPOSITIVA 05 · DE B^T D B A K_e
+  <div class="body">
+    <div class="card">
+      <svg id="por" viewBox="0 0 380 180"></svg>
+      <div class="sld"><label><span style="color:var(--gold);font-weight:700">elementos ensamblados</span><span class="v" id="ev">0</span> / 5</label>
+        <input type="range" id="ne" min="0" max="5" step="1" value="0"></div>
+      <div class="now" id="now">arrastra → agrega columnas, muro y vigas</div>
+    </div>
+    <div>
+      <div class="mat" id="mat"></div>
+      <div class="rule">regla del ensamble: <span class="y">K[i,j] += k_del_elemento</span></div>
+      <div class="note">Cada elemento deja su rigidez en su(s) nudo(s). El <span class="mid">nudo del medio (N2)</span> lo tocan <b>la columna del medio + la viga izquierda + la viga derecha</b> → ahí <b>se SUMAN</b> (1000 → 2500 → <span class="mid">4000</span>). Eso es ensamblar.</div>
+    </div>
   </div>
-
 </div>
+<div class="dnav"><a href="./index.html">⌂ índice</a></div>
 
 <script>
-// ────────────────────────────────────────────────────────────────
-// Slide 05 — Matriz de rigidez K_e en vivo
-//   Unidades de los sliders:
-//     E : kgf/cm²
-//     I : cm⁴
-//     L : m
-//   Conversión a tonf/m:
-//     pref [tonf/m] = (E_kgfcm² × I_cm⁴) / (1e7 × L³_m)
-//     pref [kgf/cm] = (E_kgfcm² × I_cm⁴) / L³_cm     (con L_cm = L_m × 100)
-// ────────────────────────────────────────────────────────────────
-
-const keLSlider = document.getElementById('ke-l-slider');
-const keESlider = document.getElementById('ke-e-slider');
-const keISlider = document.getElementById('ke-i-slider');
-const keLVal    = document.getElementById('ke-l-val');
-const keEVal    = document.getElementById('ke-e-val');
-const keIVal    = document.getElementById('ke-i-val');
-const keMatrixBody = document.getElementById('ke-matrix-body');
-
-const keESpan      = document.getElementById('ke-E');
-const keISpan      = document.getElementById('ke-I');
-const keLcmSpan    = document.getElementById('ke-Lcm');
-const keNumSpan    = document.getElementById('ke-num');
-const keDenSpan    = document.getElementById('ke-den');
-const kePrefKgfCm  = document.getElementById('ke-pref-kgfcm');
-const kePrefTonfM  = document.getElementById('ke-pref-tonfm');
-const keExplanation= document.getElementById('ke-explanation');
-
-function fmtMantissa(value, exp) {
-  // Express a number as M·10^exp with M ≈ 1-10 mantissa
-  if (value === 0) return "0";
-  const m = value / Math.pow(10, exp);
-  return m.toFixed(3) + "·10" + supDigits(exp);
+const kc=1000,kw=8000,kv=1500;
+const ELEMS=[
+ {name:"columna 1 + MURO", add:[[0,0,kc+kw]]},
+ {name:"columna 2 (medio)", add:[[1,1,kc]]},
+ {name:"columna 3", add:[[2,2,kc]]},
+ {name:"viga izquierda (N1–N2)", add:[[0,0,kv],[1,1,kv],[0,1,-kv],[1,0,-kv]]},
+ {name:"viga derecha (N2–N3)", add:[[1,1,kv],[2,2,kv],[1,2,-kv],[2,1,-kv]]},
+];
+const neS=document.getElementById('ne'),ev=document.getElementById('ev'),now=document.getElementById('now'),matD=document.getElementById('mat'),por=document.getElementById('por');
+function build(){
+  const ne=+neS.value; ev.textContent=ne;
+  now.textContent = ne===0?'arrastra → agrega columnas, muro y vigas':'+ '+ELEMS[ne-1].name;
+  const K=[[0,0,0],[0,0,0],[0,0,0]];
+  for(let e=0;e<ne;e++) ELEMS[e].add.forEach(([i,j,v])=>K[i][j]+=v);
+  let m='';
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){const v=K[i][j];const mid=(i===1&&j===1);
+    m+=`<div class="cell ${v===0?'z':(mid?'mid':'hot')}">${v===0?'·':v}</div>`;}
+  matD.innerHTML=m;
+  const on=(k)=>ne>k?1:0.18;
+  let s='';
+  s+=`<line x1="10" y1="150" x2="370" y2="150" stroke="#444" stroke-width="2"/>`;
+  s+=`<rect x="55" y="50" width="14" height="100" fill="#aa00aa" opacity="${on(0)}"/>`;
+  s+=`<line x1="62" y1="50" x2="62" y2="150" stroke="#aa00aa" stroke-width="3" opacity="${on(0)}"/>`;
+  s+=`<line x1="190" y1="50" x2="190" y2="150" stroke="#cc0000" stroke-width="3" opacity="${on(1)}"/>`;
+  s+=`<line x1="320" y1="50" x2="320" y2="150" stroke="#cc0000" stroke-width="3" opacity="${on(2)}"/>`;
+  s+=`<line x1="62" y1="50" x2="190" y2="50" stroke="#0000cc" stroke-width="3" opacity="${on(3)}"/>`;
+  s+=`<line x1="190" y1="50" x2="320" y2="50" stroke="#0000cc" stroke-width="3" opacity="${on(4)}"/>`;
+  s+=`<circle cx="62" cy="50" r="6" fill="#1a2942"/><circle cx="190" cy="50" r="7" fill="#2d6a4f"/><circle cx="320" cy="50" r="6" fill="#1a2942"/>`;
+  s+=`<text x="62" y="38" font-size="11" fill="#1a2942" text-anchor="middle" font-family="monospace">N1</text>`;
+  s+=`<text x="190" y="36" font-size="11" fill="#2d6a4f" text-anchor="middle" font-family="monospace">N2 (medio)</text>`;
+  s+=`<text x="320" y="38" font-size="11" fill="#1a2942" text-anchor="middle" font-family="monospace">N3</text>`;
+  s+=`<text x="62" y="120" font-size="9" fill="#aa00aa" text-anchor="middle" font-family="monospace">muro</text>`;
+  por.innerHTML=s;
 }
-function supDigits(n) {
-  const sup = { "0":"⁰", "1":"¹", "2":"²", "3":"³", "4":"⁴", "5":"⁵", "6":"⁶", "7":"⁷", "8":"⁸", "9":"⁹", "-":"⁻" };
-  return n.toString().split("").map(c => sup[c] || c).join("");
-}
-
-function fmtNum(v) {
-  if (Math.abs(v) >= 100000) {
-    return v.toExponential(2);
-  }
-  if (Math.abs(v) >= 100) return v.toFixed(0);
-  if (Math.abs(v) >= 10)  return v.toFixed(1);
-  return v.toFixed(2);
-}
-
-function keUpdate() {
-  const L_m  = parseFloat(keLSlider.value);
-  const E    = parseFloat(keESlider.value);   // kgf/cm²
-  const I    = parseFloat(keISlider.value);   // cm⁴
-  const L_cm = L_m * 100;
-
-  keLVal.textContent = L_m.toFixed(1);
-  keEVal.textContent = E.toLocaleString('en-US');
-  keIVal.textContent = I.toLocaleString('en-US');
-
-  // Texto de la fórmula paso a paso
-  keESpan.textContent   = E.toLocaleString('en-US');
-  keISpan.textContent   = I.toLocaleString('en-US');
-  keLcmSpan.textContent = L_cm.toFixed(0);
-
-  const numerator   = E * I;            // kgf·cm²
-  const denominator = Math.pow(L_cm, 3);// cm³
-  const numExp = Math.floor(Math.log10(numerator));
-  const denExp = Math.floor(Math.log10(denominator));
-  keNumSpan.textContent = fmtMantissa(numerator, numExp);
-  keDenSpan.textContent = fmtMantissa(denominator, denExp);
-
-  // Prefactor en kgf/cm
-  const pref_kgfcm = numerator / denominator;
-  kePrefKgfCm.textContent = fmtNum(pref_kgfcm) + " kgf/cm";
-
-  // Prefactor en tonf/m: pref [kgf/cm] × 100 [cm/m] / 1000 [kgf/tonf] = pref/10
-  const pref_tonfm = pref_kgfcm / 10;
-  kePrefTonfM.textContent = fmtNum(pref_tonfm) + " tonf/m";
-
-  // Matriz K_e simbólica (en unidades del prefactor):
-  //   [12,    6L,   -12,   6L  ]
-  //   [6L,   4L²,  -6L,   2L²  ]
-  //   [-12,  -6L,   12,   -6L  ]
-  //   [6L,   2L²,  -6L,   4L²  ]
-  // Multiplicada por pref [tonf/m]:
-  //   componentes con unidades:
-  //     entrada (i,j) tipo v-v  →  tonf/m
-  //     entrada (i,j) tipo v-θ  →  tonf/rad      (pref · L_m)
-  //     entrada (i,j) tipo θ-θ  →  tonf·m/rad    (pref · L_m²)
-  const symbolic = [
-    [12,        6*L_m,        -12,        6*L_m       ],
-    [6*L_m,    4*L_m*L_m,     -6*L_m,    2*L_m*L_m    ],
-    [-12,       -6*L_m,        12,        -6*L_m      ],
-    [6*L_m,    2*L_m*L_m,     -6*L_m,    4*L_m*L_m    ],
-  ];
-
-  const labels = ["v₁", "θ₁", "v₂", "θ₂"];
-  let html = "";
-  for (let i = 0; i < 4; i++) {
-    html += "<tr>";
-    html += `<th style="background:var(--paper-dark);color:var(--blue)">${labels[i]}</th>`;
-    for (let j = 0; j < 4; j++) {
-      const val = pref_tonfm * symbolic[i][j];
-      const isDiag = i === j;
-      const color = val > 0 ? "var(--green)" : (val < 0 ? "var(--red)" : "var(--ink-fade)");
-      const fontWeight = isDiag ? "700" : "500";
-      html += `<td style="color:${color};font-weight:${fontWeight};text-align:center">${fmtNum(val)}</td>`;
-    }
-    html += "</tr>";
-  }
-  keMatrixBody.innerHTML = html;
-
-  // Explicación dinámica
-  const material = E < 500_000 ? "hormigón" : "acero";
-  const k11 = pref_tonfm * 12;
-  const k22 = pref_tonfm * 4 * L_m * L_m;
-  keExplanation.innerHTML =
-    `Con <strong>E = ${E.toLocaleString('en-US')} kgf/cm²</strong> (${material}), ` +
-    `<strong>I = ${I.toLocaleString('en-US')} cm⁴</strong>, ` +
-    `<strong>L = ${L_m.toFixed(1)} m</strong>: ` +
-    `K(1,1) = 12·EI/L³ = <em>${fmtNum(k11)} tonf/m</em> (rigidez transversal en el extremo) y ` +
-    `K(2,2) = 4·EI/L = <em>${fmtNum(k22)} tonf·m/rad</em> (rigidez rotacional). ` +
-    `<strong>Doblar L reduce K(1,1) ocho veces</strong> (la L³ del denominador), pero solo divide K(2,2) entre 2. ` +
-    `Por eso las vigas largas son <em>flexibles a flexión</em> pero <em>relativamente rígidas a rotación</em>.`;
-}
-
-keLSlider.addEventListener("input", keUpdate);
-keESlider.addEventListener("input", keUpdate);
-keISlider.addEventListener("input", keUpdate);
-keUpdate();
+neS.addEventListener('input',build); build();
+document.addEventListener('keydown',e=>{if(e.key==='h'||e.key==='H')location.href='./index.html';});
 </script>
-
-<script src="./shared/nav.js"></script>
+<script src="./shared/slidenav.js"></script>
 </body>
 </html>

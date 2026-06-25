@@ -1,5 +1,10 @@
 # Hekatan Struct — Carpeta de Validación
 
+> ⭐ **FUENTE ÚNICA DE VERDAD para la Mesa de Torsión:** [`MESA_TORSION_FUENTE_UNICA.md`](./MESA_TORSION_FUENTE_UNICA.md).
+> Si algún número de este README difiere de ahí, vale el de FUENTE_UNICA (cierre final 2026-06-18:
+> losa Mxx/Myy/Mxy y frames **<1% vs ETABS** con DKQ-Batoz). Para leer los `.e2k`: `MANUAL_E2K.md`.
+> (Reportes/prompts viejos con números −14/−46% fueron borrados por obsoletos.)
+
 Validación cruzada de los solvers FEM de **Hekatan Struct** y **Hekatan Lab**
 contra software comercial de referencia y soluciones analíticas.
 
@@ -11,7 +16,8 @@ contra software comercial de referencia y soluciones analíticas.
 ## Validación Mesa Torsión vs ETABS 19.1 (2026)
 
 Modelo CSI ETABS 19.1: pórtico 6×6m × 4m alto, 4 col C40×40 pinned-base,
-4 vigas V30×50, losa 10 cm Shell-Thin, diafragma rígido. Es el caso pivote
+4 vigas V30×50, losa 10 cm Shell-Thin (⚠ SIN diafragma rígido: "D1" está DEFINIDO en el e2k
+pero NO asignado — ver MANUAL_E2K.md). Es el caso pivote
 que disparó la implementación del **MZC Kirchhoff** (= ETABS Shell-Thin, DKE
 Wilson Ch10) en `hekatan-fem/src/cpp/utils/shellThin.cpp`.
 
@@ -97,6 +103,13 @@ Wilson Ch10) en `hekatan-fem/src/cpp/utils/shellThin.cpp`.
 | UDCon1   | **-4.26%** ✓ | **-1.14%** ✓ | **-0.08%** ✓ | **-1.25%** ✓ | +14.12% ~ | **-0.09%** ✓ |
 | UDCon2   | **-3.00%** ✓ | **-0.47%** ✓ | **+0.01%** ✓ | **-1.05%** ✓ | +14.24% ~ | **+0.05%** ✓ |
 
+> ⚠ **El +14% de M₂ NO es un error de solver: es comparación inconsistente nudo-vs-cara.**
+> Hekatan reportaba M₂ en el NUDO (z=4.0 m) y ETABS lo reporta en la CARA del soporte
+> (z=3.5 m), por el `CARDINALPT 8` de las vigas (offset = peralte completo 0.50 m) y
+> `PZENDOFFSETSRIGID No` (rigid factor 0 → offset solo en reporte, no en K). Comparando
+> el MISMO punto: M₂ **+1.1%** (verificado en `python-fem/mesa_torsion_dke_live.py` y el
+> Calcpad `Calcpad/mesa_torsion/mesa_torsion_DKE_completo.cpd`). Ver `MESA_TORSION_FUENTE_UNICA.md` §0.
+
 **Modal**:
 | Modo | Hekatan (DKE) | ETABS | Δ |
 |---|---|---|---|
@@ -181,7 +194,144 @@ npx gh-pages --dist website/src/examples ...
 
 ---
 
+## Validación 4-way Mesa Torsión (2026-05-23)
 
+Extensión del workflow original con **2 solvers FEM open-source adicionales** corriendo en
+WSL Ubuntu para responder *"¿dónde está la diferencia entre solvers?"* sin depender solo
+de la comparación Hekatan ↔ ETABS.
+
+### Los 4 solvers comparados
+
+| Solver        | Donde corre                      | Elemento shell         | Elemento beam          |
+|---------------|----------------------------------|------------------------|------------------------|
+| **ETABS 19.1** | Windows (CSI)                   | Shell-Thin (DKE Wilson)| Frame Euler            |
+| **Hekatan-py** | Windows o WSL (Python ≥3.10)    | MZC Kirchhoff (mirror C++) | Frame Euler        |
+| **Pynite**     | WSL venv `/root/pynite_venv`    | MITC4 (Bathe-Dvorkin)  | Frame Euler            |
+| **FEniCS**     | WSL system `/usr/bin/python3`   | (3D solid lineal elast)| (3D solid lineal elast)|
+
+> Hekatan-py reproduce bit-a-bit el solver C++/WASM del workspace web, así que sirve
+> también como proxy validado del comportamiento de Hekatan-Struct nativo.
+
+### Hallazgos del 4-way (static picks vs ETABS, switches default)
+
+| Componente | Hekatan-py Δ% | Pynite Δ% | Veredicto |
+|------------|---------------|-----------|-----------|
+| **P**  axial    | -3.0% a +0.0%  | +0.0% a +2.5%  | ✓ Todos coinciden |
+| **V2** shear-y  | -6.4% a +1.3%  | +0.4% a +3.8%  | ✓ Todos coinciden |
+| **V3** shear-z  | -1.3% a +0.0%  | +0.1% a +0.5%  | ✓ Todos coinciden |
+| **T**  torsión  | -1.4% a -0.7%  | -0.5% a +0.1%  | ✓ Todos coinciden |
+| **M2** moment-y | **+13.2 a +14.4%** | **+14.6 a +14.7%** | ⚠ Hekatan ≈ Pynite, ambos divergen de ETABS |
+| **M3** moment-z | -0.9% a +0.3%  | -0.1% a +0.4%  | ✓ Todos coinciden |
+
+**Veredicto M2**: cuando **dos solvers open-source independientes (MZC Kirchhoff vs MITC4)
+coinciden entre sí dentro del 0.5% pero ambos difieren del comercial en +14%, el sesgo no
+está en los open-source**. ETABS reporta M2 con convención distinta — probablemente cara
+superior de columna vs eje neutral, o post rigid-end-offset. **NO es un bug de Hekatan.**
+
+**Veredicto modal**: ambos open-source dan periodos **5–10× más rápidos** que ETABS:
+
+| Modo | ETABS  | Hekatan-py | Pynite |
+|------|--------|------------|--------|
+| T₁   | 0.345s | 0.045s (-87%) | 0.082s (-76%) |
+| T₃   | 0.292s | 0.012s (-96%) | 0.070s (-76%) |
+
+ETABS agrega masa **mass source = Dead + SCP + 0.25·Live al diafragma**. Hekatan-py y
+Pynite solo usan SW de members → bajo mass total → modos rápidos. Setup issue, no bug.
+
+### Cómo correr (PowerShell-friendly)
+
+**WSL prep (una sola vez):**
+```powershell
+# Verificar Ubuntu + libs
+wsl --status
+wsl -d Ubuntu -- bash -lc "python3 -c 'import dolfin; print(dolfin.__version__)'"
+
+# Crear venv Pynite (aislado del system python para evitar conflictos numpy)
+wsl -d Ubuntu -- bash -lc "
+  apt-get install -y python3.12-venv pipx
+  python3 -m venv /root/pynite_venv
+  /root/pynite_venv/bin/pip install PyniteFEA matplotlib
+"
+```
+
+**Correr los 4 (en orden, total ~3-5 min):**
+```powershell
+$ROOT = "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct"
+
+# 1. Pynite (WSL venv aislado) — ~10s
+wsl -d Ubuntu -- /root/pynite_venv/bin/python `
+  "/mnt/c/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validacion/pynite/mesa_torsion_pynite.py"
+
+# 2. FEniCS (WSL system python con dolfin) — ~60s primera vez (JIT cache), ~10s después
+wsl -d Ubuntu -- python3 `
+  "/mnt/c/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validacion/fenics/mesa_torsion_fenics.py"
+
+# 3. Hekatan-py + reporte unificado (Windows nativo, llama al CLI internamente) — ~15s
+python "$ROOT\validacion\compare_mesa_torsion_4way.py"
+```
+
+El paso 3 genera:
+- `validacion/mesa_torsion_4way_report.md` — tabla legible
+- `validacion/mesa_torsion_4way_report.json` — datos crudos
+
+**Opcional — re-correr solo Hekatan-py con switches a mano:**
+```powershell
+python "$ROOT\hekatan-struct-py\examples\mesa_torsion_cli.py" --static --modal --compare `
+  --json-out "$ROOT\validacion\hekatan_py_mesa_torsion_results.json"
+```
+
+Después del JSON cacheado, el `compare_*` script ya no necesita re-ejecutar Hekatan-py.
+
+**GUI Qt interactiva (opcional, requiere pyvistaqt+PyQt5):**
+```powershell
+python "$ROOT\hekatan-struct-py\examples\mesa_torsion_cli.py" --gui
+```
+
+### Files producidos por el workflow 4-way
+
+```
+validacion/
+├── pynite/
+│   ├── mesa_torsion_pynite.py            ← MITC4 quad + Euler beams via PyNiteFEA
+│   └── mesa_torsion_pynite_results.json  ← picks + periodos
+├── fenics/
+│   ├── mesa_torsion_fenics.py            ← 3D solid lineal elasticity dolfin 2019
+│   └── mesa_torsion_fenics_results.json  ← w_max y w_center_slab por caso
+├── compare_mesa_torsion_4way.py          ← arma el reporte
+├── mesa_torsion_4way_report.md           ← reporte Markdown unificado
+└── mesa_torsion_4way_report.json         ← datos crudos JSON unificado
+```
+
+### Pendientes para cerrar el ciclo modal
+
+- [ ] Mass source ETABS: agregar `apply_area_load(rho_scp+0.25*rho_live)` en Hekatan-py
+      como mass source para que T₁ suba de 0.045s → 0.345s. Idem en Pynite.
+- [x] ~~Verificar si la +14% en M2 desaparece moviendo el station al rigid-end-offset
+      superior de la columna (en lugar del end-node nudo).~~
+      **RESUELTO 2026-05-25**: la diferencia viene de los end offsets del e2k
+      (MESHATINTERSECTIONS YES → ioff_col = hViga/2 = 0.25m). Aplicando offset
+      en K (R^T K R) la diferencia baja de +15% a +2.6-4.8%.
+      Ver [`MESA_TORSION_FUENTE_UNICA.md`](./MESA_TORSION_FUENTE_UNICA.md) para detalle completo.
+
+---
+
+## Validación M2 Columnas — 5 solvers + end offsets (2026-05-25)
+
+Investigación completa documentada en [`MESA_TORSION_FUENTE_UNICA.md`](./MESA_TORSION_FUENTE_UNICA.md).
+
+**Resumen**: 4 solvers open-source (Hekatan-py, Hekatan-WASM, Pynite, OpenSeesPy)
+coinciden entre sí dentro del 1% en M2 col, pero divergen +14-16% de ETABS.
+La causa es que ETABS aplica end offsets automáticos (MESHATINTERSECTIONS YES del e2k)
+que acortan la longitud flexible de la columna y reportan fuerzas en la cara del soporte.
+
+| Modo | M2 UDCon2 | vs ETABS | Descripción |
+|---|---|---|---|
+| A: Sin offsets | 11.991 | +15.3% | Baseline (4 open-source) |
+| B: Offset en K | 10.859 | +4.4% | R^T K R con ioff=0.25m |
+| C: Offset K+cara | 10.181 | -2.1% | + reporte M_face |
+| **ETABS 19.1** | **10.40** | **ref** | rigid=0, PZENDOFFSETSRIGID No |
+
+---
 
 ## Estructura
 

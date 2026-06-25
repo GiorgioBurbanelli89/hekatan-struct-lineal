@@ -1,4 +1,0 @@
-openseespy>=3.5.0
-numpy>=1.24
-matplotlib>=3.7
-scipy>=1.10

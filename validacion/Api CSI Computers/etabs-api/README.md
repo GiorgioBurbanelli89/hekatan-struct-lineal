@@ -1,5 +1,21 @@
 # validacion/etabs-api/ — ETABS 18+ API verification
 
+> # ⚠️ ANTES DE TOCAR CUALQUIER SCRIPT — LEER PRIMERO:
+> # 👉 [`GUIA_API_ETABS.md`](./GUIA_API_ETABS.md)
+>
+> Esa guía documenta TODOS los gotchas que ya hemos descubierto a las malas:
+> - **`SM.FrameObj.GetNameList()` crashea** (access violation) → hardcodear nombres
+> - **`Results.FrameForce("C1", 0)` retorna 0** → usar LineElement IDs numéricos `"1"`..`"N"` post-auto-mesh
+> - **`BaseReact` Fx empieza en `ret[4]`**, no en `ret[1]` (los primeros índices son strings de case/step)
+> - **`ApplicationStart()` rompe la licencia SentinelLM** → usar `GetActiveObject` con ETABS ya abierto
+> - **rigid offsets col/viga automáticos** afectan las stations de FrameForce
+> - **mass source default** excluye masa UZ RX RY (importante para matchear desde FEM externo)
+>
+> Cada vez que abras un script aquí, antes de "arreglar" un bug, chequeá si ya
+> está documentado en la guía. NO repetir los mismos errores.
+
+---
+
 Cada caso FEM está implementado en **3 lenguajes** que invocan la misma
 API .NET de ETABS (`ETABSv1.dll`).
 

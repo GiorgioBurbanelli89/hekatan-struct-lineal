@@ -68,7 +68,9 @@ export function getViewer({
   );
   const orthoCamera = new THREE.OrthographicCamera(-10, 10, 10, -10, -1000, 2e6);
   let activeCamera: THREE.Camera = camera;
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  // preserveDrawingBuffer: true → permite capturar el canvas (toDataURL/readPixels)
+  // para exportar GIF/PNG de la animación de modos. Costo de perf menor.
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.localClippingEnabled = true;
   const controls = new OrbitControls(camera, renderer.domElement);
 
@@ -445,6 +447,10 @@ export function getViewer({
     settings.frameResults.val;
     settings.shellResults.val;
     settings.solidResults?.val;  // re-render al cambiar Solid results (H8 sólidos)
+    derivedNodes.val;            // re-render al cambiar nodos (animación modal: el
+                                 // animador modula mesh.nodes.val cada frame; sin
+                                 // esta dependencia el render NO se disparaba y la
+                                 // animación de modos no se veía).
 
     setTimeout(viewerRender); // setTimeout to ensure render is called after all updates are done in that event tick
   });

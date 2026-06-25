@@ -10,24 +10,24 @@
 #noc
 '<h4>Funciones de forma Q8 Serendipity (elemento DKE)</h4>
 '<p>El DKE usa funciones Q8 Serendipity en coordenadas naturales (ξ, η):</p>
-N_1(ξ; η) = (1 - ξ)*(1 - η)*(-ξ - η - 1)/4
-N_2(ξ; η) = (1 + ξ)*(1 - η)*(ξ - η - 1)/4
-N_5(ξ; η) = (1 - ξ^2)*(1 - η)/2
+'<p>N<sub>1</sub>(ξ,η) = (1−ξ)(1−η)(−ξ−η−1)/4</p>
+'<p>N<sub>2</sub>(ξ,η) = (1+ξ)(1−η)(ξ−η−1)/4</p>
+'<p>N<sub>5</sub>(ξ,η) = (1−ξ²)(1−η)/2</p>
 '<h4>Derivadas parciales de las funciones de forma</h4>
 '<p>∂N/∂ξ y ∂N/∂η necesarias para la matriz B:</p>
-dN1_dξ = $Slope{N_1(ξ; η) @ ξ = a}
-dN1_dη = $Slope{N_1(ξ; η) @ η = b}
+'<p>∂N<sub>1</sub>/∂ξ &nbsp;(diferenciando N<sub>1</sub> respecto de ξ)</p>
+'<p>∂N<sub>1</sub>/∂η</p>
 '<h4>Jacobiano del elemento</h4>
 '<p>J_e transforma del espacio natural (ξ,η) al espacio fisico (x,y):</p>
-J_e = [$Slope{x(ξ; η) @ ξ = a}; $Slope{y(ξ; η) @ ξ = a}|$Slope{x(ξ; η) @ η = b}; $Slope{y(ξ; η) @ η = b}]
+'<p>J<sub>e</sub> = [ ∂x/∂ξ , ∂y/∂ξ ; ∂x/∂η , ∂y/∂η ]</p>
 '<h4>Matriz de rigidez flexural D</h4>
 '<p>Relacion constitutiva placa Kirchhoff:</p>
 D_flex = E*t^3/(12*(1 - ν^2))*[1; ν; 0|ν; 1; 0|0; 0; (1 - ν)/2]
 '<h4>Rigidez elemental K (integral doble)</h4>
 '<p>K_ij se obtiene integrando B&rsquo;&middot;D&middot;B sobre el elemento:</p>
-K_ij = $Area{$Area{B_i(ξ; η)*D*B_j(ξ; η)*det_Je @ ξ = -1 : 1} @ η = -1 : 1}
+'<p>K<sub>ij</sub> = ∫∫ B<sub>i</sub><sup>T</sup>·D·B<sub>j</sub>·det(J<sub>e</sub>) dξ dη &nbsp; (ξ,η ∈ [−1,1])</p>
 '<h4>Vector de fuerzas nodales (carga distribuida)</h4>
-F_i = $Area{$Area{N_i(ξ; η)*q*det_Je @ ξ = -1 : 1} @ η = -1 : 1}
+'<p>F<sub>i</sub> = ∫∫ N<sub>i</sub>·q·det(J<sub>e</sub>) dξ dη</p>
 '<h4>Viga Euler-Bernoulli 3D — rigidez elemental</h4>
 '<p>DOFs por nodo: [u, v, w, θx, θy, θz]. Terminos principales:</p>
 K_axial = E*A/L*[1; -1|-1; 1]
@@ -475,6 +475,13 @@ Mx_n = matrix(n_m + 1; n_m + 1)
 My_n = matrix(n_m + 1; n_m + 1)
 Mxy_n = matrix(n_m + 1; n_m + 1)
 cnt_n = matrix(n_m + 1; n_m + 1)
+'Campos de corte V13/V23 (equilibrio, por elemento desde sus Gauss propios)
+V13_n = matrix(n_m + 1; n_m + 1)
+V23_n = matrix(n_m + 1; n_m + 1)
+Vmax_n = matrix(n_m + 1; n_m + 1)
+cntV_n = matrix(n_m + 1; n_m + 1)
+maxV13 = 0
+maxV23 = 0
 'Coeficientes de extrapolacion bilineal Gauss→esquinas
 sqr3 = sqrt(3)
 #for ej = 0 : n_m - 1
@@ -534,6 +541,52 @@ sqr3 = sqrt(3)
 				Mx_g4 = Mx_g','My_g4 = My_g','Mxy_g4 = Mxy_g
 			#end if
 		#loop
+		'Corte por equilibrio desde los 4 Gauss del PROPIO elemento (sqr3=extrapol natural→fisico; /g=kN→tonf)
+		'V13 = -(dMx/dx + dMxy/dy) ; V23 = -(dMy/dy + dMxy/dx)  (signo - = convencion ETABS, confirmado corr=-1.000)
+		dMxdx_e = sqr3*((Mx_g2 + Mx_g4) - (Mx_g1 + Mx_g3))/(2*d_x)/g
+		dMxydy_e = sqr3*((Mxy_g3 + Mxy_g4) - (Mxy_g1 + Mxy_g2))/(2*d_y)/g
+		dMydy_e = sqr3*((My_g3 + My_g4) - (My_g1 + My_g2))/(2*d_y)/g
+		dMxydx_e = sqr3*((Mxy_g2 + Mxy_g4) - (Mxy_g1 + Mxy_g3))/(2*d_x)/g
+		V13_e = -(dMxdx_e + dMxydy_e)
+		V23_e = -(dMydy_e + dMxydx_e)
+		'Excluir los 4 elementos ESQUINA (columna = apoyo puntual -> singularidad V~1/r).
+		'ETABS acota ahi con la huella 0.4x0.4; su max real (0.793) esta en el campo.
+		cX_e = 0
+		#if ei ≡ 0
+			cX_e = 1
+		#end if
+		#if ei ≡ n_m - 1
+			cX_e = 1
+		#end if
+		cY_e = 0
+		#if ej ≡ 0
+			cY_e = 1
+		#end if
+		#if ej ≡ n_m - 1
+			cY_e = 1
+		#end if
+		#if cX_e*cY_e ≡ 0
+			#if abs(V13_e) > maxV13
+				maxV13 = abs(V13_e)
+			#end if
+			#if abs(V23_e) > maxV23
+				maxV23 = abs(V23_e)
+			#end if
+		#end if
+		#for cc = 1 : 4
+			#if cc ≡ 1
+				iiV = ei + 1','jjV = ej + 1
+			#else if cc ≡ 2
+				iiV = ei + 2','jjV = ej + 1
+			#else if cc ≡ 3
+				iiV = ei + 2','jjV = ej + 2
+			#else
+				iiV = ei + 1','jjV = ej + 2
+			#end if
+			V13_n.(iiV; jjV) = V13_n.(iiV; jjV) + V13_e
+			V23_n.(iiV; jjV) = V23_n.(iiV; jjV) + V23_e
+			cntV_n.(iiV; jjV) = cntV_n.(iiV; jjV) + 1
+		#loop
 		'Extrapolar a 4 esquinas
 		#for cc = 1 : 4
 			#if cc ≡ 1
@@ -566,6 +619,16 @@ sqr3 = sqrt(3)
 		#end if
 	#loop
 #loop
+'V13_n/V23_n ya se acumularon POR ELEMENTO dentro del loop de recovery (desde los Gauss propios). Promediar a nodos:
+#for jj = 1 : n_m + 1
+	#for ii = 1 : n_m + 1
+		#if cntV_n.(ii; jj) > 0
+			V13_n.(ii; jj) = V13_n.(ii; jj)/cntV_n.(ii; jj)
+			V23_n.(ii; jj) = V23_n.(ii; jj)/cntV_n.(ii; jj)
+		#end if
+		Vmax_n.(ii; jj) = sqrt(V13_n.(ii; jj)^2 + V23_n.(ii; jj)^2)
+	#loop
+#loop
 'Mmax, Mmin (principals de Mohr)
 Mmax_n = matrix(n_m + 1; n_m + 1)
 Mmin_n = matrix(n_m + 1; n_m + 1)
@@ -590,6 +653,9 @@ w_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; w_field)
 Mx_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; Mx_n)
 My_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; My_n)
 Mxy_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; Mxy_n)
+V13_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; V13_n)
+V23_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; V23_n)
+Vmax_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; Vmax_n)
 Mmax_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; Mmax_n)
 Mmin_sp(x; y) = spline(1 + x/d_x; 1 + y/d_y; Mmin_n)
 PlotWidth = 50*a
@@ -724,6 +790,43 @@ $Map{Mmin_sp(x; y) @ x = 0 : a & y = 0 : b}
 #val
 '</svg>
 #equ
+'<hr/>
+'<h3>PARTE VII-b — Cortante transversal V13/V23 (corte de placa)</h3>
+'<p>ETABS reporta V13/V23 incluso en ShellThin (Kirchhoff): aunque el elemento no tiene rigidez de corte, SAPFire lo recupera por equilibrio del campo de momentos (rutina ShellElem_RecoveryThickOnlySBR). Relacion ETABS: V = &tau;&middot;t.</p>
+'<h4>7b.1 V13 (tonf/m) — V13 en ETABS</h4>
+$Map{V13_sp(x; y) @ x = 0 : a & y = 0 : b}
+'<h4>7b.2 V23 (tonf/m) — V23 en ETABS</h4>
+$Map{V23_sp(x; y) @ x = 0 : a & y = 0 : b}
+'<h4>7b.3 Vmax = &radic;(V13&sup2;+V23&sup2;) (tonf/m)</h4>
+$Map{Vmax_sp(x; y) @ x = 0 : a & y = 0 : b}
+'<hr/>
+'<h3>PARTE VII-c — Comparacion losa Hekatan-DKE vs ETABS ShellThin (caso Live)</h3>
+#hide
+maxMxy = 0
+maxw = 0
+#for jj = 1 : n_m + 1
+	#for ii = 1 : n_m + 1
+		#if abs(Mxy_n.(ii; jj)) > maxMxy
+			maxMxy = abs(Mxy_n.(ii; jj))
+		#end if
+		#if abs(w_field.(ii; jj)) > maxw
+			maxw = abs(w_field.(ii; jj))
+		#end if
+	#loop
+#loop
+#show
+#val
+'<table border="1" cellpadding="6" style="border-collapse:collapse; font-size:0.95em">
+'<tr style="background:#333;color:white"><th>Cantidad</th><th>Hekatan-DKE</th><th>ETABS ShellThin</th><th>Dif %</th></tr>
+'<tr><td>max |Mxy| (tonf.m/m)</td><td>'maxMxy'</td><td>0.189</td><td>'(maxMxy/0.189 - 1)*100'</td></tr>
+'<tr><td>max |V13| equilibrio (tonf/m)</td><td>'maxV13'</td><td>0.793</td><td>apoyo puntual (ver nota)</td></tr>
+'<tr><td>max |V23| equilibrio (tonf/m)</td><td>'maxV23'</td><td>0.793</td><td>apoyo puntual (ver nota)</td></tr>
+'<tr><td>max |w| (mm)</td><td>'maxw'</td><td>6.50</td><td>'(maxw/6.50 - 1)*100'</td></tr>
+'</table>
+#equ
+'<p><b>MOMENTOS — resuelto (extraido de CsiGo2.dll + CSV ETABS):</b> el recovery de Mx/My/Mxy es IDENTICO al de ETABS: 2&times;2 Gauss en &xi;,&eta;=&plusmn;1/&radic;3 (=0.5773502691896257, 338&times; en el binario) + extrapolacion a nodos con factor &radic;3 (=1.7320508075688772, 47&times;), e integracion M=&sigma;<sub>flex</sub>&middot;t&sup2;/6 (verificado celda a celda contra el CSV de Mesa torsionT, caso Live). El residuo en Mxy (-4%) y w (-1.2%) NO es del recovery sino de la RIGIDEZ del elemento (DKE Batoz vs ShellThin de CSI).</p>
+'<p><b>CORTE — formula CONFIRMADA:</b> V13 = &minus;(&part;M11/&part;x + &part;M12/&part;y), V23 = &minus;(&part;M22/&part;y + &part;M12/&part;x). Probado contra el CSV de ETABS (gradiente por-elemento de SUS momentos vs SU V13): <b>correlacion &minus;1.0000, max = 0.793 EXACTO</b> en los 25 elementos (script test_corte.py). El signo &minus; es convencion ETABS.</p>
+'<p><b>Por que el V13 sale alto:</b> la FORMULA esta verificada EXACTA (test_corte.py: corr -1.000 vs ETABS). El exceso es MODELADO: las 4 columnas estan en las ESQUINAS como APOYO PUNTUAL &rarr; singularidad de cortante (V~1/r) que da gradientes de momento ~10&times; los de ETABS, el cual reparte la reaccion sobre la huella 0.4&times;0.4 (panel zone) &rarr; acota V13 a 0.793. Mxy (momento, finito) SI coincide. Para igualar V13 hay que modelar el footprint de columna. Ver doc maestro: validacion/MESA_TORSION_FUENTE_UNICA.md</p>
 '<hr/>
 '<h3>PARTE VIII — Diagramas viga Sur (B1, y=0)</h3>
 '<p>5 segmentos de dx='d_x' m. Viga flecta hacia abajo → momentos invertidos.</p>

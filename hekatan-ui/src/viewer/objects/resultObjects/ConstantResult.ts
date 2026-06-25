@@ -59,8 +59,8 @@ export class ConstantResult extends THREE.Group implements IResultObject {
 
     this.add(this.mesh);
 
-    // text
-    this.text = new Text(`${result[1].toFixed(4)}`);
+    // text — toFixed(2) (antes 4 → labels muy crowdeados)
+    this.text = new Text(`${result[1].toFixed(2)}`);
 
     this.normalizedResult = normalizedResult;
     this.textPosition = getAverage([node1, node2]);

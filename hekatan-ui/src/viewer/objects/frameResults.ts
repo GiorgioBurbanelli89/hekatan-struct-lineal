@@ -26,6 +26,28 @@ export function frameResults(
 ): THREE.Group {
   // init
   const group = new THREE.Group();
+
+  // Helper: extent del modelo (igual que nodes.ts y supports.ts).
+  // Antes los frame results usaban "0.05 * gridSize" → con gridSize=20m
+  // default los diagramas eran ENORMES (1m de altura) sobre modelos chicos.
+  // Ahora son proporcionales al span real del modelo.
+  const computeExtent = (): number => {
+    const ns = derivedNodes.rawVal ?? [];
+    if (ns.length < 2) return settings.gridSize.val * 0.5;
+    let mins = [Infinity, Infinity, Infinity];
+    let maxs = [-Infinity, -Infinity, -Infinity];
+    for (const n of ns) {
+      for (let i = 0; i < 3; i++) {
+        if (n[i] < mins[i]) mins[i] = n[i];
+        if (n[i] > maxs[i]) maxs[i] = n[i];
+      }
+    }
+    return Math.max(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2], 0.1);
+  };
+  // 2.5% del extent — diagramas más chicos para no chocar con labels
+  // ni con el deformed shape. Antes era 5% pero quedaba muy dominante
+  // cuando había muchos frames con resultados visibles a la vez.
+  const computeSize = () => 0.025 * computeExtent();
   const resultObjects = {
     [ResultType.normals]: ConstantResult,
     [ResultType.shearsY]: ConstantResult,
@@ -77,7 +99,7 @@ export function frameResults(
           : false
       );
 
-      const size = 0.05 * settings.gridSize.rawVal;
+      const size = computeSize();
       resultObject.updateScale(size * deridedDisplayScale.rawVal);
 
       group.add(resultObject);
@@ -90,7 +112,7 @@ export function frameResults(
 
     if (settings.frameResults.rawVal == "none") return;
 
-    const size = 0.05 * settings.gridSize.val;
+    const size = computeSize();
     group.children.forEach((c) =>
       (c as IResultObject).updateScale(size * deridedDisplayScale.rawVal)
     );

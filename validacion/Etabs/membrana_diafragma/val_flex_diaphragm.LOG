@@ -1,12 +1,12 @@
 
 
- ETABS Ultimate 64-bit 19.1.0 Build 2420 (Analysis Build 9853/64)
- File: C:\Users\j-b-j\Document...ekatan-struct\validation\val_flex_diaphragm.LOG
+ ETABS Ultimate 64-bit 22.6.0 Build 4022 (Analysis Build 9991/64)
+ File: C:\Users\j-b-j\Document...Etabs\membrana_diafragma\val_flex_diaphragm.LOG
 
 
 
 
- B E G I N   A N A L Y S I S                                2026/04/24  21:12:50
+ B E G I N   A N A L Y S I S                                2026/06/24  13:50:14
 
 
  RUNNING ANALYSIS AS A SEPARATE PROCESS
@@ -14,13 +14,17 @@
 
  NUMBER OF JOINTS                          =         373
     WITH RESTRAINTS                        =          10
-    WITH MASS                              =         345
+    WITH MASS                              =           9
  NUMBER OF FRAME/TENDON ELEMENTS           =         207
  NUMBER OF SHELL ELEMENTS                  =         300
  NUMBER OF CONSTRAINTS/WELDS               =           1
  NUMBER OF LOAD PATTERNS                   =           3
- NUMBER OF ACCELERATION LOADS              =           9
+ NUMBER OF ACCELERATION LOADS              =          12
  NUMBER OF LOAD CASES                      =           2
+ NUMBER OF MASS SOURCES                    =           1
+
+ UNITS (FORCE, LENGTH, TEMPERATURE, TIME)  = lb, in, °F, sec
+ GRAVITATIONAL ACCELERATION                =  386.088583
 
  ADDRESSABLE PHYSICAL MEMORY (RAM)         =      15.715 GB
 
@@ -35,13 +39,13 @@
  NUMBER OF THREADS: FORM (AUTOMATIC)       =          16
 
 
- E L E M E N T   F O R M A T I O N                                      21:12:50
+ E L E M E N T   F O R M A T I O N                                      13:50:14
 
 
  NUMBER OF COUPLED CONSTRAINT EQUATIONS    =           0
 
 
- L I N E A R   E Q U A T I O N   S O L U T I O N                        21:12:50
+ L I N E A R   E Q U A T I O N   S O L U T I O N                        13:50:14
 
  FORMING STIFFNESS AT ZERO (UNSTRESSED) INITIAL CONDITIONS
 
@@ -58,7 +62,7 @@
  ---------------------------------
 
 
- L I N E A R   S T A T I C   C A S E S                                  21:12:50
+ L I N E A R   S T A T I C   C A S E S                                  13:50:14
 
  USING STIFFNESS AT ZERO (UNSTRESSED) INITIAL CONDITIONS
 
@@ -70,46 +74,31 @@
  CASE: ~LLRF
 
 
- E I G E N   M O D A L   A N A L Y S I S                                21:12:50
+ E I G E N   M O D A L   A N A L Y S I S                                13:50:14
 
  CASE: MODAL
 
  USING STIFFNESS AT ZERO (UNSTRESSED) INITIAL CONDITIONS
 
  NUMBER OF STIFFNESS DEGREES OF FREEDOM    =        2178
- NUMBER OF MASS DEGREES OF FREEDOM         =         672
+ NUMBER OF MASS DEGREES OF FREEDOM         =           0
  MAXIMUM NUMBER OF EIGEN MODES SOUGHT      =          12
  MINIMUM NUMBER OF EIGEN MODES SOUGHT      =           1
  NUMBER OF RESIDUAL-MASS MODES SOUGHT      =           0
- NUMBER OF SUBSPACE VECTORS USED           =          24
+ NUMBER OF SUBSPACE VECTORS USED           =       60525
  RELATIVE CONVERGENCE TOLERANCE            =    1.00E-09
 
  FREQUENCY SHIFT  (CENTER) (CYC/TIME)      =     .000000
  FREQUENCY CUTOFF (RADIUS) (CYC/TIME)      =  -INFINITY-
  ALLOW AUTOMATIC FREQUENCY SHIFTING        =         YES
 
-
- Original stiffness at shift : EV= 0.0000000E+00, f=     .000000, T=  -INFINITY-
- Number of eigenvalues below shift =      0
- Found mode      1 of     12:  EV= 3.9944908E+02, f=    3.180906, T=    0.314376
- Found mode      2 of     12:  EV= 3.9944908E+02, f=    3.180906, T=    0.314376
- Found mode      3 of     12:  EV= 8.1030737E+02, f=    4.530488, T=    0.220727
- Found mode      4 of     12:  EV= 4.3046623E+03, f=   10.442144, T=    0.095766
- Found mode      5 of     12:  EV= 4.3046623E+03, f=   10.442144, T=    0.095766
- Found mode      6 of     12:  EV= 8.6570157E+03, f=   14.808267, T=    0.067530
- Found mode      7 of     12:  EV= 1.3462867E+04, f=   18.466683, T=    0.054152
- Found mode      8 of     12:  EV= 1.3462867E+04, f=   18.466683, T=    0.054152
- Found mode      9 of     12:  EV= 2.6955217E+04, f=   26.130129, T=    0.038270
-
- Forming stiffness, new shift: EV= 5.8070690E+05, f=  121.282635, T=    0.008245
- Number of eigenvalues below shift =      9
- Found mode     10 of     12:  EV= 6.1127035E+05, f=  124.433351, T=    0.008036
- Found mode     11 of     12:  EV= 6.1477965E+05, f=  124.790026, T=    0.008013
- Found mode     12 of     12:  EV= 6.2324208E+05, f=  125.645956, T=    0.007959
-
- NUMBER OF EIGEN MODES FOUND               =          12
- NUMBER OF ITERATIONS PERFORMED            =          11
- NUMBER OF STIFFNESS SHIFTS                =           1
+ * * * W A R N I N G * * *
+ THE STRUCTURE HAS NO (UNRESTRAINED) MASS; NO EIGEN MODES CAN BE FOUND
 
 
- A N A L Y S I S   C O M P L E T E                          2026/04/24  21:12:50
+ * * * W A R N I N G * * *
+ NO EIGEN MODES WERE FOUND
+
+
+
+ A N A L Y S I S   C O M P L E T E                          2026/06/24  13:50:14

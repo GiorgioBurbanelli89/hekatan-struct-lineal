@@ -446,9 +446,16 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       // Agregar resultados de análisis para shells (con UNIDADES del workspace)
       // Convención SI base: bending [kN·m/m], membrane [kN/m], shear [kN/m], stress [kN/m²=kPa]
       // Workspace tonf default → mostrar [tonf·m/m], [tonf/m], [tonf/m²]
-      if (bestElemType === "shell" && ctx.mesh?.analyzeOutputs) {
-        const ao = ctx.mesh.analyzeOutputs.rawVal as any;
+      if (bestElemType === "shell") {
+        const ao = ctx.mesh?.analyzeOutputs?.rawVal as any;
         const sF = STRESS_FACTOR[units.stressUnit] ?? 1;
+        // Campo que el COLORMAP está mostrando ahora mismo → el tooltip debe
+        // ser CONGRUENTE: ese valor primero y marcado (= color bajo el cursor).
+        // shellResults es un van State → leer .val (no el objeto).
+        const srRaw = (ctx.settings as any)?.shellResults;
+        const activeField = String(
+          (srRaw && typeof srRaw === "object" && "val" in srRaw ? srRaw.val : srRaw) ?? "none"
+        );
         // [key del Map, label visible, factor de conversión, unidad string]
         const fields: [string, string, number, string][] = [
           ["bendingXX",  "Mxx", fF, `${units.forceUnit}·m/m`],   // momento por longitud
@@ -462,28 +469,45 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           ["vonMises",   "σVM", sF, units.stressUnit],           // tensión
           ["pressure",   "p",   sF, units.stressUnit],           // presión suelo
         ];
-        const lines: string[] = [];
-        for (const [key, label, fct, unit] of fields) {
+        // Valor representativo del elemento (escalar o máx-magnitud de los 4 nodos)
+        const valueOf = (key: string): number | null => {
           const m = ao?.[key];
           if (m && m instanceof Map) {
             const v = m.get(bestElem);
             if (v != null) {
-              if (typeof v === "number") {
-                lines.push(`${label} = ${fmt(v * fct, 3)} ${unit}`);
-              } else if (Array.isArray(v)) {
-                // 4 valores per-nodo; tomar el de mayor magnitud
-                let vMax = v[0];
-                for (const x of v) {
-                  if (Math.abs(x) > Math.abs(vMax)) vMax = x;
-                }
-                lines.push(`${label} = ${fmt(vMax * fct, 3)} ${unit}`);
-              }
+              if (typeof v === "number") return v;
+              if (Array.isArray(v)) { let vM = v[0]; for (const x of v) if (Math.abs(x) > Math.abs(vM)) vM = x; return vM; }
             }
           }
+          return null;
+        };
+        // 1) Línea CONGRUENTE con el color en pantalla (lo que indica el colormap)
+        let activeLine: string | null = null;
+        const fld = fields.find(f => f[0] === activeField);
+        if (fld) {
+          const v = valueOf(fld[0]);
+          if (v != null) activeLine = `▶ ${fld[1]} = ${fmt(v * fld[2], 3)} ${fld[3]}  ◀ en pantalla`;
+        } else if (/^displacement[XYZ]$/.test(activeField)) {
+          // El colormap muestra desplazamiento (nodal) → promedio del elemento
+          const comp = activeField.endsWith("X") ? 0 : activeField.endsWith("Y") ? 1 : 2;
+          const def = ctx.mesh?.deformOutputs?.rawVal;
+          if (def?.deformations) {
+            let sum = 0, cnt = 0;
+            for (const ni of el) { const u = def.deformations.get(ni); if (u) { sum += u[comp]; cnt++; } }
+            if (cnt) activeLine = `▶ U${["x","y","z"][comp]} = ${fmt((sum / cnt) * dF, 3)} ${units.dispUnit}  ◀ en pantalla`;
+          }
         }
-        if (lines.length > 0) {
-          info += `\n──── results ────\n` + lines.slice(0, 8).join("\n");
+        // 2) El resto de campos (referencia), sin repetir el activo
+        const lines: string[] = [];
+        for (const [key, label, fct, unit] of fields) {
+          if (key === activeField) continue;
+          const v = valueOf(key);
+          if (v != null) lines.push(`${label} = ${fmt(v * fct, 3)} ${unit}`);
         }
+        const block: string[] = [];
+        if (activeLine) block.push(activeLine);
+        block.push(...lines.slice(0, activeLine ? 7 : 8));
+        if (block.length > 0) info += `\n──── resultados shell ────\n` + block.join("\n");
       }
 
       // Agregar fuerzas internas para frames (axial, cortante, momento)
@@ -570,10 +594,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     if (hover.type === "node") {
       const p = nodePos(hover.idx);
       if (p) {
-        // Tamaño = mismo cálculo que nodes.ts:
-        //   nodes.ts: PointsMaterial.size = 0.03 * extent * displayScale  (DIÁMETRO)
-        //   highlight Sphere RADIUS = (0.03 * extent * displayScale) / 2 * 1.4
-        //   = 0.021 * extent * displayScale  (40% más grande que radio del nodo)
+        // Tamaño = MISMO que el nodo regular (nodes.ts):
+        //   nodes.ts: PointsMaterial.size = 0.03 * extent * displayScale  (diámetro)
+        //   highlight Sphere RADIUS = diámetro/2 = 0.015 * extent * displayScale
+        // Antes era 0.021 (1.4× el nodo) → se veía DOBLE del tamaño real,
+        // ahora coincide exactamente con el marker del nodo.
         const ns = ctx.derivedNodes.rawVal ?? [];
         let extent = 1.0;
         if (ns.length >= 2) {
@@ -588,7 +613,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           extent = Math.max(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2], 0.1);
         }
         const ds = ctx.derivedDisplayScale?.rawVal ?? 1;
-        const sz = 0.021 * extent * ds;
+        const sz = 0.015 * extent * ds;
         nodeHL.position.copy(p);
         nodeHL.scale.setScalar(sz);
         nodeHL.visible = true;
@@ -603,8 +628,22 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const dir = p2.clone().sub(p1);
         const len = dir.length();
         const camera = ctx.getActiveCamera();
-        const dist = camera.position.distanceTo(mid);
-        const radius = dist * 0.0035;  // ~3.5px aprox
+        // ── Radio adaptado a tipo de cámara ──
+        // Perspective: el radio aparente en pantalla escala con la distancia,
+        // así que radius = dist*0.0035 ≈ 3.5px constantes.
+        // Orthographic: la distancia NO afecta tamaño aparente — la cámara
+        // queda a D=1000m en setView pero el frustum suele ser ~20m. Sin
+        // este ajuste el tubeHL aparecía como un bloque cyan de ~3.5m
+        // (giant cyan rectangle bug en elevX/plan/elevY). Usar frustum.
+        let radius: number;
+        if ((camera as any).isOrthographicCamera) {
+          const o = camera as THREE.OrthographicCamera;
+          const H = (o.top - o.bottom) / o.zoom;
+          radius = H * 0.0035;  // ~3.5px relativos al frustum
+        } else {
+          const dist = camera.position.distanceTo(mid);
+          radius = dist * 0.0035;
+        }
         tubeHL.position.copy(mid);
         // Orientar el cilindro alineado con el segmento (eje Y por default)
         const up = new THREE.Vector3(0, 1, 0);
@@ -731,6 +770,299 @@ export function setupHover(ctx: HoverContext): THREE.Group {
   ctx.rendererElm.addEventListener("pointerleave", onPointerLeave);
   ctx.rendererElm.addEventListener("pointerenter", onPointerEnter);
 
+  // ── Context menu (right-click) ──────────────────────────────────────────
+  // Aparece SOLO si el cursor está físicamente sobre un nodo/elemento (hover
+  // hit). Si click derecho cae lejos del elemento → el menú se cierra.
+  // Opciones: "📝 Asignar"  /  "ℹ Ver información"
+  // Cada opción dispara un CustomEvent en window que cualquier panel del
+  // workspace puede escuchar:
+  //   - "hekatan:assign"  → window.dispatchEvent + detail {type, idx, clientX, clientY}
+  //   - "hekatan:info"    → idem
+  // Esto permite que otras secciones de la UI (panel de cargas, asignación
+  // de secciones, modal de propiedades) reaccionen sin acoplarse a hover.ts.
+  const contextMenu = document.createElement("div");
+  Object.assign(contextMenu.style, {
+    position: "absolute",
+    zIndex: "10000",
+    background: "rgba(20, 20, 25, 0.96)",
+    border: "1px solid rgba(120, 180, 255, 0.45)",
+    borderRadius: "6px",
+    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.55)",
+    padding: "4px 0",
+    minWidth: "180px",
+    fontFamily: "Segoe UI, sans-serif",
+    fontSize: "13px",
+    color: "#e8e8e8",
+    userSelect: "none",
+    display: "none",
+  });
+  contextMenu.classList.add("hekatan-context-menu");
+
+  let menuTarget: { type: "node" | "frame" | "shell" | "solid"; idx: number } | null = null;
+
+  // ── Submenu de "Asignar" (estilo ETABS) ─────────────────────────────
+  // Opciones que ETABS / SAFE permiten asignar a un FRAME:
+  //   - Section Property, Property Modifiers, Releases/Partial Fixity,
+  //     End Length Offsets, Insertion Point, Local Axes, Output Stations,
+  //     Tension/Compression Limits, Line Springs, Additional Mass,
+  //     Material Overwrite
+  // Para NODES/SHELLS/SOLIDS aplican otras opciones (Support, Spring, etc).
+  // Cada item dispara un CustomEvent específico:
+  //   "hekatan:assign:section"  → abrir panel Secciones con prefill
+  //   "hekatan:assign:material" → abrir panel Materiales
+  //   etc.
+  // Todos comparten "hekatan:assign" (legacy) con detail.subAction.
+  const assignSubmenu = document.createElement("div");
+  Object.assign(assignSubmenu.style, {
+    position: "absolute",
+    background: "rgba(20, 20, 25, 0.97)",
+    border: "1px solid rgba(120, 180, 255, 0.45)",
+    borderRadius: "6px",
+    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.55)",
+    padding: "4px 0",
+    minWidth: "240px",
+    fontFamily: "Segoe UI, sans-serif",
+    fontSize: "12.5px",
+    color: "#e8e8e8",
+    userSelect: "none",
+    display: "none",
+    zIndex: "10001",
+  });
+
+  const ASSIGN_OPTIONS_FRAME: Array<{ icon: string; label: string; key: string }> = [
+    { icon: "📐", label: "Section Property...",          key: "section" },
+    { icon: "🔧", label: "Property Modifiers...",        key: "modifiers" },
+    { icon: "🔓", label: "Releases / Partial Fixity...",  key: "releases" },
+    { icon: "↔",  label: "End Length Offsets...",         key: "endOffsets" },
+    { icon: "📍", label: "Insertion Point...",            key: "insertionPoint" },
+    { icon: "🧭", label: "Local Axes...",                 key: "localAxes" },
+    { icon: "📊", label: "Output Stations...",            key: "outputStations" },
+    { icon: "⚖", label: "Tension / Compression Limits...", key: "tcLimits" },
+    { icon: "🌀", label: "Line Springs...",               key: "lineSprings" },
+    { icon: "⚓", label: "Additional Mass...",            key: "addMass" },
+    { icon: "🎨", label: "Material Overwrite...",         key: "materialOverwrite" },
+  ];
+
+  const ASSIGN_OPTIONS_NODE: Array<{ icon: string; label: string; key: string }> = [
+    { icon: "🔻", label: "Joint Restraints (Supports)...", key: "restraints" },
+    { icon: "🌀", label: "Point Springs...",              key: "pointSprings" },
+    { icon: "💪", label: "Joint Loads — Force...",        key: "jointForce" },
+    { icon: "🔄", label: "Joint Loads — Moment...",       key: "jointMoment" },
+    { icon: "⚓", label: "Additional Mass (Joint)...",    key: "jointMass" },
+  ];
+
+  const ASSIGN_OPTIONS_SHELL: Array<{ icon: string; label: string; key: string }> = [
+    { icon: "📐", label: "Section Property (Slab/Wall)...", key: "shellSection" },
+    { icon: "🔧", label: "Property Modifiers (f/m/v)...",   key: "shellModifiers" },
+    { icon: "🌀", label: "Area Springs (Winkler)...",       key: "areaSprings" },
+    { icon: "💪", label: "Uniform Load (Shell)...",         key: "shellLoad" },
+    { icon: "🧭", label: "Local Axes...",                   key: "shellLocalAxes" },
+    { icon: "🎨", label: "Material Overwrite...",           key: "shellMaterial" },
+  ];
+
+  const ASSIGN_OPTIONS_SOLID: Array<{ icon: string; label: string; key: string }> = [
+    { icon: "📐", label: "Solid Property...",            key: "solidProp" },
+    { icon: "💪", label: "Surface Pressure...",          key: "solidPressure" },
+    { icon: "🧭", label: "Local Axes...",                key: "solidLocalAxes" },
+  ];
+
+  const makeSubmenuItem = (icon: string, label: string, key: string) => {
+    const item = document.createElement("div");
+    item.style.cssText = `
+      padding: 5px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: background 0.08s;
+      white-space: nowrap;
+    `;
+    item.innerHTML = `<span style="font-size:13px;width:18px;text-align:center;">${icon}</span><span>${label}</span>`;
+    item.addEventListener("mouseenter", () => { item.style.background = "rgba(100, 160, 255, 0.22)"; });
+    item.addEventListener("mouseleave", () => { item.style.background = "transparent"; });
+    item.addEventListener("click", (e: MouseEvent) => {
+      e.stopPropagation();
+      const target = menuTarget;
+      hideContextMenu();
+      if (!target) return;
+      // Dispatch event específico Y el genérico
+      window.dispatchEvent(new CustomEvent(`hekatan:assign:${key}`, {
+        detail: { type: target.type, idx: target.idx, subAction: key },
+      }));
+      window.dispatchEvent(new CustomEvent("hekatan:assign", {
+        detail: { type: target.type, idx: target.idx, subAction: key },
+      }));
+    });
+    return item;
+  };
+
+  function rebuildSubmenu(type: "node" | "frame" | "shell" | "solid") {
+    assignSubmenu.innerHTML = "";
+    const opts = type === "frame" ? ASSIGN_OPTIONS_FRAME :
+                 type === "node"  ? ASSIGN_OPTIONS_NODE :
+                 type === "shell" ? ASSIGN_OPTIONS_SHELL :
+                                    ASSIGN_OPTIONS_SOLID;
+    // Header
+    const header = document.createElement("div");
+    header.style.cssText = `padding: 4px 14px; font-size: 11px; color: #88a; border-bottom: 1px solid rgba(120,180,255,0.18); margin-bottom: 3px;`;
+    header.textContent = `Asignar a ${type.toUpperCase()} #${menuTarget?.idx ?? "?"}`;
+    assignSubmenu.appendChild(header);
+    for (const o of opts) assignSubmenu.appendChild(makeSubmenuItem(o.icon, o.label, o.key));
+  }
+
+  setTimeout(() => {
+    if (ctx.rendererElm.parentElement) {
+      ctx.rendererElm.parentElement.appendChild(assignSubmenu);
+    }
+  }, 0);
+
+  function showAssignSubmenu(parentLeft: number, parentTop: number) {
+    if (!menuTarget) return;
+    rebuildSubmenu(menuTarget.type);
+    // Posicionar a la derecha del menú principal
+    const mainRect = contextMenu.getBoundingClientRect();
+    const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect()
+      ?? ctx.rendererElm.getBoundingClientRect();
+    assignSubmenu.style.left = `${parentLeft + mainRect.width}px`;
+    assignSubmenu.style.top = `${parentTop}px`;
+    assignSubmenu.style.display = "block";
+    // Si se sale del viewport, mover a la izquierda
+    setTimeout(() => {
+      const subRect = assignSubmenu.getBoundingClientRect();
+      if (subRect.right > window.innerWidth - 10) {
+        assignSubmenu.style.left = `${parentLeft - subRect.width}px`;
+      }
+    }, 0);
+  }
+  function hideAssignSubmenu() {
+    assignSubmenu.style.display = "none";
+  }
+
+  const makeMenuItem = (icon: string, label: string, hasSubmenu: boolean, onClick: (target: typeof menuTarget) => void) => {
+    const item = document.createElement("div");
+    item.style.cssText = `
+      padding: 6px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.1s;
+      justify-content: space-between;
+    `;
+    const left = `<span style="display:flex;align-items:center;gap:10px;"><span style="font-size:14px;width:18px;text-align:center;">${icon}</span><span>${label}</span></span>`;
+    const right = hasSubmenu ? `<span style="color:#888;">▸</span>` : "";
+    item.innerHTML = left + right;
+    item.addEventListener("mouseenter", () => {
+      item.style.background = "rgba(100, 160, 255, 0.18)";
+      if (hasSubmenu) {
+        // Abrir submenu al hover sobre Asignar
+        const left = parseFloat(contextMenu.style.left || "0");
+        const top = parseFloat(contextMenu.style.top || "0");
+        showAssignSubmenu(left, top);
+      } else {
+        hideAssignSubmenu();
+      }
+    });
+    item.addEventListener("mouseleave", () => {
+      item.style.background = "transparent";
+    });
+    item.addEventListener("click", (e: MouseEvent) => {
+      e.stopPropagation();
+      if (hasSubmenu) {
+        // Click sobre "Asignar" → toggle submenu (ya está abierto por hover)
+        return;
+      }
+      const target = menuTarget;
+      hideContextMenu();
+      onClick(target);
+    });
+    return item;
+  };
+
+  const itemAssign = makeMenuItem("📝", "Asignar", true, () => {});
+  const itemInfo = makeMenuItem("ℹ", "Ver información", false, (target) => {
+    if (!target) return;
+    window.dispatchEvent(new CustomEvent("hekatan:info", {
+      detail: { type: target.type, idx: target.idx },
+    }));
+  });
+  // Al mouse-enter sobre "Ver información" → cerrar submenu (si abierto)
+  itemInfo.addEventListener("mouseenter", () => { hideAssignSubmenu(); });
+  contextMenu.appendChild(itemAssign);
+  contextMenu.appendChild(itemInfo);
+
+  setTimeout(() => {
+    if (ctx.rendererElm.parentElement) {
+      ctx.rendererElm.parentElement.appendChild(contextMenu);
+    }
+  }, 0);
+
+  function showContextMenu(clientX: number, clientY: number, target: typeof menuTarget) {
+    menuTarget = target;
+    const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect()
+      ?? ctx.rendererElm.getBoundingClientRect();
+    contextMenu.style.left = `${clientX - parentRect.left}px`;
+    contextMenu.style.top = `${clientY - parentRect.top}px`;
+    contextMenu.style.display = "block";
+    // Cancelar cualquier click-click rect-select pendiente (evita el
+    // rectángulo cyan flotante visible al right-click sobre elemento)
+    try { (window as any).__hekatanCancelClickClickRect?.(); } catch {}
+  }
+  function hideContextMenu() {
+    contextMenu.style.display = "none";
+    hideAssignSubmenu();
+    menuTarget = null;
+  }
+
+  // Pre-emptive pointerdown (capture phase) — si el right-click cae sobre
+  // un elemento, seteamos un flag global para que drawing.ts SALTE su lógica
+  // de "right-click = cancel". Esto es coordinación entre hover.ts y
+  // drawing.ts sin acoplamiento directo.
+  ctx.rendererElm.addEventListener("pointerdown", (e: PointerEvent) => {
+    if (e.button !== 2) return;  // sólo right-click
+    const hover = findHovered(e.clientX, e.clientY);
+    (window as any).__hekatanRClickOnElement = !!hover;
+  }, { capture: true });
+
+  // Right-click sobre el canvas — capture phase para correr ANTES que el
+  // listener de drawing.ts (que hace stopPropagation).
+  // Si hay hover hit → suprimir todo y mostrar nuestro menú.
+  // Si no → permitir que drawing.ts haga el cancel default.
+  ctx.rendererElm.addEventListener("contextmenu", (e: MouseEvent) => {
+    const hover = findHovered(e.clientX, e.clientY);
+    if (!hover) {
+      // Click derecho LEJOS del elemento → cerrar menú si abierto + dejar
+      // que drawing.ts haga el cancel default (no llamamos preventDefault).
+      hideContextMenu();
+      (window as any).__hekatanRClickOnElement = false;
+      return;
+    }
+    // Cursor sobre un elemento → suprimir menú nativo + stopImmediatePropagation
+    // para evitar que el listener de drawing.ts también capture (y bloquee).
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    showContextMenu(e.clientX, e.clientY, { type: hover.type, idx: hover.idx });
+    // Reset flag — ya estamos mostrando nuestro menu, drawing.ts skipeo cancel
+    (window as any).__hekatanRClickOnElement = false;
+  }, { capture: true });
+
+  // Click izquierdo en cualquier lado (canvas o fuera) → cerrar menú.
+  // NO cerrar si el click cae dentro del menu principal o del submenu —
+  // así los handlers de los items pueden ejecutar sin race condition.
+  const onAnyClick = (e: MouseEvent) => {
+    if (contextMenu.style.display !== "block") return;
+    const t = e.target as Node;
+    if (contextMenu.contains(t) || assignSubmenu.contains(t)) return;
+    hideContextMenu();
+  };
+  document.addEventListener("mousedown", onAnyClick, true);
+  // Escape → cerrar menú
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
+    if (e.key === "Escape" && contextMenu.style.display === "block") {
+      hideContextMenu();
+    }
+  });
+
   // ── Click handler: SELECCIÓN PERSISTENTE ──
   // Click sobre nodo/elemento → highlight verde queda fijo hasta el siguiente click
   // Click sobre vacío → deselecciona
@@ -772,8 +1104,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     if (selected.type === "node") {
       const p = nodePos(selected.idx);
       if (p) {
-        // Tamaño = consistente con nodes.ts (radio = diámetro/2 * 1.7 = más grande
-        // que el hover para distinguir selección persistente)
+        // Tamaño = MISMO que el nodo regular pero ligeramente mayor (×1.1)
+        // para distinguir la selección persistente del hover sin que sea
+        // visualmente exagerada. Antes era 0.025 (1.67× del nodo).
         const ns = ctx.derivedNodes.rawVal ?? [];
         let extent = 1.0;
         if (ns.length >= 2) {
@@ -788,7 +1121,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           extent = Math.max(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2], 0.1);
         }
         const ds = ctx.derivedDisplayScale?.rawVal ?? 1;
-        const sz = 0.025 * extent * ds;
+        const sz = 0.017 * extent * ds;
         selNodeHL.position.copy(p);
         selNodeHL.scale.setScalar(sz);
         selNodeHL.visible = true;
@@ -802,8 +1135,16 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const dir = p2.clone().sub(p1);
         const len = dir.length();
         const camera = ctx.getActiveCamera();
-        const dist = camera.position.distanceTo(mid);
-        const radius = dist * 0.0035;
+        // Mismo ajuste que tubeHL en el hover branch: ortho usa frustum, no dist.
+        let radius: number;
+        if ((camera as any).isOrthographicCamera) {
+          const o = camera as THREE.OrthographicCamera;
+          const H = (o.top - o.bottom) / o.zoom;
+          radius = H * 0.0035;
+        } else {
+          const dist = camera.position.distanceTo(mid);
+          radius = dist * 0.0035;
+        }
         selTubeHL.position.copy(mid);
         const up = new THREE.Vector3(0, 1, 0);
         const axis = up.clone().cross(dir).normalize();

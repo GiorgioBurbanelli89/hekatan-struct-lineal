@@ -1,7 +1,7 @@
 
 
- ETABS Ultimate 64-bit 19.1.0 Build 2420 (Analysis Build 9853/64)               
- File: C:\Users\j-b-j\Document...ekatan-struct\validation\val_flex_diaphragm.OUT
+ ETABS Ultimate 64-bit 22.6.0 Build 4022 (Analysis Build 9991/64)               
+ File: C:\Users\j-b-j\Document...Etabs\membrana_diafragma\val_flex_diaphragm.OUT
                                                                      
                                                                        
 
@@ -18,7 +18,7 @@
       P9 TO     P12    A   A   A   A   A   A
      P13               +   +   A   A   A   +
      P14 TO     P35    A   A   A   A   A   A
-       2               +   +   -   -   -   +
+       1               +   +   -   -   -   +
      ~38 TO    ~373    A   A   A   A   A   A
     NULL                                    
 

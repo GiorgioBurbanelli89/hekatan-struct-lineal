@@ -101,6 +101,11 @@ for j = 1:n_j
     end
 end
 
+%-- Display joint coordinates (matching PDF)
+fprintf('\n=== Joint coordinates (matching PDF Calcpad-oficial) ===\n');
+fprintf('x_j (m) = ');  disp(x_j');
+fprintf('y_j (m) = ');  disp(y_j');
+
 %-- Conectividad
 e_j = zeros(n_e, 4);
 for i_a = 1:n_a
@@ -113,6 +118,9 @@ for i_a = 1:n_a
         e_j(e, 4) = j + 1;
     end
 end
+
+fprintf('=== Numbers of element joints transp(e_j) (4 x n_e) ===\n');
+disp(e_j');
 
 %-- Apoyos (todos los nodos del borde)
 n_s = 2*(n_a + n_b);
@@ -134,6 +142,19 @@ for i = 2:n_b
     i_s = i_s + 1;
     s_j(i_s) = n_a*(n_b + 1) + i;
 end
+
+fprintf('=== Supported joints s_j ===\n');
+disp(s_j');
+
+%-- Coordinates of elements centers (matching PDF)
+x_c = zeros(n_e, 1);
+y_c = zeros(n_e, 1);
+for e = 1:n_e
+    x_c(e) = mean(x_j(e_j(e, :)));
+    y_c(e) = mean(y_j(e_j(e, :)));
+end
+fprintf('=== Element centers x_c (m) ===\n');  disp(x_c');
+fprintf('=== Element centers y_c (m) ===\n');  disp(y_c');
 
 fprintf('\nMalla: %d elem (%dx%d), %d nodos, %d apoyos, %d GDL totales\n', ...
         n_e, n_a, n_b, n_j, n_s, n_g);
@@ -162,6 +183,11 @@ for ig = 1:n_gp
     end
 end
 
+fprintf('\n=== Element stiffness matrix K_e (16x16, kN/m) — matching PDF ===\n');
+disp(K_e);
+fprintf('=== Element load vector F_e (16x1, kN) ===\n');
+disp(F_e');
+
 K = zeros(n_g, n_g);
 F = zeros(n_g, 1);
 for e = 1:n_e
@@ -185,15 +211,128 @@ for i = 1:n_s
 end
 fprintf('Ensamblaje %.0f ms\n', toc*1000);
 
+fprintf('\n=== Global stiffness matrix K (sample top-left 8x8, total %dx%d) ===\n', n_g, n_g);
+disp(K(1:8, 1:8));
+fprintf('Nota: penalty 1e20 aparece en diagonales de DOFs w en joints apoyados\n');
+fprintf('=== Global load vector F (first 16 elements of %d, kN) ===\n', n_g);
+disp(F(1:16)');
+
 %% Resolucion
 tic; Z = K \ F; t_solve = toc;
 fprintf('Solve K\\F: %.0f ms\n', t_solve*1000);
 
+fprintf('\n=== Solution vector Z (first 16 elements of %d, mm) ===\n', n_g);
+disp(Z(1:16)' * 1000);
+
 %-- Deflexion central (nodo en x=a/2, y=b/2)
 n_center = (n_a/2)*(n_b + 1) + (n_b/2) + 1;
 w_center_mm = Z(n_dof*(n_center-1) + 1) * 1000;
-fprintf('\n=== Resultados ===\n');
+fprintf('\n=== Resultados FEM 16-DOF BFS ===\n');
 fprintf('w_centro     = %.4f mm    (referencia Calcpad: -6.529)\n', w_center_mm);
+
+%% Joint-based output (matching PDF Calcpad-oficial)
+%-- Promediado entre elementos que comparten cada joint
+w_joints   = zeros(n_a+1, n_b+1);
+Mx_joints  = zeros(n_a+1, n_b+1);
+My_joints  = zeros(n_a+1, n_b+1);
+Mxy_joints = zeros(n_a+1, n_b+1);
+count_joints = zeros(n_a+1, n_b+1);
+
+for e = 1:n_e
+    Z_e = zeros(16, 1);
+    for i = 1:4
+        gnode = e_j(e, i);
+        for k = 1:4
+            Z_e((i-1)*4 + k) = Z(n_dof*(gnode-1) + k);
+        end
+    end
+    ia = floor((e-1)/n_b);
+    ib = mod((e-1), n_b);
+    %-- 4 corners local (xi,eta) and global grid indices (gi=x, gj=y)
+    corners = [0,0, ia+1, ib+1;
+               1,0, ia+2, ib+1;
+               1,1, ia+2, ib+2;
+               0,1, ia+1, ib+2];
+    for c = 1:4
+        u  = corners(c, 1);
+        v  = corners(c, 2);
+        gi = corners(c, 3);
+        gj = corners(c, 4);
+        Nv = N_vec(u, v, a_1, b_1);
+        Bm = B_mat(u, v, a_1, b_1);
+        w_val = Nv' * Z_e * 1000;
+        M_v   = -D * Bm * Z_e;
+        w_joints(gi, gj)     = w_joints(gi, gj)     + w_val;
+        Mx_joints(gi, gj)    = Mx_joints(gi, gj)    + M_v(1);
+        My_joints(gi, gj)    = My_joints(gi, gj)    + M_v(2);
+        Mxy_joints(gi, gj)   = Mxy_joints(gi, gj)   + M_v(3);
+        count_joints(gi, gj) = count_joints(gi, gj) + 1;
+    end
+end
+w_joints   = w_joints   ./ count_joints;
+Mx_joints  = Mx_joints  ./ count_joints;
+My_joints  = My_joints  ./ count_joints;
+Mxy_joints = Mxy_joints ./ count_joints;
+
+fprintf('\n=== Joint deflections transp(W_z) [mm] (rows=y, cols=x) ===\n');
+disp(w_joints');
+fprintf('=== Joint bending moments transp(Mx) [kNm/m] ===\n');
+disp(Mx_joints');
+fprintf('=== Joint bending moments transp(My) [kNm/m] ===\n');
+disp(My_joints');
+fprintf('=== Joint bending moments transp(Mxy) [kNm/m] ===\n');
+disp(Mxy_joints');
+
+fprintf('\n--- Valores en puntos especificos (FEM 16-DOF BFS) ---\n');
+fprintf('w(a/2, b/2)   = %8.4f mm    (ref Calcpad oficial: 6.63)\n',  w_joints(n_a/2+1, n_b/2+1));
+fprintf('M_x(a/2, b/2) = %8.4f kNm/m (ref Calcpad oficial: 6.28)\n',  Mx_joints(n_a/2+1, n_b/2+1));
+fprintf('M_y(a/2, b/2) = %8.4f kNm/m (ref Calcpad oficial: 12.74)\n', My_joints(n_a/2+1, n_b/2+1));
+fprintf('M_xy(0, 0)    = %8.4f kNm/m (ref Calcpad oficial: -8.38)\n', Mxy_joints(1, 1));
+
+%% Solucion analitica de Navier (doble serie, placa simply-supported)
+N_NAV = 20;
+D_cyl  = E_si*t^3/(12*(1-nu^2));
+alpha  = a/b;
+alpha2 = alpha^2;
+q0     = 16*q/pi^2;
+
+w_nav = 0; Mx_nav_s = 0; My_nav_s = 0; Mxy_nav_s = 0;
+xc_n = a/2; yc_n = b/2;
+for m_idx = 0:N_NAV
+    km  = 2*m_idx+1;
+    Sax = sin(km*pi*xc_n/a) / km;
+    Cax = 1;
+    for n_idx = 0:N_NAV
+        kn  = 2*n_idx+1;
+        Sby = sin(kn*pi*yc_n/b) / kn;
+        Cby = 1;
+        k2m = 4*m_idx*(m_idx+1)+1;
+        k2n = 4*n_idx*(n_idx+1)+1;
+        Amn = k2m + alpha2*k2n;
+        Bmn = k2m + nu*alpha2*k2n;
+        Cmn = nu*k2m + alpha2*k2n;
+        A1  = 1/Amn^2;
+        B1  = Bmn/Amn^2;
+        C1  = Cmn/Amn^2;
+        w_nav     = w_nav     + Sax * A1 * Sby;
+        Mx_nav_s  = Mx_nav_s  + Sax * B1 * Sby;
+        My_nav_s  = My_nav_s  + Sax * C1 * Sby;
+        Mxy_nav_s = Mxy_nav_s + Cax * A1 * Cby;
+    end
+end
+w_nav_mm = q0*(a/pi)^4 / D_cyl * w_nav * 1000;
+Mx_nav   = q0*(a/pi)^2 * Mx_nav_s;
+My_nav   = q0*(a/pi)^2 * My_nav_s;
+Mxy_nav  = -q0*(a/pi)^2 * (1-nu) * alpha * Mxy_nav_s;
+
+fprintf('\n=== Solucion analitica de Navier (N=%d terminos serie doble) ===\n', N_NAV);
+fprintf('D_cyl     = %.4f kNm     (rigidez cilindrica de placa)\n', D_cyl);
+fprintf('alpha     = a/b = %.4f\n', alpha);
+fprintf('q_0       = 16q/pi^2 = %.4f kN/m^2\n', q0);
+fprintf('w(a/2,b/2)   = %8.4f mm    (FEM BFS: %.4f mm)\n',   w_nav_mm, w_joints(n_a/2+1, n_b/2+1));
+fprintf('M_x(a/2,b/2) = %8.4f kNm/m (FEM BFS: %.4f kNm/m)\n', Mx_nav,   Mx_joints(n_a/2+1, n_b/2+1));
+fprintf('M_y(a/2,b/2) = %8.4f kNm/m (FEM BFS: %.4f kNm/m)\n', My_nav,   My_joints(n_a/2+1, n_b/2+1));
+fprintf('M_xy(0,0)    = %8.4f kNm/m (FEM BFS: %.4f kNm/m)\n', Mxy_nav,  Mxy_joints(1, 1));
 
 %% Reconstruir deflexion sobre grilla densa (para surf y peak Mxy)
 N_DENSE = 21;

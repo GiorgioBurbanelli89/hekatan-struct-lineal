@@ -20,6 +20,10 @@ export function getParameters(parameters: Parameters): HTMLDivElement {
   const pane = new Pane({ title: "Parameters", container: parametersElm });
   const tweakParameters = convertToTweakparameters(parameters);
   const folders = new Map<string, FolderApi>();
+  // Map de bindings expuestos al exterior para permitir hide/show dinámico
+  // (ej. ocultar sliders L_v_i cuando i > nVanos en pórticos paramétricos).
+  // Acceso: (parametersElm as any).__bindings.get("L_v4")?.hidden = true;
+  const bindingsMap = new Map<string, any>();
 
   // Update
   parametersElm.setAttribute("id", "parameters");
@@ -34,12 +38,13 @@ export function getParameters(parameters: Parameters): HTMLDivElement {
         pane.addFolder({ title: parameter.folder })
       );
 
-    folders.get(parameter.folder ?? "root")?.addBinding(tweakParameters, key, {
+    const binding = folders.get(parameter.folder ?? "root")?.addBinding(tweakParameters, key, {
       min: parameter.min || 0,
       max: parameter.max || 50,
       step: parameter.step || 0.5,
       label: parameter.label || key,
     });
+    if (binding) bindingsMap.set(key, binding);
   });
 
   // Events: on parameters change update the state
@@ -47,6 +52,10 @@ export function getParameters(parameters: Parameters): HTMLDivElement {
     // @ts-ignore
     parameters[e.target.key].value.val = e.value;
   });
+
+  // Exponer bindings y pane via propiedades del DOM para hide/show dinámico
+  (parametersElm as any).__bindings = bindingsMap;
+  (parametersElm as any).__pane = pane;
 
   return parametersElm;
 }

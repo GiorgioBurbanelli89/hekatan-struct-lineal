@@ -3,316 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>01 · Fundamentos del FEM</title>
+<title>01 · Fundamentos del FEM (los pasos)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/style.css">
-
-<script>
-MathJax = {
-  tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
-  svg: { fontCache: 'global' }
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
-
 <style>
-  .step-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin: 16px 0 24px;
-  }
-  .step-card {
-    background: var(--paper-dark);
-    border: 1.5px solid var(--ink);
-    border-radius: 4px;
-    padding: 14px 16px;
-    position: relative;
-  }
-  .step-card .step-num {
-    position: absolute;
-    top: -10px; left: 12px;
-    background: var(--gold);
-    color: var(--ink);
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    font-size: 0.7rem;
-    padding: 2px 9px;
-    border-radius: 3px;
-    letter-spacing: 0.12em;
-  }
-  .step-card h3 {
-    font-family: 'Cormorant Garamond', serif;
-    color: var(--blue);
-    font-size: 1.1rem;
-    margin: 4px 0 6px;
-  }
-  .step-card p {
-    font-size: 0.86rem;
-    color: var(--ink-soft);
-    margin: 0;
-  }
-
-  .concept-box {
-    background: var(--paper-dark);
-    border-left: 4px solid var(--gold);
-    padding: 16px 20px;
-    border-radius: 4px;
-    margin: 14px 0;
-  }
-  .concept-box h3 {
-    font-family: 'Cormorant Garamond', serif;
-    color: var(--blue);
-    margin: 0 0 6px;
-  }
-
-  .principio-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 12px 0;
-  }
-  .principio {
-    background: var(--paper-dark);
-    border: 1px solid var(--ink-fade);
-    border-radius: 4px;
-    padding: 12px;
-    text-align: center;
-  }
-  .principio .lbl {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.18em;
-    color: var(--gold);
-    text-transform: uppercase;
-  }
-  .principio .name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--ink);
-    margin-top: 4px;
-  }
-  .principio .desc {
-    font-size: 0.78rem;
-    color: var(--ink-soft);
-    margin-top: 2px;
-  }
-
-  /* SVG diagram */
-  .svg-card {
-    background: var(--paper-dark);
-    border: 1.5px solid var(--ink);
-    border-radius: 4px;
-    padding: 12px;
-    margin: 12px 0;
-    text-align: center;
-  }
-  .svg-card svg {
-    max-width: 100%;
-    height: auto;
-  }
+  html,body{ height:100%; overflow:hidden; }
+  .wrap{ height:100vh; display:flex; flex-direction:column; padding:14px 30px 44px; }
+  .head{ text-align:center; border-bottom:1.5px solid var(--ink); padding-bottom:6px; margin-bottom:10px; flex:0 0 auto; }
+  .head .pre{ font-family:'JetBrains Mono',monospace; font-size:0.64rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gold); }
+  .head h1{ font-size:1.5rem; margin-top:2px; }
+  .head .sub{ font-style:italic; color:var(--ink-soft); font-size:0.88rem; margin-top:2px; }
+  .body{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1.05fr 0.95fr; gap:22px; align-items:center; }
+  .steps{ display:flex; flex-direction:column; gap:9px; }
+  .stp{ display:flex; align-items:flex-start; gap:12px; border:1.5px solid var(--ink); border-radius:8px; padding:9px 13px; background:var(--paper-dark); }
+  .stp .n{ width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:var(--gold); color:var(--ink); font-family:'JetBrains Mono',monospace; font-size:0.82rem; font-weight:700; flex:0 0 auto; }
+  .stp .tx{ font-size:0.92rem; line-height:1.36; } .stp .tx .t{ font-weight:700; color:var(--blue); display:block; }
+  .stp .tx b{ color:#9a6b1f; } .stp .tx .nm{ font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#8a6d2a; }
+  .gfx{ text-align:center; }
+  .gfx svg{ width:100%; height:auto; max-height:36vh; }
+  .foot{ flex:0 0 auto; background:var(--highlight); border-left:4px solid var(--gold); border-radius:0 5px 5px 0; padding:9px 14px; margin-top:9px; font-size:0.9rem; line-height:1.42; }
+  .foot b{ color:var(--blue); }
+  .dnav{ position:fixed; bottom:12px; left:50%; transform:translateX(-50%); background:var(--ink); padding:6px 12px; border-radius:30px; }
+  .dnav a{ color:var(--paper); text-decoration:none; font-family:'JetBrains Mono',monospace; font-size:0.74rem; padding:3px 10px; }
 </style>
 </head>
 <body>
-
-<div class="container">
-
-  <header>
-    <div class="pre-title">Diapositiva 01 · Antes de las herramientas — el concepto</div>
-    <h1>Fundamentos del Método de Elementos Finitos</h1>
-    <div class="subtitle">Discretizar lo continuo, escribir $K\,u = F$, resolver. <em>Eso es todo.</em></div>
-  </header>
-
-  <section>
-    <h2>El problema de la mecánica del continuo</h2>
-    <p>En una viga, una losa o un edificio, las ecuaciones de equilibrio se escriben en cada punto del cuerpo:</p>
-    $$ \nabla \cdot \boldsymbol{\sigma} + \mathbf{b} = \mathbf{0}, \qquad \boldsymbol{\sigma} = \mathbf{E}\,\boldsymbol{\varepsilon}, \qquad \boldsymbol{\varepsilon} = \tfrac{1}{2}(\nabla\mathbf{u} + \nabla\mathbf{u}^T) $$
-    <p>Estas son <em>infinitas</em> ecuaciones diferenciales acopladas. Solo unos pocos casos clásicos (viga simple, placa rectangular) tienen <strong>solución cerrada</strong>. Para todo lo demás necesitamos una idea ingeniosa: <strong>aproximar la solución continua mediante una solución finita</strong>.</p>
-  </section>
-
-  <section>
-    <h2>La idea central del FEM en cuatro pasos</h2>
-
-    <div class="step-grid">
-      <div class="step-card">
-        <span class="step-num">PASO 1</span>
-        <h3>Discretizar</h3>
-        <p>Partimos el cuerpo continuo en <em>N</em> elementos pequeños conectados por nodos. La incógnita ya no es un campo continuo sino los <strong>desplazamientos nodales</strong> $u_1, u_2, \ldots, u_n$.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">PASO 2</span>
-        <h3>Interpolar</h3>
-        <p>Dentro de cada elemento, el desplazamiento se aproxima por <strong>funciones de forma</strong> $N_i(x)$: $u(x) \approx \sum N_i(x)\,u_i$. Para vigas usamos Hermite cúbicas, para placas $C^1$, etc.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">PASO 3</span>
-        <h3>Galerkin</h3>
-        <p>Aplicamos el principio de los <strong>residuos ponderados</strong> (o de mínima energía potencial). De ahí sale, para cada elemento, la matriz $K_e$ y el vector $F_e$.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">PASO 4</span>
-        <h3>Ensamblar &amp; resolver</h3>
-        <p>Sumamos todas las contribuciones $K_e$ en una matriz global $K$ y todos los $F_e$ en $F$. Aplicamos las condiciones de borde y resolvemos el sistema lineal $K\,u = F$.</p>
-      </div>
+<div class="wrap">
+  <div class="head">
+    <div class="pre">Aquí empieza el FEM · el concepto antes de la herramienta</div>
+    <h1>Fundamentos del FEM — los <span style="color:#b08d4f">4 pasos</span> para calcular</h1>
+    <div class="sub">Partir la estructura en pedazos, hallar cuánto resiste cada uno, sumar y resolver. Eso es todo.</div>
+  </div>
+  <div class="body">
+    <!-- IZQUIERDA: los 4 pasos en simple -->
+    <div class="steps">
+      <div class="stp"><span class="n">1</span><span class="tx"><span class="t">Partir en pedazos (discretizar)</span>La estructura se corta en muchos <b>elementos</b> pequeños unidos por <b>nudos</b>. La incógnita pasa a ser cuánto se mueve cada nudo. <span class="nm">discretización</span></span></div>
+      <div class="stp"><span class="n">2</span><span class="tx"><span class="t">La forma entre nudos (interpolar)</span>Las <b>funciones de forma N</b> dan el movimiento dentro del elemento a partir de los nudos → la forma de la deformada. <span class="nm">interpolación</span></span></div>
+      <div class="stp"><span class="n">3</span><span class="tx"><span class="t">La rigidez de cada pedazo</span>Cuánto resiste = un área (integral <b>K = ∫BᵀDB</b>). <b>Galerkin</b> da la integral, <b>Gauss</b> la calcula con los puntos 0.577. <span class="nm">Galerkin + cuadratura de Gauss</span></span></div>
+      <div class="stp"><span class="n">4</span><span class="tx"><span class="t">Sumar todo y resolver</span>Se <b>suman</b> las rigideces de todos los pedazos en una matriz global y se resuelve <b>K · u = F</b> → los desplazamientos. <span class="nm">ensamble + solución</span></span></div>
     </div>
-
-    <p>Este esquema vale para <em>vigas, placas, cáscaras, sólidos 3D, dinámica modal y análisis no lineal</em>. Lo único que cambia entre problemas es la forma de la matriz local $K_e$.</p>
-  </section>
-
-  <section>
-    <h2>Los tres principios físicos detrás del FEM</h2>
-    <div class="principio-grid">
-      <div class="principio">
-        <div class="lbl">Equilibrio</div>
-        <div class="name">$\sum F = 0$</div>
-        <div class="desc">Cada nodo está en equilibrio: $K\,u = F$ es la versión discreta de la 3ª ley de Newton.</div>
-      </div>
-      <div class="principio">
-        <div class="lbl">Compatibilidad</div>
-        <div class="name">$\varepsilon = \partial u$</div>
-        <div class="desc">Las deformaciones derivan de un campo $u$ continuo: las funciones de forma garantizan continuidad nodo a nodo.</div>
-      </div>
-      <div class="principio">
-        <div class="lbl">Ley constitutiva</div>
-        <div class="name">$\sigma = E\,\varepsilon$</div>
-        <div class="desc">Hooke (lineal) o relaciones constitutivas no lineales: la "personalidad" del material entra aquí.</div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Visualización: el continuo se vuelve finito</h2>
-    <div class="svg-card">
-      <svg viewBox="0 0 720 250" preserveAspectRatio="xMidYMid meet">
-        <!-- Texto explicativo -->
-        <text x="120" y="20" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#b08d4f" letter-spacing="2">CONTINUO</text>
-        <text x="360" y="20" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#b08d4f" letter-spacing="2">DISCRETIZACIÓN</text>
-        <text x="600" y="20" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#b08d4f" letter-spacing="2">SISTEMA $K\,u = F$</text>
-
-        <!-- Continuo: viga sólida -->
-        <line x1="40" y1="100" x2="200" y2="100" stroke="#1a2942" stroke-width="3"/>
-        <rect x="40" y="100" width="160" height="20" fill="#3d4f6f" opacity="0.3"/>
-        <line x1="40" y1="120" x2="200" y2="120" stroke="#1a2942" stroke-width="3"/>
-        <!-- Empotramiento continuo -->
-        <line x1="40" y1="80" x2="40" y2="140" stroke="#1a2942" stroke-width="3"/>
-        <g>
-          <line x1="32" y1="80"  x2="40" y2="88"  stroke="#1a2942" stroke-width="1.5"/>
-          <line x1="32" y1="100" x2="40" y2="108" stroke="#1a2942" stroke-width="1.5"/>
-          <line x1="32" y1="120" x2="40" y2="128" stroke="#1a2942" stroke-width="1.5"/>
-          <line x1="32" y1="140" x2="40" y2="148" stroke="#1a2942" stroke-width="1.5"/>
+    <!-- DERECHA: gráfica continuo → pedazos → K u = F -->
+    <div class="gfx">
+      <svg viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg">
+        <text x="70" y="22" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#b08d4f" letter-spacing="1.5">LA ESTRUCTURA</text>
+        <text x="290" y="22" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#b08d4f" letter-spacing="1.5">EN PEDAZOS</text>
+        <!-- continuo: viga empotrada con carga -->
+        <line x1="30" y1="70" x2="120" y2="70" stroke="#1a2942" stroke-width="3"/>
+        <rect x="30" y="70" width="90" height="13" fill="#3d4f6f" opacity="0.28"/>
+        <line x1="30" y1="83" x2="120" y2="83" stroke="#1a2942" stroke-width="3"/>
+        <line x1="30" y1="58" x2="30" y2="95" stroke="#1a2942" stroke-width="3"/>
+        <g stroke="#a23232" stroke-width="1.3">
+          <line x1="48" y1="45" x2="48" y2="66"/><polygon points="45,62 51,62 48,68" fill="#a23232"/>
+          <line x1="75" y1="45" x2="75" y2="66"/><polygon points="72,62 78,62 75,68" fill="#a23232"/>
+          <line x1="102" y1="45" x2="102" y2="66"/><polygon points="99,62 105,62 102,68" fill="#a23232"/>
         </g>
-        <!-- Carga distribuida -->
-        <g stroke="#a23232" stroke-width="1.5">
-          <line x1="60"  y1="60" x2="60"  y2="95"/><polygon points="56,90 64,90 60,98" fill="#a23232"/>
-          <line x1="100" y1="60" x2="100" y2="95"/><polygon points="96,90 104,90 100,98" fill="#a23232"/>
-          <line x1="140" y1="60" x2="140" y2="95"/><polygon points="136,90 144,90 140,98" fill="#a23232"/>
-          <line x1="180" y1="60" x2="180" y2="95"/><polygon points="176,90 184,90 180,98" fill="#a23232"/>
-        </g>
-        <text x="120" y="180" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="14" fill="#3d4f6f">Infinitos puntos · ∇·σ + b = 0</text>
-
-        <!-- Flecha -->
-        <line x1="220" y1="105" x2="260" y2="105" stroke="#b08d4f" stroke-width="2"/>
-        <polygon points="258,100 268,105 258,110" fill="#b08d4f"/>
-
-        <!-- Discretización: 4 elementos con 5 nodos -->
-        <line x1="280" y1="110" x2="440" y2="110" stroke="#2d6a4f" stroke-width="2"/>
+        <text x="70" y="115" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="12" fill="#3d4f6f">infinitos puntos</text>
+        <!-- flecha -->
+        <line x1="135" y1="76" x2="175" y2="76" stroke="#b08d4f" stroke-width="2.5"/><polygon points="173,71 183,76 173,81" fill="#b08d4f"/>
+        <!-- discreto: 4 elementos, 5 nudos -->
+        <line x1="200" y1="78" x2="350" y2="78" stroke="#2d6a4f" stroke-width="2.5"/>
         <g fill="#a23232" stroke="#1a2942" stroke-width="1">
-          <circle cx="280" cy="110" r="5"/>
-          <circle cx="320" cy="110" r="4"/>
-          <circle cx="360" cy="110" r="4"/>
-          <circle cx="400" cy="110" r="4"/>
-          <circle cx="440" cy="110" r="4"/>
+          <circle cx="200" cy="78" r="5"/><circle cx="237" cy="78" r="4.5"/><circle cx="275" cy="78" r="4.5"/><circle cx="312" cy="78" r="4.5"/><circle cx="350" cy="78" r="4.5"/>
         </g>
-        <!-- IDs nodales -->
-        <text x="280" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a2942">1</text>
-        <text x="320" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a2942">2</text>
-        <text x="360" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a2942">3</text>
-        <text x="400" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a2942">4</text>
-        <text x="440" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1a2942">5</text>
-        <!-- Etiqueta elementos -->
-        <text x="300" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#2d6a4f">e₁</text>
-        <text x="340" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#2d6a4f">e₂</text>
-        <text x="380" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#2d6a4f">e₃</text>
-        <text x="420" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#2d6a4f">e₄</text>
-        <!-- Empotramiento discreto -->
-        <line x1="280" y1="80" x2="280" y2="140" stroke="#1a2942" stroke-width="2"/>
-        <g>
-          <line x1="272" y1="80"  x2="280" y2="88"  stroke="#1a2942" stroke-width="1.2"/>
-          <line x1="272" y1="100" x2="280" y2="108" stroke="#1a2942" stroke-width="1.2"/>
-          <line x1="272" y1="120" x2="280" y2="128" stroke="#1a2942" stroke-width="1.2"/>
-          <line x1="272" y1="140" x2="280" y2="148" stroke="#1a2942" stroke-width="1.2"/>
-        </g>
-        <text x="360" y="180" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="14" fill="#3d4f6f">N elementos · 5 nodos · u₁…u₅</text>
-
-        <!-- Flecha -->
-        <line x1="460" y1="105" x2="500" y2="105" stroke="#b08d4f" stroke-width="2"/>
-        <polygon points="498,100 508,105 498,110" fill="#b08d4f"/>
-
-        <!-- Sistema lineal -->
-        <text x="600" y="100" text-anchor="middle" font-family="Cormorant Garamond" font-size="20" fill="#1a2942" font-weight="600">K · u = F</text>
-        <text x="600" y="125" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3d4f6f">5×5 · 5×1 · 5×1</text>
-        <text x="600" y="180" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="14" fill="#3d4f6f">Álgebra lineal · resoluble</text>
+        <line x1="200" y1="62" x2="200" y2="94" stroke="#1a2942" stroke-width="2"/>
+        <text x="218" y="70" font-family="JetBrains Mono" font-size="8" fill="#2d6a4f">e₁</text>
+        <text x="255" y="70" font-family="JetBrains Mono" font-size="8" fill="#2d6a4f">e₂</text>
+        <text x="293" y="70" font-family="JetBrains Mono" font-size="8" fill="#2d6a4f">e₃</text>
+        <text x="330" y="70" font-family="JetBrains Mono" font-size="8" fill="#2d6a4f">e₄</text>
+        <text x="275" y="115" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="12" fill="#3d4f6f">5 nudos · u₁…u₅</text>
+        <!-- abajo: sumar y resolver -->
+        <text x="180" y="155" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#b08d4f" letter-spacing="1.5">SUMAR Y RESOLVER</text>
+        <rect x="60" y="170" width="240" height="48" rx="7" fill="#1a2942"/>
+        <text x="180" y="200" text-anchor="middle" font-family="Cormorant Garamond" font-size="26" fill="#f4d35e" font-weight="700">K · u = F</text>
+        <text x="180" y="238" text-anchor="middle" font-family="Newsreader" font-style="italic" font-size="12" fill="#3d4f6f">álgebra lineal · se resuelve en el computador</text>
       </svg>
     </div>
-  </section>
-
-  <section>
-    <h2>Convergencia: por qué el FEM "funciona"</h2>
-    <div class="concept-box">
-      <h3>Teorema de convergencia (Strang &amp; Fix, 1973)</h3>
-      <p>Si las funciones de forma son <em>completas</em> y <em>compatibles</em>, la solución FEM converge a la solución exacta cuando el tamaño de elemento $h \to 0$:</p>
-      $$ \| u_{\text{exacta}} - u_{\text{FEM}} \|_E \;\le\; C\,h^{p+1-m} $$
-      <p>donde $p$ es el grado del polinomio de interpolación y $m$ el orden de la EDP. <strong>Para vigas Bernoulli con Hermite cúbicas: convergencia de orden 4 en deformaciones, 2 en momentos.</strong> Por eso doblar $N$ reduce el error 16× en flecha.</p>
-    </div>
-  </section>
-
-  <section>
-    <h2>Lo que el FEM <em>no</em> hace solo</h2>
-    <table>
-      <tr>
-        <th>Tarea</th>
-        <th>¿Quién decide?</th>
-      </tr>
-      <tr>
-        <td>Tipo de elemento (frame, shell thin/thick, solid)</td>
-        <td><strong>Ingeniero</strong></td>
-      </tr>
-      <tr>
-        <td>Tamaño de malla y refinamiento (convergencia)</td>
-        <td><strong>Ingeniero</strong></td>
-      </tr>
-      <tr>
-        <td>Condiciones de contorno (apoyos, resortes, simetrías)</td>
-        <td><strong>Ingeniero</strong></td>
-      </tr>
-      <tr>
-        <td>Cargas y combinaciones según norma (NEC, ACI, ASCE)</td>
-        <td><strong>Ingeniero</strong></td>
-      </tr>
-      <tr>
-        <td>Construir $K_e$ a partir de las funciones de forma</td>
-        <td>Computador (cuadratura de Gauss)</td>
-      </tr>
-      <tr>
-        <td>Ensamblar $K$ global y resolver $K\,u = F$</td>
-        <td>Computador (SparseLU, Cholesky)</td>
-      </tr>
-    </table>
-  </section>
-
-  <div class="quote">
-    <strong>Antes de hablar de software</strong> (ETABS, OpenSees, Hekatan, MATLAB) hay que entender estas cuatro ideas: <em>discretizar, interpolar, ensamblar, resolver</em>. Toda la presentación de hoy se reduce a mostrar cómo distintas herramientas ejecutan exactamente esos cuatro pasos — con sintaxis distinta, pero las mismas ecuaciones.
   </div>
-
-  <div class="footer-note">
-    HEKATAN STRUCT · DIAPOSITIVA 01 · CONCEPTO ANTES DE HERRAMIENTA
+  <div class="foot">
+    <b>Lo clave:</b> estos 4 pasos valen para <b>vigas, losas, muros, edificios, dinámica</b> — lo único que cambia entre problemas es la <b>matriz de rigidez del elemento</b> (paso 3). Todo el resto de la charla es ver cómo distintas herramientas (ETABS, OpenSees, Hekatan) ejecutan estos mismos 4 pasos.
   </div>
-
 </div>
-
+<div class="dnav"><a href="./index.html">⌂ índice</a></div>
 <script src="./shared/nav.js"></script>
 </body>
 </html>

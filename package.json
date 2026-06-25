@@ -43,5 +43,10 @@
   "devDependencies": {
     "cross-env": "^10.1.0",
     "puppeteer": "^24.42.0"
+  },
+  "dependencies": {
+    "rollup": "^4.61.1",
+    "vite": "^5.4.21",
+    "vite-plugin-top-level-await": "^1.6.0"
   }
 }

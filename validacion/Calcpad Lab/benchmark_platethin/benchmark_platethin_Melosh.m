@@ -346,7 +346,7 @@ title(sprintf('Melosh: M_{xy} [kNm/m] — esquina=%.3f (SAP: 7.25)', Mxy_esquina
 xlabel('x [m]'); ylabel('y [m]'); colorbar
 
 figure
-trisurf(T, x_j, y_j, w_nodo_mm, w_nodo_mm);
+trisurf(T, x_j, y_j, -w_nodo_mm, -w_nodo_mm);
 title(sprintf('Melosh: Deflexión 3D — w_{centro}=%.3f mm', w_centro_mm))
 xlabel('x [m]'); ylabel('y [m]'); zlabel('w [mm]')
 

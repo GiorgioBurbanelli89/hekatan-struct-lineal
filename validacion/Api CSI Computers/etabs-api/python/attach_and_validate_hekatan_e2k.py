@@ -183,6 +183,14 @@ if RUN_ANALYSIS and nPts > 0:
     print("\n  ────── Análisis lineal estático ──────")
     try:
         SapModel.SetPresentUnits(6)  # N, m, C (no afecta el modelo, sólo output)
+        # CRÍTICO: ETABS NO crea los archivos de análisis si el modelo no está
+        # guardado en disco → RunAnalysis devuelve 1 (error) y los desplazamientos
+        # salen 0. Guardamos a un .edb temporal antes de analizar.
+        import tempfile
+        save_path = os.path.join(tempfile.gettempdir(),
+                                 "hekatan_e2k_" + os.path.splitext(os.path.basename(e2k_path))[0] + ".edb")
+        sret = SapModel.File.Save(save_path)
+        print(f"  File.Save('{save_path}') -> {sret}")
         SapModel.Analyze.SetRunCaseFlag("", True, True)
         print("  Ejecutando RunAnalysis()...")
         t0 = time.perf_counter()

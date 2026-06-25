@@ -30,9 +30,9 @@ export class LinearResult extends THREE.Group implements IResultObject {
     const intersection = (result[0] * length) / (result[0] + result[1]);
     const twoSegments = result[0] * result[1] > 0;
 
-    // text
-    this.text = new Text(`${result[0].toFixed(4)}`);
-    this.text2 = new Text(`${(result[1] * -1).toFixed(4)}`);
+    // text — toFixed(2) (antes era 4 decimales que crowdeaba labels)
+    this.text = new Text(`${result[0].toFixed(2)}`);
+    this.text2 = new Text(`${(result[1] * -1).toFixed(2)}`);
 
     this.normalizedResult = normalizedResult;
     this.textPosition = get10thFromFirstPoint(node1, node2);

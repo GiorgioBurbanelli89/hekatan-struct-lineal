@@ -239,22 +239,33 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
-  background: var(--ink-fade);
-  border-radius: 2px;
+  height: 22px;            /* área para arrastrar (antes 4px = casi imposible) */
+  margin: -9px 0;          /* footprint neto ~4px: el alto de la slide NO cambia */
+  background: transparent; /* el track visible se dibuja aparte, fino */
   outline: none;
   cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--ink-fade);
+  border-radius: 3px;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 18px;
   height: 18px;
+  margin-top: -6px;        /* centra el thumb sobre el track */
   background: var(--gold);
   border-radius: 50%;
   border: 2px solid var(--ink);
   cursor: grab;
 }
 input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; }
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: var(--ink-fade);
+  border-radius: 3px;
+}
 input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;

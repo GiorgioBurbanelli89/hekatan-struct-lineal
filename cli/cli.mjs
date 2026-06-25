@@ -21,8 +21,8 @@ import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Load WASM ──────────────────────────────────────────────────────
-const wasmPath = join(__dirname, "hekatan-fem", "src", "cpp", "built", "deform.wasm");
-const jsPath = join(__dirname, "hekatan-fem", "src", "cpp", "built", "deform.js");
+const wasmPath = join(__dirname, "..", "hekatan-fem", "src", "cpp", "built", "deform.wasm");
+const jsPath = join(__dirname, "..", "hekatan-fem", "src", "cpp", "built", "deform.js");
 const createModule = (await import(pathToFileURL(jsPath).href)).default;
 const mod = await createModule({ wasmBinary: readFileSync(wasmPath) });
 

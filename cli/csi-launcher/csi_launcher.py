@@ -13,6 +13,9 @@ Modos de uso:
    python csi_launcher.py archivo.e2k --etabs      → fuerza ETABS
    python csi_launcher.py archivo.s2k --sap        → fuerza SAP2000
    python csi_launcher.py archivo.f2k --safe       → fuerza SAFE
+   python csi_launcher.py archivo.e2k --inspect    → imprime materiales, secciones, points, cases
+   python csi_launcher.py archivo.e2k --results    → corre análisis + dump displacements/reactions
+   python csi_launcher.py archivo.e2k --json       → output JSON (machine-readable)
    python csi_launcher.py --recent                 → muestra archivos recientes
 
 Para archivos .EDB/.SDB/.FDB (binarios) usa file association de Windows.

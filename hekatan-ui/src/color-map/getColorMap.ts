@@ -5,25 +5,26 @@ import { Lut } from "three/addons/math/Lut.js";
 import van, { State } from "vanjs-core";
 import { fixedColorMapRange } from "../viewer/getViewer";
 
-// SAP2000 default contour colormap — replica EXACTA del "Display Deformed Shape →
-// Contours" de SAP2000/CSiBridge/ETABS. 14 stops del clásico industrial:
-//   min(t=0)=magenta → rosa → rojo → naranja → amarillo → verde → cian → azul oscuro(t=1)
-// Adaptado de calcpad-viz/src/utils/colormap.ts (Calcpad-Symbolic).
+// Colormap de contornos EXACTO de ETABS — extraído por INGENIERÍA INVERSA vía la OAPI
+// (tabla "Options - Colors - Output": los COLORREF/BGR reales del binario; SIN decompilar).
+// 15 bandas Contour1(min)→Contour15(max): magenta → rojo → naranja → amarillo → verde →
+// cian → azul (reverse-rainbow ≈ jet_r). Fuente: hekatan-csi-debug/etabs_colormap.py.
 const SAP2000_PALETTE: [number, number, number, number][] = [
-  [0.000, 255,   0, 255],  // magenta (min)
-  [0.077, 255,   0, 180],  // rosa
-  [0.154, 255,   0,   0],  // rojo
-  [0.231, 255,  80,   0],  // rojo-naranja
-  [0.308, 255, 140,   0],  // naranja
-  [0.385, 255, 190,   0],  // amarillo-naranja
-  [0.462, 255, 255,   0],  // amarillo
-  [0.538, 180, 255,   0],  // amarillo-verde
-  [0.615,   0, 255,   0],  // verde
-  [0.692,   0, 255, 180],  // verde-cian
-  [0.769,   0, 255, 255],  // cian
-  [0.846,   0, 180, 255],  // cian-azul
-  [0.923,   0,   0, 255],  // azul
-  [1.000,   0,   0, 180],  // azul oscuro (max)
+  [0.0000, 200,   0, 200],  // C1  magenta (min)
+  [0.0714, 228,   0, 100],  // C2
+  [0.1429, 255,   0,   0],  // C3  rojo
+  [0.2143, 255,  64,   0],  // C4
+  [0.2857, 255, 128,   0],  // C5  naranja
+  [0.3571, 255, 170,   0],  // C6
+  [0.4286, 255, 212,   0],  // C7
+  [0.5000, 255, 255,   0],  // C8  amarillo
+  [0.5714, 128, 255,   0],  // C9
+  [0.6429,   0, 255,   0],  // C10 verde
+  [0.7143,   0, 255, 128],  // C11
+  [0.7857,   0, 255, 255],  // C12 cian
+  [0.8571,   0, 170, 255],  // C13
+  [0.9286,   0,  85, 255],  // C14
+  [1.0000,   0,   0, 255],  // C15 azul (max)
 ];
 
 /** Lookup en la palette interpolando linealmente entre stops. */
@@ -105,7 +106,12 @@ export function getColorMap(
           gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
           return;
         }
-        vec3 color = texture2D(cmap, vec2(clamp(vScalar, 0.0, 1.0), 0.5)).rgb;
+        // BANDAS DISCRETAS como ETABS (15 contornos): quantizar el escalar a la
+        // banda y tomar su color central (no gradiente suave).
+        float NB = 15.0;
+        float band = min(floor(clamp(vScalar, 0.0, 1.0) * NB), NB - 1.0);
+        float q = (band + 0.5) / NB;
+        vec3 color = texture2D(cmap, vec2(q, 0.5)).rgb;
         gl_FragColor = vec4(color * ambient, 1.0);
       }
     `,
