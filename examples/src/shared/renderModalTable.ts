@@ -5,6 +5,8 @@ export interface ModalTableConfig {
   title: string;
   /** Optional property lines shown below the title */
   properties?: string[];
+  /** SVG del espectro NEC-15 (Sa vs T) insertado en el cuerpo del panel. */
+  spectrumHtml?: string;
 }
 
 /**
@@ -22,12 +24,12 @@ export function createModalPanel() {
     position: fixed; bottom: 10px; left: 10px; z-index: 9999;
     background: rgba(0,0,0,0.92); color: #0f0; font-family: monospace;
     font-size: 12px; border-radius: 6px;
-    max-width: 760px; max-height: 60vh;
-    overflow-x: auto; overflow-y: auto;
+    width: 640px; max-width: 60vw; max-height: 50vh;
+    display: flex; flex-direction: column; overflow: hidden;
     pointer-events: auto;
-    border: 1px solid #0f03;
+    border: 1px solid #0f06; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     resize: both;
-    min-width: 400px; min-height: 200px;
+    min-width: 340px; min-height: 120px;
   `;
 
   let minimized = false;
@@ -96,17 +98,19 @@ export function createModalPanel() {
 </div>`;
     })();
 
-    let html = `<div id="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px;">
-  <b style="color:#ff0">⚡ MODAL ANALYSIS — ${config.title}</b>
+    let html = `<div id="modal-header" style="flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:6px 10px; cursor:move; border-bottom:1px solid #0f04; background:rgba(0,0,0,0.4);">
+  <b style="color:#ff0; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">⚡ MODAL — ${config.title}</b>
   <div style="display:flex; gap:4px; margin-left:12px;">
     <button id="modal-copy" style="padding:2px 8px; font-size:10px; cursor:pointer;
       background:#2d6a4f; color:#fff; border:1px solid #40916c; border-radius:3px;" title="Copiar tabla">📋</button>
     <button id="modal-minimize" style="padding:2px 8px; font-size:10px; cursor:pointer;
       background:#555; color:#fff; border:1px solid #777; border-radius:3px;" title="Minimizar">▬</button>
+    <button id="modal-close" style="padding:2px 8px; font-size:10px; cursor:pointer;
+      background:#7a2d2d; color:#fff; border:1px solid #b04545; border-radius:3px;" title="Cerrar (ocultar ventana)">✕</button>
   </div>
 </div>`;
 
-    html += `<div id="modal-body" style="padding:0 12px 10px 12px;">`;
+    html += `<div id="modal-body" style="flex:1 1 auto; min-height:0; overflow:auto; padding:6px 12px 10px 12px;">`;
 
     // Dictamen arriba
     html += `<div style="padding:6px 0; font-weight:bold; font-size:13px;">${dictamen}</div>`;
@@ -118,6 +122,8 @@ export function createModalPanel() {
         html += `<span style="color:#888">${line}</span>\n`;
       }
     }
+    // Gráfica del espectro NEC-15 (Sa vs T) con T₁ del modal marcado.
+    if (config.spectrumHtml) html += config.spectrumHtml;
 
     html += `<table style="border-collapse:collapse; color:#0f0; font-size:11px; margin-top:4px">
 <tr style="color:#ff0; border-bottom:1px solid #ff03">
@@ -202,6 +208,29 @@ export function createModalPanel() {
       const btn = div.querySelector("#modal-minimize") as HTMLElement;
       if (minimized) { body.style.display = "none"; btn.textContent = "▢"; btn.title = "Restaurar"; }
       else { body.style.display = "block"; btn.textContent = "▬"; btn.title = "Minimizar"; }
+    });
+
+    // Cerrar = ocultar la ventana ENTERA (no solo colapsar el cuerpo). Así el
+    // usuario sigue con otro cálculo sin que el panel le tape el modelo. Se
+    // vuelve a mostrar al apretar "Correr modal + animar" (display = "block").
+    div.querySelector("#modal-close")?.addEventListener("click", () => {
+      div.style.display = "none";
+    });
+
+    // Arrastrar el panel por el header → moverlo a donde no tape el modelo
+    const header = div.querySelector("#modal-header") as HTMLElement;
+    header?.addEventListener("mousedown", (e) => {
+      if ((e.target as HTMLElement).tagName === "BUTTON") return;
+      const r = div.getBoundingClientRect();
+      div.style.bottom = "auto"; div.style.top = `${r.top}px`; div.style.left = `${r.left}px`;
+      const ox = (e as MouseEvent).clientX - r.left, oy = (e as MouseEvent).clientY - r.top;
+      const move = (ev: MouseEvent) => {
+        div.style.left = `${Math.max(0, ev.clientX - ox)}px`;
+        div.style.top = `${Math.max(0, ev.clientY - oy)}px`;
+      };
+      const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+      document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+      e.preventDefault();
     });
 
     div.querySelector("#modal-copy")?.addEventListener("click", () => {

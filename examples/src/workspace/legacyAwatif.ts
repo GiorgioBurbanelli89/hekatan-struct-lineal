@@ -103,6 +103,10 @@ export const tableroPuente      = legacy("tablero-puente",       "Tablero Puente
 export const solidCubeFEM       = legacy("solid-cube-fem",       "Cubo Sólido H8 (validación CalculiX)",          "🏁 Benchmarks · 3️⃣ Sólidos", true);
 export const bulboPresionesSuelo= legacy("bulbo-presiones-suelo","Bulbo de Presiones — Serquen SF-70",            "🏁 Benchmarks · 4️⃣ Combinados", true);
 
+// ─── Sísmico (Norma Ecuatoriana de la Construcción NEC-SE-DS) ───────
+export const necEspectro        = legacy("espectro-nec",         "Espectro de Diseño NEC-SE-DS",                   "Sísmico · NEC");
+export const necCortanteBasal   = legacy("cortante-basal",       "Cortante Basal + Distribución NEC-SE-DS",        "Sísmico · NEC");
+
 /** Array completo de los 19+11 ejemplos legacy para registrar de un golpe. */
 export const legacyAwatifExamples: ExampleDef[] = [
   legacy1dMesh,
@@ -153,4 +157,7 @@ export const legacyAwatifExamples: ExampleDef[] = [
   // 🏁 Benchmarks (FEM 3D Sólido validados)
   solidCubeFEM,
   bulboPresionesSuelo,
+  // Sísmico · NEC (Norma Ecuatoriana)
+  necEspectro,
+  necCortanteBasal,
 ];

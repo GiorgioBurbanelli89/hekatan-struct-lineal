@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Hekatan Struct — Workspace</title>
+  <link rel="canonical" href="/workspace/?t=cerramiento">
+  <script>
+    // ⚠️ Redirección con BASE-PATH ABSOLUTO.
+    // CRÍTICO: vite.config.ts tiene `root: "./src"` → en dev, la URL raíz es
+    // localhost:4600/ (NO /src/). En prod gh-pages, la base es /hekatan-struct/.
+    // El relativo './1d-mesh-clean/' anterior causaba recursión infinita cuando
+    // este index.html se servía como fallback para paths inválidos.
+    (function () {
+      var p = location.pathname;
+      var base = '/';
+      if (p.indexOf('/hekatan-struct/') === 0) base = '/hekatan-struct/'; // gh-pages prod
+      window.location.replace(base + 'workspace/?t=cerramiento');
+    })();
+  </script>
+  <noscript>
+    <!-- Fallback sin JS. En dev base = "/"; en prod "/hekatan-struct/". -->
+    <meta http-equiv="refresh" content="0; url=/workspace/?t=cerramiento">
+  </noscript>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #1a1a1a; color: #eee; padding: 2rem; }
+    a { color: #4af; }
+  </style>
+</head>
+<body>
+  <p>Redirigiendo al workspace de Hekatan Struct...</p>
+  <p>Si no se redirige automáticamente:
+    <a href="/workspace/?t=cerramiento">Click acá para abrir el workspace (cerramiento)</a>
+  </p>
+</body>
+</html>

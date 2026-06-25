@@ -392,16 +392,16 @@ function buildReport(): string {
 <!-- ═══════════ PASO 8: ENSAMBLAJE ═══════════ -->
 <h2>Ensamblaje Global</h2>
 
-<p>Para cada elemento e = 1..${nElems}, se ensambla K<sub>e</sub>(12×12) y f<sub>e</sub>(12×1) en las matrices globales:</p>
+<p>Para cada elemento e = 1..${nElems}, se ensambla su K<sub>e</sub> (12×12 = 4 nodos × 3 GDL) y f<sub>e</sub> (12×1) en las matrices globales. Los índices <em>p, q</em> recorren los 12 GDL locales del elemento:</p>
 
 <div class="eq eq-center">
-  $$\\mathbf{K}(\\text{dofMap}[i], \\text{dofMap}[j]) \\mathrel{+}= \\mathbf{K}_e(i, j)$$
+  $$\\mathbf{K}(\\text{dofMap}[p], \\text{dofMap}[q]) \\mathrel{+}= \\mathbf{K}_e(p, q)$$
 </div>
 <div class="eq eq-center">
-  $$\\mathbf{F}(\\text{dofMap}[i]) \\mathrel{+}= \\mathbf{f}_e(i)$$
+  $$\\mathbf{F}(\\text{dofMap}[p]) \\mathrel{+}= \\mathbf{f}_e(p)$$
 </div>
 
-<p>Mapeo DOF: para nodo local i del elemento, DOF global = 3·(nodo_global) + d, donde d ∈ {0=w, 1=β<sub>x</sub>, 2=β<sub>y</sub>}</p>
+<p>Mapeo DOF (dofMap): el GDL local <em>p</em> = 3·i + d — con nodo local i ∈ {0,1,2,3} y componente d ∈ {0=w, 1=β<sub>x</sub>, 2=β<sub>y</sub>} — se mapea al GDL global <strong>dofMap[p] = 3·G + d</strong>, donde G es el nodo global del nodo local i (no confundir con el punto de Gauss g del vector de carga).</p>
 
 <table>
   <tr><th>Propiedad</th><th>Valor</th></tr>

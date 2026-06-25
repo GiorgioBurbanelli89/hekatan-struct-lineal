@@ -165,7 +165,7 @@ document.body.append(
       deformOutputs: deformOutputsState,
       analyzeOutputs: analyzeOutputsState,
     },
-    settingsObj: { deformedShape: true },
+    settingsObj: { deformedShape: true, shellResults: "vonMises" },
   }),
   getToolbar({
     sourceCode:

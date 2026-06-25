@@ -34,6 +34,12 @@ export interface ExportE2kInput {
    * Formato: 8 valores [A, As2, As3, Torsion, I22, I33, Mass, Weight].
    */
   propertyModifiers?: Map<number, [number, number, number, number, number, number, number, number]>;
+  /**
+   * Emitir un diafragma rigido D1 y asignarlo a losas + juntas top.
+   * Default `false` = modelo SIN diafragma rigido (flexible). Poner `true` para
+   * el caso con diafragma rigido.
+   */
+  rigidDiaphragm?: boolean;
 }
 
 export function exportE2k(input: ExportE2kInput): string {
@@ -58,64 +64,26 @@ export function exportE2k(input: ExportE2kInput): string {
  * This preserves ETABS compatibility perfectly.
  */
 function exportFromRaw(raw: Map<string, string[]>, model: E2kModel): string {
+  // Round-trip FIEL: re-emite las secciones en el MISMO orden en que entraron
+  // (el Map conserva el orden de parseo = orden del archivo original) e INCLUYE
+  // las secciones vacias. Asi "lo que entra == lo que sale" (salvo el timestamp
+  // del LOG que ETABS reescribe). NO se reordena ni se descartan secciones.
   const out: string[] = [];
-
-  // Ordered section names as they appear in ETABS e2k files
-  const sectionOrder = [
-    "PROGRAM INFORMATION",
-    "CONTROLS",
-    "STORIES - IN SEQUENCE FROM TOP",
-    "GRIDS",
-    "DIAPHRAGM NAMES",
-    "MATERIAL PROPERTIES",
-    "REBAR DEFINITIONS",
-    "FRAME SECTIONS",
-    "AUTO SELECT SECTION LISTS",
-    "CONCRETE SECTIONS",
-    "WALL/SLAB/DECK SECTIONS",
-    "POINT COORDINATES",
-    "LINE CONNECTIVITIES",
-    "AREA CONNECTIVITIES",
-    "POINT ASSIGNS",
-    "LINE ASSIGNS",
-    "AREA ASSIGNS",
-    "LOAD PATTERNS",
-    "POINT OBJECT LOADS",
-    "FRAME OBJECT LOADS",
-    "SHELL OBJECT LOADS",
-    "ANALYSIS OPTIONS",
-    "MASS SOURCE",
-    "FUNCTIONS",
-    "LOAD CASES",
-    "LOAD COMBINATIONS",
-  ];
-
-  out.push(`$ File exported from Awatif FEM Studio (round-trip)`);
-  out.push(``);
-
-  for (const secName of sectionOrder) {
-    const lines = raw.get(secName);
-    if (!lines || lines.length === 0) continue;
-    out.push(`$ ${secName}`);
-    for (const line of lines) {
-      out.push(line);
-    }
-    out.push(``);
-  }
-
-  // Emit any sections not in our ordered list
+  const headers = model?.rawSectionHeaders;
   for (const [secName, lines] of raw) {
-    if (sectionOrder.includes(secName)) continue;
-    if (lines.length === 0) continue;
-    out.push(`$ ${secName}`);
-    for (const line of lines) {
-      out.push(line);
-    }
-    out.push(``);
+    // Cabecera verbatim del original si existe (preserva espacios finales);
+    // si no, se reconstruye como "$ <nombre>".
+    out.push(headers?.get(secName) ?? `$ ${secName}`);
+    for (const line of lines) out.push(line);
+    // NO se agrega blank extra: las lineas en blanco entre secciones ya vienen
+    // capturadas como ultima(s) linea(s) de cada bloque (round-trip fiel).
   }
-
-  out.push(`  END`);
-  out.push(`$ END OF MODEL FILE`);
+  // Si el archivo original no traia su propio "END OF MODEL FILE" como seccion,
+  // lo agregamos (ETABS lo espera al cierre).
+  if (!raw.has("END OF MODEL FILE")) {
+    out.push(`  END`);
+    out.push(`$ END OF MODEL FILE`);
+  }
   return out.join("\r\n");
 }
 
@@ -131,6 +99,9 @@ function exportFromRaw(raw: Map<string, string[]>, model: E2kModel): string {
  */
 function exportFromScratch(input: ExportE2kInput): string {
   const { nodes, elements, nodeInputs, elementInputs, title, units } = input;
+  // Diafragma rigido D1: OPT-IN. Por defecto NO se emite (modelo flexible / sin
+  // diafragma) para respetar "sin diafragma rigido". Activar con rigidDiaphragm:true.
+  const rigidDiaphragm = input.rigidDiaphragm ?? false;
   const force = units?.force || "Tonf";
   const length = units?.length || "m";
   const lines: string[] = [];
@@ -203,15 +174,27 @@ function exportFromScratch(input: ExportE2kInput): string {
   // is (id, X, Y) with Z derived from STORY assignment.
   const zSet = new Set<number>();
   nodes.forEach(n => zSet.add(rd(n[2]))); // Z = vertical elevation
-  const sortedZ = [...zSet].sort((a, b) => a - b);
+  let sortedZ = [...zSet].sort((a, b) => a - b);
+  // Slab-only / single-level case: si solo hay un Z, garantizar Base + Story1.
+  // Si Z > 0: Base en 0, Story1 en Z. Si Z = 0: Base en 0, Story1 en 4 (default).
+  if (sortedZ.length === 1) {
+    const onlyZ = sortedZ[0];
+    if (onlyZ > 0) sortedZ = [0, onlyZ];
+    else           sortedZ = [0, 4];
+  }
   const storyNames: string[] = [];
   const zToStory = new Map<number, string>();
   storyNames.push("Base");
   zToStory.set(sortedZ[0], "Base");
   for (let i = 1; i < sortedZ.length; i++) {
-    const name = `Level_${i}`;
+    const name = `Story${i}`;
     storyNames.push(name);
     zToStory.set(sortedZ[i], name);
+  }
+  // Si nodos quedaron a z=0 pero forzamos Story1 a z=4, mapear z=0 a Story1
+  // (no a Base) para que las areas se asignen al piso correcto.
+  if (zSet.size === 1 && zSet.has(0)) {
+    zToStory.set(0, storyNames[1]);
   }
   lines.push(`$ STORIES - IN SEQUENCE FROM TOP`);
   for (let i = sortedZ.length - 1; i >= 1; i--) {
@@ -224,7 +207,7 @@ function exportFromScratch(input: ExportE2kInput): string {
   // top joints de columnas verticales (estándar ETABS) y para top joints de
   // shells (losas / muros). Default RIGID (típico).
   const hasQ4 = elements.some(el => el.length === 4);
-  {
+  if (rigidDiaphragm) {
     lines.push(`$ DIAPHRAGM NAMES`);
     lines.push(`  DIAPHRAGM "D1"    TYPE RIGID`);
     lines.push(``);
@@ -273,7 +256,16 @@ function exportFromScratch(input: ExportE2kInput): string {
     const wpv_kN = wpvByE.get(E_kNm2) ?? (isSteel ? 76.97 : 24.0);
     const E_out  = cE(E_kNm2);
     const wpv_out = cWV(wpv_kN);
-    const nu = isSteel ? 0.3 : 0.2;
+    // Poisson — respetar elementInputs.poissonsRatios si el usuario lo paso;
+    // si no, fallback a defaults estandar (0.3 acero, 0.2 concreto).
+    // Tomamos la moda del nu de todos los elementos que comparten ese E.
+    const nusForE: number[] = [];
+    elementInputs.poissonsRatios?.forEach((nu_e, elemIdx) => {
+      if (elementInputs.elasticities?.get(elemIdx) === E_kNm2) nusForE.push(nu_e);
+    });
+    const nu = nusForE.length > 0
+      ? nusForE.reduce((s, v) => s + v, 0) / nusForE.length
+      : (isSteel ? 0.3 : 0.2);
     const alpha = isSteel ? 1.17e-5 : 1.0e-5;
 
     if (isSteel) {
@@ -584,7 +576,7 @@ function exportFromScratch(input: ExportE2kInput): string {
     // MINNUMSTA = nSegments para que ETABS auto-mesh interno coincida con la
     // discretización hekatan. RIGIDZONE 0.5 = default ETABS (zona rígida a 0.5
     // del nudo). MAXSTASPC opcional para uniformizar el espaciado.
-    laEntries.push(`  LINEASSIGN  "${eName}"  "${psTop.story}"  SECTION "${ch.secName}" ${extras} RIGIDZONE 0.5 MAXSTASPC 0.5 MINNUMSTA ${ch.nSegments} AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
+    laEntries.push(`  LINEASSIGN  "${eName}"  "${psTop.story}"  SECTION "${ch.secName}" ${extras} RIGIDZONE 0 MAXSTASPC 0.5 MINNUMSTA ${ch.nSegments} AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
   });
 
   // 2. Elementos no-chain (beams + columnas sueltas/no-contiguas) — uno por uno
@@ -598,7 +590,7 @@ function exportFromScratch(input: ExportE2kInput): string {
     if (type === "BEAM") {
       const ps0 = nodeToPS(el[0]), ps1 = nodeToPS(el[1]);
       lines.push(`  LINE  "E${i + 1}"  BEAM  "${ps0.pt}"  "${ps1.pt}"  0`);
-      laEntries.push(`  LINEASSIGN  "E${i + 1}"  "${ps0.story}"  SECTION "${secName}" ${extras} RIGIDZONE 0.5 MINNUMSTA 3 AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
+      laEntries.push(`  LINEASSIGN  "E${i + 1}"  "${ps0.story}"  SECTION "${secName}" ${extras} RIGIDZONE 0 MINNUMSTA 3 AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
     } else {
       // Columna/brace suelta (no entra en ningún chain por estar aislada)
       const bot = nodes[el[0]][2] <= nodes[el[1]][2] ? el[0] : el[1];
@@ -608,7 +600,7 @@ function exportFromScratch(input: ExportE2kInput): string {
       const botIdx = sortedZ.indexOf(zBot), topIdx = sortedZ.indexOf(zTop);
       const nStories = Math.max(1, topIdx >= 0 && botIdx >= 0 ? topIdx - botIdx : 1);
       lines.push(`  LINE  "E${i + 1}"  ${type}  "${psTop.pt}"  "${psTop.pt}"  ${nStories}`);
-      laEntries.push(`  LINEASSIGN  "E${i + 1}"  "${psTop.story}"  SECTION "${secName}" ${extras} RIGIDZONE 0.5 MINNUMSTA 3 AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
+      laEntries.push(`  LINEASSIGN  "E${i + 1}"  "${psTop.story}"  SECTION "${secName}" ${extras} RIGIDZONE 0 MINNUMSTA 3 AUTOMESH "YES"  MESHATINTERSECTIONS "YES"  `);
     }
   });
   lines.push(``);
@@ -639,7 +631,7 @@ function exportFromScratch(input: ExportE2kInput): string {
   chains.forEach(ch => {
     const psTop = nodeToPS(ch.topNodeIdx);
     const key = `${psTop.pt}@${psTop.story}`;
-    if (!emittedPointAssigns.has(key) && psTop.story !== "Base") {
+    if (rigidDiaphragm && !emittedPointAssigns.has(key) && psTop.story !== "Base") {
       lines.push(`  POINTASSIGN  "${psTop.pt}"  "${psTop.story}"  DIAPH "D1"  `);
       emittedPointAssigns.add(key);
     }
@@ -697,19 +689,34 @@ function exportFromScratch(input: ExportE2kInput): string {
     return matNames.values().next().value || "Conc_1";
   })();
 
+  // Espesor por TIPO (no el primero del map): toma el thickness de un elemento
+  // representativo de losa / de muro respectivamente.
+  const thkOf = (predicate: (a: { isWall: boolean }) => boolean, fallback: number) => {
+    for (const a of areaElements) {
+      if (predicate(a)) {
+        const t = elementInputs.thicknesses?.get(a.idx);
+        if (t !== undefined) return t;
+      }
+    }
+    return fallback;
+  };
   if (areaElements.some(a => !a.isWall)) {
     lines.push(`$ SLAB PROPERTIES`);
-    const t_slab = elementInputs.thicknesses?.values().next().value ?? 0.15;
+    const t_slab = thkOf(a => !a.isWall, 0.15);
     lines.push(`  SHELLPROP  "Losa"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "ShellThin"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(t_slab)} `);
     lines.push(``);
   }
   if (areaElements.some(a => a.isWall)) {
     lines.push(`$ WALL PROPERTIES`);
-    const t_wall = elementInputs.thicknesses?.values().next().value ?? 0.2;
-    lines.push(`  SHELLPROP  "Muro"  PROPTYPE  "Wall"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "ShellThick"  WALLTHICKNESS ${rd(t_wall)} `);
+    const t_wall = thkOf(a => a.isWall, 0.2);
+    // Muro DKE = ShellThin (Kirchhoff), igual que la losa. ETABS ShellThin usa DKE.
+    lines.push(`  SHELLPROP  "Muro"  PROPTYPE  "Wall"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "ShellThin"  WALLTHICKNESS ${rd(t_wall)} `);
     lines.push(``);
   }
 
+  // Recolecta losas para emitir AREALOAD (carga de área, como ETABS) en vez de
+  // solo cargas nodales. Reconstruye la presión q de las cargas nodales FZ.
+  const slabAreas: { aName: string; story: string; idx: number; nodes: number[] }[] = [];
   if (areaElements.length > 0) {
     lines.push(`$ AREA CONNECTIVITIES`);
     const aaEntries: string[] = [];
@@ -731,7 +738,9 @@ function exportFromScratch(input: ExportE2kInput): string {
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 0 0 0 0
         lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[0].pt}"  "${ps[1].pt}"  "${ps[2].pt}"  "${ps[3].pt}"  0  0  0  0  `);
-        aaEntries.push(`  AREAASSIGN  "${aName}"  "${ps[0].story}"  SECTION "Losa"  DIAPH  "D1"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        const diaphLosa = rigidDiaphragm ? ` DIAPH  "D1" ` : ``;
+        aaEntries.push(`  AREAASSIGN  "${aName}"  "${ps[0].story}"  SECTION "Losa" ${diaphLosa} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        slabAreas.push({ aName, story: ps[0].story, idx: ae.idx, nodes: el });
       }
     });
     lines.push(``);
@@ -756,6 +765,35 @@ function exportFromScratch(input: ExportE2kInput): string {
   lines.push(`  LOADPATTERN "Live"  TYPE  "Live"  SELFWEIGHT  0`);
   lines.push(``);
 
+  // ── SLAB AREA LOADS (como ETABS) ───────────────────────────────────
+  // Reconstruye la presión uniforme q de las cargas nodales FZ sobre las losas
+  // y la emite como AREALOAD (carga de área), igual que ETABS. Suprime la FZ
+  // nodal de esos nodos para no duplicar. Así el e2k tiene la losa CON carga.
+  const slabNodeSet = new Set<number>();
+  const areaLoadLines: string[] = [];
+  let qSlab = 0;   // presión uniforme de losa (para el SHELLUNIFORMLOADSET)
+  // SIEMPRE emitir la carga de losa aplicada (antes solo en "manual" → en "auto" la
+  // carga del usuario se perdía y ETABS mostraba el modelo "sin carga"). Va en el patrón
+  // "Live" (carga aplicada), separada del peso propio que maneja weightMode.
+  if (slabAreas.length > 0 && nodeInputs.loads) {
+    const q4Area = (el: number[]) => {
+      const p = el.map(n => nodes[n]);
+      const d1 = [p[2][0]-p[0][0], p[2][1]-p[0][1], p[2][2]-p[0][2]];
+      const d2 = [p[3][0]-p[1][0], p[3][1]-p[1][1], p[3][2]-p[1][2]];
+      const cx = d1[1]*d2[2]-d1[2]*d2[1], cy = d1[2]*d2[0]-d1[0]*d2[2], cz = d1[0]*d2[1]-d1[1]*d2[0];
+      return 0.5*Math.sqrt(cx*cx+cy*cy+cz*cz);
+    };
+    let totalA = 0, totalFZ = 0;
+    for (const s of slabAreas) { totalA += q4Area(s.nodes); s.nodes.forEach(n => slabNodeSet.add(n)); }
+    slabNodeSet.forEach(n => { const l = nodeInputs.loads!.get(n); if (l) totalFZ += Math.abs(l[2]); });
+    qSlab = totalA > 1e-9 ? totalFZ / totalA : 0;   // presión uniforme (kN/m²)
+    if (qSlab > 1e-9) for (const s of slabAreas)
+      // Formato NATIVO de ETABS: AREALOAD referencia un load set nombrado (UNIFLOADSET).
+      // NO usar "UNIFF" directo: ETABS lo interpreta como carga a frames (one-way) y NO la
+      // muestra/aplica en losas con flexión → el modelo aparece "sin carga".
+      areaLoadLines.push(`  AREALOAD  "${s.aName}"  "${s.story}"  TYPE "UNIFLOADSET"  "CargaLosa"`);
+  }
+
   // ── POINT OBJECT LOADS ─────────────────────────────────────────────
   const userLoadLines: string[] = [];
   if (nodeInputs.loads && nodeInputs.loads.size > 0) {
@@ -764,9 +802,9 @@ function exportFromScratch(input: ExportE2kInput): string {
       const ps = nodeToPS(nodeIdx);
       if (Math.abs(fx) > 1e-10) userLoadLines.push(`  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "FORCE"  LC "Dead"  FX ${rd(cF(fx))}  FY 0  FZ 0`);
       if (Math.abs(fy) > 1e-10) userLoadLines.push(`  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "FORCE"  LC "Dead"  FX 0  FY ${rd(cF(fy))}  FZ 0`);
-      // FZ: en modo "auto" se omite (lo computa ETABS via SELFWEIGHT=1);
-      // en modo "manual" se emite explícitamente.
-      if (weightMode === "manual" && Math.abs(fz) > 1e-10) {
+      // FZ: en modo "auto" se omite (SELFWEIGHT=1). En "manual" se emite, salvo
+      // que el nodo sea de losa (ahí la carga ya va como AREALOAD de área).
+      if (weightMode === "manual" && Math.abs(fz) > 1e-10 && !slabNodeSet.has(nodeIdx)) {
         userLoadLines.push(`  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "FORCE"  LC "Dead"  FX 0  FY 0  FZ ${rd(cF(fz))}`);
       }
     });
@@ -779,6 +817,15 @@ function exportFromScratch(input: ExportE2kInput): string {
       if (Math.abs(my) > 1e-10) userLoadLines.push(`  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "MOMENT"  LC "Dead"  MX 0  MY ${rd(cF(my))}  MZ 0`);
       if (Math.abs(mz) > 1e-10) userLoadLines.push(`  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "MOMENT"  LC "Dead"  MX 0  MY 0  MZ ${rd(cF(mz))}`);
     });
+  }
+  if (areaLoadLines.length > 0) {
+    // Definición del load set ANTES de asignarlo (como ETABS): nombre → patrón + valor.
+    lines.push(`$ SHELL UNIFORM LOAD SETS`);
+    lines.push(`  SHELLUNIFORMLOADSET  "CargaLosa"  LOADPAT "Live"  VALUE ${rd(cF(qSlab))}`);
+    lines.push(``);
+    lines.push(`$ SHELL OBJECT LOADS`);
+    areaLoadLines.forEach(l => lines.push(l));
+    lines.push(``);
   }
   if (userLoadLines.length > 0) {
     lines.push(`$ POINT OBJECT LOADS`);

@@ -11,7 +11,8 @@ export const plateThin: ExampleDef = {
   category: "🏁 Benchmarks · 2️⃣ Áreas",
   benchmark: true,
   defaultShellResult: "bendingXX",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY", "displacementZ"],
+  availableShellResults: ["bendingXX", "bendingYY", "bendingXY",
+                          "shearX", "shearY", "vonMises", "displacementZ"],
   hasModal: true,
   params: {
     Lx: { default: 4.0, min: 1, max: 10, step: 0.5, label: "Lx (m)" },
@@ -65,17 +66,51 @@ export const plateThin: ExampleDef = {
       deformations.set(i, [0, 0, n.w, n.bx, n.by, 0]);
     });
     states.deformOutputs.val = { deformations };
-    // Poblar analyzeOutputs con bendingXX, bendingYY, bendingXY para shell results
+    // Poblar analyzeOutputs con momentos + cortantes + Von Mises
     const bendingXX = new Map<number, number[]>();
     const bendingYY = new Map<number, number[]>();
     const bendingXY = new Map<number, number[]>();
+    const shearX    = new Map<number, number[]>();
+    const shearY    = new Map<number, number[]>();
+    const vonMises  = new Map<number, number[]>();
+    // Modulo de seccion por unidad ancho: S = t^2/6, sigma = M/S
+    const S = p.t * p.t / 6;
     out.elementResults.forEach((er, i) => {
-      // Valor constante per-element (4 nodos Q4 reciben mismo valor)
       bendingXX.set(i, [er.Mxx, er.Mxx, er.Mxx, er.Mxx]);
       bendingYY.set(i, [er.Myy, er.Myy, er.Myy, er.Myy]);
       bendingXY.set(i, [er.Mxy, er.Mxy, er.Mxy, er.Mxy]);
+      shearX.set(i,    [er.Qx,  er.Qx,  er.Qx,  er.Qx]);
+      shearY.set(i,    [er.Qy,  er.Qy,  er.Qy,  er.Qy]);
+      // Von Mises en fibra inferior (sigma_xx = +Mxx/S por unit ancho, etc.)
+      const sxx = er.Mxx / S, syy = er.Myy / S, sxy = er.Mxy / S;
+      const vm = Math.sqrt(sxx*sxx - sxx*syy + syy*syy + 3*sxy*sxy);
+      vonMises.set(i, [vm, vm, vm, vm]);
     });
-    states.analyzeOutputs.val = { bendingXX, bendingYY, bendingXY };
+    states.analyzeOutputs.val = { bendingXX, bendingYY, bendingXY,
+                                   shearX, shearY, vonMises };
+
+    // Capture hook for puppeteer/automation: w_max, M_max
+    let wMaxAbs = 0;
+    out.nodeResults.forEach(n => { if (Math.abs(n.w) > Math.abs(wMaxAbs)) wMaxAbs = n.w; });
+    let MxxMax = 0, MyyMax = 0, MxyMax = 0;
+    out.elementResults.forEach(e => {
+      if (Math.abs(e.Mxx) > Math.abs(MxxMax)) MxxMax = e.Mxx;
+      if (Math.abs(e.Myy) > Math.abs(MyyMax)) MyyMax = e.Myy;
+      if (Math.abs(e.Mxy) > Math.abs(MxyMax)) MxyMax = e.Mxy;
+    });
+    (window as any).__lastHekatanResult = {
+      example: "plate-thin",
+      params: { Lx: p.Lx, Ly: p.Ly, t: p.t, E: p.E, nu: p.nu, q: p.q, nx: p.nx, ny: p.ny },
+      w_max_m: wMaxAbs,
+      w_max_mm: wMaxAbs * 1000,
+      Mxx_max: MxxMax,
+      Myy_max: MyyMax,
+      Mxy_max: MxyMax,
+      n_nodes: out.nodeResults.length,
+      n_elements: out.elementResults.length,
+    };
+    console.log("HEKATAN_RESULT:", JSON.stringify((window as any).__lastHekatanResult));
+
     // Agregar propiedades necesarias para modal (E, ν, ρ por elemento)
     const elasticities = new Map<number, number>();
     const poissons = new Map<number, number>();

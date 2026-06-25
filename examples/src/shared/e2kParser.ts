@@ -32,10 +32,14 @@ export interface E2kModel {
   elementSections: Map<number, string>;  // elemIdx → section name
   nodeInputs: NodeInputs;
   elementInputs: ElementInputs;
+  /** Resortes Winkler (cimentación): {node, dof 0-5, k en kN/m} para pasar a deform() */
+  springsList: { node: number; dof: number; k: number }[];
   sectionShapes: Map<number, SectionShape>;
   info: { nNodes: number; nFrames: number; nAreas: number; title: string };
   /** Raw text blocks from original e2k for round-trip export */
   rawSections?: Map<string, string[]>;
+  /** Cabecera original ("$ ...") de cada seccion, verbatim, para round-trip exacto */
+  rawSectionHeaders?: Map<string, string>;
 }
 
 export function parseE2k(text: string): E2kModel {
@@ -48,10 +52,27 @@ export function parseE2k(text: string): E2kModel {
   const frameSections: E2kModel["frameSections"] = new Map();
   const pointCoords = new Map<string, [number, number]>(); // name → [x, y] (plan coords)
   const lineConns: { name: string; type: string; pt1: string; pt2: string; nStories: number }[] = [];
-  const areaConns: { name: string; pts: string[]; nStories: number }[] = [];
+  const areaConns: { name: string; pts: string[]; nStories: number; storyOffsets?: number[] }[] = [];
   const restraints = new Map<string, string[]>(); // pointName+story → restrained DOFs
   const lineAssigns = new Map<string, { story: string; section: string; rigidZone: number; releases: string[]; angle: number }>(); // lineName+story → assignment
   const frameLoads: { line: string; story: string; type: string; dir: string; lc: string; val: number }[] = [];
+  // areaName+story → assignment (section name, modelingType, cardinal point)
+  const areaAssigns = new Map<string, { story: string; section: string; modelingType: string; cardinalPoint: string }>();
+  // SHELL/SLAB section: name → properties
+  const shellSections = new Map<string, { material: string; modelingType: string; thickness: number }>();
+  // SHELL OBJECT LOADS: q uniforme por (area, story, loadcase)
+  const shellLoads: { area: string; story: string; type: string; dir: string; lc: string; val: number }[] = [];
+  // SHELL UNIFORM LOAD SETS: setName → array of {loadpat, value}
+  const shellLoadSets = new Map<string, { loadpat: string; value: number }[]>();
+  // ── RESORTES WINKLER (cimentación sobre suelo) ──
+  // AREA SPRING: nombre → rigidez por unidad de área (subgrade modulus) en U1/U2/U3.
+  const areaSprings = new Map<string, { u1: number; u2: number; u3: number }>();
+  // POINT SPRING: nombre → rigidez de resorte puntual en UX/UY/UZ.
+  const pointSprings = new Map<string, { ux: number; uy: number; uz: number }>();
+  // asignación área→spring: "area@story" → nombre de spring (de AREAASSIGN ... SPRINGPROP)
+  const areaSpringAssign = new Map<string, string>();
+  // asignación punto→spring: "point@story" → nombre (de POINTASSIGN ... SPRINGPROP)
+  const pointSpringAssign = new Map<string, string>();
   const grids: E2kGrid[] = [];
   let title = "";
 
@@ -59,6 +80,9 @@ export function parseE2k(text: string): E2kModel {
 
   // Capture raw lines for sections we can't reconstruct perfectly
   const rawSections = new Map<string, string[]>();
+  // Cabecera ORIGINAL ($ ...) de cada seccion, verbatim, para round-trip exacto
+  // (preserva espacios finales y mayusculas tal cual ETABS las escribio).
+  const rawSectionHeaders = new Map<string, string>();
   const capturedSectionNames = [
     "PROGRAM INFORMATION", "CONTROLS", "STORIES - IN SEQUENCE FROM TOP",
     "GRIDS", "DIAPHRAGM NAMES", "MATERIAL PROPERTIES", "REBAR DEFINITIONS",
@@ -73,15 +97,20 @@ export function parseE2k(text: string): E2kModel {
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
-    if (!line || line.startsWith("$")) {
-      if (line.startsWith("$ ")) currentSection = line.substring(2).trim();
+    if (line.startsWith("$ ")) {
+      // Nueva seccion: registrar la clave y la cabecera AUNQUE quede vacia.
+      currentSection = line.substring(2).trim();
+      if (!rawSections.has(currentSection)) rawSections.set(currentSection, []);
+      if (!rawSectionHeaders.has(currentSection)) rawSectionHeaders.set(currentSection, rawLine);
       continue;
     }
-    // Capture raw line for current section
+    // Capturar TODA otra linea (contenido, blancos, y comentarios "$"/"$$" sin
+    // nombre de seccion) para el round-trip exacto.
     if (currentSection) {
       if (!rawSections.has(currentSection)) rawSections.set(currentSection, []);
       rawSections.get(currentSection)!.push(rawLine);
     }
+    if (!line || line.startsWith("$")) continue;   // blancos/comentarios: no se parsean
 
     // ── CONTROLS ──
     if (currentSection === "CONTROLS") {
@@ -208,14 +237,140 @@ export function parseE2k(text: string): E2kModel {
     }
 
     // ── AREA CONNECTIVITIES ──
+    // Formato real ETABS: AREA "F1"  FLOOR  4  "2"  "3"  "4"  "1"  0  0  0  0
+    // El keyword "FLOOR"/"WALL"/"RAMP" puede estar entre name y el conteo.
     if (currentSection === "AREA CONNECTIVITIES") {
-      const am = line.match(/AREA\s+"([^"]+)"\s+\d+\s+(.+)/);
+      const am = line.match(/AREA\s+"([^"]+)"\s+(?:FLOOR|WALL|RAMP|PANEL)?\s*\d+\s+(.+)/);
       if (am) {
         const pts = am[2].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
-        areaConns.push({ name: am[1], pts, nStories: 0 });
+        // Enteros tras los puntos = offset de story por esquina (0=story asignada,
+        // 1=una story abajo). FLOOR: "0 0 0 0" (plano). PANEL/muro: ej "1 1 0 0" (vertical).
+        const storyOffsets = (am[2].replace(/"[^"]*"/g, " ").trim().match(/-?\d+/g) || []).map(Number);
+        areaConns.push({ name: am[1], pts, nStories: 0, storyOffsets });
+      }
+    }
+
+    // ── SLAB / WALL / DECK PROPERTIES ──
+    // Headers reales: "SLAB PROPERTIES", "WALL PROPERTIES", "DECK PROPERTIES",
+    // o el legacy combinado "WALL/SLAB/DECK SECTIONS".
+    if (currentSection === "WALL/SLAB/DECK SECTIONS" ||
+        currentSection === "SLAB PROPERTIES" ||
+        currentSection === "WALL PROPERTIES" ||
+        currentSection === "DECK PROPERTIES") {
+      const sm = line.match(/SHELLPROP\s+"([^"]+)"\s+(.+)/);
+      if (sm) {
+        const name = sm[1];
+        const tStr = sm[2].match(/SLABTHICKNESS\s+([\d.eE+-]+)/)?.[1];
+        const wStr = sm[2].match(/WALLTHICKNESS\s+([\d.eE+-]+)/)?.[1];
+        const mat = sm[2].match(/MATERIAL\s+"([^"]+)"/)?.[1];
+        const mtype = sm[2].match(/MODELINGTYPE\s+"([^"]+)"/)?.[1];
+        if (tStr || wStr) {
+          const existing = shellSections.get(name) || { material: "", modelingType: "ShellThin", thickness: 0 };
+          shellSections.set(name, {
+            material: mat ?? existing.material,
+            modelingType: mtype ?? existing.modelingType,
+            thickness: parseFloat(tStr ?? wStr ?? "0"),
+          });
+        }
+      }
+    }
+
+    // ── AREA ASSIGNS ──
+    // AREAASSIGN "F1" "Story1" SECTION "Slab1" CARDINALPOINT "TOP" TRANSFORMSTIFFNESSFOROFFSETS "No"
+    if (currentSection === "AREA ASSIGNS") {
+      const aa = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+(.+)/);
+      if (aa) {
+        const areaName = aa[1], story = aa[2], rest = aa[3];
+        const sec = rest.match(/SECTION\s+"([^"]+)"/)?.[1] ?? "";
+        const cp  = rest.match(/CARDINALPOINT\s+"([^"]+)"/)?.[1] ?? "CENTROID";
+        const mtype = rest.match(/MODELINGTYPE\s+"([^"]+)"/)?.[1] ?? "ShellThin";
+        areaAssigns.set(`${areaName}@${story}`, { story, section: sec, modelingType: mtype, cardinalPoint: cp });
+        const sp = rest.match(/SPRINGPROP\s+"([^"]+)"/)?.[1];
+        if (sp) areaSpringAssign.set(`${areaName}@${story}`, sp);
+      }
+    }
+
+    // ── RESORTES: propiedades (AREA/POINT SPRING PROPERTIES) ──
+    if (currentSection === "AREA SPRING PROPERTIES") {
+      const m = line.match(/AREASPRING\s+"([^"]+)"\s+(.+)/);
+      if (m) {
+        const name = m[1], r = m[2];
+        const u1 = parseFloat(r.match(/U1\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        const u2 = parseFloat(r.match(/U2\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        const u3 = parseFloat(r.match(/U3\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        areaSprings.set(name, { u1, u2, u3 });
+      }
+    }
+    if (currentSection === "POINT SPRING PROPERTIES") {
+      const m = line.match(/POINTSPRING\s+"([^"]+)"\s+(.+)/);
+      if (m) {
+        const name = m[1], r = m[2];
+        const ux = parseFloat(r.match(/UX\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        const uy = parseFloat(r.match(/UY\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        const uz = parseFloat(r.match(/UZ\s+([\d.eE+-]+)/)?.[1] ?? "0");
+        pointSprings.set(name, { ux, uy, uz });
+      }
+    }
+    // POINTASSIGN ... SPRINGPROP "name"
+    if (currentSection === "POINT ASSIGNS") {
+      const pa = line.match(/POINTASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+(.+)/);
+      const sp = pa?.[3]?.match(/SPRINGPROP\s+"([^"]+)"/)?.[1];
+      if (pa && sp) pointSpringAssign.set(`${pa[1]}@${pa[2]}`, sp);
+    }
+
+    // ── SHELL UNIFORM LOAD SETS ──
+    // SHELLUNIFORMLOADSET "ULoadSet1"  LOADPAT "Live"  VALUE 0.5
+    if (currentSection === "SHELL UNIFORM LOAD SETS") {
+      const su = line.match(/SHELLUNIFORMLOADSET\s+"([^"]+)"\s+LOADPAT\s+"([^"]+)"\s+VALUE\s+([\d.eE+-]+)/);
+      if (su) {
+        const setName = su[1], loadpat = su[2], value = parseFloat(su[3]);
+        if (!shellLoadSets.has(setName)) shellLoadSets.set(setName, []);
+        shellLoadSets.get(setName)!.push({ loadpat, value });
+      }
+    }
+
+    // ── SHELL OBJECT LOADS ──
+    // Forma A: AREALOAD "F1" "Story1" TYPE "UNIFF" DIR "GRAV" LC "Live" FVAL 1.019716
+    // Forma B: AREALOAD "F1" "Story1" TYPE "UNIFLOADSET" "ULoadSet1"
+    if (currentSection === "SHELL OBJECT LOADS") {
+      const sl = line.match(/AREALOAD\s+"([^"]+)"\s+"([^"]+)"\s+(.+)/);
+      if (sl) {
+        const areaName = sl[1], story = sl[2], rest = sl[3];
+        const typ = rest.match(/TYPE\s+"([^"]+)"/)?.[1] ?? "";
+        if (typ === "UNIFLOADSET") {
+          // Resolver el set DESPUÉS de parsear (porque los SETS pueden estar
+          // antes o después). Almacenamos referencia y resolvemos en post.
+          const setName = rest.match(/UNIFLOADSET"\s+"([^"]+)"/)?.[1]
+                       ?? rest.match(/"([^"]+)"\s*$/)?.[1] ?? "";
+          shellLoads.push({ area: areaName, story, type: "UNIFLOADSET",
+                            dir: "GRAV", lc: setName, val: 0 });
+        } else {
+          const dir = rest.match(/DIR\s+"([^"]+)"/)?.[1] ?? "GRAV";
+          const lc  = rest.match(/LC\s+"([^"]+)"/)?.[1] ?? "";
+          const val = parseFloat(rest.match(/FVAL\s+([\d.eE+-]+)/)?.[1] ?? "0");
+          shellLoads.push({ area: areaName, story, type: typ, dir, lc, val });
+        }
       }
     }
   }
+
+  // Resolver UNIFLOADSET references: expand a una row por (loadpat, value) del set
+  const expandedShellLoads: typeof shellLoads = [];
+  for (const sl of shellLoads) {
+    if (sl.type === "UNIFLOADSET") {
+      const set = shellLoadSets.get(sl.lc);
+      if (set) {
+        for (const e of set) {
+          expandedShellLoads.push({ area: sl.area, story: sl.story, type: "UNIFF",
+                                    dir: sl.dir, lc: e.loadpat, val: e.value });
+        }
+      }
+    } else {
+      expandedShellLoads.push(sl);
+    }
+  }
+  shellLoads.length = 0;
+  shellLoads.push(...expandedShellLoads);
 
   // ── Compute story elevations ──
   // Stories are listed top-to-bottom in the file. Each story's HEIGHT is
@@ -281,6 +436,24 @@ export function parseE2k(text: string): E2kModel {
     allNodeKeys.add(key);
   }
 
+  // Also from area assignments: corner nodes at story level
+  // Helper: story de cada esquina de área según su offset (0=asignada, n=n abajo).
+  // Las losas (offset 0) quedan en su story; los muros PANEL (offset 1 en 2 esquinas)
+  // bajan esas esquinas una story → quad vertical, no degenerado.
+  const storyIdxByName = new Map(stories.map((s, i) => [s.name, i] as [string, number]));
+  const offsetStory = (assignedStory: string, off: number): string => {
+    const i = storyIdxByName.get(assignedStory);
+    if (i === undefined) return assignedStory;
+    return stories[Math.max(0, i - (off || 0))].name;
+  };
+  for (const ac of areaConns) {
+    for (const [key, aa] of areaAssigns) {
+      if (!key.startsWith(ac.name + "@")) continue;
+      for (let c = 0; c < ac.pts.length; c++)
+        allNodeKeys.add(nodeKey(ac.pts[c], offsetStory(aa.story, ac.storyOffsets?.[c] ?? 0)));
+    }
+  }
+
   // Create nodes — deduplicate by (point, story) key
   for (const nk of allNodeKeys) {
     const [pt, story] = nk.split("@");
@@ -298,6 +471,10 @@ export function parseE2k(text: string): E2kModel {
   const elementTypes: string[] = [];
   const elementStoriesArr: string[] = [];
   const elementSections = new Map<number, string>();
+  // Declarados aqui (antes de su uso en LINE ASSIGNS) para evitar TDZ:
+  // se llenaban antes de su antigua declaracion -> "Cannot access before initialization".
+  const rigidOffsets = new Map<number, [number, number]>();
+  const momentReleases = new Map<number, boolean[]>();
 
   for (const lc of lineConns) {
     for (const [key, la] of lineAssigns) {
@@ -351,14 +528,110 @@ export function parseE2k(text: string): E2kModel {
     }
   }
 
+  // ── Build area (shell) elements (Q4 4-node) ──
+  // Cada area F# en una story da 1 Q4 element con los 4 corner nodes a esa
+  // elevación de story. Las losas grandes (>2m lado) idealmente se sub-mesh
+  // después por el caller — el parser solo crea el Q4 grande (lo que figura
+  // en el e2k literalmente).
+  const areaElementSection = new Map<number, string>();  // elemIdx → "Slab1" name
+  const areaElementCardinal = new Map<number, string>(); // elemIdx → "TOP"/"CENTROID"
+  for (const ac of areaConns) {
+    for (const [key, aa] of areaAssigns) {
+      if (!key.startsWith(ac.name + "@")) continue;
+      const idxs: number[] = [];
+      for (let c = 0; c < ac.pts.length; c++) {
+        const nk = nodeKey(ac.pts[c], offsetStory(aa.story, ac.storyOffsets?.[c] ?? 0));
+        const idx = nodeNameToIdx.get(nk);
+        if (idx === undefined) { idxs.length = 0; break; }
+        idxs.push(idx);
+      }
+      // descartar degenerados (nodos repetidos) por si algún offset no resolvió
+      if (idxs.length !== 4 || new Set(idxs).size !== 4) continue;  // solo Q4 válidos
+      const elemIdx = elements.length;
+      elements.push(idxs);
+      elementNames.push(ac.name);
+      elementTypes.push("FLOOR");
+      elementStoriesArr.push(aa.story);
+      areaElementSection.set(elemIdx, aa.section);
+      areaElementCardinal.set(elemIdx, aa.cardinalPoint);
+    }
+  }
+
+  // ── RESORTES WINKLER → springsList {node, dof, k} ──
+  // (a) AREA SPRING (balasto bajo la losa de cimentación): el "subgrade modulus"
+  //     ks [fuerza/long³] se distribuye a los 4 nodos del Q4 como k = ks·A/4
+  //     [fuerza/long]. dof: 0=UX 1=UY 2=UZ.
+  // (b) POINT SPRING: resorte puntual directo en el nodo.
+  // Los valores quedan en unidades NATIVAS del e2k; se convierten a kN-m en el
+  // bloque de unidades junto con el resto (springs se escalan ×Ff/Lf).
+  const springAccum = new Map<string, number>();   // "node:dof" → k
+  const addSpring = (node: number, dof: number, k: number) => {
+    if (!(k > 0)) return;
+    const key = `${node}:${dof}`;
+    springAccum.set(key, (springAccum.get(key) ?? 0) + k);
+  };
+  for (let ei = 0; ei < elements.length; ei++) {
+    const e = elements[ei];
+    if (e.length !== 4) continue;
+    const spName = areaSpringAssign.get(`${elementNames[ei]}@${elementStoriesArr[ei]}`);
+    const sp = spName ? areaSprings.get(spName) : undefined;
+    if (!sp) continue;
+    const p = e.map((n) => nodes[n]);
+    const v1 = [p[1][0] - p[0][0], p[1][1] - p[0][1]];
+    const v2 = [p[3][0] - p[0][0], p[3][1] - p[0][1]];
+    const A = Math.abs(v1[0] * v2[1] - v1[1] * v2[0]);  // área en plano XY (cimentación)
+    const per = A / 4;
+    for (const n of e) {
+      addSpring(n, 0, sp.u1 * per);
+      addSpring(n, 1, sp.u2 * per);
+      addSpring(n, 2, sp.u3 * per);
+    }
+  }
+  for (const [key, spName] of pointSpringAssign) {
+    const idx = nodeNameToIdx.get(key);
+    const sp = pointSprings.get(spName);
+    if (idx === undefined || !sp) continue;
+    addSpring(idx, 0, sp.ux);
+    addSpring(idx, 1, sp.uy);
+    addSpring(idx, 2, sp.uz);
+  }
+  const springsList: { node: number; dof: number; k: number }[] = [];
+  for (const [key, k] of springAccum) {
+    const [n, d] = key.split(":").map(Number);
+    springsList.push({ node: n, dof: d, k });
+  }
+
+  // ── Apply shell loads → equivalent nodal loads on slab corners ──
+  // Distribuye q_uniff sobre los 4 nodos del Q4 (area/4 c/u). Quick & dirty;
+  // un sub-mesh adicional posterior re-distribuye con tributary areas finas.
+  const nodalLoads = new Map<number, [number, number, number, number, number, number]>();
+  for (const sl of shellLoads) {
+    if (sl.type !== "UNIFF") continue;
+    for (let ei = 0; ei < elements.length; ei++) {
+      if (elementNames[ei] !== sl.area || elementStoriesArr[ei] !== sl.story) continue;
+      const e = elements[ei];
+      if (e.length !== 4) continue;
+      const p = e.map(n => nodes[n]);
+      // Compute plan area (assume Q4 in XY plane)
+      const v1 = [p[1][0]-p[0][0], p[1][1]-p[0][1]];
+      const v2 = [p[3][0]-p[0][0], p[3][1]-p[0][1]];
+      const A = Math.abs(v1[0]*v2[1] - v1[1]*v2[0]);
+      const Fz_per_node = -sl.val * A / 4;   // GRAV = downward
+      for (const ni of e) {
+        const prev = nodalLoads.get(ni) || [0, 0, 0, 0, 0, 0];
+        prev[2] += Fz_per_node;
+        nodalLoads.set(ni, prev);
+      }
+    }
+  }
+
   // ── Build element inputs (properties) ──
   const elasticities = new Map<number, number>();
   const shearModuli = new Map<number, number>();
   const areas = new Map<number, number>();
   const shearAreasY = new Map<number, number>();
   const shearAreasZ = new Map<number, number>();
-  const rigidOffsets = new Map<number, [number, number]>();
-  const momentReleases = new Map<number, boolean[]>();
+  // (rigidOffsets y momentReleases se declaran arriba, junto a elementSections)
   const momentsOfInertiaZ = new Map<number, number>();
   const momentsOfInertiaY = new Map<number, number>();
   const torsionalConstants = new Map<number, number>();
@@ -483,6 +756,51 @@ export function parseE2k(text: string): E2kModel {
     });
   }
 
+  // Fallback de frame: vigas/columnas cuya sección no se parseó o cuya forma no se
+  // reconoció quedan con A/I=0 → rigidez nula → matriz singular. Les damos una sección
+  // de concreto 0.30×0.30 por defecto para que el modelo resuelva (aprox, no exacta).
+  {
+    let dm: { E: number; G: number } | undefined;
+    for (const mat of materials.values()) { if (mat.E > 0) { dm = mat; break; } }
+    const DEF_E = dm?.E ?? 2.5e7, DEF_G = dm?.G ?? 1.04e7;
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].length !== 2) continue;  // solo frames
+      if (!((areas.get(i) ?? 0) > 0)) {
+        areas.set(i, 0.09); momentsOfInertiaZ.set(i, 6.75e-4); momentsOfInertiaY.set(i, 6.75e-4);
+        torsionalConstants.set(i, 1.14e-3); shearAreasY.set(i, 0.075); shearAreasZ.set(i, 0.075);
+      }
+      if (!((elasticities.get(i) ?? 0) > 0)) elasticities.set(i, DEF_E);
+      if (!((shearModuli.get(i) ?? 0) > 0)) shearModuli.set(i, DEF_G);
+    }
+  }
+
+  // ── Apply shell element properties (E, ν, t, plateFormulations) ──
+  const thicknesses = new Map<number, number>();
+  const poissonsRatios = new Map<number, number>();
+  const plateFormulations = new Map<number, number>();
+  const drillingTypes = new Map<number, number>();
+  const densitiesArea = new Map<number, number>();
+  // Material concreto por defecto para shells cuya sección no se parseó (deck metálico,
+  // nombres con caracteres raros, etc.) → evita que queden con rigidez 0 (matriz singular).
+  let defMat: { E: number; G: number; nu: number; density?: number } | undefined;
+  for (const mat of materials.values()) { if (mat.E > 0) { defMat = mat; break; } }
+  for (const [elemIdx, secName] of areaElementSection) {
+    const shellSec = shellSections.get(secName);
+    // espesor de la sección si se parseó y es >0; si no, fallback 0.20 m (evita rigidez cero)
+    const t = (shellSec && shellSec.thickness > 0) ? shellSec.thickness : 0.20;
+    thicknesses.set(elemIdx, t);
+    const mat = (shellSec ? materials.get(shellSec.material) : undefined) || defMat;
+    if (mat) {
+      elasticities.set(elemIdx, mat.E);
+      shearModuli.set(elemIdx, mat.G);
+      poissonsRatios.set(elemIdx, mat.nu);
+      if (mat.density !== undefined) densitiesArea.set(elemIdx, mat.density);
+    }
+    // ShellThin → MZC Kirchhoff (1); ShellThick/Membrane/desconocido → Mindlin (0)
+    plateFormulations.set(elemIdx, shellSec?.modelingType === "ShellThin" ? 1 : 0);
+    drillingTypes.set(elemIdx, 2);  // Hughes-Brezzi drilling → evita rz singular en nodos de shell
+  }
+
   // ── Build node inputs (supports) ──
   const supports = new Map<number, [boolean, boolean, boolean, boolean, boolean, boolean]>();
   for (const [key, dofs] of restraints) {
@@ -498,6 +816,16 @@ export function parseE2k(text: string): E2kModel {
       if (d === "RZ") fix[5] = true;
     }
     supports.set(nodeIdx, fix);
+  }
+
+  // Restringir nodos AISLADOS (en ningún elemento) → sus 6 GDL quedan libres → matriz
+  // singular. Un nodo aislado no transmite carga, así que fijarlo no altera el resultado.
+  {
+    const usedNodes = new Set<number>();
+    for (const e of elements) for (const n of e) usedNodes.add(n);
+    for (let n = 0; n < nodes.length; n++)
+      if (!usedNodes.has(n) && !supports.has(n))
+        supports.set(n, [true, true, true, true, true, true]);
   }
 
   // ── Convert LINELOAD to equivalent nodal loads ──
@@ -553,6 +881,49 @@ export function parseE2k(text: string): E2kModel {
     const mat = materials.get(sec.material);
     if (mat?.density) densities.set(elemIdx, mat.density);
   }
+  for (const [eIdx, d] of densitiesArea) densities.set(eIdx, d);
+
+  // ── Merge shell loads into the existing nodal loads map ──
+  for (const [ni, fz] of nodalLoads) {
+    const prev = loads.get(ni) || [0, 0, 0, 0, 0, 0];
+    loads.set(ni, [prev[0]+fz[0], prev[1]+fz[1], prev[2]+fz[2],
+                    prev[3]+fz[3], prev[4]+fz[4], prev[5]+fz[5]]);
+  }
+
+  // ── Conversión de UNIDADES del e2k a las internas de Hekatan (kN, m) ──
+  // El e2k declara sus unidades (ej. "N" "MM") y los valores se parsearon CRUDOS.
+  // Acá escalamos TODO lo que entra al ANÁLISIS (nodos, cargas, E, áreas,
+  // inercias, espesores, densidades) a kN-m. Sin esto, un modelo ETABS en N-mm
+  // daba geometría 1000× y cargas 1e6× → resultados absurdos.
+  // El ROUND-TRIP (rawSections) NO se toca: re-exporta el e2k original verbatim.
+  const LEN_TO_M: Record<string, number> = { M: 1, CM: 0.01, MM: 0.001, FT: 0.3048, IN: 0.0254, INCH: 0.0254 };
+  const FRC_TO_KN: Record<string, number> = { KN: 1, N: 0.001, TONF: 9.80665, TON: 9.80665, KGF: 0.00980665, KG: 0.00980665, KIP: 4.448222, LB: 0.004448222 };
+  const Lf = LEN_TO_M[(units.length || "M").toUpperCase()] ?? 1;
+  const Ff = FRC_TO_KN[(units.force || "KN").toUpperCase()] ?? 1;
+  if (Lf !== 1 || Ff !== 1) {
+    const stress = Ff / (Lf * Lf);            // E, G  (fuerza/longitud²)
+    for (const n of nodes) { n[0] *= Lf; n[1] *= Lf; n[2] *= Lf; }
+    for (const [k, v] of loads) {
+      loads.set(k, [v[0] * Ff, v[1] * Ff, v[2] * Ff, v[3] * Ff * Lf, v[4] * Ff * Lf, v[5] * Ff * Lf]);
+    }
+    const scale = (m: Map<number, number>, f: number) => { for (const [k, v] of m) m.set(k, v * f); };
+    scale(elasticities, stress);
+    scale(shearModuli, stress);
+    scale(areas, Lf * Lf);
+    scale(momentsOfInertiaZ, Lf ** 4);
+    scale(momentsOfInertiaY, Lf ** 4);
+    scale(torsionalConstants, Lf ** 4);
+    scale(shearAreasY, Lf * Lf);
+    scale(shearAreasZ, Lf * Lf);
+    scale(thicknesses, Lf);
+    scale(densities, Ff / (Lf ** 3));         // peso/volumen = fuerza/longitud³
+    // resortes: k [fuerza/longitud] → ×Ff/Lf. OJO: el área tributaria usada para
+    // los AREASPRING se calculó con coords NATIVAS, así que k nativo = ks·A_nat;
+    // ks es fuerza/long³ y A long² → fuerza/long. Convertir a kN/m = ×Ff/Lf.
+    const springFactor = Ff / Lf;
+    for (const s of springsList) s.k *= springFactor;
+    units.force = "KN"; units.length = "M";   // los VALORES quedan en kN-m
+  }
 
   return {
     units,
@@ -581,9 +952,14 @@ export function parseE2k(text: string): E2kModel {
       momentReleases,
       densities,
       sectionShapes,
+      thicknesses,
+      poissonsRatios,
+      plateFormulations,
+      drillingTypes,
     },
     sectionShapes,
     grids,
+    springsList,
     info: {
       nNodes: nodes.length,
       nFrames: elements.length,
@@ -591,5 +967,6 @@ export function parseE2k(text: string): E2kModel {
       title,
     },
     rawSections,
+    rawSectionHeaders,
   };
 }

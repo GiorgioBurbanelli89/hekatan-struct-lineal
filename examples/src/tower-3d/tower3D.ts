@@ -129,7 +129,9 @@ export const tower3D: ExampleDef = {
     states.nodeInputs.val = { supports, loads };
     states.elementInputs.val = {
       elasticities, shearModuli, areas,
-      momentsOfInertiaZ: Iz, momentsOfInertiaY: Iy, torsionalConstants: J,
+      // Convención awatif Z-up: momentsOfInertiaY = eje FUERTE (b·h³/12) para que la
+      // viga flexione vertical con el eje fuerte. Antes estaba al revés (eje débil).
+      momentsOfInertiaZ: Iy, momentsOfInertiaY: Iz, torsionalConstants: J,
       densities, poissonsRatios: poissons,
     };
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);

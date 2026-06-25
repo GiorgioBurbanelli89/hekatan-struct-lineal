@@ -74,7 +74,7 @@ export function emptyState(): CadDrawState {
     // El usuario debe activar EXPLÍCITAMENTE un tool de dibujo desde Tweakpane.
     tool: "select",
     snap: 0.5,
-    workPlane: "xy",
+    workPlane: "xz",
     workZ: 0,
     pendingNodes: [],
     nextNodeId: 1,

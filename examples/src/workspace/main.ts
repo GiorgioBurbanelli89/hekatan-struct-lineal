@@ -40,6 +40,7 @@ import {
 // import { attachInspect } from "../shared/attachInspect";  // DEPRECATED: ahora en hekatan-ui/femTools
 import { createModalPanel } from "../shared/renderModalTable";
 import { createModalAnimator, type ModalAnimator } from "../shared/animateMode";
+import { exportModeAnimationGif } from "../shared/gifExport";
 // createModalAnimator también se llama en buildParamsPane() para re-wirear el
 // callback onStatusChange al folder "⚡ Modal + Animación" recién creado.
 import {
@@ -480,7 +481,17 @@ function loadExample(ex: ExampleDef) {
     if (sR.solids?.val !== undefined)      sR.solids.val = true;
   };
   resetViewerVis();
-  [50, 200, 500, 1000].forEach((ms) => setTimeout(resetViewerVis, ms));
+  // El dropdown "Shell results" del viewer se arma ASYNC (Tweakpane), a veces >1s después.
+  // Reintentar visibilidad + filtro cada 250ms hasta que el filtro encuentre el dropdown
+  // (devuelve true), o hasta ~7s. Así no depende de un delay fijo que puede llegar antes.
+  {
+    let tries = 0;
+    const iv = setInterval(() => {
+      resetViewerVis();
+      const ok = filterShellResultOptions(ex.availableShellResults);
+      if (ok || ++tries > 28) clearInterval(iv);
+    }, 250);
+  }
   // Aplica el colormap por defecto que cada ejemplo declara.
   // Si el anterior tenía seleccionado "pressure" y el nuevo no lo populó,
   // quedaría 0 everywhere — así evitamos ese caso.
@@ -654,25 +665,42 @@ function autoFitCamera() {
 
 /** Oculta opciones no aplicables del <select> "Shell results" del Settings HTML
  *  y sincroniza su display con el estado actual de shellResults. */
-function filterShellResultOptions(allowed?: string[]) {
-  // Busca el select que contiene "bendingXX" para distinguirlo de los otros dropdowns.
-  const selects = viewerElm.querySelectorAll<HTMLSelectElement>("select");
+function filterShellResultOptions(allowed?: string[]): boolean {
+  // El value del <option> es la ETIQUETA ("M11 (bendingXX)"); la KEY interna está entre
+  // paréntesis, o es el value mismo (none/pressure). Antes el filtro buscaba el value
+  // exacto "bendingXX" → nunca encontraba el dropdown → no filtraba → pressure aparecía
+  // en TODOS los ejemplos. keyOf extrae la key real.
+  // Normalizar (minúsculas, sin espacios) para que "Von Mises"==="vonMises" y la key del
+  // paréntesis matchee la lista. keyOf: toma lo de los paréntesis o el value, normalizado.
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+  const keyOf = (v: string) => norm(v.match(/\(([^)]+)\)/)?.[1] || v);
+  const allowedN = allowed?.map(norm);
+  // Buscar en TODO el documento (el dropdown del viewer no siempre cuelga de viewerElm).
+  const selects = document.querySelectorAll<HTMLSelectElement>("select");
   const shellSelect = Array.from(selects).find((s) =>
-    Array.from(s.options).some((o) => o.value === "bendingXX")
+    Array.from(s.options).some((o) => keyOf(o.value) === "bendingxx")
   );
-  if (!shellSelect) return;
+  if (!shellSelect) return false;
   for (const opt of Array.from(shellSelect.options)) {
-    // "none" siempre disponible; resto solo si está en la lista (o si no se declaró).
-    const show = opt.value === "none" || !allowed || allowed.includes(opt.value);
+    const key = keyOf(opt.value);
+    // "none" siempre disponible. "pressure" = presión de contacto del suelo → SOLO
+    // fundaciones que lo declaran explícito; nunca por el fallback de "no declarado".
+    const show =
+      key === "none" ? true :
+      key === "pressure" ? (allowedN?.includes("pressure") ?? false) :
+      (!allowedN || allowedN.includes(key));
     opt.hidden = !show;
     opt.disabled = !show;
   }
   // Sincronizar el valor mostrado con el estado actual (Tweakpane no lo hace solo).
+  // Solo si hay un <option> cuya key coincide — si no, NO tocar (evita romper el colormap).
   const s = (viewerElm as any).__settings;
   if (s?.shellResults) {
-    shellSelect.value = s.shellResults.val;
-    shellSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    const want = norm(s.shellResults.val);
+    const match = Array.from(shellSelect.options).find((o) => keyOf(o.value) === want);
+    if (match) { shellSelect.value = match.value; shellSelect.dispatchEvent(new Event("change", { bubbles: true })); }
   }
+  return true;
 }
 
 /**
@@ -4844,10 +4872,24 @@ solve`;
       },
     });
     let lastModalResults: any = null;
+    // Guarda el estado de deformedShape antes de animar el modo, para restaurarlo
+    // al detener. La deformada ESTÁTICA (por carga, escalada) tapa la animación
+    // del modo, así que la apagamos mientras se anima.
+    let modalPrevDeformed: boolean | undefined;
+    const setViewerDeformed = (v: boolean) => {
+      const vs = (viewerElm as any).__settings;
+      if (vs?.deformedShape && "val" in vs.deformedShape) vs.deformedShape.val = v;
+    };
+    const getViewerDeformed = (): boolean | undefined => {
+      const vs = (viewerElm as any).__settings;
+      return vs?.deformedShape && "val" in vs.deformedShape ? vs.deformedShape.val : undefined;
+    };
     const captureModalPanel = {
       div: modalPanel.div,
       render: (out: any, meta: any) => {
         lastModalResults = out;
+        // Global robusto contra reconstrucciones de la pane (el botón GIF lee de acá).
+        (window as any).__hekatanModalOut = out;
         modalPanel.render(out, meta);
         if (out?.frequencies?.length) {
           modalAnimator.setResults(out);
@@ -4866,6 +4908,10 @@ solve`;
       // capturen "originals" corruptos con el último frame animado anterior).
       modalAnimator.stop();
       modalPanel.div.style.display = "block";
+      // Apagar la deformada estática (guardando su valor) para que se vea la
+      // ANIMACIÓN del modo y no la deformada por carga (que la tapaba).
+      if (modalPrevDeformed === undefined) modalPrevDeformed = getViewerDeformed();
+      setViewerDeformed(false);
       if (currentExample!.runModal) currentExample!.runModal(toSIParams(), states, captureModalPanel);
     });
 
@@ -4890,9 +4936,39 @@ solve`;
       // inmediato del viewer (el canvas se actualiza al momento, sin esperar el
       // siguiente evento reactivo que congelaba la deformada).
       modalAnimator.stop();
+      // Restaurar la deformada estática al valor que tenía antes de animar.
+      if (modalPrevDeformed !== undefined) { setViewerDeformed(modalPrevDeformed); modalPrevDeformed = undefined; }
     });
     fModal.addButton({ title: "▶ Reanudar" }).on("click", () => {
-      if (lastModalResults) modalAnimator.play();
+      if (lastModalResults) { setViewerDeformed(false); modalAnimator.play(); }
+    });
+    // ── Descargar GIF del modo (estilo Abaqus). Renderiza OFFLINE (frame a
+    //    frame con awaits) → no congela aunque el modelo tenga shells. ──
+    const GIF_TITLE = "📥 Descargar GIF del modo";
+    const gifBtn = fModal.addButton({ title: GIF_TITLE });
+    const setGifTitle = (t: string) => { try { (gifBtn as any).title = t; (gifBtn as any).refresh?.(); currentPane?.refresh(); } catch {} };
+    gifBtn.on("click", async () => {
+      const res = lastModalResults ?? (window as any).__hekatanModalOut;
+      if (!res?.modeShapes?.length) { setGifTitle("⚠ Corré el modal primero"); setTimeout(() => setGifTitle(GIF_TITLE), 1800); return; }
+      const rawMode = Math.round(animCtrl?.modeIdx);
+      const modeIdx = Math.min(res.modeShapes.length - 1, Math.max(0, (Number.isFinite(rawMode) ? rawMode : 1) - 1));
+      modalAnimator.stop();
+      setViewerDeformed(false);
+      try {
+        await exportModeAnimationGif({
+          mesh: { nodes },
+          viewerElm,
+          results: res,
+          mode: modeIdx,
+          filename: `modo_${modeIdx + 1}_${(currentExample?.id ?? "modelo")}.gif`,
+          onProgress: (d, t) => setGifTitle(`⏳ Generando GIF ${d}/${t}…`),
+        });
+        setGifTitle(`✅ GIF modo ${modeIdx + 1} descargado`);
+      } catch (e: any) {
+        console.warn("GIF export error:", e?.message);
+        setGifTitle("❌ Error generando GIF");
+      }
+      setTimeout(() => setGifTitle(GIF_TITLE), 2500);
     });
   }
   currentPane = pane;
@@ -6034,7 +6110,10 @@ if (urlT === "zapata-aislada") {
   } catch { /* no-op */ }
 }
 if (!urlT) {
-  urlT = "new-blank";
+  // Default del workspace: Test M — Dual (pórtico + losa + muros). Es el ejemplo
+  // didáctico completo NEC-15 (estático + dinámico modal + derivas + cortante
+  // estático/dinámico + combinaciones sísmicas). Antes era "new-blank".
+  urlT = "test-m-dual";
   try {
     const u = new URL(window.location.href);
     u.searchParams.set("t", urlT);

@@ -193,8 +193,20 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
     const mScale = maxDisp > 1e-12 ? (extent * scalePct / 100) / maxDisp : 1;
 
     const t0 = performance.now();
+    // THROTTLE ADAPTATIVO: cada cambio de mesh.nodes.val reconstruye TODA la
+    // geometría del viewer (van.derive recrea el BufferGeometry). A 60fps eso
+    // satura/CONGELA el navegador, sobre todo con shells (malla densa). Escalamos
+    // el intervalo con el tamaño del modelo: ~25fps para frames (poco nodos) y
+    // hasta ~8fps para modelos pesados. El render lo dispara el viewer al cambiar
+    // derivedNodes (NO llamamos render() acá: sería síncrono ANTES del rebuild).
+    const frameInterval = Math.min(200, Math.max(40, nNodes * 0.7));
+    let lastFrame = 0;
     const tick = () => {
-      const t = (performance.now() - t0) / 1000;
+      rafId = requestAnimationFrame(tick);
+      const now = performance.now();
+      if (now - lastFrame < frameInterval) return;
+      lastFrame = now;
+      const t = (now - t0) / 1000;
       const amp = Math.sin(2 * Math.PI * visFreq * t) * mScale;
       const newNodes: Node[] = new Array(nNodes);
       for (let i = 0; i < nNodes; i++) {
@@ -206,9 +218,6 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
         ];
       }
       mesh.nodes.val = newNodes;
-      // Forzar render inmediato (bypass debounce reactivo de van.derive)
-      getCtx()?.render();
-      rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
     fireStatus();

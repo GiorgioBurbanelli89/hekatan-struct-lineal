@@ -275,6 +275,7 @@ import { plateWithBeams } from "../plate-with-beams/plateWithBeams";
 import { slabBeamsColumns } from "../slab-beams-columns/slabBeamsColumns";
 import { plateThick } from "../plate-thick/plateThick";
 import { membrana } from "../membrana-pstress/membrana";
+import { drillingDof } from "../test/drillingDof";
 import { shellThin } from "../shell-thin/shellThin";
 import { benchmark3way } from "../benchmark-3way/benchmark3way";
 import { benchmarkCft } from "../benchmark-cft/benchmarkCft";
@@ -303,6 +304,9 @@ import { edificioAceroV2 } from "../edificio-acero-v2/edificioAceroV2";
 import { edificioMixto } from "../edificio-mixto/edificioMixto";
 import { edificioMuros } from "../edificio-muros/edificioMuros";
 import { edificioDual } from "../edificio-dual/edificioDual";
+import { edificioFrameNec } from "../edificio-frame-nec/edificioFrameNec";
+import { testMPortico, testMLosa, testMDual } from "../test-m/testM";
+import { mesaTorsionNoLineal } from "../mesa-torsion-no-lineal/mesaTorsionNoLineal";
 import { columnaCft } from "../columna-cft/columnaCft";
 import { triangularPlate } from "../triangular-plate/triangularPlate";
 import { conexionRbs } from "../conexion-rbs/conexionRbs";
@@ -336,6 +340,8 @@ import {
 } from "./legacyAwatif";
 
 export const examplesRegistry: ExampleDef[] = [
+  // 🧪 TEST — casos de prueba / desarrollo (categoría "test")
+  drillingDof,            // 2 muros + viga de acople (drilling DOF + test exportador e2k)
   // 📐 NewBlank — lienzo en blanco al inicio (más visible)
   newBlank,
   // Importador CSI (F2K/E2K/S2K) — al inicio para acceso rápido
@@ -402,6 +408,12 @@ export const examplesRegistry: ExampleDef[] = [
   edificioMixto,
   edificioMuros,
   edificioDual,
+  edificioFrameNec,       // Edificio pórtico paramétrico (frame puro) + carga lateral NEC
+  // 🎓 Test M — 3 variantes (solo pórticos / con losa / dual) parametrizables svx/svy/sp
+  testMPortico,
+  testMLosa,
+  testMDual,
+  mesaTorsionNoLineal,
   // Legacy (se mantienen por compatibilidad con URLs existentes)
   edificioConLosa,
   edificioConMuros,

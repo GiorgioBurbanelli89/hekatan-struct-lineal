@@ -188,7 +188,9 @@ export const guerraEj5ZapataTrapezoidal: ExampleDef = {
     const deformations = new Map<number, [number, number, number, number, number, number]>();
     for (const r of result.nodeResults) deformations.set(r.node, [0, 0, r.w, r.bx, r.by, 0]);
     states.deformOutputs.val = { deformations, reactions: new Map() };
-    states.analyzeOutputs.val = { pressure, bendingXX, bendingYY, bendingXY, vonMises };
+    // Colormap libro Fig.180 (Guerra): -12 (cyan) a -26 t/m² (magenta), jet_r discreto.
+    const colorMapRanges = { pressure: [-12 * TONF_TO_KN, -26 * TONF_TO_KN] as [number, number] };
+    states.analyzeOutputs.val = { pressure, bendingXX, bendingYY, bendingXY, vonMises, colorMapRanges } as any;
 
     const objs: THREE.Object3D[] = [];
     objs.push(...buildColumnFrame(p.col1_x, cy, p.h_col, p.col_size));

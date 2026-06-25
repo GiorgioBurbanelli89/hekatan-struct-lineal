@@ -114,7 +114,9 @@ export const portico2D: ExampleDef = {
     states.nodeInputs.val = { supports, loads };
     states.elementInputs.val = {
       elasticities, shearModuli, areas,
-      momentsOfInertiaZ: Iz, momentsOfInertiaY: Iy, torsionalConstants: J,
+      // Convención awatif Z-up: momentsOfInertiaY = eje FUERTE (Iz AISC = b·h³/12),
+      // momentsOfInertiaZ = eje débil. Antes estaba al revés → flexión con eje débil.
+      momentsOfInertiaZ: Iy, momentsOfInertiaY: Iz, torsionalConstants: J,
       densities, poissonsRatios: poissons,
     };
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);

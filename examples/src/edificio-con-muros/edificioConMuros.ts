@@ -28,8 +28,10 @@ export const edificioConMuros: ExampleDef = {
   id: "edificio-con-muros",
   name: "Edificio con Muros de corte",
   category: "Edificios",
-  defaultShellResult: "bendingXX",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY", "displacementZ", "vonMises"],
+  // vonMises por defecto: el MURO de corte muestra su esfuerzo de membrana
+  // (con bendingXX salía azul porque el muro no tiene flexión de placa).
+  defaultShellResult: "vonMises",
+  availableShellResults: ["vonMises", "membraneXX", "membraneYY", "membraneXY", "bendingXX", "bendingYY", "bendingXY", "displacementZ"],
   hasModal: true,
   params,
   build: edificioAporticado.build,

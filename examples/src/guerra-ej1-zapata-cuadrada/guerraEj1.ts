@@ -203,7 +203,9 @@ export const guerraEj1ZapataCuadrada: ExampleDef = {
       const vm = Math.sqrt(er.Mxx**2 + er.Myy**2 - er.Mxx*er.Myy + 3*er.Mxy**2);
       vonMises.set(i, [vm, vm, vm, vm]);
     });
-    states.analyzeOutputs.val = { pressure, bendingXX, bendingYY, bendingXY, vonMises };
+    // Colormap libro Fig.180 (Guerra): -12 (cyan) a -26 t/m² (magenta), jet_r discreto.
+    const colorMapRanges = { pressure: [-12 * TONF_TO_KN, -26 * TONF_TO_KN] as [number, number] };
+    states.analyzeOutputs.val = { pressure, bendingXX, bendingYY, bendingXY, vonMises, colorMapRanges } as any;
 
     // Visualización columna
     const objs: THREE.Object3D[] = [];

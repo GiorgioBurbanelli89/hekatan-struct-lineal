@@ -79,8 +79,8 @@ export const mesaTorsion: ExampleDef = {
     apoyo:     { default: 0, label: "Apoyo base",
                  options: { "Pinned (UX UY UZ)": 0, "Empotrado (6 DOF)": 1 }, folder: "Apoyo" },
     // ─── ETABS features ───
-    rigidOffsets: { default: 1, label: "Rigid offsets ETABS-like",
-                    options: { "ON (h_viga/2 + b_col/2)": 1, "OFF (full length)": 0 }, folder: "ETABS features" },
+    rigidOffsets: { default: 0, label: "Rigid offsets ETABS-like",
+                    options: { "OFF (full length, ETABS default)": 0, "ON (h_viga/2 + b_col/2)": 1 }, folder: "ETABS features" },
     // ─── Cargas ───
     q_SCP:     { default: 1.0, min: 0, max: 5, step: 0.1, label: "SCP (tonf/m²)", folder: "Cargas" },
     q_Live:    { default: 0.5, min: 0, max: 5, step: 0.1, label: "Live (tonf/m²)", folder: "Cargas" },
@@ -106,12 +106,14 @@ export const mesaTorsion: ExampleDef = {
         const diff = e !== 0 ? ((h - e) / e * 100) : 0;
         return `H=${h.toFixed(2)}  E=${e.toFixed(2)}  Δ=${diff >= 0 ? "+" : ""}${diff.toFixed(1)}%`;
       };
-      out[`${caseName} |P|`]   = fmt(hk.P,  et.P);
-      out[`${caseName} |V₂|`]  = fmt(hk.V2, et.V2);
-      out[`${caseName} |V₃|`]  = fmt(hk.V3, et.V3);
-      out[`${caseName} |T|`]   = fmt(hk.T,  et.T);
-      out[`${caseName} |M₂|`]  = fmt(hk.M2, et.M2);
-      out[`${caseName} |M₃|`]  = fmt(hk.M3, et.M3);
+      // SWAP de ejes locales (columna vertical, convención awatif Z-up vs ETABS):
+      // Hekatan V₂↔ETABS V₃, V₃↔ETABS V₂, M₂↔ETABS M₃, M₃↔ETABS M₂.
+      out[`${caseName} |P|`]        = fmt(hk.P,  et.P);
+      out[`${caseName} |V₂↔E V₃|`]  = fmt(hk.V2, et.V3);
+      out[`${caseName} |V₃↔E V₂|`]  = fmt(hk.V3, et.V2);
+      out[`${caseName} |T|`]        = fmt(hk.T,  et.T);
+      out[`${caseName} |M₂↔E M₃|`]  = fmt(hk.M2, et.M3);
+      out[`${caseName} |M₃↔E M₂|`]  = fmt(hk.M3, et.M2);
     }
     return out;
   },
@@ -175,15 +177,21 @@ export const mesaTorsion: ExampleDef = {
     const densities      = new Map<number, number>();
     const sections       = new Map<number, any>();
     const rigidOffsets   = new Map<number, [number, number]>();
+    const shearAreasY    = new Map<number, number>();   // Timoshenko: As=A·5/6 (ETABS default)
+    const shearAreasZ    = new Map<number, number>();   // si no se pasan → el C++ cae a Euler (bug)
     // ETABS Mesa Torsión usa Shell-Thin (Kirchhoff DKE) — flag por shell
     const plateFormulations = new Map<number, number>();
+    const drillingTypes  = new Map<number, number>();
 
     for (let i = 0; i < shellCount; i++) {
       thicknesses.set(i, p.tLosa);
       elasticities.set(i, E_kNm2);
       poissons.set(i, p.nu);
       densities.set(i, RHO);
-      plateFormulations.set(i, 1);  // 1 = Shell-Thin Kirchhoff MZC (= ETABS Slab1 Shell-Thin t=100mm confirmado)
+      plateFormulations.set(i, 1);  // 1 = Shell-Thin Kirchhoff DKE (Batoz) — matchea ETABS
+      drillingTypes.set(i, 0);      // ← como el Python hekatan-fem-py (_make_ei: drilling=0).
+                                    // HB (2) mete rigidez torsional en plano que empuja momento
+                                    // espurio a las columnas (+33%). Losa horizontal → drilling 0.
       // drillingType default = 2 (Hughes-Brezzi) via C++ → no requiere setear aquí.
       // Para este modelo (losa horizontal + viga horizontal), drilling shell (Rz)
       // y torsión viga (Rx local) son DOFs distintos, por lo que HB tiene efecto
@@ -209,6 +217,8 @@ export const mesaTorsion: ExampleDef = {
       poissons.set(i, p.nu);
       Gm.set(i, Gmod);
       areas.set(i, Ac);
+      shearAreasY.set(i, Ac * 5 / 6);   // Timoshenko (columna C40x40)
+      shearAreasZ.set(i, Ac * 5 / 6);
       Iz.set(i, Iyc);   // weak axis → Iz local (swap por convención awatif Z-up)
       Iy.set(i, Izc);
       J_t.set(i, Jc);
@@ -233,8 +243,13 @@ export const mesaTorsion: ExampleDef = {
         poissons.set(bIdx, p.nu);
         Gm.set(bIdx, Gmod);
         areas.set(bIdx, Av);
-        Iz.set(bIdx, Izv);
-        Iy.set(bIdx, Iyv);
+        shearAreasY.set(bIdx, Av * 5 / 6);   // Timoshenko: viga V30x50 corta-peraltada → φ≈0.5
+        shearAreasZ.set(bIdx, Av * 5 / 6);
+        // SWAP awatif Z-up (igual que columnas): la flexión VERTICAL de la viga
+        // horizontal usa momentsOfInertiaY → debe ser el eje FUERTE (Izv=bh³/12).
+        // Sin el swap el frame flexionaba con el eje débil → +33% a la columna.
+        Iz.set(bIdx, Iyv);   // eje débil → Iz local
+        Iy.set(bIdx, Izv);   // eje fuerte (vertical) → Iy local
         J_t.set(bIdx, Jv);
         densities.set(bIdx, RHO);
         sections.set(bIdx, { type: "rect", b: p.bViga, h: p.hViga });
@@ -256,6 +271,8 @@ export const mesaTorsion: ExampleDef = {
       rigidOffsets: rigidOffsets.size > 0 ? rigidOffsets : undefined,
       // ETABS Shell-Thin (DKE Kirchhoff) — matchea ETABS exacto < 1.5%
       plateFormulations,
+      drillingTypes,   // 0 en la losa (como hekatan-fem-py) — sin drilling HB espurio
+      shearAreasY, shearAreasZ,   // Timoshenko A·5/6 en frames (el C++ cae a Euler si no se pasan)
     };
 
     // ─── Helper para construir cargas por caso ────────────────────────
@@ -323,6 +340,8 @@ export const mesaTorsion: ExampleDef = {
 
     const allCaseResults: Record<string, { deform: DeformOutputs; analyze: AnalyzeOutputs }> = {};
     const framePicks: Record<string, FramePicksByCase> = {};
+    const colPicks:   Record<string, FramePicksByCase> = {};
+    const beamPicks:  Record<string, FramePicksByCase> = {};
 
     for (const c of cases) {
       const loads = buildLoads(c.sw, c.scp, c.live);
@@ -332,6 +351,9 @@ export const mesaTorsion: ExampleDef = {
         allCaseResults[c.name] = { deform: def, analyze: ana };
         // Pick |max| de cada componente sobre cols + vigas (no shells)
         framePicks[c.name] = computePicks(ana, colStart, beamEnd);
+        // ★ NUEVO: separar cols vs vigas para comparar contra ETABS por elemento
+        colPicks[c.name]   = computePicks(ana, colStart, colEnd);
+        beamPicks[c.name]  = computePicks(ana, beamStart, beamEnd);
       } catch (e: any) {
         console.warn(`[Mesa torsión] caso ${c.name} falló:`, e.message);
       }
@@ -339,6 +361,8 @@ export const mesaTorsion: ExampleDef = {
 
     // Guardar para computedLabels y debug
     (states as any)._mesaTorsionCases = framePicks;
+    (states as any)._mesaTorsionColPicks = colPicks;
+    (states as any)._mesaTorsionBeamPicks = beamPicks;
     (states as any)._mesaTorsionAllResults = allCaseResults;
 
     // ─── Mostrar caso activo en viewer ────────────────────────────────
@@ -383,6 +407,82 @@ export const mesaTorsion: ExampleDef = {
       }
     }
     console.log(lines.join("\n"));
+
+    // ─── Reporte separado COLS vs VIGAS (★ NUEVO) ──────────────────
+    // ETABS específicos del README_MESA_TORSION.md (UDCon2):
+    //   Col base/tope:  P=24.86, V2=V3=2.97, T=0, M2=M3=10.40 (cuadrada simétrica)
+    //   Viga centro:    P=1.84,  V2=11.27,  T=5.23, M3=15.48 (M2 ≈ 0)
+    const ETABS_COL_UDCon2  = { P: 24.86, V2: 2.97,  V3: 2.97,  T: 0,    M2: 10.40, M3: 10.40 };
+    const ETABS_BEAM_UDCon2 = { P:  1.84, V2: 11.27, V3: 0.08,  T: 5.23, M2: 0.04,  M3: 15.48 };
+    const lines2: string[] = [];
+    lines2.push(``);
+    lines2.push(`  ═══ COMPARATIVA SEPARADA por elemento (UDCon2 vs ETABS específicos) ═══`);
+    lines2.push(`  Convención awatif: V₂↔ETABS V₃, M₂↔ETABS M₃ (ejes rotados 90°)`);
+    lines2.push(`  ┌──────────────────────┬─────────┬─────────┬──────────┐`);
+    lines2.push(`  │  Elemento  Comp      │ Hekatan │  ETABS  │   Δ%     │`);
+    lines2.push(`  ├──────────────────────┼─────────┼─────────┼──────────┤`);
+    const reportRow = (elem: string, hk: FramePicksByCase, et: typeof ETABS_COL_UDCon2) => {
+      for (const comp of ["P", "V2", "V3", "T", "M2", "M3"] as const) {
+        const h = hk[comp];
+        const e = et[COMP_SWAP[comp]];
+        const d = e > 0.01 ? ((h - e) / e * 100) : (h > 0.01 ? Infinity : 0);
+        const dstr = isFinite(d) ? ((d >= 0 ? "+" : "") + d.toFixed(1) + "%") : (h > 0.01 ? "—" : "0%");
+        lines2.push(`  │  ${elem.padEnd(8)} ${comp.padEnd(4)}     │ ${h.toFixed(3).padStart(7)} │ ${e.toFixed(3).padStart(7)} │ ${dstr.padStart(8)} │`);
+      }
+      lines2.push(`  ├──────────────────────┼─────────┼─────────┼──────────┤`);
+    };
+    const hkCol  = colPicks["UDCon2"];
+    const hkBeam = beamPicks["UDCon2"];
+    if (hkCol && hkBeam) {
+      reportRow("COL", hkCol, ETABS_COL_UDCon2);
+      reportRow("VIGA", hkBeam, ETABS_BEAM_UDCon2);
+    }
+    lines2.push(`  └──────────────────────┴─────────┴─────────┴──────────┘`);
+    console.log(lines2.join("\n"));
+
+    // ─── ★ Esfuerzos en SHELL para responder "¿concuerdan con ETABS?" ──
+    // ETABS losa UDCon2 (del README_MESA_TORSION.md):
+    //   |M11|max = |M22|max = 2.970 tonf·m/m
+    //   |M12|max = 0.857 tonf·m/m
+    //   |V13|max = |V23|max = 3.619 tonf/m
+    const udcAna = allCaseResults["UDCon2"]?.analyze;
+    if (udcAna) {
+      const maxAbsField = (map: Map<number, number[]> | undefined) => {
+        if (!map) return 0;
+        let mx = 0;
+        for (let i = 0; i < shellCount; i++) {
+          const arr = map.get(i);
+          if (!arr) continue;
+          for (const v of arr) {
+            const a = Math.abs(v);
+            if (a > mx) mx = a;
+          }
+        }
+        return mx;
+      };
+      const m11h = maxAbsField(udcAna.bendingXX) / G;  // kN·m → tonf·m (G es factor unidades)
+      const m22h = maxAbsField(udcAna.bendingYY) / G;
+      const m12h = maxAbsField(udcAna.bendingXY) / G;
+      const v13h = maxAbsField(udcAna.tranverseShearX) / G;
+      const v23h = maxAbsField(udcAna.tranverseShearY) / G;
+      const lines3: string[] = [];
+      lines3.push(``);
+      lines3.push(`  ═══ ESFUERZOS SHELL (LOSA) — UDCon2 (tonf·m/m, tonf/m) ═══`);
+      lines3.push(`  ┌───────────┬─────────┬─────────┬──────────┐`);
+      lines3.push(`  │  Comp     │ Hekatan │  ETABS  │   Δ%     │`);
+      lines3.push(`  ├───────────┼─────────┼─────────┼──────────┤`);
+      const row = (lbl: string, h: number, e: number) => {
+        const d = e > 0.01 ? ((h - e) / e * 100) : 0;
+        lines3.push(`  │  ${lbl.padEnd(8)} │ ${h.toFixed(3).padStart(7)} │ ${e.toFixed(3).padStart(7)} │ ${((d>=0?"+":"")+d.toFixed(1)+"%").padStart(8)} │`);
+      };
+      row("|M11|max", m11h, 2.970);
+      row("|M22|max", m22h, 2.970);
+      row("|M12|max", m12h, 0.857);
+      row("|V13|max", v13h, 3.619);
+      row("|V23|max", v23h, 3.619);
+      lines3.push(`  └───────────┴─────────┴─────────┴──────────┘`);
+      console.log(lines3.join("\n"));
+    }
 
     states.objects3D.val = [];
   },
