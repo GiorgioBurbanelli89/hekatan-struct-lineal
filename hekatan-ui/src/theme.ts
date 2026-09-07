@@ -29,8 +29,11 @@ export interface ThemeColors {
 }
 
 const DARK: ThemeColors = {
-  background: 0x111118,
-  grid: 0x555555,
+  // Hekatan Acero. El fondo y la rejilla siguen la relacion del area de dibujo
+  // de AutoCAD (registro, Drawing Window): un fondo casi negro con tinte azul y
+  // una rejilla dos escalones por encima, no un gris neutro.
+  background: 0x0e1116,
+  grid: 0x2c3647,
   axisArrow: 0x888888,
   elementLine: 0xffffff,
   nodePoint: 0xffffff,
@@ -45,8 +48,10 @@ const DARK: ThemeColors = {
 };
 
 const LIGHT: ThemeColors = {
-  background: 0xf0f0f0,
-  grid: 0x999999,
+  // El claro NO es el oscuro invertido: invertir da grises sucios y se pierde
+  // el texto pequeno. Sale del LightTheme.xbel, que es un blanco frio.
+  background: 0xf4f6f9,
+  grid: 0xb9c0d0,
   axisArrow: 0x444444,
   elementLine: 0x111111,
   nodePoint: 0x111111,

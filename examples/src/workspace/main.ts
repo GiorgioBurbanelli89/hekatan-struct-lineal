@@ -79,6 +79,9 @@ import {
   getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, addCadPanel, addCadRibbon,
   // 🛠 Orquestador unificado de Herramientas FEM (folder Tweakpane completo)
   attachFemTools,
+  // el tema del VISOR: el fondo lo pinta WebGL, no el CSS, asi que la piel
+  // tiene que avisarle aparte
+  setTheme as uiSetTheme,
 } from "hekatan-ui";
 // import { attachInspect } from "../shared/attachInspect";  // DEPRECATED: ahora en hekatan-ui/femTools
 import { exportarPng, exportarOrbitaGif, pngBlob } from "../shared/gifExport";
@@ -180,6 +183,7 @@ import { exportTclFromCli, importTclToCli } from "../shared/tclIO";
 import { parseE2k } from "../shared/e2kParser";
 import { exportS2k } from "../shared/s2kExporter";
 import { parseS2k } from "../shared/s2kParser";
+import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -2152,6 +2156,18 @@ const savedPos = (() => {
   } catch {}
   return null;
 })();
+// ── la piel CAD: barra de titulo arriba, barra de estado abajo y las
+// paletas acopladas a los lados. Va ANTES de crear el pane para que las
+// variables de Tweakpane ya esten puestas cuando se pinte la primera fila.
+// El puente al tema del VISOR va ANTES de aplicar la piel: `aplicarPielCad`
+// termina llamando a `ponerModo`, y si el puente no existe todavia el 3D se
+// queda con su tema de fabrica. Se veia como un lienzo negro con los paneles
+// claros, y no daba ningun error.
+(window as any).__hkSetViewerTheme = (t: "dark" | "light") => {
+  try { (uiSetTheme as any)?.(t); } catch {}
+};
+aplicarPielCad("sin titulo");
+
 paneHost.id = "hk-pane-host";
 paneHost.style.cssText =
   "position:fixed;" +
