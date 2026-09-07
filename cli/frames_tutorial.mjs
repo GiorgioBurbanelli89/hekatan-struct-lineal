@@ -23,6 +23,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const EJEMPLO = process.argv[2] || "test-m-dual";
 const N = parseInt(process.argv[3] || "24", 10);
 const OUT = join(__dirname, "..", process.argv[4] || "frames_tutorial");
+// x2: cada pixel CSS son dos de imagen. Un frame de 2560x1440 metido en un
+// video de 1920 se REDUCE, y reducir conserva el texto; ampliar lo borra.
+const DPR = parseFloat(process.env.DPR || "2");
 mkdirSync(OUT, { recursive: true });
 for (const f of readdirSync(OUT)) if (/\.png$/.test(f)) unlinkSync(join(OUT, f));
 
@@ -55,7 +58,7 @@ const nav = await puppeteer.launch({
          "--window-size=1280,720"],
 });
 const pag = await nav.newPage();
-await pag.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+await pag.setViewport({ width: 1280, height: 720, deviceScaleFactor: DPR });
 pag.on("console", (m) => consola.push(`[${m.type()}] ${m.text()}`));
 pag.on("pageerror", (e) => consola.push(`[pageerror] ${e.message}`));
 
