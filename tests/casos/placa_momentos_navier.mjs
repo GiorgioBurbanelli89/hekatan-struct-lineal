@@ -33,6 +33,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { resolverHeks } from "../lib/heks.mjs";
 
 const A = 4.0;            // m, placa cuadrada
@@ -56,7 +57,9 @@ function navier() {
   }
   return {
     w: (w * 16 * Q) / (Math.PI ** 6 * D),
-    mx: (mx * 16 * Q) / Math.PI ** 4,
+    // signo de CSI (8-sep-2026): M11 positivo = traccion abajo, o sea el centro
+    // de una placa apoyada bajo carga hacia abajo (Q < 0) sale POSITIVO
+    mx: -(mx * 16 * Q) / Math.PI ** 4,
   };
 }
 
@@ -122,15 +125,19 @@ export async function correr() {
   const filas = [];
   const c = A / 2;
 
-  // 1) el valor en el centro contra Navier. Con malla 8x8 el centroide del Q4
-  //    se queda un 2 % corto, que es convergencia normal, no error.
+  // 1) el valor en el centro contra Navier. Con malla 8x8 el valor en el NUDO
+  //    central (media de los joints de las 4 cascaras que lo tocan, como lo lista
+  //    CSI) se pasa un 4.9 % de la serie: SAP2000 24 da exactamente lo mismo
+  //    (7.4169 contra 7.4170, ver la fila 5), asi que es la malla, no el motor.
+  //    Hasta el 8-sep-2026 aqui se comparaba el centroide repartido a nudos
+  //    (2 % corto) y con el signo de la curvatura del solver, al reves que CSI.
   const mx = val("bendingXX", c, c);
   const d1 = (100 * (mx - teo.mx)) / teo.mx;
   filas.push({
     que: "M11 en el centro vs Navier",
-    medido: d1, limite: 4.0,
-    ok: Number.isFinite(d1) && Math.abs(d1) <= 4.0,
-    detalle: `${mx.toFixed(4)} vs ${teo.mx.toFixed(4)} kN.m/m (con el fallo: 0.0000)`,
+    medido: d1, limite: 6.0,
+    ok: Number.isFinite(d1) && Math.abs(d1) <= 6.0,
+    detalle: `${mx.toFixed(4)} vs ${teo.mx.toFixed(4)} kN.m/m (con el fallo: 0.0000; SAP2000 8x8: 7.4169)`,
   });
 
   // 2) M12 tiene que ser CERO en el centro, por simetria. Con el fallo el centro
@@ -160,6 +167,48 @@ export async function correr() {
     ok: Number.isFinite(razon) && razon >= 1.5,
     detalle: `centro ${centro.toFixed(3)} contra borde ${borde.toFixed(3)} (razon ${razon.toFixed(2)}, hace falta > 1.5)`,
   });
+
+  // 5) SAP2000 24, la misma placa por .s2k (validation/isse/placa_navier), JOINT
+  //    A JOINT: AreaForceShell (M11 M22 M12 en los 4 joints de cada cascara, sin
+  //    promediar) contra bendingXXjoint de analyze(). Es el arbitro que decide
+  //    la recuperacion de esfuerzos del Shell-Thick, no la serie de Navier.
+  {
+    const S = JSON.parse(readFileSync(new URL("../datos/placa_navier_sap2000.json", import.meta.url), "utf-8").replace(/\bNaN\b/g, "null"));
+    const porNombre = new Map(S.puntos.map((p) => [p.n, p]));
+    const k3 = (x, y, z) => [x, y, z].map((v) => Math.round(v * 1000)).join(",");
+    const idx = new Map();
+    r.elements.forEach((el, i) => { if (el.length === 4) idx.set(k3(...[0, 1, 2].map((d) => el.reduce((s, n) => s + nodes[n][d], 0) / 4)), i); });
+    let nJ = 0, peor = 0, maxM = 1e-12, centroS = null;
+    const enNudoS = new Map();
+    for (const ar of S.areas || []) {
+      const pts = ar.pts.map((p) => porNombre.get(p)).filter(Boolean); if (pts.length !== 4) continue;
+      const cc = [0, 1, 2].map((d) => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / 4);
+      const i = idx.get(k3(...cc)), fe = (S.shells || {})[ar.n]; if (i === undefined || !fe) continue;
+      const el = r.elements[i];
+      const hj = [a.bendingXXjoint?.get(i), a.bendingYYjoint?.get(i), a.bendingXYjoint?.get(i)]; if (!hj[0]) continue;
+      for (const v of fe) {
+        const p = porNombre.get(v[0]); const pos = el.findIndex((n) => k3(...nodes[n]) === k3(p.x, p.y, p.z)); if (pos < 0) continue;
+        nJ++;
+        for (const [q, k] of [[0, 4], [1, 5], [2, 6]]) { maxM = Math.max(maxM, Math.abs(v[k])); peor = Math.max(peor, Math.abs(v[k] - hj[q][pos])); }
+        const kn = k3(...nodes[el[pos]]); (enNudoS.get(kn) ?? enNudoS.set(kn, []).get(kn)).push(v[4]);
+      }
+    }
+    const l = enNudoS.get(k3(c, c, 0)); if (l) centroS = l.reduce((s, q) => s + q, 0) / l.length;
+    const d5 = nJ ? (100 * peor) / maxM : NaN;
+    filas.push({
+      que: "joints M11/M22/M12 vs SAP2000 (AreaForceShell)",
+      medido: d5, limite: 0.1,
+      ok: Number.isFinite(d5) && d5 <= 0.1 && nJ >= 256,
+      detalle: `${nJ} joints, peor ${d5.toFixed(4)} % del |M| max ${maxM.toFixed(3)}`,
+    });
+    const d6 = centroS != null ? (100 * (mx - centroS)) / centroS : NaN;
+    filas.push({
+      que: "M11 en el nudo central vs SAP2000",
+      medido: d6, limite: 0.1,
+      ok: Number.isFinite(d6) && Math.abs(d6) <= 0.1,
+      detalle: `${mx.toFixed(4)} vs ${centroS != null ? centroS.toFixed(4) : "?"} (media de los 4 joints de SAP)`,
+    });
+  }
 
   // 4) y la FLECHA, que siempre estuvo bien: es el control de que el solver no
   //    se ha movido al arreglar la recuperacion

@@ -211,6 +211,15 @@ export type AnalyzeOutputs = {
   tranverseShearX?: Map<number, number[]>;
   tranverseShearY?: Map<number, number[]>;
   vonMises?: Map<number, number[]>;
+  /** Momentos de cascara SIN promediar entre elementos: en el centroide (un numero por
+   *  elemento) y en sus 4 joints (Shell-Thick de CSI). Signo de CSI. Para comparar con
+   *  AreaForceShell de ETABS/SAP2000 elemento a elemento; el colormap usa bendingXX. */
+  bendingXXcentro?: Map<number, number>;
+  bendingYYcentro?: Map<number, number>;
+  bendingXYcentro?: Map<number, number>;
+  bendingXXjoint?: Map<number, number[]>;
+  bendingYYjoint?: Map<number, number[]>;
+  bendingXYjoint?: Map<number, number[]>;
   /** Presión de contacto Winkler/soil (kN/m² o tonf/m²). Usado por zapatas con springs. */
   pressure?: Map<number, number[]>;
   /**

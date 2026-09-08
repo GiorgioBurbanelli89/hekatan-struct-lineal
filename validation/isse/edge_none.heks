@@ -1,0 +1,18 @@
+# Edge constraint de ETABS con OBJMESHTYPE "NONE": la restriccion INTERPOLADA de verdad.
+# Placa 3x2 m a z=2, empotrada en (0,0) y (0,2). El pano A (0..2 x 0..2) es UN elemento;
+# B1/B2 cuelgan del nudo 7 = (2,0.7), que esta sobre la arista derecha de A sin ser vertice.
+# Sin automallado (NONE) ETABS no parte A: el nudo 7 solo puede atarse por el edge constraint.
+node 1 0 0 2
+node 2 2 0 2
+node 3 2 2 2
+node 4 0 2 2
+node 5 3 0 2
+node 6 3 0.7 2
+node 7 2 0.7 2
+node 8 3 2 2
+shell 1 1 2 3 4 0.20 25e6 0.2
+shell 2 2 5 6 7 0.20 25e6 0.2
+shell 3 7 6 8 3 0.20 25e6 0.2
+support 1 fixed
+support 4 fixed
+load 6 0 0 -10

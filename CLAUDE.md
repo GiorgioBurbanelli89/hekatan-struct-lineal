@@ -374,6 +374,40 @@ penalización de la divergencia es lo que lo estabiliza — ese es el origen del
 elemento (`localX = v01 + v32`): en un trapecio no coincide entrada a entrada
 con la K global de ETABS aunque sea la misma (autovalores idénticos).
 
+## Fuerzas de cáscara: joints como CSI, signo de CSI (8-sep-2026)
+
+`analyze()` daba el momento en el **centroide** con la B bilineal y lo repartía a nudos
+promediando los centroides vecinos: el pico sobre una columna desaparecía (4.2 donde ETABS
+lista 57.8) y el signo era el de la curvatura del solver, **al revés que CSI**. Ahora:
+
+- **Shell-Thin (DKQ, `plateFormulations = 1`)**: `utils/dkqJoints.ts` (espejo de `plateDKQ.h`)
+  evalúa la B en **Gauss 2×2 y extrapola bilinealmente** a las esquinas. Medido: = ETABS 22
+  **0.0000 % joint a joint** en las 4 plantillas con losa (3600 joints c/u); evaluando en las
+  esquinas directamente el M12 de las celdas de esquina se iba 26 %. Contra SAP2000, 0.5–0.9 %
+  (lo que SAP y ETABS difieren entre sí).
+- **Shell-Thick (`plateFormulations = 0`)**: `utils/csiThickJoints.ts` recupera los 10 gdl
+  internos (`u_i = −K_ii⁻¹ K_ib u_b`, misma K que `getBendingK_CSI`) y evalúa en las esquinas.
+  Placa 4×4 vs SAP2000 0.026 % joint a joint; losa gruesa de edificio vs SAP y ETABS 0.075 %.
+  ⚠️ Aplicar la recuperación gruesa a una solución DKQ da 41 vs 58 sobre columna: cada
+  formulación con su B.
+- **Signo**: `SIGNO_CSI = −1` en `computeQ4ShellStresses`: M11 > 0 = tracción abajo (vano de
+  losa positivo, columna negativa). El test `placa-momentos-navier` lleva ese signo y SAP2000 de
+  árbitro (`tests/datos/placa_navier_sap2000.json`).
+- Salidas nuevas en `AnalyzeOutputs`: `bendingXXcentro` (número por elemento) y
+  `bendingXXjoint` (4 valores, sin promediar), ídem YY/XY. `bendingXX` (el colormap) es la media
+  en el nudo de los joints de los elementos que lo tocan. `plantillas_hekatan.mjs` los vuelca
+  (`bXXc`, `bXXj`, `pts`) y `plantillas_vs_csi.mjs` compara en tres capas (centroide, joint, nudo).
+- **Giros del solver = mano derecha**: `θx = +∂w/∂y`, `θy = −∂w/∂x` (medido con el patch test;
+  las otras siete combinaciones dan cientos de %). En un apoyo duro de placa, «pendiente
+  tangencial nula» en y = 0 es `ry = 0`; fijar `rx` ahí es empotrar.
+- Validez sin ETABS (`validation/02-placas/shell_thick_validez.mjs`, `_convergencia.mjs`): rango
+  3, patch test 6.9e-11 % (Thick) / 6.6e-13 % (DKQ), convergencia a Reissner–Mindlin 0.12 % / 0.29 %
+  (t/L 0.1, 32×32) y 0.065 % / 0.24 % (t/L 0.01), sin bloqueo. Fuentes pieza a pieza en
+  `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md`: la simetrización del cortante y la
+  penalización de la divergencia **no están publicadas** (son del kernel); el resto sí.
+- Pendiente: F11/F22/F12 (membrana) joint a joint; edge constraint interpolado (`NONE`) es
+  Hermite en w (medido, no implementado).
+
 ## Masa torsional: Ip vs J
 
 La masa consistente usa `Ip = Iy + Iz` (momento polar de inercia) para DOFs torsionales, NO `J` (constante de Saint-Venant). OpenSees tiene un bug conocido donde usa J en vez de Ip — causa ~3% de error en modos torsionales.

@@ -104,8 +104,13 @@ export function correr(tipo, over) {
     if (el.length !== 3 && el.length !== 4) return;
     const c = [0, 1, 2].map(d => el.reduce((s, n) => s + st.nodes.val[n][d], 0) / el.length);
     const g = (m) => m?.get?.(i) ?? null;
-    shells.push({ c, n: el.length,
+    // pts: los nudos, para casar joint a joint con AreaForceShell. bXXc: el centroide
+    // (media de los 4 joints). bXXj: los 4 joints SIN promediar (lo que lista CSI).
+    // bXX: lo que pinta el colormap (media en el nudo de los joints de los vecinos).
+    shells.push({ c, n: el.length, pts: el.map(n => st.nodes.val[n]),
       bXX: g(a.bendingXX), bYY: g(a.bendingYY), bXY: g(a.bendingXY),
+      bXXc: g(a.bendingXXcentro), bYYc: g(a.bendingYYcentro), bXYc: g(a.bendingXYcentro),
+      bXXj: g(a.bendingXXjoint), bYYj: g(a.bendingYYjoint), bXYj: g(a.bendingXYjoint),
       mXX: g(a.membraneXX), mYY: g(a.membraneYY), mXY: g(a.membraneXY) });
   });
 

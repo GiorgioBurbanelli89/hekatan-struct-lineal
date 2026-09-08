@@ -98,6 +98,14 @@ importador de ETABS (`DIAPH` en áreas, `ADDRESTRAINT`, objetos de piso), no el 
   pasando líneas por el nudo colgado** (14 nudos / 8 elementos de análisis en la sonda), así que
   ON y OFF dan lo mismo. Eso es `deck etabs` en Hekatan (partir el paño). La restricción interpolada
   solo actúa con `OBJMESHTYPE "NONE"`.
+- Con `OBJMESHTYPE "NONE"` (`validation/isse/edge_none.heks` → `heks_a_csi.mjs … meshtype=NONE`, ETABS por
+  e2k): el nudo colgado a 0.35 de una arista de 2 m sale con **w = cúbica de Hermite** con los giros de los
+  extremos (0.11 %; lineal se va 2.8 %, Hermite con el giro al revés 3.9 %) y giros ≈ lineales (1 %). El
+  0.11 % que queda es del orden del término de cortante de la arista gruesa (φ ≈ 0.03). No implementado en
+  Hekatan: su defecto (`deck etabs`) es lo que ETABS hace por defecto.
+- Fuerzas de cáscara (8-sep-2026, tarde): las 4 plantillas con losa Thin contra ETABS **0.0000 % joint a
+  joint** (`cli/_joints_vs_csi.mjs`); la gruesa contra SAP2000 y ETABS 0.075 %. Ver
+  `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md` y `validation/modelos/plantillas/COMPARACION.md` capa 5.
 
 ## 5 · El `.e2k` arreglado (8-sep-2026): ETABS = Hekatan también por fichero
 

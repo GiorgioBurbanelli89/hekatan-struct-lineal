@@ -129,15 +129,20 @@ modo se cruza con el de ETABS cuyo vector de participacion
 Las de barra pasan por `tests/lib/comparar.mjs`, que hace las dos
 conversiones de la convencion CSI: fuerza de EXTREMO -> DIAGRAMA (en el nudo
 i cambia de signo) y el signo de `M2`. Las de cascara se emparejan por
-CENTROIDE, porque ETABS renumera las areas al importar.
+CENTROIDE, porque ETABS renumera las areas al importar, y se comparan en
+tres capas contra `AreaForceShell`: el CENTROIDE (media de los 4 joints de
+ETABS contra el de Hekatan), JOINT A JOINT (cada joint del elemento, sin
+promediar, 3600 por plantilla: M11, M22 y M12) y por NUDO (la media de los
+joints de los elementos que tocan el nudo, que es lo que pinta el colormap).
+Signo de CSI en los dos (desde el 8-sep-2026). Todo en % del |M| maximo.
 
-| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | peor M11 | peor M22 |
-|---|---|---|---|---|---|---|---|
-| `portico-2d` | 76 de 76 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % |
-| `portico-3d` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % |
-| `portico-losa` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 68.057 % | 68.057 % |
-| `solo-rejilla` | 64 de 64 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % |
-| `losa-plana` | 64 de 64 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 87.628 % | 87.628 % |
-| `losa-vigas-borde` | 304 de 304 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 85.237 % | 85.237 % |
-| `dual` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 940 de 940 | 67.413 % | 103.193 % |
-| `arriostrado` | 560 de 560 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % |
+| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | M11 centroide | M22 centroide | M12 centroide | joint a joint | nudo (colormap) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `portico-2d` | 76 de 76 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % | 0.000 % | - | - |
+| `portico-3d` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % | 0.000 % | - | - |
+| `portico-losa` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 0.000 % | 0.000 % | 0.000 % | 0.000 % (3600) | 0.000 % |
+| `solo-rejilla` | 64 de 64 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % | 0.000 % | - | - |
+| `losa-plana` | 64 de 64 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 0.000 % | 0.000 % | 0.000 % | 0.000 % (3600) | 0.000 % |
+| `losa-vigas-borde` | 304 de 304 | 0.000 % | 0.000 % | 0.000 % | 900 de 900 | 0.000 % | 0.000 % | 0.000 % | 0.000 % (3600) | 0.000 % |
+| `dual` | 544 de 544 | 0.000 % | 0.000 % | 0.000 % | 940 de 940 | 0.000 % | 0.000 % | 0.000 % | 0.000 % (3760) | 0.000 % |
+| `arriostrado` | 560 de 560 | 0.000 % | 0.000 % | 0.000 % | 0 de 0 | 0.000 % | 0.000 % | 0.000 % | - | - |

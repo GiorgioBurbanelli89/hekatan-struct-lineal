@@ -329,46 +329,51 @@ for (const r of filas) {
   } catch (e) { r.fuerzas = { err: String(e?.message || e).slice(0, 90) }; }
 
   // CASCARAS. Se empareja por CENTROIDE: ETABS renumera las areas al importar,
-  // asi que el nombre no sirve de clave.
+  // asi que el nombre no sirve de clave. Tres capas, de menos a mas fina:
+  //   · centroide: la media de los 4 joints de ETABS contra bXXc de Hekatan;
+  //   · joint a joint: cada joint de AreaForceShell contra bXXj (mismo nudo);
+  //   · nudo: la media de los joints de los elementos que tocan el nudo (lo que
+  //     pinta el colormap) en los dos programas.
+  // Signo: el de CSI en los dos (desde el 8-sep-2026). Sin "invertido".
   const cShell = new Map();
   for (const s of (H.shells || [])) cShell.set(k3(...s.c), s);
-  let nSh = 0, peorM11 = 0, peorM22 = 0, sinParSh = 0;
-  let peorM11n = 0, peorM22n = 0, sumEH = 0, sumHH = 0;
   const media = (v) => (Array.isArray(v) && v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
-  const maxM11 = Math.max(1e-12, ...(H.shells || []).map((s) => Math.abs(media(s.bXX) ?? 0)));
-  const maxM22 = Math.max(1e-12, ...(H.shells || []).map((s) => Math.abs(media(s.bYY) ?? 0)));
+  let nSh = 0, nJ = 0, sinParSh = 0, peorC = [0, 0, 0], peorJ = [0, 0, 0], maxM = 1e-12, sumEH = 0, sumHH = 0;
+  const nudoH = new Map(), nudoE = new Map();
   for (const a of (J.areas || [])) {
-    const pts = (a.pts || []).map((n) => porNombre.get(n)).filter(Boolean);
+    const pts = a.pts.map((n) => porNombre.get(n)).filter(Boolean);
     if (!pts.length) continue;
     const c = [0, 1, 2].map((d) => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / pts.length);
     const sh = cShell.get(k3(...c));
     const fe = (J.shells || {})[a.n];
     if (!sh || !fe) { if (fe) sinParSh++; continue; }
     nSh++;
-    const m11e = fe.reduce((s, v) => s + v[4], 0) / fe.length;
-    const m22e = fe.reduce((s, v) => s + v[5], 0) / fe.length;
-    const h11 = media(sh.bXX) ?? 0, h22 = media(sh.bYY) ?? 0;
-    // El SIGNO no se supone: se mide. Se guarda la diferencia con el signo tal
-    // cual Y con el signo cambiado, y gana la que salga menor en TODO el
-    // modelo. Una discrepancia del 220 % en un campo que por lo demas cuadra es
-    // la firma de un convenio de signo al reves, no de un error del solver.
-    peorM11 = Math.max(peorM11, Math.abs(m11e - h11) / maxM11);
-    peorM22 = Math.max(peorM22, Math.abs(m22e - h22) / maxM22);
-    peorM11n = Math.max(peorM11n, Math.abs(m11e + h11) / maxM11);
-    peorM22n = Math.max(peorM22n, Math.abs(m22e + h22) / maxM22);
-    sumEH += m11e * h11; sumHH += h11 * h11;
+    const hc = [sh.bXXc ?? media(sh.bXX), sh.bYYc ?? media(sh.bYY), sh.bXYc ?? media(sh.bXY)];
+    const hj = [sh.bXXj, sh.bYYj, sh.bXYj];
+    for (const [q, idx] of [[0, 4], [1, 5], [2, 6]]) {
+      const ec = fe.reduce((s, v) => s + v[idx], 0) / fe.length;
+      maxM = Math.max(maxM, Math.abs(ec));
+      peorC[q] = Math.max(peorC[q], Math.abs(ec - (hc[q] ?? 0)));
+      sumEH += ec * (hc[q] ?? 0); sumHH += (hc[q] ?? 0) ** 2;
+    }
+    if (!hj[0] || !sh.pts) continue;
+    for (const v of fe) {
+      const p = porNombre.get(v[0]); if (!p) continue;
+      const pos = sh.pts.findIndex((n) => k3(...n) === k3(p.x, p.y, p.z)); if (pos < 0) continue;
+      nJ++;
+      for (const [q, idx] of [[0, 4], [1, 5], [2, 6]]) peorJ[q] = Math.max(peorJ[q], Math.abs(v[idx] - hj[q][pos]));
+      const kn = k3(...sh.pts[pos]);
+      (nudoH.get(kn) ?? nudoH.set(kn, []).get(kn)).push(hj[0][pos]);
+      (nudoE.get(kn) ?? nudoE.set(kn, []).get(kn)).push(v[4]);
+    }
   }
-  // .cual de los dos convenios cuadra? El que da menos diferencia. Y
-  // `pendiente` es el ajuste por minimos cuadrados M11_ETABS = k * M11_Hekatan:
-  // k = +1 dice que son el MISMO numero, k = -1 que solo cambia el signo, y
-  // cualquier otro valor que ademas hay un factor y no es solo el convenio.
-  const invertido = (peorM11n + peorM22n) < (peorM11 + peorM22);
-  r.shells = { nSh, sinParSh, nAreasE: (J.areas || []).length,
+  let peorN = 0;
+  for (const [kn, l] of nudoH) { const e = nudoE.get(kn); if (e) peorN = Math.max(peorN, Math.abs(media(l) - media(e))); }
+  r.shells = { nSh, nJ, sinParSh, nAreasE: (J.areas || []).length,
                nShellsH: (H.shells || []).length,
-               peorM11: invertido ? peorM11n : peorM11,
-               peorM22: invertido ? peorM22n : peorM22,
-               invertido, pendiente: sumHH > 1e-12 ? sumEH / sumHH : null,
-               maxM11, maxM22 };
+               peorM11: peorC[0] / maxM, peorM22: peorC[1] / maxM, peorM12: peorC[2] / maxM,
+               peorJoint: Math.max(...peorJ) / maxM, peorNudo: peorN / maxM,
+               invertido: false, pendiente: sumHH > 1e-12 ? sumEH / sumHH : null, maxM };
 }
 
 // ── consola ──
@@ -449,7 +454,7 @@ for (const r of filas) {
 }
 
 console.log("\n== CAPA 5 · FUERZAS de barra (Dead) y de cascara ==");
-console.log("plantilla            barras    peor P     peor V2    peor M3   |  shells  peor M11   peor M22   signo  M11_E/M11_H");
+console.log("plantilla            barras    peor P     peor V2    peor M3   |  shells  peor M11   peor M22   peor M12 (centroide) | joint a joint | nudo (colormap)  M_E/M_H");
 console.log("-".repeat(104));
 for (const r of filas) {
   if (r.err) { console.log(`${et(r)} ${r.err}`); continue; }
@@ -460,9 +465,9 @@ for (const r of filas) {
   const peor = (c) => (F.campos && F.campos[c]) ? f(F.campos[c].max, 3) + " %" : "-";
   console.log(`${et(r)} ${String(F.emparejadas ?? 0).padStart(6)} ${String(peor("P")).padStart(10)} ` +
     `${String(peor("V2")).padStart(11)} ${String(peor("M3")).padStart(10)}   | ` +
-    `${String(S.nSh ?? 0).padStart(7)} ${p2(S.peorM11).padStart(9)} ${p2(S.peorM22).padStart(10)}` +
-    `${(S.nSh ? (S.invertido ? "  invertido" : "  igual    ") : "").padEnd(11)}` +
-    `${S.pendiente != null ? f(S.pendiente, 4).padStart(8) : ""}` +
+    `${String(S.nSh ?? 0).padStart(7)} ${p2(S.peorM11).padStart(9)} ${p2(S.peorM22).padStart(10)} ${p2(S.peorM12).padStart(10)}` +
+    `  ${S.nSh ? p2(S.peorJoint).padStart(10) : "".padStart(10)}  ${S.nSh ? p2(S.peorNudo).padStart(10) : "".padStart(10)}` +
+    `${S.pendiente != null ? f(S.pendiente, 4).padStart(9) : ""}` +
     (F.err ? "  " + F.err : ""));
 }
 
@@ -560,19 +565,25 @@ const md = [
   "Las de barra pasan por `tests/lib/comparar.mjs`, que hace las dos",
   "conversiones de la convencion CSI: fuerza de EXTREMO -> DIAGRAMA (en el nudo",
   "i cambia de signo) y el signo de `M2`. Las de cascara se emparejan por",
-  "CENTROIDE, porque ETABS renumera las areas al importar.",
+  "CENTROIDE, porque ETABS renumera las areas al importar, y se comparan en",
+  "tres capas contra `AreaForceShell`: el CENTROIDE (media de los 4 joints de",
+  "ETABS contra el de Hekatan), JOINT A JOINT (cada joint del elemento, sin",
+  "promediar, 3600 por plantilla: M11, M22 y M12) y por NUDO (la media de los",
+  "joints de los elementos que tocan el nudo, que es lo que pinta el colormap).",
+  "Signo de CSI en los dos (desde el 8-sep-2026). Todo en % del |M| maximo.",
   "",
-  "| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | peor M11 | peor M22 |",
-  "|---|---|---|---|---|---|---|---|",
+  "| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | M11 centroide | M22 centroide | M12 centroide | joint a joint | nudo (colormap) |",
+  "|---|---|---|---|---|---|---|---|---|---|---|",
   ...filas.map((r) => {
-    if (r.err) return `| \`${r.nombre}\` | ${r.err} | | | | | | |`;
+    if (r.err) return `| \`${r.nombre}\` | ${r.err} | | | | | | | | | |`;
     const F = r.fuerzas || {}, S = r.shells || {};
     // ⚠️ `campos[c].max` YA viene en % (compararFuerzas divide por el PICO del
     // campo y multiplica por 100) y `campos[c].peor` es un OBJETO con la barra y
     // el extremo, no un numero: pasarlo por el formateador daba `NaN %` en los 8.
     const peor = (c) => (F.campos && F.campos[c]) ? f(F.campos[c].max, 3) + " %" : "-";
     return `| \`${r.nombre}\` | ${F.emparejadas ?? 0} de ${F.nStruct ?? 0} | ${peor("P")} | ${peor("V2")} | ` +
-      `${peor("M3")} | ${S.nSh ?? 0} de ${S.nShellsH ?? 0} | ${p2(S.peorM11)} | ${p2(S.peorM22)} |`;
+      `${peor("M3")} | ${S.nSh ?? 0} de ${S.nShellsH ?? 0} | ${p2(S.peorM11)} | ${p2(S.peorM22)} | ${p2(S.peorM12)} | ` +
+      `${S.nSh ? p2(S.peorJoint) + " (" + S.nJ + ")" : "-"} | ${S.nSh ? p2(S.peorNudo) : "-"} |`;
   }),
   "",
 ];

@@ -49,6 +49,11 @@ software; ETABS, SAP2000 y SAFE solo se usan para comprobarlo.
 | Muelle de área (Winkler, ISSE) contra muelles nodales por área tributaria | `spring` | **0.0000 %** | **0.0000 %** | consistente (−1.9 %) |
 | Muelle de línea (viga de cimentación) contra muelles nodales por longitud tributaria | `spring` | **0.0000 %** | **0.0000 %** | — |
 | Muelles de giro en la base (ISSE de zapata, kθ), `.heks` `spring n rx/ry/rz k`, misma malla por OAPI | `spring` | **4e-13 %** | **2.5e-13 %** | — |
+| Fuerzas de cáscara joint a joint (`AreaForceShell` M11/M22/M12 en los 4 joints de cada cáscara, sin promediar) — Shell-Thin = DKQ en Gauss 2×2 extrapolado; 4 plantillas con losa, 3600–3760 joints cada una | `shelltype thin` | 0.5–0.9 % ⁶ | **0.0000 %** (centroide, joint y nudo) | — |
+| Fuerzas de cáscara — Shell-Thick (formulación de CSI, 10 gdl internos recuperados): placa 4×4 (256 joints) · losa gruesa de edificio (3600 joints) | `shelltype thick` | **0.026 %** · **0.075 %** | — · **0.075 %** | — |
+| Validez del Shell-Thick SIN CSI: rango (3 modos rígidos en 5 geometrías), patch test de curvatura constante (MacNeal–Harder, cuadriláteros distorsionados), convergencia a Reissner–Mindlin exacto (apoyo duro, 32×32) | — | patch test **6.9e-11 %** (gruesa) / **6.6e-13 %** (DKQ) · w 0.12 % / M 0.29 % (t/L 0.1) · w 0.065 % / M 0.24 % (t/L 0.01), sin bloqueo — `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md` | | |
+| Edge constraint interpolado (`OBJMESHTYPE "NONE"`, nudo colgado a 0.35 de una arista de 2 m) | ⏳ no implementado | n/a | w = **cúbica de Hermite** con los giros de extremo (0.11 %); lineal 2.8 % | — |
+| Plantilla dual, empuje lateral (forma del 2.º modo), e2k arreglado | `etabsjoint 1` | — | **0.00 %** en las 4 plantas | — |
 | Edge constraint (nudo colgado en la arista de un paño) | `deck etabs` | n/a | por defecto ETABS **malla por el nudo** (ON = OFF); la restricción interpolada solo con `OBJMESHTYPE "NONE"` | — |
 | Shell-Thick — mezanine losa maciza, 1284 nudos | `shelltype thick` | **< 1e-6 %** | **< 1e-6 %** | — |
 | 6 tipos de losa (deck, membrana, thin, thick, nervada, waffle) | — | — | **< 3e-7 %** | — |
@@ -69,6 +74,7 @@ constraint) y lo corta en las vigas que lo cruzan; SAP2000 solo conecta los 4 nu
 interruptor Hekatan se comporta como SAP2000; con `deck etabs`, como ETABS (ver la sección del deck).
 ² SAP2000 pone el peso y la carga de área de una membrana en sus 4 esquinas, como Hekatan sin interruptor.
 ³ SAP2000 no tiene reparto en un sentido.
+⁶ Lo que SAP2000 y ETABS difieren entre sí en esos mismos joints (0.2 % en las losas); Hekatan reporta el signo de CSI (M11 > 0 = tracción abajo) desde el 8-sep-2026.
 ⁴ El Winkler por defecto de SAFE es un muelle de *área*; el de Hekatan (y SAP2000) es nodal. El
 1.92 % es la diferencia entre los dos modelos, no un error; con muelles nodales SAFE cierra a 1e-9 %.
 ⁵ SAFE imprime los desplazamientos con 6 decimales en m (0.0005 mm sobre 32 mm): ese es el 1.5e-3 %, no el solver. Cuatro leyes de SAFE medidas por el camino (`f2kExporter.ts`): una tabla `COLUMN OBJECT CONNECTIVITY` le hace tirar todas las losas y vigas; las tablas quieren el *nombre* del campo (`"Stiffness UZ"`), con la clave se queda callado en 200 kN/m; una sección de hormigón sin material de armadura se rechaza entera; y SAFE analiza las vigas con **0.1·J**, así que el fichero lleva 10·J.

@@ -203,6 +203,24 @@ for i, f in enumerate(trabajos, 1):
             except Exception as ex:
                 D["disp_error"] = str(ex)[:80]
 
+            # ---- fuerzas de CASCARA, caso DEAD (misma firma de 25 campos que ETABS) --
+            #   [1]obj [2]elm [3]pointElm [4]loadCase [7]F11 [8]F22 [9]F12 [14]M11 [15]M22 [16]M12 [20]V13 [21]V23
+            # Se guardan los 4 puntos de cada area, sin promediar (como en plantillas_etabs.py).
+            try:
+                r = sm.Results.AreaForceShell("All", 2)
+                n = r[0]
+                sh = {}
+                for k in range(n):
+                    if str(r[4][k]).lower() != "dead":
+                        continue
+                    sh.setdefault(str(r[1][k]), []).append(
+                        [str(r[3][k]), r[7][k], r[8][k], r[9][k],
+                         r[14][k], r[15][k], r[16][k],
+                         r[20][k], r[21][k]])
+                D["shells"] = sh
+            except Exception as ex:
+                D["shells_error"] = str(ex)[:80]
+
             try:
                 r = sm.Results.ModalPeriod()
                 D["modal"] = [{"mode": k + 1, "T": r[4][k], "f": r[5][k]}

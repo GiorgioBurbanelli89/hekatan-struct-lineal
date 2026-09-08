@@ -6,6 +6,8 @@ import {
   DeformOutputs,
   ElementInputs,
 } from "./data-model";
+import { csiThickJointMoments } from "./utils/csiThickJoints";
+import { dkqJointMoments } from "./utils/dkqJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
 import {
   getLocalStiffnessMatrix,
@@ -37,6 +39,10 @@ export function analyze(
     vonMises: new Map(),
   };
 
+  // Momentos en los 4 JOINTS de cada Q4 (Shell-Thick de CSI con sus 10 gdl
+  // internos recuperados, ver utils/csiThickJoints.ts). Sin promediar: es lo
+  // que ETABS lista en AreaForceShell, por elemento y por joint.
+  const jointBending: Map<number, number[][]> = new Map();
   const analyzeOutputsElements: {
     bendingXX: Map<number, number>;
     bendingYY: Map<number, number>;
@@ -138,6 +144,7 @@ export function analyze(
       analyzeOutputsElements.bendingXX.set(i, q4Results.Mx);
       analyzeOutputsElements.bendingYY.set(i, q4Results.My);
       analyzeOutputsElements.bendingXY.set(i, q4Results.Mxy);
+      if (q4Results.Mj) jointBending.set(i, q4Results.Mj);
       analyzeOutputsElements.tranverseShearX.set(i, q4Results.Qx);
       analyzeOutputsElements.tranverseShearY.set(i, q4Results.Qy);
       analyzeOutputsElements.vonMises.set(i, q4Results.vonMises);
@@ -281,9 +288,18 @@ export function analyze(
       membraneXXs[pos] = avgField(analyzeOutputsElements.membraneXX);
       membraneYYs[pos] = avgField(analyzeOutputsElements.membraneYY);
       membraneXYs[pos] = avgField(analyzeOutputsElements.membraneXY);
-      bendingXXs[pos] = avgField(analyzeOutputsElements.bendingXX);
-      bendingYYs[pos] = avgField(analyzeOutputsElements.bendingYY);
-      bendingXYs[pos] = avgField(analyzeOutputsElements.bendingXY);
+      // Flexion: la media, en este nudo, del valor que cada elemento vecino
+      // tiene EN SU ESQUINA (el joint de CSI), no de su centroide. Si un vecino
+      // no trae joints (placa delgada, triangulo), aporta su centroide.
+      const avgJoint = (campo: number, centro: Map<number, number>) =>
+        mean(elementIndicies.map((ei) => {
+          const mj = jointBending.get(ei);
+          const pos2 = mj ? elements[ei].indexOf(nodeIndex) : -1;
+          return mj && pos2 >= 0 ? mj[pos2][campo] : (centro.get(ei) ?? 0);
+        }));
+      bendingXXs[pos] = avgJoint(0, analyzeOutputsElements.bendingXX);
+      bendingYYs[pos] = avgJoint(1, analyzeOutputsElements.bendingYY);
+      bendingXYs[pos] = avgJoint(2, analyzeOutputsElements.bendingXY);
       shearXs[pos] = avgField(analyzeOutputsElements.tranverseShearX);
       shearYs[pos] = avgField(analyzeOutputsElements.tranverseShearY);
       vmStress[pos] = avgField(analyzeOutputsElements.vonMises);
@@ -295,6 +311,20 @@ export function analyze(
     analyzeOutputs.bendingXX!.set(elementIndex, bendingXXs);
     analyzeOutputs.bendingYY!.set(elementIndex, bendingYYs);
     analyzeOutputs.bendingXY!.set(elementIndex, bendingXYs);
+    // sin promediar: el centroide y los 4 joints tal cual salen del elemento
+    const mjE = jointBending.get(elementIndex);
+    // el centroide: la media de los 4 joints cuando los hay (con la extrapolacion
+    // bilineal desde Gauss es exactamente el valor en el centro del campo de CSI;
+    // la B bilineal de arriba coincide en M11/M22 pero no en M12), si no el de la B bilineal
+    const centroDe = (q: number, m: Map<number, number>) => mjE ? mjE.reduce((s, v) => s + v[q], 0) / mjE.length : (m.get(elementIndex) ?? 0);
+    (analyzeOutputs.bendingXXcentro ??= new Map()).set(elementIndex, centroDe(0, analyzeOutputsElements.bendingXX));
+    (analyzeOutputs.bendingYYcentro ??= new Map()).set(elementIndex, centroDe(1, analyzeOutputsElements.bendingYY));
+    (analyzeOutputs.bendingXYcentro ??= new Map()).set(elementIndex, centroDe(2, analyzeOutputsElements.bendingXY));
+    if (mjE) {
+      (analyzeOutputs.bendingXXjoint ??= new Map()).set(elementIndex, mjE.map((m) => m[0]));
+      (analyzeOutputs.bendingYYjoint ??= new Map()).set(elementIndex, mjE.map((m) => m[1]));
+      (analyzeOutputs.bendingXYjoint ??= new Map()).set(elementIndex, mjE.map((m) => m[2]));
+    }
     analyzeOutputs.tranverseShearX!.set(elementIndex, shearXs);
     analyzeOutputs.tranverseShearY!.set(elementIndex, shearYs);
     analyzeOutputs.vonMises!.set(elementIndex, vmStress);
@@ -315,7 +345,7 @@ function computeQ4ShellStresses(
   elementInputs: ElementInputs,
   elemIdx: number
 ): { Nx: number; Ny: number; Nxy: number; Mx: number; My: number; Mxy: number;
-     Qx: number; Qy: number; vonMises: number } {
+     Qx: number; Qy: number; vonMises: number; Mj: number[][] | null } {
   const E = elementInputs.elasticities?.get(elemIdx) ?? 0;
   const nu = elementInputs.poissonsRatios?.get(elemIdx) ?? 0;
   const t = elementInputs.thicknesses?.get(elemIdx) ?? 1;
@@ -444,7 +474,7 @@ function computeQ4ShellStresses(
   }
   const detJ = J00*J11 - J01*J10;
   if (Math.abs(detJ) < 1e-20) {
-    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0 };
+    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0, Mj: null };
   }
   const invJ00 = J11/detJ, invJ01 = -J01/detJ, invJ10 = -J10/detJ, invJ11 = J00/detJ;
 
@@ -498,9 +528,50 @@ function computeQ4ShellStresses(
     kappaXY +=  dNdy[n] * thetaY - dNdx[n] * thetaX;
   }
 
-  const Mx = Db[0][0]*kappaXX + Db[0][1]*kappaYY;
-  const My = Db[1][0]*kappaXX + Db[1][1]*kappaYY;
-  const Mxy = Db[2][2]*kappaXY;
+  // ── SIGNO DE CSI (8-sep-2026) ──
+  //
+  // Medido contra AreaForceShell de ETABS 22 y SAP2000 24 en las plantillas con
+  // losa (3600 joints por plantilla): en el centro del elemento este campo es
+  // EXACTAMENTE el de CSI con el signo cambiado (pendiente -1.000000). El
+  // convenio de CSI es el de toda la vida (M11 positivo = traccion abajo: el
+  // vano de una losa bajo gravedad sale positivo y la columna negativa), asi
+  // que se reporta con ese signo y no con el de la curvatura del solver. Hasta
+  // hoy el colormap salia al reves que ETABS.
+  const SIGNO_CSI = -1;
+  const Mx = SIGNO_CSI * (Db[0][0]*kappaXX + Db[0][1]*kappaYY);
+  const My = SIGNO_CSI * (Db[1][0]*kappaXX + Db[1][1]*kappaYY);
+  const Mxy = SIGNO_CSI * (Db[2][2]*kappaXY);
+
+  // ── MOMENTOS EN LOS JOINTS (Shell-Thick de CSI, internos recuperados) ──
+  //
+  // El centroide con la B bilineal de arriba cuadra con CSI a 1e-6, pero
+  // llevar ese unico numero a los nudos promediando centroides vecinos borra
+  // el pico sobre la columna (4.2 donde ETABS lista 57.8). Con los 10 gdl
+  // internos del elemento recuperados y la curvatura evaluada en cada esquina
+  // sale 41.4 en ese nudo y 0.3 % en campo suave. Solo en la placa gruesa
+  // (formulacion 0): la delgada (DKQ) tiene otra B y sigue por centroide.
+  // La placa DELGADA (formulacion 1, el Shell-Thin = DKQ) tiene su propia B
+  // (utils/dkqJoints.ts, espejo de plateDKQ.h) y se evalua directamente en las
+  // esquinas: es el elemento de las plantillas (losa Thin por defecto).
+  let Mj: number[][] | null = null;
+  const esPlacaGruesa = ((elementInputs as any)?.plateFormulations?.get(elemIdx) ?? 0) !== 1;
+  if (Math.abs(detJ) > 1e-20) {
+    const u12: number[] = [];
+    for (let n = 0; n < 4; n++) u12.push(uLocal[n*6 + 2], uLocal[n*6 + 3], uLocal[n*6 + 4]);
+    try {
+      // DKQ: en Gauss 2x2 y extrapolado bilinealmente a las esquinas. Medido el
+      // 8-sep-2026 contra AreaForceShell en las 4 plantillas con losa Thin:
+      // = ETABS 22 a 0.0000 % joint a joint (3600 joints por plantilla) y = SAP2000
+      // 24 a 0.9 % (que es lo que SAP y ETABS difieren entre si). Evaluado
+      // directamente en las esquinas el M12 de los elementos de esquina se iba
+      // un 26 %: CSI extrapola desde Gauss, no evalua en el nudo.
+      const modoDKQ = (globalThis as any).__hekatanDkqJoints ?? "gauss";
+      Mj = (esPlacaGruesa ? csiThickJointMoments(xl, yl, u12, E, nu, t)
+                          : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
+             .map((m) => m.map((v) => SIGNO_CSI * v));
+      if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
+    } catch { Mj = null; }
+  }
 
   // --- Transverse shear (Mindlin) ---
   //
@@ -559,7 +630,7 @@ function computeQ4ShellStresses(
 
   const vonMises = Math.max(vonMises_top, vonMises_bot);
 
-  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises };
+  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises, Mj };
 }
 
 function getMaterialStiffnessMatrix3x3(
