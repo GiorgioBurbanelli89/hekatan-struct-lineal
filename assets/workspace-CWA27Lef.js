@@ -14213,7 +14213,7 @@ body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
    su linea de estado y la guia lo mismo que la barra de herramientas. */
 body.hk-cad #hk-ribbon{ top:40px !important; }
 body.hk-cad #hk-ribbon-estado{ top:106px !important; }
-body.hk-cad #hk-ribbon-guia{ top:150px !important; }
+body.hk-cad #hk-ribbon-guia{ top:292px !important; max-height:calc(100% - 360px) !important; }
 
 /* \u2500\u2500 la LINEA DE COMANDO, acoplada abajo y a todo lo ancho \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 /* Estaba flotando en el centro con un cian que no es de ninguna de las dos
