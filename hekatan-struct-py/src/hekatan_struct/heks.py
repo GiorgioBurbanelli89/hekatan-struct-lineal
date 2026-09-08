@@ -136,7 +136,17 @@ def leer_heks(ruta: str) -> ModeloHeks:
     sang: dict[int, float] = {}
     stipo: dict[int, int] = {}             # shelltype: 1 = thin, 0 = thick
     muelles: list[tuple[int, int, float]] = []   # (ID de nudo, GDL, k)
-    muelles_area: dict[int, float] = {}          # `springarea shellID ks`: Winkler de AREA (SAFE)
+    # `areaspring shellID ks [nodal]` (alias `springarea`, `winkler`, `winklerarea`): Winkler de AREA.
+    # Por defecto CONSISTENTE (ks*int N^T N dA, el de SAFE); con `nodal` se reparte a los nudos por
+    # int N_i dA, que es lo que hacen SAP2000 y ETABS (medido el 8-sep-2026: SAFE tambien).
+    # OJO: hasta el 8-sep-2026 Python solo entendia `springarea` y el TS solo `areaspring`, asi que
+    # el MISMO .heks no se leia igual en los dos motores. Ahora los cuatro nombres valen en ambos.
+    muelles_area: dict[int, float] = {}
+    muelles_area_nodal: set[int] = set()
+    # `edge etabs`: los nudos COLGADOS sobre la arista de una cascara se atan a esa arista
+    # (w por Hermite cubica con los giros de los extremos, resto lineal), como la restriccion
+    # interpolada de ETABS. Sin la directiva quedan sueltos, que es lo que hace SAP2000.
+    edge_flag = [False]
     errores: list[str] = []
     ignorados: dict[str, int] = {}
 
@@ -266,8 +276,13 @@ def leer_heks(ruta: str) -> ModeloHeks:
                         smod[sid] = (vals[0], vals[1])
                 elif cmd == "shellang":
                     sang[int(t[1])] = float(t[2])
-                elif cmd in ("springarea", "winklerarea"):
+                elif cmd in ("springarea", "winklerarea", "areaspring", "winkler"):
                     muelles_area[int(t[1])] = float(t[2])
+                    if any(x.lower() in ("nodal", "lumped", "sap", "etabs") for x in t[3:]):
+                        muelles_area_nodal.add(int(t[1]))
+                elif cmd in ("edge", "edgeconstraint"):
+                    v = (t[1] if len(t) > 1 else "etabs").lower()
+                    edge_flag[0] = v in ("etabs", "1", "on", "si", "hermite")
                 elif cmd in ("deck", "deckmode"):
                     v = (t[1] if len(t) > 1 else "etabs").lower()
                     de_flag[0] = v in ("etabs", "1", "on", "si")
@@ -473,8 +488,13 @@ def leer_heks(ruta: str) -> ModeloHeks:
     for sid, ks in muelles_area.items():
         if sid in m.shell_idx:
             ni.area_springs[m.shell_idx[sid]] = ks
+            if sid in muelles_area_nodal:
+                ni.area_springs_nodal.add(m.shell_idx[sid])
         else:
-            m.errores.append(f"springarea sin cáscara: {sid}")
+            m.errores.append(f"areaspring sin cáscara: {sid}")
+    # `edge etabs`: buscar los nudos colgados sobre aristas de cascara y anotarlos
+    if edge_flag[0]:
+        ni.hanging_nodes = _nudos_colgados(m.nodes, m.elements)
     huerfanos_muelle = []
     for nid, dof, kk in muelles:
         if nid in idx_de:
@@ -518,6 +538,46 @@ def leer_heks(ruta: str) -> ModeloHeks:
     if not ni.loads and not ei.frame_loads:
         m.errores.append("modelo SIN carga: la deformada va a salir 0")
     return m
+
+
+def _nudos_colgados(nodes, elements, tol: float = 1e-6):
+    """Nudos que caen DENTRO de una arista de una cascara sin ser vertice suyo (malla no conforme).
+
+    Devuelve [(idx_elemento, idx_nudo)]. Solo se anotan los nudos que pertenecen a OTRO elemento:
+    un nudo suelto de verdad no hay que atarlo, hay que avisarlo (y `deform` ya lo hace).
+    Es el `edge etabs` de Hekatan; espejo de `springsExtra.h` en el C++.
+    """
+    import numpy as np
+    N = np.asarray(nodes, float)
+    shells = [(e, list(c)) for e, c in enumerate(elements) if len(c) in (3, 4)]
+    de_algun_elem = set()
+    for c in elements:
+        de_algun_elem.update(int(x) for x in c)
+    out: list[tuple[int, int]] = []
+    for e, conn in shells:
+        P = N[conn]
+        lo, hi = P.min(axis=0) - tol, P.max(axis=0) + tol
+        for h in range(len(N)):
+            if h in conn or h not in de_algun_elem:
+                continue
+            X = N[h]
+            if np.any(X < lo) or np.any(X > hi):
+                continue
+            for k in range(len(conn)):
+                A, B = P[k], P[(k + 1) % len(conn)]
+                d = B - A
+                L2 = float(d @ d)
+                if L2 < 1e-24:
+                    continue
+                t = float((X - A) @ d) / L2
+                if t <= tol or t >= 1 - tol:
+                    continue
+                if np.linalg.norm((X - A) - t * d) <= tol * np.sqrt(L2):
+                    # el nudo tiene que estar en OTRO elemento para que atarlo signifique algo
+                    if any(h in list(c) for i2, c in enumerate(elements) if i2 != e):
+                        out.append((e, h))
+                    break
+    return out
 
 
 def resolver_heks(m: ModeloHeks):

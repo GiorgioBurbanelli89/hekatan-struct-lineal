@@ -10,3 +10,5 @@
 _*.log
 *.fdb
 *.FDB
+_paridad_*.heks
+_paridad_py.json

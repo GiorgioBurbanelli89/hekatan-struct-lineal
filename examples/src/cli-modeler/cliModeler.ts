@@ -496,8 +496,12 @@ export function parseCliCommands(text: string): ParsedModel {
           break;
         }
         // areaspring <shellID> <ks kN/m3> [nodal]
+        // Los cuatro nombres valen, y en los DOS motores: hasta el 8-sep-2026 el TS solo entendia
+        // `areaspring` y el Python solo `springarea`, asi que el MISMO .heks no se leia igual.
         case "areaspring":
-        case "winkler": {
+        case "winkler":
+        case "springarea":
+        case "winklerarea": {
           const id = parseInt(tokens[1], 10);
           const ks = parseFloat(tokens[2] ?? "0");
           const nodal = tokens.slice(3).some(t => /^(nodal|lumped|sap|etabs)$/i.test(t));

@@ -57,6 +57,11 @@ class NodeInputs:
     # Muelle de AREA por cascara (SAFE `PropAreaSpring`): ks [kN/m3] -> ks*int N^T N dA sobre uz,
     # matriz CONSISTENTE que acopla los 4 nudos (no diagonal). Indice de ELEMENTO -> ks.
     area_springs: dict[int, float] = field(default_factory=dict)
+    # cascaras cuyo muelle de area va CONCENTRADO por area tributaria (SAP2000/ETABS/SAFE)
+    # en vez de consistente; `areaspring ID ks nodal`
+    area_springs_nodal: set[int] = field(default_factory=set)
+    # (elemento, nudo) de los nudos COLGADOS sobre una arista que hay que atar; `edge etabs`
+    hanging_nodes: list[tuple[int, int]] = field(default_factory=list)
     # Diafragma RIGIDO: nudo -> grupo (0 = ninguno). ux, uy, rz atados a un maestro
     # virtual en el centro del grupo; uz, rx, ry libres (el "Rigid" de ETABS).
     diaphragms: dict[int, int] = field(default_factory=dict)

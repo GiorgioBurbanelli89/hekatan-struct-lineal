@@ -556,16 +556,26 @@ def deform(
         else:
             K_orig[np.arange(n_total), np.arange(n_total)] += kd
 
-    # Muelles de AREA (SAFE): ks * int N^T N dA sobre los uz de los 4 nudos de la cascara.
-    # Gauss 2x2 con el jacobiano real. Es la matriz de masa de una membrana con rho = ks/t:
-    # consistente, acopla los 4 nudos; el nodal (arriba) es su version concentrada.
+    # Muelles de AREA: `ks * int N^T N dA` sobre la NORMAL de la cascara (Gauss 2x2, jacobiano
+    # real). Dos formas, las dos aqui, espejo de `utils/springsExtra.h` del C++:
+    #   · CONSISTENTE (defecto): la matriz entera, que acopla los 4 nudos.
+    #   · NODAL (`areaspring ID ks nodal`): solo `ks * int N_i dA` en la diagonal de cada nudo.
+    # MEDIDO el 8-sep-2026: SAP2000, ETABS **y SAFE** usan el NODAL (placa flexible: SAFE = nodal
+    # a 1.1 %, el consistente se va 23 % en las esquinas). El consistente se queda porque es la
+    # forma «de libro» y porque con carga uniforme los dos dan w = q/ks exacto.
+    # Antes esto iba solo sobre `uz` global: en una cascara inclinada eso no es el Winkler del
+    # terreno. Ahora va sobre la normal, como el C++.
     if getattr(node_inputs, "area_springs", None):
         g2 = 1.0 / np.sqrt(3.0)
+        nodal_set = getattr(node_inputs, "area_springs_nodal", set())
         for idx, ks in node_inputs.area_springs.items():
             conn = elements[idx]
             if len(conn) != 4 or ks == 0:
                 continue
             P = np.array([nodes[n] for n in conn], float)
+            nrm = np.cross(P[2] - P[0], P[3] - P[1])
+            ln = np.linalg.norm(nrm)
+            nrm = nrm / ln if ln > 1e-30 else np.array([0.0, 0.0, 1.0])
             Ke = np.zeros((4, 4))
             for xi in (-g2, g2):
                 for eta in (-g2, g2):
@@ -574,18 +584,92 @@ def deform(
                     dN_deta = 0.25 * np.array([-(1 - xi), -(1 + xi), (1 + xi), (1 - xi)])
                     detJ = np.linalg.norm(np.cross(dN_dxi @ P, dN_deta @ P))
                     Ke += ks * np.outer(N, N) * detJ
-            gd = [6 * n + 2 for n in conn]
+            if idx in nodal_set:                       # concentrado: la fila entera a la diagonal
+                Ke = np.diag(Ke.sum(axis=1))
+            # de los 4 uz a los 12 GDL de traslacion, proyectando en la normal
+            Kt = np.zeros((12, 12))
+            for a in range(4):
+                for b in range(4):
+                    Kt[3 * a:3 * a + 3, 3 * b:3 * b + 3] = Ke[a, b] * np.outer(nrm, nrm)
+            gdt = [6 * n + d for n in conn for d in range(3)]
             if disperso:
                 from scipy.sparse import lil_matrix
                 K_orig = K_orig.tolil()
-                for a in range(4):
-                    for b in range(4):
-                        K_orig[gd[a], gd[b]] += Ke[a, b]
+                for a in range(12):
+                    for b in range(12):
+                        if Kt[a, b]:
+                            K_orig[gdt[a], gdt[b]] += Kt[a, b]
                 K_orig = K_orig.tocsr()
             else:
-                for a in range(4):
-                    for b in range(4):
-                        K_orig[gd[a], gd[b]] += Ke[a, b]
+                for a in range(12):
+                    for b in range(12):
+                        if Kt[a, b]:
+                            K_orig[gdt[a], gdt[b]] += Kt[a, b]
+
+    # ── Nudos COLGADOS sobre una arista (`edge etabs`) ──
+    # Malla no conforme: el nudo que cae dentro de una arista sin ser vertice se ata a esa arista
+    # por PENALIZACION: traslaciones en el plano y giros lineales en t, y la flecha normal por la
+    # CUBICA DE HERMITE con los giros de los extremos. Espejo de `springsExtra.h` del C++.
+    # ⚠️ NO es lo que hace ETABS: ETABS malla el pano por el nudo (medido 8-sep-2026, tambien con
+    # OBJMESHTYPE "NONE"). Es una opcion de malla no conforme, no la replica de ETABS.
+    colgados = getattr(node_inputs, "hanging_nodes", None)
+    if colgados:
+        filas: list[tuple[list[tuple[int, float]], bool]] = []   # (restriccion, es_giro)
+        for e_idx, h in colgados:
+            conn = list(elements[e_idx])
+            P = np.array([nodes[n] for n in conn], float)
+            X = np.array(nodes[h], float)
+            nrm = np.cross(P[2] - P[0], P[3 % len(conn)] - P[1])
+            ln = np.linalg.norm(nrm)
+            nrm = nrm / ln if ln > 1e-30 else np.array([0.0, 0.0, 1.0])
+            for k in range(len(conn)):
+                ia, ib = conn[k], conn[(k + 1) % len(conn)]
+                A, B = P[k], P[(k + 1) % len(conn)]
+                d = B - A
+                L = float(np.linalg.norm(d))
+                if L < 1e-12:
+                    continue
+                t = float((X - A) @ d) / (L * L)
+                if t <= 1e-6 or t >= 1 - 1e-6 or np.linalg.norm((X - A) - t * d) > 1e-6 * L:
+                    continue
+                s = d / L
+                # m = s x n (NO n x s): con mano derecha, un giro theta alrededor de m da
+                # dw/ds = +theta_m, porque (m x s)·n = +1. Con el signo cambiado la Hermite ata
+                # la pendiente al reves: medido el 8-sep-2026 contra el TS/WASM (5.1 % de
+                # diferencia) y contra ETABS (0.11 % con +rx, 3.9 % con -rx).
+                mvec = np.cross(s, nrm)
+                H1 = 1 - 3 * t * t + 2 * t ** 3
+                H2 = (t - 2 * t * t + t ** 3) * L
+                H3 = 3 * t * t - 2 * t ** 3
+                H4 = (-t * t + t ** 3) * L
+                for vec in (s, mvec):                       # traslacion en el plano: lineal
+                    C = []
+                    for p in range(3):
+                        if vec[p]:
+                            C += [(6 * h + p, vec[p]), (6 * ia + p, -(1 - t) * vec[p]), (6 * ib + p, -t * vec[p])]
+                    filas.append((C, False))
+                C = []                                       # flecha normal: Hermite
+                for p in range(3):
+                    if nrm[p]:
+                        C += [(6 * h + p, nrm[p]), (6 * ia + p, -H1 * nrm[p]), (6 * ib + p, -H3 * nrm[p])]
+                    if mvec[p]:
+                        C += [(6 * ia + 3 + p, -H2 * mvec[p]), (6 * ib + 3 + p, -H4 * mvec[p])]
+                filas.append((C, False))
+                for p in range(3):                           # giros: lineales
+                    filas.append(([(6 * h + 3 + p, 1.0), (6 * ia + 3 + p, -(1 - t)), (6 * ib + 3 + p, -t)], True))
+                break
+        if filas:
+            diag = (K_orig.diagonal() if disperso else np.diag(K_orig))
+            kT = max(1.0, float(np.max(np.abs(diag))))
+            if disperso:
+                from scipy.sparse import lil_matrix
+                K_orig = K_orig.tolil()
+            for C, _es_giro in filas:
+                for gi, ci in C:
+                    for gj, cj in C:
+                        K_orig[gi, gj] += 1e6 * kT * ci * cj
+            if disperso:
+                K_orig = K_orig.tocsr()
 
     # ── Diafragma rigido: K y F al espacio reducido, u = T u_red ──
     T_dia, col_de = _armar_diafragma(nodes, node_inputs, n_total)
