@@ -1,5 +1,5 @@
-import { e as i, __tla as __tla_0 } from "./edificioAporticado-DVslVtEE.js";
-let d;
+import { e as l, __tla as __tla_0 } from "./edificioAporticado-CmTpJQnt.js";
+let i;
 let __tla = Promise.all([
   (() => {
     try {
@@ -8,7 +8,7 @@ let __tla = Promise.all([
     }
   })()
 ]).then(async () => {
-  const a = i.params, e = {
+  const a = l.params, e = {
     ...a
   };
   e.matCol = {
@@ -17,6 +17,10 @@ let __tla = Promise.all([
   };
   e.matViga = {
     ...a.matViga,
+    default: 1
+  };
+  e.colShape = {
+    ...a.colShape,
     default: 0
   };
   e.slabOn = {
@@ -25,11 +29,11 @@ let __tla = Promise.all([
   };
   e.bracesMode = {
     ...a.bracesMode,
-    default: 1
+    default: 2
   };
   e.slabT = {
     ...a.slabT,
-    default: 0.15
+    default: 0.12
   };
   e.fcConcr = {
     ...a.fcConcr,
@@ -37,32 +41,40 @@ let __tla = Promise.all([
   };
   e.nPisos = {
     ...a.nPisos,
-    default: 6
+    default: 10
   };
-  e.diafragmaRigido = {
-    ...a.diafragmaRigido,
-    default: 1
+  e.murosMode = {
+    ...a.murosMode,
+    default: 3
   };
-  d = {
-    id: "edificio-muros",
-    name: "Edificio con Muros de Corte (Hormig\xF3n)",
+  e.tMuro = {
+    ...a.tMuro,
+    default: 0.25
+  };
+  i = {
+    id: "edificio-dual",
+    name: "Edificio Dual (Mixto + Muros + Diagonales)",
     category: "4\uFE0F\u20E3 Mixtos \xB7 \u{1F3E2} Edificios",
     defaultShellResult: "membraneYY",
     availableShellResults: [
       "bendingXX",
       "bendingYY",
+      "membraneXX",
+      "membraneYY",
+      "membranePrincipalMin",
+      "membranePrincipalMax",
       "displacementZ",
       "vonMises"
     ],
     hasModal: true,
     params: e,
-    build: i.build,
-    runModal: i.runModal,
-    computedLabels: i.computedLabels,
-    dynamicParams: i.dynamicParams
+    build: l.build,
+    runModal: l.runModal,
+    computedLabels: l.computedLabels,
+    dynamicParams: l.dynamicParams
   };
 });
 export {
   __tla,
-  d as e
+  i as e
 };

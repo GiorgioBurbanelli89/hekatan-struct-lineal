@@ -1,5 +1,5 @@
-import { e as l, __tla as __tla_0 } from "./edificioAporticado-DVslVtEE.js";
-let i;
+import { e as i, __tla as __tla_0 } from "./edificioAporticado-CmTpJQnt.js";
+let l;
 let __tla = Promise.all([
   (() => {
     try {
@@ -8,7 +8,7 @@ let __tla = Promise.all([
     }
   })()
 ]).then(async () => {
-  const a = l.params, e = {
+  const a = i.params, e = {
     ...a
   };
   e.matCol = {
@@ -29,7 +29,7 @@ let __tla = Promise.all([
   };
   e.bracesMode = {
     ...a.bracesMode,
-    default: 2
+    default: 0
   };
   e.slabT = {
     ...a.slabT,
@@ -39,42 +39,26 @@ let __tla = Promise.all([
     ...a.fcConcr,
     default: 280
   };
-  e.nPisos = {
-    ...a.nPisos,
-    default: 10
-  };
-  e.murosMode = {
-    ...a.murosMode,
-    default: 3
-  };
-  e.tMuro = {
-    ...a.tMuro,
-    default: 0.25
-  };
-  i = {
-    id: "edificio-dual",
-    name: "Edificio Dual (Mixto + Muros + Diagonales)",
+  l = {
+    id: "edificio-mixto",
+    name: "Edificio Mixto (Col Hormig\xF3n + Viga Acero)",
     category: "4\uFE0F\u20E3 Mixtos \xB7 \u{1F3E2} Edificios",
-    defaultShellResult: "membraneYY",
+    defaultShellResult: "bendingXX",
     availableShellResults: [
       "bendingXX",
       "bendingYY",
-      "membraneXX",
-      "membraneYY",
-      "membranePrincipalMin",
-      "membranePrincipalMax",
       "displacementZ",
       "vonMises"
     ],
     hasModal: true,
     params: e,
-    build: l.build,
-    runModal: l.runModal,
-    computedLabels: l.computedLabels,
-    dynamicParams: l.dynamicParams
+    build: i.build,
+    runModal: i.runModal,
+    computedLabels: i.computedLabels,
+    dynamicParams: i.dynamicParams
   };
 });
 export {
   __tla,
-  i as e
+  l as e
 };

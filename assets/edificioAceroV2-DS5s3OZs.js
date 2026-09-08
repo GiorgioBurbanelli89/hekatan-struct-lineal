@@ -1,5 +1,5 @@
-import { e as i, __tla as __tla_0 } from "./edificioAporticado-DVslVtEE.js";
-let l;
+import { e as i, __tla as __tla_0 } from "./edificioAporticado-CmTpJQnt.js";
+let o;
 let __tla = Promise.all([
   (() => {
     try {
@@ -13,15 +13,11 @@ let __tla = Promise.all([
   };
   e.matCol = {
     ...a.matCol,
-    default: 0
+    default: 1
   };
   e.matViga = {
     ...a.matViga,
     default: 1
-  };
-  e.colShape = {
-    ...a.colShape,
-    default: 0
   };
   e.slabOn = {
     ...a.slabOn,
@@ -35,13 +31,9 @@ let __tla = Promise.all([
     ...a.slabT,
     default: 0.12
   };
-  e.fcConcr = {
-    ...a.fcConcr,
-    default: 280
-  };
-  l = {
-    id: "edificio-mixto",
-    name: "Edificio Mixto (Col Hormig\xF3n + Viga Acero)",
+  o = {
+    id: "edificio-acero-v2",
+    name: "Edificio Acero (W profiles)",
     category: "4\uFE0F\u20E3 Mixtos \xB7 \u{1F3E2} Edificios",
     defaultShellResult: "bendingXX",
     availableShellResults: [
@@ -60,5 +52,5 @@ let __tla = Promise.all([
 });
 export {
   __tla,
-  l as e
+  o as e
 };

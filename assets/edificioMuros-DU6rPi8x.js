@@ -1,5 +1,5 @@
-import { e as i, __tla as __tla_0 } from "./edificioAporticado-DVslVtEE.js";
-let l;
+import { e as i, __tla as __tla_0 } from "./edificioAporticado-CmTpJQnt.js";
+let d;
 let __tla = Promise.all([
   (() => {
     try {
@@ -19,17 +19,13 @@ let __tla = Promise.all([
     ...a.matViga,
     default: 0
   };
-  e.colShape = {
-    ...a.colShape,
-    default: 0
-  };
   e.slabOn = {
     ...a.slabOn,
     default: 1
   };
   e.bracesMode = {
     ...a.bracesMode,
-    default: 0
+    default: 1
   };
   e.slabT = {
     ...a.slabT,
@@ -37,17 +33,24 @@ let __tla = Promise.all([
   };
   e.fcConcr = {
     ...a.fcConcr,
-    default: 240
+    default: 280
   };
-  l = {
-    id: "edificio-hormigon",
-    name: "Edificio Hormig\xF3n (puro)",
+  e.nPisos = {
+    ...a.nPisos,
+    default: 6
+  };
+  e.diafragmaRigido = {
+    ...a.diafragmaRigido,
+    default: 1
+  };
+  d = {
+    id: "edificio-muros",
+    name: "Edificio con Muros de Corte (Hormig\xF3n)",
     category: "4\uFE0F\u20E3 Mixtos \xB7 \u{1F3E2} Edificios",
-    defaultShellResult: "bendingXX",
+    defaultShellResult: "membraneYY",
     availableShellResults: [
       "bendingXX",
       "bendingYY",
-      "bendingXY",
       "displacementZ",
       "vonMises"
     ],
@@ -61,5 +64,5 @@ let __tla = Promise.all([
 });
 export {
   __tla,
-  l as e
+  d as e
 };
