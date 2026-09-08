@@ -133,6 +133,11 @@ cuatro nudos.
 | **A** · muros en X, 6 pisos (54 POINT D1; antes 174 + 2400 áreas) | **0.0000 %** (9999/9999) | 0.7667/0.7666 · 0.2438/0.2435 · 0.2340/0.2321 |
 | **B** · muros en X e Y, 6 pisos | **0.0000 %** (11943/11943) | 0.2525/0.2510 · 0.2185/0.2166 · 0.1358/0.1333 |
 
+**Con los brazos rígidos automáticos de ETABS PUESTOS (8-sep-2026, tarde; `etabs_offsets/`, Hekatan
+`offsets=1`, su defecto):** A **0.0000 %** (9999/9999), T1–T6 0.7584/0.7584 · 0.2409/0.2409 · 0.2297/0.2295 ·
+0.2112/0.2111 · 0.1335/0.1335 · 0.0878/0.0878; B **0.0000 %** (11943/11943), T1–T6 dentro del 0.3 %. Ya no hay
+que anular nada en ETABS: cada tramo de viga que toca columna pesa y masa con L − ½b_col por extremo.
+
 Los modos 4–6 de B y los 2–6 del modelo mínimo son modos locales de losa y siguen sin emparejar:
 es un tema de masa (ETABS la agrupa por stories, que aquí son de 0.5 m), no de rigidez. Aparte.
 
@@ -142,7 +147,7 @@ es un tema de masa (ETABS la agrupa por stories, que aquí son de 0.5 m), no de 
 cd hekatan-struct
 node cli/exportar_csi.mjs edificio-aporticado validation/modelos/vs_muros/A_murosX  murosMode=1 nPisos=6 bracesMode=0 slabOn=1
 node cli/exportar_csi.mjs edificio-aporticado validation/modelos/vs_muros/B_murosXY murosMode=3 nPisos=6 bracesMode=0 slabOn=1
-python cli/plantillas_etabs.py   validation/modelos/vs_muros validation/modelos/vs_muros/etabs
+python cli/plantillas_etabs.py   validation/modelos/vs_muros validation/modelos/vs_muros/etabs_offsets   # deja los brazos de ETABS (Hekatan offsets=1); --nooffsets para anularlos
 python cli/plantillas_sap2000.py validation/modelos/vs_muros validation/modelos/vs_muros/sap
 node cli/ejemplo_vs_csi.mjs edificio-aporticado validation/modelos/vs_muros/sap/A_murosX.json murosMode=1 nPisos=6 bracesMode=0 slabOn=1 comparar=0   # SAP2000 primero
 node cli/ejemplo_vs_csi.mjs edificio-aporticado validation/modelos/vs_muros/etabs/A_murosX.json murosMode=1 nPisos=6 bracesMode=0 slabOn=1   # luego ETABS
