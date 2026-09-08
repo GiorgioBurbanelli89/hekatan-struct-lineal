@@ -1158,18 +1158,18 @@ function qt(I) {
         const m = (v) => ne.indexOf(v);
         if (new Set(p.map((v) => v.pt)).size === 4) {
           const v = Math.max(...p.map((ae) => m(ae.story))), z = p.map((ae) => v - m(ae.story));
-          r.push(`  AREA "${S}"  ${h}  4  "${p[0].pt}"  "${p[1].pt}"  "${p[2].pt}"  "${p[3].pt}"  ${z.join("  ")}  `), e.push(`  AREAASSIGN  "${S}"  "${ne[v]}"  SECTION "${ve(s)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          r.push(`  AREA "${S}"  ${h}  4  "${p[0].pt}"  "${p[1].pt}"  "${p[2].pt}"  "${p[3].pt}"  ${z.join("  ")}  `), e.push(`  AREAASSIGN  "${S}"  "${ne[v]}"  SECTION "${ve(s)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           return;
         }
         const g = l[c[0]][2] <= l[c[2]][2] ? 0 : 2, y = l[c[1]][2] <= l[c[3]][2] ? 1 : 3;
         r.push(`  AREA "${S}"  ${h}  4  "${p[g].pt}"  "${p[y].pt}"  "${p[y].pt}"  "${p[g].pt}"  1  1  0  0  `);
         const C = p[g === 0 ? 2 : 0].story;
-        e.push(`  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        e.push(`  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
       } else {
         const m = p.length, Y = (z) => ne.indexOf(z), g = Math.max(...p.map((z) => Y(z.story))), y = p.map((z) => g - Y(z.story)), C = ne[g] ?? p[0].story;
         r.push(`  AREA "${S}"  ${h}  ${m}  ` + p.map((z) => `"${z.pt}"`).join("  ") + "  " + y.join("  ") + "  ");
         const v = Tt.get(s.idx) ?? (w == null ? void 0 : w.get(s.idx));
-        e.push(Qe(s.idx) ? `  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}"  ANG ${T(v ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  ` : `  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}" ${Xe && (!De.size || (N[s.idx] ?? []).every((z) => De.has(z))) ? ' DIAPH  "D1" ' : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `), qe.push({ name: S, story: C, idx: s.idx });
+        e.push(Qe(s.idx) ? `  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}"  ANG ${T(v ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  ` : `  AREAASSIGN  "${S}"  "${C}"  SECTION "${ve(s)}" ${Xe && (!De.size || (N[s.idx] ?? []).every((z) => De.has(z))) ? ' DIAPH  "D1" ' : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `), qe.push({ name: S, story: C, idx: s.idx });
       }
     }), r.push(""), r.push("$ AREA ASSIGNS"), e.forEach((s) => r.push(s)), r.push("");
   }
