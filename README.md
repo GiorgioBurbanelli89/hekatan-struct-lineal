@@ -32,6 +32,8 @@ Full detail in [`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md).
 | **Building with shear walls** (6 storeys, slab, walls in X / in X+Y; 3333 / 3981 nodes) — same mesh by OAPI and by file | SAP2000 24 (`comparar=0`) · ETABS 22 (`comparar=1`, ETABS beam–wall joint) | **0.0000 %** on every node, both programs; 6 periods identical to 4 decimals vs SAP2000, ≤ 0.6 % vs ETABS with its lateral-mass rule | ✅ closed 2026-09-08 |
 | **E2K diaphragm** — `DIAPH "D1"` now follows Hekatan's diaphragm map (it used to sit on every 0.5 m column segment and on every slab area) | ETABS 22 by e2k vs by OAPI | **0.0000 %** (was 1.3–15.9 % stiffer) · 8 templates re-run: statics 0.000 %, modes 1–3 0.00 % | ✅ 2026-09-08 |
 | **Area springs (Winkler, SSI)** | SAP2000 24 · ETABS 22, area spring vs nodal springs lumped by tributary area | **0.0000 %** in both → same as Hekatan `spring`; only SAFE uses the consistent matrix (−1.9 %) | ✅ 2026-09-08 |
+| **Line springs** (grade beams on Winkler) | SAP2000 24 · ETABS 22, line spring vs nodal springs lumped by tributary length | **0.0000 %** in both → same as Hekatan `spring` | ✅ 2026-09-08 |
+| **Rotational springs** (footing SSI, kθ) — `.heks` `spring n rx/ry/rz k` | SAP2000 24 · ETABS 22 by OAPI, same mesh | **4e-13 %** · **2.5e-13 %** | ✅ 2026-09-08 |
 | **Edge constraint** | ETABS 22, hanging joint on a shell edge, analysis model read via `PointElm` | by default ETABS *meshes through the joint* (ON = OFF to the last digit) = Hekatan `deck etabs`; the interpolated constraint only acts with `OBJMESHTYPE "NONE"` | ✅ measured 2026-09-08 |
 
 Regression suite: **`npm test` → 552/552**, plus **208 passed** in the Python

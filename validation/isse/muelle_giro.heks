@@ -1,0 +1,14 @@
+# Muelles de GIRO en la base (ISSE de una zapata: k_theta = ks*I): columna 0.30x0.30 de 3 m,
+# traslacion fija en la base y rx, ry, rz sobre muelles; empuje de 10 kN en X arriba. kN, m.
+# Arbitro: SAP2000 24 y ETABS 22 por OAPI (csi_desde_dump.py), misma malla. 8-sep-2026.
+node 1 0 0 0
+node 2 0 0 1.5
+node 3 0 0 3
+frame 1 1 2 22805415 0.09 0.000675 0.000675 0.00114 0.2 0
+frame 2 2 3 22805415 0.09 0.000675 0.000675 0.00114 0.2 0
+support 1 pinned
+spring 1 rx 20000
+spring 1 ry 20000
+spring 1 rz 20000
+load 3 10 0 0 0 0 3
+solve
