@@ -454,6 +454,102 @@ const ESCENAS = {
   //   VENTANA con el raton y COPIAR, diagonales, APOYOS y CARGAS por clic en los
   //   nudos, y el diagrama de axiles y momentos. Pensada para un GIF: la
   //   ventana ENTERA (ribbon, paneles, ventana de comandos, barra de estado).
+  // MODELO NUEVO de cero, con la ventana ENTERA a la vista: los 25 botones del
+  // ribbon caben a 1280x720 (medido con `cli/_botones_caben.mjs`).
+  //
+  // Lo aprendido en el primer intento, para no repetirlo:
+  //  · las teclas de vista (1/2/3/4) se ESCRIBEN en la caja de comandos si tiene
+  //    el foco: salió «4col» y activó CÍRCULO. Se usan los BOTONES (`vistaBoton`),
+  //    que además es lo que se quiere enseñar.
+  //  · sin `encuadra()` el modelo de 6x5 m sale como un punto en una rejilla de 20 m.
+  async modelo_nuevo() {
+    abre("modelo_nuevo");
+    await pag.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    await cargar("?t=new-blank");
+    await espera(600);
+    await pag.keyboard.press("Escape");            // la guía «Cómo usar»
+    await espera(400);
+    await foto(10);                                 // la ventana entera, quieta
+
+    // Y hacia ABAJO en pantalla, lejos del ribbon
+    const ESQUINAS = [[0, 0], [6, 0], [6, -5], [0, -5]];
+    const cmd = async (txt, tras = 400) => {
+      await limpiaComando();
+      const c = await centroDe("#hk3-cmd-input");
+      if (c) await pag.mouse.click(c.x, c.y);
+      await pag.keyboard.type(txt, { delay: 32 });
+      await foto();
+      await pag.keyboard.press("Enter");
+      await espera(tras);
+      await foto();
+    };
+    const esc = async () => { await pag.keyboard.press("Escape"); await espera(300); await foto(); };
+    const pantalla = (x, y, z) => pag.evaluate((wx, wy, wz) => {
+      const v = document.querySelector("#viewer"); const cv = v.querySelector("canvas");
+      const r = cv.getBoundingClientRect(); const cam = v.__ctx.camera; cam.updateMatrixWorld();
+      const m = cam.projectionMatrix.elements, mv = cam.matrixWorldInverse.elements;
+      const tx = mv[0]*wx + mv[4]*wy + mv[8]*wz + mv[12], ty = mv[1]*wx + mv[5]*wy + mv[9]*wz + mv[13];
+      const tz = mv[2]*wx + mv[6]*wy + mv[10]*wz + mv[14], tw = mv[3]*wx + mv[7]*wy + mv[11]*wz + mv[15];
+      const cx = m[0]*tx + m[4]*ty + m[8]*tz + m[12]*tw, cy = m[1]*tx + m[5]*ty + m[9]*tz + m[13]*tw;
+      const cw = m[3]*tx + m[7]*ty + m[11]*tz + m[15]*tw;
+      return { x: r.left + (cx / cw + 1) / 2 * r.width, y: r.top + (1 - cy / cw) / 2 * r.height };
+    }, x, y, z);
+    // ⚠️ El ribbon ocupa el centro-ARRIBA del lienzo (y de 40 a 276): un punto del
+    // modelo que caiga ahí recibe el clic el BOTÓN, no el dibujo — en el primer
+    // intento solo entraron 2 de los 4 vértices y nadie avisó. Se comprueba antes
+    // de clicar y se dice en el log.
+    const clicMundo = async (x, y, z, fotos = 2) => {
+      const c = await pantalla(x, y, z);
+      const tapado = await pag.evaluate(({ x: px, y: py }) => {
+        const e = document.elementFromPoint(px, py);
+        return e ? !(e.tagName === "CANVAS") : true;
+      }, c);
+      if (tapado) { console.log(`   ⚠️ (${x},${y},${z}) cae bajo un panel: no se clica`); return false; }
+      await mover(c.x, c.y, 4);
+      await pag.mouse.click(c.x, c.y);
+      await espera(380);
+      await foto(fotos);
+      return true;
+    };
+
+    // ── 1) el cursor pasea por los botones, para que se vean uno a uno ──────
+    const cajas = await pag.evaluate(() => [...document.querySelectorAll("#hk-ribbon button")]
+      .slice(0, 12).map((b) => { const r = b.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+    for (const c of cajas) { await mover(c.x, c.y, 2); await foto(); }
+
+    // ── 2) el contorno en planta, por polilínea, con el ratón ───────────────
+    await vistaBoton("Planta"); await foto(4);
+    await cmd("pl");
+    for (const [x, y] of ESQUINAS) await clicMundo(x, y, 0);
+    // la opción «Cerrar» que ahora se PULSA junto al cursor (8-sep-2026)
+    const bCerrar = await pag.evaluate(() => {
+      const b = [...document.querySelectorAll("#hk-dyn-ops button")].find((q) => /cerrar/i.test(q.textContent || ""));
+      if (!b) return null; const r = b.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    if (bCerrar) { await mover(bCerrar.x, bCerrar.y, 6); await foto(4); await pag.mouse.click(bCerrar.x, bCerrar.y); await espera(600); await foto(5); }
+    else { await cmd("c"); }
+    console.log("   tras el contorno:", JSON.stringify(await modelo()));
+
+    // ── 3) las cuatro columnas, en 3D ──────────────────────────────────────
+    await vistaBoton("3D"); await foto(5);
+    // Las columnas POR COORDENADAS: en 3D el ribbon tapa parte del modelo y los
+    // clics caían sobre él (medido: 4 de 8). Tecleadas siempre entran, y de paso
+    // se ve trabajar la ventana de comandos.
+    await cmd("col");
+    for (const [x, y] of ESQUINAS) { await cmd(`${x},${y},0`, 300); await cmd(`${x},${y},3`, 450); }
+    await esc();
+    await encuadra(); await foto(6);
+    console.log("   tras las columnas:", JSON.stringify(await modelo()));
+
+    // ── 4) apoyos empotrados en la base ────────────────────────────────────
+    await cmd("ap");
+    for (const [x, y] of ESQUINAS) await cmd(`${x},${y},0`, 400);
+    await esc();
+    await foto(8);
+    console.log("   final:", JSON.stringify(await modelo()));
+  },
   async cercha() {
     abre("cercha");
     await pag.setViewport({ width: 1280, height: 760, deviceScaleFactor: 1 });
