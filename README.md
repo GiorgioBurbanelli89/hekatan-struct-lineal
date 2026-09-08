@@ -29,8 +29,12 @@ Full detail in [`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md).
 | **S2K export** → SAP2000 24 | round-trip re-import | **0.000 %** — 378/378 nodes | ✅ |
 | **F2K export** → SAFE 20 | real foundation (9 footings + pedestals + tie beams, 225 nodal springs) read from the `.f2k` | **1.5e-3 %** (SAFE prints U to 0.0005 mm); same `.heks` → `.s2k` SAP2000 1.2e-8 %, `.e2k` ETABS 1.4e-8 % | ✅ closed 2026-09-05 |
 | **Assembled mass** | ETABS `AssembledJointMass` | **0.002 %** | ✅ |
+| **Building with shear walls** (6 storeys, slab, walls in X / in X+Y; 3333 / 3981 nodes) — same mesh by OAPI and by file | SAP2000 24 (`comparar=0`) · ETABS 22 (`comparar=1`, ETABS beam–wall joint) | **0.0000 %** on every node, both programs; 6 periods identical to 4 decimals vs SAP2000, ≤ 0.6 % vs ETABS with its lateral-mass rule | ✅ closed 2026-09-08 |
+| **E2K diaphragm** — `DIAPH "D1"` now follows Hekatan's diaphragm map (it used to sit on every 0.5 m column segment and on every slab area) | ETABS 22 by e2k vs by OAPI | **0.0000 %** (was 1.3–15.9 % stiffer) · 8 templates re-run: statics 0.000 %, modes 1–3 0.00 % | ✅ 2026-09-08 |
+| **Area springs (Winkler, SSI)** | SAP2000 24 · ETABS 22, area spring vs nodal springs lumped by tributary area | **0.0000 %** in both → same as Hekatan `spring`; only SAFE uses the consistent matrix (−1.9 %) | ✅ 2026-09-08 |
+| **Edge constraint** | ETABS 22, hanging joint on a shell edge, analysis model read via `PointElm` | by default ETABS *meshes through the joint* (ON = OFF to the last digit) = Hekatan `deck etabs`; the interpolated constraint only acts with `OBJMESHTYPE "NONE"` | ✅ measured 2026-09-08 |
 
-Regression suite: **`npm test` → 499/499**, plus **208 passed** in the Python
+Regression suite: **`npm test` → 552/552**, plus **208 passed** in the Python
 engine (`hekatan-struct-py`), which reproduces the TS/C++ solver at `1e-9` and is
 used as the fast arbiter.
 

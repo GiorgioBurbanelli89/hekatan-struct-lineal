@@ -44,6 +44,10 @@ software; ETABS, SAP2000 y SAFE solo se usan para comprobarlo.
 | Shell-Thin (DKQ) — 9 modos de la celda | `shelltype thin` | — | **0.000000 %** | — |
 | Shell-Thin — placa 8×8, 5 espesores | `shelltype thin` | — | **0.000 %** | — |
 | Shell-Thick (formulación de CSI) — K de ~140 celdas medidas | `shelltype thick` | **1e-12 %** | **1e-12 %** | — |
+| Edificio con muros de corte, 6 pisos, losa, muros en X / en X e Y (3333 / 3981 nudos) — misma malla por OAPI y por fichero | `comparar` 0 (SAP2000) / 1 (unión viga-muro de ETABS) · `diafragmaNudos` | **0.0000 %** todos los nudos; 6 períodos idénticos a 4 decimales | **0.0000 %** todos los nudos; 6 períodos ≤ 0.6 % con su masa lateral | — |
+| Exportador `.e2k`: el `DIAPH "D1"` sigue el mapa de diafragmas de Hekatan (antes iba en cada tramo de columna de 0.5 m y en toda la losa: 1.3–15.9 % más rígido en ETABS) | — | — | **0.0000 %** · 8 plantillas re-corridas: estático 0.000 %, modos 1–3 0.00 % | — |
+| Muelle de área (Winkler, ISSE) contra muelles nodales por área tributaria | `spring` | **0.0000 %** | **0.0000 %** | consistente (−1.9 %) |
+| Edge constraint (nudo colgado en la arista de un paño) | `deck etabs` | n/a | por defecto ETABS **malla por el nudo** (ON = OFF); la restricción interpolada solo con `OBJMESHTYPE "NONE"` | — |
 | Shell-Thick — mezanine losa maciza, 1284 nudos | `shelltype thick` | **< 1e-6 %** | **< 1e-6 %** | — |
 | 6 tipos de losa (deck, membrana, thin, thick, nervada, waffle) | — | — | **< 3e-7 %** | — |
 | Membrana / drilling — celda 12×12, 9 geometrías | `drillingTypes 12` | — | **1e-13 %** | — |
