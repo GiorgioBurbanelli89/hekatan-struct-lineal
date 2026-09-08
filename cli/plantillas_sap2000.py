@@ -152,6 +152,15 @@ for i, f in enumerate(trabajos, 1):
                 sm.SetModelIsLocked(False)
             except Exception:
                 pass
+            # El .s2k no trae caso modal (SAP2000 no es un programa de edificios): se
+            # anade aqui, 12 modos, con la masa de SAP por defecto (elementos, todas las
+            # direcciones, sin agrupar por planta = la masa completa de Hekatan). 8-sep-2026.
+            try:
+                sm.LoadCases.ModalEigen.SetCase("MODAL")
+                sm.LoadCases.ModalEigen.SetNumberModes("MODAL", 12, 1)
+                D["modal_case"] = "MODAL"
+            except Exception as ex:
+                D["modal_case_error"] = str(ex)[:80]
             D["run"] = sm.Analyze.RunAnalysis()
             D["t_analisis"] = round(time.time() - ta, 1)
             sm.Results.Setup.DeselectAllCasesAndCombosForOutput()

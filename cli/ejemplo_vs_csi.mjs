@@ -32,10 +32,21 @@ export function construir(id, over) {
   ex.build(p, st, { render(){}, clear(){}, show(){}, hide(){} });
   let T = [];
   try { const m = modalAnalysis(st.nodes.val, st.elements.val, st.nodeInputs.val, st.elementInputs.val, 6); T = (m.frequencies || []).map(f => 1 / f); } catch (e) { T = ["modal: " + (e?.message || e)]; }
-  return { nodes: st.nodes.val, elements: st.elements.val, U: st.deformOutputs.val?.deformations, Rq: st.deformOutputs.val?.reactions, T };
+  return { nodes: st.nodes.val, elements: st.elements.val, U: st.deformOutputs.val?.deformations, Rq: st.deformOutputs.val?.reactions, T,
+           nodeInputs: st.nodeInputs.val, elementInputs: st.elementInputs.val };
 }`, "ejemplo-vs-csi");
 
 const H = mod.construir(id, over);
+// Modal con los DEFAULTS de masa de ETABS (solo masa lateral, INCLUDEVERTICALMASS "No"): el
+// camino de subespacio del WASM (`lateral = 1`), el mismo que las plantillas cierran al cuarto
+// decimal. Con masa completa (arriba, `T`) salen ademas los modos verticales de losa, que ETABS
+// no tiene por defecto y por eso "no emparejaban" (8-sep-2026).
+let T_lat = [];
+try {
+  const { modal } = await import("../tests/lib/wasm.mjs");
+  const f = await modal(H.nodes, H.elements, H.nodeInputs, H.elementInputs, 6, 1);   // devuelve las frecuencias
+  T_lat = (f || []).map((v) => 1 / v);
+} catch (e) { T_lat = ["modal lateral: " + (e?.message || e)]; }
 const J = JSON.parse(readFileSync(jsonPath, "utf-8"));
 const k4 = (x, y, z) => [x, y, z].map(v => (Math.round(v * 1e4) / 1e4).toFixed(4)).join(",");
 const porCoord = new Map();
@@ -68,6 +79,7 @@ const soloBarras = peores.filter(q => enBarra.has(q[1]) && !enShell.has(q[1]));
 if (soloBarras.length) console.log(`  solo nudos de BARRA (${soloBarras.length / 3}): peor ${soloBarras[0][0].toFixed(4)} %`);
 const TE = (J.modal || []).map(m => m.T);
 if (TE.length && Array.isArray(H.T) && typeof H.T[0] === "number") {
-  console.log("  T Hekatan:", H.T.slice(0, 6).map(t => t.toFixed(4)).join("  "));
+  console.log("  T Hekatan:", H.T.slice(0, 6).map(t => t.toFixed(4)).join("  "), " (masa completa)");
+  console.log("  T Hek.lat:", T_lat.slice(0, 6).map(t => (typeof t === "number" ? t.toFixed(4) : String(t))).join("  "), " (solo masa lateral, como ETABS)");
   console.log("  T CSI    :", TE.slice(0, 6).map(t => (+t).toFixed(4)).join("  "));
 } else if (Array.isArray(H.T) && typeof H.T[0] === "string") console.log("  " + H.T[0]);
