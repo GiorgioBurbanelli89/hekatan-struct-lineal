@@ -185,7 +185,14 @@ export function drawing({
 
   const activePoints = new THREE.Points(
     new THREE.BufferGeometry(),
-    new THREE.PointsMaterial({ color: "orange", size: 0.1 })
+    // Los puntos ya colocados del dibujo en curso. `sizeAttenuation:false` →
+    // size en PÍXELES, igual que `indicationPoint` (el gris, 6 px).
+    // ⚠️ Estaba con `size: 0.1` SIN atenuación desactivada, o sea 0.10 m del
+    // mundo: al acercar el zoom el punto naranja crecía hasta tapar lo que se
+    // estaba dibujando, y al alejar desaparecía. Los marcadores de hover ya se
+    // escalaban para verse constantes (~6 px) y este no: era el único.
+    // 7 px, uno más que el gris, para que el punto activo cante sin estorbar.
+    new THREE.PointsMaterial({ color: "orange", sizeAttenuation: false, size: 7 })
   );
   scene.add(activePoints);
 
@@ -2144,15 +2151,36 @@ export function drawing({
   // 3D world-space). Calculamos el scale = distancia/factor para que el
   // tamaño aparente en píxeles quede igual a cualquier zoom.
   // Calibración: a 10m de la cámara, scale=1 (sphere=2cm, cruz=15cm).
-  const _snapBaseDist = 40;   // factor mayor → sphere mas chica al alejar
-  const _snapMaxScale = 2.5;  // cap mas agresivo para plan view de modelos grandes
+  // ⚠️ Esto escalaba con la DISTANCIA a la cámara (`dist / 40`, con tope 2.5).
+  // En perspectiva funciona; en ORTOGRÁFICA (las vistas planta, frente y lado) el
+  // zoom NO cambia la distancia —cambia `camera.zoom`—, así que el marcador se
+  // quedaba del mismo tamaño en el mundo y CRECÍA en pantalla al acercar: tapaba
+  // justo el punto que se iba a marcar. El tope de 2.5 era un parche de eso.
+  // Ahora se calculan los METROS QUE MIDE UN PÍXEL con la cámara de verdad y el
+  // marcador se fija a un tamaño en píxeles: igual a cualquier zoom y en las dos
+  // cámaras. El halo mide 0.015 m de radio con escala 1.
+  // 5 px de radio (10 de diámetro) es la medida del marcador de referencia a
+  // objetos de AutoCAD con su ajuste por defecto (AutoSnap Marker Size 5).
+  const _snapPx = 5;            // radio aparente del halo, en píxeles
+  const metrosPorPixel = (punto: THREE.Vector3) => {
+    const cam = getActiveCamera() as any;
+    const h = rendererElm?.clientHeight || 700;
+    if (cam.isOrthographicCamera)
+      return (cam.top - cam.bottom) / (cam.zoom || 1) / h;
+    const dist = cam.position.distanceTo(punto);
+    return (2 * dist * Math.tan(((cam.fov || 50) * Math.PI / 180) / 2)) / h;
+  };
   const updateSnapMarkerScale = () => {
     if (!snapMarker.visible) return;
-    const cam = getActiveCamera();
-    const dist = cam.position.distanceTo(snapMarker.position);
-    const s = Math.max(0.05, Math.min(_snapMaxScale, dist / _snapBaseDist));
-    snapMarker.scale.setScalar(s);
+    const s = (_snapPx * metrosPorPixel(snapMarker.position)) / 0.015;
+    snapMarker.scale.setScalar(Math.max(0.02, Math.min(60, s)));
   };
+  // expuestos para poder MEDIR el tamaño aparente desde fuera (cli/ctl_cursor_tamano.mjs).
+  // El marcador va por referencia: buscarlo en la escena por `geometry.type` no vale,
+  // el empaquetado deja las esferas como `BufferGeometry` y no se encuentra.
+  (window as any).__hekatanUpdateSnapScale = updateSnapMarkerScale;
+  (window as any).__hekatanSnapMarker = snapMarker;
+  (window as any).__hekatanMetrosPorPixel = metrosPorPixel;
   // Helper compartido: re-escala cada esfera de selección (cyan) según
   // su distancia individual a la cámara. Se invoca al orbitar/zoomear y
   // también justo después de refreshSelectionGroup().

@@ -6503,6 +6503,51 @@ try {
   //     teclas que actúen solas, que era lo que se comía las coordenadas.
   //   · Los dígitos 1-4 cambian la vista solo sin herramienta y caja vacía.
   // ═══════════════════════════════════════════════════════════════════════
+  // ── Comandos de AutoCAD que aquí todavía NO están ────────────────────────
+  // Sacados de su `acad.pgp` (C:\Users\…\AutoCAD 2027\R26.0\enu\Support), no de
+  // memoria: 221 alias de 1-3 letras, de los que Hekatan entiende 20. Quien viene
+  // de AutoCAD teclea los suyos, y responder «desconocido» no ayuda a nadie: se
+  // dice QUÉ es y con qué se hace hoy lo mismo.
+  const ACAD_FALTA: Record<string, [string, string]> = {
+    mi: ["MIRROR (simetría)", "todavía no; copie y mueva, o dibuje el otro lado"],
+    ro: ["ROTATE (girar)", "todavía no; vuelva a dibujar con las coordenadas giradas"],
+    ar: ["ARRAY (matriz)", "todavía no; use COPIAR (CO) varias veces, o la Rejilla del panel"],
+    sc: ["SCALE (escalar)", "todavía no; vuelva a dibujar con las medidas nuevas"],
+    f: ["FILLET (empalme)", "todavía no; use RECORTAR (TR) y ALARGAR (EX)"],
+    cha: ["CHAMFER (chaflán)", "todavía no; use RECORTAR (TR) y ALARGAR (EX)"],
+    x: ["EXPLODE (descomponer)", "aquí cada tramo ya es independiente: no hace falta"],
+    j: ["JOIN (unir)", "todavía no; dibuje la polilínea de una vez (PL)"],
+    br: ["BREAK (partir)", "todavía no; use RECORTAR (TR)"],
+    len: ["LENGTHEN (alargar por longitud)", "use ALARGAR (EX) hasta un contorno"],
+    la: ["LAYER (capas)", "aquí no hay capas: cada elemento sabe qué es (columna, viga, losa)"],
+    h: ["HATCH (sombreado)", "aquí el color lo pone el resultado del cálculo (colormap)"],
+    b: ["BLOCK (bloque)", "todavía no"],
+    i: ["INSERT (insertar bloque)", "todavía no"],
+    di: ["DIST (medir)", "todavía no; la barra de abajo canta las coordenadas y la longitud al dibujar"],
+    aa: ["AREA (medir área)", "todavía no"],
+    me: ["MEASURE (dividir por distancia)", "todavía no; use «Div. vigas» en el panel"],
+    div: ["DIVIDE (dividir en n)", "todavía no; use «Div. vigas» en el panel"],
+    el: ["ELLIPSE (elipse)", "todavía no; hay CÍRCULO (C) y ARCO (A)"],
+    spl: ["SPLINE", "todavía no; use POLILÍNEA (PL)"],
+    pol: ["POLYGON (polígono regular)", "todavía no; use POLILÍNEA (PL)"],
+    ml: ["MLINE (línea múltiple)", "todavía no; use DESFASE (O)"],
+    mt: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
+    t: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
+    dt: ["TEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
+    d: ["DIMSTYLE (acotación)", "las cotas las pone el visor: Ajustes → Cotas"],
+    dli: ["DIMLINEAR (cota)", "las cotas las pone el visor: Ajustes → Cotas"],
+    pe: ["PEDIT (editar polilínea)", "todavía no"],
+    ch: ["PROPERTIES (propiedades)", "seleccione el elemento: sus datos salen en el panel"],
+    pr: ["PROPERTIES (propiedades)", "seleccione el elemento: sus datos salen en el panel"],
+    mo: ["PROPERTIES (propiedades)", "seleccione el elemento: sus datos salen en el panel"],
+    ma: ["MATCHPROP (igualar propiedades)", "todavía no"],
+    g: ["GROUP (agrupar)", "todavía no"],
+    un: ["UNITS (unidades)", "las unidades van en el panel: Unidades"],
+    op: ["OPTIONS (opciones)", "los ajustes están en el panel de la izquierda"],
+    re: ["REGEN (regenerar)", "no hace falta: la vista se refresca sola"],
+    p: ["PAN (encuadrar)", "arrastre con el botón derecho o la rueda; Z encuadra todo"],
+    xl: ["XLINE (línea auxiliar infinita)", "hay LÍNEA AUXILIAR en el panel (aux)"],
+  };
   const ALIASES: Record<string, string> = {
     line: "line", l: "line", linea: "line", "línea": "line",
     node: "node", n: "node", point: "node", po: "node", punto: "node", nodo: "node", nudo: "node",
@@ -6555,20 +6600,20 @@ try {
     () => (window as any).__hekatanRibbon?.usar?.("apoyo"));
   especial("carga", ["cg", "load", "fuerza"], "CARGA — clic sobre los nudos",
     () => (window as any).__hekatanRibbon?.usar?.("carga"));
-  especial("deshacer", ["u", "undo", "z"], "DESHACER", () => {
+  especial("deshacer", ["u", "undo"], "DESHACER", () => {
     if (!(window as any).__hekatanCadOption?.("u")) (window as any).__hekatanUndo?.();
   });
   especial("rehacer", ["redo", "y"], "REHACER", () => (window as any).__hekatanRedo?.());
   especial("cerrar", ["close"], "CERRAR la polilínea", () => (window as any).__hekatanCadOption?.("c"));
-  especial("zoom", ["encuadre", "ze", "fit"], "ZOOM Extensión", () => (window as any).__hekatanAutoFit?.());
+  especial("zoom", ["encuadre", "ze", "fit", "z", "e-zoom"], "ZOOM Extensión", () => (window as any).__hekatanAutoFit?.());
   especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
   especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
   especial("lado", ["side"], "VISTA lado", () => (window as any).__hekatanRibbon?.vista?.(2));
   especial("3d", ["iso"], "VISTA 3D", () => (window as any).__hekatanRibbon?.vista?.(3));
   especial("orto", ["ortho"], "ORTO", () => (window as any).__hekatanToggleOrtho?.());
   especial("polar", [], "POLAR", () => (window as any).__hekatanTogglePolar?.());
-  especial("osnap", ["refent"], "OSNAP", () => (window as any).__hekatanToggleOsnap?.());
-  especial("snap", ["forzcursor"], "SNAP a la rejilla", () => (window as any).__hekatanToggleSnap?.());
+  especial("osnap", ["refent", "os", "ds", "se"], "OSNAP", () => (window as any).__hekatanToggleOsnap?.());
+  especial("snap", ["forzcursor", "sn"], "SNAP a la rejilla", () => (window as any).__hekatanToggleSnap?.());
   especial("ayuda", ["help", "?"], "AYUDA — cómo usar", () => (window as any).__hekatanRibbon?.guia?.(true));
   especial("fin", ["end", "terminar"], "FIN del trazo", () => (window as any).__hekatanFinalizeDraw?.());
   const ALL_CANON = [...new Set([...Object.values(TOOL_CANON), ...Object.values(ESPECIALES).map((e) => e.canon)])];
@@ -6756,7 +6801,12 @@ try {
     if (esp) { ultimoComando = cmd; echo(esp.eco); try { esp.run(); } catch { flash("✕ error", false); } return; }
     // 4. Herramientas
     const t = ALIASES[cmd];
-    if (!t) { flash(`✕ «${cmd}» desconocido. Teclee ? para la ayuda.`, false); return; }
+    if (!t) {
+      const ac = ACAD_FALTA[cmd];
+      if (ac) flash(`ℹ «${cmd.toUpperCase()}» es ${ac[0]} en AutoCAD — ${ac[1]}`, false);
+      else flash(`✕ «${cmd}» desconocido. Teclee ? para la ayuda.`, false);
+      return;
+    }
     ultimoComando = cmd;
     try { activarTool(t); } catch { flash("✕ error", false); }
   };
@@ -6866,7 +6916,11 @@ try {
         }
         tecleados.push(v);
         if (tecleados.length > 60) tecleados.shift();
-        const cmd = (ALIASES[v.toLowerCase()] || ESPECIALES[v.toLowerCase()]) ? v : (sug || v);
+        // Un alias de AutoCAD que aquí no existe (AR, MI, SC…) gana al autocompletado:
+        // si no, «ar» se completaba a «área» y el usuario recibía otra herramienta en vez
+        // de la explicación. Lo tecleado a propósito manda.
+        const lc = v.toLowerCase();
+        const cmd = (ALIASES[lc] || ESPECIALES[lc] || ACAD_FALTA[lc]) ? v : (sug || v);
         run(cmd); setCmdText("");
       } else if (ev.key === "Escape") {
         setCmdText(""); inp.blur();

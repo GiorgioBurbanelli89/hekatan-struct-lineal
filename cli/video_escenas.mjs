@@ -79,9 +79,13 @@ async function cargar(query) {
     if (document.getElementById("vd-cursor")) return;
     const c = document.createElement("div");
     c.id = "vd-cursor";
-    c.style.cssText = "position:fixed;width:22px;height:22px;pointer-events:none;z-index:99999;" +
-      "border:3px solid #d3a53c;border-radius:50%;transform:translate(-50%,-50%);" +
-      "background:radial-gradient(circle,#ef4444 35%,transparent 70%);box-shadow:0 0 10px #ef4444;" +
+    // 12 px, no 22: el fotograma ya se graba a 1280x720 y no se reduce después,
+    // así que el cursor de 22 px con borde de 3 y sombra de 10 tapaba lo que se
+    // estaba dibujando y era más grande que los propios marcadores del programa
+    // (7 px). Se queda visible pero a escala de lo que dibuja.
+    c.style.cssText = "position:fixed;width:12px;height:12px;pointer-events:none;z-index:99999;" +
+      "border:2px solid #d3a53c;border-radius:50%;transform:translate(-50%,-50%);" +
+      "background:radial-gradient(circle,#ef4444 35%,transparent 70%);box-shadow:0 0 5px #ef4444;" +
       "left:-80px;top:-80px;transition:none";
     document.body.appendChild(c);
     window.__vdAt = (x, y) => { c.style.left = x + "px"; c.style.top = y + "px"; };
