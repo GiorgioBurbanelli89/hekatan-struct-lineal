@@ -1,5 +1,8 @@
 # Edificio con muros, A contra B: Hekatan Struct lineal, ETABS 22 y SAP2000 24
 
+**Resultado (8-sep-2026)**: con la misma malla, Hekatan `comparar=0` = SAP2000 y Hekatan `comparar=1` = ETABS,
+los dos a 0.0000 % en desplazamientos y reacciones, por OAPI y por fichero (`.s2k` y `.e2k` arreglado).
+
 ![A · muros en X   VS   B · muros en X e Y](VS_muros_hekatan.png)
 
 **El edificio**: `edificio-aporticado` de Hekatan Struct, 6 pisos de 3 m, 3×3 vanos de 5 m,
@@ -95,6 +98,26 @@ importador de ETABS (`DIAPH` en áreas, `ADDRESTRAINT`, objetos de piso), no el 
   pasando líneas por el nudo colgado** (14 nudos / 8 elementos de análisis en la sonda), así que
   ON y OFF dan lo mismo. Eso es `deck etabs` en Hekatan (partir el paño). La restricción interpolada
   solo actúa con `OBJMESHTYPE "NONE"`.
+
+## 5 · El `.e2k` arreglado (8-sep-2026): ETABS = Hekatan también por fichero
+
+Lo que aumentaba el 1.3–3.3 % (y el 15.9 % del modelo mínimo) era el **diafragma del `.e2k`**, no
+el solver: el exportador creaba una STORY por cada nivel de la malla (cada 0.5 m) y ponía
+`POINTASSIGN DIAPH "D1"` en el nudo superior de cada TRAMO de columna, o sea diafragmas rígidos a
+media altura de columnas y muros; y `DIAPH "D1"` en las ÁREAS de losa, que en ETABS ata la losa
+entera aunque Hekatan solo ate los ejes. Ahora el D1 sale del mapa de diafragmas de Hekatan
+(`nodeInputs.diaphragms`, el mismo que usa el s2k) y el área solo lleva D1 si Hekatan ata sus
+cuatro nudos.
+
+| e2k arreglado en ETABS 22 vs Hekatan `comparar=1` | estático (peor nudo) | T1 · T2 · T3 (Hekatan / ETABS) |
+|---|---|---|
+| modelo mínimo, diafragma de ejes (9 POINT D1, 0 AREA) | **0.0000 %** (1734/1734) | 0.1205 / 0.1197 |
+| modelo mínimo, toda la planta (441 POINT, 400 AREA) | **0.0000 %** (1734/1734) | 0.1203 / 0.1195 |
+| **A** · muros en X, 6 pisos (54 POINT D1; antes 174 + 2400 áreas) | **0.0000 %** (9999/9999) | 0.7667/0.7666 · 0.2438/0.2435 · 0.2340/0.2321 |
+| **B** · muros en X e Y, 6 pisos | **0.0000 %** (11943/11943) | 0.2525/0.2510 · 0.2185/0.2166 · 0.1358/0.1333 |
+
+Los modos 4–6 de B y los 2–6 del modelo mínimo son modos locales de losa y siguen sin emparejar:
+es un tema de masa (ETABS la agrupa por stories, que aquí son de 0.5 m), no de rigidez. Aparte.
 
 ## Reproducir
 

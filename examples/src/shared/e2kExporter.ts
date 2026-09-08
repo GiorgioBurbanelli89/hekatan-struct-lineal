@@ -1276,7 +1276,26 @@ function exportFromScratch(input: ExportE2kInput): string {
   // flexibles. Medido (dual de 2 plantas, empuje en esquina): la planta 2 casaba
   // con Hekatan al 0.7 % y la planta 1 se iba un 100 %. Ahora va en el nudo de
   // cada planta por la que pasa la cadena (todos los ejes de columna, cada nivel).
-  if (usarDiafragma) chains.forEach(ch => {
+  // ⚠️ Y hasta el 8-sep-2026 el D1 iba en el nudo superior de CADA TRAMO de
+  // columna: con las columnas malladas a 0.5 m, cada nivel de malla es una
+  // STORY y ETABS ataba con diafragma rigido la mitad de la altura de columnas
+  // y muros. Medido (1 piso con muro, 578 nudos, empuje de 50 kN): ETABS por
+  // e2k salia 15.9 % mas rigido que por OAPI; con el D1 solo en la planta,
+  // 0.0000 %. Ahora manda el mapa de Hekatan (nodeInputs.diaphragms, el mismo
+  // que usa el s2k): D1 exactamente en los nudos que Hekatan ata. Sin mapa
+  // ("d1" forzado) se cae al criterio viejo de las cadenas, planta a planta.
+  const nudosDiaf = new Set<number>();
+  if (nodeInputs.diaphragms) nodeInputs.diaphragms.forEach((g, n) => { if (g !== 0) nudosDiaf.add(n); });
+  if (usarDiafragma && nudosDiaf.size) {
+    nudosDiaf.forEach((n) => {
+      const ps = nodeToPS(n);
+      const key = `${ps.pt}@${ps.story}`;
+      if (!emittedPointAssigns.has(key) && ps.story !== "Base") {
+        lines.push(`  POINTASSIGN  "${ps.pt}"  "${ps.story}"  DIAPH "D1"  `);
+        emittedPointAssigns.add(key);
+      }
+    });
+  } else if (usarDiafragma) chains.forEach(ch => {
     for (const ei of ch.elemIndices) {
       const [a, b] = elements[ei];
       const topIdx = nodes[a][2] >= nodes[b][2] ? a : b;
@@ -1710,7 +1729,11 @@ function exportFromScratch(input: ExportE2kInput): string {
         // sin usar. Se decide POR ELEMENTO y se asigna SU grupo.
         aaEntries.push(esMembranaDe(ae.idx)
           ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
-          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          // DIAPH en el AREA hace que ETABS ate TODA la malla de la losa (medido
+          // el 8-sep-2026: no es lo mismo que atar los POINTs de eje). Solo va si
+          // Hekatan ata los cuatro nudos del elemento; si solo ata los ejes de
+          // columna (como SAP2000), el area no lleva DIAPH.
+          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: storyArea, idx: ae.idx });
       }
     });
