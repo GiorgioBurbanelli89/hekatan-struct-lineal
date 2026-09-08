@@ -1437,6 +1437,44 @@ export function drawing({
   // circulo borrado se detecta porque no queda ningun punto en su circunferencia.
   const circulos: { c: [number, number, number]; r: number }[] = [];
   (window as any).__hekatanCirculos = circulos;
+
+  // ── Centros DEDUCIDOS de la geometría ────────────────────────────────────
+  // El registro de arriba vive en memoria: se pierde al recargar la página y no
+  // existe si el dibujo viene de fuera (un .heks importado, por ejemplo), así
+  // que el OSNAP "centro" dejaba de funcionar sin que nada lo avisara.
+  // Un círculo teselado ES un polígono regular cerrado: su centro es el promedio
+  // de sus vértices, y se reconoce porque todos están a la misma distancia de él.
+  // Deducirlo no necesita guardar nada y vale para cualquier dibujo.
+  // Se recalcula solo cuando cambia el número de puntos o de polilíneas (el
+  // OSNAP se evalúa en cada movimiento del ratón: recorrer todo cada vez sería
+  // O(n) por frame).
+  let cacheCentros: { c: [number, number, number]; r: number }[] = [];
+  let cacheClave = "";
+  const centrosDeducidos = (): { c: [number, number, number]; r: number }[] => {
+    const pts = drawingObj.points.rawVal as [number, number, number][];
+    const polys = (drawingObj.polylines?.rawVal ?? []) as number[][];
+    const clave = `${pts.length}|${polys.length}|${polys.reduce((a, q) => a + q.length, 0)}`;
+    if (clave === cacheClave) return cacheCentros;
+    cacheClave = clave;
+    const out: { c: [number, number, number]; r: number }[] = [];
+    for (const poly of polys) {
+      // cerrada = el último índice repite el primero; hacen falta >= 5 vértices
+      const n = poly.length;
+      if (n < 6 || poly[0] !== poly[n - 1]) continue;
+      const vs = poly.slice(0, n - 1).map((i) => pts[i]).filter(Boolean) as [number, number, number][];
+      if (vs.length < 5) continue;
+      const c: [number, number, number] = [0, 1, 2].map((k) =>
+        vs.reduce((a, v) => a + v[k], 0) / vs.length) as [number, number, number];
+      const rs = vs.map((v) => Math.hypot(v[0] - c[0], v[1] - c[1], v[2] - c[2]));
+      const r = rs.reduce((a, b) => a + b, 0) / rs.length;
+      if (r < 1e-9) continue;
+      // regular: todos los vértices a la misma distancia (0.5 % del radio)
+      if (rs.some((q) => Math.abs(q - r) > 0.005 * r)) continue;
+      out.push({ c, r });
+    }
+    return (cacheCentros = out);
+  };
+  (window as any).__hekatanCentrosDeducidos = centrosDeducidos;
   (window as any).__hekatanDrawCircle = (
     cx: number, cy: number, cz: number, r: number,
     segs: number = (window as any).__hekatanArcSegs ?? 12,
@@ -3711,7 +3749,14 @@ export function drawing({
     // sobre el propio centro), como en AutoCAD. El candidato queda a tol/2
     // para que un extremo o un nudo mas cercano al cursor le ganen.
     if (opts.cen) {
-      for (const k of circulos) {
+      // los del registro (dibujados en esta sesión) MÁS los deducidos de la
+      // geometría (valen tras recargar y en dibujos importados), sin repetir
+      const deducidos = centrosDeducidos();
+      const todos = [...circulos];
+      for (const d of deducidos)
+        if (!todos.some((k) => Math.hypot(k.c[0]-d.c[0], k.c[1]-d.c[1], k.c[2]-d.c[2]) < 1e-6 && Math.abs(k.r - d.r) < 1e-6))
+          todos.push(d);
+      for (const k of todos) {
         const vivo = pts.some((p) => Math.abs(Math.hypot(p[0]-k.c[0], p[1]-k.c[1], p[2]-k.c[2]) - k.r) < 1e-6);
         if (!vivo) continue;
         const d = Math.hypot(px-k.c[0], py-k.c[1], pz-k.c[2]);
