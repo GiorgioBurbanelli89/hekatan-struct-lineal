@@ -92,6 +92,27 @@ const limpia = () => pag.evaluate(() => {
   window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = [[]]; window.__hekatanDrawingAreas.val = [];
   window.__hekatanSelection?.clear?.(); window.__hekatanRefreshSelection?.();
 });
+
+// mundo -> pantalla con la camara activa (para CLICAR sobre una linea dibujada)
+const pantalla = (x, y, z) => pag.evaluate((wx, wy, wz) => {
+  const v = document.querySelector("#viewer"); const ctx = v.__ctx; const cv = v.querySelector("canvas");
+  const r = cv.getBoundingClientRect(); const cam = ctx.camera; cam.updateMatrixWorld();
+  const m = cam.projectionMatrix.elements, mv = cam.matrixWorldInverse.elements;
+  const tx = mv[0]*wx + mv[4]*wy + mv[8]*wz + mv[12], ty = mv[1]*wx + mv[5]*wy + mv[9]*wz + mv[13];
+  const tz = mv[2]*wx + mv[6]*wy + mv[10]*wz + mv[14], tw = mv[3]*wx + mv[7]*wy + mv[11]*wz + mv[15];
+  const cx = m[0]*tx + m[4]*ty + m[8]*tz + m[12]*tw, cy = m[1]*tx + m[5]*ty + m[9]*tz + m[13]*tw;
+  const cw = m[3]*tx + m[7]*ty + m[11]*tz + m[15]*tw;
+  const nx = cx / cw, ny = cy / cw;
+  return { x: r.left + (nx + 1) / 2 * r.width, y: r.top + (1 - ny) / 2 * r.height };
+}, x, y, z);
+const clicEn = async (x, y, z) => {
+  const c = await pantalla(x, y, z);
+  await pag.mouse.move(c.x - 3, c.y - 3); await espera(80);
+  await pag.mouse.move(c.x, c.y); await espera(200);
+  await pag.mouse.click(c.x, c.y); await espera(300);
+};
+const tiene = (pts, q) => pts.some((p) => Math.abs(p[0]-q[0]) < 1e-6 && Math.abs(p[1]-q[1]) < 1e-6 && Math.abs(p[2]-q[2]) < 1e-6);
+
 await limpia();
 
 // 1. LÍNEA por teclado con cierre
@@ -160,6 +181,67 @@ const v = await pag.evaluate(() => document.getElementById("hk3-cmd-input").valu
 ok(v === "1" && (await cam()) === "persp", "con LÍNEA activa, el 1 es una coordenada, no una vista", `caja=«${v}»`);
 await pag.keyboard.press("Escape"); await espera(200);
 await pag.evaluate(() => { document.getElementById("hk3-cmd-input").value = ""; });
+
+// 8. RECORTAR · ALARGAR · DESFASE · circulo y rectangulo por teclado · OSNAP centro
+await pag.keyboard.press("Escape"); await espera(200);
+await limpia();
+await teclea("l"); await teclea("0,0,0"); await teclea("4,0,0"); await pag.keyboard.press("Escape"); await espera(150);
+await teclea("l"); await teclea("2,-2,0"); await teclea("2,2,0"); await pag.keyboard.press("Escape"); await espera(150);
+await teclea("l"); await teclea("3,-3,0"); await teclea("3,-1,0"); await pag.keyboard.press("Escape"); await espera(150);
+await pag.keyboard.press("1"); await espera(500);
+e = await estado();
+ok(e.pts.length === 6 && (await cam()) === "orto", "tres líneas por teclado y vista en planta", `pts=${e.pts.length}`);
+
+await teclea("tr");
+await clicEn(1, 0, 0);
+e = await estado();
+ok(/trozo/.test(e.prompt), "TR + clic en la línea A → «Designe el trozo de línea a quitar»", e.prompt);
+await clicEn(2, 1.5, 0);
+e = await estado();
+ok(tiene(e.pts, [2, 0, 0]) && !tiene(e.pts, [2, 2, 0]) && tiene(e.pts, [2, -2, 0]), "RECORTAR quita el trozo de B por encima de A (queda (2,-2)→(2,0))", JSON.stringify(e.pts));
+await foto("recortar");
+await pag.keyboard.press("Escape"); await espera(150);
+
+await teclea("ex");
+await clicEn(3.5, 0, 0);
+await clicEn(3, -1, 0);
+e = await estado();
+ok(tiene(e.pts, [3, 0, 0]) && !tiene(e.pts, [3, -1, 0]), "ALARGAR lleva el extremo de C hasta A (3,-1)→(3,0)", JSON.stringify(e.pts));
+await foto("alargar");
+await pag.keyboard.press("Escape"); await espera(150);
+
+await teclea("o");
+await teclea("1");
+e = await estado();
+ok(/distancia 1 m/.test(e.prompt), "O + 1 Enter → distancia memorizada en el prompt", e.prompt);
+await clicEn(1, 0, 0);
+await clicEn(1, 1, 0);
+e = await estado();
+ok(tiene(e.pts, [0, 1, 0]) && tiene(e.pts, [4, 1, 0]), "DESFASE copia A un metro hacia +Y ((0,1)→(4,1))", JSON.stringify(e.pts.slice(-2)));
+await foto("desfase");
+await pag.keyboard.press("Escape"); await espera(150);
+
+const nAntes = (await estado()).pts.length;
+await teclea("c"); await teclea("-2,-2,0"); await teclea("1");
+e = await estado();
+const circ = await pag.evaluate(() => (window.__hekatanCirculos || []).map((k) => [k.c, k.r]));
+ok(e.pts.length > nAntes + 4 && circ.length === 1 && circ[0][1] === 1, "CÍRCULO por teclado: centro -2,-2 y radio 1 (cifra tecleada)", JSON.stringify(circ));
+const cen = await pag.evaluate(() => {
+  const o = window.__hekatanOsnap; const guardado = { ...o };
+  for (const k of Object.keys(o)) o[k] = false; o.cen = true;
+  const r = window.__hekatanOsnapCompute(-2 + Math.cos(0.26), -2 + Math.sin(0.26), 0, 0.4);
+  Object.assign(o, guardado);
+  return r;
+});
+ok(!!cen && cen.type === "cen" && Math.abs(cen.x + 2) < 1e-9 && Math.abs(cen.y + 2) < 1e-9, "OSNAP centro sobre la circunferencia → (-2,-2)", JSON.stringify(cen));
+await pag.keyboard.press("Escape"); await espera(150);
+
+const nAntesRec = (await estado()).pts.length;
+await teclea("rec"); await teclea("5,-3,0"); await teclea("6,-2,0");
+e = await estado();
+ok(e.pts.length === nAntesRec + 4 && tiene(e.pts, [6, -2, 0]) && tiene(e.pts, [5, -2, 0]), "RECTÁNGULO por teclado con dos esquinas", `pts=${e.pts.length}`);
+await pag.keyboard.press("Escape"); await espera(150);
+await foto("modificar_final");
 
 // 7. barra de estado: ORTO por clic, y F2 abre el historial
 const orto0 = await pag.evaluate(() => !!window.__hekatanOrthoMode);

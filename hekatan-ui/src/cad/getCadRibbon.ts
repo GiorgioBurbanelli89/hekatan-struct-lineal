@@ -104,7 +104,10 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
       { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: arrastra izq→der; captura: der→izq." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
-      { id: "delete", icono: "🗑", nombre: "Borrar", tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
+      { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
+      { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
+      { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
+      { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
     ],
   },
 ];
@@ -503,7 +506,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
           <tr><td style="padding:1px 14px 1px 0"><b>L</b> línea · <b>PL</b> polilínea · <b>REC</b> rectángulo · <b>C</b> círculo · <b>A</b> arco</td>
               <td><b>COL</b> columna · <b>MU</b> muro · <b>LO</b> losa</td></tr>
           <tr><td style="padding:1px 14px 1px 0"><b>S</b> seleccionar · <b>M</b> mover · <b>CO</b> copiar · <b>E</b> borrar</td>
-              <td><b>AP</b> apoyo · <b>CG</b> carga · <b>REJ</b> rejilla</td></tr>
+              <td><b>O</b> desfase · <b>TR</b> recortar · <b>EX</b> alargar</td></tr>
+          <tr><td style="padding:1px 14px 1px 0"><b>AP</b> apoyo · <b>CG</b> carga · <b>REJ</b> rejilla</td>
+              <td>OSNAP: extremo · medio · nudo · <b>centro</b> · intersección</td></tr>
           <tr><td style="padding:1px 14px 1px 0"><b>F3</b> OSNAP · <b>F8</b> ORTO · <b>F9</b> SNAP · <b>F10</b> POLAR</td>
               <td><b>F2</b> historial · <b>Esc</b> cancelar · <b>?</b> esta ayuda</td></tr>
         </table>

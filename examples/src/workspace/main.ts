@@ -6522,7 +6522,9 @@ try {
     erase: "delete", e: "delete", del: "delete", delete: "delete", borrar: "delete",
     select: "select", sel: "select", s: "select", seleccionar: "select",
     aux: "aux", xline: "aux", auxline: "aux", auxiliar: "aux", auxp: "auxp", auxpoint: "auxp",
-    extend: "extend", ex: "extend", prolongar: "extend",
+    extend: "extend", ex: "extend", alargar: "extend", al: "extend", prolongar: "extend",
+    trim: "trim", tr: "trim", recortar: "trim", recorta: "trim",
+    offset: "offset", o: "offset", desfase: "offset", df: "offset", desfasar: "offset", equidistancia: "offset",
     axis: "axis", eje: "axis", ax: "axis",
     chamfer: "chaflan", chaflan: "chaflan", chaf: "chaflan", slab: "chaflan",
   };
@@ -6532,14 +6534,14 @@ try {
     rect: "▭ Rectángulo", circle: "○ Círculo", arc: "⌒ Arco", col: "▌ Columna",
     wall: "▥ Muro", delete: "🗑 Borrar", select: "🖱 Seleccionar",
     move: "✥ Mover", copy: "⧉ Copiar",
-    aux: "┊ Línea auxiliar", auxp: "✦ Punto auxiliar", extend: "↗ Prolongar",
+    aux: "┊ Línea auxiliar", auxp: "✦ Punto auxiliar", extend: "↦ Alargar", trim: "✂ Recortar", offset: "⇉ Desfase",
     axis: "📐 Eje", chaflan: "▱ Losa con chaflanes",
   };
   const TOOL_CANON: Record<string, string> = {
     line: "line", node: "node", area: "losa", polyline: "polyline", rect: "rectangle",
     rectarea: "rectarea", polyarea: "polyarea", plane3: "plane3",
     circle: "circle", arc: "arc", col: "column", wall: "wall", delete: "delete",
-    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend",
+    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset",
     axis: "axis", chaflan: "chamfer",
   };
   // Comandos que no son herramientas del motor: rejilla, apoyo, carga, deshacer…
@@ -6608,7 +6610,7 @@ try {
   const input = document.createElement("input");
   input.type = "text";
   input.id = "hk3-cmd-input";
-  input.placeholder = "L línea · PL polilínea · REC · C · COL · MU muro · LO losa · M mover · CO copiar · E borrar · ? ayuda";
+  input.placeholder = "L línea · PL · REC · C · COL · MU · LO · M mover · CO copiar · O desfase · TR recortar · EX alargar · E borrar · ? ayuda";
   input.autocomplete = "off";
   input.spellcheck = false;
   const cmdWrap = document.createElement("div");

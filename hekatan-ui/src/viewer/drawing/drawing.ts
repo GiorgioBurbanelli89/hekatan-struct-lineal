@@ -280,6 +280,23 @@ export function drawing({
     // Para tools 3D (col/wall/extp/extl) la "distancia" tipeada es la ALTURA
     // del elemento — la guardamos para que el próximo click la use.
     const curTool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
+    if (curTool === "offset") {
+      pendingDist = lengthM;
+      updateStatus(`⇉ DESFASE distancia ${lengthM} m — designe la línea y luego el lado.`);
+      rubberLabelInput.blur();
+      try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
+      return;
+    }
+    if (curTool === "circle" && pendingClicks.length === 1) {
+      // "CIRCULO centro, radio 3": la cifra es el radio
+      const c = pendingClicks[0];
+      pendingClicks = [];
+      (window as any).__hekatanDrawCircle?.(c[0], c[1], c[2], lengthM);
+      updateStatus(`✓ Círculo r=${lengthM} m en (${c[0].toFixed(2)}, ${c[1].toFixed(2)}, ${c[2].toFixed(2)}).`);
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
+      return;
+    }
     if (curTool === "col" || curTool === "wall" || curTool === "extp" || curTool === "extl") {
       pendingHeight = lengthM;
       const labels: any = { col: "columna", wall: "pared", extp: "extrusión punto→línea", extl: "extrusión línea→área" };
@@ -424,26 +441,12 @@ export function drawing({
     if (parsed.kind === "length") { commitTypedDistance(parsed.L); return true; }
     const pt = resolveParsedInput(parsed);
     if (!pt) return false;
-    // MOVER/COPIAR: la coordenada tecleada es el punto base o el destino
-    // («@6,0,0» = desplazar seis metros), no un punto de polilínea.
-    const toolMC = (window as any).__hekatanCadState?.get?.()?.tool;
-    if (toolMC === "move" || toolMC === "copy") {
-      (window as any).__hekatanPasoMoverCopiar?.(toolMC, pt);
-      return true;
-    }
-    commitAbsolutePoint(pt);
-    // Auto-cierre del ÁREA al 4º punto tipeado (igual que con clicks).
-    const tool = (window as any).__hekatanCadState?.get?.()?.tool;
-    if (tool === "area" && drawingObj.polylines) {
-      const polys = drawingObj.polylines.rawVal;
-      const li = polys.length - 1;
-      const last = polys[li] ?? [];
-      if (last.length === 4) {
-        drawingObj.polylines.val = [...polys.slice(0, -1), [...last, last[0]], []];
-        if (drawingObj.areas) drawingObj.areas.val = [...drawingObj.areas.rawVal, li];
-        try { (window as any).__hekatanRebuild?.(); } catch {}
-      }
-    }
+    // El punto tecleado se trata EXACTAMENTE como un clic en ese sitio: la
+    // misma funcion reparte por herramienta (linea, circulo, muro, mover...).
+    procesarClic(new THREE.Vector3(pt[0], pt[1], pt[2]), null);
+    rubberStart = pt;
+    rubberLabelInput.blur();
+    try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
     return true;
   };
 
@@ -1429,6 +1432,11 @@ export function drawing({
   // ── Discretización de elementos no-lineales ──
   // Círculo en plano XY (centro cx,cy,cz; radio r). Se discretiza en N
   // segmentos rectos formando un polígono regular cerrado.
+  // Los circulos y arcos se guardan TESELADOS (una polilinea): el centro no es
+  // ningun punto. Para el OSNAP "centro" se anota aqui (centro y radio). Un
+  // circulo borrado se detecta porque no queda ningun punto en su circunferencia.
+  const circulos: { c: [number, number, number]; r: number }[] = [];
+  (window as any).__hekatanCirculos = circulos;
   (window as any).__hekatanDrawCircle = (
     cx: number, cy: number, cz: number, r: number,
     segs: number = (window as any).__hekatanArcSegs ?? 12,
@@ -1447,6 +1455,7 @@ export function drawing({
       newPts.push(p);
     }
     drawingObj.points.val = [...drawingObj.points.rawVal, ...newPts];
+    circulos.push({ c: [cx, cy, cz], r });
     if (drawingObj.polylines) {
       // Polilínea cerrada (vuelve al primer punto)
       const closed = [...newPts.map((_, i) => baseIdx + i), baseIdx];
@@ -1510,6 +1519,7 @@ export function drawing({
       newPts.push([v.x, v.y, v.z]);
     }
     drawingObj.points.val = [...drawingObj.points.rawVal, ...newPts];
+    circulos.push({ c: [center.x, center.y, center.z], r: radius });
     if (drawingObj.polylines) {
       const arcPoly = newPts.map((_, i) => baseIdx + i);
       const polys = drawingObj.polylines.rawVal;
@@ -2264,7 +2274,7 @@ export function drawing({
         viewerRender();
         return;
       }
-      if (curTool === "delete") {
+      if (curTool === "delete" || curTool === "trim" || curTool === "extend" || curTool === "offset") {
         const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
         // Buscar lo más cerca entre polilínea y aux line — gana el de menor dist
         const foundPoly = findClosestPoly(p.x, p.y, p.z, tol);
@@ -3697,6 +3707,20 @@ export function drawing({
         }
       }
     }
+    // CENTRO de circulos y arcos: con el cursor sobre la circunferencia (o
+    // sobre el propio centro), como en AutoCAD. El candidato queda a tol/2
+    // para que un extremo o un nudo mas cercano al cursor le ganen.
+    if (opts.cen) {
+      for (const k of circulos) {
+        const vivo = pts.some((p) => Math.abs(Math.hypot(p[0]-k.c[0], p[1]-k.c[1], p[2]-k.c[2]) - k.r) < 1e-6);
+        if (!vivo) continue;
+        const d = Math.hypot(px-k.c[0], py-k.c[1], pz-k.c[2]);
+        if (d < tol || Math.abs(d - k.r) < tol) {
+          const dd = Math.min(d, tol * 0.5);
+          if (!best || dd < (best as any).d) best = { type: "cen", x: k.c[0], y: k.c[1], z: k.c[2], d: dd };
+        }
+      }
+    }
     // INTERSECCIÓN: cruce de dos tramos. Solo se miran los tramos que pasan
     // cerca del cursor (a menos de 3·tol), así no es O(n²) sobre el modelo.
     if (opts.int) {
@@ -3769,6 +3793,10 @@ export function drawing({
   // Se setea cuando el usuario tipea un número + Enter ANTES de hacer el
   // click final. Default = 3m si no se tipea nada.
   let pendingHeight = 0;
+  // DESFASE: distancia tecleada (se conserva entre desfases, como en AutoCAD)
+  let pendingDist = 0;
+  // RECORTAR / ALARGAR / DESFASE: la linea o contorno designado en el 1er clic
+  let designado: { poly: number; seg: number } | null = null;
   // ── Crear status bar HTML siempre visible debajo del viewer ──
   // Muestra: tool activa + paso actual + última acción.
   const statusBar = document.createElement("div");
@@ -3857,7 +3885,13 @@ export function drawing({
       case "plane3": return P(`PLANO Precise punto ${n + 1} de 3:`);
       case "extp": return P("EXTRUIR Precise el nudo a levantar (altura: teclee la cifra + Enter):");
       case "extl": return P("EXTRUIR Precise la línea a levantar:");
-      case "extend": return P("PROLONGAR Precise la línea y luego hasta dónde:");
+      case "extend": return !designado ? P("ALARGAR Designe el contorno hasta el que alargar:")
+                                       : P("ALARGAR Designe la línea a alargar, cerca del extremo libre:");
+      case "trim": return !designado ? P("RECORTAR Designe el contorno de corte:")
+                                     : P("RECORTAR Designe el trozo de línea a quitar:");
+      case "offset": return !designado
+        ? P(`DESFASE Designe la línea a desfasar${pendingDist > 0 ? ` (distancia ${pendingDist} m)` : " (teclee la distancia; sin ella, la copia pasa por el punto del lado)"}:`)
+        : P("DESFASE Precise el lado hacia el que va la copia:");
       case "axis": return P("EJE Precise el primer punto del eje:");
       case "aux": return n ? P("AUXILIAR Precise el segundo punto:") : P("AUXILIAR Precise el primer punto:");
       case "auxp": return P("PUNTO AUXILIAR Precise punto:");
@@ -3895,6 +3929,7 @@ export function drawing({
     polyAreaPts = [];
     polyAreaPreview.visible = false;
     cerrarPolilinea();
+    designado = null;
     viewerRender();
     updateStatus("🛠 Tool cambiado — clicks pendientes limpiados");
     refreshPrompt();
@@ -4059,6 +4094,7 @@ export function drawing({
   // siguiente click como inicio de algo nuevo".
   const finalizeDraw = () => {
     pendingClicks = [];
+    designado = null;
     // Cierra la polilínea en curso Y descarta las que se quedaron en 0 ó 1
     // punto: eso no es ningún frame, es el hueco de haber cambiado de
     // herramienta a medio dibujar. Antes solo se añadía una vacía al final y
@@ -4170,6 +4206,163 @@ export function drawing({
     refreshPrompt();
   };
   (window as any).__hekatanPasoMoverCopiar = pasoMoverCopiar;
+
+  // ── DESFASE · RECORTAR · ALARGAR — el OFFSET / TRIM / EXTEND de AutoCAD ────
+  // Los tres empiezan DESIGNANDO una linea (pasa a rojo bajo el cursor, clic):
+  //   DESFASE : la linea a copiar en paralelo; luego un clic en el lado. La
+  //             distancia se teclea antes (una cifra + Enter) o, si no hay,
+  //             la copia pasa POR el punto del lado ("a traves de").
+  //   RECORTAR: el contorno de corte; luego clic en el trozo que sobra. El
+  //             tramo se parte en el cruce y se quita el lado clicado.
+  //   ALARGAR : el contorno; luego clic en la linea a alargar, cerca de su
+  //             extremo libre, que se lleva hasta el cruce con el contorno.
+  type P3 = [number, number, number];
+  const normalPlano = (): P3 => {
+    const wp = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+    return wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1];
+  };
+  const d3 = (a: P3, b: P3) => Math.hypot(a[0]-b[0], a[1]-b[1], a[2]-b[2]);
+  // Puntos mas proximos de dos rectas (p1->p2, p3->p4). Devuelve el cruce si
+  // casi se tocan; `libreA`/`libreB` permiten salirse del tramo (prolongarlo).
+  const cruceRectas = (p1: P3, p2: P3, p3: P3, p4: P3, libreA: boolean, libreB: boolean): P3 | null => {
+    const u = [p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]], v = [p4[0]-p3[0], p4[1]-p3[1], p4[2]-p3[2]];
+    const w = [p1[0]-p3[0], p1[1]-p3[1], p1[2]-p3[2]];
+    const A = u[0]*u[0]+u[1]*u[1]+u[2]*u[2], B = u[0]*v[0]+u[1]*v[1]+u[2]*v[2], C = v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+    const D = u[0]*w[0]+u[1]*w[1]+u[2]*w[2], E = v[0]*w[0]+v[1]*w[1]+v[2]*w[2];
+    const den = A*C - B*B;
+    if (den < 1e-12) return null;
+    const sA = (B*E - C*D) / den, tB = (A*E - B*D) / den;
+    if (!libreA && (sA < -1e-6 || sA > 1 + 1e-6)) return null;
+    if (!libreB && (tB < -1e-6 || tB > 1 + 1e-6)) return null;
+    const q1: P3 = [p1[0]+sA*u[0], p1[1]+sA*u[1], p1[2]+sA*u[2]];
+    const q2: P3 = [p3[0]+tB*v[0], p3[1]+tB*v[1], p3[2]+tB*v[2]];
+    if (d3(q1, q2) > 1e-4) return null;
+    return q1;
+  };
+  const usosDePunto = (idx: number) =>
+    (drawingObj.polylines?.rawVal ?? []).reduce((n, pl) => n + pl.filter((k) => k === idx).length, 0);
+  const NOMBRE_MOD: Record<string, string> = { offset: "DESFASE", trim: "RECORTAR", extend: "ALARGAR" };
+  const pasoModificar = (tool: string, click: P3): void => {
+    if (!drawingObj.polylines) return;
+    const polys = drawingObj.polylines.rawVal;
+    const pts = drawingObj.points.rawVal as P3[];
+    const nombre = NOMBRE_MOD[tool];
+    if (!designado) {
+      if (hoveredPolyIndex < 0) { updateStatus(`${nombre}: pase el cursor por una línea (se pone roja) y haga clic.`); return; }
+      designado = { poly: hoveredPolyIndex, seg: Math.max(0, hoveredSegIndex) };
+      updateStatus(tool === "offset"
+        ? `DESFASE línea #${designado.poly + 1} designada — clic en el lado hacia el que va la copia${pendingDist > 0 ? ` (${pendingDist} m)` : ""}.`
+        : tool === "trim" ? "RECORTAR contorno designado — clic en el trozo de línea a quitar."
+        : "ALARGAR contorno designado — clic en la línea a alargar, cerca del extremo libre.");
+      refreshPrompt();
+      return;
+    }
+    if (tool === "offset") {
+      const P = designado.poly; const poly = polys[P];
+      if (!poly || poly.length < 2) { designado = null; updateStatus("DESFASE: esa polilínea no tiene tramos."); refreshPrompt(); return; }
+      const cerrada = poly.length > 2 && poly[0] === poly[poly.length - 1];
+      const nrm = normalPlano();
+      const segs = [] as { a: P3; b: P3; n: P3 }[];
+      for (let i = 0; i < poly.length - 1; i++) {
+        const a = pts[poly[i]], b = pts[poly[i + 1]];
+        const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]]; const L = Math.hypot(u[0], u[1], u[2]) || 1;
+        const ux = u[0]/L, uy = u[1]/L, uz = u[2]/L;
+        // normal en el plano de trabajo: n = nrm x u
+        const nn: P3 = [nrm[1]*uz - nrm[2]*uy, nrm[2]*ux - nrm[0]*uz, nrm[0]*uy - nrm[1]*ux];
+        const Ln = Math.hypot(nn[0], nn[1], nn[2]) || 1;
+        segs.push({ a, b, n: [nn[0]/Ln, nn[1]/Ln, nn[2]/Ln] });
+      }
+      // el tramo mas cercano al clic decide el LADO (y la distancia si no se tecleo)
+      let iNear = 0, dNear = Infinity;
+      segs.forEach((sg, i) => {
+        const d = distPointSeg(click[0], click[1], click[2], sg.a[0], sg.a[1], sg.a[2], sg.b[0], sg.b[1], sg.b[2]);
+        if (d < dNear) { dNear = d; iNear = i; }
+      });
+      const sn = segs[iNear];
+      const lado = Math.sign((click[0]-sn.a[0])*sn.n[0] + (click[1]-sn.a[1])*sn.n[1] + (click[2]-sn.a[2])*sn.n[2]) || 1;
+      const dist = pendingDist > 0 ? pendingDist : dNear;
+      if (dist < 1e-6) { updateStatus("DESFASE: distancia nula — teclee una distancia o clique más lejos."); return; }
+      const off = segs.map((sg) => ({
+        a: [sg.a[0] + lado*dist*sg.n[0], sg.a[1] + lado*dist*sg.n[1], sg.a[2] + lado*dist*sg.n[2]] as P3,
+        b: [sg.b[0] + lado*dist*sg.n[0], sg.b[1] + lado*dist*sg.n[1], sg.b[2] + lado*dist*sg.n[2]] as P3,
+      }));
+      const m = off.length;
+      const vertice = (j: number): P3 => {
+        // j = vertice entre el tramo j-1 y el j (esquina a inglete)
+        const prev = off[(j - 1 + m) % m], next = off[j % m];
+        const q = cruceRectas(prev.a, prev.b, next.a, next.b, true, true);
+        return q ?? next.a;
+      };
+      const nuevos: P3[] = [];
+      const nV = cerrada ? m : m + 1;
+      for (let j = 0; j < nV; j++) {
+        if (!cerrada && j === 0) nuevos.push(off[0].a);
+        else if (!cerrada && j === m) nuevos.push(off[m - 1].b);
+        else nuevos.push(vertice(j));
+      }
+      pushUndo();
+      const base = pts.length;
+      drawingObj.points.val = [...pts, ...nuevos];
+      const idx = nuevos.map((_, i) => base + i);
+      if (cerrada) idx.push(base);
+      let lista = polys.slice();
+      if (lista.length && lista[lista.length - 1].length === 0) lista = lista.slice(0, -1);
+      drawingObj.polylines.val = [...lista, idx, []];
+      designado = null;
+      updateStatus(`✓ Desfase a ${dist.toFixed(2)} m — ${m} tramo${m === 1 ? "" : "s"} nuevo${m === 1 ? "" : "s"}. Designe otra línea o Esc.`);
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      viewerRender();
+      refreshPrompt();
+      return;
+    }
+    // RECORTAR / ALARGAR: hace falta OTRA linea bajo el cursor
+    if (hoveredPolyIndex < 0 || (hoveredPolyIndex === designado.poly && hoveredSegIndex === designado.seg)) {
+      updateStatus(`${nombre}: pase el cursor por OTRA línea y haga clic.`); return;
+    }
+    const pc = polys[designado.poly];
+    const c1 = pts[pc[designado.seg]], c2 = pts[pc[designado.seg + 1]];
+    const P = hoveredPolyIndex, S = Math.max(0, hoveredSegIndex);
+    const poly = polys[P]; const ia = poly[S], ib = poly[S + 1];
+    if (!c1 || !c2 || ia == null || ib == null) { updateStatus(`${nombre}: no se pudo leer el tramo.`); return; }
+    const a = pts[ia], b = pts[ib];
+    if (tool === "trim") {
+      const q = cruceRectas(a, b, c1, c2, false, false);
+      if (!q) { updateStatus("RECORTAR: esa línea no cruza el contorno designado."); return; }
+      pushUndo();
+      const iq = pts.length;
+      drawingObj.points.val = [...pts, q];
+      const partido = [...poly.slice(0, S + 1), iq, ...poly.slice(S + 1)];
+      drawingObj.polylines.val = polys.map((pl, i) => (i === P ? partido : pl));
+      const ladoA = d3(click, a) < d3(click, b);
+      deleteSeg(P, ladoA ? S : S + 1);
+      updateStatus(`✓ Recortado en (${q[0].toFixed(2)}, ${q[1].toFixed(2)}, ${q[2].toFixed(2)}). Designe otro trozo o Esc.`);
+    } else {
+      const q = cruceRectas(a, b, c1, c2, true, false);
+      if (!q) { updateStatus("ALARGAR: ni prolongada llega esa línea al contorno."); return; }
+      const cercaA = d3(click, a) < d3(click, b);
+      const pos = cercaA ? S : S + 1;
+      if (pos !== 0 && pos !== poly.length - 1) { updateStatus("ALARGAR: solo se alarga un extremo libre de la polilínea."); return; }
+      const iExt = poly[pos];
+      // si el cruce cae DENTRO del tramo, eso es recortar, no alargar
+      const dentro = d3(q, a) + d3(q, b) < d3(a, b) + 1e-6;
+      if (dentro) { updateStatus("ALARGAR: el contorno corta el tramo por dentro; use RECORTAR."); return; }
+      pushUndo();
+      if (usosDePunto(iExt) > 1) {
+        // el extremo lo comparte otra linea: nudo nuevo solo para esta
+        const iq = pts.length;
+        drawingObj.points.val = [...pts, q];
+        const nuevo = poly.slice(); nuevo[pos] = iq;
+        drawingObj.polylines.val = polys.map((pl, i) => (i === P ? nuevo : pl));
+      } else {
+        drawingObj.points.val = pts.map((p, i) => (i === iExt ? q : p));
+      }
+      updateStatus(`✓ Alargada hasta (${q[0].toFixed(2)}, ${q[1].toFixed(2)}, ${q[2].toFixed(2)}). Designe otra línea o Esc.`);
+    }
+    // el contorno sigue designado para encadenar recortes, como en AutoCAD
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    refreshPrompt();
+  };
 
   // ── REPLICAR selección (estilo ETABS "Replicate Linear") ──
   // Clona los nodos + frames/áreas seleccionados `count` veces, cada copia
@@ -4315,6 +4508,13 @@ export function drawing({
     }
 
     // ── Tool dispatcher ──
+    procesarClic(point, event);
+  });
+  // Un PUNTO ya resuelto (por clic o TECLEADO en la ventana de comandos) pasa
+  // por el mismo reparto de herramientas. Antes lo tecleado solo servia para
+  // linea/polilinea (commitAbsolutePoint): "CIRCULO centro 0,0 radio 3" habia
+  // que clicarlo. `event` es null cuando el punto viene del teclado.
+  const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
 
     // ── SELECT/none: NO crear geometría — los planos ortogonales se quedan
@@ -4331,7 +4531,7 @@ export function drawing({
         if (ccAnchor) cancelClickClick();
         const { kind, a, b } = hoverItem;
         const id = b !== undefined ? `${kind}:${a}:${b}` : `${kind}:${a}`;
-        const isMulti = event.ctrlKey || event.metaKey || event.shiftKey;
+        const isMulti = !!event && (event.ctrlKey || event.metaKey || event.shiftKey);
         if (!isMulti) selection.clear();
         if (selection.has(id)) selection.delete(id);
         else selection.add(id);
@@ -4343,9 +4543,9 @@ export function drawing({
         //   2. ccAnchor == null  → PRIMER click vacío → empieza click-click rect
         //                          (siempre que no haya modifier multi)
         //   3. multi-modifier sin anchor → ignora (consistente con AutoCAD)
-        const isMulti = event.ctrlKey || event.metaKey || event.shiftKey;
-        const cx = event.clientX;
-        const cy = event.clientY;
+        const isMulti = !!event && (event.ctrlKey || event.metaKey || event.shiftKey);
+        const cx = event?.clientX ?? 0;
+        const cy = event?.clientY ?? 0;
         if (ccAnchor) {
           // Cierre del rect — usar la lógica compartida.
           finalizeRectSelection(ccAnchor.x, ccAnchor.y, cx, cy, isMulti);
@@ -4692,23 +4892,8 @@ export function drawing({
       pendingClicks = [];
       return;
     }
-    if (tool === "extend") {
-      // 2 clicks: 1° sobre una línea existente (cualquiera) → toma su dirección.
-      // 2° en la dirección de extensión → crea aux line desde el endpoint
-      // hasta el nuevo click.
-      pendingClicks.push([point.x, point.y, point.z]);
-      if (pendingClicks.length === 1) {
-        updateStatus(`↗ Prolongar — click 1/2 OK. Marcá el destino de la prolongación.`);
-        return;
-      }
-      const [a, b] = pendingClicks;
-      const auxState = (window as any).__hekatanDrawingAuxLines;
-      if (auxState) {
-        const cur: number[][] = auxState.rawVal ?? auxState.val ?? [];
-        auxState.val = [...cur, [a[0], a[1], a[2], b[0], b[1], b[2]]];
-      }
-      updateStatus(`✓ Prolongación creada como línea auxiliar`);
-      pendingClicks = [];
+    if (tool === "extend" || tool === "trim" || tool === "offset") {
+      pasoModificar(tool, [point.x, point.y, point.z]);
       return;
     }
     if (tool === "chaflan") {
@@ -4803,7 +4988,7 @@ export function drawing({
       const last = drawingObj.polylines?.rawVal[drawingObj.polylines.rawVal.length - 1] ?? [];
       updateStatus(`▦ Área — click ${last.length}/4. Marcá ${4 - last.length} vértice${4 - last.length === 1 ? "" : "s"} más.`);
     }
-  });
+  };
 
   // Tras CADA clic el prompt se recalcula del estado (va detrás del manejador
   // grande porque los listeners corren en orden de registro).

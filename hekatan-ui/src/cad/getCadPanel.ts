@@ -77,7 +77,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     rect:     "▭ Rectángulo — click 2 esquinas. Tipear @5,3 para esquina opuesta relativa.",
     aux:      "┊ Línea auxiliar — referencia visual (no genera FEM). Mismo input que línea.",
     auxp:     "✦ Punto auxiliar — 1 click crea un punto cyan (no genera nodo FEM, sirve para OSnap).",
-    extend:   "↗ Prolongar — click una línea, click en la dirección a extender.",
+    extend:   "↦ Alargar — clic en el contorno, luego en la línea a alargar (cerca del extremo).",
     chaflan:  "▱ Losa con chaflanes — click 2 esquinas. Radio en slider 'Chaflán r'.",
     "delete": "🗑 Borrar — hover sobre línea/área (se resalta en rojo) + click para eliminar.",
     select:   "🖱 Seleccionar — click sobre un elemento. Sin tool activo no se crean nodos.",
@@ -136,7 +136,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
 
   const fMod = fCad.addFolder({ title: "✂ Modificar", expanded: false });
   fMod.addButton({ title: "🖱 Seleccionar" }).on("click", () => setActiveTool("select"));
-  fMod.addButton({ title: "↗ Prolongar línea" }).on("click", () => setActiveTool("extend"));
+  fMod.addButton({ title: "↦ Alargar hasta un contorno" }).on("click", () => setActiveTool("extend"));
   fMod.addButton({ title: "🗑 Borrar (hover + click)" }).on("click", () => setActiveTool("delete"));
 
   // ── PRECISION: todo lo que decide DONDE cae el clic, en un solo sitio ──────
