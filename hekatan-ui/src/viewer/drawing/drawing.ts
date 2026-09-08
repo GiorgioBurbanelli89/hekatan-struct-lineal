@@ -403,6 +403,12 @@ export function drawing({
       ...polys.slice(0, -1),
       [...last, drawingObj.points.rawVal.length - 1],
     ];
+    // El punto tecleado pasa a ser el origen del siguiente relativo: sin esto
+    // «0,0,3» + «@6,0,0» por la caja de comandos daba «desconocido», porque
+    // rubberStart solo lo fijaba el ratón (updateRubberLabel) y con el
+    // teclado nunca llegaba a existir. Medido el 8-sep-2026 capturando el
+    // vídeo 2 de School: 3 coordenadas → 1 nudo y 0 tramos.
+    rubberStart = pt;
     rubberLabelInput.blur();
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
