@@ -57,7 +57,11 @@ const ok = (cond, que, detalle = "") => {
   if (!cond) fallos.push(que);
 };
 
-await pag.goto(`http://localhost:${PUERTO}${BASE}workspace/?t=new-blank`,
+// URL_BASE=https://giorgioburbanelli89.github.io/hekatan-struct-lineal/ → la misma
+// prueba contra el sitio PUBLICO (lo que ve Jorge), no contra la copia local.
+const URL_BASE = process.env.URL_BASE || `http://localhost:${PUERTO}${BASE}`;
+console.log("probando", URL_BASE);
+await pag.goto(`${URL_BASE}workspace/?t=new-blank`,
                { waitUntil: "networkidle2", timeout: 180000 });
 await espera(6000);
 let n = 0;
