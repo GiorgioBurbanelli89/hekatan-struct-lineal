@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 const nom = process.argv[2]; const B = "validation/modelos/plantillas/";
 const lee = (d) => JSON.parse(readFileSync(B + d + "/" + nom + ".json", "utf-8").replace(/\bNaN\b/g, "null"));
-const S = lee("sap2000_shells"), E = lee("etabs");
+const S = lee(process.env.SAPDIR || "sap2000"), E = lee("etabs");
 const k3 = (x, y, z) => [x, y, z].map(v => Math.round(v * 1000)).join(",");
 const pS = new Map(S.puntos.map(p => [p.n, p])), pE = new Map(E.puntos.map(p => [p.n, p]));
 const cen = (J, P, a) => { const pts = a.pts.map(n => P.get(n)).filter(Boolean); return pts.length === 4 ? k3(...[0, 1, 2].map(d => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / 4)) : null; };

@@ -1,0 +1,567 @@
+node 1 0.000000 0.000000 0
+node 2 0.000000 0.150000 0
+node 3 0.000000 0.300000 0
+node 4 0.000000 0.450000 0
+node 5 0.000000 0.600000 0
+node 6 0.000000 0.750000 0
+node 7 0.000000 0.900000 0
+node 8 0.000000 1.050000 0
+node 9 0.000000 1.200000 0
+node 10 0.000000 1.350000 0
+node 11 0.000000 1.500000 0
+node 12 0.150000 0.000000 0
+node 13 0.150000 0.150000 0
+node 14 0.150000 0.300000 0
+node 15 0.150000 0.450000 0
+node 16 0.150000 0.600000 0
+node 17 0.150000 0.750000 0
+node 18 0.150000 0.900000 0
+node 19 0.150000 1.050000 0
+node 20 0.150000 1.200000 0
+node 21 0.150000 1.350000 0
+node 22 0.150000 1.500000 0
+node 23 0.300000 0.000000 0
+node 24 0.300000 0.150000 0
+node 25 0.300000 0.300000 0
+node 26 0.300000 0.450000 0
+node 27 0.300000 0.600000 0
+node 28 0.300000 0.750000 0
+node 29 0.300000 0.900000 0
+node 30 0.300000 1.050000 0
+node 31 0.300000 1.200000 0
+node 32 0.300000 1.350000 0
+node 33 0.300000 1.500000 0
+node 34 0.450000 0.000000 0
+node 35 0.450000 0.150000 0
+node 36 0.450000 0.300000 0
+node 37 0.450000 0.450000 0
+node 38 0.450000 0.600000 0
+node 39 0.450000 0.750000 0
+node 40 0.450000 0.900000 0
+node 41 0.450000 1.050000 0
+node 42 0.450000 1.200000 0
+node 43 0.450000 1.350000 0
+node 44 0.450000 1.500000 0
+node 45 0.600000 0.000000 0
+node 46 0.600000 0.150000 0
+node 47 0.600000 0.300000 0
+node 48 0.600000 0.450000 0
+node 49 0.600000 0.600000 0
+node 50 0.600000 0.750000 0
+node 51 0.600000 0.900000 0
+node 52 0.600000 1.050000 0
+node 53 0.600000 1.200000 0
+node 54 0.600000 1.350000 0
+node 55 0.600000 1.500000 0
+node 56 0.750000 0.000000 0
+node 57 0.750000 0.150000 0
+node 58 0.750000 0.300000 0
+node 59 0.750000 0.450000 0
+node 60 0.750000 0.600000 0
+node 61 0.750000 0.750000 0
+node 62 0.750000 0.900000 0
+node 63 0.750000 1.050000 0
+node 64 0.750000 1.200000 0
+node 65 0.750000 1.350000 0
+node 66 0.750000 1.500000 0
+node 67 0.900000 0.000000 0
+node 68 0.900000 0.150000 0
+node 69 0.900000 0.300000 0
+node 70 0.900000 0.450000 0
+node 71 0.900000 0.600000 0
+node 72 0.900000 0.750000 0
+node 73 0.900000 0.900000 0
+node 74 0.900000 1.050000 0
+node 75 0.900000 1.200000 0
+node 76 0.900000 1.350000 0
+node 77 0.900000 1.500000 0
+node 78 1.050000 0.000000 0
+node 79 1.050000 0.150000 0
+node 80 1.050000 0.300000 0
+node 81 1.050000 0.450000 0
+node 82 1.050000 0.600000 0
+node 83 1.050000 0.750000 0
+node 84 1.050000 0.900000 0
+node 85 1.050000 1.050000 0
+node 86 1.050000 1.200000 0
+node 87 1.050000 1.350000 0
+node 88 1.050000 1.500000 0
+node 89 1.200000 0.000000 0
+node 90 1.200000 0.150000 0
+node 91 1.200000 0.300000 0
+node 92 1.200000 0.450000 0
+node 93 1.200000 0.600000 0
+node 94 1.200000 0.750000 0
+node 95 1.200000 0.900000 0
+node 96 1.200000 1.050000 0
+node 97 1.200000 1.200000 0
+node 98 1.200000 1.350000 0
+node 99 1.200000 1.500000 0
+node 100 1.350000 0.000000 0
+node 101 1.350000 0.150000 0
+node 102 1.350000 0.300000 0
+node 103 1.350000 0.450000 0
+node 104 1.350000 0.600000 0
+node 105 1.350000 0.750000 0
+node 106 1.350000 0.900000 0
+node 107 1.350000 1.050000 0
+node 108 1.350000 1.200000 0
+node 109 1.350000 1.350000 0
+node 110 1.350000 1.500000 0
+node 111 1.500000 0.000000 0
+node 112 1.500000 0.150000 0
+node 113 1.500000 0.300000 0
+node 114 1.500000 0.450000 0
+node 115 1.500000 0.600000 0
+node 116 1.500000 0.750000 0
+node 117 1.500000 0.900000 0
+node 118 1.500000 1.050000 0
+node 119 1.500000 1.200000 0
+node 120 1.500000 1.350000 0
+node 121 1.500000 1.500000 0
+shell 1 1 12 13 2 0.4 2188198 0.2 0
+shelltype 1 thin
+shell 2 2 13 14 3 0.4 2188198 0.2 0
+shelltype 2 thin
+shell 3 3 14 15 4 0.4 2188198 0.2 0
+shelltype 3 thin
+shell 4 4 15 16 5 0.4 2188198 0.2 0
+shelltype 4 thin
+shell 5 5 16 17 6 0.4 2188198 0.2 0
+shelltype 5 thin
+shell 6 6 17 18 7 0.4 2188198 0.2 0
+shelltype 6 thin
+shell 7 7 18 19 8 0.4 2188198 0.2 0
+shelltype 7 thin
+shell 8 8 19 20 9 0.4 2188198 0.2 0
+shelltype 8 thin
+shell 9 9 20 21 10 0.4 2188198 0.2 0
+shelltype 9 thin
+shell 10 10 21 22 11 0.4 2188198 0.2 0
+shelltype 10 thin
+shell 11 12 23 24 13 0.4 2188198 0.2 0
+shelltype 11 thin
+shell 12 13 24 25 14 0.4 2188198 0.2 0
+shelltype 12 thin
+shell 13 14 25 26 15 0.4 2188198 0.2 0
+shelltype 13 thin
+shell 14 15 26 27 16 0.4 2188198 0.2 0
+shelltype 14 thin
+shell 15 16 27 28 17 0.4 2188198 0.2 0
+shelltype 15 thin
+shell 16 17 28 29 18 0.4 2188198 0.2 0
+shelltype 16 thin
+shell 17 18 29 30 19 0.4 2188198 0.2 0
+shelltype 17 thin
+shell 18 19 30 31 20 0.4 2188198 0.2 0
+shelltype 18 thin
+shell 19 20 31 32 21 0.4 2188198 0.2 0
+shelltype 19 thin
+shell 20 21 32 33 22 0.4 2188198 0.2 0
+shelltype 20 thin
+shell 21 23 34 35 24 0.4 2188198 0.2 0
+shelltype 21 thin
+shell 22 24 35 36 25 0.4 2188198 0.2 0
+shelltype 22 thin
+shell 23 25 36 37 26 0.4 2188198 0.2 0
+shelltype 23 thin
+shell 24 26 37 38 27 0.4 2188198 0.2 0
+shelltype 24 thin
+shell 25 27 38 39 28 0.4 2188198 0.2 0
+shelltype 25 thin
+shell 26 28 39 40 29 0.4 2188198 0.2 0
+shelltype 26 thin
+shell 27 29 40 41 30 0.4 2188198 0.2 0
+shelltype 27 thin
+shell 28 30 41 42 31 0.4 2188198 0.2 0
+shelltype 28 thin
+shell 29 31 42 43 32 0.4 2188198 0.2 0
+shelltype 29 thin
+shell 30 32 43 44 33 0.4 2188198 0.2 0
+shelltype 30 thin
+shell 31 34 45 46 35 0.4 2188198 0.2 0
+shelltype 31 thin
+shell 32 35 46 47 36 0.4 2188198 0.2 0
+shelltype 32 thin
+shell 33 36 47 48 37 0.4 2188198 0.2 0
+shelltype 33 thin
+shell 34 37 48 49 38 0.4 2188198 0.2 0
+shelltype 34 thin
+shell 35 38 49 50 39 0.4 2188198 0.2 0
+shelltype 35 thin
+shell 36 39 50 51 40 0.4 2188198 0.2 0
+shelltype 36 thin
+shell 37 40 51 52 41 0.4 2188198 0.2 0
+shelltype 37 thin
+shell 38 41 52 53 42 0.4 2188198 0.2 0
+shelltype 38 thin
+shell 39 42 53 54 43 0.4 2188198 0.2 0
+shelltype 39 thin
+shell 40 43 54 55 44 0.4 2188198 0.2 0
+shelltype 40 thin
+shell 41 45 56 57 46 0.4 2188198 0.2 0
+shelltype 41 thin
+shell 42 46 57 58 47 0.4 2188198 0.2 0
+shelltype 42 thin
+shell 43 47 58 59 48 0.4 2188198 0.2 0
+shelltype 43 thin
+shell 44 48 59 60 49 0.4 2188198 0.2 0
+shelltype 44 thin
+shell 45 49 60 61 50 0.4 2188198 0.2 0
+shelltype 45 thin
+areaload 45 -1111.111111111111
+shell 46 50 61 62 51 0.4 2188198 0.2 0
+shelltype 46 thin
+areaload 46 -1111.111111111111
+shell 47 51 62 63 52 0.4 2188198 0.2 0
+shelltype 47 thin
+shell 48 52 63 64 53 0.4 2188198 0.2 0
+shelltype 48 thin
+shell 49 53 64 65 54 0.4 2188198 0.2 0
+shelltype 49 thin
+shell 50 54 65 66 55 0.4 2188198 0.2 0
+shelltype 50 thin
+shell 51 56 67 68 57 0.4 2188198 0.2 0
+shelltype 51 thin
+shell 52 57 68 69 58 0.4 2188198 0.2 0
+shelltype 52 thin
+shell 53 58 69 70 59 0.4 2188198 0.2 0
+shelltype 53 thin
+shell 54 59 70 71 60 0.4 2188198 0.2 0
+shelltype 54 thin
+shell 55 60 71 72 61 0.4 2188198 0.2 0
+shelltype 55 thin
+areaload 55 -1111.111111111111
+shell 56 61 72 73 62 0.4 2188198 0.2 0
+shelltype 56 thin
+areaload 56 -1111.111111111111
+shell 57 62 73 74 63 0.4 2188198 0.2 0
+shelltype 57 thin
+shell 58 63 74 75 64 0.4 2188198 0.2 0
+shelltype 58 thin
+shell 59 64 75 76 65 0.4 2188198 0.2 0
+shelltype 59 thin
+shell 60 65 76 77 66 0.4 2188198 0.2 0
+shelltype 60 thin
+shell 61 67 78 79 68 0.4 2188198 0.2 0
+shelltype 61 thin
+shell 62 68 79 80 69 0.4 2188198 0.2 0
+shelltype 62 thin
+shell 63 69 80 81 70 0.4 2188198 0.2 0
+shelltype 63 thin
+shell 64 70 81 82 71 0.4 2188198 0.2 0
+shelltype 64 thin
+shell 65 71 82 83 72 0.4 2188198 0.2 0
+shelltype 65 thin
+shell 66 72 83 84 73 0.4 2188198 0.2 0
+shelltype 66 thin
+shell 67 73 84 85 74 0.4 2188198 0.2 0
+shelltype 67 thin
+shell 68 74 85 86 75 0.4 2188198 0.2 0
+shelltype 68 thin
+shell 69 75 86 87 76 0.4 2188198 0.2 0
+shelltype 69 thin
+shell 70 76 87 88 77 0.4 2188198 0.2 0
+shelltype 70 thin
+shell 71 78 89 90 79 0.4 2188198 0.2 0
+shelltype 71 thin
+shell 72 79 90 91 80 0.4 2188198 0.2 0
+shelltype 72 thin
+shell 73 80 91 92 81 0.4 2188198 0.2 0
+shelltype 73 thin
+shell 74 81 92 93 82 0.4 2188198 0.2 0
+shelltype 74 thin
+shell 75 82 93 94 83 0.4 2188198 0.2 0
+shelltype 75 thin
+shell 76 83 94 95 84 0.4 2188198 0.2 0
+shelltype 76 thin
+shell 77 84 95 96 85 0.4 2188198 0.2 0
+shelltype 77 thin
+shell 78 85 96 97 86 0.4 2188198 0.2 0
+shelltype 78 thin
+shell 79 86 97 98 87 0.4 2188198 0.2 0
+shelltype 79 thin
+shell 80 87 98 99 88 0.4 2188198 0.2 0
+shelltype 80 thin
+shell 81 89 100 101 90 0.4 2188198 0.2 0
+shelltype 81 thin
+shell 82 90 101 102 91 0.4 2188198 0.2 0
+shelltype 82 thin
+shell 83 91 102 103 92 0.4 2188198 0.2 0
+shelltype 83 thin
+shell 84 92 103 104 93 0.4 2188198 0.2 0
+shelltype 84 thin
+shell 85 93 104 105 94 0.4 2188198 0.2 0
+shelltype 85 thin
+shell 86 94 105 106 95 0.4 2188198 0.2 0
+shelltype 86 thin
+shell 87 95 106 107 96 0.4 2188198 0.2 0
+shelltype 87 thin
+shell 88 96 107 108 97 0.4 2188198 0.2 0
+shelltype 88 thin
+shell 89 97 108 109 98 0.4 2188198 0.2 0
+shelltype 89 thin
+shell 90 98 109 110 99 0.4 2188198 0.2 0
+shelltype 90 thin
+shell 91 100 111 112 101 0.4 2188198 0.2 0
+shelltype 91 thin
+shell 92 101 112 113 102 0.4 2188198 0.2 0
+shelltype 92 thin
+shell 93 102 113 114 103 0.4 2188198 0.2 0
+shelltype 93 thin
+shell 94 103 114 115 104 0.4 2188198 0.2 0
+shelltype 94 thin
+shell 95 104 115 116 105 0.4 2188198 0.2 0
+shelltype 95 thin
+shell 96 105 116 117 106 0.4 2188198 0.2 0
+shelltype 96 thin
+shell 97 106 117 118 107 0.4 2188198 0.2 0
+shelltype 97 thin
+shell 98 107 118 119 108 0.4 2188198 0.2 0
+shelltype 98 thin
+shell 99 108 119 120 109 0.4 2188198 0.2 0
+shelltype 99 thin
+shell 100 109 120 121 110 0.4 2188198 0.2 0
+shelltype 100 thin
+spring 1 uz 11.25
+support 1 1 1 0 0 0 1
+spring 2 uz 22.5
+support 2 1 1 0 0 0 1
+spring 3 uz 22.5
+support 3 1 1 0 0 0 1
+spring 4 uz 22.5
+support 4 1 1 0 0 0 1
+spring 5 uz 22.5
+support 5 1 1 0 0 0 1
+spring 6 uz 22.5
+support 6 1 1 0 0 0 1
+spring 7 uz 22.5
+support 7 1 1 0 0 0 1
+spring 8 uz 22.5
+support 8 1 1 0 0 0 1
+spring 9 uz 22.5
+support 9 1 1 0 0 0 1
+spring 10 uz 22.5
+support 10 1 1 0 0 0 1
+spring 11 uz 11.25
+support 11 1 1 0 0 0 1
+spring 12 uz 22.5
+support 12 1 1 0 0 0 1
+spring 13 uz 45
+support 13 1 1 0 0 0 1
+spring 14 uz 45
+support 14 1 1 0 0 0 1
+spring 15 uz 45
+support 15 1 1 0 0 0 1
+spring 16 uz 45
+support 16 1 1 0 0 0 1
+spring 17 uz 45
+support 17 1 1 0 0 0 1
+spring 18 uz 45
+support 18 1 1 0 0 0 1
+spring 19 uz 45
+support 19 1 1 0 0 0 1
+spring 20 uz 45
+support 20 1 1 0 0 0 1
+spring 21 uz 45
+support 21 1 1 0 0 0 1
+spring 22 uz 22.5
+support 22 1 1 0 0 0 1
+spring 23 uz 22.5
+support 23 1 1 0 0 0 1
+spring 24 uz 45
+support 24 1 1 0 0 0 1
+spring 25 uz 45
+support 25 1 1 0 0 0 1
+spring 26 uz 45
+support 26 1 1 0 0 0 1
+spring 27 uz 45
+support 27 1 1 0 0 0 1
+spring 28 uz 45
+support 28 1 1 0 0 0 1
+spring 29 uz 45
+support 29 1 1 0 0 0 1
+spring 30 uz 45
+support 30 1 1 0 0 0 1
+spring 31 uz 45
+support 31 1 1 0 0 0 1
+spring 32 uz 45
+support 32 1 1 0 0 0 1
+spring 33 uz 22.5
+support 33 1 1 0 0 0 1
+spring 34 uz 22.5
+support 34 1 1 0 0 0 1
+spring 35 uz 45
+support 35 1 1 0 0 0 1
+spring 36 uz 45
+support 36 1 1 0 0 0 1
+spring 37 uz 45
+support 37 1 1 0 0 0 1
+spring 38 uz 45
+support 38 1 1 0 0 0 1
+spring 39 uz 45
+support 39 1 1 0 0 0 1
+spring 40 uz 45
+support 40 1 1 0 0 0 1
+spring 41 uz 45
+support 41 1 1 0 0 0 1
+spring 42 uz 45
+support 42 1 1 0 0 0 1
+spring 43 uz 45
+support 43 1 1 0 0 0 1
+spring 44 uz 22.5
+support 44 1 1 0 0 0 1
+spring 45 uz 22.5
+support 45 1 1 0 0 0 1
+spring 46 uz 45
+support 46 1 1 0 0 0 1
+spring 47 uz 45
+support 47 1 1 0 0 0 1
+spring 48 uz 45
+support 48 1 1 0 0 0 1
+spring 49 uz 45
+support 49 1 1 0 0 0 1
+spring 50 uz 45
+support 50 1 1 0 0 0 1
+spring 51 uz 45
+support 51 1 1 0 0 0 1
+spring 52 uz 45
+support 52 1 1 0 0 0 1
+spring 53 uz 45
+support 53 1 1 0 0 0 1
+spring 54 uz 45
+support 54 1 1 0 0 0 1
+spring 55 uz 22.5
+support 55 1 1 0 0 0 1
+spring 56 uz 22.5
+support 56 1 1 0 0 0 1
+spring 57 uz 45
+support 57 1 1 0 0 0 1
+spring 58 uz 45
+support 58 1 1 0 0 0 1
+spring 59 uz 45
+support 59 1 1 0 0 0 1
+spring 60 uz 45
+support 60 1 1 0 0 0 1
+spring 61 uz 45
+support 61 1 1 0 0 0 1
+spring 62 uz 45
+support 62 1 1 0 0 0 1
+spring 63 uz 45
+support 63 1 1 0 0 0 1
+spring 64 uz 45
+support 64 1 1 0 0 0 1
+spring 65 uz 45
+support 65 1 1 0 0 0 1
+spring 66 uz 22.5
+support 66 1 1 0 0 0 1
+spring 67 uz 22.5
+support 67 1 1 0 0 0 1
+spring 68 uz 45
+support 68 1 1 0 0 0 1
+spring 69 uz 45
+support 69 1 1 0 0 0 1
+spring 70 uz 45
+support 70 1 1 0 0 0 1
+spring 71 uz 45
+support 71 1 1 0 0 0 1
+spring 72 uz 45
+support 72 1 1 0 0 0 1
+spring 73 uz 45
+support 73 1 1 0 0 0 1
+spring 74 uz 45
+support 74 1 1 0 0 0 1
+spring 75 uz 45
+support 75 1 1 0 0 0 1
+spring 76 uz 45
+support 76 1 1 0 0 0 1
+spring 77 uz 22.5
+support 77 1 1 0 0 0 1
+spring 78 uz 22.5
+support 78 1 1 0 0 0 1
+spring 79 uz 45
+support 79 1 1 0 0 0 1
+spring 80 uz 45
+support 80 1 1 0 0 0 1
+spring 81 uz 45
+support 81 1 1 0 0 0 1
+spring 82 uz 45
+support 82 1 1 0 0 0 1
+spring 83 uz 45
+support 83 1 1 0 0 0 1
+spring 84 uz 45
+support 84 1 1 0 0 0 1
+spring 85 uz 45
+support 85 1 1 0 0 0 1
+spring 86 uz 45
+support 86 1 1 0 0 0 1
+spring 87 uz 45
+support 87 1 1 0 0 0 1
+spring 88 uz 22.5
+support 88 1 1 0 0 0 1
+spring 89 uz 22.5
+support 89 1 1 0 0 0 1
+spring 90 uz 45
+support 90 1 1 0 0 0 1
+spring 91 uz 45
+support 91 1 1 0 0 0 1
+spring 92 uz 45
+support 92 1 1 0 0 0 1
+spring 93 uz 45
+support 93 1 1 0 0 0 1
+spring 94 uz 45
+support 94 1 1 0 0 0 1
+spring 95 uz 45
+support 95 1 1 0 0 0 1
+spring 96 uz 45
+support 96 1 1 0 0 0 1
+spring 97 uz 45
+support 97 1 1 0 0 0 1
+spring 98 uz 45
+support 98 1 1 0 0 0 1
+spring 99 uz 22.5
+support 99 1 1 0 0 0 1
+spring 100 uz 22.5
+support 100 1 1 0 0 0 1
+spring 101 uz 45
+support 101 1 1 0 0 0 1
+spring 102 uz 45
+support 102 1 1 0 0 0 1
+spring 103 uz 45
+support 103 1 1 0 0 0 1
+spring 104 uz 45
+support 104 1 1 0 0 0 1
+spring 105 uz 45
+support 105 1 1 0 0 0 1
+spring 106 uz 45
+support 106 1 1 0 0 0 1
+spring 107 uz 45
+support 107 1 1 0 0 0 1
+spring 108 uz 45
+support 108 1 1 0 0 0 1
+spring 109 uz 45
+support 109 1 1 0 0 0 1
+spring 110 uz 22.5
+support 110 1 1 0 0 0 1
+spring 111 uz 11.25
+support 111 1 1 0 0 0 1
+spring 112 uz 22.5
+support 112 1 1 0 0 0 1
+spring 113 uz 22.5
+support 113 1 1 0 0 0 1
+spring 114 uz 22.5
+support 114 1 1 0 0 0 1
+spring 115 uz 22.5
+support 115 1 1 0 0 0 1
+spring 116 uz 22.5
+support 116 1 1 0 0 0 1
+spring 117 uz 22.5
+support 117 1 1 0 0 0 1
+spring 118 uz 22.5
+support 118 1 1 0 0 0 1
+spring 119 uz 22.5
+support 119 1 1 0 0 0 1
+spring 120 uz 22.5
+support 120 1 1 0 0 0 1
+spring 121 uz 11.25
+support 121 1 1 0 0 0 1

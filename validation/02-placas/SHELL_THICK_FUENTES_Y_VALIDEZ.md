@@ -38,8 +38,18 @@ pruebas del apartado 3, que no dependen de ETABS.
 | edge constraint, muelles, uniones | ver `validation/modelos/vs_muros/COMPARACION_VS_MUROS.md` |
 
 Y la delgada (DKQ), `plantillas` 2/4/5/6 contra ETABS 22: **0.0000 %** joint a joint en las
-cuatro (3600–3760 joints cada una); contra SAP2000, 0.5–0.9 %, que es lo que SAP y ETABS
-difieren entre sí (`cli/_sap_vs_etabs_shells.mjs`).
+cuatro (3600–3760 joints cada una), y **contra SAP2000 24 también 0.0000 %** una vez el `.s2k`
+lleva el diafragma (los de `csi/` eran del 3-sep, anteriores a esa función del exportador: con
+ellos SAP daba 0.5–0.9 %, que se atribuyó a «lo que SAP y ETABS difieren»; no era eso).
+SAP2000 y ETABS listan los mismos joints a 0.0000 % en las tres losas; en la dual difieren
+6.9 % por la unión viga-muro (Hekatan con `etabsjoint 1` = ETABS, con `etabsjoint 0` = SAP2000,
+las dos a 0.0000 % en flexión y membrana).
+
+**Membrana (F11/F22/F12)**, ITW tipo 12 (`utils/itwJoints.ts`): deformación en Gauss 2×2 con
+la Allman proyectada y **sin la burbuja**, extrapolada a las esquinas = ETABS y SAP2000
+**0.0000 % joint a joint** en la dual (3760 joints, muros incluidos). Con la burbuja recuperada
+dentro, 5.7 % en los joints de muro (el centroide sale igual: la burbuja no tiene deformación
+media). La burbuja está en la K (condensada) pero CSI no la usa al reportar tensiones.
 
 ## 3 · Lo que vale sin ETABS: las pruebas clásicas de un elemento de placa
 
@@ -74,6 +84,32 @@ MITC4/T1 sin corrección tampoco bloquea, pero un Q4 con cortante pleno estaría
 apoyo blando (solo w = 0) la gruesa queda un 4 % por encima de la serie a 32×32: es la capa
 límite de Reissner–Mindlin (la serie es de apoyo duro), no el elemento — se midió primero así
 y por eso se dice aquí.
+
+**c bis) Sensibilidad al factor de la penalización** (`shell_thick_sensibilidad.mjs`: la misma K
+del WASM con el factor libre, placa 16×16 apoyo duro, resuelta en denso):
+
+| factor | t/L = 0.1: w · M11 (vs exacto) | t/L = 0.01: w · M11 | modos nulos (paralelogramo) |
+|---|---|---|---|
+| 10 | 0.222 % · 1.055 % | 0.213 % · 1.047 % | 3 |
+| 100 | 0.159 % · 0.911 % | 0.138 % · 0.881 % | 3 |
+| **1000 (kernel)** | 0.152 % · 0.895 % | 0.128 % · 0.862 % | 3 |
+| 10 000 | 0.152 % · 0.894 % | 0.127 % · 0.861 % | 3 |
+| 100 000 | 0.152 % · 0.894 % | 0.127 % · 0.861 % | 3 |
+
+De 1 000 en adelante la solución **no cambia** (< 0.001 %), y de 10 a 1 000 se mueve 0.1 %: es lo
+que se espera de un parámetro de estabilización (como el del control de reloj de arena de
+Flanagan–Belytschko 1981), no de una calibración. El elemento converge a lo mismo con cualquier
+factor razonable; el 1000 solo garantiza que el modo φ queda rígido frente a los demás.
+
+**Por qué es defendible tenerla** (8-sep-2026, con Jorge): la simetrización del cortante deja sin
+energía al modo φ (θ = (x−xc, y−yc), w = 0), que tiene curvatura nula pero cortante real, así que
+en la placa de verdad sí cuesta energía; la penalización de la divergencia se la devuelve. Es una
+estabilización de un modo de energía nula, práctica publicada y aceptada (Flanagan–Belytschko 1981,
+Hughes 1987 cap. 4), aunque esta variante concreta no lo esté. Se tiene con tres condiciones: con
+nombre y opcional (`shelltype thick` = formulación identificada de CSI; el MITC4 publicado sigue en
+`HK_BENDING_FORMULATION=3` y el DKQ delgado es Batoz tal cual), documentada como identificada y no
+publicada, y nunca como fundamento único: el argumento es rango + patch test + convergencia +
+insensibilidad al factor, no «lo hace ETABS».
 
 **d) Comparación con códigos independientes de CSI** (ya hecha antes de hoy, en
 `dse-de-wilson/cuatro_motores.py`): OpenSees `ShellMITC4` / `ShellDKGQ` / `ShellNLDKGQ`

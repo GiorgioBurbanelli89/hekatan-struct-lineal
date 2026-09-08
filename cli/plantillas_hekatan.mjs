@@ -111,7 +111,9 @@ export function correr(tipo, over) {
       bXX: g(a.bendingXX), bYY: g(a.bendingYY), bXY: g(a.bendingXY),
       bXXc: g(a.bendingXXcentro), bYYc: g(a.bendingYYcentro), bXYc: g(a.bendingXYcentro),
       bXXj: g(a.bendingXXjoint), bYYj: g(a.bendingYYjoint), bXYj: g(a.bendingXYjoint),
-      mXX: g(a.membraneXX), mYY: g(a.membraneYY), mXY: g(a.membraneXY) });
+      mXX: g(a.membraneXX), mYY: g(a.membraneYY), mXY: g(a.membraneXY),
+      mXXc: g(a.membraneXXcentro), mYYc: g(a.membraneYYcentro), mXYc: g(a.membraneXYcentro),
+      mXXj: g(a.membraneXXjoint), mYYj: g(a.membraneYYjoint), mXYj: g(a.membraneXYjoint) });
   });
 
   // diaf=1: diafragma rigido por planta (todos los nudos de cada cota > 0), como el

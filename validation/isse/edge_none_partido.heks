@@ -1,0 +1,17 @@
+# El mismo modelo con el pano A PARTIDO en y = 0.7 (malla conforme): A1 = 0..2 x 0..0.7, A2 = 0.7..2
+node 1 0 0 2
+node 2 2 0 2
+node 3 2 2 2
+node 4 0 2 2
+node 5 3 0 2
+node 6 3 0.7 2
+node 7 2 0.7 2
+node 8 3 2 2
+node 9 0 0.7 2
+shell 1 1 2 7 9 0.20 25e6 0.2
+shell 4 9 7 3 4 0.20 25e6 0.2
+shell 2 2 5 6 7 0.20 25e6 0.2
+shell 3 7 6 8 3 0.20 25e6 0.2
+support 1 fixed
+support 4 fixed
+load 6 0 0 -10

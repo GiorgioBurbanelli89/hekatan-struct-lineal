@@ -1,0 +1,107 @@
+{
+  "solver": "SAFE 20 via API (construido desde cero)",
+  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct\\validation\\isse\\placa_flexible_area_spring.fdb",
+  "params": {
+    "Lz": 4.0,
+    "Bz": 4.0,
+    "tz": 0.2,
+    "E_kNm2": 25000000.0,
+    "nu": 0.2,
+    "rho_kNm3": 0.0,
+    "ks_kNm3": 20000.0,
+    "P_kN": 1000.0,
+    "nx": 8,
+    "ny": 8
+  },
+  "results": {
+    "w_max_m": -0.007965,
+    "w_max_joint": "PCenter",
+    "Mxx_max_kNm_per_m": 0.0,
+    "Myy_max_kNm_per_m": 0.0,
+    "Mxy_max_kNm_per_m": 0.0,
+    "Qx_max_kN_per_m": 0.0,
+    "Qy_max_kN_per_m": 0.0,
+    "q_max_from_safe_table": null,
+    "q_max_calc_ks_w": 159.3,
+    "runtime_s": 12.45,
+    "samples_9pts": [
+      {
+        "label": "esquina (0,0)",
+        "joint": "1",
+        "x": 0.0,
+        "y": 0.0,
+        "w_mm": 0.934,
+        "q_kNm2": 18.68
+      },
+      {
+        "label": "esquina (Lz,0)",
+        "joint": "17",
+        "x": 4.0,
+        "y": 0.0,
+        "w_mm": 0.924,
+        "q_kNm2": 18.48
+      },
+      {
+        "label": "esquina (0,Bz)",
+        "joint": "74",
+        "x": 0.0,
+        "y": 4.0,
+        "w_mm": 0.924,
+        "q_kNm2": 18.48
+      },
+      {
+        "label": "esquina (Lz,Bz)",
+        "joint": "81",
+        "x": 4.0,
+        "y": 4.0,
+        "w_mm": 0.925,
+        "q_kNm2": 18.5
+      },
+      {
+        "label": "medio-borde (Lz/2,0)",
+        "joint": "9",
+        "x": 2.0,
+        "y": 0.0,
+        "w_mm": -1.735,
+        "q_kNm2": 34.7
+      },
+      {
+        "label": "medio-borde (Lz,Bz/2)",
+        "joint": "45",
+        "x": 4.0,
+        "y": 2.0,
+        "w_mm": -1.735,
+        "q_kNm2": 34.7
+      },
+      {
+        "label": "medio-borde (Lz/2,Bz)",
+        "joint": "77",
+        "x": 2.0,
+        "y": 4.0,
+        "w_mm": -1.735,
+        "q_kNm2": 34.7
+      },
+      {
+        "label": "medio-borde (0,Bz/2)",
+        "joint": "38",
+        "x": 0.0,
+        "y": 2.0,
+        "w_mm": -1.735,
+        "q_kNm2": 34.7
+      },
+      {
+        "label": "centro (Lz/2,Bz/2)",
+        "joint": "PCenter",
+        "x": 2.0,
+        "y": 2.0,
+        "w_mm": -7.965,
+        "q_kNm2": 159.3
+      }
+    ]
+  },
+  "tables_found": {
+    "joint_displacements_rows": 243,
+    "area_forces_rows": 0,
+    "soil_pressures_rows": 774
+  }
+}

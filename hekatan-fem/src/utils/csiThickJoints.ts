@@ -23,13 +23,14 @@
  * la curvatura del solver (el que llama pone el signo de CSI).
  */
 export function csiThickJointMoments(
-  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number
+  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+  penal = 1000
 ): number[][] {
   const D0 = (E * t * t * t) / (12 * (1 - nu * nu));
   const Db = [[D0, D0 * nu, 0], [D0 * nu, D0, 0], [0, 0, (D0 * (1 - nu)) / 2]];
   const Dsv = ((5 / 6) * E * t) / (2 * (1 + nu));
   const Dsum = Db[0][0] + Db[1][1] + Db[2][2];
-  const PENAL = 1000;
+  const PENAL = penal;   // el 1000 del kernel; parametro solo para la prueba de sensibilidad
   const ca: number[] = [], sa: number[] = [], LL: number[] = [];
   for (let k = 0; k < 4; k++) {
     const j = (k + 1) % 4;

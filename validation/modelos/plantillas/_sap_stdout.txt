@@ -1,12 +1,12 @@
 8 modelos
- 1/8  P0_portico-2d                  ok                      10.7 s  T1=1.4230
- 2/8  P1_portico-3d                  ok                       4.2 s  T1=0.4257
- 3/8  P2_portico-losa                ok                       9.1 s  T1=0.7056
- 4/8  P3_solo-rejilla                ok                       3.6 s  T1=0.8116
- 5/8  P4_losa-plana                  ok                       7.8 s  T1=1.0207
- 6/8  P5_losa-vigas-borde            ok                       7.1 s  T1=0.7647
- 7/8  P6_dual                        ok                       7.6 s  T1=0.6806
- 8/8  P7_arriostrado                 ok                       4.7 s  T1=0.4293
+ 1/8  P0_portico-2d                  ok                      10.0 s  T1=1.4181
+ 2/8  P1_portico-3d                  ok                       3.9 s  T1=0.4233
+ 3/8  P2_portico-losa                ok                       7.0 s  T1=0.7056
+ 4/8  P3_solo-rejilla                ok                       2.8 s  T1=0.8116
+ 5/8  P4_losa-plana                  ok                       6.7 s  T1=1.0206
+ 6/8  P5_losa-vigas-borde            ok                       6.6 s  T1=0.7646
+ 7/8  P6_dual                        ok                       7.1 s  T1=0.6805
+ 8/8  P7_arriostrado                 ok                       4.0 s  T1=0.4269
 
-8 ok, 0 con problema, 54.8 s
+8 ok, 0 con problema, 48.3 s
 -> C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\sap2000

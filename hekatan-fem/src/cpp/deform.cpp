@@ -1,6 +1,7 @@
 #include "data-model.h"
 #include "utils/etabsWallJoint.h"
 #include "utils/rigidDiaphragm.h"
+#include "utils/springsExtra.h"
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -164,6 +165,9 @@ extern "C"
             int node = static_cast<int>(springs_flat_ptr[3 * i]);
             int d    = static_cast<int>(springs_flat_ptr[3 * i + 1]);
             double k = springs_flat_ptr[3 * i + 2];
+            // nudo NEGATIVO = registro de elemento: muelle de area consistente (SAFE) o nudo
+            // colgado (edge constraint de ETABS), ver utils/springsExtra.h
+            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, node, d, k)) continue;
             int gdof = 6 * node + d;
             if (gdof >= 0 && gdof < dof) {
                 K_global.coeffRef(gdof, gdof) += k;

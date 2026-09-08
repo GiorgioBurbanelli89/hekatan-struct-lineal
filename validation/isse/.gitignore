@@ -8,3 +8,5 @@
 *.ico
 *.msh
 _*.log
+*.fdb
+*.FDB

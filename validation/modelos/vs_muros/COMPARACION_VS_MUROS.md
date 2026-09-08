@@ -98,13 +98,22 @@ importador de ETABS (`DIAPH` en áreas, `ADDRESTRAINT`, objetos de piso), no el 
   pasando líneas por el nudo colgado** (14 nudos / 8 elementos de análisis en la sonda), así que
   ON y OFF dan lo mismo. Eso es `deck etabs` en Hekatan (partir el paño). La restricción interpolada
   solo actúa con `OBJMESHTYPE "NONE"`.
-- Con `OBJMESHTYPE "NONE"` (`validation/isse/edge_none.heks` → `heks_a_csi.mjs … meshtype=NONE`, ETABS por
-  e2k): el nudo colgado a 0.35 de una arista de 2 m sale con **w = cúbica de Hermite** con los giros de los
-  extremos (0.11 %; lineal se va 2.8 %, Hermite con el giro al revés 3.9 %) y giros ≈ lineales (1 %). El
-  0.11 % que queda es del orden del término de cortante de la arista gruesa (φ ≈ 0.03). No implementado en
-  Hekatan: su defecto (`deck etabs`) es lo que ETABS hace por defecto.
+- Con `OBJMESHTYPE "NONE"` (`validation/isse/edge_none.heks`, ETABS por e2k, leído el modelo de análisis con
+  `PointElm`/`AreaElm`, `edge_none_pointelm.py`): **ETABS malla igual**: 14 nudos y 8 áreas de análisis de 3
+  objetos (el paño A partido en 5, con un triángulo, por el nudo colgado). O sea que «NONE» no evita el cookie-cut
+  y la restricción interpolada no llega a actuar aquí tampoco. SAP2000 sobre los mismos objetos = Hekatan con el
+  nudo suelto a 0.000 %; ETABS queda entre «suelto» y «paño partido» porque su partición es otra. Lo de la
+  mañana («w = Hermite 0.11 %») era el campo suave de esa malla, no una ley. Réplica de ETABS en Hekatan:
+  partir el paño (`deck etabs`). `edge etabs` (nudo colgado atado por Hermite, penalización 1e6) queda como
+  opción publicada de malla no conforme, no como «lo que hace ETABS».
+- Muelle de área de SAFE (`validation/isse/safe_area_flexible.py`, placa 4×4 t = 0.20 ks = 20000 P = 1000 al
+  centro, 8×8 Thick, `SubModulus` por tabla): SAFE = Hekatan **nodal** a ≤ 1.1 % (SAFE imprime 4 cifras);
+  el **consistente** (`areaspring`, ks·∫NᵀN) se va 23 % en las esquinas. El «−1.9 % = matriz consistente» del
+  20-ago no se sostiene: SAFE, SAP2000 y ETABS reparten el muelle de área a los nudos. Zapata 1.5×1.5×0.4 con
+  muelles nodales: SAP2000 = Hekatan exacto (−2.223793484e-2 los dos).
 - Fuerzas de cáscara (8-sep-2026, tarde): las 4 plantillas con losa Thin contra ETABS **0.0000 % joint a
-  joint** (`cli/_joints_vs_csi.mjs`); la gruesa contra SAP2000 y ETABS 0.075 %. Ver
+  joint** (`cli/_joints_vs_csi.mjs`) y contra SAP2000 también 0.0000 % con el `.s2k` con diafragma;
+  membrana F11/F22/F12 de la dual (muros) 0.0000 % contra los dos; la gruesa 0.075 %. Ver
   `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md` y `validation/modelos/plantillas/COMPARACION.md` capa 5.
 
 ## 5 · El `.e2k` arreglado (8-sep-2026): ETABS = Hekatan también por fichero

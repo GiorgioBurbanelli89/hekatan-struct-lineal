@@ -369,10 +369,31 @@ for (const r of filas) {
   }
   let peorN = 0;
   for (const [kn, l] of nudoH) { const e = nudoE.get(kn); if (e) peorN = Math.max(peorN, Math.abs(media(l) - media(e))); }
+  // MEMBRANA (F11 F22 F12 = columnas 1,2,3 de AreaForceShell), misma comparacion
+  let peorFc = 0, peorFj = 0, maxF = 1e-12, nFj = 0;
+  for (const a of (J.areas || [])) {
+    const pts = a.pts.map((n) => porNombre.get(n)).filter(Boolean); if (!pts.length) continue;
+    const c = [0, 1, 2].map((d) => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / pts.length);
+    const sh = cShell.get(k3(...c)); const fe = (J.shells || {})[a.n]; if (!sh || !fe) continue;
+    const hc = [sh.mXXc ?? media(sh.mXX), sh.mYYc ?? media(sh.mYY), sh.mXYc ?? media(sh.mXY)];
+    const hj = [sh.mXXj, sh.mYYj, sh.mXYj];
+    for (const [q, idx] of [[0, 1], [1, 2], [2, 3]]) {
+      const ec = fe.reduce((s, v) => s + v[idx], 0) / fe.length;
+      maxF = Math.max(maxF, Math.abs(ec)); peorFc = Math.max(peorFc, Math.abs(ec - (hc[q] ?? 0)));
+    }
+    if (!hj[0] || !sh.pts) continue;
+    for (const v of fe) {
+      const p = porNombre.get(v[0]); if (!p) continue;
+      const pos = sh.pts.findIndex((n) => k3(...n) === k3(p.x, p.y, p.z)); if (pos < 0) continue;
+      nFj++;
+      for (const [q, idx] of [[0, 1], [1, 2], [2, 3]]) peorFj = Math.max(peorFj, Math.abs(v[idx] - hj[q][pos]));
+    }
+  }
   r.shells = { nSh, nJ, sinParSh, nAreasE: (J.areas || []).length,
                nShellsH: (H.shells || []).length,
                peorM11: peorC[0] / maxM, peorM22: peorC[1] / maxM, peorM12: peorC[2] / maxM,
                peorJoint: Math.max(...peorJ) / maxM, peorNudo: peorN / maxM,
+               peorFc: peorFc / maxF, peorFj: peorFj / maxF, nFj, maxF,
                invertido: false, pendiente: sumHH > 1e-12 ? sumEH / sumHH : null, maxM };
 }
 
@@ -454,7 +475,7 @@ for (const r of filas) {
 }
 
 console.log("\n== CAPA 5 · FUERZAS de barra (Dead) y de cascara ==");
-console.log("plantilla            barras    peor P     peor V2    peor M3   |  shells  peor M11   peor M22   peor M12 (centroide) | joint a joint | nudo (colormap)  M_E/M_H");
+console.log("plantilla            barras    peor P     peor V2    peor M3   |  shells  peor M11   peor M22   peor M12 (centroide) | joint a joint | nudo (colormap)  M_E/M_H | F centroide | F joints");
 console.log("-".repeat(104));
 for (const r of filas) {
   if (r.err) { console.log(`${et(r)} ${r.err}`); continue; }
@@ -468,6 +489,7 @@ for (const r of filas) {
     `${String(S.nSh ?? 0).padStart(7)} ${p2(S.peorM11).padStart(9)} ${p2(S.peorM22).padStart(10)} ${p2(S.peorM12).padStart(10)}` +
     `  ${S.nSh ? p2(S.peorJoint).padStart(10) : "".padStart(10)}  ${S.nSh ? p2(S.peorNudo).padStart(10) : "".padStart(10)}` +
     `${S.pendiente != null ? f(S.pendiente, 4).padStart(9) : ""}` +
+    `${S.nSh ? "  " + p2(S.peorFc).padStart(10) + "  " + p2(S.peorFj).padStart(10) : ""}` +
     (F.err ? "  " + F.err : ""));
 }
 
@@ -570,12 +592,13 @@ const md = [
   "ETABS contra el de Hekatan), JOINT A JOINT (cada joint del elemento, sin",
   "promediar, 3600 por plantilla: M11, M22 y M12) y por NUDO (la media de los",
   "joints de los elementos que tocan el nudo, que es lo que pinta el colormap).",
+  "Lo mismo para la MEMBRANA (F11 F22 F12, en % del |F| maximo): centroide y joint a joint.",
   "Signo de CSI en los dos (desde el 8-sep-2026). Todo en % del |M| maximo.",
   "",
-  "| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | M11 centroide | M22 centroide | M12 centroide | joint a joint | nudo (colormap) |",
-  "|---|---|---|---|---|---|---|---|---|---|---|",
+  "| plantilla | barras emparejadas | peor P | peor V2 | peor M3 | shells | M11 centroide | M22 centroide | M12 centroide | M joint a joint | M nudo (colormap) | F11/F22/F12 centroide | F joint a joint |",
+  "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
   ...filas.map((r) => {
-    if (r.err) return `| \`${r.nombre}\` | ${r.err} | | | | | | | | | |`;
+    if (r.err) return `| \`${r.nombre}\` | ${r.err} | | | | | | | | | | | |`;
     const F = r.fuerzas || {}, S = r.shells || {};
     // ⚠️ `campos[c].max` YA viene en % (compararFuerzas divide por el PICO del
     // campo y multiplica por 100) y `campos[c].peor` es un OBJETO con la barra y
@@ -583,7 +606,8 @@ const md = [
     const peor = (c) => (F.campos && F.campos[c]) ? f(F.campos[c].max, 3) + " %" : "-";
     return `| \`${r.nombre}\` | ${F.emparejadas ?? 0} de ${F.nStruct ?? 0} | ${peor("P")} | ${peor("V2")} | ` +
       `${peor("M3")} | ${S.nSh ?? 0} de ${S.nShellsH ?? 0} | ${p2(S.peorM11)} | ${p2(S.peorM22)} | ${p2(S.peorM12)} | ` +
-      `${S.nSh ? p2(S.peorJoint) + " (" + S.nJ + ")" : "-"} | ${S.nSh ? p2(S.peorNudo) : "-"} |`;
+      `${S.nSh ? p2(S.peorJoint) + " (" + S.nJ + ")" : "-"} | ${S.nSh ? p2(S.peorNudo) : "-"} | ` +
+      `${S.nSh ? p2(S.peorFc) : "-"} | ${S.nSh ? p2(S.peorFj) + " (" + S.nFj + ")" : "-"} |`;
   }),
   "",
 ];

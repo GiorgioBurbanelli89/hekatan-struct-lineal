@@ -127,6 +127,16 @@ interface ParsedModel {
    *  4 cifras). Con la directiva, Hekatan reproduce a SAFE; sin ella = SAP2000/ETABS. */
   torsionFactor: number;
   deckTributario: Set<number>;           // ids de shell cuya carga ya fue a las barras de borde
+  /** `areaspring <shellID> <ks> [nodal]`: muelle de AREA (Winkler, kN/m3) sobre la cascara.
+   *  Por defecto CONSISTENTE, ks·∫NᵀN dA sobre la normal (el de SAFE); con `nodal` se reparte a
+   *  los nudos por ∫N_i dA (lo que hacen SAP2000 y ETABS, = `spring` a mano). Viaja al WASM por la
+   *  lista de muelles con nudo NEGATIVO (utils/springsExtra.h). */
+  areaSprings: Array<{ id: number; ks: number; nodal: boolean }>;
+  /** `edge etabs`: nudos COLGADOS sobre la arista de una cascara (malla no conforme) atados a
+   *  la arista como el edge constraint de ETABS con OBJMESHTYPE "NONE": w = Hermite cubica con
+   *  los giros de los extremos, in-plano y giros lineales (medido 8-sep-2026, 0.11 %). Sin la
+   *  directiva un nudo colgado queda suelto, como en SAP2000. */
+  edgeEtabs: boolean;
   /** `hex ID n1..n8 [E nu rho]`: hexaedros H8 (solidos). Se resuelven con hex8Solve
    *  (Wilson–Taylor por defecto; `incompatible 0` lo quita). */
   solids: Array<{ id: number; pts: number[]; E: number; nu: number; rho: number }>;
@@ -226,6 +236,8 @@ export function parseCliCommands(text: string): ParsedModel {
     deckOneWay: false,
     torsionFactor: 1,
     deckTributario: new Set(),
+    areaSprings: [],
+    edgeEtabs: false,
     solids: [],
     solidIncompatible: true,
     etabsWallJoint: true,     // por DEFECTO como ETABS (decision de Jorge, 3-sep-2026); `etabsjoint 0` = modo SAP2000
@@ -481,6 +493,23 @@ export function parseCliCommands(text: string): ParsedModel {
           const v = (tokens[1] ?? "etabs").toLowerCase();
           m.deckEtabs = v === "etabs" || v === "1" || v === "on" || v === "si";
           m.deckOneWay = tokens.slice(2).some(t => /^(oneway|1way|unidireccional)$/i.test(t));
+          break;
+        }
+        // areaspring <shellID> <ks kN/m3> [nodal]
+        case "areaspring":
+        case "winkler": {
+          const id = parseInt(tokens[1], 10);
+          const ks = parseFloat(tokens[2] ?? "0");
+          const nodal = tokens.slice(3).some(t => /^(nodal|lumped|sap|etabs)$/i.test(t));
+          if (isFinite(id) && isFinite(ks) && ks !== 0) m.areaSprings.push({ id, ks, nodal });
+          else m.errors.push(`areaspring: uso areaspring <shellID> <ks> [nodal]`);
+          break;
+        }
+        // edge etabs | edge none : nudos colgados en aristas de cascara atados (Hermite) o sueltos
+        case "edge":
+        case "edgeconstraint": {
+          const v = (tokens[1] ?? "etabs").toLowerCase();
+          m.edgeEtabs = v === "etabs" || v === "1" || v === "on" || v === "si" || v === "hermite";
           break;
         }
         case "meshcross":
@@ -1305,6 +1334,45 @@ export const cliModeler: ExampleDef = {
     for (const sp of m.springs) {
       const idx = idToIdx.get(sp.node);
       if (idx !== undefined) springsList.push({ node: idx, dof: sp.dof, k: sp.k });
+    }
+    // Muelles de AREA: registro con nudo negativo = -(elemento+1); gdl -1 consistente, -3 nodal
+    for (const as of m.areaSprings) {
+      const eIdx = shellIdxOf.get(as.id);
+      if (eIdx === undefined) { m.errors.push(`areaspring ${as.id}: no existe esa cascara`); continue; }
+      springsList.push({ node: -(eIdx + 1), dof: as.nodal ? -3 : -1, k: as.ks });
+    }
+    // `edge etabs`: nudos colgados sobre aristas de cascara -> registro gdl -2, k = indice del nudo
+    if (m.edgeEtabs) {
+      const enShell = new Set<number>();
+      const shellsIdx: number[] = [];
+      elements.forEach((el, e) => { if (el.length === 3 || el.length === 4) { shellsIdx.push(e); for (const n of el) enShell.add(n); } });
+      let nColgados = 0;
+      for (const e of shellsIdx) {
+        const el = elements[e] as number[];
+        const P = el.map(n => nodes[n]);
+        const bb = [0, 1, 2].map(d => [Math.min(...P.map(q => q[d])), Math.max(...P.map(q => q[d]))]);
+        for (let h = 0; h < nodes.length; h++) {
+          if (el.includes(h)) continue;
+          const X = nodes[h];
+          if (X[0] < bb[0][0] - 1e-6 || X[0] > bb[0][1] + 1e-6 || X[1] < bb[1][0] - 1e-6 || X[1] > bb[1][1] + 1e-6 || X[2] < bb[2][0] - 1e-6 || X[2] > bb[2][1] + 1e-6) continue;
+          // sobre alguna arista (i, j), estrictamente dentro
+          let colgado = false;
+          for (let k = 0; k < el.length && !colgado; k++) {
+            const A = P[k], B = P[(k + 1) % el.length];
+            const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]; const L2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2]; if (L2 < 1e-24) continue;
+            const q = [X[0] - A[0], X[1] - A[1], X[2] - A[2]]; const t = (q[0] * d[0] + q[1] * d[1] + q[2] * d[2]) / L2;
+            if (t <= 1e-6 || t >= 1 - 1e-6) continue;
+            const r = [q[0] - t * d[0], q[1] - t * d[1], q[2] - t * d[2]];
+            if (Math.hypot(r[0], r[1], r[2]) <= 1e-6 * Math.sqrt(L2)) colgado = true;
+          }
+          if (!colgado) continue;
+          // solo si el nudo pertenece a OTRO elemento (si no, esta suelto y no hay que atarlo)
+          const usado = elements.some((el2, e2) => e2 !== e && (el2 as number[]).includes(h));
+          if (!usado) continue;
+          springsList.push({ node: -(e + 1), dof: -2, k: h }); nColgados++;
+        }
+      }
+      if (nColgados) console.log(`[CLI Modeler] edge etabs: ${nColgados} nudo(s) colgado(s) atado(s) a su arista (Hermite)`);
     }
 
     // ── Solidos H8 (`hex`): 8 nudos, 3 GDL por nudo ────────────────────────

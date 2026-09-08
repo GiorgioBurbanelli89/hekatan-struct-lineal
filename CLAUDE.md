@@ -405,8 +405,19 @@ lista 57.8) y el signo era el de la curvatura del solver, **al revés que CSI**.
   (t/L 0.1, 32×32) y 0.065 % / 0.24 % (t/L 0.01), sin bloqueo. Fuentes pieza a pieza en
   `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md`: la simetrización del cortante y la
   penalización de la divergencia **no están publicadas** (son del kernel); el resto sí.
-- Pendiente: F11/F22/F12 (membrana) joint a joint; edge constraint interpolado (`NONE`) es
-  Hermite en w (medido, no implementado).
+- **Membrana (F11/F22/F12)**: `utils/itwJoints.ts` (ITW tipo 12: Allman proyectada, Gauss 2×2
+  extrapolado, **sin la burbuja** al recuperar; con ella 5.7 % en muros). = ETABS y SAP2000
+  **0.0000 %** en la dual (3760 joints). Salidas `membraneXXcentro/joint`.
+- ⚠️ Los `.s2k` de `validation/modelos/plantillas/csi/` eran del 3-sep, sin diafragma: SAP daba
+  0.5–0.9 % en fuerzas y 0.5 % en uy, y se atribuyó a «lo que SAP y ETABS difieren». Re-exportados
+  el 8-sep: SAP2000 = ETABS = Hekatan a 0.0000 % (flexión y membrana) en las 4 plantillas con losa.
+- Test `node tests/run.mjs fuerzas-cascara` (dual M y F, losa plana M; joints y nudo, 0.001 %).
+- `areaspring <shellID> <ks> [nodal]` y `edge etabs` en el `.heks` (8-sep-2026): viajan al WASM por la
+  lista de muelles con **nudo negativo** = −(elemento+1) (`utils/springsExtra.h`; gdl −1 consistente
+  ks·∫NᵀN, −3 nodal ∫N_i dA, −2 nudo colgado atado por Hermite con penalización 1e6). Medido: el muelle de
+  área de **SAFE es el nodal** (placa flexible ≤ 1.1 %; el consistente 23 % en esquinas) y **ETABS malla el
+  paño por el nudo colgado también con `OBJMESHTYPE "NONE"`** (14 nudos / 8 áreas de análisis): su réplica
+  es `deck etabs`, no `edge etabs`. Test `node tests/run.mjs muelle-area`.
 
 ## Masa torsional: Ip vs J
 

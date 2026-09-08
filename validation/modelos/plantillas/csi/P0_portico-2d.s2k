@@ -247,6 +247,30 @@ TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
    Joint=3   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
    Joint=4   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
  
+TABLE:  "CONSTRAINT DEFINITIONS - DIAPHRAGM"
+   Name=DIAPH1   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH2   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH3   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH4   CoordSys=GLOBAL   Axis=Z
+ 
+TABLE:  "JOINT CONSTRAINT ASSIGNMENTS"
+   Joint=5   Constraint=DIAPH1
+   Joint=10   Constraint=DIAPH1
+   Joint=15   Constraint=DIAPH1
+   Joint=20   Constraint=DIAPH1
+   Joint=21   Constraint=DIAPH2
+   Joint=26   Constraint=DIAPH2
+   Joint=31   Constraint=DIAPH2
+   Joint=36   Constraint=DIAPH2
+   Joint=37   Constraint=DIAPH3
+   Joint=42   Constraint=DIAPH3
+   Joint=47   Constraint=DIAPH3
+   Joint=52   Constraint=DIAPH3
+   Joint=53   Constraint=DIAPH4
+   Joint=58   Constraint=DIAPH4
+   Joint=63   Constraint=DIAPH4
+   Joint=68   Constraint=DIAPH4
+ 
 TABLE:  "LOAD PATTERN DEFINITIONS"
    LoadPat=DEAD   DesignType=Dead   SelfWtMult=0
  

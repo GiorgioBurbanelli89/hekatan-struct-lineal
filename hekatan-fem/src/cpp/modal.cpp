@@ -1,5 +1,6 @@
 #include "data-model.h"
 #include "utils/etabsWallJoint.h"
+#include "utils/springsExtra.h"
 #include <vector>
 #include <map>
 #include <array>
@@ -499,6 +500,7 @@ extern "C"
             const int nodo = (int)springs_flat_ptr[3 * i];
             const int d    = (int)springs_flat_ptr[3 * i + 1];
             const double k = springs_flat_ptr[3 * i + 2];
+            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, nodo, d, k)) continue;
             if (nodo < 0 || nodo >= num_nodes || d < 0 || d > 5 || k == 0.0) continue;
             K_global.coeffRef(nodo * 6 + d, nodo * 6 + d) += k;
         }

@@ -8,6 +8,7 @@ import {
 } from "./data-model";
 import { csiThickJointMoments } from "./utils/csiThickJoints";
 import { dkqJointMoments } from "./utils/dkqJoints";
+import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
 import {
   getLocalStiffnessMatrix,
@@ -43,6 +44,7 @@ export function analyze(
   // internos recuperados, ver utils/csiThickJoints.ts). Sin promediar: es lo
   // que ETABS lista en AreaForceShell, por elemento y por joint.
   const jointBending: Map<number, number[][]> = new Map();
+  const jointMembrane: Map<number, number[][]> = new Map();   // F11 F22 F12 en los 4 joints (ITW)
   const analyzeOutputsElements: {
     bendingXX: Map<number, number>;
     bendingYY: Map<number, number>;
@@ -145,6 +147,7 @@ export function analyze(
       analyzeOutputsElements.bendingYY.set(i, q4Results.My);
       analyzeOutputsElements.bendingXY.set(i, q4Results.Mxy);
       if (q4Results.Mj) jointBending.set(i, q4Results.Mj);
+      if (q4Results.Nj) jointMembrane.set(i, q4Results.Nj);
       analyzeOutputsElements.tranverseShearX.set(i, q4Results.Qx);
       analyzeOutputsElements.tranverseShearY.set(i, q4Results.Qy);
       analyzeOutputsElements.vonMises.set(i, q4Results.vonMises);
@@ -279,15 +282,25 @@ export function analyze(
     const vmStress: number[] = new Array(nNodes).fill(0);
 
     element.forEach((nodeIndex, pos) => {
-      const elementIndicies =
-        nodeToCentroidElementIndiciesMap.get(nodeIndex) || [];
+      // Solo los vecinos que son CASCARA: getCentroidsMaps mete tambien las barras
+      // que tocan el nudo, y una barra no tiene campo de cascara (aportaba un 0 a la
+      // media: en un nudo losa-columna el momento salia diluido un 40 %, medido
+      // contra ETABS el 8-sep-2026).
+      const elementIndicies = (nodeToCentroidElementIndiciesMap.get(nodeIndex) || [])
+        .filter((ei) => elements[ei].length === 3 || elements[ei].length === 4);
 
       const avgField = (field: Map<number, number>) =>
         mean(elementIndicies.map((ei) => field.get(ei) ?? 0));
 
-      membraneXXs[pos] = avgField(analyzeOutputsElements.membraneXX);
-      membraneYYs[pos] = avgField(analyzeOutputsElements.membraneYY);
-      membraneXYs[pos] = avgField(analyzeOutputsElements.membraneXY);
+      const avgJointM = (campo: number, centro: Map<number, number>) =>
+        mean(elementIndicies.map((ei) => {
+          const nj = jointMembrane.get(ei);
+          const pos2 = nj ? elements[ei].indexOf(nodeIndex) : -1;
+          return nj && pos2 >= 0 ? nj[pos2][campo] : (centro.get(ei) ?? 0);
+        }));
+      membraneXXs[pos] = avgJointM(0, analyzeOutputsElements.membraneXX);
+      membraneYYs[pos] = avgJointM(1, analyzeOutputsElements.membraneYY);
+      membraneXYs[pos] = avgJointM(2, analyzeOutputsElements.membraneXY);
       // Flexion: la media, en este nudo, del valor que cada elemento vecino
       // tiene EN SU ESQUINA (el joint de CSI), no de su centroide. Si un vecino
       // no trae joints (placa delgada, triangulo), aporta su centroide.
@@ -312,6 +325,16 @@ export function analyze(
     analyzeOutputs.bendingYY!.set(elementIndex, bendingYYs);
     analyzeOutputs.bendingXY!.set(elementIndex, bendingXYs);
     // sin promediar: el centroide y los 4 joints tal cual salen del elemento
+    const njE = jointMembrane.get(elementIndex);
+    const centroM = (q: number, m: Map<number, number>) => njE ? njE.reduce((s, v) => s + v[q], 0) / njE.length : (m.get(elementIndex) ?? 0);
+    (analyzeOutputs.membraneXXcentro ??= new Map()).set(elementIndex, centroM(0, analyzeOutputsElements.membraneXX));
+    (analyzeOutputs.membraneYYcentro ??= new Map()).set(elementIndex, centroM(1, analyzeOutputsElements.membraneYY));
+    (analyzeOutputs.membraneXYcentro ??= new Map()).set(elementIndex, centroM(2, analyzeOutputsElements.membraneXY));
+    if (njE) {
+      (analyzeOutputs.membraneXXjoint ??= new Map()).set(elementIndex, njE.map((m) => m[0]));
+      (analyzeOutputs.membraneYYjoint ??= new Map()).set(elementIndex, njE.map((m) => m[1]));
+      (analyzeOutputs.membraneXYjoint ??= new Map()).set(elementIndex, njE.map((m) => m[2]));
+    }
     const mjE = jointBending.get(elementIndex);
     // el centroide: la media de los 4 joints cuando los hay (con la extrapolacion
     // bilineal desde Gauss es exactamente el valor en el centro del campo de CSI;
@@ -345,7 +368,7 @@ function computeQ4ShellStresses(
   elementInputs: ElementInputs,
   elemIdx: number
 ): { Nx: number; Ny: number; Nxy: number; Mx: number; My: number; Mxy: number;
-     Qx: number; Qy: number; vonMises: number; Mj: number[][] | null } {
+     Qx: number; Qy: number; vonMises: number; Mj: number[][] | null; Nj: number[][] | null } {
   const E = elementInputs.elasticities?.get(elemIdx) ?? 0;
   const nu = elementInputs.poissonsRatios?.get(elemIdx) ?? 0;
   const t = elementInputs.thicknesses?.get(elemIdx) ?? 1;
@@ -474,7 +497,7 @@ function computeQ4ShellStresses(
   }
   const detJ = J00*J11 - J01*J10;
   if (Math.abs(detJ) < 1e-20) {
-    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0, Mj: null };
+    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0, Mj: null, Nj: null };
   }
   const invJ00 = J11/detJ, invJ01 = -J01/detJ, invJ10 = -J10/detJ, invJ11 = J00/detJ;
 
@@ -541,6 +564,25 @@ function computeQ4ShellStresses(
   const Mx = SIGNO_CSI * (Db[0][0]*kappaXX + Db[0][1]*kappaYY);
   const My = SIGNO_CSI * (Db[1][0]*kappaXX + Db[1][1]*kappaYY);
   const Mxy = SIGNO_CSI * (Db[2][2]*kappaXY);
+
+  // ── FUERZAS DE MEMBRANA EN LOS JOINTS (ITW tipo 12, la membrana de CSI) ──
+  // Allman + burbuja recuperada + proyección del drilling, Gauss 2×2 extrapolado
+  // (utils/itwJoints.ts). Signo: tracción positiva, el de CSI.
+  let Nj: number[][] | null = null;
+  if (Math.abs(detJ) > 1e-20) {
+    const u12m: number[] = [];
+    for (let n = 0; n < 4; n++) u12m.push(uLocal[n*6 + 0], uLocal[n*6 + 1], uLocal[n*6 + 5]);
+    const tipoDrill = (elementInputs as any)?.drillingTypes?.get(elemIdx) ?? 12;
+    const gammaFac = (elementInputs as any)?.drillingPenaltyScales?.get(elemIdx) ?? 0.4;
+    const mm = (elementInputs as any)?.membraneModifiers?.get(elemIdx);
+    const smod = (elementInputs as any)?.shellModifiers?.get(elemIdx);
+    const mod = Array.isArray(smod) && smod.length >= 3 ? [smod[0], smod[1], smod[2]]
+              : (typeof mm === "number" && mm !== 1 ? [mm, mm, mm] : null);
+    try {
+      Nj = itwJointForces(xl, yl, u12m, E, nu, t, { tipo: tipoDrill, gammaFac, mod });
+      if (Nj && Nj.some((m) => m.some((v) => !Number.isFinite(v)))) Nj = null;
+    } catch { Nj = null; }
+  }
 
   // ── MOMENTOS EN LOS JOINTS (Shell-Thick de CSI, internos recuperados) ──
   //
@@ -630,7 +672,7 @@ function computeQ4ShellStresses(
 
   const vonMises = Math.max(vonMises_top, vonMises_bot);
 
-  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises, Mj };
+  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises, Mj, Nj };
 }
 
 function getMaterialStiffnessMatrix3x3(

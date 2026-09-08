@@ -3494,6 +3494,78 @@ TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
    Joint=15   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
    Joint=16   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
  
+TABLE:  "CONSTRAINT DEFINITIONS - DIAPHRAGM"
+   Name=DIAPH1   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH2   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH3   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH4   CoordSys=GLOBAL   Axis=Z
+ 
+TABLE:  "JOINT CONSTRAINT ASSIGNMENTS"
+   Joint=17   Constraint=DIAPH1
+   Joint=22   Constraint=DIAPH1
+   Joint=27   Constraint=DIAPH1
+   Joint=32   Constraint=DIAPH1
+   Joint=97   Constraint=DIAPH1
+   Joint=102   Constraint=DIAPH1
+   Joint=107   Constraint=DIAPH1
+   Joint=112   Constraint=DIAPH1
+   Joint=177   Constraint=DIAPH1
+   Joint=182   Constraint=DIAPH1
+   Joint=187   Constraint=DIAPH1
+   Joint=192   Constraint=DIAPH1
+   Joint=257   Constraint=DIAPH1
+   Joint=262   Constraint=DIAPH1
+   Joint=267   Constraint=DIAPH1
+   Joint=272   Constraint=DIAPH1
+   Joint=273   Constraint=DIAPH2
+   Joint=278   Constraint=DIAPH2
+   Joint=283   Constraint=DIAPH2
+   Joint=288   Constraint=DIAPH2
+   Joint=353   Constraint=DIAPH2
+   Joint=358   Constraint=DIAPH2
+   Joint=363   Constraint=DIAPH2
+   Joint=368   Constraint=DIAPH2
+   Joint=433   Constraint=DIAPH2
+   Joint=438   Constraint=DIAPH2
+   Joint=443   Constraint=DIAPH2
+   Joint=448   Constraint=DIAPH2
+   Joint=513   Constraint=DIAPH2
+   Joint=518   Constraint=DIAPH2
+   Joint=523   Constraint=DIAPH2
+   Joint=528   Constraint=DIAPH2
+   Joint=529   Constraint=DIAPH3
+   Joint=534   Constraint=DIAPH3
+   Joint=539   Constraint=DIAPH3
+   Joint=544   Constraint=DIAPH3
+   Joint=609   Constraint=DIAPH3
+   Joint=614   Constraint=DIAPH3
+   Joint=619   Constraint=DIAPH3
+   Joint=624   Constraint=DIAPH3
+   Joint=689   Constraint=DIAPH3
+   Joint=694   Constraint=DIAPH3
+   Joint=699   Constraint=DIAPH3
+   Joint=704   Constraint=DIAPH3
+   Joint=769   Constraint=DIAPH3
+   Joint=774   Constraint=DIAPH3
+   Joint=779   Constraint=DIAPH3
+   Joint=784   Constraint=DIAPH3
+   Joint=785   Constraint=DIAPH4
+   Joint=790   Constraint=DIAPH4
+   Joint=795   Constraint=DIAPH4
+   Joint=800   Constraint=DIAPH4
+   Joint=865   Constraint=DIAPH4
+   Joint=870   Constraint=DIAPH4
+   Joint=875   Constraint=DIAPH4
+   Joint=880   Constraint=DIAPH4
+   Joint=945   Constraint=DIAPH4
+   Joint=950   Constraint=DIAPH4
+   Joint=955   Constraint=DIAPH4
+   Joint=960   Constraint=DIAPH4
+   Joint=1025   Constraint=DIAPH4
+   Joint=1030   Constraint=DIAPH4
+   Joint=1035   Constraint=DIAPH4
+   Joint=1040   Constraint=DIAPH4
+ 
 TABLE:  "LOAD PATTERN DEFINITIONS"
    LoadPat=DEAD   DesignType=Dead   SelfWtMult=0
  

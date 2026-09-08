@@ -220,6 +220,12 @@ export type AnalyzeOutputs = {
   bendingXXjoint?: Map<number, number[]>;
   bendingYYjoint?: Map<number, number[]>;
   bendingXYjoint?: Map<number, number[]>;
+  membraneXXcentro?: Map<number, number>;
+  membraneYYcentro?: Map<number, number>;
+  membraneXYcentro?: Map<number, number>;
+  membraneXXjoint?: Map<number, number[]>;
+  membraneYYjoint?: Map<number, number[]>;
+  membraneXYjoint?: Map<number, number[]>;
   /** Presión de contacto Winkler/soil (kN/m² o tonf/m²). Usado por zapatas con springs. */
   pressure?: Map<number, number[]>;
   /**
