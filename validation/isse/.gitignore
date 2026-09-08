@@ -1,0 +1,10 @@
+*.EDB
+*.sdb
+*.$et
+*.K_*
+*.LOG
+*.OUT
+*.Y*
+*.ico
+*.msh
+_*.log

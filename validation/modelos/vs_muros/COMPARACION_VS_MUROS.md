@@ -68,6 +68,34 @@ emparejan por participación de masa, no por número.
 Dos muros más en la dirección débil bajan el desplazamiento a la mitad y el período a un tercio:
 el primer modo de A era de traslación en Y (sin muros en esa dirección) y en B ya no existe.
 
+## 3 · Cierre por OAPI (misma malla, sin fichero de por medio) — 8-sep-2026, modelo mínimo de 1 piso
+
+| Hekatan | SAP2000 24 | ETABS 22 |
+|---|---|---|
+| `comparar=0` (unión SAP), sin diafragma | **1·10⁻¹¹ %** | 0.18 % |
+| `comparar=0`, diafragma de ejes | **2·10⁻¹¹ %** | 0.55 % |
+| `comparar=1` (unión viga-muro de ETABS), sin diafragma | — | **0.0000 %** (1734/1734) |
+| `comparar=1`, diafragma de ejes (`diafragmaNudos=1`) | — | **0.0000 %** |
+| `comparar=1`, diafragma en toda la planta (`diafragmaNudos=2`) | — | **8·10⁻¹¹ %** |
+
+ETABS contra SAP2000 directo, misma malla: 0.55 %, idéntico con el muro como Slab o como Wall,
+sin edge constraints y sin automallado. Ese 0.55 % es la unión viga-muro, y `comparar=1` la calca.
+Sin muros, Hekatan = ETABS = SAP2000 exacto.
+
+Lo que queda es de la **ruta `.e2k`** (lo que exporta el botón): ETABS-por-e2k contra
+ETABS-por-OAPI del mismo modelo difiere hasta 2.5 % en u_z de la losa sobre el muro. Es el
+importador de ETABS (`DIAPH` en áreas, `ADDRESTRAINT`, objetos de piso), no el solver.
+
+## 4 · Muelles (ISSE) y edge constraint, medidos en los dos programas
+
+- Muelle de ÁREA (`validation/isse/muelle_area_csi.py`): en **SAP2000 y en ETABS es el muelle nodal
+  concentrado por área tributaria** (0.0000 % contra el modelo con muelles en nudos), que es lo que
+  hace Hekatan (`spring`). SAFE lo mete consistente (−1.9 %, 20-ago-2026).
+- Edge constraint (`validation/isse/edge_constraint_etabs2.py`): por defecto ETABS **malla el paño
+  pasando líneas por el nudo colgado** (14 nudos / 8 elementos de análisis en la sonda), así que
+  ON y OFF dan lo mismo. Eso es `deck etabs` en Hekatan (partir el paño). La restricción interpolada
+  solo actúa con `OBJMESHTYPE "NONE"`.
+
 ## Reproducir
 
 ```bash
