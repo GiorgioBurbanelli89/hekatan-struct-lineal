@@ -40,7 +40,11 @@ Con `comparar = 0` (sin unión especial, el modo SAP2000): **el mismo número en
 las dos variantes. El elemento de cáscara (Shell-Thick de CSI, membrana tipo 12) y el ensamble son
 los de SAP2000.
 
-### 2 · Después, ETABS
+### 2 · Después, ETABS  ⚠️ (HISTÓRICO: el estado de la mañana del 8-sep, antes de arreglar el `.e2k` y de `offsets`)
+
+Lo de esta sección **está superado** por las secciones 3, 5 y la de los brazos rígidos: hoy A y B
+cierran a 0.0000 % y los seis períodos con ETABS tal cual. Se deja para que se vea de dónde salió
+cada porcentaje y no se vuelva a perseguir el elemento cuando el problema era el fichero.
 
 Con el `.e2k` tal cual (ETABS con sus defectos: edge constraints y su unión muro-viga-losa):
 
@@ -138,8 +142,11 @@ cuatro nudos.
 0.2112/0.2111 · 0.1335/0.1335 · 0.0878/0.0878; B **0.0000 %** (11943/11943), T1–T6 dentro del 0.3 %. Ya no hay
 que anular nada en ETABS: cada tramo de viga que toca columna pesa y masa con L − ½b_col por extremo.
 
-Los modos 4–6 de B y los 2–6 del modelo mínimo son modos locales de losa y siguen sin emparejar:
-es un tema de masa (ETABS la agrupa por stories, que aquí son de 0.5 m), no de rigidez. Aparte.
+⚠️ Aquí decía que **los modos 4–6 de B y los 2–6 del modelo mínimo no emparejaban** («modos locales
+de losa, es la masa por stories de 0.5 m»). **Ya no**: con los brazos rígidos automáticos reproducidos
+(`offsets=1`) y el `.e2k` con el diafragma arreglado, los SEIS períodos de A y de B cierran contra
+ETABS (arriba). Lo que no emparejaba no era «masa por stories»: era masa de más en las vigas, la que
+ETABS descuenta dentro de la columna. Se deja escrito para que no vuelva la hipótesis.
 
 ## Reproducir
 
