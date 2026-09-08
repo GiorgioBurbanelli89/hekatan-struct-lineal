@@ -391,28 +391,103 @@ const ESCENAS = {
     await boton("Modal Periods", 5000, 4);
     await tecla("Escape", 800); await foto(1);
   },
-  // 7. el lienzo en blanco: rejilla de un botón, vistas por tecla y una línea por comando
-  async cad() {
-    abre("cad");
+  // 7-9. el lienzo en blanco, en TRES escenas (vídeo 2 «Dibujar desde cero»):
+  //   cad_rejilla: los tres campos (vanos X, vanos Y, pisos) y el botón Rejilla
+  //   cad_vistas : teclas 1 2 3 4 (planta, frente, lado, 3D) con el cursor en su botón
+  //   cad_linea  : tecla L y dos vigas escritas en la línea de comando
+  // Lo aprendido con la escena `cad` vieja: (a) la cámara no encuadra la
+  // rejilla si el autofit va antes de que el modelo se haya dibujado; (b) las
+  // teclas 1-4 y L NO sirven aquí: la caja de comandos se vuelve a enfocar
+  // sola 60 ms después de cualquier blur (keepCmdFocus en main.ts) y, con la
+  // caja enfocada, el ribbon ignora los dígitos a propósito (getCadRibbon.ts:
+  // «4,0,6» perdía el 4). Medido: la tecla acababa ESCRITA en la caja («4l»).
+  // Así que vistas y herramientas van por sus BOTONES del ribbon, con el cursor.
+  async cad_rejilla() {
+    abre("cad_rejilla");
     await cargar("?t=new-blank");
-    await foto(3);
+    await foto(4);
     console.log("   antes:", JSON.stringify(await modelo()));
-    await clic("#hk-ribbon button", "Rejilla", 3000, 3);
+    // el cursor pasa por los tres campos para que se lea qué son
+    for (const t of ["Vanos en X", "Vanos en Y", "Alturas de piso"]) {
+      const c = await centroInput(t);
+      if (c) { await mover(c.x, c.y, 5); await foto(3); }
+    }
+    await clic("#hk-ribbon button", "Rejilla", 2500, 2);
     console.log("   tras Rejilla:", JSON.stringify(await modelo()));
-    await autofit();
-    await foto(3);
+    await encuadra(); await foto(5);
+    // y la vista 3D encuadrada, por su botón
+    await vistaBoton("3D"); await foto(5);
+  },
+  async cad_vistas() {
+    abre("cad_vistas");
+    await cargar("?t=new-blank");
+    await rejillaRapida();
+    await vistaBoton("3D"); await foto(3);
+    for (const nom of ["Planta", "Frente", "Lado", "3D"]) { await vistaBoton(nom); await foto(5); }
+  },
+  async cad_linea() {
+    abre("cad_linea");
+    await cargar("?t=new-blank");
+    await rejillaRapida();
+    await vistaBoton("3D"); await foto(3);
+    const antes = await modelo();
+    console.log("   antes:", JSON.stringify(antes));
+    // el botón «Línea» del ribbon (la tecla L no entra: ver nota de arriba)
+    await limpiaComando();
+    await clic("#hk-ribbon button", "Línea", 700, 3);
+    console.log("   herramienta:", await pag.evaluate(() => window.__hekatanCadState?.get?.()?.tool));
+    // dos vigas del primer piso, de A a B y de B hacia el eje 2, escritas.
+    // Coordenadas ABSOLUTAS: el relativo «@6,0,0» tras un punto TECLEADO no
+    // entraba (drawing.ts solo fijaba rubberStart con el ratón; corregido en
+    // la fuente el 8-sep, pero la web construida que se captura es la anterior).
+    await escribeComando("0,0,3");
+    await escribeComando("6,0,3");
+    await escribeComando("6,5,3");
+    await tecla("Escape", 600);
+    const despues = await modelo();
+    console.log("   tras línea:", JSON.stringify(despues), "tramos nuevos:", despues.tramos - antes.tramos);
     await desenfoca();
-    for (const k of ["4", "1"]) { await tecla(k, 1400); await autofit(); await foto(3); }
-    await tecla("l", 400);
-    await foto(2);
-    await escribeComando("0,0,0");
-    await escribeComando("@6,0,0");
-    console.log("   tras línea:", JSON.stringify(await modelo()));
-    await tecla("Escape", 500);
-    await desenfoca();
-    await tecla("4", 1400); await autofit(); await foto(4);
+    await encuadra(); await foto(6);
   },
 };
+async function centroInput(titulo) {
+  return pag.evaluate((t) => {
+    const e = Array.from(document.querySelectorAll("#hk-ribbon input"))
+      .find((i) => (i.title || "").startsWith(t) && i.getBoundingClientRect().width > 0);
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, titulo);
+}
+const camara = () => pag.evaluate(() => {
+  const c = document.querySelector("#viewer")?.__ctx?.camera;
+  return c ? [c.isOrthographicCamera ? "orto" : "persp",
+              ...[c.position.x, c.position.y, c.position.z].map((v) => +v.toFixed(1))] : null;
+});
+async function encuadra() {
+  // el modelo tarda en dibujarse: autofit dos veces con pausa, y una foto entre medias
+  await espera(1200); await autofit(); await espera(600); await autofit(); await espera(400);
+}
+async function vistaBoton(nom) {
+  await clic("#hk-ribbon button", nom, 1200, 2);
+  await encuadra();
+  console.log(`   vista ${nom} -> cámara ${JSON.stringify(await camara())}`);
+}
+async function limpiaComando() {
+  await pag.evaluate(() => {
+    for (const id of ["hk3-cmd-input", "hk-dyn-input"]) {
+      const i = document.getElementById(id); if (i) i.value = "";
+    }
+    const g = document.getElementById("hk3-cmd-ghost"); if (g) g.innerHTML = "";
+  });
+}
+async function rejillaRapida() {
+  // la rejilla sin ceremonia (ya se enseñó en cad_rejilla)
+  await pag.evaluate(() => Array.from(document.querySelectorAll("#hk-ribbon button"))
+    .find((b) => (b.textContent || "").includes("Rejilla"))?.click());
+  await espera(2500);
+  console.log("   rejilla:", JSON.stringify(await modelo()));
+}
 
 // ------------------------------------------------------------------ main
 const pedidas = process.argv.slice(2);
