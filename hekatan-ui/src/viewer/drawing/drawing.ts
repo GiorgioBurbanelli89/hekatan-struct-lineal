@@ -4315,13 +4315,28 @@ export function drawing({
       refreshPrompt();
       return;
     }
-    // RECORTAR / ALARGAR: hace falta OTRA linea bajo el cursor
-    if (hoveredPolyIndex < 0 || (hoveredPolyIndex === designado.poly && hoveredSegIndex === designado.seg)) {
-      updateStatus(`${nombre}: pase el cursor por OTRA línea y haga clic.`); return;
+    // RECORTAR / ALARGAR: hace falta OTRA linea bajo el cursor. Cerca del
+    // cruce el OSNAP imanta el cursor al punto de interseccion, donde las dos
+    // lineas estan a distancia cero y el hover puede quedarse con el propio
+    // contorno: entonces se busca la otra linea mas cercana al clic.
+    let P = hoveredPolyIndex, S = Math.max(0, hoveredSegIndex);
+    if (P < 0 || (P === designado.poly && S === designado.seg)) {
+      const tolB = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
+      let mejor = tolB;
+      P = -1;
+      polys.forEach((pl, i) => {
+        for (let j = 0; j < pl.length - 1; j++) {
+          if (i === designado!.poly && j === designado!.seg) continue;
+          const a0 = pts[pl[j]], b0 = pts[pl[j + 1]];
+          if (!a0 || !b0) continue;
+          const d = distPointSeg(click[0], click[1], click[2], a0[0], a0[1], a0[2], b0[0], b0[1], b0[2]);
+          if (d < mejor) { mejor = d; P = i; S = j; }
+        }
+      });
+      if (P < 0) { updateStatus(`${nombre}: pase el cursor por OTRA línea y haga clic.`); return; }
     }
     const pc = polys[designado.poly];
     const c1 = pts[pc[designado.seg]], c2 = pts[pc[designado.seg + 1]];
-    const P = hoveredPolyIndex, S = Math.max(0, hoveredSegIndex);
     const poly = polys[P]; const ia = poly[S], ib = poly[S + 1];
     if (!c1 || !c2 || ia == null || ib == null) { updateStatus(`${nombre}: no se pudo leer el tramo.`); return; }
     const a = pts[ia], b = pts[ib];

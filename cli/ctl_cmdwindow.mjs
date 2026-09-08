@@ -196,7 +196,7 @@ await teclea("tr");
 await clicEn(1, 0, 0);
 e = await estado();
 ok(/trozo/.test(e.prompt), "TR + clic en la línea A → «Designe el trozo de línea a quitar»", e.prompt);
-await clicEn(2, 1.5, 0);
+await clicEn(2, 0.8, 0);   // y=0.8: mas arriba cae sobre el ribbon; mas cerca del cruce lo imanta el OSNAP
 e = await estado();
 ok(tiene(e.pts, [2, 0, 0]) && !tiene(e.pts, [2, 2, 0]) && tiene(e.pts, [2, -2, 0]), "RECORTAR quita el trozo de B por encima de A (queda (2,-2)→(2,0))", JSON.stringify(e.pts));
 await foto("recortar");
@@ -215,7 +215,7 @@ await teclea("1");
 e = await estado();
 ok(/distancia 1 m/.test(e.prompt), "O + 1 Enter → distancia memorizada en el prompt", e.prompt);
 await clicEn(1, 0, 0);
-await clicEn(1, 1, 0);
+await clicEn(1, 0.5, 0);
 e = await estado();
 ok(tiene(e.pts, [0, 1, 0]) && tiene(e.pts, [4, 1, 0]), "DESFASE copia A un metro hacia +Y ((0,1)→(4,1))", JSON.stringify(e.pts.slice(-2)));
 await foto("desfase");

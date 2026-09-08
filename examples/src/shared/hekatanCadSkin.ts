@@ -183,6 +183,12 @@ body.hk-cad #hk-pane-host{
 body.hk-cad #hk-coord-fixed{ display:none !important; }
 body.hk-cad #toolbar{ top:38px !important; }
 body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
+/* La barra de titulo mide 30 px y el ribbon iba a top:8px: la primera fila de
+   iconos (Linea, Polilinea...) quedaba DEBAJO de la barra. Se baja el ribbon,
+   su linea de estado y la guia lo mismo que la barra de herramientas. */
+body.hk-cad #hk-ribbon{ top:40px !important; }
+body.hk-cad #hk-ribbon-estado{ top:106px !important; }
+body.hk-cad #hk-ribbon-guia{ top:150px !important; }
 
 /* ── la LINEA DE COMANDO, acoplada abajo y a todo lo ancho ───────────── */
 /* Estaba flotando en el centro con un cian que no es de ninguna de las dos
