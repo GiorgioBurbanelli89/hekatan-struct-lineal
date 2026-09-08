@@ -90,7 +90,7 @@ for (const [vista, boton] of [["planta (ortográfica)", "Planta"], ["3D (perspec
   const disp = (Math.max(...px) - Math.min(...px)) / Math.max(...px) * 100;
   console.log(`   ${vista}: ${medidas.map((m) => `zoom×${m.z} → ${m.px}px`).join(" · ")}`);
   ok(disp < 15, `${vista}: el marcador se ve IGUAL a cualquier zoom`, `dispersión ${disp.toFixed(1)} % (antes crecía con el zoom)`);
-  ok(px.every((q) => q > 2 && q < 12), `${vista}: y del tamaño del marcador de AutoCAD (2–12 px)`, `${px.join(", ")} px`);
+  ok(px.every((q) => q > 2 && q < 8), `${vista}: y del tamaño del marcador de AutoCAD (2–8 px)`, `${px.join(", ")} px`);
 }
 await nav.close(); srv.close();
 console.log(fallos.length ? `\n${fallos.length} FALLO(S)` : "\nTodo correcto");

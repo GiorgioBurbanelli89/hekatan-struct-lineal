@@ -191,8 +191,8 @@ export function drawing({
     // mundo: al acercar el zoom el punto naranja crecía hasta tapar lo que se
     // estaba dibujando, y al alejar desaparecía. Los marcadores de hover ya se
     // escalaban para verse constantes (~6 px) y este no: era el único.
-    // 7 px, uno más que el gris, para que el punto activo cante sin estorbar.
-    new THREE.PointsMaterial({ color: "orange", sizeAttenuation: false, size: 7 })
+    // 5 px: se ve, pero no tapa el dibujo (el gris de referencia son 6).
+    new THREE.PointsMaterial({ color: "orange", sizeAttenuation: false, size: 5 })
   );
   scene.add(activePoints);
 
@@ -2159,9 +2159,11 @@ export function drawing({
   // Ahora se calculan los METROS QUE MIDE UN PÍXEL con la cámara de verdad y el
   // marcador se fija a un tamaño en píxeles: igual a cualquier zoom y en las dos
   // cámaras. El halo mide 0.015 m de radio con escala 1.
-  // 5 px de radio (10 de diámetro) es la medida del marcador de referencia a
-  // objetos de AutoCAD con su ajuste por defecto (AutoSnap Marker Size 5).
-  const _snapPx = 5;            // radio aparente del halo, en píxeles
+  // Radio aparente del halo, en píxeles. AutoCAD trae 5 de fábrica (su marcador
+  // de referencia a objetos); aquí va a 3 porque Jorge lo quiere más discreto:
+  // el cursor tiene que dejar VER el punto que va a marcar, no taparlo.
+  // Se puede regular desde fuera con `__hekatanSnapPx(n)`.
+  let _snapPx = 3;
   const metrosPorPixel = (punto: THREE.Vector3) => {
     const cam = getActiveCamera() as any;
     const h = rendererElm?.clientHeight || 700;
@@ -2181,6 +2183,11 @@ export function drawing({
   (window as any).__hekatanUpdateSnapScale = updateSnapMarkerScale;
   (window as any).__hekatanSnapMarker = snapMarker;
   (window as any).__hekatanMetrosPorPixel = metrosPorPixel;
+  // regular el tamaño del marcador sin recompilar: __hekatanSnapPx(2) lo hace más fino
+  (window as any).__hekatanSnapPx = (n?: number) => {
+    if (typeof n === "number" && n > 0) { _snapPx = n; updateSnapMarkerScale(); viewerRender(); }
+    return _snapPx;
+  };
   // Helper compartido: re-escala cada esfera de selección (cyan) según
   // su distancia individual a la cámara. Se invoca al orbitar/zoomear y
   // también justo después de refreshSelectionGroup().
