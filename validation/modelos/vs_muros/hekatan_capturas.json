@@ -1,0 +1,22 @@
+{
+  "A": {
+    "ejemplo": "edificio-aporticado",
+    "params": {
+      "murosMode": 1,
+      "nPisos": 6,
+      "slabOn": 1,
+      "bracesMode": 0,
+      "tMuro": 0.25
+    }
+  },
+  "B": {
+    "ejemplo": "edificio-aporticado",
+    "params": {
+      "murosMode": 3,
+      "nPisos": 6,
+      "slabOn": 1,
+      "bracesMode": 0,
+      "tMuro": 0.25
+    }
+  }
+}
