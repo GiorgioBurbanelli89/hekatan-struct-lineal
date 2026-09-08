@@ -30,7 +30,10 @@ export interface CadSolid {
   pts: number[];  // node ids (8 para hexaedro)
 }
 
-export type CadTool = "select" | "node" | "line" | "area" | "solid";
+// Las herramientas del motor de dibujo (drawing.ts) son más que estas cinco:
+// polyline, rect, circle, arc, col, wall, move, copy, delete… Se admite
+// cualquier nombre para no tener dos listas que mantener.
+export type CadTool = "select" | "node" | "line" | "area" | "solid" | (string & {});
 
 export interface CadModel {
   nodes: Map<number, CadNode>;

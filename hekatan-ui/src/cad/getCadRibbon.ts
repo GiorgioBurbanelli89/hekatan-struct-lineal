@@ -68,19 +68,19 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
   {
     titulo: "Dibujar",
     items: [
-      { id: "line",     icono: "／", nombre: "Línea",     tecla: "L", ayuda: "clic 1er punto, clic 2º. Sigue encadenando." },
-      { id: "polyline", icono: "⌒", nombre: "Polilínea", tecla: "P", ayuda: "clics seguidos; Enter o clic derecho para terminar." },
-      { id: "rect",     icono: "▭", nombre: "Rectáng.",  tecla: "R", ayuda: "clic 2 esquinas opuestas." },
-      { id: "circle",   icono: "○", nombre: "Círculo",   tecla: "C", ayuda: "clic centro, clic radio (o teclea el radio)." },
-      { id: "arc",      icono: "⌒", nombre: "Arco",      tecla: "A", ayuda: "clic inicio, medio y fin." },
+      { id: "line",     icono: "／", nombre: "Línea",     tecla: "L",   ayuda: "clic tras clic, encadena. C cierra, U quita el último, Esc termina." },
+      { id: "polyline", icono: "⌒", nombre: "Polilínea", tecla: "PL",  ayuda: "clics seguidos; Enter o clic derecho para terminar." },
+      { id: "rect",     icono: "▭", nombre: "Rectáng.",  tecla: "REC", ayuda: "clic en dos esquinas opuestas." },
+      { id: "circle",   icono: "○", nombre: "Círculo",   tecla: "C",   ayuda: "clic en el centro, clic en el radio (o teclea el radio)." },
+      { id: "arc",      icono: "⌒", nombre: "Arco",      tecla: "A",   ayuda: "clic inicio, medio y fin." },
     ],
   },
   {
     titulo: "Estructura",
     items: [
-      { id: "col",  icono: "▌", nombre: "Columna", tecla: "K", ayuda: "teclea la altura + Enter, luego clic en la base." },
-      { id: "wall", icono: "▥", nombre: "Muro",    tecla: "M", ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
-      { id: "area", icono: "▦", nombre: "Losa",    tecla: "Q", ayuda: "4 clics en orden, antihorario." },
+      { id: "col",  icono: "▌", nombre: "Columna", tecla: "COL", ayuda: "teclea la altura + Enter, luego clic en la base." },
+      { id: "wall", icono: "▥", nombre: "Muro",    tecla: "MU",  ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
+      { id: "area", icono: "▦", nombre: "Losa",    tecla: "LO",  ayuda: "4 clics en orden, antihorario." },
     ],
   },
   {
@@ -92,17 +92,19 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
     // solucion — la matriz es singular — y sin cargas no se mueve.
     titulo: "Analizar",
     items: [
-      { id: "apoyo", icono: "▲", nombre: "Apoyo", tecla: "F",
+      { id: "apoyo", icono: "▲", nombre: "Apoyo", tecla: "AP",
         ayuda: "clic sobre un nudo: lo empotra. Sin apoyos no hay solucion." },
-      { id: "carga", icono: "↓", nombre: "Carga", tecla: "W",
+      { id: "carga", icono: "↓", nombre: "Carga", tecla: "CG",
         ayuda: "clic sobre un nudo: le pone la carga vertical de la casilla." },
     ],
   },
   {
     titulo: "Modificar",
     items: [
-      { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S", ayuda: "clic sobre un elemento. Ventana: arrastra." },
-      { id: "delete", icono: "🗑", nombre: "Borrar", tecla: "E", ayuda: "pasa por encima (se pone rojo) y haz clic." },
+      { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: arrastra izq→der; captura: der→izq." },
+      { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
+      { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
+      { id: "delete", icono: "🗑", nombre: "Borrar", tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
     ],
   },
 ];
@@ -146,10 +148,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // Así que la barra dice siempre las tres cosas, en este orden: en qué plano
   // se está dibujando, a qué cota, y qué se espera ahora. Es lo que hace la
   // línea de estado de AutoCAD.
-  let prompt = "Elige una herramienta arriba, o teclea su letra.";
+  let prompt = "Elige una herramienta arriba, o teclea su comando y Enter (L, PL, REC, COL, M, CO).";
+  let pistaActiva = false;   // mientras el ratón está sobre un botón, manda su pista
   const refrescar = () => {
     const e = document.getElementById("hk-ribbon-estado");
-    if (!e) return;
+    if (!e || pistaActiva) return;
     const st = (window as any).__hekatanCadState?.get?.();
     const plano = st?.workPlane ?? "xy";
     const nombre = plano === "xy" ? "PLANTA (X-Y)"
@@ -230,6 +233,21 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     decir(`${h.nombre} — ${h.ayuda}`);
   };
 
+  // La PISTA de un botón al pasar el ratón: la guía es corta a propósito (los
+  // cuatro pasos) y el detalle de cada herramienta se enseña donde se mira.
+  let pistaTimer = 0;
+  const pista = (txt: string) => {
+    const e = document.getElementById("hk-ribbon-estado");
+    const g = document.getElementById("hk-guia-pista");
+    clearTimeout(pistaTimer);
+    if (txt) {
+      pistaActiva = true;
+      if (e) e.innerHTML = `<span style="color:#22d3ee">${txt}</span>`;
+      if (g) g.textContent = txt;
+    } else {
+      pistaTimer = window.setTimeout(() => { pistaActiva = false; refrescar(); if (g) g.textContent = ""; }, 150);
+    }
+  };
   for (const g of GRUPOS) {
     const caja = document.createElement("div");
     caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
@@ -254,8 +272,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       b.addEventListener("click", () => usar(h));
       b.addEventListener("mouseenter", () => {
         if (hooks.getTool() !== h.id) b.style.background = "rgba(34,211,238,.13)";
+        pista(`${h.icono} ${h.nombre} (${h.tecla}) — ${h.ayuda}`);
       });
-      b.addEventListener("mouseleave", pintarActivo);
+      b.addEventListener("mouseleave", () => { pintarActivo(); pista(""); });
       botones.set(h.id, b);
       fila.appendChild(b);
     }
@@ -443,61 +462,67 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   const guia = document.createElement("div");
   guia.id = "hk-ribbon-guia";
   guia.style.cssText = [
-    "position:absolute", "top:50%", "left:50%", "transform:translate(-50%,-50%)",
-    "z-index:70", "display:none", "max-width:640px", "padding:20px 24px",
+    "position:absolute", "top:120px", "left:50%", "transform:translateX(-50%)",
+    "z-index:70", "display:none", "max-width:640px", "max-height:calc(100% - 200px)", "overflow:auto", "padding:16px 22px",
     "background:rgba(10,18,32,.97)", "border:1px solid #22d3ee",
     "border-radius:12px", "box-shadow:0 10px 40px rgba(0,0,0,.6)",
     "color:#cbd5e1", "font:13px/1.65 system-ui,-apple-system,Segoe UI,sans-serif",
   ].join(";") + ";";
   guia.innerHTML = `
-    <div style="font:600 16px inherit;color:#22d3ee;margin-bottom:2px">Cómo dibujar aquí</div>
-    <div style="color:#64748b;font-size:11px;margin-bottom:14px">? o F1 para abrir y cerrar · Esc también cierra</div>
-
-    <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">1 · Lo primero: el plano de trabajo</div>
-    <p style="margin:0 0 12px">
-      La pantalla es 3D, así que un clic no es un punto: es un rayo. Cae siempre
-      sobre el <b style="color:#22d3ee">plano de trabajo</b>, que es el que dice
-      la barra de abajo. Con <b>1</b> dibujas en planta a la cota Z que marque;
-      con <b>2</b> y <b>3</b>, en los dos alzados. <b>4</b> gira a 3D para mirar
-      —no para dibujar.
-    </p>
-
-    <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">2 · El camino corto: la rejilla</div>
-    <p style="margin:0 0 12px">
-      Escribe los vanos arriba —<code style="color:#22d3ee">4x6</code> son 4 de
-      6 m, y <code style="color:#22d3ee">6,6,5</code> son tres vanos
-      distintos— y aprieta <b>🏗 Rejilla</b>. Salen los ejes A,B,C… y 1,2,3…, los
-      niveles y las columnas en cada cruce. Es la forma rápida de arrancar.
-    </p>
-
-    <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">3 · Dibujar a mano</div>
-    <p style="margin:0 0 12px">
-      Teclea <b>L</b> y haz clic: la línea <b>encadena</b>, cada clic sigue del
-      anterior. <b>Esc</b> la corta. Para medidas exactas no uses el ojo:
-      escribe en la caja de comandos de abajo
-      <code style="color:#22d3ee">6,0,0</code> (punto exacto),
-      <code style="color:#22d3ee">@6,0</code> (desde el último) o
-      <code style="color:#22d3ee">@6&lt;45</code> (distancia y ángulo).
-    </p>
-
-    <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">Las teclas</div>
-    <table style="border-collapse:collapse;font-size:12px">
-      <tr><td style="padding:1px 14px 1px 0"><b>L</b> línea · <b>P</b> polilínea · <b>R</b> rectángulo</td>
-          <td><b>K</b> columna · <b>M</b> muro · <b>Q</b> losa</td></tr>
-      <tr><td style="padding:1px 14px 1px 0"><b>C</b> círculo · <b>A</b> arco · <b>S</b> seleccionar</td>
-          <td><b>E</b> borrar · <b>G</b> rejilla · <b>Esc</b> terminar</td></tr>
-      <tr><td style="padding:1px 14px 1px 0"><b>1</b> planta · <b>2</b> frente · <b>3</b> lado · <b>4</b> 3D</td>
-          <td><b>F8</b> orto · <b>F9</b> imán · <b>Ctrl+Z</b> deshacer</td></tr>
-    </table>
-    <div style="margin-top:14px;color:#64748b;font-size:11px">
-      El imán engancha a nudos y puntos medios. Si te roba el clic donde no
-      quieres, apagalo con F9.
-    </div>`;
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+      <div style="font:600 16px inherit;color:#22d3ee">Cómo usar · cuatro pasos</div>
+      <button type="button" id="hk-guia-cerrar" title="Cerrar (Esc)" style="width:24px;height:24px;border-radius:50%;border:1px solid #1e3a4a;background:transparent;color:#94a3b8;cursor:pointer;font:600 13px inherit">✕</button>
+    </div>
+    <div style="color:#64748b;font-size:11px;margin-bottom:10px">Pasa el ratón por un botón de arriba y te dice cómo se usa · ? o F1 abren y cierran esto</div>
+    <ol style="margin:0 0 10px 18px;padding:0;line-height:1.7">
+      <li><b>Rejilla</b>: vanos en X, en Y y pisos en las casillas de arriba → <b>🏗 Rejilla</b> (o <b>REJ</b>). Ejes, niveles y columnas.</li>
+      <li><b>Dibuja</b>: teclea <b>L</b>, <b>COL</b>, <b>MU</b> o <b>LO</b> y Enter; luego clic, o coordenadas
+        <code style="color:#22d3ee">6,0,3</code> · <code style="color:#22d3ee">@6,0,0</code>. <b>C</b> cierra, <b>Esc</b> termina.</li>
+      <li><b>Apoyos y cargas</b>: <b>AP</b> y <b>CG</b>, clic en los nudos. Sin apoyos no hay solución.</li>
+      <li><b>Calcula</b>: en el panel izquierdo, <b>Analyze</b> enseña deformada, momentos y cortantes.</li>
+    </ol>
+    <div id="hk-guia-pista" style="min-height:18px;margin:0 0 6px;padding:4px 8px;border-left:2px solid #22d3ee;background:rgba(34,211,238,.06);color:#cbd5e1;font-size:12px"></div>
+    <details id="hk-guia-detalle" style="margin-top:6px">
+      <summary style="cursor:pointer;color:#22d3ee;font-size:12px">Ver todo: teclas, coordenadas, selección</summary>
+      <div style="margin-top:8px">
+        <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">La ventana de comandos</div>
+        <p style="margin:0 0 8px">Dice qué espera: <i style="color:#22d3ee">Precise primer punto</i>, luego
+          <i style="color:#22d3ee">punto siguiente o [Cerrar/desHacer]</i>. <b>U</b> quita el último punto.
+          Enter con la caja vacía termina el comando o repite el último. Espacio vale por Enter. <b>F2</b> despliega el historial.</p>
+        <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">Coordenadas</div>
+        <p style="margin:0 0 8px"><code style="color:#22d3ee">6,0,3</code> punto exacto ·
+          <code style="color:#22d3ee">@6,0,0</code> desde el último · <code style="color:#22d3ee">@6&lt;45</code> distancia y ángulo ·
+          una cifra sola = distancia, altura (columna, muro) o radio.</p>
+        <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">Dónde cae el clic</div>
+        <p style="margin:0 0 8px">Sobre el plano de trabajo de la barra de abajo. <b>1</b> planta (a la cota Z), <b>2</b> frente,
+          <b>3</b> lado, <b>4</b> 3D para mirar. Los números cambian la vista solo sin comando en curso.</p>
+        <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">Seleccionar y modificar</div>
+        <p style="margin:0 0 8px">Sin comando, arrastra: <b>izquierda→derecha</b> ventana (entero dentro), <b>derecha→izquierda</b> captura (basta tocar).
+          Con selección: <b>M</b> mueve, <b>CO</b> copia (punto base y segundo punto), <b>Supr</b> borra, <b>Ctrl+Z</b> / <b>Ctrl+Y</b>.</p>
+        <table style="border-collapse:collapse;font-size:12px">
+          <tr><td style="padding:1px 14px 1px 0"><b>L</b> línea · <b>PL</b> polilínea · <b>REC</b> rectángulo · <b>C</b> círculo · <b>A</b> arco</td>
+              <td><b>COL</b> columna · <b>MU</b> muro · <b>LO</b> losa</td></tr>
+          <tr><td style="padding:1px 14px 1px 0"><b>S</b> seleccionar · <b>M</b> mover · <b>CO</b> copiar · <b>E</b> borrar</td>
+              <td><b>AP</b> apoyo · <b>CG</b> carga · <b>REJ</b> rejilla</td></tr>
+          <tr><td style="padding:1px 14px 1px 0"><b>F3</b> OSNAP · <b>F8</b> ORTO · <b>F9</b> SNAP · <b>F10</b> POLAR</td>
+              <td><b>F2</b> historial · <b>Esc</b> cancelar · <b>?</b> esta ayuda</td></tr>
+        </table>
+      </div>
+    </details>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:12px;color:#64748b;font-size:11px;cursor:pointer">
+      <input type="checkbox" id="hk-guia-nomas" style="margin:0"> No volver a mostrar al abrir un archivo nuevo
+    </label>`;
 
   const verGuia = (v?: boolean) => {
     const on = v ?? (guia.style.display === "none");
     guia.style.display = on ? "block" : "none";
   };
+  guia.querySelector("#hk-guia-cerrar")?.addEventListener("click", () => verGuia(false));
+  const chkNoMas = guia.querySelector("#hk-guia-nomas") as HTMLInputElement | null;
+  try { if (chkNoMas) chkNoMas.checked = localStorage.getItem("hk_guia_nuevo") === "0"; } catch {}
+  chkNoMas?.addEventListener("change", () => {
+    try { localStorage.setItem("hk_guia_nuevo", chkNoMas.checked ? "0" : "1"); } catch {}
+  });
   // Un clic en cualquier otro sitio la cierra. Sin esto la guia se abre sola
   // encima del lienzo y SE COME LOS CLICS: se intenta dibujar, no pasa nada, y
   // no hay forma evidente de quitarla. Lo cazó el test del panel viejo, que se
@@ -527,7 +552,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     "color:#94a3b8", "font:11px Consolas,monospace", "pointer-events:none",
     "white-space:nowrap",
   ].join(";") + ";";
-  estado.textContent = "Teclea una letra o elige arriba — L línea · P polilínea · R rectángulo · K columna · G rejilla";
+  estado.textContent = "Teclea un comando y Enter — L línea · PL polilínea · REC rectángulo · COL columna · REJ rejilla · ? ayuda";
 
   // ── PLEGAR el ribbon ──────────────────────────────────────────────────────
   //
@@ -645,35 +670,22 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   } catch { /* sin localStorage: no se abre sola */ }
   refrescar();
 
-  // ── Atajos de una tecla, como AutoCAD ─────────────────────────────────────
-  // No se disparan si el foco está en una caja de texto: la de comandos de
-  // abajo se queda enfocada a propósito, y sin esta guarda escribir "line"
-  // activaría Losa con la L y Selección con la S mientras se teclea.
-  const TECLA = new Map<string, Herr>();
-  for (const g of GRUPOS) for (const h of g.items) TECLA.set(h.tecla.toLowerCase(), h);
-  //
-  // La caja de comandos de abajo se RE-ENFOCA sola cada 900 ms (para poder
-  // teclear sin hacer clic). Si se descarta toda tecla que llegue con un campo
-  // enfocado, funciona la primera y ninguna más: se probó y salían `l` sí,
-  // `p`/`k`/`q` no, con la herramienta congelada en Línea.
-  //
-  // Se resuelve como en AutoCAD: con la caja de comandos VACÍA, una letra sola
-  // ES el comando y actúa en el acto. En cuanto hay algo escrito, la letra es
-  // texto y manda el Enter. Las demás cajas (los vanos de la rejilla) siempre
-  // se respetan: ahí se escriben números.
+  // ── Teclas globales del ribbon ─────────────────────────────────────────────
+  // Las LETRAS ya no actúan solas: se acumulan en la ventana de comandos y
+  // manda el Enter (L, PL, REC, COL…), como en AutoCAD. Lo de «una letra sola
+  // es el comando» se comía las coordenadas: al teclear «4,0,6» el 4 cambiaba
+  // la vista, y el foco de la caja hacía que las teclas de vista no entraran
+  // nunca (medido el 8-sep-2026 grabando el vídeo 2 de School: «411», «4l»).
+  // Los dígitos 1-4 cambian la vista SOLO sin herramienta y con la caja vacía;
+  // con una herramienta activa, un dígito es el principio de una coordenada.
   const CMD = "hk3-cmd-input";
   const enCampo = (e: EventTarget | null): boolean => {
     const n = e as HTMLElement | null;
     if (!n) return false;
-    if (n.id === CMD) return (n as HTMLInputElement).value.trim().length > 0;
+    if (n.id === CMD || n.id === "hk-dyn-input") return (n as HTMLInputElement).value.trim().length > 0;
     return n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT"
         || n.isContentEditable;
   };
-  // Y hay que VACIAR la caja al consumir la tecla. `preventDefault()` no basta:
-  // la caja de comandos tiene dos consolas sincronizadas que se escriben el
-  // valor a mano, así que la letra entra igual. Medido: quedaba "l", "lp",
-  // "lpk", "lpkq" — la primera tecla funcionaba y las demás las bloqueaba la
-  // guarda de arriba al ver la caja con texto.
   const limpiarCmd = () => {
     for (const id of [CMD, "hk-dyn-input"]) {
       const i = document.getElementById(id) as HTMLInputElement | null;
@@ -683,26 +695,17 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     if (g) g.innerHTML = "";
   };
   window.addEventListener("keydown", (e) => {
-    // F1 y ? funcionan SIEMPRE, tambien escribiendo en la caja de comandos:
-    // la ayuda es lo unico que hay que poder pedir estando perdido.
-    if (e.key === "F1" || e.key === "?") { e.preventDefault(); verGuia(); return; }
+    if (e.key === "F1") { e.preventDefault(); verGuia(); return; }
     if (e.key === "Escape" && guia.style.display !== "none") {
       e.preventDefault(); verGuia(false); return;
     }
     if (e.ctrlKey || e.altKey || e.metaKey || enCampo(e.target)) return;
-    const k = e.key.toLowerCase();
-    const h = TECLA.get(k);
-    if (h) { e.preventDefault(); usar(h); setTimeout(limpiarCmd, 0); return; }
-    if (k === "g") { e.preventDefault(); lanzarGrid(); setTimeout(limpiarCmd, 0); return; }
-    // ⚠️ Los DIGITOS no se capturan si el foco esta en la caja de comandos,
-    // aunque este vacia. Alli un digito es el principio de una COORDENADA:
-    // al escribir `4,0,6` el "4" cambiaba la vista a 3D y se lo comia, asi
-    // que el punto acababa cayendo en el plano de trabajo y se perdia la Z.
-    // Las letras si se capturan (una letra sola ES el comando, como AutoCAD);
-    // los numeros, nunca.
-    const enCmd = (e.target as HTMLElement | null)?.id === CMD;
-    const v = enCmd ? -1 : ["1", "2", "3", "4"].indexOf(k);
+    const k = e.key;
+    const v = ["1", "2", "3", "4"].indexOf(k);
     if (v >= 0) {
+      const t = hooks.getTool();
+      const dibujando = t && t !== "select" && t !== "none";
+      if (dibujando) return;                       // un dígito es una coordenada
       e.preventDefault(); VISTAS[v][3](); decir(`Vista: ${VISTAS[v][1]}`);
       setTimeout(limpiarCmd, 0); return;
     }
@@ -720,6 +723,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       for (const g of GRUPOS) for (const h of g.items) if (h.id === id) usar(h);
     },
     grid: lanzarGrid,
+    vista: (i: number) => { const v = VISTAS[i]; if (v) { v[3](); decir(`Vista: ${v[1]}`); } },
+    marcar: (tool: string) => { if (tool !== "select" || modoAplicar) { modoAplicar = null; (window as any).__hekatanBloquearVentana = false; } pintarActivo(); },
     estado: () => estado.textContent,
     herramientas: () => [...botones.keys()],
   };

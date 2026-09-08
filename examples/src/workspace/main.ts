@@ -76,7 +76,7 @@ van.derive(() => {
   localStorage.setItem(AUTO_MESH_KEY, String(autoMeshShellsEnabled.val));
 });
 import {
-  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, addCadPanel, addCadRibbon,
+  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, addCadPanel, addCadRibbon, addCadStatusBar,
   // 🛠 Orquestador unificado de Herramientas FEM (folder Tweakpane completo)
   attachFemTools,
   // el tema del VISOR: el fondo lo pinta WebGL, no el CSS, asi que la piel
@@ -460,6 +460,14 @@ function loadExample(ex: ExampleDef) {
   // URL: decidirlo una sola vez al arrancar dejaba la barra abierta para
   // siempre en cuanto se entraba por `/workspace/` a secas.
   try { (window as any).__hekatanRibbonDefecto?.(ribbonPlegadaPara(ex.id)); } catch {}
+  // Un ARCHIVO NUEVO abre la ventana «Cómo usar», igual que un ejemplo trae
+  // su explicación: quien entra a un lienzo vacío no sabe ni por dónde
+  // empezar. Se puede apagar desde la propia ventana («no volver a mostrar»).
+  if (ex.id === "new-blank") {
+    let mostrar = true;
+    try { mostrar = localStorage.getItem("hk_guia_nuevo") !== "0"; } catch {}
+    if (mostrar) setTimeout(() => { try { (window as any).__hekatanRibbon?.guia?.(true); } catch {} }, 700);
+  }
   // Nuevo ejemplo cargado: permitir auto-fit inicial.
   userCameraInteracted = false;
   // Reset estado de folders (cada ejemplo tiene su propio layout).
@@ -3588,6 +3596,9 @@ function buildParamsPane() {
           (window as any).__hekatanRebuild?.();
         },
       });
+      // La barra de estado de abajo (SNAP · ORTO · POLAR · OSNAP, coordenadas,
+      // plano y mensaje), como la de AutoCAD. Una sola vez.
+      if (!document.getElementById("hk-statusbar")) addCadStatusBar();
     }
   }
   // ── BLOQUE INLINE LEGACY (será removido al confirmarse el move) ──
@@ -6476,105 +6487,372 @@ try {
 // los botones del panel CAD). Local a workspace3.
 // ═══════════════════════════════════════════════════════════════
 (() => {
-  // alias de comando → tool interno (los mismos tools de getCadPanel)
+  // ═══════════════════════════════════════════════════════════════════════
+  // LA VENTANA DE COMANDOS, como la de AutoCAD (8-sep-2026)
+  //
+  // Antes era una casilla sola: se tecleaba y no se sabía ni qué comando iba
+  // ni qué punto pedía, y el mensaje de estado quedaba TAPADO por la propia
+  // casilla (las dos iban centradas abajo). Ahora:
+  //   · HISTORIAL: las últimas líneas (F2 o el triángulo lo despliegan).
+  //   · PROMPT: «LÍNEA Precise punto siguiente o [Cerrar/desHacer]:», que lo
+  //     dicta drawing.ts desde su estado (__hekatanCadPrompt); las opciones
+  //     entre corchetes se pueden CLICAR.
+  //   · Enter o Espacio ejecutan; vacíos, terminan el comando en curso o
+  //     REPITEN el último (como AutoCAD). ↑/↓ recorren lo tecleado.
+  //   · Las letras se acumulan y manda el Enter (L, PL, REC, COL…): ya no hay
+  //     teclas que actúen solas, que era lo que se comía las coordenadas.
+  //   · Los dígitos 1-4 cambian la vista solo sin herramienta y caja vacía.
+  // ═══════════════════════════════════════════════════════════════════════
   const ALIASES: Record<string, string> = {
     line: "line", l: "line", linea: "line", "línea": "line",
-    node: "node", n: "node", point: "node", po: "node", punto: "node", nodo: "node",
-    area: "area", shell: "area", "área": "area",
-    rectarea: "rectarea", ra: "rectarea", "rectárea": "rectarea", arearect: "rectarea",
+    node: "node", n: "node", point: "node", po: "node", punto: "node", nodo: "node", nudo: "node",
+    area: "area", shell: "area", "área": "area", losa: "area", lo: "area",
+    rectarea: "rectarea", ra: "rectarea", "rectárea": "rectarea", arearect: "rectarea", losarect: "rectarea",
     polyarea: "polyarea", pa: "polyarea", "polígono": "polyarea", poligono: "polyarea",
     arealibre: "polyarea", "área-libre": "polyarea", freearea: "polyarea",
     plane3: "plane3", ucs: "plane3", plano3: "plane3", inclinar: "plane3", incline: "plane3",
-    polyline: "polyline", pline: "polyline", pl: "polyline", polilinea: "polyline",
-    rectangle: "rect", rec: "rect", rectang: "rect", rectangulo: "rect", rect: "rect",
-    circle: "circle", c: "circle", circ: "circle", circulo: "circle",
+    polyline: "polyline", pline: "polyline", pl: "polyline", polilinea: "polyline", "polilínea": "polyline",
+    rectangle: "rect", rec: "rect", rectang: "rect", rectangulo: "rect", "rectángulo": "rect", rect: "rect",
+    circle: "circle", c: "circle", circ: "circle", circulo: "circle", "círculo": "circle",
     arc: "arc", a: "arc", arco: "arc",
-    column: "col", col: "col", co: "col", columna: "col",
-    wall: "wall", w: "wall", muro: "wall", pared: "wall",
+    column: "col", col: "col", columna: "col", k: "col",
+    wall: "wall", w: "wall", muro: "wall", pared: "wall", mu: "wall",
+    move: "move", m: "move", mover: "move", desplazar: "move",
+    copy: "copy", co: "copy", cp: "copy", copiar: "copy",
     erase: "delete", e: "delete", del: "delete", delete: "delete", borrar: "delete",
     select: "select", sel: "select", s: "select", seleccionar: "select",
-    aux: "aux", xline: "aux", auxline: "aux", auxp: "auxp", auxpoint: "auxp",
+    aux: "aux", xline: "aux", auxline: "aux", auxiliar: "aux", auxp: "auxp", auxpoint: "auxp",
     extend: "extend", ex: "extend", prolongar: "extend",
     axis: "axis", eje: "axis", ax: "axis",
-    chamfer: "chaflan", chaflan: "chaflan", chaf: "chaflan", losa: "chaflan", slab: "chaflan",
+    chamfer: "chaflan", chaflan: "chaflan", chaf: "chaflan", slab: "chaflan",
   };
   const TOOL_LABEL: Record<string, string> = {
-    line: "／ Línea", node: "● Nodo", area: "▦ Área 4-clics", polyline: "⌒ Polilínea",
-    rectarea: "▭ Área rectangular", polyarea: "⬡ Área libre", plane3: "◣ Plano inclinado",
-    rect: "▭ Rectángulo", circle: "○ Círculo", arc: "⌒ Arco", col: "▌ Columna 3D",
-    wall: "▥ Pared Q4", delete: "🗑 Borrar", select: "🖱 Seleccionar",
+    line: "／ Línea", node: "● Nudo", area: "▦ Losa 4 clics", polyline: "⌒ Polilínea",
+    rectarea: "▭ Losa rectangular", polyarea: "⬡ Área libre", plane3: "◣ Plano inclinado",
+    rect: "▭ Rectángulo", circle: "○ Círculo", arc: "⌒ Arco", col: "▌ Columna",
+    wall: "▥ Muro", delete: "🗑 Borrar", select: "🖱 Seleccionar",
+    move: "✥ Mover", copy: "⧉ Copiar",
     aux: "┊ Línea auxiliar", auxp: "✦ Punto auxiliar", extend: "↗ Prolongar",
     axis: "📐 Eje", chaflan: "▱ Losa con chaflanes",
   };
-  // Nombre canónico (palabra completa) por herramienta — para el autocompletar.
   const TOOL_CANON: Record<string, string> = {
-    line: "line", node: "node", area: "area", polyline: "polyline", rect: "rectangle",
+    line: "line", node: "node", area: "losa", polyline: "polyline", rect: "rectangle",
     rectarea: "rectarea", polyarea: "polyarea", plane3: "plane3",
     circle: "circle", arc: "arc", col: "column", wall: "wall", delete: "delete",
-    select: "select", aux: "auxline", auxp: "auxpoint", extend: "extend",
+    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend",
     axis: "axis", chaflan: "chamfer",
   };
-  const ALL_CANON = [...new Set(Object.values(TOOL_CANON))];
+  // Comandos que no son herramientas del motor: rejilla, apoyo, carga, deshacer…
+  const ESPECIALES: Record<string, { canon: string; run: () => void; eco: string }> = {};
+  const especial = (canon: string, alias: string[], eco: string, run: () => void) => {
+    for (const a of [canon, ...alias]) ESPECIALES[a] = { canon, run, eco };
+  };
+  especial("rejilla", ["rej", "grid", "g"], "REJILLA — ejes, niveles y columnas en los cruces",
+    () => (window as any).__hekatanRibbon?.grid?.());
+  especial("apoyo", ["ap", "support", "empotrar"], "APOYO — clic sobre los nudos",
+    () => (window as any).__hekatanRibbon?.usar?.("apoyo"));
+  especial("carga", ["cg", "load", "fuerza"], "CARGA — clic sobre los nudos",
+    () => (window as any).__hekatanRibbon?.usar?.("carga"));
+  especial("deshacer", ["u", "undo", "z"], "DESHACER", () => {
+    if (!(window as any).__hekatanCadOption?.("u")) (window as any).__hekatanUndo?.();
+  });
+  especial("rehacer", ["redo", "y"], "REHACER", () => (window as any).__hekatanRedo?.());
+  especial("cerrar", ["close"], "CERRAR la polilínea", () => (window as any).__hekatanCadOption?.("c"));
+  especial("zoom", ["encuadre", "ze", "fit"], "ZOOM Extensión", () => (window as any).__hekatanAutoFit?.());
+  especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
+  especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
+  especial("lado", ["side"], "VISTA lado", () => (window as any).__hekatanRibbon?.vista?.(2));
+  especial("3d", ["iso"], "VISTA 3D", () => (window as any).__hekatanRibbon?.vista?.(3));
+  especial("orto", ["ortho"], "ORTO", () => (window as any).__hekatanToggleOrtho?.());
+  especial("polar", [], "POLAR", () => (window as any).__hekatanTogglePolar?.());
+  especial("osnap", ["refent"], "OSNAP", () => (window as any).__hekatanToggleOsnap?.());
+  especial("snap", ["forzcursor"], "SNAP a la rejilla", () => (window as any).__hekatanToggleSnap?.());
+  especial("ayuda", ["help", "?"], "AYUDA — cómo usar", () => (window as any).__hekatanRibbon?.guia?.(true));
+  especial("fin", ["end", "terminar"], "FIN del trazo", () => (window as any).__hekatanFinalizeDraw?.());
+  const ALL_CANON = [...new Set([...Object.values(TOOL_CANON), ...Object.values(ESPECIALES).map((e) => e.canon)])];
 
-  // ── UI: barra de comando estilo AutoCAD — FIJA abajo-centro ──
-  // (Antes seguía al cursor; molestaba para clickear. La fijamos abajo, como la
-  //  command line de AutoCAD. El seguir-al-cursor queda para más adelante.)
+  // ── DOM: la ventana (historial + prompt + casilla), fija abajo-centro ────
   const bar = document.createElement("div");
   bar.id = "hk3-cmdline";
   bar.style.cssText = [
-    "position:fixed", "left:50%", "bottom:14px", "transform:translateX(-50%)",
-    "z-index:99999",
-    "display:flex", "align-items:center", "gap:6px",
+    "position:fixed", "left:50%", "bottom:30px", "transform:translateX(-50%)",
+    "z-index:99999", "width:min(760px, 92vw)",
+    "display:flex", "flex-direction:column",
     "background:rgba(15,23,42,0.96)", "border:1px solid #22d3ee",
-    "border-radius:7px", "padding:4px 8px",
+    "border-radius:7px", "padding:0",
     "font-family:Consolas,monospace", "font-size:12px",
     "box-shadow:0 4px 14px rgba(0,0,0,0.5)",
     "pointer-events:auto",
   ].join(";") + ";";
+  const hist = document.createElement("div");
+  hist.id = "hk3-cmd-hist";
+  hist.style.cssText = [
+    "max-height:54px", "overflow-y:auto", "padding:4px 8px 2px",
+    "color:#7f9cae", "line-height:17px", "white-space:pre-wrap",
+    "border-bottom:1px solid #1e3a4a", "scrollbar-width:thin",
+  ].join(";") + ";";
+  const fila = document.createElement("div");
+  fila.style.cssText = "display:flex;align-items:center;gap:6px;padding:3px 6px 4px;";
+  const bHist = document.createElement("button");
+  bHist.type = "button";
+  bHist.title = "Historial de comandos (F2)";
+  bHist.textContent = "▲";
+  bHist.style.cssText = "width:18px;height:20px;padding:0;border:none;background:transparent;color:#4a6a7a;cursor:pointer;font-size:10px;";
   const label = document.createElement("span");
+  label.id = "hk3-cmd-prompt";
   label.textContent = "Comando:";
-  label.style.cssText = "color:#22d3ee;font-weight:bold";
+  label.style.cssText = "color:#22d3ee;font-weight:bold;white-space:nowrap;";
+  const ops = document.createElement("span");
+  ops.id = "hk3-cmd-ops";
+  ops.style.cssText = "color:#94a3b8;white-space:nowrap;";
   const input = document.createElement("input");
   input.type = "text";
   input.id = "hk3-cmd-input";
-  input.placeholder = "line, l, node, circle, rec, area, col…";
+  input.placeholder = "L línea · PL polilínea · REC · C · COL · MU muro · LO losa · M mover · CO copiar · E borrar · ? ayuda";
   input.autocomplete = "off";
   input.spellcheck = false;
-  // La caja visual vive en el wrapper; el input queda TRANSPARENTE encima del
-  // ghost de autocompletar. Mismo padding/font para que el texto se alinee.
   const cmdWrap = document.createElement("div");
+  cmdWrap.id = "hk3-cmd-wrap";
   cmdWrap.style.cssText = [
-    "position:relative", "display:inline-block",
+    "position:relative", "display:inline-block", "flex:1",
     "background:#0a1622", "border:1px solid #1e3a4a", "border-radius:5px",
-    "width:280px", "height:26px",
+    "height:26px", "min-width:120px",
   ].join(";") + ";";
   const baseTxt = "padding:4px 8px;font-family:Consolas,monospace;font-size:13px;line-height:18px;white-space:pre;box-sizing:border-box;";
   input.style.cssText = baseTxt + "background:transparent;border:none;color:#cdeefb;width:100%;height:100%;outline:none;position:relative;z-index:2;";
-  // Ghost = texto fantasma gris detrás (prefijo transparente + sufijo faded)
   const ghost = document.createElement("div");
   ghost.id = "hk3-cmd-ghost";
   ghost.style.cssText = baseTxt + "position:absolute;left:0;top:0;width:100%;height:100%;color:#4a6a7a;pointer-events:none;z-index:1;overflow:hidden;";
   cmdWrap.appendChild(ghost);
   cmdWrap.appendChild(input);
-  bar.appendChild(label);
-  bar.appendChild(cmdWrap);
+  fila.append(bHist, label, ops, cmdWrap);
+  bar.append(hist, fila);
   document.body.appendChild(bar);
 
-  // ── Seguir al cursor (Dynamic Input estilo AutoCAD) ──
-  // La barra se posiciona al lado del puntero. Mientras tipeás (input enfocado)
-  // se CONGELA donde estaba, para que no se mueva mientras escribís. Al
-  // soltar el foco vuelve a seguir el cursor.
-  // La barra queda FIJA (abajo-centro). El seguir-al-cursor se desactivó por
-  // pedido del usuario (molestaba para clickear); se podrá reactivar después.
+  // ── Historial ────────────────────────────────────────────────────────────
+  let histAbierto = false;
+  const abrirHist = (v?: boolean) => {
+    histAbierto = v ?? !histAbierto;
+    hist.style.maxHeight = histAbierto ? "240px" : "54px";
+    bHist.textContent = histAbierto ? "▼" : "▲";
+    hist.scrollTop = hist.scrollHeight;
+  };
+  bHist.addEventListener("click", () => abrirHist());
+  const echo = (txt: string, clase = "") => {
+    const t = String(txt ?? "").split("   |   ")[0].trim();
+    if (!t) return;
+    const ultimo = hist.lastElementChild as HTMLElement | null;
+    if (ultimo && ultimo.dataset.t === t) return;        // el mismo mensaje seguido, una vez
+    const d = document.createElement("div");
+    d.dataset.t = t;
+    d.textContent = t;
+    if (clase === "cmd") d.style.color = "#cdeefb";
+    else if (clase === "err") d.style.color = "#fb7185";
+    else if (clase === "ok") d.style.color = "#34d399";
+    hist.appendChild(d);
+    while (hist.children.length > 300) hist.removeChild(hist.firstChild!);
+    hist.scrollTop = hist.scrollHeight;
+  };
+  (window as any).__hekatanCadEcho = (txt: string) => echo(txt);
+  echo("Hekatan Struct — ventana de comandos. Teclee un comando y Enter; ? o F1 para la ayuda.");
 
-  // ── SIEMPRE en modo edición: caret parpadeando, listo para escribir ──
-  // Mantenemos el input enfocado para poder tipear comandos sin clickear,
-  // EXCEPTO cuando: (a) hay otro input/textarea activo (Tweakpane), o (b) estás
-  // dibujando (ahí manda la cajita de coordenadas #hk-rubber-label).
-  // ── Infra para NO cerrar los <select> nativos (Shell/Frame results) ──
-  // Ningún focus-stealer roba el foco mientras un <select> esté (o haya estado
-  // en los últimos 4s) enfocado, ni durante la interacción con Tweakpane. Cierra
-  // la carrera que en producción (minificado) cerraba el dropdown al instante.
+  // ── Prompt (lo dicta drawing.ts) y opciones clicables ────────────────────
+  let opcionesActuales: string[] = [];
+  const setPrompt = (txt: string, opciones: string[] = []) => {
+    label.textContent = txt || "Comando:";
+    opcionesActuales = opciones;
+    ops.innerHTML = "";
+    if (opciones.length) {
+      ops.appendChild(document.createTextNode("["));
+      opciones.forEach((o, i) => {
+        const b = document.createElement("span");
+        // la letra del comando en mayúscula, como AutoCAD: Cerrar → C, desHacer → H
+        const letra = o.match(/[A-ZÁÉÍÓÚ]/)?.[0]?.toLowerCase() ?? o[0].toLowerCase();
+        b.textContent = o;
+        b.title = `teclee ${letra.toUpperCase()} + Enter`;
+        b.style.cssText = "color:#22d3ee;cursor:pointer;text-decoration:underline dotted;";
+        b.addEventListener("click", () => { run(letra === "h" ? "u" : letra); setCmdText(""); });
+        ops.appendChild(b);
+        if (i < opciones.length - 1) ops.appendChild(document.createTextNode("/"));
+      });
+      ops.appendChild(document.createTextNode("]:"));
+    }
+    // el Dynamic Input pegado al cursor repite el prompt sin el nombre del comando
+    const corto = txt.replace(/^[A-ZÁÉÍÓÚÑ0-9 ]+ /, "").replace(/:$/, "");
+    dynPrompt.textContent = corto.length > 44 ? corto.slice(0, 42) + "…" : corto;
+  };
+  (window as any).__hekatanCadPrompt = setPrompt;
+
+  const flash = (msg: string, ok: boolean) => {
+    echo(msg, ok ? "ok" : "err");
+    label.style.color = ok ? "#34d399" : "#fb7185";
+    setTimeout(() => { label.style.color = "#22d3ee"; }, 900);
+  };
+
+  // ── Ejecutar ─────────────────────────────────────────────────────────────
+  const tecleados: string[] = [];
+  let iHist = -1;
+  let ultimoComando = "";
+  const toolActual = () => (window as any).__hekatanCadState?.get?.()?.tool ?? "select";
+  const activarTool = (tool: string) => {
+    (window as any).__hekatanCadState?.setTool?.(tool);
+    (window as any).__hekatanCadResetPending?.();
+    (window as any).__hekatanRectSelectExplicit = (tool === "select");
+    const st = document.getElementById("hk-cad-status");
+    const lbl = TOOL_LABEL[tool] ?? tool;
+    if (st) { st.textContent = `${lbl} activo (por comando)`; (window as any).__hekatanRefreshStatus?.(); }
+    (window as any).__hekatanRibbon?.marcar?.(tool);
+    (window as any).__hekatanCadRefreshPrompt?.();
+  };
+  const run = (raw: string) => {
+    const cmd = raw.trim().toLowerCase();
+    if (!cmd) return;
+    echo(`${label.textContent} ${raw.trim()}`, "cmd");
+    const tool = toolActual();
+    // 1. Opción del prompt en curso: C cierra, U quita el último punto
+    if ((tool === "line" || tool === "polyline") && (cmd === "c" || cmd === "u" || cmd === "cerrar" || cmd === "deshacer")) {
+      if ((window as any).__hekatanCadOption?.(cmd)) {
+        // Cerrar acaba el comando, como en AutoCAD; desHacer sigue en él
+        if (cmd === "c" || cmd === "cerrar") activarTool("select");
+        return;
+      }
+    }
+    // 2. Coordenada o cifra: 1,1,1 · @5,3 · 5<45 · 5 (distancia / altura / radio)
+    if (/^@?-?[\d.]/.test(cmd)) {
+      const ok = (window as any).__hekatanTypeCoord?.(raw.trim());
+      if (ok) { flash("✓ punto colocado", true); (window as any).__hekatanCadRefreshPrompt?.(); return; }
+      flash(`✕ «${raw.trim()}» no es una coordenada válida (1,1,1 · @5,3 · 5<45 · 5)`, false);
+      return;
+    }
+    // 3. Comandos que no son herramientas
+    const esp = ESPECIALES[cmd];
+    if (esp) { ultimoComando = cmd; echo(esp.eco); try { esp.run(); } catch { flash("✕ error", false); } return; }
+    // 4. Herramientas
+    const t = ALIASES[cmd];
+    if (!t) { flash(`✕ «${cmd}» desconocido. Teclee ? para la ayuda.`, false); return; }
+    ultimoComando = cmd;
+    try { activarTool(t); } catch { flash("✕ error", false); }
+  };
+  (window as any).__hekatanCadRun = run;
+
+  // ── Autocompletar fantasma ───────────────────────────────────────────────
+  const suggestFor = (t: string): string => {
+    const lc = t.trim().toLowerCase();
+    if (!lc || /^@?-?[\d.]/.test(lc)) return "";
+    if (ALL_CANON.includes(lc)) return "";
+    let cand = ALL_CANON.find((c) => c.startsWith(lc) && c.length > lc.length);
+    if (!cand) {
+      cand = [...Object.keys(ALIASES), ...Object.keys(ESPECIALES)]
+        .filter((k) => k.startsWith(lc) && k.length > lc.length)
+        .sort((a, b) => a.length - b.length)[0];
+    }
+    return cand || "";
+  };
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const updateGhostFor = (inp: HTMLInputElement, gh: HTMLElement) => {
+    const v = inp.value; const sug = suggestFor(v);
+    gh.innerHTML = (sug && v.length)
+      ? `<span style="color:transparent">${esc(v)}</span>${esc(sug.slice(v.length))}` : "";
+  };
+
+  // ── 2ª consola: Dynamic Input pegada al cursor ───────────────────────────
+  const dyn = document.createElement("div");
+  dyn.id = "hk-dyn";
+  dyn.style.cssText = [
+    "position:fixed", "left:0", "top:0", "z-index:99997", "display:none",
+    "align-items:center", "gap:6px", "background:rgba(15,23,42,0.92)",
+    "border:1px solid #22d3ee", "border-radius:6px", "padding:2px 6px",
+    "box-shadow:0 3px 10px rgba(0,0,0,0.5)", "pointer-events:none",
+  ].join(";") + ";";
+  const dynPrompt = document.createElement("span");
+  dynPrompt.id = "hk-dyn-prompt";
+  dynPrompt.style.cssText = "color:#22d3ee;font:11px Consolas,monospace;white-space:nowrap;";
+  const dynBase = "padding:0 4px;font-family:Consolas,monospace;font-size:12px;line-height:18px;white-space:pre;box-sizing:border-box;";
+  const dynWrap = document.createElement("div");
+  dynWrap.style.cssText = "position:relative;display:inline-block;width:165px;height:18px;";
+  const dynInput = document.createElement("input");
+  dynInput.type = "text"; dynInput.id = "hk-dyn-input"; dynInput.autocomplete = "off"; dynInput.spellcheck = false;
+  dynInput.style.cssText = dynBase + "background:transparent;border:none;color:#cdeefb;width:100%;height:100%;outline:none;position:relative;z-index:2;pointer-events:none;";
+  const dynGhost = document.createElement("div");
+  dynGhost.style.cssText = dynBase + "position:absolute;left:0;top:0;width:100%;height:100%;color:#4a6a7a;pointer-events:none;z-index:1;overflow:hidden;";
+  dynWrap.append(dynGhost, dynInput);
+  dyn.append(dynPrompt, dynWrap);
+  document.body.appendChild(dyn);
+
+  let _sync = false;
+  const setCmdText = (v: string) => {
+    _sync = true;
+    input.value = v; dynInput.value = v;
+    updateGhostFor(input, ghost); updateGhostFor(dynInput, dynGhost);
+    _sync = false;
+  };
+
+  // ── Teclado de las dos consolas ──────────────────────────────────────────
+  const wireKeys = (inp: HTMLInputElement) => {
+    inp.addEventListener("input", () => { if (!_sync) setCmdText(inp.value); });
+    inp.addEventListener("keydown", (ev) => {
+      const passDel = (ev.key === "Delete" || ev.key === "Backspace") && inp.value.length === 0;
+      // F2 (historial), F3/F8/F9/F10 (conmutadores) y Escape suben al resto de la app
+      const sube = passDel || /^F(2|3|8|9|10)$/.test(ev.key);
+      if (!sube) ev.stopPropagation();
+      if (ev.key === "F2") { ev.preventDefault(); abrirHist(); return; }
+      const sug = suggestFor(inp.value);
+      if ((ev.key === "Tab" || (ev.key === "ArrowRight" && inp.selectionStart === inp.value.length)) && sug) {
+        setCmdText(sug); ev.preventDefault(); return;
+      }
+      if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+        if (!tecleados.length) return;
+        ev.preventDefault();
+        if (ev.key === "ArrowUp") iHist = iHist < 0 ? tecleados.length - 1 : Math.max(0, iHist - 1);
+        else iHist = iHist < 0 ? -1 : Math.min(tecleados.length, iHist + 1);
+        setCmdText(iHist >= 0 && iHist < tecleados.length ? tecleados[iHist] : "");
+        if (iHist >= tecleados.length) iHist = -1;
+        return;
+      }
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        const v = inp.value.trim();
+        iHist = -1;
+        if (!v) {
+          // Enter vacío: termina el comando en curso; sin comando, repite el último
+          const tool = toolActual();
+          if (tool === "polyarea") { (window as any).__hekatanFinalizePolyArea?.(); return; }
+          if (tool !== "select" && tool !== "none") { (window as any).__hekatanFinalizeDraw?.(); activarTool("select"); return; }
+          if (ultimoComando) { run(ultimoComando); }
+          return;
+        }
+        tecleados.push(v);
+        if (tecleados.length > 60) tecleados.shift();
+        const cmd = (ALIASES[v.toLowerCase()] || ESPECIALES[v.toLowerCase()]) ? v : (sug || v);
+        run(cmd); setCmdText("");
+      } else if (ev.key === "Escape") {
+        setCmdText(""); inp.blur();
+        (window as any).__hekatanEscapeCancel?.();
+        ev.preventDefault();
+      }
+    });
+  };
+  wireKeys(input);
+  wireKeys(dynInput);
+  window.addEventListener("keydown", (ev) => {
+    if (ev.key === "F2") { ev.preventDefault(); abrirHist(); }
+  });
+
+  // ── El prompt sigue a la herramienta: se envuelve setTool ───────────────
+  const engancharSetTool = () => {
+    const st = (window as any).__hekatanCadState;
+    if (!st || st.__conPrompt) return;
+    const orig = st.setTool;
+    st.setTool = (t: any) => { orig(t); (window as any).__hekatanCadRefreshPrompt?.(); };
+    st.__conPrompt = true;
+  };
+  engancharSetTool();
+  setTimeout(engancharSetTool, 800);
+  setTimeout(() => (window as any).__hekatanCadRefreshPrompt?.(), 900);
+
+  // ── Foco: la casilla está lista para teclear, salvo que otro mando lo use ─
+  // (lo de antes, sin cambios de conducta: no robar el foco a un <select> ni a
+  // Tweakpane, ni mientras se escribe una coordenada en #hk-rubber-label)
   let tpInteractUntil = 0, selectFocusUntil = 0;
   const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
   const inTweakpane = (el: HTMLElement | null): boolean => {
@@ -6599,161 +6877,25 @@ try {
   const keepCmdFocus = () => {
     if (stealBlocked()) return;
     const ae = document.activeElement as HTMLElement | null;
-    // SOLO re-enfocar si NADA tiene el foco (body/null). Si hay un select
-    // (ej. dropdown "Categoría"), botón, slider o cualquier control de
-    // Tweakpane enfocado → NO robar el foco (sino se cierra y no se puede
-    // clickear/usar).
     if (ae && ae !== document.body && ae !== input) return;
     const rl = document.getElementById("hk-rubber-label") as HTMLElement | null;
-    if (rl && rl.style.display === "block") return; // dibujando → coords manda
+    if (rl && rl.style.display === "block") return;
     try { input.focus({ preventScroll: true }); } catch {}
   };
   if (!isTouch) {
     input.addEventListener("blur", () => setTimeout(keepCmdFocus, 60));
-    setTimeout(keepCmdFocus, 500);                       // foco inicial
-    // Re-tomar el foco SOLO si no hay nada enfocado (body) — no roba a nadie.
+    setTimeout(keepCmdFocus, 500);
     setInterval(() => {
       const ae = document.activeElement;
       if (!ae || ae === document.body) keepCmdFocus();
     }, 900);
   }
-
-  const flash = (msg: string, ok: boolean) => {
-    label.textContent = msg;
-    label.style.color = ok ? "#34d399" : "#fb7185";
-    setTimeout(() => { label.textContent = "Comando:"; label.style.color = "#22d3ee"; }, 1600);
-  };
-
-  const run = (raw: string) => {
-    const cmd = raw.trim().toLowerCase();
-    if (!cmd) return;
-    // ¿Es una COORDENADA en vez de un comando? (1,1,1 abs · @5,3 rel · 5<45
-    // polar · 5 DDE) → colocar el punto en vez de "comando desconocido".
-    if (/^@?-?[\d.]/.test(cmd)) {
-      const ok = (window as any).__hekatanTypeCoord?.(raw.trim());
-      if (ok) { flash("✓ punto colocado", true); return; }
-    }
-    const tool = ALIASES[cmd];
-    if (!tool) { flash(`✕ "${cmd}" desconocido`, false); return; }
-    try {
-      (window as any).__hekatanCadState?.setTool?.(tool);
-      (window as any).__hekatanCadResetPending?.();
-      (window as any).__hekatanRectSelectExplicit = (tool === "select");
-      // reflejar en la status bar del CAD (si existe)
-      const st = document.getElementById("hk-cad-status");
-      const lbl = TOOL_LABEL[tool] ?? tool;
-      if (st) { st.textContent = `${lbl} activo (por comando)`; (window as any).__hekatanRefreshStatus?.(); }
-      flash(`✓ ${lbl}`, true);
-    } catch (e) {
-      flash("✕ error", false);
-    }
-  };
-
-  // ── Autocompletar fantasma (ghost) estilo AutoCAD ──
-  // Sugiere para CUALQUIER comando: primero el nombre canónico completo
-  // (line, rectangle, column, chamfer…), y si no, cualquier alias que extienda
-  // lo tipeado (l, rec, co, n, del, ax…). Garantiza ghost para todo prefijo.
-  const suggestFor = (t: string): string => {
-    const lc = t.trim().toLowerCase();
-    if (!lc) return "";
-    if (ALL_CANON.includes(lc)) return ""; // ya es un comando completo
-    let cand = ALL_CANON.find(c => c.startsWith(lc) && c.length > lc.length);
-    if (!cand) {
-      cand = Object.keys(ALIASES)
-        .filter(k => k.startsWith(lc) && k.length > lc.length)
-        .sort((a, b) => a.length - b.length)[0];
-    }
-    return cand || "";
-  };
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  // Ghost genérico para cualquier input+ghost.
-  const updateGhostFor = (inp: HTMLInputElement, gh: HTMLElement) => {
-    const v = inp.value; const sug = suggestFor(v);
-    gh.innerHTML = (sug && v.length)
-      ? `<span style="color:transparent">${esc(v)}</span>${esc(sug.slice(v.length))}` : "";
-  };
-
-  // ── 2ª consola: Dynamic Input PEGADA AL CURSOR (estilo AutoCAD) ──
-  // pointer-events:none en TODO → el click pasa al lienzo (no bloquea como
-  // antes). El input se enfoca por código, así el caret queda en el cursor.
-  const dyn = document.createElement("div");
-  dyn.id = "hk-dyn";
-  dyn.style.cssText = [
-    "position:fixed", "left:0", "top:0", "z-index:99997", "display:none",
-    "align-items:center", "background:rgba(15,23,42,0.92)",
-    "border:1px solid #22d3ee", "border-radius:6px", "padding:2px 6px",
-    "box-shadow:0 3px 10px rgba(0,0,0,0.5)", "pointer-events:none",
-  ].join(";") + ";";
-  const dynBase = "padding:0 4px;font-family:Consolas,monospace;font-size:12px;line-height:18px;white-space:pre;box-sizing:border-box;";
-  const dynWrap = document.createElement("div");
-  dynWrap.style.cssText = "position:relative;display:inline-block;width:165px;height:18px;";
-  const dynInput = document.createElement("input");
-  dynInput.id = "hk-dyn-input"; dynInput.type = "text"; dynInput.autocomplete = "off"; dynInput.spellcheck = false;
-  dynInput.placeholder = "comando o coord…";
-  dynInput.style.cssText = dynBase + "background:transparent;border:none;color:#cdeefb;width:100%;height:100%;outline:none;position:relative;z-index:2;pointer-events:none;";
-  const dynGhost = document.createElement("div");
-  dynGhost.style.cssText = dynBase + "position:absolute;left:0;top:0;width:100%;height:100%;color:#4a6a7a;pointer-events:none;z-index:1;overflow:hidden;";
-  dynWrap.appendChild(dynGhost); dynWrap.appendChild(dynInput);
-  dyn.appendChild(dynWrap);
-  document.body.appendChild(dyn);
-
-  // Sincronizar texto entre las DOS consolas (sin loop).
-  let _sync = false;
-  const setCmdText = (v: string) => {
-    _sync = true;
-    input.value = v; dynInput.value = v;
-    updateGhostFor(input, ghost); updateGhostFor(dynInput, dynGhost);
-    _sync = false;
-  };
-
-  // Wire de teclado COMPARTIDO (misma lógica para abajo y cursor).
-  const wireKeys = (inp: HTMLInputElement) => {
-    inp.addEventListener("input", () => { if (!_sync) setCmdText(inp.value); });
-    inp.addEventListener("keydown", (ev) => {
-      // Dejar pasar Delete/Backspace al canvas cuando el comando está VACÍO
-      // (para que borren la selección). Si hay texto, proteger el tipeo.
-      const passDel = (ev.key === "Delete" || ev.key === "Backspace") && inp.value.length === 0;
-      if (!passDel) ev.stopPropagation(); // que X/Y/Z/F8 no se disparen mientras tipeás
-      const sug = suggestFor(inp.value);
-      if ((ev.key === "Tab" || (ev.key === "ArrowRight" && inp.selectionStart === inp.value.length)) && sug) {
-        setCmdText(sug); ev.preventDefault(); return;
-      }
-      if (ev.key === "Enter") {
-        const v = inp.value.trim();
-        // Enter vacío con ÁREA LIBRE activa → cerrar y mallar el polígono.
-        if (!v && (window as any).__hekatanCadState?.get?.()?.tool === "polyarea") {
-          (window as any).__hekatanFinalizePolyArea?.();
-          setCmdText(""); ev.preventDefault(); return;
-        }
-        const cmd = ALIASES[v.toLowerCase()] ? v : (sug || v);
-        run(cmd); setCmdText(""); ev.preventDefault();
-      } else if (ev.key === "Escape") {
-        setCmdText(""); (inp as HTMLInputElement).blur();
-        (window as any).__hekatanEscapeCancel?.();   // ESC también deselecciona/cancela
-        ev.preventDefault();
-      }
-    });
-  };
-  wireKeys(input);
-  wireKeys(dynInput);
-
-  // ¿estamos tipeando coordenadas (dibujando)? → ahí manda #hk-rubber-label.
   const isDrawingCoords = () => {
     const rl = document.getElementById("hk-rubber-label") as HTMLElement | null;
     return !!(rl && rl.style.display === "block");
   };
-  // Posicionar + mostrar el Dynamic Input al lado del cursor; enfocarlo para
-  // que el caret quede ahí. Mientras está VACÍO sigue al cursor; al tipear se
-  // congela (para no moverse). Si dibujás, se oculta (la cajita de coords manda).
-  // ── TÁCTIL: nunca robar el foco ──────────────────────────────────────────────
-  // El "Dynamic Input" estilo AutoCAD sigue al cursor y se auto-enfoca para capturar
-  // el tecleo. Con mouse es invisible; en un MÓVIL es un bug grave: `pointermove` se
-  // dispara al arrastrar el dedo y `pointerleave` al levantarlo, así que cualquier
-  // toque sobre el modelo enfocaba un <input> y el navegador abría el TECLADO VIRTUAL
-  // encima del viewer. En táctil no hay teclado físico que capturar → no aplica.
   const esTactil = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
-
-  viewerElm.addEventListener("pointermove", (e: PointerEvent) => {
+  viewerElm?.addEventListener("pointermove", (e: PointerEvent) => {
     if (esTactil(e)) { dyn.style.display = "none"; return; }
     if (isDrawingCoords()) { dyn.style.display = "none"; return; }
     if (dynInput.value.length === 0) {
@@ -6765,8 +6907,6 @@ try {
       dyn.style.top = Math.max(4, y) + "px";
     }
     dyn.style.display = "flex";
-    // CRÍTICO: si interactuás con un <select> de Tweakpane (Shell/Frame results),
-    // NO robar el foco — sino el pointermove/pointerleave cierra la lista nativa.
     if (stealBlocked()) return;
     const ae = document.activeElement as HTMLElement | null;
     if (ae && ae.tagName === "BUTTON") return;
@@ -6774,26 +6914,23 @@ try {
       try { dynInput.focus({ preventScroll: true }); } catch {}
     }
   });
-  viewerElm.addEventListener("pointerleave", (e: PointerEvent) => {
+  viewerElm?.addEventListener("pointerleave", (e: PointerEvent) => {
     dyn.style.display = "none";
-    if (esTactil(e)) return;      // móvil: levantar el dedo abriría el teclado virtual
-    if (stealBlocked()) return;   // select abierto → NO robar foco (cerraba el popup)
+    if (esTactil(e)) return;
+    if (stealBlocked()) return;
     try { input.focus({ preventScroll: true }); } catch {}
   });
 
-  // ── Auto-focus al empezar a tipear letras (estilo AutoCAD) ──
+  // ── Auto-foco al teclear letras, estilo AutoCAD ──────────────────────────
   window.addEventListener("keydown", (ev) => {
     const ae = document.activeElement as HTMLElement | null;
-    // Si YA hay un input/textarea enfocado (incluidos nuestros 2 inputs de
-    // comando), NO interceptar → la tecla se agrega normal al input enfocado.
-    // Sólo arrancamos la palabra cuando NADA está enfocado.
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")) return;
-    if (stealBlocked()) return;   // tocando un select de Tweakpane → no interceptar
+    if (stealBlocked()) return;
     if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-    if (/^[a-zA-Z]$/.test(ev.key)) {
+    if (/^[a-zA-Z@]$/.test(ev.key)) {
       const target = (dyn.style.display !== "none") ? dynInput : input;
       target.focus();
-      setCmdText(ev.key);   // primer carácter arranca la palabra
+      setCmdText(ev.key);
       ev.preventDefault();
     }
   }, { capture: true });

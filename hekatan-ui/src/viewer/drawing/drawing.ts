@@ -412,6 +412,7 @@ export function drawing({
     rubberLabelInput.blur();
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
+    try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
   };
 
   // Exponer para que la barra de comandos pueda colocar un punto desde una
@@ -423,6 +424,13 @@ export function drawing({
     if (parsed.kind === "length") { commitTypedDistance(parsed.L); return true; }
     const pt = resolveParsedInput(parsed);
     if (!pt) return false;
+    // MOVER/COPIAR: la coordenada tecleada es el punto base o el destino
+    // («@6,0,0» = desplazar seis metros), no un punto de polilínea.
+    const toolMC = (window as any).__hekatanCadState?.get?.()?.tool;
+    if (toolMC === "move" || toolMC === "copy") {
+      (window as any).__hekatanPasoMoverCopiar?.(toolMC, pt);
+      return true;
+    }
     commitAbsolutePoint(pt);
     // Auto-cierre del ÁREA al 4º punto tipeado (igual que con clicks).
     const tool = (window as any).__hekatanCadState?.get?.()?.tool;
@@ -918,10 +926,37 @@ export function drawing({
       }
       escapeCancel();
       ev.preventDefault();
+    } else if (ev.key === "F3") {
+      // F3 → OSNAP (referencia a objetos) sí/no, como en AutoCAD
+      ev.preventDefault();
+      (window as any).__hekatanToggleOsnap?.();
+    } else if (ev.key === "F10") {
+      // F10 → rastreo POLAR sí/no, como en AutoCAD
+      ev.preventDefault();
+      (window as any).__hekatanTogglePolar?.();
     } else if (ev.key === "F8") {
+      ev.preventDefault();
+      (window as any).__hekatanToggleOrtho?.();
+    }
+  });
+  // Los conmutadores viven en funciones para que la BARRA DE ESTADO (los
+  // botones SNAP · ORTO · POLAR · OSNAP de abajo) y las teclas F hagan lo mismo.
+  (window as any).__hekatanToggleOsnap = () => {
+    const on = !((window as any).__hekatanOsnapOn ?? true);
+    (window as any).__hekatanOsnapOn = on;
+    if (!on) hideOsnap();
+    updateStatus(`🧲 OSNAP ${on ? "ON" : "OFF"} (F3)`);
+  };
+  (window as any).__hekatanTogglePolar = () => {
+    const on = !((window as any).__hekatanPolarTrack !== false);
+    (window as any).__hekatanPolarTrack = on;
+    if (!on) polarLines.visible = false;
+    updateStatus(`◈ POLAR ${on ? "ON" : "OFF"} (F10)`);
+  };
+  (window as any).__hekatanToggleOrtho = () => {
+    {
       // F8 → toggle ORTO mode (AutoCAD-style). Restringe el rubber band al
       // eje X/Y/Z más cercano AUTOMÁTICAMENTE (axis lock dinámico).
-      ev.preventDefault();
       (window as any).__hekatanOrthoMode = !(window as any).__hekatanOrthoMode;
       const on = (window as any).__hekatanOrthoMode;
       // Refrescar status (re-aplica sufijo con modos activos)
@@ -961,7 +996,7 @@ export function drawing({
       }
       orthoBadge.style.display = on ? "block" : "none";
     }
-  });
+  };
   // Helper: proyecta el rayo del raycaster sobre el eje desde lastPt y
   // devuelve el punto del eje más cercano al cursor en pantalla.
   const _axisLockEndA = new THREE.Vector3();
@@ -2213,6 +2248,8 @@ export function drawing({
           }
         }
         const coords = `X=${coordPt.x.toFixed(2)} Y=${coordPt.y.toFixed(2)} Z=${coordPt.z.toFixed(2)}`;
+        // la barra de estado de abajo (getCadStatusBar) lee de aquí
+        (window as any).__hekatanCursorXYZ = [coordPt.x, coordPt.y, coordPt.z];
         if (hoverItem) {
           const labels: any = { pt: "nodo", seg: "segmento", poly: "área", aux: "línea aux" };
           coordReadout.textContent = `${coords}  ·  🖱 Click → ${labels[hoverItem.kind]}`;
@@ -3588,7 +3625,7 @@ export function drawing({
   // El usuario activa cada snap via window.__hekatanOsnap[type] = true
   (window as any).__hekatanOsnap = (window as any).__hekatanOsnap ?? {
     end: true, mid: true, node: true, cen: true,
-    per: false, nea: false, int: false,
+    per: false, nea: false, int: true,
   };
   // Snap marker visual (cuadrado coloreado por tipo + label)
   const osnapMarker = new THREE.Group();
@@ -3658,6 +3695,41 @@ export function drawing({
           if (opts.nea) consider("nea", sx, sy, sz);
           if (opts.per) consider("per", sx, sy, sz);
         }
+      }
+    }
+    // INTERSECCIÓN: cruce de dos tramos. Solo se miran los tramos que pasan
+    // cerca del cursor (a menos de 3·tol), así no es O(n²) sobre el modelo.
+    if (opts.int) {
+      const cerca: [number, number, number][][] = [];
+      for (const poly of polys) {
+        for (let i = 0; i < poly.length - 1; i++) {
+          const a = pts[poly[i]], b = pts[poly[i + 1]];
+          if (!a || !b) continue;
+          const dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2];
+          const len2 = dx*dx + dy*dy + dz*dz;
+          if (len2 < 1e-12) continue;
+          const t = Math.max(0, Math.min(1, ((px-a[0])*dx + (py-a[1])*dy + (pz-a[2])*dz) / len2));
+          if (Math.hypot(a[0]+t*dx-px, a[1]+t*dy-py, a[2]+t*dz-pz) < 3*tol) cerca.push([a, b]);
+        }
+      }
+      for (let i = 0; i < cerca.length; i++) for (let j = i + 1; j < cerca.length; j++) {
+        const [p1, p2] = cerca[i], [p3, p4] = cerca[j];
+        // puntos más próximos de las dos rectas (Gauss sobre s,t); si casi
+        // coinciden y caen dentro de los dos tramos, es un cruce
+        const u = [p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2]], v = [p4[0]-p3[0], p4[1]-p3[1], p4[2]-p3[2]];
+        const w = [p1[0]-p3[0], p1[1]-p3[1], p1[2]-p3[2]];
+        const A = u[0]*u[0]+u[1]*u[1]+u[2]*u[2], B = u[0]*v[0]+u[1]*v[1]+u[2]*v[2], C = v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+        const D = u[0]*w[0]+u[1]*w[1]+u[2]*w[2], E = v[0]*w[0]+v[1]*w[1]+v[2]*w[2];
+        const den = A*C - B*B;
+        if (den < 1e-12) continue;                 // paralelos
+        const s = (B*E - C*D) / den, t = (A*E - B*D) / den;
+        if (s < -1e-6 || s > 1+1e-6 || t < -1e-6 || t > 1+1e-6) continue;
+        const q1 = [p1[0]+s*u[0], p1[1]+s*u[1], p1[2]+s*u[2]];
+        const q2 = [p3[0]+t*v[0], p3[1]+t*v[1], p3[2]+t*v[2]];
+        if (Math.hypot(q1[0]-q2[0], q1[1]-q2[1], q1[2]-q2[2]) > 1e-4) continue;   // se cruzan sin tocarse
+        // los extremos compartidos ya los da END; aquí interesan los cruces
+        const esExtremo = [p1, p2, p3, p4].some((e) => Math.hypot(e[0]-q1[0], e[1]-q1[1], e[2]-q1[2]) < 1e-6);
+        if (!esExtremo) consider("int", q1[0], q1[1], q1[2]);
       }
     }
     // Líneas auxiliares: endpoint, midpoint, nearest, perpendicular
@@ -3744,7 +3816,70 @@ export function drawing({
     const fullText = txt + buildStatusSuffix();
     statusBar.textContent = fullText;
     (window as any).__hekatanCadStatusText = fullText;
+    // La ventana de comandos (main.ts) lleva un HISTORIAL como la de AutoCAD:
+    // cada mensaje de estado se escribe ahí también, así lo que pasó no se
+    // pierde al mensaje siguiente. La barra de abajo solo enseña el último.
+    try { (window as any).__hekatanCadEcho?.(txt); } catch {}
   };
+
+  // ── EL PROMPT: qué se espera AHORA, en el léxico de AutoCAD ──────────────
+  // «Precise primer punto:», «Precise punto siguiente o [Cerrar/desHacer]:».
+  // Se deduce del estado (herramienta, clics pendientes, polilínea en curso)
+  // y no de cada rama del manejador de clic: así ninguna rama se lo salta.
+  // La ventana de comandos lo pinta en su línea de prompt y el Dynamic Input
+  // pegado al cursor lo repite en corto.
+  const PROMPT_IDLE = "Comando:";
+  const promptFor = (): { txt: string; ops: string[] } => {
+    const tool = (window as any).__hekatanCadState?.get?.()?.tool ?? "select";
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const last = polys.length ? polys[polys.length - 1] : [];
+    const n = pendingClicks.length;
+    const P = (txt: string, ops: string[] = []) => ({ txt, ops });
+    switch (tool) {
+      case "line":
+        return last.length >= 2 ? P("LÍNEA Precise punto siguiente o", ["Cerrar", "desHacer"])
+             : last.length === 1 ? P("LÍNEA Precise punto siguiente o", ["desHacer"])
+             : P("LÍNEA Precise primer punto:");
+      case "polyline":
+        return last.length >= 2 ? P("POLILÍNEA Precise punto siguiente o", ["Cerrar", "desHacer"])
+             : last.length === 1 ? P("POLILÍNEA Precise punto siguiente o", ["desHacer"])
+             : P("POLILÍNEA Precise punto inicial:");
+      case "node": return P("NUDO Precise punto:");
+      case "area": return P(`LOSA Precise vértice ${Math.min(last.length + 1, 4)} de 4 (en orden, antihorario):`);
+      case "rectarea": return n ? P("LOSA RECTANGULAR Precise otra esquina:") : P("LOSA RECTANGULAR Precise primera esquina:");
+      case "polyarea": return P(`ÁREA LIBRE Precise vértice ${polyAreaPts.length + 1} (Enter o clic derecho cierra y malla):`);
+      case "rect": return n ? P("RECTÁNGULO Precise otra esquina:") : P("RECTÁNGULO Precise primera esquina:");
+      case "circle": return n ? P("CÍRCULO Precise radio (clic o teclee la cifra):") : P("CÍRCULO Precise centro:");
+      case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
+      case "col": return P(`COLUMNA Precise punto de inserción (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter antes del clic):`);
+      case "wall": return n ? P("MURO Precise segundo punto de la base:")
+                            : P(`MURO Precise primer punto de la base (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter):`);
+      case "plane3": return P(`PLANO Precise punto ${n + 1} de 3:`);
+      case "extp": return P("EXTRUIR Precise el nudo a levantar (altura: teclee la cifra + Enter):");
+      case "extl": return P("EXTRUIR Precise la línea a levantar:");
+      case "extend": return P("PROLONGAR Precise la línea y luego hasta dónde:");
+      case "axis": return P("EJE Precise el primer punto del eje:");
+      case "aux": return n ? P("AUXILIAR Precise el segundo punto:") : P("AUXILIAR Precise el primer punto:");
+      case "auxp": return P("PUNTO AUXILIAR Precise punto:");
+      case "chaflan": return n ? P("LOSA CHAFLANES Precise otra esquina:") : P("LOSA CHAFLANES Precise primera esquina:");
+      case "delete": return P("BORRAR Designe objetos (pase por encima y haga clic):");
+      case "move": return !selection.size ? P("MOVER Designe objetos (S o ventana) y vuelva a M:")
+                    : n ? P("MOVER Precise segundo punto (o teclee @dx,dy,dz):") : P("MOVER Precise punto base:");
+      case "copy": return !selection.size ? P("COPIAR Designe objetos (S o ventana) y vuelva a CO:")
+                    : n ? P("COPIAR Precise segundo punto (o teclee @dx,dy,dz):") : P("COPIAR Precise punto base:");
+      case "select": return selection.size
+        ? P(`SELECCIÓN ${selection.size} objeto${selection.size === 1 ? "" : "s"} · Supr borra · M mueve · CO copia · Esc suelta:`)
+        : P("Designe objetos (ventana izq→der, captura der→izq) o teclee un comando:");
+      default: return P(PROMPT_IDLE);
+    }
+  };
+  const refreshPrompt = () => {
+    try {
+      const p = promptFor();
+      (window as any).__hekatanCadPrompt?.(p.txt, p.ops);
+    } catch {}
+  };
+  (window as any).__hekatanCadRefreshPrompt = refreshPrompt;
   // Refresh expuesto al window — para que main.ts y otros listeners
   // (F8, toggle planos, slider Cota Z, cambio de tool) puedan refrescar
   // el status sin saber el texto del tool actual.
@@ -3762,6 +3897,7 @@ export function drawing({
     cerrarPolilinea();
     viewerRender();
     updateStatus("🛠 Tool cambiado — clicks pendientes limpiados");
+    refreshPrompt();
   };
 
   /**
@@ -3784,13 +3920,30 @@ export function drawing({
   // Snapshot del estado de drawing ANTES de cada modificación. Ctrl+Z hace
   // pop y restaura. Limit 100 estados para no consumir mucha RAM.
   const undoStack: { p: any; l: any; a: any }[] = [];
+  // Rehacer (Ctrl+Y / Ctrl+Shift+Z): lo que se deshizo se guarda aquí y se
+  // vacía en cuanto se dibuja algo nuevo, como en cualquier editor.
+  const redoStack: { p: any; l: any; a: any }[] = [];
+  const snapshot = () => ({
+    p: JSON.parse(JSON.stringify(drawingObj.points.rawVal ?? [])),
+    l: JSON.parse(JSON.stringify(drawingObj.polylines?.rawVal ?? [])),
+    a: JSON.parse(JSON.stringify(drawingObj.areas?.rawVal ?? [])),
+  });
+  const restore = (s: { p: any; l: any; a: any }) => {
+    drawingObj.points.val = s.p;
+    if (drawingObj.polylines) drawingObj.polylines.val = s.l;
+    if (drawingObj.areas) drawingObj.areas.val = s.a;
+    pendingClicks = [];
+    rubberBand.visible = false;
+    polarLines.visible = false;
+    hideRubberLabel();
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    refreshPrompt();
+  };
   const pushUndo = () => {
-    undoStack.push({
-      p: JSON.parse(JSON.stringify(drawingObj.points.rawVal ?? [])),
-      l: JSON.parse(JSON.stringify(drawingObj.polylines?.rawVal ?? [])),
-      a: JSON.parse(JSON.stringify(drawingObj.areas?.rawVal ?? [])),
-    });
+    undoStack.push(snapshot());
     if (undoStack.length > 100) undoStack.shift();
+    redoStack.length = 0;
   };
   const undo = () => {
     const prev = undoStack.pop();
@@ -3798,19 +3951,84 @@ export function drawing({
       updateStatus("↶ Nada para deshacer");
       return;
     }
-    drawingObj.points.val = prev.p;
-    if (drawingObj.polylines) drawingObj.polylines.val = prev.l;
-    if (drawingObj.areas) drawingObj.areas.val = prev.a;
-    pendingClicks = [];
-    rubberBand.visible = false;
-    polarLines.visible = false;
-    hideRubberLabel();
-    updateStatus(`↶ Undo — ${undoStack.length} estados restantes`);
-    try { (window as any).__hekatanRebuild?.(); } catch {}
-    viewerRender();
+    redoStack.push(snapshot());
+    restore(prev);
+    updateStatus(`↶ Deshacer — quedan ${undoStack.length}`);
+  };
+  const redo = () => {
+    const next = redoStack.pop();
+    if (!next) {
+      updateStatus("↷ Nada para rehacer");
+      return;
+    }
+    undoStack.push(snapshot());
+    restore(next);
+    updateStatus(`↷ Rehacer — quedan ${redoStack.length}`);
   };
   (window as any).__hekatanPushUndo = pushUndo;
   (window as any).__hekatanUndo = undo;
+  (window as any).__hekatanRedo = redo;
+  document.addEventListener("keydown", (ev: KeyboardEvent) => {
+    const k = ev.key.toLowerCase();
+    const esRedo = (ev.ctrlKey || ev.metaKey) && (k === "y" || (k === "z" && ev.shiftKey));
+    if (!esRedo) return;
+    const tgt = ev.target as HTMLInputElement | null;
+    const enTexto = tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA")
+      && tgt.type !== "checkbox" && tgt.type !== "range" && (tgt.value?.length ?? 0) > 0;
+    if (enTexto) return;
+    ev.preventDefault(); ev.stopPropagation();
+    redo();
+  }, { capture: true });
+
+  // ── Las OPCIONES del prompt, como en AutoCAD: [Cerrar/desHacer] ──────────
+  // Se teclean en la caja de comandos mientras hay una línea en curso.
+  //   C / cerrar   → une el último punto con el primero y termina.
+  //   U / deshacer → quita SOLO el último punto (no todo el trazo).
+  (window as any).__hekatanCadOption = (op: string): boolean => {
+    const o = op.trim().toLowerCase();
+    const tool = (window as any).__hekatanCadState?.get?.()?.tool;
+    if (!drawingObj.polylines) return false;
+    const polys = drawingObj.polylines.rawVal;
+    const last = polys.length ? polys[polys.length - 1] : [];
+    if (tool !== "line" && tool !== "polyline") {
+      if (o === "u" || o === "deshacer" || o === "undo") { undo(); return true; }
+      return false;
+    }
+    if (o === "c" || o === "cerrar" || o === "close") {
+      if (last.length < 3) { updateStatus("Cerrar necesita al menos tres puntos."); return true; }
+      pushUndo();
+      drawingObj.polylines.val = [...polys.slice(0, -1), [...last, last[0]], []];
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      finalizeDraw();
+      updateStatus(`✓ Polilínea cerrada — ${last.length} tramos.`);
+      return true;
+    }
+    if (o === "u" || o === "deshacer" || o === "undo") {
+      if (!last.length) { undo(); return true; }
+      pushUndo();
+      const quitado = last[last.length - 1];
+      const rest = last.slice(0, -1);
+      // el punto sale también de la lista de puntos si nadie más lo usa
+      const usado = polys.some((pl, i) => i !== polys.length - 1 && pl.includes(quitado)) || rest.includes(quitado);
+      let pts = drawingObj.points.rawVal;
+      let nuevas = [...polys.slice(0, -1), rest];
+      if (!usado && quitado === pts.length - 1) {
+        pts = pts.slice(0, -1);
+        drawingObj.points.val = pts;
+      }
+      drawingObj.polylines.val = nuevas;
+      if (rest.length) {
+        const p = pts[rest[rest.length - 1]];
+        if (p) rubberStart = [p[0], p[1], p[2]];
+      } else { rubberStart = null; rubberBand.visible = false; }
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      viewerRender();
+      updateStatus(`↶ Último punto quitado — quedan ${rest.length}.`);
+      refreshPrompt();
+      return true;
+    }
+    return false;
+  };
   // Ctrl+Z / Cmd+Z global — usar CAPTURE phase para interceptar ANTES que
   // los inputs de Tweakpane (sino el input hace su undo de texto y se come
   // el evento, nunca llegando al window listener).
@@ -3855,6 +4073,7 @@ export function drawing({
     hideRubberLabel();
     updateStatus("⏹ Dibujo finalizado — click para empezar otra serie");
     viewerRender();
+    refreshPrompt();
   };
   (window as any).__hekatanFinalizeDraw = finalizeDraw;
 
@@ -3887,8 +4106,70 @@ export function drawing({
     } catch {}
     updateStatus(hadSel ? "⎋ Selección cancelada" : "⎋ Sin herramienta — arrastrá para seleccionar");
     viewerRender();
+    refreshPrompt();
   };
   (window as any).__hekatanEscapeCancel = escapeCancel;
+
+  // ── MOVER y COPIAR la selección con dos puntos (base → destino) ──────────
+  // Es el MOVE/COPY de AutoCAD: se designan los objetos, punto base, segundo
+  // punto. Se traslada cada NUDO de la selección (los tramos y áreas que los
+  // usan van con ellos, como al mover un nudo en ETABS). COPIAR reusa
+  // __hekatanReplicateSelection con una sola copia. Devuelve cuántos nudos.
+  const nudosDeSeleccion = (): Set<number> => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const nodeSet = new Set<number>();
+    selection.forEach((id) => {
+      if (id.startsWith("pt:")) nodeSet.add(+id.slice(3));
+      else if (id.startsWith("poly:")) (polys[+id.slice(5)] || []).forEach((n) => nodeSet.add(n));
+      else if (id.startsWith("seg:")) {
+        const parts = id.split(":"); const poly = polys[+parts[1]] || [];
+        const a = poly[+parts[2]], b = poly[+parts[2] + 1];
+        if (a != null) nodeSet.add(a); if (b != null) nodeSet.add(b);
+      }
+    });
+    return nodeSet;
+  };
+  const moveSelection = (dx: number, dy: number, dz: number): number => {
+    const nodeSet = nudosDeSeleccion();
+    if (!nodeSet.size) return 0;
+    pushUndo();
+    const pts = drawingObj.points.rawVal.map((p, i) =>
+      nodeSet.has(i) ? [p[0] + dx, p[1] + dy, p[2] + dz] : p) as [number, number, number][];
+    drawingObj.points.val = pts;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    refreshSelectionGroup();
+    viewerRender();
+    return nodeSet.size;
+  };
+  (window as any).__hekatanMoveSelection = moveSelection;
+  // Un paso de MOVER/COPIAR con un punto (clic o coordenada tecleada).
+  const pasoMoverCopiar = (tool: string, pt: [number, number, number]): void => {
+    if (!selection.size) {
+      updateStatus(`${tool === "move" ? "MOVER" : "COPIAR"}: primero designe objetos (S, o ventana), luego vuelva al comando.`);
+      (window as any).__hekatanCadState?.setTool?.("select");
+      refreshPrompt();
+      return;
+    }
+    pendingClicks.push(pt);
+    if (pendingClicks.length === 1) {
+      rubberStart = pt;
+      updateStatus(`${tool === "move" ? "MOVER" : "COPIAR"} punto base (${pt[0].toFixed(2)}, ${pt[1].toFixed(2)}, ${pt[2].toFixed(2)}). Precise el segundo punto.`);
+      refreshPrompt();
+      return;
+    }
+    const [a, b] = pendingClicks;
+    const d: [number, number, number] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    pendingClicks = [];
+    rubberBand.visible = false;
+    let n = 0;
+    if (tool === "move") n = moveSelection(d[0], d[1], d[2]);
+    else n = nudosDeSeleccion().size, (window as any).__hekatanReplicateSelection?.(d[0], d[1], d[2], 1);
+    updateStatus(`✓ ${tool === "move" ? "Movidos" : "Copiados"} ${n} nudo${n === 1 ? "" : "s"} — Δ (${d[0].toFixed(2)}, ${d[1].toFixed(2)}, ${d[2].toFixed(2)}) m.`);
+    if (tool === "move") { selection.clear(); refreshSelectionGroup(); }
+    (window as any).__hekatanCadState?.setTool?.("select");
+    refreshPrompt();
+  };
+  (window as any).__hekatanPasoMoverCopiar = pasoMoverCopiar;
 
   // ── REPLICAR selección (estilo ETABS "Replicate Linear") ──
   // Clona los nodos + frames/áreas seleccionados `count` veces, cada copia
@@ -4100,6 +4381,11 @@ export function drawing({
         st.pendingStart, [point.x, point.y, point.z], useNum,
       );
       updateStatus(`✓ Eje "${label}" creado. Click 1=nuevo eje, o cambia tool.`);
+      return;
+    }
+
+    if (tool === "move" || tool === "copy") {
+      pasoMoverCopiar(tool, [point.x, point.y, point.z]);
       return;
     }
 
@@ -4518,6 +4804,10 @@ export function drawing({
       updateStatus(`▦ Área — click ${last.length}/4. Marcá ${4 - last.length} vértice${4 - last.length === 1 ? "" : "s"} más.`);
     }
   });
+
+  // Tras CADA clic el prompt se recalcula del estado (va detrás del manejador
+  // grande porque los listeners corren en orden de registro).
+  rendererElm.addEventListener("click", () => refreshPrompt());
 
   // On contextmenu, add a new empty polyline
   rendererElm.addEventListener("contextmenu", (ev: Event) => {

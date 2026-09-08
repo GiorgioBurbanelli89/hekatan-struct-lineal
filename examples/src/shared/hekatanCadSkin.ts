@@ -187,19 +187,22 @@ body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
 /* ── la LINEA DE COMANDO, acoplada abajo y a todo lo ancho ───────────── */
 /* Estaba flotando en el centro con un cian que no es de ninguna de las dos
    paletas. En AutoCAD va pegada al borde inferior, sobre la barra de estado. */
+/* Desde el 8-sep-2026 la ventana tiene HISTORIAL encima del prompt (F2 lo
+   despliega), asi que la altura ya no es fija: la fijaba en 40 px y el
+   historial salia aplastado a una linea de scroll. */
 body.hk-cad #hk3-cmdline{
   left:0 !important; right:0 !important; bottom:26px !important;
   transform:none !important; width:auto !important;
   border-radius:0 !important; border:0 !important;
   border-top:1px solid var(--hk-borde) !important;
   background:var(--hk-hueco) !important; box-shadow:none !important;
-  padding:6px 10px !important; gap:8px !important; height:40px !important;
-  box-sizing:border-box !important;
+  padding:0 !important; box-sizing:border-box !important;
 }
-body.hk-cad #hk3-cmdline > span:first-child{ color:var(--hk-foco) !important; }
-body.hk-cad #hk3-cmdline > div{
+body.hk-cad #hk3-cmd-hist{ color:var(--hk-suave) !important; border-bottom:1px solid var(--hk-borde) !important; }
+body.hk-cad #hk3-cmd-prompt{ color:var(--hk-foco) !important; }
+body.hk-cad #hk3-cmd-wrap{
   background:var(--hk-panel2) !important; border:1px solid var(--hk-borde) !important;
-  border-radius:3px !important; width:min(520px,50vw) !important;
+  border-radius:3px !important;
 }
 body.hk-cad #hk3-cmd-input{ color:var(--hk-texto) !important; }
 
@@ -303,8 +306,15 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     "</span>";
   document.body.appendChild(tit);
 
+  // La franja de conmutadores de la piel (FORZC · REJILLA · ORTO · POLAR ·
+  // REFENT · RASTREO · DIN) era DECORATIVA: sus botones lanzaban un evento
+  // `hk-conmutador` que nadie escuchaba. Desde el 8-sep-2026 la barra de
+  // estado es `getCadStatusBar.ts` (hekatan-ui), con conmutadores que hacen lo
+  // que dicen (F9 · F8 · F10 · F3) y las coordenadas de verdad. Esta se deja
+  // escondida para no tener dos barras abajo.
   const est = document.createElement("div");
   est.id = "hk-cad-est";
+  est.style.display = "none";
   est.innerHTML =
     '<span class="xy" id="hk-cad-xy">0.0000, 0.0000, 0.0000</span>' +
     CONMUTADORES.map(
