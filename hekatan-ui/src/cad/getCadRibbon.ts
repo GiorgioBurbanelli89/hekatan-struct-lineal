@@ -101,7 +101,7 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
   {
     titulo: "Modificar",
     items: [
-      { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: arrastra izq→der; captura: der→izq." },
+      { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: clic en una esquina, mueve, clic en la otra (izq→der ventana, der→izq captura). Arrastrar orbita." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
@@ -500,7 +500,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
         <p style="margin:0 0 8px">Sobre el plano de trabajo de la barra de abajo. <b>1</b> planta (a la cota Z), <b>2</b> frente,
           <b>3</b> lado, <b>4</b> 3D para mirar. Los números cambian la vista solo sin comando en curso.</p>
         <div style="color:#e2e8f0;font-weight:600;margin-bottom:4px">Seleccionar y modificar</div>
-        <p style="margin:0 0 8px">Sin comando, arrastra: <b>izquierda→derecha</b> ventana (entero dentro), <b>derecha→izquierda</b> captura (basta tocar).
+        <p style="margin:0 0 8px">Sin comando, clic en una esquina, mueve el ratón y clic en la otra: <b>izquierda→derecha</b> ventana (entero dentro), <b>derecha→izquierda</b> captura (basta tocar). Arrastrar con el botón apretado gira la cámara.
           Con selección: <b>M</b> mueve, <b>CO</b> copia (punto base y segundo punto), <b>Supr</b> borra, <b>Ctrl+Z</b> / <b>Ctrl+Y</b>.</p>
         <table style="border-collapse:collapse;font-size:12px">
           <tr><td style="padding:1px 14px 1px 0"><b>L</b> línea · <b>PL</b> polilínea · <b>REC</b> rectángulo · <b>C</b> círculo · <b>A</b> arco</td>

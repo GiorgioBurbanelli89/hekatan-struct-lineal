@@ -449,6 +449,89 @@ const ESCENAS = {
     await desenfoca();
     await encuadra(); await foto(6);
   },
+  // 10. UNA CERCHA desde cero, con la ventana de comandos nueva (8-sep-2026):
+  //   cordones por POLILINEA tecleada, un montante por LINEA, seleccion por
+  //   VENTANA con el raton y COPIAR, diagonales, APOYOS y CARGAS por clic en los
+  //   nudos, y el diagrama de axiles y momentos. Pensada para un GIF: la
+  //   ventana ENTERA (ribbon, paneles, ventana de comandos, barra de estado).
+  async cercha() {
+    abre("cercha");
+    await pag.setViewport({ width: 1280, height: 760, deviceScaleFactor: 1 });
+    await cargar("?t=new-blank");
+    await espera(800);
+    await pag.keyboard.press("Escape");           // la guia «Como usar»
+    await espera(400);
+    await foto(3);
+    const cmd = async (txt) => {
+      const c = await centroDe("#hk3-cmd-input");
+      if (c) { await pag.mouse.click(c.x, c.y); }
+      await pag.keyboard.type(txt, { delay: 35 });
+      await foto();
+      await pag.keyboard.press("Enter");
+      await espera(350);
+      await foto();
+    };
+    const esc = async () => { await pag.keyboard.press("Escape"); await espera(250); };
+    const pantalla = (x, y, z) => pag.evaluate((wx, wy, wz) => {
+      const v = document.querySelector("#viewer"); const cv = v.querySelector("canvas"); const r = cv.getBoundingClientRect();
+      const cam = v.__ctx.camera; cam.updateMatrixWorld();
+      const m = cam.projectionMatrix.elements, mv = cam.matrixWorldInverse.elements;
+      const tx = mv[0]*wx + mv[4]*wy + mv[8]*wz + mv[12], ty = mv[1]*wx + mv[5]*wy + mv[9]*wz + mv[13];
+      const tz = mv[2]*wx + mv[6]*wy + mv[10]*wz + mv[14], tw = mv[3]*wx + mv[7]*wy + mv[11]*wz + mv[15];
+      const cx = m[0]*tx + m[4]*ty + m[8]*tz + m[12]*tw, cy = m[1]*tx + m[5]*ty + m[9]*tz + m[13]*tw;
+      const cw = m[3]*tx + m[7]*ty + m[11]*tz + m[15]*tw;
+      return { x: r.left + (cx / cw + 1) / 2 * r.width, y: r.top + (1 - cy / cw) / 2 * r.height };
+    }, x, y, z);
+    const clicMundo = async (x, y, z) => {
+      const c = await pantalla(x, y, z);
+      await mover(c.x, c.y, 3);
+      await pag.mouse.click(c.x, c.y);
+      await espera(400);
+      await foto(2);
+    };
+    const modelo3 = () => pag.evaluate(() => ({
+      nudos: window.__hekatanDrawingPoints.val.length,
+      tramos: window.__hekatanDrawingPolylines.val.reduce((s, p) => s + Math.max(0, p.length - 1), 0),
+    }));
+
+    // vista de FRENTE (X-Z): la cercha vive en ese plano
+    await pag.keyboard.press("2"); await espera(600); await foto(2);
+    // cordon inferior y superior por polilinea tecleada
+    await cmd("pl"); for (const p of ["0,0,0", "3,0,0", "6,0,0", "9,0,0", "12,0,0"]) await cmd(p); await esc();
+    await autofit(); await foto(2);
+    await cmd("pl"); for (const p of ["0,0,2", "3,0,2", "6,0,2", "9,0,2", "12,0,2"]) await cmd(p); await esc();
+    await autofit(); await foto(2);
+    console.log("   cordones:", JSON.stringify(await modelo3()));
+    // un montante por linea, y se COPIA dos veces con seleccion por ventana
+    await cmd("l"); await cmd("3,0,0"); await cmd("3,0,2"); await esc();
+    // seleccion por VENTANA: clic en una esquina, mover, clic en la otra
+    // (izquierda -> derecha = ventana). Arrastrar con el boton apretado ORBITA.
+    const a = await pantalla(1.8, 0, 3.2), b = await pantalla(4.2, 0, -1.2);   // lejos de los nudos: el iman (0,75 m) los cogeria
+    await mover(a.x, a.y, 3); await pag.mouse.click(a.x, a.y); await espera(200); await foto();
+    await mover(b.x, b.y, 6); await pag.mouse.click(b.x, b.y); await espera(400); await foto(2);
+    console.log("   seleccion:", await pag.evaluate(() => [...window.__hekatanSelection]));
+    await cmd("co"); await cmd("3,0,0"); await cmd("6,0,0");
+    await cmd("co"); await cmd("3,0,0"); await cmd("9,0,0");
+    await esc(); await foto(2);
+    // diagonales tipo Pratt, hacia el centro
+    for (const [p1, p2] of [["0,0,0", "3,0,2"], ["3,0,0", "6,0,2"], ["9,0,0", "6,0,2"], ["12,0,0", "9,0,2"]]) {
+      await cmd("l"); await cmd(p1); await cmd(p2); await esc();
+    }
+    await foto(2);
+    console.log("   cercha:", JSON.stringify(await modelo3()));
+    // apoyos en los extremos y cargas en los nudos superiores, por clic
+    await cmd("ap");
+    await clicMundo(0, 0, 0); await clicMundo(12, 0, 0);
+    await cmd("cg");
+    await clicMundo(3, 0, 2); await clicMundo(6, 0, 2); await clicMundo(9, 0, 2);
+    await esc(); await desenfoca(); await espera(800); await foto(3);
+    // resultados: axil y momento en las barras
+    await carpetaPane("Analyze");
+    await cursorA("Frame results");
+    await ajusta("Frame results", "Axial Force (diagram)", 4);
+    await ajusta("Frame results", "Moment 3-3 (diagram)", 4);
+    await foto(4);
+  },
 };
 async function centroInput(titulo) {
   return pag.evaluate((t) => {

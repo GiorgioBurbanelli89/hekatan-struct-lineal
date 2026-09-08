@@ -3903,7 +3903,7 @@ export function drawing({
                     : n ? P("COPIAR Precise segundo punto (o teclee @dx,dy,dz):") : P("COPIAR Precise punto base:");
       case "select": return selection.size
         ? P(`SELECCIÓN ${selection.size} objeto${selection.size === 1 ? "" : "s"} · Supr borra · M mueve · CO copia · Esc suelta:`)
-        : P("Designe objetos (ventana izq→der, captura der→izq) o teclee un comando:");
+        : P("Designe objetos (clic-clic: ventana izq→der, captura der→izq) o teclee un comando:");
       default: return P(PROMPT_IDLE);
     }
   };
@@ -4140,7 +4140,7 @@ export function drawing({
       const t = st?.get?.()?.tool;
       if (t && t !== "select") st?.setTool?.("select");
     } catch {}
-    updateStatus(hadSel ? "⎋ Selección cancelada" : "⎋ Sin herramienta — arrastrá para seleccionar");
+    updateStatus(hadSel ? "⎋ Selección cancelada" : "⎋ Sin herramienta — clic-clic para seleccionar por ventana");
     viewerRender();
     refreshPrompt();
   };
