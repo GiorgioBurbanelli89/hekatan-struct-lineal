@@ -9,9 +9,11 @@ const leg = (p) => p.evaluate(() => ({ hidden: document.getElementById("legend")
 let p = await abrir("edificio-dual");
 console.log(JSON.stringify({ paso: "dual F22 por defecto", leg: await leg(p) }));
 await p.screenshot({ path: "cli/shots/deploy/_v3_dual_auto.png" });
-const r1 = await setSel(p, "Rango colormap", "solo muros"); await new Promise((r) => setTimeout(r, 2500)); await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); ctx.render?.(); });
+const r1 = await setSel(p, "Rango colormap", process.argv[2] ?? "muros Y"); await new Promise((r) => setTimeout(r, 2500)); await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); ctx.render?.(); });
 await new Promise((r) => setTimeout(r, 800)); await p.screenshot({ path: "cli/shots/deploy/_v3_dual_muros.png" });
-console.log(JSON.stringify({ paso: "dual rango=muros", set: r1, leg: await leg(p) })); await p.close();
+console.log(JSON.stringify({ paso: "dual rango=" + (process.argv[2] ?? "muros Y"), set: r1, leg: await leg(p) }));
+// diagrid parametrico accesible por URL
+await p.close(); p = await abrir("diagrid"); console.log(JSON.stringify({ paso: "diagrid", titulo: await p.evaluate(() => document.querySelector(".tp-rotv_t")?.textContent?.trim()), nudos: await p.evaluate(() => window.__hekatanStates?.nodes?.val?.length) })); await p.close();
 // (b) placa-base leyenda
 p = await abrir("placa-base"); console.log(JSON.stringify({ paso: "placa-base leyenda", leg: await leg(p) })); await p.close();
 // (c) portico sin cascaras
