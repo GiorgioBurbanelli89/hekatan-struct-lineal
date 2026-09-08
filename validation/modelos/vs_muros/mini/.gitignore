@@ -1,0 +1,5 @@
+etabs/edb/
+sap/sdb/
+solo_*/
+sap_in/
+_*.log

@@ -1,0 +1,2023 @@
+File Edificio Aporticado.$2k was saved on m/d/yy at h:mm:ss
+ 
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes
+ 
+TABLE:  "CONNECTIVITY - FRAME"
+   Frame=1   JointI=1   JointJ=460   IsCurved=No
+   Frame=2   JointI=2   JointJ=470   IsCurved=No
+   Frame=3   JointI=3   JointJ=12   IsCurved=No
+   Frame=4   JointI=4   JointJ=13   IsCurved=No
+   Frame=5   JointI=5   JointJ=14   IsCurved=No
+   Frame=6   JointI=6   JointJ=15   IsCurved=No
+   Frame=7   JointI=7   JointJ=524   IsCurved=No
+   Frame=8   JointI=8   JointJ=534   IsCurved=No
+   Frame=9   JointI=9   JointJ=18   IsCurved=No
+   Frame=10   JointI=10   JointJ=19   IsCurved=No
+   Frame=11   JointI=11   JointJ=244   IsCurved=No
+   Frame=12   JointI=13   JointJ=127   IsCurved=No
+   Frame=13   JointI=14   JointJ=343   IsCurved=No
+   Frame=14   JointI=16   JointJ=235   IsCurved=No
+   Frame=15   JointI=17   JointJ=442   IsCurved=No
+   Frame=16   JointI=10   JointJ=28   IsCurved=No
+   Frame=17   JointI=13   JointJ=136   IsCurved=No
+   Frame=18   JointI=11   JointJ=38   IsCurved=No
+   Frame=19   JointI=14   JointJ=146   IsCurved=No
+   Frame=20   JointI=12   JointJ=262   IsCurved=No
+   Frame=21   JointI=15   JointJ=361   IsCurved=No
+   Frame=22   JointI=19   JointJ=20   IsCurved=No
+   Frame=23   JointI=20   JointJ=21   IsCurved=No
+   Frame=24   JointI=21   JointJ=22   IsCurved=No
+   Frame=25   JointI=22   JointJ=23   IsCurved=No
+   Frame=26   JointI=23   JointJ=24   IsCurved=No
+   Frame=27   JointI=24   JointJ=25   IsCurved=No
+   Frame=28   JointI=25   JointJ=26   IsCurved=No
+   Frame=29   JointI=26   JointJ=27   IsCurved=No
+   Frame=30   JointI=27   JointJ=11   IsCurved=No
+   Frame=31   JointI=28   JointJ=39   IsCurved=No
+   Frame=32   JointI=38   JointJ=49   IsCurved=No
+   Frame=33   JointI=39   JointJ=50   IsCurved=No
+   Frame=34   JointI=49   JointJ=60   IsCurved=No
+   Frame=35   JointI=50   JointJ=61   IsCurved=No
+   Frame=36   JointI=60   JointJ=71   IsCurved=No
+   Frame=37   JointI=61   JointJ=72   IsCurved=No
+   Frame=38   JointI=71   JointJ=82   IsCurved=No
+   Frame=39   JointI=72   JointJ=83   IsCurved=No
+   Frame=40   JointI=82   JointJ=93   IsCurved=No
+   Frame=41   JointI=83   JointJ=94   IsCurved=No
+   Frame=42   JointI=93   JointJ=104   IsCurved=No
+   Frame=43   JointI=94   JointJ=105   IsCurved=No
+   Frame=44   JointI=104   JointJ=115   IsCurved=No
+   Frame=45   JointI=105   JointJ=116   IsCurved=No
+   Frame=46   JointI=115   JointJ=126   IsCurved=No
+   Frame=47   JointI=116   JointJ=13   IsCurved=No
+   Frame=48   JointI=126   JointJ=14   IsCurved=No
+   Frame=49   JointI=127   JointJ=128   IsCurved=No
+   Frame=50   JointI=128   JointJ=129   IsCurved=No
+   Frame=51   JointI=129   JointJ=130   IsCurved=No
+   Frame=52   JointI=130   JointJ=131   IsCurved=No
+   Frame=53   JointI=131   JointJ=132   IsCurved=No
+   Frame=54   JointI=132   JointJ=133   IsCurved=No
+   Frame=55   JointI=133   JointJ=134   IsCurved=No
+   Frame=56   JointI=134   JointJ=135   IsCurved=No
+   Frame=57   JointI=135   JointJ=14   IsCurved=No
+   Frame=158   JointI=136   JointJ=147   IsCurved=No
+   Frame=159   JointI=146   JointJ=157   IsCurved=No
+   Frame=160   JointI=147   JointJ=158   IsCurved=No
+   Frame=161   JointI=157   JointJ=168   IsCurved=No
+   Frame=162   JointI=158   JointJ=169   IsCurved=No
+   Frame=163   JointI=168   JointJ=179   IsCurved=No
+   Frame=164   JointI=169   JointJ=180   IsCurved=No
+   Frame=165   JointI=179   JointJ=190   IsCurved=No
+   Frame=166   JointI=180   JointJ=191   IsCurved=No
+   Frame=167   JointI=190   JointJ=201   IsCurved=No
+   Frame=168   JointI=191   JointJ=202   IsCurved=No
+   Frame=169   JointI=201   JointJ=212   IsCurved=No
+   Frame=170   JointI=202   JointJ=213   IsCurved=No
+   Frame=171   JointI=212   JointJ=223   IsCurved=No
+   Frame=172   JointI=213   JointJ=224   IsCurved=No
+   Frame=173   JointI=223   JointJ=234   IsCurved=No
+   Frame=174   JointI=224   JointJ=16   IsCurved=No
+   Frame=175   JointI=234   JointJ=17   IsCurved=No
+   Frame=176   JointI=235   JointJ=236   IsCurved=No
+   Frame=177   JointI=236   JointJ=237   IsCurved=No
+   Frame=178   JointI=237   JointJ=238   IsCurved=No
+   Frame=179   JointI=238   JointJ=239   IsCurved=No
+   Frame=180   JointI=239   JointJ=240   IsCurved=No
+   Frame=181   JointI=240   JointJ=241   IsCurved=No
+   Frame=182   JointI=241   JointJ=242   IsCurved=No
+   Frame=183   JointI=242   JointJ=243   IsCurved=No
+   Frame=184   JointI=243   JointJ=17   IsCurved=No
+   Frame=285   JointI=244   JointJ=245   IsCurved=No
+   Frame=286   JointI=245   JointJ=246   IsCurved=No
+   Frame=287   JointI=246   JointJ=247   IsCurved=No
+   Frame=288   JointI=247   JointJ=248   IsCurved=No
+   Frame=289   JointI=248   JointJ=249   IsCurved=No
+   Frame=290   JointI=249   JointJ=250   IsCurved=No
+   Frame=291   JointI=250   JointJ=251   IsCurved=No
+   Frame=292   JointI=251   JointJ=252   IsCurved=No
+   Frame=293   JointI=252   JointJ=12   IsCurved=No
+   Frame=294   JointI=262   JointJ=272   IsCurved=No
+   Frame=295   JointI=272   JointJ=282   IsCurved=No
+   Frame=296   JointI=282   JointJ=292   IsCurved=No
+   Frame=297   JointI=292   JointJ=302   IsCurved=No
+   Frame=298   JointI=302   JointJ=312   IsCurved=No
+   Frame=299   JointI=312   JointJ=322   IsCurved=No
+   Frame=300   JointI=322   JointJ=332   IsCurved=No
+   Frame=301   JointI=332   JointJ=342   IsCurved=No
+   Frame=302   JointI=342   JointJ=15   IsCurved=No
+   Frame=303   JointI=343   JointJ=344   IsCurved=No
+   Frame=304   JointI=344   JointJ=345   IsCurved=No
+   Frame=305   JointI=345   JointJ=346   IsCurved=No
+   Frame=306   JointI=346   JointJ=347   IsCurved=No
+   Frame=307   JointI=347   JointJ=348   IsCurved=No
+   Frame=308   JointI=348   JointJ=349   IsCurved=No
+   Frame=309   JointI=349   JointJ=350   IsCurved=No
+   Frame=310   JointI=350   JointJ=351   IsCurved=No
+   Frame=311   JointI=351   JointJ=15   IsCurved=No
+   Frame=412   JointI=361   JointJ=371   IsCurved=No
+   Frame=413   JointI=371   JointJ=381   IsCurved=No
+   Frame=414   JointI=381   JointJ=391   IsCurved=No
+   Frame=415   JointI=391   JointJ=401   IsCurved=No
+   Frame=416   JointI=401   JointJ=411   IsCurved=No
+   Frame=417   JointI=411   JointJ=421   IsCurved=No
+   Frame=418   JointI=421   JointJ=431   IsCurved=No
+   Frame=419   JointI=431   JointJ=441   IsCurved=No
+   Frame=420   JointI=441   JointJ=18   IsCurved=No
+   Frame=421   JointI=442   JointJ=443   IsCurved=No
+   Frame=422   JointI=443   JointJ=444   IsCurved=No
+   Frame=423   JointI=444   JointJ=445   IsCurved=No
+   Frame=424   JointI=445   JointJ=446   IsCurved=No
+   Frame=425   JointI=446   JointJ=447   IsCurved=No
+   Frame=426   JointI=447   JointJ=448   IsCurved=No
+   Frame=427   JointI=448   JointJ=449   IsCurved=No
+   Frame=428   JointI=449   JointJ=450   IsCurved=No
+   Frame=429   JointI=450   JointJ=18   IsCurved=No
+   Frame=530   JointI=460   JointJ=471   IsCurved=No
+   Frame=531   JointI=470   JointJ=481   IsCurved=No
+   Frame=532   JointI=471   JointJ=482   IsCurved=No
+   Frame=533   JointI=481   JointJ=492   IsCurved=No
+   Frame=534   JointI=482   JointJ=493   IsCurved=No
+   Frame=535   JointI=492   JointJ=503   IsCurved=No
+   Frame=536   JointI=493   JointJ=504   IsCurved=No
+   Frame=537   JointI=503   JointJ=514   IsCurved=No
+   Frame=538   JointI=504   JointJ=10   IsCurved=No
+   Frame=539   JointI=514   JointJ=11   IsCurved=No
+   Frame=600   JointI=524   JointJ=535   IsCurved=No
+   Frame=601   JointI=534   JointJ=545   IsCurved=No
+   Frame=602   JointI=535   JointJ=546   IsCurved=No
+   Frame=603   JointI=545   JointJ=556   IsCurved=No
+   Frame=604   JointI=546   JointJ=557   IsCurved=No
+   Frame=605   JointI=556   JointJ=567   IsCurved=No
+   Frame=606   JointI=557   JointJ=568   IsCurved=No
+   Frame=607   JointI=567   JointJ=578   IsCurved=No
+   Frame=608   JointI=568   JointJ=16   IsCurved=No
+   Frame=609   JointI=578   JointJ=17   IsCurved=No
+ 
+TABLE:  "CONNECTIVITY - AREA"
+   Area=58   NumJoints=4   Joint1=10   Joint2=19   Joint3=29   Joint4=28
+   Area=59   NumJoints=4   Joint1=19   Joint2=20   Joint3=30   Joint4=29
+   Area=60   NumJoints=4   Joint1=20   Joint2=21   Joint3=31   Joint4=30
+   Area=61   NumJoints=4   Joint1=21   Joint2=22   Joint3=32   Joint4=31
+   Area=62   NumJoints=4   Joint1=22   Joint2=23   Joint3=33   Joint4=32
+   Area=63   NumJoints=4   Joint1=23   Joint2=24   Joint3=34   Joint4=33
+   Area=64   NumJoints=4   Joint1=24   Joint2=25   Joint3=35   Joint4=34
+   Area=65   NumJoints=4   Joint1=25   Joint2=26   Joint3=36   Joint4=35
+   Area=66   NumJoints=4   Joint1=26   Joint2=27   Joint3=37   Joint4=36
+   Area=67   NumJoints=4   Joint1=27   Joint2=11   Joint3=38   Joint4=37
+   Area=68   NumJoints=4   Joint1=28   Joint2=29   Joint3=40   Joint4=39
+   Area=69   NumJoints=4   Joint1=29   Joint2=30   Joint3=41   Joint4=40
+   Area=70   NumJoints=4   Joint1=30   Joint2=31   Joint3=42   Joint4=41
+   Area=71   NumJoints=4   Joint1=31   Joint2=32   Joint3=43   Joint4=42
+   Area=72   NumJoints=4   Joint1=32   Joint2=33   Joint3=44   Joint4=43
+   Area=73   NumJoints=4   Joint1=33   Joint2=34   Joint3=45   Joint4=44
+   Area=74   NumJoints=4   Joint1=34   Joint2=35   Joint3=46   Joint4=45
+   Area=75   NumJoints=4   Joint1=35   Joint2=36   Joint3=47   Joint4=46
+   Area=76   NumJoints=4   Joint1=36   Joint2=37   Joint3=48   Joint4=47
+   Area=77   NumJoints=4   Joint1=37   Joint2=38   Joint3=49   Joint4=48
+   Area=78   NumJoints=4   Joint1=39   Joint2=40   Joint3=51   Joint4=50
+   Area=79   NumJoints=4   Joint1=40   Joint2=41   Joint3=52   Joint4=51
+   Area=80   NumJoints=4   Joint1=41   Joint2=42   Joint3=53   Joint4=52
+   Area=81   NumJoints=4   Joint1=42   Joint2=43   Joint3=54   Joint4=53
+   Area=82   NumJoints=4   Joint1=43   Joint2=44   Joint3=55   Joint4=54
+   Area=83   NumJoints=4   Joint1=44   Joint2=45   Joint3=56   Joint4=55
+   Area=84   NumJoints=4   Joint1=45   Joint2=46   Joint3=57   Joint4=56
+   Area=85   NumJoints=4   Joint1=46   Joint2=47   Joint3=58   Joint4=57
+   Area=86   NumJoints=4   Joint1=47   Joint2=48   Joint3=59   Joint4=58
+   Area=87   NumJoints=4   Joint1=48   Joint2=49   Joint3=60   Joint4=59
+   Area=88   NumJoints=4   Joint1=50   Joint2=51   Joint3=62   Joint4=61
+   Area=89   NumJoints=4   Joint1=51   Joint2=52   Joint3=63   Joint4=62
+   Area=90   NumJoints=4   Joint1=52   Joint2=53   Joint3=64   Joint4=63
+   Area=91   NumJoints=4   Joint1=53   Joint2=54   Joint3=65   Joint4=64
+   Area=92   NumJoints=4   Joint1=54   Joint2=55   Joint3=66   Joint4=65
+   Area=93   NumJoints=4   Joint1=55   Joint2=56   Joint3=67   Joint4=66
+   Area=94   NumJoints=4   Joint1=56   Joint2=57   Joint3=68   Joint4=67
+   Area=95   NumJoints=4   Joint1=57   Joint2=58   Joint3=69   Joint4=68
+   Area=96   NumJoints=4   Joint1=58   Joint2=59   Joint3=70   Joint4=69
+   Area=97   NumJoints=4   Joint1=59   Joint2=60   Joint3=71   Joint4=70
+   Area=98   NumJoints=4   Joint1=61   Joint2=62   Joint3=73   Joint4=72
+   Area=99   NumJoints=4   Joint1=62   Joint2=63   Joint3=74   Joint4=73
+   Area=100   NumJoints=4   Joint1=63   Joint2=64   Joint3=75   Joint4=74
+   Area=101   NumJoints=4   Joint1=64   Joint2=65   Joint3=76   Joint4=75
+   Area=102   NumJoints=4   Joint1=65   Joint2=66   Joint3=77   Joint4=76
+   Area=103   NumJoints=4   Joint1=66   Joint2=67   Joint3=78   Joint4=77
+   Area=104   NumJoints=4   Joint1=67   Joint2=68   Joint3=79   Joint4=78
+   Area=105   NumJoints=4   Joint1=68   Joint2=69   Joint3=80   Joint4=79
+   Area=106   NumJoints=4   Joint1=69   Joint2=70   Joint3=81   Joint4=80
+   Area=107   NumJoints=4   Joint1=70   Joint2=71   Joint3=82   Joint4=81
+   Area=108   NumJoints=4   Joint1=72   Joint2=73   Joint3=84   Joint4=83
+   Area=109   NumJoints=4   Joint1=73   Joint2=74   Joint3=85   Joint4=84
+   Area=110   NumJoints=4   Joint1=74   Joint2=75   Joint3=86   Joint4=85
+   Area=111   NumJoints=4   Joint1=75   Joint2=76   Joint3=87   Joint4=86
+   Area=112   NumJoints=4   Joint1=76   Joint2=77   Joint3=88   Joint4=87
+   Area=113   NumJoints=4   Joint1=77   Joint2=78   Joint3=89   Joint4=88
+   Area=114   NumJoints=4   Joint1=78   Joint2=79   Joint3=90   Joint4=89
+   Area=115   NumJoints=4   Joint1=79   Joint2=80   Joint3=91   Joint4=90
+   Area=116   NumJoints=4   Joint1=80   Joint2=81   Joint3=92   Joint4=91
+   Area=117   NumJoints=4   Joint1=81   Joint2=82   Joint3=93   Joint4=92
+   Area=118   NumJoints=4   Joint1=83   Joint2=84   Joint3=95   Joint4=94
+   Area=119   NumJoints=4   Joint1=84   Joint2=85   Joint3=96   Joint4=95
+   Area=120   NumJoints=4   Joint1=85   Joint2=86   Joint3=97   Joint4=96
+   Area=121   NumJoints=4   Joint1=86   Joint2=87   Joint3=98   Joint4=97
+   Area=122   NumJoints=4   Joint1=87   Joint2=88   Joint3=99   Joint4=98
+   Area=123   NumJoints=4   Joint1=88   Joint2=89   Joint3=100   Joint4=99
+   Area=124   NumJoints=4   Joint1=89   Joint2=90   Joint3=101   Joint4=100
+   Area=125   NumJoints=4   Joint1=90   Joint2=91   Joint3=102   Joint4=101
+   Area=126   NumJoints=4   Joint1=91   Joint2=92   Joint3=103   Joint4=102
+   Area=127   NumJoints=4   Joint1=92   Joint2=93   Joint3=104   Joint4=103
+   Area=128   NumJoints=4   Joint1=94   Joint2=95   Joint3=106   Joint4=105
+   Area=129   NumJoints=4   Joint1=95   Joint2=96   Joint3=107   Joint4=106
+   Area=130   NumJoints=4   Joint1=96   Joint2=97   Joint3=108   Joint4=107
+   Area=131   NumJoints=4   Joint1=97   Joint2=98   Joint3=109   Joint4=108
+   Area=132   NumJoints=4   Joint1=98   Joint2=99   Joint3=110   Joint4=109
+   Area=133   NumJoints=4   Joint1=99   Joint2=100   Joint3=111   Joint4=110
+   Area=134   NumJoints=4   Joint1=100   Joint2=101   Joint3=112   Joint4=111
+   Area=135   NumJoints=4   Joint1=101   Joint2=102   Joint3=113   Joint4=112
+   Area=136   NumJoints=4   Joint1=102   Joint2=103   Joint3=114   Joint4=113
+   Area=137   NumJoints=4   Joint1=103   Joint2=104   Joint3=115   Joint4=114
+   Area=138   NumJoints=4   Joint1=105   Joint2=106   Joint3=117   Joint4=116
+   Area=139   NumJoints=4   Joint1=106   Joint2=107   Joint3=118   Joint4=117
+   Area=140   NumJoints=4   Joint1=107   Joint2=108   Joint3=119   Joint4=118
+   Area=141   NumJoints=4   Joint1=108   Joint2=109   Joint3=120   Joint4=119
+   Area=142   NumJoints=4   Joint1=109   Joint2=110   Joint3=121   Joint4=120
+   Area=143   NumJoints=4   Joint1=110   Joint2=111   Joint3=122   Joint4=121
+   Area=144   NumJoints=4   Joint1=111   Joint2=112   Joint3=123   Joint4=122
+   Area=145   NumJoints=4   Joint1=112   Joint2=113   Joint3=124   Joint4=123
+   Area=146   NumJoints=4   Joint1=113   Joint2=114   Joint3=125   Joint4=124
+   Area=147   NumJoints=4   Joint1=114   Joint2=115   Joint3=126   Joint4=125
+   Area=148   NumJoints=4   Joint1=116   Joint2=117   Joint3=127   Joint4=13
+   Area=149   NumJoints=4   Joint1=117   Joint2=118   Joint3=128   Joint4=127
+   Area=150   NumJoints=4   Joint1=118   Joint2=119   Joint3=129   Joint4=128
+   Area=151   NumJoints=4   Joint1=119   Joint2=120   Joint3=130   Joint4=129
+   Area=152   NumJoints=4   Joint1=120   Joint2=121   Joint3=131   Joint4=130
+   Area=153   NumJoints=4   Joint1=121   Joint2=122   Joint3=132   Joint4=131
+   Area=154   NumJoints=4   Joint1=122   Joint2=123   Joint3=133   Joint4=132
+   Area=155   NumJoints=4   Joint1=123   Joint2=124   Joint3=134   Joint4=133
+   Area=156   NumJoints=4   Joint1=124   Joint2=125   Joint3=135   Joint4=134
+   Area=157   NumJoints=4   Joint1=125   Joint2=126   Joint3=14   Joint4=135
+   Area=185   NumJoints=4   Joint1=13   Joint2=127   Joint3=137   Joint4=136
+   Area=186   NumJoints=4   Joint1=127   Joint2=128   Joint3=138   Joint4=137
+   Area=187   NumJoints=4   Joint1=128   Joint2=129   Joint3=139   Joint4=138
+   Area=188   NumJoints=4   Joint1=129   Joint2=130   Joint3=140   Joint4=139
+   Area=189   NumJoints=4   Joint1=130   Joint2=131   Joint3=141   Joint4=140
+   Area=190   NumJoints=4   Joint1=131   Joint2=132   Joint3=142   Joint4=141
+   Area=191   NumJoints=4   Joint1=132   Joint2=133   Joint3=143   Joint4=142
+   Area=192   NumJoints=4   Joint1=133   Joint2=134   Joint3=144   Joint4=143
+   Area=193   NumJoints=4   Joint1=134   Joint2=135   Joint3=145   Joint4=144
+   Area=194   NumJoints=4   Joint1=135   Joint2=14   Joint3=146   Joint4=145
+   Area=195   NumJoints=4   Joint1=136   Joint2=137   Joint3=148   Joint4=147
+   Area=196   NumJoints=4   Joint1=137   Joint2=138   Joint3=149   Joint4=148
+   Area=197   NumJoints=4   Joint1=138   Joint2=139   Joint3=150   Joint4=149
+   Area=198   NumJoints=4   Joint1=139   Joint2=140   Joint3=151   Joint4=150
+   Area=199   NumJoints=4   Joint1=140   Joint2=141   Joint3=152   Joint4=151
+   Area=200   NumJoints=4   Joint1=141   Joint2=142   Joint3=153   Joint4=152
+   Area=201   NumJoints=4   Joint1=142   Joint2=143   Joint3=154   Joint4=153
+   Area=202   NumJoints=4   Joint1=143   Joint2=144   Joint3=155   Joint4=154
+   Area=203   NumJoints=4   Joint1=144   Joint2=145   Joint3=156   Joint4=155
+   Area=204   NumJoints=4   Joint1=145   Joint2=146   Joint3=157   Joint4=156
+   Area=205   NumJoints=4   Joint1=147   Joint2=148   Joint3=159   Joint4=158
+   Area=206   NumJoints=4   Joint1=148   Joint2=149   Joint3=160   Joint4=159
+   Area=207   NumJoints=4   Joint1=149   Joint2=150   Joint3=161   Joint4=160
+   Area=208   NumJoints=4   Joint1=150   Joint2=151   Joint3=162   Joint4=161
+   Area=209   NumJoints=4   Joint1=151   Joint2=152   Joint3=163   Joint4=162
+   Area=210   NumJoints=4   Joint1=152   Joint2=153   Joint3=164   Joint4=163
+   Area=211   NumJoints=4   Joint1=153   Joint2=154   Joint3=165   Joint4=164
+   Area=212   NumJoints=4   Joint1=154   Joint2=155   Joint3=166   Joint4=165
+   Area=213   NumJoints=4   Joint1=155   Joint2=156   Joint3=167   Joint4=166
+   Area=214   NumJoints=4   Joint1=156   Joint2=157   Joint3=168   Joint4=167
+   Area=215   NumJoints=4   Joint1=158   Joint2=159   Joint3=170   Joint4=169
+   Area=216   NumJoints=4   Joint1=159   Joint2=160   Joint3=171   Joint4=170
+   Area=217   NumJoints=4   Joint1=160   Joint2=161   Joint3=172   Joint4=171
+   Area=218   NumJoints=4   Joint1=161   Joint2=162   Joint3=173   Joint4=172
+   Area=219   NumJoints=4   Joint1=162   Joint2=163   Joint3=174   Joint4=173
+   Area=220   NumJoints=4   Joint1=163   Joint2=164   Joint3=175   Joint4=174
+   Area=221   NumJoints=4   Joint1=164   Joint2=165   Joint3=176   Joint4=175
+   Area=222   NumJoints=4   Joint1=165   Joint2=166   Joint3=177   Joint4=176
+   Area=223   NumJoints=4   Joint1=166   Joint2=167   Joint3=178   Joint4=177
+   Area=224   NumJoints=4   Joint1=167   Joint2=168   Joint3=179   Joint4=178
+   Area=225   NumJoints=4   Joint1=169   Joint2=170   Joint3=181   Joint4=180
+   Area=226   NumJoints=4   Joint1=170   Joint2=171   Joint3=182   Joint4=181
+   Area=227   NumJoints=4   Joint1=171   Joint2=172   Joint3=183   Joint4=182
+   Area=228   NumJoints=4   Joint1=172   Joint2=173   Joint3=184   Joint4=183
+   Area=229   NumJoints=4   Joint1=173   Joint2=174   Joint3=185   Joint4=184
+   Area=230   NumJoints=4   Joint1=174   Joint2=175   Joint3=186   Joint4=185
+   Area=231   NumJoints=4   Joint1=175   Joint2=176   Joint3=187   Joint4=186
+   Area=232   NumJoints=4   Joint1=176   Joint2=177   Joint3=188   Joint4=187
+   Area=233   NumJoints=4   Joint1=177   Joint2=178   Joint3=189   Joint4=188
+   Area=234   NumJoints=4   Joint1=178   Joint2=179   Joint3=190   Joint4=189
+   Area=235   NumJoints=4   Joint1=180   Joint2=181   Joint3=192   Joint4=191
+   Area=236   NumJoints=4   Joint1=181   Joint2=182   Joint3=193   Joint4=192
+   Area=237   NumJoints=4   Joint1=182   Joint2=183   Joint3=194   Joint4=193
+   Area=238   NumJoints=4   Joint1=183   Joint2=184   Joint3=195   Joint4=194
+   Area=239   NumJoints=4   Joint1=184   Joint2=185   Joint3=196   Joint4=195
+   Area=240   NumJoints=4   Joint1=185   Joint2=186   Joint3=197   Joint4=196
+   Area=241   NumJoints=4   Joint1=186   Joint2=187   Joint3=198   Joint4=197
+   Area=242   NumJoints=4   Joint1=187   Joint2=188   Joint3=199   Joint4=198
+   Area=243   NumJoints=4   Joint1=188   Joint2=189   Joint3=200   Joint4=199
+   Area=244   NumJoints=4   Joint1=189   Joint2=190   Joint3=201   Joint4=200
+   Area=245   NumJoints=4   Joint1=191   Joint2=192   Joint3=203   Joint4=202
+   Area=246   NumJoints=4   Joint1=192   Joint2=193   Joint3=204   Joint4=203
+   Area=247   NumJoints=4   Joint1=193   Joint2=194   Joint3=205   Joint4=204
+   Area=248   NumJoints=4   Joint1=194   Joint2=195   Joint3=206   Joint4=205
+   Area=249   NumJoints=4   Joint1=195   Joint2=196   Joint3=207   Joint4=206
+   Area=250   NumJoints=4   Joint1=196   Joint2=197   Joint3=208   Joint4=207
+   Area=251   NumJoints=4   Joint1=197   Joint2=198   Joint3=209   Joint4=208
+   Area=252   NumJoints=4   Joint1=198   Joint2=199   Joint3=210   Joint4=209
+   Area=253   NumJoints=4   Joint1=199   Joint2=200   Joint3=211   Joint4=210
+   Area=254   NumJoints=4   Joint1=200   Joint2=201   Joint3=212   Joint4=211
+   Area=255   NumJoints=4   Joint1=202   Joint2=203   Joint3=214   Joint4=213
+   Area=256   NumJoints=4   Joint1=203   Joint2=204   Joint3=215   Joint4=214
+   Area=257   NumJoints=4   Joint1=204   Joint2=205   Joint3=216   Joint4=215
+   Area=258   NumJoints=4   Joint1=205   Joint2=206   Joint3=217   Joint4=216
+   Area=259   NumJoints=4   Joint1=206   Joint2=207   Joint3=218   Joint4=217
+   Area=260   NumJoints=4   Joint1=207   Joint2=208   Joint3=219   Joint4=218
+   Area=261   NumJoints=4   Joint1=208   Joint2=209   Joint3=220   Joint4=219
+   Area=262   NumJoints=4   Joint1=209   Joint2=210   Joint3=221   Joint4=220
+   Area=263   NumJoints=4   Joint1=210   Joint2=211   Joint3=222   Joint4=221
+   Area=264   NumJoints=4   Joint1=211   Joint2=212   Joint3=223   Joint4=222
+   Area=265   NumJoints=4   Joint1=213   Joint2=214   Joint3=225   Joint4=224
+   Area=266   NumJoints=4   Joint1=214   Joint2=215   Joint3=226   Joint4=225
+   Area=267   NumJoints=4   Joint1=215   Joint2=216   Joint3=227   Joint4=226
+   Area=268   NumJoints=4   Joint1=216   Joint2=217   Joint3=228   Joint4=227
+   Area=269   NumJoints=4   Joint1=217   Joint2=218   Joint3=229   Joint4=228
+   Area=270   NumJoints=4   Joint1=218   Joint2=219   Joint3=230   Joint4=229
+   Area=271   NumJoints=4   Joint1=219   Joint2=220   Joint3=231   Joint4=230
+   Area=272   NumJoints=4   Joint1=220   Joint2=221   Joint3=232   Joint4=231
+   Area=273   NumJoints=4   Joint1=221   Joint2=222   Joint3=233   Joint4=232
+   Area=274   NumJoints=4   Joint1=222   Joint2=223   Joint3=234   Joint4=233
+   Area=275   NumJoints=4   Joint1=224   Joint2=225   Joint3=235   Joint4=16
+   Area=276   NumJoints=4   Joint1=225   Joint2=226   Joint3=236   Joint4=235
+   Area=277   NumJoints=4   Joint1=226   Joint2=227   Joint3=237   Joint4=236
+   Area=278   NumJoints=4   Joint1=227   Joint2=228   Joint3=238   Joint4=237
+   Area=279   NumJoints=4   Joint1=228   Joint2=229   Joint3=239   Joint4=238
+   Area=280   NumJoints=4   Joint1=229   Joint2=230   Joint3=240   Joint4=239
+   Area=281   NumJoints=4   Joint1=230   Joint2=231   Joint3=241   Joint4=240
+   Area=282   NumJoints=4   Joint1=231   Joint2=232   Joint3=242   Joint4=241
+   Area=283   NumJoints=4   Joint1=232   Joint2=233   Joint3=243   Joint4=242
+   Area=284   NumJoints=4   Joint1=233   Joint2=234   Joint3=17   Joint4=243
+   Area=312   NumJoints=4   Joint1=11   Joint2=244   Joint3=253   Joint4=38
+   Area=313   NumJoints=4   Joint1=244   Joint2=245   Joint3=254   Joint4=253
+   Area=314   NumJoints=4   Joint1=245   Joint2=246   Joint3=255   Joint4=254
+   Area=315   NumJoints=4   Joint1=246   Joint2=247   Joint3=256   Joint4=255
+   Area=316   NumJoints=4   Joint1=247   Joint2=248   Joint3=257   Joint4=256
+   Area=317   NumJoints=4   Joint1=248   Joint2=249   Joint3=258   Joint4=257
+   Area=318   NumJoints=4   Joint1=249   Joint2=250   Joint3=259   Joint4=258
+   Area=319   NumJoints=4   Joint1=250   Joint2=251   Joint3=260   Joint4=259
+   Area=320   NumJoints=4   Joint1=251   Joint2=252   Joint3=261   Joint4=260
+   Area=321   NumJoints=4   Joint1=252   Joint2=12   Joint3=262   Joint4=261
+   Area=322   NumJoints=4   Joint1=38   Joint2=253   Joint3=263   Joint4=49
+   Area=323   NumJoints=4   Joint1=253   Joint2=254   Joint3=264   Joint4=263
+   Area=324   NumJoints=4   Joint1=254   Joint2=255   Joint3=265   Joint4=264
+   Area=325   NumJoints=4   Joint1=255   Joint2=256   Joint3=266   Joint4=265
+   Area=326   NumJoints=4   Joint1=256   Joint2=257   Joint3=267   Joint4=266
+   Area=327   NumJoints=4   Joint1=257   Joint2=258   Joint3=268   Joint4=267
+   Area=328   NumJoints=4   Joint1=258   Joint2=259   Joint3=269   Joint4=268
+   Area=329   NumJoints=4   Joint1=259   Joint2=260   Joint3=270   Joint4=269
+   Area=330   NumJoints=4   Joint1=260   Joint2=261   Joint3=271   Joint4=270
+   Area=331   NumJoints=4   Joint1=261   Joint2=262   Joint3=272   Joint4=271
+   Area=332   NumJoints=4   Joint1=49   Joint2=263   Joint3=273   Joint4=60
+   Area=333   NumJoints=4   Joint1=263   Joint2=264   Joint3=274   Joint4=273
+   Area=334   NumJoints=4   Joint1=264   Joint2=265   Joint3=275   Joint4=274
+   Area=335   NumJoints=4   Joint1=265   Joint2=266   Joint3=276   Joint4=275
+   Area=336   NumJoints=4   Joint1=266   Joint2=267   Joint3=277   Joint4=276
+   Area=337   NumJoints=4   Joint1=267   Joint2=268   Joint3=278   Joint4=277
+   Area=338   NumJoints=4   Joint1=268   Joint2=269   Joint3=279   Joint4=278
+   Area=339   NumJoints=4   Joint1=269   Joint2=270   Joint3=280   Joint4=279
+   Area=340   NumJoints=4   Joint1=270   Joint2=271   Joint3=281   Joint4=280
+   Area=341   NumJoints=4   Joint1=271   Joint2=272   Joint3=282   Joint4=281
+   Area=342   NumJoints=4   Joint1=60   Joint2=273   Joint3=283   Joint4=71
+   Area=343   NumJoints=4   Joint1=273   Joint2=274   Joint3=284   Joint4=283
+   Area=344   NumJoints=4   Joint1=274   Joint2=275   Joint3=285   Joint4=284
+   Area=345   NumJoints=4   Joint1=275   Joint2=276   Joint3=286   Joint4=285
+   Area=346   NumJoints=4   Joint1=276   Joint2=277   Joint3=287   Joint4=286
+   Area=347   NumJoints=4   Joint1=277   Joint2=278   Joint3=288   Joint4=287
+   Area=348   NumJoints=4   Joint1=278   Joint2=279   Joint3=289   Joint4=288
+   Area=349   NumJoints=4   Joint1=279   Joint2=280   Joint3=290   Joint4=289
+   Area=350   NumJoints=4   Joint1=280   Joint2=281   Joint3=291   Joint4=290
+   Area=351   NumJoints=4   Joint1=281   Joint2=282   Joint3=292   Joint4=291
+   Area=352   NumJoints=4   Joint1=71   Joint2=283   Joint3=293   Joint4=82
+   Area=353   NumJoints=4   Joint1=283   Joint2=284   Joint3=294   Joint4=293
+   Area=354   NumJoints=4   Joint1=284   Joint2=285   Joint3=295   Joint4=294
+   Area=355   NumJoints=4   Joint1=285   Joint2=286   Joint3=296   Joint4=295
+   Area=356   NumJoints=4   Joint1=286   Joint2=287   Joint3=297   Joint4=296
+   Area=357   NumJoints=4   Joint1=287   Joint2=288   Joint3=298   Joint4=297
+   Area=358   NumJoints=4   Joint1=288   Joint2=289   Joint3=299   Joint4=298
+   Area=359   NumJoints=4   Joint1=289   Joint2=290   Joint3=300   Joint4=299
+   Area=360   NumJoints=4   Joint1=290   Joint2=291   Joint3=301   Joint4=300
+   Area=361   NumJoints=4   Joint1=291   Joint2=292   Joint3=302   Joint4=301
+   Area=362   NumJoints=4   Joint1=82   Joint2=293   Joint3=303   Joint4=93
+   Area=363   NumJoints=4   Joint1=293   Joint2=294   Joint3=304   Joint4=303
+   Area=364   NumJoints=4   Joint1=294   Joint2=295   Joint3=305   Joint4=304
+   Area=365   NumJoints=4   Joint1=295   Joint2=296   Joint3=306   Joint4=305
+   Area=366   NumJoints=4   Joint1=296   Joint2=297   Joint3=307   Joint4=306
+   Area=367   NumJoints=4   Joint1=297   Joint2=298   Joint3=308   Joint4=307
+   Area=368   NumJoints=4   Joint1=298   Joint2=299   Joint3=309   Joint4=308
+   Area=369   NumJoints=4   Joint1=299   Joint2=300   Joint3=310   Joint4=309
+   Area=370   NumJoints=4   Joint1=300   Joint2=301   Joint3=311   Joint4=310
+   Area=371   NumJoints=4   Joint1=301   Joint2=302   Joint3=312   Joint4=311
+   Area=372   NumJoints=4   Joint1=93   Joint2=303   Joint3=313   Joint4=104
+   Area=373   NumJoints=4   Joint1=303   Joint2=304   Joint3=314   Joint4=313
+   Area=374   NumJoints=4   Joint1=304   Joint2=305   Joint3=315   Joint4=314
+   Area=375   NumJoints=4   Joint1=305   Joint2=306   Joint3=316   Joint4=315
+   Area=376   NumJoints=4   Joint1=306   Joint2=307   Joint3=317   Joint4=316
+   Area=377   NumJoints=4   Joint1=307   Joint2=308   Joint3=318   Joint4=317
+   Area=378   NumJoints=4   Joint1=308   Joint2=309   Joint3=319   Joint4=318
+   Area=379   NumJoints=4   Joint1=309   Joint2=310   Joint3=320   Joint4=319
+   Area=380   NumJoints=4   Joint1=310   Joint2=311   Joint3=321   Joint4=320
+   Area=381   NumJoints=4   Joint1=311   Joint2=312   Joint3=322   Joint4=321
+   Area=382   NumJoints=4   Joint1=104   Joint2=313   Joint3=323   Joint4=115
+   Area=383   NumJoints=4   Joint1=313   Joint2=314   Joint3=324   Joint4=323
+   Area=384   NumJoints=4   Joint1=314   Joint2=315   Joint3=325   Joint4=324
+   Area=385   NumJoints=4   Joint1=315   Joint2=316   Joint3=326   Joint4=325
+   Area=386   NumJoints=4   Joint1=316   Joint2=317   Joint3=327   Joint4=326
+   Area=387   NumJoints=4   Joint1=317   Joint2=318   Joint3=328   Joint4=327
+   Area=388   NumJoints=4   Joint1=318   Joint2=319   Joint3=329   Joint4=328
+   Area=389   NumJoints=4   Joint1=319   Joint2=320   Joint3=330   Joint4=329
+   Area=390   NumJoints=4   Joint1=320   Joint2=321   Joint3=331   Joint4=330
+   Area=391   NumJoints=4   Joint1=321   Joint2=322   Joint3=332   Joint4=331
+   Area=392   NumJoints=4   Joint1=115   Joint2=323   Joint3=333   Joint4=126
+   Area=393   NumJoints=4   Joint1=323   Joint2=324   Joint3=334   Joint4=333
+   Area=394   NumJoints=4   Joint1=324   Joint2=325   Joint3=335   Joint4=334
+   Area=395   NumJoints=4   Joint1=325   Joint2=326   Joint3=336   Joint4=335
+   Area=396   NumJoints=4   Joint1=326   Joint2=327   Joint3=337   Joint4=336
+   Area=397   NumJoints=4   Joint1=327   Joint2=328   Joint3=338   Joint4=337
+   Area=398   NumJoints=4   Joint1=328   Joint2=329   Joint3=339   Joint4=338
+   Area=399   NumJoints=4   Joint1=329   Joint2=330   Joint3=340   Joint4=339
+   Area=400   NumJoints=4   Joint1=330   Joint2=331   Joint3=341   Joint4=340
+   Area=401   NumJoints=4   Joint1=331   Joint2=332   Joint3=342   Joint4=341
+   Area=402   NumJoints=4   Joint1=126   Joint2=333   Joint3=343   Joint4=14
+   Area=403   NumJoints=4   Joint1=333   Joint2=334   Joint3=344   Joint4=343
+   Area=404   NumJoints=4   Joint1=334   Joint2=335   Joint3=345   Joint4=344
+   Area=405   NumJoints=4   Joint1=335   Joint2=336   Joint3=346   Joint4=345
+   Area=406   NumJoints=4   Joint1=336   Joint2=337   Joint3=347   Joint4=346
+   Area=407   NumJoints=4   Joint1=337   Joint2=338   Joint3=348   Joint4=347
+   Area=408   NumJoints=4   Joint1=338   Joint2=339   Joint3=349   Joint4=348
+   Area=409   NumJoints=4   Joint1=339   Joint2=340   Joint3=350   Joint4=349
+   Area=410   NumJoints=4   Joint1=340   Joint2=341   Joint3=351   Joint4=350
+   Area=411   NumJoints=4   Joint1=341   Joint2=342   Joint3=15   Joint4=351
+   Area=430   NumJoints=4   Joint1=14   Joint2=343   Joint3=352   Joint4=146
+   Area=431   NumJoints=4   Joint1=343   Joint2=344   Joint3=353   Joint4=352
+   Area=432   NumJoints=4   Joint1=344   Joint2=345   Joint3=354   Joint4=353
+   Area=433   NumJoints=4   Joint1=345   Joint2=346   Joint3=355   Joint4=354
+   Area=434   NumJoints=4   Joint1=346   Joint2=347   Joint3=356   Joint4=355
+   Area=435   NumJoints=4   Joint1=347   Joint2=348   Joint3=357   Joint4=356
+   Area=436   NumJoints=4   Joint1=348   Joint2=349   Joint3=358   Joint4=357
+   Area=437   NumJoints=4   Joint1=349   Joint2=350   Joint3=359   Joint4=358
+   Area=438   NumJoints=4   Joint1=350   Joint2=351   Joint3=360   Joint4=359
+   Area=439   NumJoints=4   Joint1=351   Joint2=15   Joint3=361   Joint4=360
+   Area=440   NumJoints=4   Joint1=146   Joint2=352   Joint3=362   Joint4=157
+   Area=441   NumJoints=4   Joint1=352   Joint2=353   Joint3=363   Joint4=362
+   Area=442   NumJoints=4   Joint1=353   Joint2=354   Joint3=364   Joint4=363
+   Area=443   NumJoints=4   Joint1=354   Joint2=355   Joint3=365   Joint4=364
+   Area=444   NumJoints=4   Joint1=355   Joint2=356   Joint3=366   Joint4=365
+   Area=445   NumJoints=4   Joint1=356   Joint2=357   Joint3=367   Joint4=366
+   Area=446   NumJoints=4   Joint1=357   Joint2=358   Joint3=368   Joint4=367
+   Area=447   NumJoints=4   Joint1=358   Joint2=359   Joint3=369   Joint4=368
+   Area=448   NumJoints=4   Joint1=359   Joint2=360   Joint3=370   Joint4=369
+   Area=449   NumJoints=4   Joint1=360   Joint2=361   Joint3=371   Joint4=370
+   Area=450   NumJoints=4   Joint1=157   Joint2=362   Joint3=372   Joint4=168
+   Area=451   NumJoints=4   Joint1=362   Joint2=363   Joint3=373   Joint4=372
+   Area=452   NumJoints=4   Joint1=363   Joint2=364   Joint3=374   Joint4=373
+   Area=453   NumJoints=4   Joint1=364   Joint2=365   Joint3=375   Joint4=374
+   Area=454   NumJoints=4   Joint1=365   Joint2=366   Joint3=376   Joint4=375
+   Area=455   NumJoints=4   Joint1=366   Joint2=367   Joint3=377   Joint4=376
+   Area=456   NumJoints=4   Joint1=367   Joint2=368   Joint3=378   Joint4=377
+   Area=457   NumJoints=4   Joint1=368   Joint2=369   Joint3=379   Joint4=378
+   Area=458   NumJoints=4   Joint1=369   Joint2=370   Joint3=380   Joint4=379
+   Area=459   NumJoints=4   Joint1=370   Joint2=371   Joint3=381   Joint4=380
+   Area=460   NumJoints=4   Joint1=168   Joint2=372   Joint3=382   Joint4=179
+   Area=461   NumJoints=4   Joint1=372   Joint2=373   Joint3=383   Joint4=382
+   Area=462   NumJoints=4   Joint1=373   Joint2=374   Joint3=384   Joint4=383
+   Area=463   NumJoints=4   Joint1=374   Joint2=375   Joint3=385   Joint4=384
+   Area=464   NumJoints=4   Joint1=375   Joint2=376   Joint3=386   Joint4=385
+   Area=465   NumJoints=4   Joint1=376   Joint2=377   Joint3=387   Joint4=386
+   Area=466   NumJoints=4   Joint1=377   Joint2=378   Joint3=388   Joint4=387
+   Area=467   NumJoints=4   Joint1=378   Joint2=379   Joint3=389   Joint4=388
+   Area=468   NumJoints=4   Joint1=379   Joint2=380   Joint3=390   Joint4=389
+   Area=469   NumJoints=4   Joint1=380   Joint2=381   Joint3=391   Joint4=390
+   Area=470   NumJoints=4   Joint1=179   Joint2=382   Joint3=392   Joint4=190
+   Area=471   NumJoints=4   Joint1=382   Joint2=383   Joint3=393   Joint4=392
+   Area=472   NumJoints=4   Joint1=383   Joint2=384   Joint3=394   Joint4=393
+   Area=473   NumJoints=4   Joint1=384   Joint2=385   Joint3=395   Joint4=394
+   Area=474   NumJoints=4   Joint1=385   Joint2=386   Joint3=396   Joint4=395
+   Area=475   NumJoints=4   Joint1=386   Joint2=387   Joint3=397   Joint4=396
+   Area=476   NumJoints=4   Joint1=387   Joint2=388   Joint3=398   Joint4=397
+   Area=477   NumJoints=4   Joint1=388   Joint2=389   Joint3=399   Joint4=398
+   Area=478   NumJoints=4   Joint1=389   Joint2=390   Joint3=400   Joint4=399
+   Area=479   NumJoints=4   Joint1=390   Joint2=391   Joint3=401   Joint4=400
+   Area=480   NumJoints=4   Joint1=190   Joint2=392   Joint3=402   Joint4=201
+   Area=481   NumJoints=4   Joint1=392   Joint2=393   Joint3=403   Joint4=402
+   Area=482   NumJoints=4   Joint1=393   Joint2=394   Joint3=404   Joint4=403
+   Area=483   NumJoints=4   Joint1=394   Joint2=395   Joint3=405   Joint4=404
+   Area=484   NumJoints=4   Joint1=395   Joint2=396   Joint3=406   Joint4=405
+   Area=485   NumJoints=4   Joint1=396   Joint2=397   Joint3=407   Joint4=406
+   Area=486   NumJoints=4   Joint1=397   Joint2=398   Joint3=408   Joint4=407
+   Area=487   NumJoints=4   Joint1=398   Joint2=399   Joint3=409   Joint4=408
+   Area=488   NumJoints=4   Joint1=399   Joint2=400   Joint3=410   Joint4=409
+   Area=489   NumJoints=4   Joint1=400   Joint2=401   Joint3=411   Joint4=410
+   Area=490   NumJoints=4   Joint1=201   Joint2=402   Joint3=412   Joint4=212
+   Area=491   NumJoints=4   Joint1=402   Joint2=403   Joint3=413   Joint4=412
+   Area=492   NumJoints=4   Joint1=403   Joint2=404   Joint3=414   Joint4=413
+   Area=493   NumJoints=4   Joint1=404   Joint2=405   Joint3=415   Joint4=414
+   Area=494   NumJoints=4   Joint1=405   Joint2=406   Joint3=416   Joint4=415
+   Area=495   NumJoints=4   Joint1=406   Joint2=407   Joint3=417   Joint4=416
+   Area=496   NumJoints=4   Joint1=407   Joint2=408   Joint3=418   Joint4=417
+   Area=497   NumJoints=4   Joint1=408   Joint2=409   Joint3=419   Joint4=418
+   Area=498   NumJoints=4   Joint1=409   Joint2=410   Joint3=420   Joint4=419
+   Area=499   NumJoints=4   Joint1=410   Joint2=411   Joint3=421   Joint4=420
+   Area=500   NumJoints=4   Joint1=212   Joint2=412   Joint3=422   Joint4=223
+   Area=501   NumJoints=4   Joint1=412   Joint2=413   Joint3=423   Joint4=422
+   Area=502   NumJoints=4   Joint1=413   Joint2=414   Joint3=424   Joint4=423
+   Area=503   NumJoints=4   Joint1=414   Joint2=415   Joint3=425   Joint4=424
+   Area=504   NumJoints=4   Joint1=415   Joint2=416   Joint3=426   Joint4=425
+   Area=505   NumJoints=4   Joint1=416   Joint2=417   Joint3=427   Joint4=426
+   Area=506   NumJoints=4   Joint1=417   Joint2=418   Joint3=428   Joint4=427
+   Area=507   NumJoints=4   Joint1=418   Joint2=419   Joint3=429   Joint4=428
+   Area=508   NumJoints=4   Joint1=419   Joint2=420   Joint3=430   Joint4=429
+   Area=509   NumJoints=4   Joint1=420   Joint2=421   Joint3=431   Joint4=430
+   Area=510   NumJoints=4   Joint1=223   Joint2=422   Joint3=432   Joint4=234
+   Area=511   NumJoints=4   Joint1=422   Joint2=423   Joint3=433   Joint4=432
+   Area=512   NumJoints=4   Joint1=423   Joint2=424   Joint3=434   Joint4=433
+   Area=513   NumJoints=4   Joint1=424   Joint2=425   Joint3=435   Joint4=434
+   Area=514   NumJoints=4   Joint1=425   Joint2=426   Joint3=436   Joint4=435
+   Area=515   NumJoints=4   Joint1=426   Joint2=427   Joint3=437   Joint4=436
+   Area=516   NumJoints=4   Joint1=427   Joint2=428   Joint3=438   Joint4=437
+   Area=517   NumJoints=4   Joint1=428   Joint2=429   Joint3=439   Joint4=438
+   Area=518   NumJoints=4   Joint1=429   Joint2=430   Joint3=440   Joint4=439
+   Area=519   NumJoints=4   Joint1=430   Joint2=431   Joint3=441   Joint4=440
+   Area=520   NumJoints=4   Joint1=234   Joint2=432   Joint3=442   Joint4=17
+   Area=521   NumJoints=4   Joint1=432   Joint2=433   Joint3=443   Joint4=442
+   Area=522   NumJoints=4   Joint1=433   Joint2=434   Joint3=444   Joint4=443
+   Area=523   NumJoints=4   Joint1=434   Joint2=435   Joint3=445   Joint4=444
+   Area=524   NumJoints=4   Joint1=435   Joint2=436   Joint3=446   Joint4=445
+   Area=525   NumJoints=4   Joint1=436   Joint2=437   Joint3=447   Joint4=446
+   Area=526   NumJoints=4   Joint1=437   Joint2=438   Joint3=448   Joint4=447
+   Area=527   NumJoints=4   Joint1=438   Joint2=439   Joint3=449   Joint4=448
+   Area=528   NumJoints=4   Joint1=439   Joint2=440   Joint3=450   Joint4=449
+   Area=529   NumJoints=4   Joint1=440   Joint2=441   Joint3=18   Joint4=450
+   Area=540   NumJoints=4   Joint1=1   Joint2=451   Joint3=461   Joint4=460
+   Area=541   NumJoints=4   Joint1=451   Joint2=452   Joint3=462   Joint4=461
+   Area=542   NumJoints=4   Joint1=452   Joint2=453   Joint3=463   Joint4=462
+   Area=543   NumJoints=4   Joint1=453   Joint2=454   Joint3=464   Joint4=463
+   Area=544   NumJoints=4   Joint1=454   Joint2=455   Joint3=465   Joint4=464
+   Area=545   NumJoints=4   Joint1=455   Joint2=456   Joint3=466   Joint4=465
+   Area=546   NumJoints=4   Joint1=456   Joint2=457   Joint3=467   Joint4=466
+   Area=547   NumJoints=4   Joint1=457   Joint2=458   Joint3=468   Joint4=467
+   Area=548   NumJoints=4   Joint1=458   Joint2=459   Joint3=469   Joint4=468
+   Area=549   NumJoints=4   Joint1=459   Joint2=2   Joint3=470   Joint4=469
+   Area=550   NumJoints=4   Joint1=460   Joint2=461   Joint3=472   Joint4=471
+   Area=551   NumJoints=4   Joint1=461   Joint2=462   Joint3=473   Joint4=472
+   Area=552   NumJoints=4   Joint1=462   Joint2=463   Joint3=474   Joint4=473
+   Area=553   NumJoints=4   Joint1=463   Joint2=464   Joint3=475   Joint4=474
+   Area=554   NumJoints=4   Joint1=464   Joint2=465   Joint3=476   Joint4=475
+   Area=555   NumJoints=4   Joint1=465   Joint2=466   Joint3=477   Joint4=476
+   Area=556   NumJoints=4   Joint1=466   Joint2=467   Joint3=478   Joint4=477
+   Area=557   NumJoints=4   Joint1=467   Joint2=468   Joint3=479   Joint4=478
+   Area=558   NumJoints=4   Joint1=468   Joint2=469   Joint3=480   Joint4=479
+   Area=559   NumJoints=4   Joint1=469   Joint2=470   Joint3=481   Joint4=480
+   Area=560   NumJoints=4   Joint1=471   Joint2=472   Joint3=483   Joint4=482
+   Area=561   NumJoints=4   Joint1=472   Joint2=473   Joint3=484   Joint4=483
+   Area=562   NumJoints=4   Joint1=473   Joint2=474   Joint3=485   Joint4=484
+   Area=563   NumJoints=4   Joint1=474   Joint2=475   Joint3=486   Joint4=485
+   Area=564   NumJoints=4   Joint1=475   Joint2=476   Joint3=487   Joint4=486
+   Area=565   NumJoints=4   Joint1=476   Joint2=477   Joint3=488   Joint4=487
+   Area=566   NumJoints=4   Joint1=477   Joint2=478   Joint3=489   Joint4=488
+   Area=567   NumJoints=4   Joint1=478   Joint2=479   Joint3=490   Joint4=489
+   Area=568   NumJoints=4   Joint1=479   Joint2=480   Joint3=491   Joint4=490
+   Area=569   NumJoints=4   Joint1=480   Joint2=481   Joint3=492   Joint4=491
+   Area=570   NumJoints=4   Joint1=482   Joint2=483   Joint3=494   Joint4=493
+   Area=571   NumJoints=4   Joint1=483   Joint2=484   Joint3=495   Joint4=494
+   Area=572   NumJoints=4   Joint1=484   Joint2=485   Joint3=496   Joint4=495
+   Area=573   NumJoints=4   Joint1=485   Joint2=486   Joint3=497   Joint4=496
+   Area=574   NumJoints=4   Joint1=486   Joint2=487   Joint3=498   Joint4=497
+   Area=575   NumJoints=4   Joint1=487   Joint2=488   Joint3=499   Joint4=498
+   Area=576   NumJoints=4   Joint1=488   Joint2=489   Joint3=500   Joint4=499
+   Area=577   NumJoints=4   Joint1=489   Joint2=490   Joint3=501   Joint4=500
+   Area=578   NumJoints=4   Joint1=490   Joint2=491   Joint3=502   Joint4=501
+   Area=579   NumJoints=4   Joint1=491   Joint2=492   Joint3=503   Joint4=502
+   Area=580   NumJoints=4   Joint1=493   Joint2=494   Joint3=505   Joint4=504
+   Area=581   NumJoints=4   Joint1=494   Joint2=495   Joint3=506   Joint4=505
+   Area=582   NumJoints=4   Joint1=495   Joint2=496   Joint3=507   Joint4=506
+   Area=583   NumJoints=4   Joint1=496   Joint2=497   Joint3=508   Joint4=507
+   Area=584   NumJoints=4   Joint1=497   Joint2=498   Joint3=509   Joint4=508
+   Area=585   NumJoints=4   Joint1=498   Joint2=499   Joint3=510   Joint4=509
+   Area=586   NumJoints=4   Joint1=499   Joint2=500   Joint3=511   Joint4=510
+   Area=587   NumJoints=4   Joint1=500   Joint2=501   Joint3=512   Joint4=511
+   Area=588   NumJoints=4   Joint1=501   Joint2=502   Joint3=513   Joint4=512
+   Area=589   NumJoints=4   Joint1=502   Joint2=503   Joint3=514   Joint4=513
+   Area=590   NumJoints=4   Joint1=504   Joint2=505   Joint3=19   Joint4=10
+   Area=591   NumJoints=4   Joint1=505   Joint2=506   Joint3=20   Joint4=19
+   Area=592   NumJoints=4   Joint1=506   Joint2=507   Joint3=21   Joint4=20
+   Area=593   NumJoints=4   Joint1=507   Joint2=508   Joint3=22   Joint4=21
+   Area=594   NumJoints=4   Joint1=508   Joint2=509   Joint3=23   Joint4=22
+   Area=595   NumJoints=4   Joint1=509   Joint2=510   Joint3=24   Joint4=23
+   Area=596   NumJoints=4   Joint1=510   Joint2=511   Joint3=25   Joint4=24
+   Area=597   NumJoints=4   Joint1=511   Joint2=512   Joint3=26   Joint4=25
+   Area=598   NumJoints=4   Joint1=512   Joint2=513   Joint3=27   Joint4=26
+   Area=599   NumJoints=4   Joint1=513   Joint2=514   Joint3=11   Joint4=27
+   Area=610   NumJoints=4   Joint1=7   Joint2=515   Joint3=525   Joint4=524
+   Area=611   NumJoints=4   Joint1=515   Joint2=516   Joint3=526   Joint4=525
+   Area=612   NumJoints=4   Joint1=516   Joint2=517   Joint3=527   Joint4=526
+   Area=613   NumJoints=4   Joint1=517   Joint2=518   Joint3=528   Joint4=527
+   Area=614   NumJoints=4   Joint1=518   Joint2=519   Joint3=529   Joint4=528
+   Area=615   NumJoints=4   Joint1=519   Joint2=520   Joint3=530   Joint4=529
+   Area=616   NumJoints=4   Joint1=520   Joint2=521   Joint3=531   Joint4=530
+   Area=617   NumJoints=4   Joint1=521   Joint2=522   Joint3=532   Joint4=531
+   Area=618   NumJoints=4   Joint1=522   Joint2=523   Joint3=533   Joint4=532
+   Area=619   NumJoints=4   Joint1=523   Joint2=8   Joint3=534   Joint4=533
+   Area=620   NumJoints=4   Joint1=524   Joint2=525   Joint3=536   Joint4=535
+   Area=621   NumJoints=4   Joint1=525   Joint2=526   Joint3=537   Joint4=536
+   Area=622   NumJoints=4   Joint1=526   Joint2=527   Joint3=538   Joint4=537
+   Area=623   NumJoints=4   Joint1=527   Joint2=528   Joint3=539   Joint4=538
+   Area=624   NumJoints=4   Joint1=528   Joint2=529   Joint3=540   Joint4=539
+   Area=625   NumJoints=4   Joint1=529   Joint2=530   Joint3=541   Joint4=540
+   Area=626   NumJoints=4   Joint1=530   Joint2=531   Joint3=542   Joint4=541
+   Area=627   NumJoints=4   Joint1=531   Joint2=532   Joint3=543   Joint4=542
+   Area=628   NumJoints=4   Joint1=532   Joint2=533   Joint3=544   Joint4=543
+   Area=629   NumJoints=4   Joint1=533   Joint2=534   Joint3=545   Joint4=544
+   Area=630   NumJoints=4   Joint1=535   Joint2=536   Joint3=547   Joint4=546
+   Area=631   NumJoints=4   Joint1=536   Joint2=537   Joint3=548   Joint4=547
+   Area=632   NumJoints=4   Joint1=537   Joint2=538   Joint3=549   Joint4=548
+   Area=633   NumJoints=4   Joint1=538   Joint2=539   Joint3=550   Joint4=549
+   Area=634   NumJoints=4   Joint1=539   Joint2=540   Joint3=551   Joint4=550
+   Area=635   NumJoints=4   Joint1=540   Joint2=541   Joint3=552   Joint4=551
+   Area=636   NumJoints=4   Joint1=541   Joint2=542   Joint3=553   Joint4=552
+   Area=637   NumJoints=4   Joint1=542   Joint2=543   Joint3=554   Joint4=553
+   Area=638   NumJoints=4   Joint1=543   Joint2=544   Joint3=555   Joint4=554
+   Area=639   NumJoints=4   Joint1=544   Joint2=545   Joint3=556   Joint4=555
+   Area=640   NumJoints=4   Joint1=546   Joint2=547   Joint3=558   Joint4=557
+   Area=641   NumJoints=4   Joint1=547   Joint2=548   Joint3=559   Joint4=558
+   Area=642   NumJoints=4   Joint1=548   Joint2=549   Joint3=560   Joint4=559
+   Area=643   NumJoints=4   Joint1=549   Joint2=550   Joint3=561   Joint4=560
+   Area=644   NumJoints=4   Joint1=550   Joint2=551   Joint3=562   Joint4=561
+   Area=645   NumJoints=4   Joint1=551   Joint2=552   Joint3=563   Joint4=562
+   Area=646   NumJoints=4   Joint1=552   Joint2=553   Joint3=564   Joint4=563
+   Area=647   NumJoints=4   Joint1=553   Joint2=554   Joint3=565   Joint4=564
+   Area=648   NumJoints=4   Joint1=554   Joint2=555   Joint3=566   Joint4=565
+   Area=649   NumJoints=4   Joint1=555   Joint2=556   Joint3=567   Joint4=566
+   Area=650   NumJoints=4   Joint1=557   Joint2=558   Joint3=569   Joint4=568
+   Area=651   NumJoints=4   Joint1=558   Joint2=559   Joint3=570   Joint4=569
+   Area=652   NumJoints=4   Joint1=559   Joint2=560   Joint3=571   Joint4=570
+   Area=653   NumJoints=4   Joint1=560   Joint2=561   Joint3=572   Joint4=571
+   Area=654   NumJoints=4   Joint1=561   Joint2=562   Joint3=573   Joint4=572
+   Area=655   NumJoints=4   Joint1=562   Joint2=563   Joint3=574   Joint4=573
+   Area=656   NumJoints=4   Joint1=563   Joint2=564   Joint3=575   Joint4=574
+   Area=657   NumJoints=4   Joint1=564   Joint2=565   Joint3=576   Joint4=575
+   Area=658   NumJoints=4   Joint1=565   Joint2=566   Joint3=577   Joint4=576
+   Area=659   NumJoints=4   Joint1=566   Joint2=567   Joint3=578   Joint4=577
+   Area=660   NumJoints=4   Joint1=568   Joint2=569   Joint3=235   Joint4=16
+   Area=661   NumJoints=4   Joint1=569   Joint2=570   Joint3=236   Joint4=235
+   Area=662   NumJoints=4   Joint1=570   Joint2=571   Joint3=237   Joint4=236
+   Area=663   NumJoints=4   Joint1=571   Joint2=572   Joint3=238   Joint4=237
+   Area=664   NumJoints=4   Joint1=572   Joint2=573   Joint3=239   Joint4=238
+   Area=665   NumJoints=4   Joint1=573   Joint2=574   Joint3=240   Joint4=239
+   Area=666   NumJoints=4   Joint1=574   Joint2=575   Joint3=241   Joint4=240
+   Area=667   NumJoints=4   Joint1=575   Joint2=576   Joint3=242   Joint4=241
+   Area=668   NumJoints=4   Joint1=576   Joint2=577   Joint3=243   Joint4=242
+   Area=669   NumJoints=4   Joint1=577   Joint2=578   Joint3=17   Joint4=243
+ 
+TABLE:  "COORDINATE SYSTEMS"
+   Name=GLOBAL   Type=Cartesian   X=0   Y=0   Z=0   AboutZ=0   AboutY=0   AboutX=0
+ 
+TABLE:  "DATABASE FORMAT TYPES"
+   UnitsCurr=Yes   OverrideE=No
+ 
+TABLE:  "FRAME SECTION ASSIGNMENTS"
+   Frame=1   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=2   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=3   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=4   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=5   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=6   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=7   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=8   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=9   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=10   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=11   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=12   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=13   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=14   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=15   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=16   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=17   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=18   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=19   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=20   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=21   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=22   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=23   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=24   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=25   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=26   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=27   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=28   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=29   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=30   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=31   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=32   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=33   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=34   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=35   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=36   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=37   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=38   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=39   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=40   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=41   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=42   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=43   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=44   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=45   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=46   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=47   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=48   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=49   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=50   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=51   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=52   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=53   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=54   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=55   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=56   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=57   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=158   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=159   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=160   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=161   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=162   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=163   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=164   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=165   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=166   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=167   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=168   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=169   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=170   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=171   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=172   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=173   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=174   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=175   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=176   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=177   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=178   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=179   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=180   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=181   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=182   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=183   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=184   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=285   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=286   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=287   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=288   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=289   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=290   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=291   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=292   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=293   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=294   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=295   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=296   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=297   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=298   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=299   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=300   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=301   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=302   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=303   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=304   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=305   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=306   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=307   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=308   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=309   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=310   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=311   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=412   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=413   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=414   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=415   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=416   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=417   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=418   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=419   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=420   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=421   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=422   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=423   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=424   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=425   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=426   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=427   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=428   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=429   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=530   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=531   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=532   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=533   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=534   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=535   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=536   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=537   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=538   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=539   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=600   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=601   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=602   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=603   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=604   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=605   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=606   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=607   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=608   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=609   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+ 
+TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
+   SectionName=SEC1   Material=MAT_22805415_n0.2000   Shape=General   t3=0.4   t2=0.4   Area=0.16   TorsConst=0.003584   I33=0.002133333333   I22=0.002133333333   I23=0   AS2=0.1333333333   AS3=0.1333333333 _
+        Color=Blue   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1
+   SectionName=SEC2   Material=MAT_22805415_n0.2000   Shape=General   t3=0.5   t2=0.3   Area=0.15   TorsConst=0.002835   I33=0.003125   I22=0.001125   I23=0   AS2=0.125   AS3=0.125 _
+        Color=Blue   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1
+ 
+TABLE:  "AREA SECTION ASSIGNMENTS"
+   Area=58   Section=SSEC1   MatProp=Default
+   Area=59   Section=SSEC1   MatProp=Default
+   Area=60   Section=SSEC1   MatProp=Default
+   Area=61   Section=SSEC1   MatProp=Default
+   Area=62   Section=SSEC1   MatProp=Default
+   Area=63   Section=SSEC1   MatProp=Default
+   Area=64   Section=SSEC1   MatProp=Default
+   Area=65   Section=SSEC1   MatProp=Default
+   Area=66   Section=SSEC1   MatProp=Default
+   Area=67   Section=SSEC1   MatProp=Default
+   Area=68   Section=SSEC1   MatProp=Default
+   Area=69   Section=SSEC1   MatProp=Default
+   Area=70   Section=SSEC1   MatProp=Default
+   Area=71   Section=SSEC1   MatProp=Default
+   Area=72   Section=SSEC1   MatProp=Default
+   Area=73   Section=SSEC1   MatProp=Default
+   Area=74   Section=SSEC1   MatProp=Default
+   Area=75   Section=SSEC1   MatProp=Default
+   Area=76   Section=SSEC1   MatProp=Default
+   Area=77   Section=SSEC1   MatProp=Default
+   Area=78   Section=SSEC1   MatProp=Default
+   Area=79   Section=SSEC1   MatProp=Default
+   Area=80   Section=SSEC1   MatProp=Default
+   Area=81   Section=SSEC1   MatProp=Default
+   Area=82   Section=SSEC1   MatProp=Default
+   Area=83   Section=SSEC1   MatProp=Default
+   Area=84   Section=SSEC1   MatProp=Default
+   Area=85   Section=SSEC1   MatProp=Default
+   Area=86   Section=SSEC1   MatProp=Default
+   Area=87   Section=SSEC1   MatProp=Default
+   Area=88   Section=SSEC1   MatProp=Default
+   Area=89   Section=SSEC1   MatProp=Default
+   Area=90   Section=SSEC1   MatProp=Default
+   Area=91   Section=SSEC1   MatProp=Default
+   Area=92   Section=SSEC1   MatProp=Default
+   Area=93   Section=SSEC1   MatProp=Default
+   Area=94   Section=SSEC1   MatProp=Default
+   Area=95   Section=SSEC1   MatProp=Default
+   Area=96   Section=SSEC1   MatProp=Default
+   Area=97   Section=SSEC1   MatProp=Default
+   Area=98   Section=SSEC1   MatProp=Default
+   Area=99   Section=SSEC1   MatProp=Default
+   Area=100   Section=SSEC1   MatProp=Default
+   Area=101   Section=SSEC1   MatProp=Default
+   Area=102   Section=SSEC1   MatProp=Default
+   Area=103   Section=SSEC1   MatProp=Default
+   Area=104   Section=SSEC1   MatProp=Default
+   Area=105   Section=SSEC1   MatProp=Default
+   Area=106   Section=SSEC1   MatProp=Default
+   Area=107   Section=SSEC1   MatProp=Default
+   Area=108   Section=SSEC1   MatProp=Default
+   Area=109   Section=SSEC1   MatProp=Default
+   Area=110   Section=SSEC1   MatProp=Default
+   Area=111   Section=SSEC1   MatProp=Default
+   Area=112   Section=SSEC1   MatProp=Default
+   Area=113   Section=SSEC1   MatProp=Default
+   Area=114   Section=SSEC1   MatProp=Default
+   Area=115   Section=SSEC1   MatProp=Default
+   Area=116   Section=SSEC1   MatProp=Default
+   Area=117   Section=SSEC1   MatProp=Default
+   Area=118   Section=SSEC1   MatProp=Default
+   Area=119   Section=SSEC1   MatProp=Default
+   Area=120   Section=SSEC1   MatProp=Default
+   Area=121   Section=SSEC1   MatProp=Default
+   Area=122   Section=SSEC1   MatProp=Default
+   Area=123   Section=SSEC1   MatProp=Default
+   Area=124   Section=SSEC1   MatProp=Default
+   Area=125   Section=SSEC1   MatProp=Default
+   Area=126   Section=SSEC1   MatProp=Default
+   Area=127   Section=SSEC1   MatProp=Default
+   Area=128   Section=SSEC1   MatProp=Default
+   Area=129   Section=SSEC1   MatProp=Default
+   Area=130   Section=SSEC1   MatProp=Default
+   Area=131   Section=SSEC1   MatProp=Default
+   Area=132   Section=SSEC1   MatProp=Default
+   Area=133   Section=SSEC1   MatProp=Default
+   Area=134   Section=SSEC1   MatProp=Default
+   Area=135   Section=SSEC1   MatProp=Default
+   Area=136   Section=SSEC1   MatProp=Default
+   Area=137   Section=SSEC1   MatProp=Default
+   Area=138   Section=SSEC1   MatProp=Default
+   Area=139   Section=SSEC1   MatProp=Default
+   Area=140   Section=SSEC1   MatProp=Default
+   Area=141   Section=SSEC1   MatProp=Default
+   Area=142   Section=SSEC1   MatProp=Default
+   Area=143   Section=SSEC1   MatProp=Default
+   Area=144   Section=SSEC1   MatProp=Default
+   Area=145   Section=SSEC1   MatProp=Default
+   Area=146   Section=SSEC1   MatProp=Default
+   Area=147   Section=SSEC1   MatProp=Default
+   Area=148   Section=SSEC1   MatProp=Default
+   Area=149   Section=SSEC1   MatProp=Default
+   Area=150   Section=SSEC1   MatProp=Default
+   Area=151   Section=SSEC1   MatProp=Default
+   Area=152   Section=SSEC1   MatProp=Default
+   Area=153   Section=SSEC1   MatProp=Default
+   Area=154   Section=SSEC1   MatProp=Default
+   Area=155   Section=SSEC1   MatProp=Default
+   Area=156   Section=SSEC1   MatProp=Default
+   Area=157   Section=SSEC1   MatProp=Default
+   Area=185   Section=SSEC1   MatProp=Default
+   Area=186   Section=SSEC1   MatProp=Default
+   Area=187   Section=SSEC1   MatProp=Default
+   Area=188   Section=SSEC1   MatProp=Default
+   Area=189   Section=SSEC1   MatProp=Default
+   Area=190   Section=SSEC1   MatProp=Default
+   Area=191   Section=SSEC1   MatProp=Default
+   Area=192   Section=SSEC1   MatProp=Default
+   Area=193   Section=SSEC1   MatProp=Default
+   Area=194   Section=SSEC1   MatProp=Default
+   Area=195   Section=SSEC1   MatProp=Default
+   Area=196   Section=SSEC1   MatProp=Default
+   Area=197   Section=SSEC1   MatProp=Default
+   Area=198   Section=SSEC1   MatProp=Default
+   Area=199   Section=SSEC1   MatProp=Default
+   Area=200   Section=SSEC1   MatProp=Default
+   Area=201   Section=SSEC1   MatProp=Default
+   Area=202   Section=SSEC1   MatProp=Default
+   Area=203   Section=SSEC1   MatProp=Default
+   Area=204   Section=SSEC1   MatProp=Default
+   Area=205   Section=SSEC1   MatProp=Default
+   Area=206   Section=SSEC1   MatProp=Default
+   Area=207   Section=SSEC1   MatProp=Default
+   Area=208   Section=SSEC1   MatProp=Default
+   Area=209   Section=SSEC1   MatProp=Default
+   Area=210   Section=SSEC1   MatProp=Default
+   Area=211   Section=SSEC1   MatProp=Default
+   Area=212   Section=SSEC1   MatProp=Default
+   Area=213   Section=SSEC1   MatProp=Default
+   Area=214   Section=SSEC1   MatProp=Default
+   Area=215   Section=SSEC1   MatProp=Default
+   Area=216   Section=SSEC1   MatProp=Default
+   Area=217   Section=SSEC1   MatProp=Default
+   Area=218   Section=SSEC1   MatProp=Default
+   Area=219   Section=SSEC1   MatProp=Default
+   Area=220   Section=SSEC1   MatProp=Default
+   Area=221   Section=SSEC1   MatProp=Default
+   Area=222   Section=SSEC1   MatProp=Default
+   Area=223   Section=SSEC1   MatProp=Default
+   Area=224   Section=SSEC1   MatProp=Default
+   Area=225   Section=SSEC1   MatProp=Default
+   Area=226   Section=SSEC1   MatProp=Default
+   Area=227   Section=SSEC1   MatProp=Default
+   Area=228   Section=SSEC1   MatProp=Default
+   Area=229   Section=SSEC1   MatProp=Default
+   Area=230   Section=SSEC1   MatProp=Default
+   Area=231   Section=SSEC1   MatProp=Default
+   Area=232   Section=SSEC1   MatProp=Default
+   Area=233   Section=SSEC1   MatProp=Default
+   Area=234   Section=SSEC1   MatProp=Default
+   Area=235   Section=SSEC1   MatProp=Default
+   Area=236   Section=SSEC1   MatProp=Default
+   Area=237   Section=SSEC1   MatProp=Default
+   Area=238   Section=SSEC1   MatProp=Default
+   Area=239   Section=SSEC1   MatProp=Default
+   Area=240   Section=SSEC1   MatProp=Default
+   Area=241   Section=SSEC1   MatProp=Default
+   Area=242   Section=SSEC1   MatProp=Default
+   Area=243   Section=SSEC1   MatProp=Default
+   Area=244   Section=SSEC1   MatProp=Default
+   Area=245   Section=SSEC1   MatProp=Default
+   Area=246   Section=SSEC1   MatProp=Default
+   Area=247   Section=SSEC1   MatProp=Default
+   Area=248   Section=SSEC1   MatProp=Default
+   Area=249   Section=SSEC1   MatProp=Default
+   Area=250   Section=SSEC1   MatProp=Default
+   Area=251   Section=SSEC1   MatProp=Default
+   Area=252   Section=SSEC1   MatProp=Default
+   Area=253   Section=SSEC1   MatProp=Default
+   Area=254   Section=SSEC1   MatProp=Default
+   Area=255   Section=SSEC1   MatProp=Default
+   Area=256   Section=SSEC1   MatProp=Default
+   Area=257   Section=SSEC1   MatProp=Default
+   Area=258   Section=SSEC1   MatProp=Default
+   Area=259   Section=SSEC1   MatProp=Default
+   Area=260   Section=SSEC1   MatProp=Default
+   Area=261   Section=SSEC1   MatProp=Default
+   Area=262   Section=SSEC1   MatProp=Default
+   Area=263   Section=SSEC1   MatProp=Default
+   Area=264   Section=SSEC1   MatProp=Default
+   Area=265   Section=SSEC1   MatProp=Default
+   Area=266   Section=SSEC1   MatProp=Default
+   Area=267   Section=SSEC1   MatProp=Default
+   Area=268   Section=SSEC1   MatProp=Default
+   Area=269   Section=SSEC1   MatProp=Default
+   Area=270   Section=SSEC1   MatProp=Default
+   Area=271   Section=SSEC1   MatProp=Default
+   Area=272   Section=SSEC1   MatProp=Default
+   Area=273   Section=SSEC1   MatProp=Default
+   Area=274   Section=SSEC1   MatProp=Default
+   Area=275   Section=SSEC1   MatProp=Default
+   Area=276   Section=SSEC1   MatProp=Default
+   Area=277   Section=SSEC1   MatProp=Default
+   Area=278   Section=SSEC1   MatProp=Default
+   Area=279   Section=SSEC1   MatProp=Default
+   Area=280   Section=SSEC1   MatProp=Default
+   Area=281   Section=SSEC1   MatProp=Default
+   Area=282   Section=SSEC1   MatProp=Default
+   Area=283   Section=SSEC1   MatProp=Default
+   Area=284   Section=SSEC1   MatProp=Default
+   Area=312   Section=SSEC1   MatProp=Default
+   Area=313   Section=SSEC1   MatProp=Default
+   Area=314   Section=SSEC1   MatProp=Default
+   Area=315   Section=SSEC1   MatProp=Default
+   Area=316   Section=SSEC1   MatProp=Default
+   Area=317   Section=SSEC1   MatProp=Default
+   Area=318   Section=SSEC1   MatProp=Default
+   Area=319   Section=SSEC1   MatProp=Default
+   Area=320   Section=SSEC1   MatProp=Default
+   Area=321   Section=SSEC1   MatProp=Default
+   Area=322   Section=SSEC1   MatProp=Default
+   Area=323   Section=SSEC1   MatProp=Default
+   Area=324   Section=SSEC1   MatProp=Default
+   Area=325   Section=SSEC1   MatProp=Default
+   Area=326   Section=SSEC1   MatProp=Default
+   Area=327   Section=SSEC1   MatProp=Default
+   Area=328   Section=SSEC1   MatProp=Default
+   Area=329   Section=SSEC1   MatProp=Default
+   Area=330   Section=SSEC1   MatProp=Default
+   Area=331   Section=SSEC1   MatProp=Default
+   Area=332   Section=SSEC1   MatProp=Default
+   Area=333   Section=SSEC1   MatProp=Default
+   Area=334   Section=SSEC1   MatProp=Default
+   Area=335   Section=SSEC1   MatProp=Default
+   Area=336   Section=SSEC1   MatProp=Default
+   Area=337   Section=SSEC1   MatProp=Default
+   Area=338   Section=SSEC1   MatProp=Default
+   Area=339   Section=SSEC1   MatProp=Default
+   Area=340   Section=SSEC1   MatProp=Default
+   Area=341   Section=SSEC1   MatProp=Default
+   Area=342   Section=SSEC1   MatProp=Default
+   Area=343   Section=SSEC1   MatProp=Default
+   Area=344   Section=SSEC1   MatProp=Default
+   Area=345   Section=SSEC1   MatProp=Default
+   Area=346   Section=SSEC1   MatProp=Default
+   Area=347   Section=SSEC1   MatProp=Default
+   Area=348   Section=SSEC1   MatProp=Default
+   Area=349   Section=SSEC1   MatProp=Default
+   Area=350   Section=SSEC1   MatProp=Default
+   Area=351   Section=SSEC1   MatProp=Default
+   Area=352   Section=SSEC1   MatProp=Default
+   Area=353   Section=SSEC1   MatProp=Default
+   Area=354   Section=SSEC1   MatProp=Default
+   Area=355   Section=SSEC1   MatProp=Default
+   Area=356   Section=SSEC1   MatProp=Default
+   Area=357   Section=SSEC1   MatProp=Default
+   Area=358   Section=SSEC1   MatProp=Default
+   Area=359   Section=SSEC1   MatProp=Default
+   Area=360   Section=SSEC1   MatProp=Default
+   Area=361   Section=SSEC1   MatProp=Default
+   Area=362   Section=SSEC1   MatProp=Default
+   Area=363   Section=SSEC1   MatProp=Default
+   Area=364   Section=SSEC1   MatProp=Default
+   Area=365   Section=SSEC1   MatProp=Default
+   Area=366   Section=SSEC1   MatProp=Default
+   Area=367   Section=SSEC1   MatProp=Default
+   Area=368   Section=SSEC1   MatProp=Default
+   Area=369   Section=SSEC1   MatProp=Default
+   Area=370   Section=SSEC1   MatProp=Default
+   Area=371   Section=SSEC1   MatProp=Default
+   Area=372   Section=SSEC1   MatProp=Default
+   Area=373   Section=SSEC1   MatProp=Default
+   Area=374   Section=SSEC1   MatProp=Default
+   Area=375   Section=SSEC1   MatProp=Default
+   Area=376   Section=SSEC1   MatProp=Default
+   Area=377   Section=SSEC1   MatProp=Default
+   Area=378   Section=SSEC1   MatProp=Default
+   Area=379   Section=SSEC1   MatProp=Default
+   Area=380   Section=SSEC1   MatProp=Default
+   Area=381   Section=SSEC1   MatProp=Default
+   Area=382   Section=SSEC1   MatProp=Default
+   Area=383   Section=SSEC1   MatProp=Default
+   Area=384   Section=SSEC1   MatProp=Default
+   Area=385   Section=SSEC1   MatProp=Default
+   Area=386   Section=SSEC1   MatProp=Default
+   Area=387   Section=SSEC1   MatProp=Default
+   Area=388   Section=SSEC1   MatProp=Default
+   Area=389   Section=SSEC1   MatProp=Default
+   Area=390   Section=SSEC1   MatProp=Default
+   Area=391   Section=SSEC1   MatProp=Default
+   Area=392   Section=SSEC1   MatProp=Default
+   Area=393   Section=SSEC1   MatProp=Default
+   Area=394   Section=SSEC1   MatProp=Default
+   Area=395   Section=SSEC1   MatProp=Default
+   Area=396   Section=SSEC1   MatProp=Default
+   Area=397   Section=SSEC1   MatProp=Default
+   Area=398   Section=SSEC1   MatProp=Default
+   Area=399   Section=SSEC1   MatProp=Default
+   Area=400   Section=SSEC1   MatProp=Default
+   Area=401   Section=SSEC1   MatProp=Default
+   Area=402   Section=SSEC1   MatProp=Default
+   Area=403   Section=SSEC1   MatProp=Default
+   Area=404   Section=SSEC1   MatProp=Default
+   Area=405   Section=SSEC1   MatProp=Default
+   Area=406   Section=SSEC1   MatProp=Default
+   Area=407   Section=SSEC1   MatProp=Default
+   Area=408   Section=SSEC1   MatProp=Default
+   Area=409   Section=SSEC1   MatProp=Default
+   Area=410   Section=SSEC1   MatProp=Default
+   Area=411   Section=SSEC1   MatProp=Default
+   Area=430   Section=SSEC1   MatProp=Default
+   Area=431   Section=SSEC1   MatProp=Default
+   Area=432   Section=SSEC1   MatProp=Default
+   Area=433   Section=SSEC1   MatProp=Default
+   Area=434   Section=SSEC1   MatProp=Default
+   Area=435   Section=SSEC1   MatProp=Default
+   Area=436   Section=SSEC1   MatProp=Default
+   Area=437   Section=SSEC1   MatProp=Default
+   Area=438   Section=SSEC1   MatProp=Default
+   Area=439   Section=SSEC1   MatProp=Default
+   Area=440   Section=SSEC1   MatProp=Default
+   Area=441   Section=SSEC1   MatProp=Default
+   Area=442   Section=SSEC1   MatProp=Default
+   Area=443   Section=SSEC1   MatProp=Default
+   Area=444   Section=SSEC1   MatProp=Default
+   Area=445   Section=SSEC1   MatProp=Default
+   Area=446   Section=SSEC1   MatProp=Default
+   Area=447   Section=SSEC1   MatProp=Default
+   Area=448   Section=SSEC1   MatProp=Default
+   Area=449   Section=SSEC1   MatProp=Default
+   Area=450   Section=SSEC1   MatProp=Default
+   Area=451   Section=SSEC1   MatProp=Default
+   Area=452   Section=SSEC1   MatProp=Default
+   Area=453   Section=SSEC1   MatProp=Default
+   Area=454   Section=SSEC1   MatProp=Default
+   Area=455   Section=SSEC1   MatProp=Default
+   Area=456   Section=SSEC1   MatProp=Default
+   Area=457   Section=SSEC1   MatProp=Default
+   Area=458   Section=SSEC1   MatProp=Default
+   Area=459   Section=SSEC1   MatProp=Default
+   Area=460   Section=SSEC1   MatProp=Default
+   Area=461   Section=SSEC1   MatProp=Default
+   Area=462   Section=SSEC1   MatProp=Default
+   Area=463   Section=SSEC1   MatProp=Default
+   Area=464   Section=SSEC1   MatProp=Default
+   Area=465   Section=SSEC1   MatProp=Default
+   Area=466   Section=SSEC1   MatProp=Default
+   Area=467   Section=SSEC1   MatProp=Default
+   Area=468   Section=SSEC1   MatProp=Default
+   Area=469   Section=SSEC1   MatProp=Default
+   Area=470   Section=SSEC1   MatProp=Default
+   Area=471   Section=SSEC1   MatProp=Default
+   Area=472   Section=SSEC1   MatProp=Default
+   Area=473   Section=SSEC1   MatProp=Default
+   Area=474   Section=SSEC1   MatProp=Default
+   Area=475   Section=SSEC1   MatProp=Default
+   Area=476   Section=SSEC1   MatProp=Default
+   Area=477   Section=SSEC1   MatProp=Default
+   Area=478   Section=SSEC1   MatProp=Default
+   Area=479   Section=SSEC1   MatProp=Default
+   Area=480   Section=SSEC1   MatProp=Default
+   Area=481   Section=SSEC1   MatProp=Default
+   Area=482   Section=SSEC1   MatProp=Default
+   Area=483   Section=SSEC1   MatProp=Default
+   Area=484   Section=SSEC1   MatProp=Default
+   Area=485   Section=SSEC1   MatProp=Default
+   Area=486   Section=SSEC1   MatProp=Default
+   Area=487   Section=SSEC1   MatProp=Default
+   Area=488   Section=SSEC1   MatProp=Default
+   Area=489   Section=SSEC1   MatProp=Default
+   Area=490   Section=SSEC1   MatProp=Default
+   Area=491   Section=SSEC1   MatProp=Default
+   Area=492   Section=SSEC1   MatProp=Default
+   Area=493   Section=SSEC1   MatProp=Default
+   Area=494   Section=SSEC1   MatProp=Default
+   Area=495   Section=SSEC1   MatProp=Default
+   Area=496   Section=SSEC1   MatProp=Default
+   Area=497   Section=SSEC1   MatProp=Default
+   Area=498   Section=SSEC1   MatProp=Default
+   Area=499   Section=SSEC1   MatProp=Default
+   Area=500   Section=SSEC1   MatProp=Default
+   Area=501   Section=SSEC1   MatProp=Default
+   Area=502   Section=SSEC1   MatProp=Default
+   Area=503   Section=SSEC1   MatProp=Default
+   Area=504   Section=SSEC1   MatProp=Default
+   Area=505   Section=SSEC1   MatProp=Default
+   Area=506   Section=SSEC1   MatProp=Default
+   Area=507   Section=SSEC1   MatProp=Default
+   Area=508   Section=SSEC1   MatProp=Default
+   Area=509   Section=SSEC1   MatProp=Default
+   Area=510   Section=SSEC1   MatProp=Default
+   Area=511   Section=SSEC1   MatProp=Default
+   Area=512   Section=SSEC1   MatProp=Default
+   Area=513   Section=SSEC1   MatProp=Default
+   Area=514   Section=SSEC1   MatProp=Default
+   Area=515   Section=SSEC1   MatProp=Default
+   Area=516   Section=SSEC1   MatProp=Default
+   Area=517   Section=SSEC1   MatProp=Default
+   Area=518   Section=SSEC1   MatProp=Default
+   Area=519   Section=SSEC1   MatProp=Default
+   Area=520   Section=SSEC1   MatProp=Default
+   Area=521   Section=SSEC1   MatProp=Default
+   Area=522   Section=SSEC1   MatProp=Default
+   Area=523   Section=SSEC1   MatProp=Default
+   Area=524   Section=SSEC1   MatProp=Default
+   Area=525   Section=SSEC1   MatProp=Default
+   Area=526   Section=SSEC1   MatProp=Default
+   Area=527   Section=SSEC1   MatProp=Default
+   Area=528   Section=SSEC1   MatProp=Default
+   Area=529   Section=SSEC1   MatProp=Default
+   Area=540   Section=SSEC2   MatProp=Default
+   Area=541   Section=SSEC2   MatProp=Default
+   Area=542   Section=SSEC2   MatProp=Default
+   Area=543   Section=SSEC2   MatProp=Default
+   Area=544   Section=SSEC2   MatProp=Default
+   Area=545   Section=SSEC2   MatProp=Default
+   Area=546   Section=SSEC2   MatProp=Default
+   Area=547   Section=SSEC2   MatProp=Default
+   Area=548   Section=SSEC2   MatProp=Default
+   Area=549   Section=SSEC2   MatProp=Default
+   Area=550   Section=SSEC2   MatProp=Default
+   Area=551   Section=SSEC2   MatProp=Default
+   Area=552   Section=SSEC2   MatProp=Default
+   Area=553   Section=SSEC2   MatProp=Default
+   Area=554   Section=SSEC2   MatProp=Default
+   Area=555   Section=SSEC2   MatProp=Default
+   Area=556   Section=SSEC2   MatProp=Default
+   Area=557   Section=SSEC2   MatProp=Default
+   Area=558   Section=SSEC2   MatProp=Default
+   Area=559   Section=SSEC2   MatProp=Default
+   Area=560   Section=SSEC2   MatProp=Default
+   Area=561   Section=SSEC2   MatProp=Default
+   Area=562   Section=SSEC2   MatProp=Default
+   Area=563   Section=SSEC2   MatProp=Default
+   Area=564   Section=SSEC2   MatProp=Default
+   Area=565   Section=SSEC2   MatProp=Default
+   Area=566   Section=SSEC2   MatProp=Default
+   Area=567   Section=SSEC2   MatProp=Default
+   Area=568   Section=SSEC2   MatProp=Default
+   Area=569   Section=SSEC2   MatProp=Default
+   Area=570   Section=SSEC2   MatProp=Default
+   Area=571   Section=SSEC2   MatProp=Default
+   Area=572   Section=SSEC2   MatProp=Default
+   Area=573   Section=SSEC2   MatProp=Default
+   Area=574   Section=SSEC2   MatProp=Default
+   Area=575   Section=SSEC2   MatProp=Default
+   Area=576   Section=SSEC2   MatProp=Default
+   Area=577   Section=SSEC2   MatProp=Default
+   Area=578   Section=SSEC2   MatProp=Default
+   Area=579   Section=SSEC2   MatProp=Default
+   Area=580   Section=SSEC2   MatProp=Default
+   Area=581   Section=SSEC2   MatProp=Default
+   Area=582   Section=SSEC2   MatProp=Default
+   Area=583   Section=SSEC2   MatProp=Default
+   Area=584   Section=SSEC2   MatProp=Default
+   Area=585   Section=SSEC2   MatProp=Default
+   Area=586   Section=SSEC2   MatProp=Default
+   Area=587   Section=SSEC2   MatProp=Default
+   Area=588   Section=SSEC2   MatProp=Default
+   Area=589   Section=SSEC2   MatProp=Default
+   Area=590   Section=SSEC2   MatProp=Default
+   Area=591   Section=SSEC2   MatProp=Default
+   Area=592   Section=SSEC2   MatProp=Default
+   Area=593   Section=SSEC2   MatProp=Default
+   Area=594   Section=SSEC2   MatProp=Default
+   Area=595   Section=SSEC2   MatProp=Default
+   Area=596   Section=SSEC2   MatProp=Default
+   Area=597   Section=SSEC2   MatProp=Default
+   Area=598   Section=SSEC2   MatProp=Default
+   Area=599   Section=SSEC2   MatProp=Default
+   Area=610   Section=SSEC2   MatProp=Default
+   Area=611   Section=SSEC2   MatProp=Default
+   Area=612   Section=SSEC2   MatProp=Default
+   Area=613   Section=SSEC2   MatProp=Default
+   Area=614   Section=SSEC2   MatProp=Default
+   Area=615   Section=SSEC2   MatProp=Default
+   Area=616   Section=SSEC2   MatProp=Default
+   Area=617   Section=SSEC2   MatProp=Default
+   Area=618   Section=SSEC2   MatProp=Default
+   Area=619   Section=SSEC2   MatProp=Default
+   Area=620   Section=SSEC2   MatProp=Default
+   Area=621   Section=SSEC2   MatProp=Default
+   Area=622   Section=SSEC2   MatProp=Default
+   Area=623   Section=SSEC2   MatProp=Default
+   Area=624   Section=SSEC2   MatProp=Default
+   Area=625   Section=SSEC2   MatProp=Default
+   Area=626   Section=SSEC2   MatProp=Default
+   Area=627   Section=SSEC2   MatProp=Default
+   Area=628   Section=SSEC2   MatProp=Default
+   Area=629   Section=SSEC2   MatProp=Default
+   Area=630   Section=SSEC2   MatProp=Default
+   Area=631   Section=SSEC2   MatProp=Default
+   Area=632   Section=SSEC2   MatProp=Default
+   Area=633   Section=SSEC2   MatProp=Default
+   Area=634   Section=SSEC2   MatProp=Default
+   Area=635   Section=SSEC2   MatProp=Default
+   Area=636   Section=SSEC2   MatProp=Default
+   Area=637   Section=SSEC2   MatProp=Default
+   Area=638   Section=SSEC2   MatProp=Default
+   Area=639   Section=SSEC2   MatProp=Default
+   Area=640   Section=SSEC2   MatProp=Default
+   Area=641   Section=SSEC2   MatProp=Default
+   Area=642   Section=SSEC2   MatProp=Default
+   Area=643   Section=SSEC2   MatProp=Default
+   Area=644   Section=SSEC2   MatProp=Default
+   Area=645   Section=SSEC2   MatProp=Default
+   Area=646   Section=SSEC2   MatProp=Default
+   Area=647   Section=SSEC2   MatProp=Default
+   Area=648   Section=SSEC2   MatProp=Default
+   Area=649   Section=SSEC2   MatProp=Default
+   Area=650   Section=SSEC2   MatProp=Default
+   Area=651   Section=SSEC2   MatProp=Default
+   Area=652   Section=SSEC2   MatProp=Default
+   Area=653   Section=SSEC2   MatProp=Default
+   Area=654   Section=SSEC2   MatProp=Default
+   Area=655   Section=SSEC2   MatProp=Default
+   Area=656   Section=SSEC2   MatProp=Default
+   Area=657   Section=SSEC2   MatProp=Default
+   Area=658   Section=SSEC2   MatProp=Default
+   Area=659   Section=SSEC2   MatProp=Default
+   Area=660   Section=SSEC2   MatProp=Default
+   Area=661   Section=SSEC2   MatProp=Default
+   Area=662   Section=SSEC2   MatProp=Default
+   Area=663   Section=SSEC2   MatProp=Default
+   Area=664   Section=SSEC2   MatProp=Default
+   Area=665   Section=SSEC2   MatProp=Default
+   Area=666   Section=SSEC2   MatProp=Default
+   Area=667   Section=SSEC2   MatProp=Default
+   Area=668   Section=SSEC2   MatProp=Default
+   Area=669   Section=SSEC2   MatProp=Default
+ 
+TABLE:  "AREA SECTION PROPERTIES"
+   Section=SSEC1   Material=MAT_22805415_n0.2000   MatAngle=0   AreaType=Shell   Type=Shell-Thin   DrillDOF=Yes   Thickness=0.15   BendThick=0.15   Color=Cyan
+   Section=SSEC2   Material=MAT_22805415_n0.2000   MatAngle=0   AreaType=Shell   Type=Shell-Thick   DrillDOF=Yes   Thickness=0.25   BendThick=0.25   Color=Cyan
+ 
+TABLE:  "JOINT COORDINATES"
+   Joint=1   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=0   SpecialJt=No
+   Joint=2   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=0   SpecialJt=No
+   Joint=3   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=0   Z=0   SpecialJt=No
+   Joint=4   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=5   Z=0   SpecialJt=No
+   Joint=5   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=5   Z=0   SpecialJt=No
+   Joint=6   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=5   Z=0   SpecialJt=No
+   Joint=7   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=0   SpecialJt=No
+   Joint=8   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=0   SpecialJt=No
+   Joint=9   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=10   Z=0   SpecialJt=No
+   Joint=10   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=3   SpecialJt=No
+   Joint=11   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=3   SpecialJt=No
+   Joint=12   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=0   Z=3   SpecialJt=No
+   Joint=13   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=5   Z=3   SpecialJt=No
+   Joint=14   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=5   Z=3   SpecialJt=No
+   Joint=15   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=5   Z=3   SpecialJt=No
+   Joint=16   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=3   SpecialJt=No
+   Joint=17   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=3   SpecialJt=No
+   Joint=18   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=10   Z=3   SpecialJt=No
+   Joint=19   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=3   SpecialJt=No
+   Joint=20   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=3   SpecialJt=No
+   Joint=21   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=3   SpecialJt=No
+   Joint=22   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=3   SpecialJt=No
+   Joint=23   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=3   SpecialJt=No
+   Joint=24   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=3   SpecialJt=No
+   Joint=25   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=3   SpecialJt=No
+   Joint=26   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=3   SpecialJt=No
+   Joint=27   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=3   SpecialJt=No
+   Joint=28   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0.5   Z=3   SpecialJt=No
+   Joint=29   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=30   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0.5   Z=3   SpecialJt=No
+   Joint=31   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=32   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0.5   Z=3   SpecialJt=No
+   Joint=33   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=34   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0.5   Z=3   SpecialJt=No
+   Joint=35   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=36   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0.5   Z=3   SpecialJt=No
+   Joint=37   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=38   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0.5   Z=3   SpecialJt=No
+   Joint=39   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=1   Z=3   SpecialJt=No
+   Joint=40   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=1   Z=3   SpecialJt=No
+   Joint=41   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=1   Z=3   SpecialJt=No
+   Joint=42   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=1   Z=3   SpecialJt=No
+   Joint=43   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=1   Z=3   SpecialJt=No
+   Joint=44   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=1   Z=3   SpecialJt=No
+   Joint=45   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=1   Z=3   SpecialJt=No
+   Joint=46   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=1   Z=3   SpecialJt=No
+   Joint=47   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=1   Z=3   SpecialJt=No
+   Joint=48   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=1   Z=3   SpecialJt=No
+   Joint=49   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=1   Z=3   SpecialJt=No
+   Joint=50   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=1.5   Z=3   SpecialJt=No
+   Joint=51   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=52   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=1.5   Z=3   SpecialJt=No
+   Joint=53   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=54   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=1.5   Z=3   SpecialJt=No
+   Joint=55   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=56   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=1.5   Z=3   SpecialJt=No
+   Joint=57   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=58   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=1.5   Z=3   SpecialJt=No
+   Joint=59   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=60   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=1.5   Z=3   SpecialJt=No
+   Joint=61   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=2   Z=3   SpecialJt=No
+   Joint=62   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=2   Z=3   SpecialJt=No
+   Joint=63   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=2   Z=3   SpecialJt=No
+   Joint=64   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=2   Z=3   SpecialJt=No
+   Joint=65   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=2   Z=3   SpecialJt=No
+   Joint=66   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=2   Z=3   SpecialJt=No
+   Joint=67   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=2   Z=3   SpecialJt=No
+   Joint=68   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=2   Z=3   SpecialJt=No
+   Joint=69   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=2   Z=3   SpecialJt=No
+   Joint=70   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=2   Z=3   SpecialJt=No
+   Joint=71   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=2   Z=3   SpecialJt=No
+   Joint=72   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=2.5   Z=3   SpecialJt=No
+   Joint=73   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=74   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=2.5   Z=3   SpecialJt=No
+   Joint=75   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=76   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=2.5   Z=3   SpecialJt=No
+   Joint=77   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=78   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=2.5   Z=3   SpecialJt=No
+   Joint=79   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=80   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=2.5   Z=3   SpecialJt=No
+   Joint=81   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=82   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=2.5   Z=3   SpecialJt=No
+   Joint=83   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=3   Z=3   SpecialJt=No
+   Joint=84   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=3   Z=3   SpecialJt=No
+   Joint=85   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=3   Z=3   SpecialJt=No
+   Joint=86   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=3   Z=3   SpecialJt=No
+   Joint=87   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=3   Z=3   SpecialJt=No
+   Joint=88   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=3   Z=3   SpecialJt=No
+   Joint=89   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=3   Z=3   SpecialJt=No
+   Joint=90   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=3   Z=3   SpecialJt=No
+   Joint=91   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=3   Z=3   SpecialJt=No
+   Joint=92   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=3   Z=3   SpecialJt=No
+   Joint=93   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=3   Z=3   SpecialJt=No
+   Joint=94   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=3.5   Z=3   SpecialJt=No
+   Joint=95   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=96   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=3.5   Z=3   SpecialJt=No
+   Joint=97   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=98   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=3.5   Z=3   SpecialJt=No
+   Joint=99   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=100   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=3.5   Z=3   SpecialJt=No
+   Joint=101   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=102   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=3.5   Z=3   SpecialJt=No
+   Joint=103   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=104   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=3.5   Z=3   SpecialJt=No
+   Joint=105   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=4   Z=3   SpecialJt=No
+   Joint=106   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=4   Z=3   SpecialJt=No
+   Joint=107   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=4   Z=3   SpecialJt=No
+   Joint=108   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=4   Z=3   SpecialJt=No
+   Joint=109   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=4   Z=3   SpecialJt=No
+   Joint=110   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=4   Z=3   SpecialJt=No
+   Joint=111   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=4   Z=3   SpecialJt=No
+   Joint=112   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=4   Z=3   SpecialJt=No
+   Joint=113   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=4   Z=3   SpecialJt=No
+   Joint=114   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=4   Z=3   SpecialJt=No
+   Joint=115   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=4   Z=3   SpecialJt=No
+   Joint=116   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=4.5   Z=3   SpecialJt=No
+   Joint=117   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=118   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=4.5   Z=3   SpecialJt=No
+   Joint=119   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=120   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=4.5   Z=3   SpecialJt=No
+   Joint=121   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=122   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=4.5   Z=3   SpecialJt=No
+   Joint=123   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=124   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=4.5   Z=3   SpecialJt=No
+   Joint=125   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=126   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=4.5   Z=3   SpecialJt=No
+   Joint=127   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=5   Z=3   SpecialJt=No
+   Joint=128   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=5   Z=3   SpecialJt=No
+   Joint=129   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=5   Z=3   SpecialJt=No
+   Joint=130   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=5   Z=3   SpecialJt=No
+   Joint=131   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=5   Z=3   SpecialJt=No
+   Joint=132   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=5   Z=3   SpecialJt=No
+   Joint=133   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=5   Z=3   SpecialJt=No
+   Joint=134   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=5   Z=3   SpecialJt=No
+   Joint=135   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=5   Z=3   SpecialJt=No
+   Joint=136   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=5.5   Z=3   SpecialJt=No
+   Joint=137   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=138   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=5.5   Z=3   SpecialJt=No
+   Joint=139   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=140   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=5.5   Z=3   SpecialJt=No
+   Joint=141   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=142   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=5.5   Z=3   SpecialJt=No
+   Joint=143   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=144   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=5.5   Z=3   SpecialJt=No
+   Joint=145   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=146   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=5.5   Z=3   SpecialJt=No
+   Joint=147   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=3   SpecialJt=No
+   Joint=148   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=6   Z=3   SpecialJt=No
+   Joint=149   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=6   Z=3   SpecialJt=No
+   Joint=150   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=6   Z=3   SpecialJt=No
+   Joint=151   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=6   Z=3   SpecialJt=No
+   Joint=152   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=6   Z=3   SpecialJt=No
+   Joint=153   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=6   Z=3   SpecialJt=No
+   Joint=154   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=6   Z=3   SpecialJt=No
+   Joint=155   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=6   Z=3   SpecialJt=No
+   Joint=156   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=6   Z=3   SpecialJt=No
+   Joint=157   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=6   Z=3   SpecialJt=No
+   Joint=158   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6.5   Z=3   SpecialJt=No
+   Joint=159   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=160   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=6.5   Z=3   SpecialJt=No
+   Joint=161   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=162   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=6.5   Z=3   SpecialJt=No
+   Joint=163   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=164   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=6.5   Z=3   SpecialJt=No
+   Joint=165   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=166   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=6.5   Z=3   SpecialJt=No
+   Joint=167   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=168   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=6.5   Z=3   SpecialJt=No
+   Joint=169   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=7   Z=3   SpecialJt=No
+   Joint=170   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=7   Z=3   SpecialJt=No
+   Joint=171   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=7   Z=3   SpecialJt=No
+   Joint=172   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=7   Z=3   SpecialJt=No
+   Joint=173   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=7   Z=3   SpecialJt=No
+   Joint=174   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=7   Z=3   SpecialJt=No
+   Joint=175   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=7   Z=3   SpecialJt=No
+   Joint=176   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=7   Z=3   SpecialJt=No
+   Joint=177   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=7   Z=3   SpecialJt=No
+   Joint=178   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=7   Z=3   SpecialJt=No
+   Joint=179   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=7   Z=3   SpecialJt=No
+   Joint=180   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=7.5   Z=3   SpecialJt=No
+   Joint=181   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=182   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=7.5   Z=3   SpecialJt=No
+   Joint=183   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=184   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=7.5   Z=3   SpecialJt=No
+   Joint=185   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=186   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=7.5   Z=3   SpecialJt=No
+   Joint=187   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=188   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=7.5   Z=3   SpecialJt=No
+   Joint=189   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=190   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=7.5   Z=3   SpecialJt=No
+   Joint=191   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=8   Z=3   SpecialJt=No
+   Joint=192   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=8   Z=3   SpecialJt=No
+   Joint=193   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=8   Z=3   SpecialJt=No
+   Joint=194   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=8   Z=3   SpecialJt=No
+   Joint=195   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=8   Z=3   SpecialJt=No
+   Joint=196   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=8   Z=3   SpecialJt=No
+   Joint=197   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=8   Z=3   SpecialJt=No
+   Joint=198   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=8   Z=3   SpecialJt=No
+   Joint=199   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=8   Z=3   SpecialJt=No
+   Joint=200   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=8   Z=3   SpecialJt=No
+   Joint=201   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=8   Z=3   SpecialJt=No
+   Joint=202   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=8.5   Z=3   SpecialJt=No
+   Joint=203   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=204   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=8.5   Z=3   SpecialJt=No
+   Joint=205   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=206   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=8.5   Z=3   SpecialJt=No
+   Joint=207   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=208   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=8.5   Z=3   SpecialJt=No
+   Joint=209   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=210   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=8.5   Z=3   SpecialJt=No
+   Joint=211   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=212   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=8.5   Z=3   SpecialJt=No
+   Joint=213   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=9   Z=3   SpecialJt=No
+   Joint=214   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=9   Z=3   SpecialJt=No
+   Joint=215   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=9   Z=3   SpecialJt=No
+   Joint=216   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=9   Z=3   SpecialJt=No
+   Joint=217   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=9   Z=3   SpecialJt=No
+   Joint=218   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=9   Z=3   SpecialJt=No
+   Joint=219   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=9   Z=3   SpecialJt=No
+   Joint=220   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=9   Z=3   SpecialJt=No
+   Joint=221   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=9   Z=3   SpecialJt=No
+   Joint=222   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=9   Z=3   SpecialJt=No
+   Joint=223   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=9   Z=3   SpecialJt=No
+   Joint=224   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=9.5   Z=3   SpecialJt=No
+   Joint=225   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=226   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=9.5   Z=3   SpecialJt=No
+   Joint=227   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=228   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=9.5   Z=3   SpecialJt=No
+   Joint=229   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=230   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=9.5   Z=3   SpecialJt=No
+   Joint=231   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=232   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=9.5   Z=3   SpecialJt=No
+   Joint=233   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=234   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=9.5   Z=3   SpecialJt=No
+   Joint=235   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=3   SpecialJt=No
+   Joint=236   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=3   SpecialJt=No
+   Joint=237   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=3   SpecialJt=No
+   Joint=238   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=3   SpecialJt=No
+   Joint=239   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=3   SpecialJt=No
+   Joint=240   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=3   SpecialJt=No
+   Joint=241   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=3   SpecialJt=No
+   Joint=242   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=3   SpecialJt=No
+   Joint=243   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=3   SpecialJt=No
+   Joint=244   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=0   Z=3   SpecialJt=No
+   Joint=245   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=3   SpecialJt=No
+   Joint=246   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=0   Z=3   SpecialJt=No
+   Joint=247   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=0   Z=3   SpecialJt=No
+   Joint=248   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=0   Z=3   SpecialJt=No
+   Joint=249   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=0   Z=3   SpecialJt=No
+   Joint=250   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=0   Z=3   SpecialJt=No
+   Joint=251   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=0   Z=3   SpecialJt=No
+   Joint=252   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=0   Z=3   SpecialJt=No
+   Joint=253   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=254   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0.5   Z=3   SpecialJt=No
+   Joint=255   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=256   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=0.5   Z=3   SpecialJt=No
+   Joint=257   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=258   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=0.5   Z=3   SpecialJt=No
+   Joint=259   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=260   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=0.5   Z=3   SpecialJt=No
+   Joint=261   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=0.5   Z=3   SpecialJt=No
+   Joint=262   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=0.5   Z=3   SpecialJt=No
+   Joint=263   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=1   Z=3   SpecialJt=No
+   Joint=264   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=1   Z=3   SpecialJt=No
+   Joint=265   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=1   Z=3   SpecialJt=No
+   Joint=266   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=1   Z=3   SpecialJt=No
+   Joint=267   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=1   Z=3   SpecialJt=No
+   Joint=268   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=1   Z=3   SpecialJt=No
+   Joint=269   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=1   Z=3   SpecialJt=No
+   Joint=270   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=1   Z=3   SpecialJt=No
+   Joint=271   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=1   Z=3   SpecialJt=No
+   Joint=272   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=1   Z=3   SpecialJt=No
+   Joint=273   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=274   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=1.5   Z=3   SpecialJt=No
+   Joint=275   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=276   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=1.5   Z=3   SpecialJt=No
+   Joint=277   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=278   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=1.5   Z=3   SpecialJt=No
+   Joint=279   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=280   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=1.5   Z=3   SpecialJt=No
+   Joint=281   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=1.5   Z=3   SpecialJt=No
+   Joint=282   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=1.5   Z=3   SpecialJt=No
+   Joint=283   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=2   Z=3   SpecialJt=No
+   Joint=284   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=2   Z=3   SpecialJt=No
+   Joint=285   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=2   Z=3   SpecialJt=No
+   Joint=286   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=2   Z=3   SpecialJt=No
+   Joint=287   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=2   Z=3   SpecialJt=No
+   Joint=288   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=2   Z=3   SpecialJt=No
+   Joint=289   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=2   Z=3   SpecialJt=No
+   Joint=290   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=2   Z=3   SpecialJt=No
+   Joint=291   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=2   Z=3   SpecialJt=No
+   Joint=292   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=2   Z=3   SpecialJt=No
+   Joint=293   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=294   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=2.5   Z=3   SpecialJt=No
+   Joint=295   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=296   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=2.5   Z=3   SpecialJt=No
+   Joint=297   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=298   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=2.5   Z=3   SpecialJt=No
+   Joint=299   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=300   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=2.5   Z=3   SpecialJt=No
+   Joint=301   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=2.5   Z=3   SpecialJt=No
+   Joint=302   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=2.5   Z=3   SpecialJt=No
+   Joint=303   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=3   Z=3   SpecialJt=No
+   Joint=304   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=3   Z=3   SpecialJt=No
+   Joint=305   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=3   Z=3   SpecialJt=No
+   Joint=306   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=3   Z=3   SpecialJt=No
+   Joint=307   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=3   Z=3   SpecialJt=No
+   Joint=308   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=3   Z=3   SpecialJt=No
+   Joint=309   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=3   Z=3   SpecialJt=No
+   Joint=310   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=3   Z=3   SpecialJt=No
+   Joint=311   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=3   Z=3   SpecialJt=No
+   Joint=312   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=3   Z=3   SpecialJt=No
+   Joint=313   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=314   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=3.5   Z=3   SpecialJt=No
+   Joint=315   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=316   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=3.5   Z=3   SpecialJt=No
+   Joint=317   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=318   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=3.5   Z=3   SpecialJt=No
+   Joint=319   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=320   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=3.5   Z=3   SpecialJt=No
+   Joint=321   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=3.5   Z=3   SpecialJt=No
+   Joint=322   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=3.5   Z=3   SpecialJt=No
+   Joint=323   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=4   Z=3   SpecialJt=No
+   Joint=324   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=4   Z=3   SpecialJt=No
+   Joint=325   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=4   Z=3   SpecialJt=No
+   Joint=326   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=4   Z=3   SpecialJt=No
+   Joint=327   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=4   Z=3   SpecialJt=No
+   Joint=328   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=4   Z=3   SpecialJt=No
+   Joint=329   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=4   Z=3   SpecialJt=No
+   Joint=330   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=4   Z=3   SpecialJt=No
+   Joint=331   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=4   Z=3   SpecialJt=No
+   Joint=332   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=4   Z=3   SpecialJt=No
+   Joint=333   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=334   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=4.5   Z=3   SpecialJt=No
+   Joint=335   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=336   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=4.5   Z=3   SpecialJt=No
+   Joint=337   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=338   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=4.5   Z=3   SpecialJt=No
+   Joint=339   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=340   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=4.5   Z=3   SpecialJt=No
+   Joint=341   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=4.5   Z=3   SpecialJt=No
+   Joint=342   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=4.5   Z=3   SpecialJt=No
+   Joint=343   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=5   Z=3   SpecialJt=No
+   Joint=344   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=5   Z=3   SpecialJt=No
+   Joint=345   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=5   Z=3   SpecialJt=No
+   Joint=346   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=5   Z=3   SpecialJt=No
+   Joint=347   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=5   Z=3   SpecialJt=No
+   Joint=348   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=5   Z=3   SpecialJt=No
+   Joint=349   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=5   Z=3   SpecialJt=No
+   Joint=350   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=5   Z=3   SpecialJt=No
+   Joint=351   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=5   Z=3   SpecialJt=No
+   Joint=352   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=353   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=5.5   Z=3   SpecialJt=No
+   Joint=354   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=355   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=5.5   Z=3   SpecialJt=No
+   Joint=356   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=357   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=5.5   Z=3   SpecialJt=No
+   Joint=358   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=359   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=5.5   Z=3   SpecialJt=No
+   Joint=360   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=5.5   Z=3   SpecialJt=No
+   Joint=361   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=5.5   Z=3   SpecialJt=No
+   Joint=362   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=6   Z=3   SpecialJt=No
+   Joint=363   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=3   SpecialJt=No
+   Joint=364   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=6   Z=3   SpecialJt=No
+   Joint=365   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=6   Z=3   SpecialJt=No
+   Joint=366   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=6   Z=3   SpecialJt=No
+   Joint=367   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=6   Z=3   SpecialJt=No
+   Joint=368   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=6   Z=3   SpecialJt=No
+   Joint=369   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=6   Z=3   SpecialJt=No
+   Joint=370   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=6   Z=3   SpecialJt=No
+   Joint=371   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=6   Z=3   SpecialJt=No
+   Joint=372   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=373   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6.5   Z=3   SpecialJt=No
+   Joint=374   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=375   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=6.5   Z=3   SpecialJt=No
+   Joint=376   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=377   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=6.5   Z=3   SpecialJt=No
+   Joint=378   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=379   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=6.5   Z=3   SpecialJt=No
+   Joint=380   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=6.5   Z=3   SpecialJt=No
+   Joint=381   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=6.5   Z=3   SpecialJt=No
+   Joint=382   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=7   Z=3   SpecialJt=No
+   Joint=383   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=7   Z=3   SpecialJt=No
+   Joint=384   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=7   Z=3   SpecialJt=No
+   Joint=385   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=7   Z=3   SpecialJt=No
+   Joint=386   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=7   Z=3   SpecialJt=No
+   Joint=387   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=7   Z=3   SpecialJt=No
+   Joint=388   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=7   Z=3   SpecialJt=No
+   Joint=389   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=7   Z=3   SpecialJt=No
+   Joint=390   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=7   Z=3   SpecialJt=No
+   Joint=391   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=7   Z=3   SpecialJt=No
+   Joint=392   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=393   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=7.5   Z=3   SpecialJt=No
+   Joint=394   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=395   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=7.5   Z=3   SpecialJt=No
+   Joint=396   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=397   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=7.5   Z=3   SpecialJt=No
+   Joint=398   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=399   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=7.5   Z=3   SpecialJt=No
+   Joint=400   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=7.5   Z=3   SpecialJt=No
+   Joint=401   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=7.5   Z=3   SpecialJt=No
+   Joint=402   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=8   Z=3   SpecialJt=No
+   Joint=403   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=8   Z=3   SpecialJt=No
+   Joint=404   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=8   Z=3   SpecialJt=No
+   Joint=405   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=8   Z=3   SpecialJt=No
+   Joint=406   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=8   Z=3   SpecialJt=No
+   Joint=407   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=8   Z=3   SpecialJt=No
+   Joint=408   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=8   Z=3   SpecialJt=No
+   Joint=409   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=8   Z=3   SpecialJt=No
+   Joint=410   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=8   Z=3   SpecialJt=No
+   Joint=411   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=8   Z=3   SpecialJt=No
+   Joint=412   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=413   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=8.5   Z=3   SpecialJt=No
+   Joint=414   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=415   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=8.5   Z=3   SpecialJt=No
+   Joint=416   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=417   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=8.5   Z=3   SpecialJt=No
+   Joint=418   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=419   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=8.5   Z=3   SpecialJt=No
+   Joint=420   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=8.5   Z=3   SpecialJt=No
+   Joint=421   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=8.5   Z=3   SpecialJt=No
+   Joint=422   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=9   Z=3   SpecialJt=No
+   Joint=423   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=9   Z=3   SpecialJt=No
+   Joint=424   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=9   Z=3   SpecialJt=No
+   Joint=425   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=9   Z=3   SpecialJt=No
+   Joint=426   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=9   Z=3   SpecialJt=No
+   Joint=427   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=9   Z=3   SpecialJt=No
+   Joint=428   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=9   Z=3   SpecialJt=No
+   Joint=429   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=9   Z=3   SpecialJt=No
+   Joint=430   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=9   Z=3   SpecialJt=No
+   Joint=431   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=9   Z=3   SpecialJt=No
+   Joint=432   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=433   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=9.5   Z=3   SpecialJt=No
+   Joint=434   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=435   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=9.5   Z=3   SpecialJt=No
+   Joint=436   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=437   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=9.5   Z=3   SpecialJt=No
+   Joint=438   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=439   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=9.5   Z=3   SpecialJt=No
+   Joint=440   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=9.5   Z=3   SpecialJt=No
+   Joint=441   CoordSys=GLOBAL   CoordType=Cartesian   XorR=10   Y=9.5   Z=3   SpecialJt=No
+   Joint=442   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5.5   Y=10   Z=3   SpecialJt=No
+   Joint=443   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=10   Z=3   SpecialJt=No
+   Joint=444   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6.5   Y=10   Z=3   SpecialJt=No
+   Joint=445   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7   Y=10   Z=3   SpecialJt=No
+   Joint=446   CoordSys=GLOBAL   CoordType=Cartesian   XorR=7.5   Y=10   Z=3   SpecialJt=No
+   Joint=447   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8   Y=10   Z=3   SpecialJt=No
+   Joint=448   CoordSys=GLOBAL   CoordType=Cartesian   XorR=8.5   Y=10   Z=3   SpecialJt=No
+   Joint=449   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9   Y=10   Z=3   SpecialJt=No
+   Joint=450   CoordSys=GLOBAL   CoordType=Cartesian   XorR=9.5   Y=10   Z=3   SpecialJt=No
+   Joint=451   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=0   SpecialJt=No
+   Joint=452   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=0   SpecialJt=No
+   Joint=453   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=0   SpecialJt=No
+   Joint=454   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=0   SpecialJt=No
+   Joint=455   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=0   SpecialJt=No
+   Joint=456   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=0   SpecialJt=No
+   Joint=457   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=0   SpecialJt=No
+   Joint=458   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=0   SpecialJt=No
+   Joint=459   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=0   SpecialJt=No
+   Joint=460   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=0.5   SpecialJt=No
+   Joint=461   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=0.5   SpecialJt=No
+   Joint=462   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=0.5   SpecialJt=No
+   Joint=463   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=0.5   SpecialJt=No
+   Joint=464   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=0.5   SpecialJt=No
+   Joint=465   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=0.5   SpecialJt=No
+   Joint=466   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=0.5   SpecialJt=No
+   Joint=467   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=0.5   SpecialJt=No
+   Joint=468   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=0.5   SpecialJt=No
+   Joint=469   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=0.5   SpecialJt=No
+   Joint=470   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=0.5   SpecialJt=No
+   Joint=471   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=1   SpecialJt=No
+   Joint=472   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=1   SpecialJt=No
+   Joint=473   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=1   SpecialJt=No
+   Joint=474   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=1   SpecialJt=No
+   Joint=475   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=1   SpecialJt=No
+   Joint=476   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=1   SpecialJt=No
+   Joint=477   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=1   SpecialJt=No
+   Joint=478   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=1   SpecialJt=No
+   Joint=479   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=1   SpecialJt=No
+   Joint=480   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=1   SpecialJt=No
+   Joint=481   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=1   SpecialJt=No
+   Joint=482   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=1.5   SpecialJt=No
+   Joint=483   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=1.5   SpecialJt=No
+   Joint=484   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=1.5   SpecialJt=No
+   Joint=485   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=1.5   SpecialJt=No
+   Joint=486   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=1.5   SpecialJt=No
+   Joint=487   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=1.5   SpecialJt=No
+   Joint=488   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=1.5   SpecialJt=No
+   Joint=489   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=1.5   SpecialJt=No
+   Joint=490   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=1.5   SpecialJt=No
+   Joint=491   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=1.5   SpecialJt=No
+   Joint=492   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=1.5   SpecialJt=No
+   Joint=493   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=2   SpecialJt=No
+   Joint=494   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=2   SpecialJt=No
+   Joint=495   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=2   SpecialJt=No
+   Joint=496   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=2   SpecialJt=No
+   Joint=497   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=2   SpecialJt=No
+   Joint=498   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=2   SpecialJt=No
+   Joint=499   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=2   SpecialJt=No
+   Joint=500   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=2   SpecialJt=No
+   Joint=501   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=2   SpecialJt=No
+   Joint=502   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=2   SpecialJt=No
+   Joint=503   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=2   SpecialJt=No
+   Joint=504   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=2.5   SpecialJt=No
+   Joint=505   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=0   Z=2.5   SpecialJt=No
+   Joint=506   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=0   Z=2.5   SpecialJt=No
+   Joint=507   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=0   Z=2.5   SpecialJt=No
+   Joint=508   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=0   Z=2.5   SpecialJt=No
+   Joint=509   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=0   Z=2.5   SpecialJt=No
+   Joint=510   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=0   Z=2.5   SpecialJt=No
+   Joint=511   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=0   Z=2.5   SpecialJt=No
+   Joint=512   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=0   Z=2.5   SpecialJt=No
+   Joint=513   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=0   Z=2.5   SpecialJt=No
+   Joint=514   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=2.5   SpecialJt=No
+   Joint=515   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=0   SpecialJt=No
+   Joint=516   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=0   SpecialJt=No
+   Joint=517   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=0   SpecialJt=No
+   Joint=518   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=0   SpecialJt=No
+   Joint=519   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=0   SpecialJt=No
+   Joint=520   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=0   SpecialJt=No
+   Joint=521   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=0   SpecialJt=No
+   Joint=522   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=0   SpecialJt=No
+   Joint=523   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=0   SpecialJt=No
+   Joint=524   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=0.5   SpecialJt=No
+   Joint=525   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=0.5   SpecialJt=No
+   Joint=526   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=0.5   SpecialJt=No
+   Joint=527   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=0.5   SpecialJt=No
+   Joint=528   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=0.5   SpecialJt=No
+   Joint=529   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=0.5   SpecialJt=No
+   Joint=530   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=0.5   SpecialJt=No
+   Joint=531   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=0.5   SpecialJt=No
+   Joint=532   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=0.5   SpecialJt=No
+   Joint=533   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=0.5   SpecialJt=No
+   Joint=534   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=0.5   SpecialJt=No
+   Joint=535   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=1   SpecialJt=No
+   Joint=536   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=1   SpecialJt=No
+   Joint=537   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=1   SpecialJt=No
+   Joint=538   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=1   SpecialJt=No
+   Joint=539   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=1   SpecialJt=No
+   Joint=540   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=1   SpecialJt=No
+   Joint=541   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=1   SpecialJt=No
+   Joint=542   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=1   SpecialJt=No
+   Joint=543   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=1   SpecialJt=No
+   Joint=544   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=1   SpecialJt=No
+   Joint=545   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=1   SpecialJt=No
+   Joint=546   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=1.5   SpecialJt=No
+   Joint=547   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=1.5   SpecialJt=No
+   Joint=548   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=1.5   SpecialJt=No
+   Joint=549   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=1.5   SpecialJt=No
+   Joint=550   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=1.5   SpecialJt=No
+   Joint=551   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=1.5   SpecialJt=No
+   Joint=552   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=1.5   SpecialJt=No
+   Joint=553   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=1.5   SpecialJt=No
+   Joint=554   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=1.5   SpecialJt=No
+   Joint=555   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=1.5   SpecialJt=No
+   Joint=556   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=1.5   SpecialJt=No
+   Joint=557   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=2   SpecialJt=No
+   Joint=558   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=2   SpecialJt=No
+   Joint=559   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=2   SpecialJt=No
+   Joint=560   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=2   SpecialJt=No
+   Joint=561   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=2   SpecialJt=No
+   Joint=562   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=2   SpecialJt=No
+   Joint=563   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=2   SpecialJt=No
+   Joint=564   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=2   SpecialJt=No
+   Joint=565   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=2   SpecialJt=No
+   Joint=566   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=2   SpecialJt=No
+   Joint=567   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=2   SpecialJt=No
+   Joint=568   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=10   Z=2.5   SpecialJt=No
+   Joint=569   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0.5   Y=10   Z=2.5   SpecialJt=No
+   Joint=570   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1   Y=10   Z=2.5   SpecialJt=No
+   Joint=571   CoordSys=GLOBAL   CoordType=Cartesian   XorR=1.5   Y=10   Z=2.5   SpecialJt=No
+   Joint=572   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2   Y=10   Z=2.5   SpecialJt=No
+   Joint=573   CoordSys=GLOBAL   CoordType=Cartesian   XorR=2.5   Y=10   Z=2.5   SpecialJt=No
+   Joint=574   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3   Y=10   Z=2.5   SpecialJt=No
+   Joint=575   CoordSys=GLOBAL   CoordType=Cartesian   XorR=3.5   Y=10   Z=2.5   SpecialJt=No
+   Joint=576   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4   Y=10   Z=2.5   SpecialJt=No
+   Joint=577   CoordSys=GLOBAL   CoordType=Cartesian   XorR=4.5   Y=10   Z=2.5   SpecialJt=No
+   Joint=578   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=10   Z=2.5   SpecialJt=No
+ 
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=1   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=2   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=3   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=4   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=5   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=6   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=7   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=8   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=9   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=451   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=452   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=453   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=454   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=455   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=456   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=457   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=458   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=459   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=515   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=516   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=517   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=518   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=519   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=520   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=521   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=522   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=523   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+ 
+TABLE:  "CONSTRAINT DEFINITIONS - DIAPHRAGM"
+   Name=DIAPH1   CoordSys=GLOBAL   Axis=Z
+ 
+TABLE:  "JOINT CONSTRAINT ASSIGNMENTS"
+   Joint=10   Constraint=DIAPH1
+   Joint=11   Constraint=DIAPH1
+   Joint=12   Constraint=DIAPH1
+   Joint=13   Constraint=DIAPH1
+   Joint=14   Constraint=DIAPH1
+   Joint=15   Constraint=DIAPH1
+   Joint=16   Constraint=DIAPH1
+   Joint=17   Constraint=DIAPH1
+   Joint=18   Constraint=DIAPH1
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=0
+ 
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+ 
+TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1
+ 
+TABLE:  "JOINT LOADS - FORCE"
+   Joint=10   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=11   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=12   LoadPat=DEAD   CoordSys=GLOBAL   F1=50   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=13   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=14   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=15   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=16   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=17   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+   Joint=18   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-7   M1=0   M2=0   M3=0
+ 
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=MAT_22805415_n0.2000   Type=Concrete   SymType=Isotropic   TempDepend=No   Color=Green
+ 
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=MAT_22805415_n0.2000   UnitWeight=24   UnitMass=2.44648318   E1=2.28054151e+7   G12=9.50225631e+6   U12=0.2   A1=9.9E-06
+ 
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=MAT_22805415_n0.2000   Fc=27579   eFc=27579   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=24.1.0   CurrUnits="KN, m, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+ 
+END TABLE DATA

@@ -257,6 +257,15 @@ export const edificioAporticado: ExampleDef = {
     // losa reticular con vigas profundas). OFF = diafragma flexible (losa delgada
     // con muros de corte discontínuos — ver ASCE 7-22 §12.3.1.2).
     diafragmaRigido: PE("Avanzado", "Diafragma rígido", 0, { "Flexible": 0, "Rígido (ASCE 7-22)": 1 }),
+    // Que nudos ata el diafragma de cada planta. ETABS lo asigna de dos formas y
+    // NO son lo mismo (medido el 8-sep-2026, un piso con muro, empuje de 50 kN):
+    //   POINT D1 (ejes de columna)      -> como SAP2000 y como Hekatan hasta hoy
+    //   AREA D1 (la losa entera)        -> ETABS ata TODA la malla de la losa; el
+    //                                      .e2k del exportador lo lleva, y la
+    //                                      coronacion del muro salia 15.9 % mas
+    //                                      blanda en Hekatan. Con la losa entera
+    //                                      atada, 4.1 %.
+    diafragmaNudos: PE("Avanzado", "Diafragma: nudos atados", 1, { "ninguno": 0, "ejes de columna (POINT D1, SAP2000)": 1, "toda la losa (AREA D1, ETABS)": 2 }),
     // ── Modelado de masa estilo ETABS / SAP2000 ──
     // Self-weight: ρ·V de TODOS los elementos (default Hekatan, MÁS masa)
     // From loads: DEAD + 0.25·LIVE como AREALOAD (default ETABS, MENOS masa)
@@ -952,13 +961,21 @@ export const edificioAporticado: ExampleDef = {
     // PUNTOS de la planta (ejes de columna), no la malla de la losa. Un grupo
     // por nivel (iz). Sin losa no hay diafragma (portico flexible).
     const diaphragms = new Map<number, number>();
-    if (p.slabOn >= 0.5)
+    const modoDiaf = Math.round((p as any).diafragmaNudos ?? 1);
+    if (p.slabOn >= 0.5 && modoDiaf === 1)
       for (let iz = 1; iz < zCoords.length; iz++)
         for (let iy = 0; iy < yCoords.length; iy++)
           for (let ix = 0; ix < xCoords.length; ix++) {
             const k = nid[`${ix},${iy},${iz}`];
             if (k !== undefined) diaphragms.set(k, iz);
           }
+    if (p.slabOn >= 0.5 && modoDiaf === 2)
+      // AREA D1 de ETABS: todos los nudos que estan a la cota de la planta (la
+      // malla de la losa entera y, con ella, la coronacion de muros y columnas)
+      for (let iz = 1; iz < zCoords.length; iz++) {
+        const z = zCoords[iz];
+        nodes.forEach((n, k) => { if (Math.abs(n[2] - z) < 1e-6) diaphragms.set(k, iz); });
+      }
     states.nodeInputs.val = { supports, loads, ...(diaphragms.size ? { diaphragms } : {}) };
     states.elementInputs.val = {
       etabsWallJoint: Math.round((p as any).comparar ?? 1) === 1,
