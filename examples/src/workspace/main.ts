@@ -6660,6 +6660,8 @@ try {
 
   // ── Prompt (lo dicta drawing.ts) y opciones clicables ────────────────────
   let opcionesActuales: string[] = [];
+  // al aparecer opciones hay que colocar el panel una vez junto al cursor y dejarlo quieto
+  let anclarPendiente = false;
   const setPrompt = (txt: string, opciones: string[] = []) => {
     label.textContent = txt || "Comando:";
     opcionesActuales = opciones;
@@ -6682,6 +6684,29 @@ try {
     // el Dynamic Input pegado al cursor repite el prompt sin el nombre del comando
     const corto = txt.replace(/^[A-ZÁÉÍÓÚÑ0-9 ]+ /, "").replace(/:$/, "");
     dynPrompt.textContent = corto.length > 44 ? corto.slice(0, 42) + "…" : corto;
+    // …y las MISMAS opciones, aquí sí clicables
+    if (opciones.length && !dynOps.childElementCount) anclarPendiente = true;
+    dynOps.innerHTML = "";
+    dynOps.style.display = opciones.length ? "flex" : "none";
+    for (const o of opciones) {
+      const letra = o.match(/[A-ZÁÉÍÓÚ]/)?.[0]?.toLowerCase() ?? o[0].toLowerCase();
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = o;
+      b.title = `${o} — o teclee ${letra.toUpperCase()} + Enter`;
+      b.style.cssText = "background:#0e2a38;border:1px solid #22d3ee;border-radius:4px;color:#22d3ee;" +
+        "font:11px Consolas,monospace;padding:1px 7px;cursor:pointer;line-height:15px;";
+      b.addEventListener("mouseenter", () => { b.style.background = "#164e63"; });
+      b.addEventListener("mouseleave", () => { b.style.background = "#0e2a38"; });
+      // `mousedown` y no `click`: el lienzo escucha el clic para poner un punto,
+      // y con `click` el punto se colocaba igualmente detrás del botón.
+      b.addEventListener("mousedown", (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        run(letra === "h" ? "u" : letra);
+        setCmdText("");
+      });
+      dynOps.appendChild(b);
+    }
   };
   (window as any).__hekatanCadPrompt = setPrompt;
 
@@ -6760,12 +6785,17 @@ try {
   // ── 2ª consola: Dynamic Input pegada al cursor ───────────────────────────
   const dyn = document.createElement("div");
   dyn.id = "hk-dyn";
+  // El panel NO intercepta el ratón (se dibuja debajo de él); solo la fila de
+  // opciones lo hace, y solo cuando las hay — ver `dynOps` y `anclado`.
   dyn.style.cssText = [
     "position:fixed", "left:0", "top:0", "z-index:99997", "display:none",
-    "align-items:center", "gap:6px", "background:rgba(15,23,42,0.92)",
+    "flex-direction:column", "align-items:flex-start", "gap:2px",
+    "background:rgba(15,23,42,0.92)",
     "border:1px solid #22d3ee", "border-radius:6px", "padding:2px 6px",
     "box-shadow:0 3px 10px rgba(0,0,0,0.5)", "pointer-events:none",
   ].join(";") + ";";
+  const dynFila = document.createElement("div");
+  dynFila.style.cssText = "display:flex;align-items:center;gap:6px;";
   const dynPrompt = document.createElement("span");
   dynPrompt.id = "hk-dyn-prompt";
   dynPrompt.style.cssText = "color:#22d3ee;font:11px Consolas,monospace;white-space:nowrap;";
@@ -6778,7 +6808,18 @@ try {
   const dynGhost = document.createElement("div");
   dynGhost.style.cssText = dynBase + "position:absolute;left:0;top:0;width:100%;height:100%;color:#4a6a7a;pointer-events:none;z-index:1;overflow:hidden;";
   dynWrap.append(dynGhost, dynInput);
-  dyn.append(dynPrompt, dynWrap);
+  dynFila.append(dynPrompt, dynWrap);
+  // ── Opciones CLICABLES pegadas al cursor ────────────────────────────────
+  // Antes las opciones ([Cerrar/desHacer]) solo se podían pulsar en la barra de
+  // abajo: la entrada dinámica las repetía como texto muerto porque el panel
+  // entero lleva `pointer-events:none` (si no, taparía el clic de dibujo).
+  // Ahora la fila de opciones sí recibe el ratón, y mientras haya opciones el
+  // panel se ANCLA (deja de seguir al cursor): si huyera no habría forma de
+  // pulsarlas. Es lo que hace AutoCAD con su menú de opciones.
+  const dynOps = document.createElement("div");
+  dynOps.id = "hk-dyn-ops";
+  dynOps.style.cssText = "display:none;gap:6px;pointer-events:auto;font:11px Consolas,monospace;padding-top:1px;";
+  dyn.append(dynFila, dynOps);
   document.body.appendChild(dyn);
 
   let _sync = false;
@@ -6899,8 +6940,18 @@ try {
   const esTactil = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
   viewerElm?.addEventListener("pointermove", (e: PointerEvent) => {
     if (esTactil(e)) { dyn.style.display = "none"; return; }
-    if (isDrawingCoords()) { dyn.style.display = "none"; return; }
-    if (dynInput.value.length === 0) {
+    // Mientras se estira la goma, las coordenadas ya las canta `hk-rubber-label`:
+    // el panel sobra… SALVO que haya opciones que pulsar, que es justo cuando las
+    // hay ([Cerrar/desHacer] aparecen con la polilínea empezada). Antes se ocultaba
+    // siempre y las opciones no se veían nunca junto al cursor. Ahora, dibujando,
+    // se enseña SOLO la fila de botones.
+    const dibujando = isDrawingCoords();
+    if (dibujando && !opcionesActuales.length) { dyn.style.display = "none"; return; }
+    dynFila.style.display = dibujando ? "none" : "flex";
+    // con opciones a la vista el panel se queda quieto: si siguiera al ratón,
+    // el botón se apartaría justo cuando se va a pulsar
+    if (anclarPendiente || (dynInput.value.length === 0 && !opcionesActuales.length)) {
+      anclarPendiente = false;
       let x = e.clientX + 16, y = e.clientY + 14;
       const w = dyn.offsetWidth || 175, h = dyn.offsetHeight || 24;
       if (x + w > window.innerWidth - 8) x = e.clientX - w - 8;
@@ -6917,7 +6968,13 @@ try {
     }
   });
   viewerElm?.addEventListener("pointerleave", (e: PointerEvent) => {
-    dyn.style.display = "none";
+    // ⚠️ El panel es hijo de `body`, no del lienzo: ir con el ratón a pulsar una
+    // opción SALE del lienzo y dispara esto. Escondiéndolo aquí, el botón se
+    // desvanecía justo antes del clic y no llegaba ni un `mousedown` (medido:
+    // 0 de 1). Si el ratón va hacia el propio panel, o si hay opciones que
+    // pulsar, el panel se queda.
+    const hacia = e.relatedTarget as Node | null;
+    if (!(hacia && dyn.contains(hacia)) && !opcionesActuales.length) dyn.style.display = "none";
     if (esTactil(e)) return;
     if (stealBlocked()) return;
     try { input.focus({ preventScroll: true }); } catch {}
