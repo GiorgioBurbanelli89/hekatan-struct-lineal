@@ -118,6 +118,9 @@ export const edificioAporticado: ExampleDef = {
     // despues con ETABS anadiendo SU semantica con nombre. Aqui la unica que aplica es la
     // union viga-muro de ETABS (`etabsWallJoint`); las losas son placas, no deck membrana.
     comparar: PE("Apoyo", "Comparar con", 1, { "ETABS (unión viga-muro de ETABS)": 1, "SAP2000 (sin semánticas)": 0 }),
+    // brazos rigidos AUTOMATICOS de ETABS: RZ = 0, pero la viga no pesa ni masa el tramo dentro de la
+    // columna (medio lado en la direccion de la viga, a cada extremo con columna). Medido 8-sep-2026.
+    offsets: PE("Apoyo", "Brazos rígidos", 1, { "ETABS (automáticos: solo peso y masa)": 1, "Ninguno (SAP2000)": 0 }),
 
     // ── Cargas (patrones tipo FEM Studio) ──
     CM:       P("Cargas", "CM (kN/nodo)", -5,   -30, 0,    0.5),
@@ -834,7 +837,7 @@ export const edificioAporticado: ExampleDef = {
         // es el mismo que el rectangulo (Iz -> b*h^3/12).
         return { A: c.A, Iz: c.Iz, Iy: c.Iy, J: c.J, As2: c.As2, As3: c.As3, b, h, t };
       }
-      return { A: b*h, Iz: (b*h**3)/12, Iy: (h*b**3)/12, J: 0.14 * Math.pow(Math.min(b,h), 4) } as any;
+      return { A: b*h, Iz: (b*h**3)/12, Iy: (h*b**3)/12, J: 0.14 * Math.pow(Math.min(b,h), 4), b, h } as any;
     };
     const vigaPropsAt = (floor: number) => {
       const b = vigaB_piso[floor] ?? p.vigaB, h = vigaH_piso[floor] ?? p.vigaH;
@@ -891,6 +894,19 @@ export const edificioAporticado: ExampleDef = {
       ? qMassEquiv_kNm2 / G_GRAVITY / Math.max(p.slabT, 0.05)  // ton/m³
       : rho_c;
 
+    // brazos rigidos automaticos (ETABS): en cada extremo de viga que toca columna se descuenta
+    // medio lado de la columna EN LA DIRECCION DE LA VIGA (b en X, h en Y) del peso y de la masa
+    const nudosCol = new Map<number, number>();   // nudo -> piso de la columna que lo toca
+    for (const ci of colIdx) for (const n of elements[ci] as unknown as number[]) nudosCol.set(n, elementFloor.get(ci) ?? 0);
+    const factorBrazos = (i: number) => {
+      if (Math.round((p as any).offsets ?? 1) !== 1) return 1;
+      const [a, b] = elements[i] as unknown as number[];
+      const dx = Math.abs(nodes[b][0] - nodes[a][0]), dy = Math.abs(nodes[b][1] - nodes[a][1]);
+      const L = Math.hypot(dx, dy, nodes[b][2] - nodes[a][2]);
+      const enX = dx >= dy;
+      const offDe = (n: number) => { if (!nudosCol.has(n)) return 0; const cp = colPropsAt(Math.min(nudosCol.get(n)!, 7)); return (enX ? cp.b : cp.h) / 2; };
+      return L > 1e-9 ? Math.max(0, L - offDe(a) - offDe(b)) / L : 1;
+    };
     for (let i = 0; i < elements.length; i++) {
       const floor = elementFloor.get(i) ?? 0;
       if (slabIdx.has(i)) {
@@ -926,7 +942,7 @@ export const edificioAporticado: ExampleDef = {
         areas.set(i, vp.A);
         Iz.set(i, vp.Iz * fVig_I); Iy.set(i, vp.Iy * fVig_I); J.set(i, vp.J);
         // Si Mass Source = Loads, density de vigas = 0 (la masa va solo en losa)
-        densities.set(i, useMassFromLoads ? 0 : matVigaRho);
+        densities.set(i, useMassFromLoads ? 0 : matVigaRho * factorBrazos(i));
       }
     }
 

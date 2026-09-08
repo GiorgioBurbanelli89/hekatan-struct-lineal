@@ -620,8 +620,12 @@ los offsets **de las vigas** (los de columna no los descuenta). Y √(6.048429 /
 de nudo a nudo (`getGlobalMassMatrix.cpp`, HRZ, igual que CSI): con offsets = 0
 la masa total coincide al **0.002 %**.
 
-Corolario: **Hekatan Struct no tiene end length offsets**, y ETABS los pone por
-defecto. Cualquier comparación contra ETABS los tiene que anular
+Corolario (hasta el 8-sep-2026): Hekatan no tenía end length offsets y ETABS los pone por
+defecto, así que se anulaban. **Desde el 8-sep-2026** `plantillas` y `edificio-aporticado` llevan
+`offsets` (1 = ETABS, defecto: cada tramo de viga que toca columna pesa y masa con L − ½b_col por
+extremo; 0 = SAP2000), `plantillas_etabs.py` deja los brazos (`--nooffsets` los anula) y las 8
+plantillas cierran contra ETABS con sus brazos puestos (masa 0.000 %, modos 0.00 %). Lo de abajo
+queda como historia. Cualquier comparación contra ETABS los tenía que anular
 (`FrameObj.SetEndLengthOffset(nm, False, 0,0,0)`) o mide otra estructura.
 
 ⚠️ **La tabla que estaba aquí antes era falsa** (`9.6780 / 16.9874 / 26.6149 /

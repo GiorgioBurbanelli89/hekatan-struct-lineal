@@ -37,7 +37,11 @@ import comtypes.gen.ETABSv1 as E
 AQUI = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.join(AQUI, "..", "validation", "modelos", "plantillas")
 NOEDGE = "--noedge" in sys.argv
-sys.argv = [a for a in sys.argv if a != "--noedge"]
+# Brazos rigidos AUTOMATICOS de ETABS: desde el 8-sep-2026 se DEJAN (es lo que ETABS hace y lo que
+# Hekatan reproduce con `offsets=1`, su defecto: la viga no pesa ni masa el tramo dentro de la
+# columna). `--nooffsets` los anula (SAP2000, Hekatan `offsets=0`). `--offsets` se acepta por compatibilidad.
+KEEP_OFFSETS = "--nooffsets" not in sys.argv
+sys.argv = [a for a in sys.argv if a not in ("--noedge", "--offsets", "--nooffsets")]
 ORIGEN = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(BASE, "csi"))
 DESTINO = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else os.path.join(BASE, "etabs"))
 os.makedirs(DESTINO, exist_ok=True)
@@ -78,8 +82,11 @@ for i, f in enumerate(trabajos, 1):
             # sin losa eran 3.5 t por planta (5 % de la masa) y +2.5 % en los
             # periodos. Se anulan para medir la MISMA estructura (regla de la casa:
             # "offsets = 0", CLAUDE.md), medido el 3-sep-2026.
-            for nm in sm.FrameObj.GetNameList(0, [])[1]:
-                sm.FrameObj.SetEndLengthOffset(nm, False, 0.0, 0.0, 0.0)
+            if not KEEP_OFFSETS:
+                for nm in sm.FrameObj.GetNameList(0, [])[1]:
+                    sm.FrameObj.SetEndLengthOffset(nm, False, 0.0, 0.0, 0.0)
+            else:
+                D_offsets = {nm: list(sm.FrameObj.GetEndLengthOffset(nm, False, 0.0, 0.0, 0.0)[:4]) for nm in sm.FrameObj.GetNameList(0, [])[1]}
             # --noedge: el EDGE CONSTRAINT es un default de ETABS (ata cada paño a
             # todo nudo que toca) que SAP2000 no tiene. Apagado, ETABS resuelve la
             # misma malla que SAP y Hekatan: es el paso 2 de la regla «SAP2000

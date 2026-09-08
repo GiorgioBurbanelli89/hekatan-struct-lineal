@@ -9,7 +9,7 @@ por OAPI) y después dónde vive cada cosa en los binarios. Sonda: `etabs_defaul
 
 | defecto | dónde se ve | efecto medido | en Hekatan |
 |---|---|---|---|
-| **Brazos rígidos automáticos** en cada barra: columnas `offJ` = canto de la viga (0.50), vigas `offI = offJ` = medio ancho de columna (0.25), **RZ = 0** | `GetEndLengthOffset` → `auto=True`; en el `.$et` solo se escriben cuando se fijan a mano (`LENGTHOFFI 0 LENGTHOFFJ 600`, en mm, como en `mez_thin_auto_etabs.$et`); con `auto` no se escriben | RZ = 0 → **la rigidez no cambia**; pero ETABS **no pesa** el tramo de viga dentro del brazo: −5 % de masa de viga, **+2.88 % en períodos** (Paz 6.3, medido con `AssembledJointMass`) | ❌ no está. Los drivers lo anulan en ETABS (`SetEndLengthOffset … 0`). Pendiente: `offsets etabs` (solo masa) |
+| **Brazos rígidos automáticos** en cada barra: columnas `offJ` = canto de la viga (0.50), vigas `offI = offJ` = medio ancho de columna (0.25), **RZ = 0** | `GetEndLengthOffset` → `auto=True`; en el `.$et` solo se escriben cuando se fijan a mano (`LENGTHOFFI 0 LENGTHOFFJ 600`, en mm, como en `mez_thin_auto_etabs.$et`); con `auto` no se escriben | RZ = 0 → **la rigidez no cambia**; pero ETABS **no pesa** el tramo de viga dentro del brazo: −5 % de masa de viga, **+2.88 % en períodos** (Paz 6.3, medido con `AssembledJointMass`) | ✅ **`offsets=1`** (defecto) en `plantillas` y `edificio-aporticado`: cada tramo de viga que toca columna pesa y masa con `L − ½b_col` por extremo (b en X, h en Y). Las 8 plantillas contra ETABS **con sus brazos puestos**: masa 0.000 %, estático 0.000 %, modos 1–3 0.00 %, fuerzas 0.000 %. `offsets=0` = SAP2000. El driver deja los brazos por defecto (`--nooffsets` los anula) |
 | **Automallado** de losas y muros a **1.25 m** (`AUTOMESHOPTIONS MESHTYPE "GENERAL" FLOORMESHMAXSIZE 1250 WALLMESHMAXSIZE 1250`) y de barras en sus intersecciones (`AUTOMESH "YES" MESHATINTERSECTIONS "YES"`) | `.$et` §ANALYSIS OPTIONS y §LINE ASSIGNS; modelo de análisis: 1 losa → 16 áreas, 4 vigas → 16 líneas, 8 puntos → 29 | cambia la **malla**, no el elemento. Con malla ≤ 1.25 m dada explícitamente (las plantillas, 1.2 m) ETABS la respeta y da 0.0000 %. `OBJMESHTYPE "NONE"` del e2k lo **reescribe como "DEFAULT"** en losas (por eso malló igual el nudo colgado) | ✅ Hekatan usa la malla que se le da; `meshcross` parte las X. ⏳ automallado a 1.25 m como opción |
 | **Edge constraint** de las áreas: **encendido** (`GetEdgeConstraint → True`), no se escribe en el `.$et` | OAPI | solo actúa donde el automallado deja nudos colgados; con malla conforme ON = OFF (medido dos veces) | ✅ equivale a partir el paño (`deck etabs`) |
 | `ADDRESTRAINT "No"` en la losa | `.$et` §AREA ASSIGNS | **no es** el edge constraint (que va encendido con `ADDRESTRAINT "No"`); sin efecto medido | — |
@@ -38,7 +38,7 @@ Hekatan sobre la misma malla sin más, y ETABS solo cuando la malla ya viene hec
 ## 3 · Respuesta corta
 
 No es solo los brazos: son **tres** cosas por defecto, y las tres son de preprocesado:
-1. brazos rígidos automáticos → **solo masa** (RZ = 0) → falta `offsets etabs`;
+1. brazos rígidos automáticos → **solo peso y masa** (RZ = 0) → `offsets=1` (hecho, 8 plantillas 0.000 %);
 2. automallado a 1.25 m + partir barras en intersecciones → **malla** → se da la misma malla;
 3. edge constraint encendido → **solo con nudos colgados** → partir el paño.
 Más la fuente de masa lateral por plantas (ya está) y el `MERGETOL` de 1 mm (sin efecto medido).

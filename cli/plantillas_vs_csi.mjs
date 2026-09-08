@@ -38,8 +38,8 @@ const INFORME = process.argv[2] || join(BASE, "COMPARACION.md");
 const TOL_COORD = 2e-3;   // m
 const TOL_REL = 1e-3;     // 0.1 %
 
-const hek = JSON.parse(readFileSync(join(BASE, "hekatan.json"), "utf-8"));
-const dirE = join(BASE, "etabs");
+const hek = JSON.parse(readFileSync(join(BASE, process.env.HEK_JSON || "hekatan.json"), "utf-8"));
+const dirE = join(BASE, process.env.ETABS_DIR || "etabs");   // ETABS_DIR=etabs_offsets: la corrida con brazos automaticos
 if (!existsSync(dirE)) { console.error("falta " + dirE + " — corre antes cli/plantillas_etabs.py"); process.exit(2); }
 
 function enSegmento(P, A, B) {

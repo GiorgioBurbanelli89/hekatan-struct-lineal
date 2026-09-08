@@ -181,6 +181,11 @@ const PARAMS = {
 
   // ── Secciones y cargas ───────────────────────────────────────────────────
   bcol: { default: 0.40, min: 0.2, max: 1.2, step: 0.05, label: "columna, lado (m)", folder: "🔩 Secciones" },
+  // Brazos rigidos AUTOMATICOS de ETABS: RZ = 0 (no rigidizan) pero ETABS no pesa ni masa el tramo
+  // de viga que cae dentro de la columna (medio lado a cada extremo). Medido el 8-sep-2026 por OAPI:
+  // Dead 136.8 = 144.0 - 4 vigas x 2 x 0.25 m; y +2.88 % en los periodos del Paz 6.3. Las columnas
+  // no se descuentan. Con 1 (defecto, ETABS) la viga pesa y masa con L - b_col; con 0 = SAP2000.
+  offsets: { default: 1, min: 0, max: 1, step: 1, label: "brazos rígidos (1 ETABS · 0 SAP2000)", options: { "ETABS (automáticos: solo peso y masa)": 1, "Ninguno (SAP2000)": 0 }, folder: "🔩 Secciones" },
   bviga: { default: 0.30, min: 0.15, max: 0.8, step: 0.05, label: "viga, ancho (m)", folder: "🔩 Secciones" },
   hviga: { default: 0.50, min: 0.2, max: 1.2, step: 0.05, label: "viga, canto (m)", folder: "🔩 Secciones" },
   tlosa: { default: 0.20, min: 0.08, max: 0.6, step: 0.01, label: "losa, espesor (m)", folder: "🔩 Secciones" },
@@ -583,6 +588,18 @@ export const plantillas: ExampleDef = {
     // La losa y los muros son de HORMIGÓN aunque el pórtico sea de acero: eso es
     // un edificio mixto de verdad, no un edificio de chapa.
     const Eh = 15100 * Math.sqrt(p.fc) * 98.0665, NUh = 0.20, RHOh = 24 / G;
+    // brazos rigidos automaticos (ETABS): nudos donde llega una columna, y factor de longitud
+    // "que pesa" de cada tramo de viga = (L - off_i - off_j) / L, con off = b_col / 2 en cada
+    // extremo que toca columna (las columnas son cuadradas: el mismo medio lado en X y en Y)
+    const nudosCol = new Set<number>();
+    clase.forEach((c, e) => { if (c === "col") for (const n of elements[e] as unknown as number[]) nudosCol.add(n); });
+    const factorBrazos = (e: number) => {
+      if (Math.round((p as any).offsets ?? 1) !== 1) return 1;
+      const [a, b] = elements[e] as unknown as number[];
+      const L = Math.hypot(nodes[b][0] - nodes[a][0], nodes[b][1] - nodes[a][1], nodes[b][2] - nodes[a][2]);
+      const off = (nudosCol.has(a) ? p.bcol / 2 : 0) + (nudosCol.has(b) ? p.bcol / 2 : 0);
+      return L > 1e-9 ? Math.max(0, L - off) / L : 1;
+    };
     clase.forEach((c, e) => {
       if (c === "losa" || c === "muro") {
         elasticities.set(e, Eh); poissonsRatios.set(e, NUh);
@@ -608,7 +625,7 @@ export const plantillas: ExampleDef = {
         return;
       }
       elasticities.set(e, E); poissonsRatios.set(e, NU);
-      shearModuli.set(e, Gm); densities.set(e, RHO);
+      shearModuli.set(e, Gm); densities.set(e, RHO * (c === "viga" ? factorBrazos(e) : 1));
       if (c === "diag") {
         // La diagonal trabaja a AXIL; se deja cuadrada maciza (o tubo si el
         // pórtico es de acero) y con su inercia real, no articulada: articularla
