@@ -1,0 +1,9 @@
+# modelos que SAP2000 reescribe en cada corrida: no son fuente
+*.sdb
+*.$2k
+*.K_*
+*.LOG
+*.OUT
+*.Y*
+*.msh
+*.ico
