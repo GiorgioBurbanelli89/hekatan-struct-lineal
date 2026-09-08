@@ -122,6 +122,11 @@ interface ParsedModel {
    *  galpon 4.5 % y mezanine Dead 75 % explicados con esto). */
   deckEtabs: boolean;
   deckOneWay: boolean;                   // `deck etabs oneway`: reparto en un sentido (eje local 1 del pano)
+  /** `automesh <tam_m>` (0 = apagado): parte los panos Q4 mas grandes que `tam` en una rejilla,
+   *  como el AUTOMESHOPTIONS de ETABS (FLOORMESHMAXSIZE / WALLMESHMAXSIZE, 1.25 m de fabrica).
+   *  Hekatan resuelve la malla que se le da: si un `.e2k` de ETABS trae la losa como UN pano,
+   *  ETABS la parte y Hekatan no, y no son el mismo modelo. Con la directiva si lo son. */
+  autoMesh: number;
   /** `torsion safe` (= 0.1) o `torsion <factor>`: multiplica la J de TODAS las barras. SAFE 20
    *  analiza las vigas con 0.1·J (medido el 5-sep-2026: Hekatan con J×0.1 = giros de SAFE a
    *  4 cifras). Con la directiva, Hekatan reproduce a SAFE; sin ella = SAP2000/ETABS. */
@@ -236,6 +241,7 @@ export function parseCliCommands(text: string): ParsedModel {
     deckOneWay: false,
     torsionFactor: 1,
     deckTributario: new Set(),
+    autoMesh: 0,
     areaSprings: [],
     edgeEtabs: false,
     solids: [],
@@ -514,6 +520,15 @@ export function parseCliCommands(text: string): ParsedModel {
         case "edgeconstraint": {
           const v = (tokens[1] ?? "etabs").toLowerCase();
           m.edgeEtabs = v === "etabs" || v === "1" || v === "on" || v === "si" || v === "hermite";
+          break;
+        }
+        // automesh [tam_m | off]   — 1.25 m es el defecto de ETABS
+        case "automesh":
+        case "automallado": {
+          const v = (tokens[1] ?? "1.25").toLowerCase();
+          if (v === "off" || v === "no" || v === "0") { m.autoMesh = 0; break; }
+          const f = parseFloat(v);
+          m.autoMesh = isFinite(f) && f > 0 ? f : 1.25;
           break;
         }
         case "meshcross":
@@ -840,6 +855,71 @@ function muestrasTributarias(P: V3[], n = 200, spanDir?: V3): Array<{ pts: V3[];
   return out;
 }
 
+/**
+ * `automesh <tam>`: parte cada pano Q4 en una rejilla de celdas de lado <= `tam`, como el
+ * automallado de ETABS (`AUTOMESHOPTIONS ... FLOORMESHMAXSIZE 1250`, 1.25 m de fabrica, medido
+ * en su `.$et` el 8-sep-2026: una losa de 5x5 sale con 16 elementos y 25 nudos).
+ *
+ * Por que hace falta: Hekatan resuelve LA MALLA QUE SE LE DA. Al importar un `.e2k` con la losa
+ * como un solo pano, ETABS la malla y Hekatan no: no son el mismo modelo y la diferencia es de
+ * convergencia de malla, no del elemento.
+ *
+ * Reparto: la geometria por interpolacion BILINEAL de las 4 esquinas (un pano plano y recto sale
+ * exacto; uno alabeado, aproximado, igual que ETABS). Las celdas heredan espesor, material,
+ * modificadores, tipo, angulo y la PRESION del `areaload` (que es por unidad de area: la misma en
+ * cada trozo). Los nudos que ya existen se reutilizan, no se duplican.
+ */
+function aplicarAutomesh(m: ParsedModel, tam: number) {
+  if (!(tam > 0)) return;
+  const TOL = 1e-6;
+  const P = (id: number) => m.nodes.get(id) as V3;
+  let nextNode = Math.max(0, ...m.nodes.keys()) + 1;
+  let nextShell = m.shells.reduce((mx, s) => Math.max(mx, s.id), 0) + 1;
+  const nudoEn = (q: V3): number => {
+    for (const [id, v] of m.nodes) if (v3norm(v3sub(v as V3, q)) < TOL) return id;
+    const id = nextNode++; m.nodes.set(id, [q[0], q[1], q[2]]); return id;
+  };
+  const hereda = (de: number, a: number) => {
+    const d = m.shellModsDir.get(de); if (d) m.shellModsDir.set(a, [...d]);
+    const mm = m.shellMods.get(de); if (mm) m.shellMods.set(a, [...mm] as [number, number]);
+    const q = m.shellLoads.get(de); if (q !== undefined) m.shellLoads.set(a, q);
+    const ty = m.shellTypes.get(de); if (ty !== undefined) m.shellTypes.set(a, ty);
+    const an = m.shellAngles.get(de); if (an !== undefined) m.shellAngles.set(a, an);
+  };
+  const nuevos: typeof m.shells = [];
+  let partidos = 0;
+  for (const sh of m.shells) {
+    if (sh.pts.length !== 4) { nuevos.push(sh); continue; }
+    const Q = sh.pts.map(P) as [V3, V3, V3, V3];
+    if (Q.some((q) => !q)) { nuevos.push(sh); continue; }
+    // lados medios: 0-1 y 3-2 son "u"; 0-3 y 1-2 son "v"
+    const Lu = (v3norm(v3sub(Q[1], Q[0])) + v3norm(v3sub(Q[2], Q[3]))) / 2;
+    const Lv = (v3norm(v3sub(Q[3], Q[0])) + v3norm(v3sub(Q[2], Q[1]))) / 2;
+    const nu = Math.max(1, Math.ceil(Lu / tam - 1e-9));
+    const nv = Math.max(1, Math.ceil(Lv / tam - 1e-9));
+    if (nu === 1 && nv === 1) { nuevos.push(sh); continue; }
+    const punto = (u: number, v: number): V3 => [0, 1, 2].map((k) =>
+      Q[0][k] * (1 - u) * (1 - v) + Q[1][k] * u * (1 - v) + Q[2][k] * u * v + Q[3][k] * (1 - u) * v) as V3;
+    const rej: number[][] = [];
+    for (let i = 0; i <= nu; i++) {
+      const fila: number[] = [];
+      for (let j = 0; j <= nv; j++) fila.push(nudoEn(punto(i / nu, j / nv)));
+      rej.push(fila);
+    }
+    for (let i = 0; i < nu; i++)
+      for (let j = 0; j < nv; j++) {
+        const id = (i === 0 && j === 0) ? sh.id : nextShell++;
+        nuevos.push({ ...sh, id, pts: [rej[i][j], rej[i + 1][j], rej[i + 1][j + 1], rej[i][j + 1]] });
+        if (id !== sh.id) hereda(sh.id, id);
+      }
+    partidos++;
+  }
+  if (partidos) {
+    m.shells = nuevos;
+    console.log(`[CLI Modeler] automesh ${tam} m: ${partidos} pano(s) partido(s) -> ${m.shells.length} cascaras, ${m.nodes.size} nudos`);
+  }
+}
+
 function aplicarDeckEtabs(m: ParsedModel) {
   const TOL = 1e-4;
   const P = (id: number) => m.nodes.get(id) as V3;
@@ -978,6 +1058,7 @@ export const cliModeler: ExampleDef = {
     const script = (window as any).__hekatanCliScript ?? DEFAULT_SCRIPT;
     (window as any).__hekatanCliLastScript = script;
     const m = parseCliCommands(script);
+    if (m.autoMesh > 0) aplicarAutomesh(m, m.autoMesh);
     if (m.deckEtabs) aplicarDeckEtabs(m);
 
     // Ordenar nodos por ID y asignar índices internos

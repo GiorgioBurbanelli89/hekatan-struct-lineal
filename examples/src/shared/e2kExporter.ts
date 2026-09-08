@@ -1680,7 +1680,14 @@ function exportFromScratch(input: ExportE2kInput): string {
           const iTop = Math.max(...ps.map(q => idxPl(q.story)));
           const salto = ps.map(q => iTop - idxPl(q.story));
           lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[0].pt}"  "${ps[1].pt}"  "${ps[2].pt}"  "${ps[3].pt}"  ${salto.join("  ")}  `);
-          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          // ⚠️ ADDRESTRAINT "No", NO "Yes" (8-sep-2026). Con "Yes", cuando ETABS AUTOMALLA el pano
+          // empotra todos los nudos NUEVOS del borde que toquen un nudo restringido: una losa de
+          // 5x5 apoyada solo en sus 4 esquinas salia con el borde entero empotrado y 7 VECES mas
+          // rigida (w 4.99e-4 contra 3.58e-3). Con "No" da 3.5841e-3 = Hekatan con `automesh 1.25`
+          // a 0.00000 %. Y "No" es lo que escribe ETABS en su propio .$et (medido con un modelo
+          // hecho por OAPI sin tocar nada). No se veia en las plantillas porque alli la malla ya
+          // va hecha en el fichero y ETABS no crea ni un nudo.
+          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           return;
         }
         // Use bottom-left and bottom-right points (Z-up: n[2] = elevation)
@@ -1689,7 +1696,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  1  1  0  0  `);
         // Assign at story of top nodes
         const topStory = ps[bot0 === 0 ? 2 : 0].story;
-        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 + el salto de planta de cada punto — y con 3
         // puntos, un triangulo. El contador y el numero de saltos siguen al
@@ -1720,7 +1727,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         // Un deck se asigna por su propio nombre de seccion y con ANG: el eje
         // local decide A QUIEN le entrega la carga (salva perpendicular a las
         // secundarias). Sin el ANG la reparte al reves. Y no lleva DIAPH ni
-        // ADDRESTRAINT "Yes" — asi lo escribe ETABS.
+        // ADDRESTRAINT "No" — asi lo escribe ETABS.
         const ang = angDeObjeto.get(ae.idx) ?? shellAngles?.get(ae.idx);
         // La planta del assign es la de REFERENCIA de los saltos: la mas alta.
         // ⚠️ Iba `SECTION "${DECK_SEC}"` FIJO y la rama la elegia la bandera
@@ -1733,7 +1740,7 @@ function exportFromScratch(input: ExportE2kInput): string {
           // el 8-sep-2026: no es lo mismo que atar los POINTs de eje). Solo va si
           // Hekatan ata los cuatro nudos del elemento; si solo ata los ejes de
           // columna (como SAP2000), el area no lleva DIAPH.
-          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "Yes"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: storyArea, idx: ae.idx });
       }
     });

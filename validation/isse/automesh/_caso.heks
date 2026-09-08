@@ -1,0 +1,14 @@
+# Losa 5x5 como UN pano, empotrada en las 4 esquinas, carga de area. Sin vigas: nada que interfiera.
+# ETABS la malla a 1.25 m (16 elementos, 25 nudos); Hekatan la deja como esta salvo con `automesh`.
+node 1 0 0 3
+node 2 5 0 3
+node 3 5 5 3
+node 4 0 5 3
+shell 1 1 2 3 4 0.20 25e6 0.2
+areaload 1 -10
+support 1 fixed
+support 2 fixed
+support 3 fixed
+support 4 fixed
+automesh 1.25
+solve

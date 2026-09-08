@@ -412,6 +412,15 @@ lista 57.8) y el signo era el de la curvatura del solver, **al revés que CSI**.
   0.5–0.9 % en fuerzas y 0.5 % en uy, y se atribuyó a «lo que SAP y ETABS difieren». Re-exportados
   el 8-sep: SAP2000 = ETABS = Hekatan a 0.0000 % (flexión y membrana) en las 4 plantillas con losa.
 - Test `node tests/run.mjs fuerzas-cascara` (dual M y F, losa plana M; joints y nudo, 0.001 %).
+- **`automesh <tam>`** en el `.heks` (8-sep-2026, apagado por defecto): parte los paños Q4 en celdas
+  ≤ tam por interpolación bilineal, como el `AUTOMESHOPTIONS … FLOORMESHMAXSIZE 1250` de ETABS.
+  Medido contra el modelo de análisis de ETABS (losa 5×5 como un paño): misma malla (25 nudos,
+  16 cáscaras) y **1.1e-10 %**. Hace falta al IMPORTAR un `.e2k` con la losa sin mallar: ETABS la
+  parte y Hekatan no, y no son el mismo modelo. Test `node tests/run.mjs automesh`.
+- ⚠️ El exportador escribía `ADDRESTRAINT "Yes"` en las áreas: con eso, al automallar, ETABS
+  **empotra todos los nudos NUEVOS del borde** que tocan uno restringido (losa 5×5 apoyada en 4
+  esquinas: 7 veces más rígida). Va **`"No"`**, que es lo que escribe ETABS en su propio `.$et`.
+  No se veía en las plantillas porque allí la malla ya va en el fichero.
 - `areaspring <shellID> <ks> [nodal]` y `edge etabs` en el `.heks` (8-sep-2026): viajan al WASM por la
   lista de muelles con **nudo negativo** = −(elemento+1) (`utils/springsExtra.h`; gdl −1 consistente
   ks·∫NᵀN, −3 nodal ∫N_i dA, −2 nudo colgado atado por Hermite con penalización 1e6). Medido: el muelle de
