@@ -9,8 +9,8 @@
  *  1. los alias que AutoCAD y Hekatan comparten hacen lo mismo (L línea, PL polilínea, C círculo…);
  *  2. **Z encuadra, no deshace** — hasta el 8-sep-2026 Z estaba puesto como DESHACER (por Ctrl+Z) y
  *     en AutoCAD es ZOOM: quien viene de AutoCAD teclea Z para encuadrar y le borraba lo dibujado;
- *  3. un comando de AutoCAD que aquí no existe (MI, RO, AR…) responde QUÉ es y con qué se hace,
- *     no «desconocido».
+ *  3. un comando de AutoCAD que aquí no existe (MI, RO, SC…) responde QUÉ es y con qué se hace,
+ *     no «desconocido»; y AR (su ARRAY) SÍ existe: es REPLICAR, el Replicate de ETABS.
  *
  *   node cli/ctl_alias_autocad.mjs
  */
@@ -95,12 +95,27 @@ const trasU = await pag.evaluate(() => (window).__hekatanDrawingPoints?.val?.len
 ok(trasU < despues, "U DESHACE (en AutoCAD U = UNDO)", `puntos ${despues} → ${trasU}`);
 
 // 3) un comando de AutoCAD que aquí no está: respuesta útil
-for (const [c, esperado] of [["mi", /MIRROR/i], ["ar", /ARRAY/i], ["sc", /SCALE/i]]) {
+for (const [c, esperado] of [["mi", /MIRROR/i], ["sc", /SCALE/i], ["f", /FILLET/i]]) {
   const r = await teclea(c);
   ok(esperado.test(r.ultima) && !/desconocido/i.test(r.ultima),
      `${c.toUpperCase()} (de AutoCAD, aquí sin implementar) explica qué es y qué usar`,
      r.ultima.slice(0, 72));
 }
+// AR (el ARRAY de AutoCAD) SÍ está: es REPLICAR, el Replicate de ETABS
+await teclea("l"); await teclea("0,0,0"); await teclea("2,0,0"); await esc();
+await pag.evaluate(() => (window).__hekatanCadRun("s"));
+await pag.mouse.click(400, 300); await espera(200); await pag.mouse.click(1000, 600); await espera(400);
+await teclea("ar");
+// REPLICAR pregunta: su mensaje va a la LÍNEA DE PETICIÓN, no al historial
+// (el historial en ese momento lleva los ecos de la designación por ventana)
+const ecoAr = await pag.evaluate(() => (document.getElementById("hk3-cmd-prompt")?.textContent || "")
+  + " ⏎ " + [...document.querySelectorAll("#hk3-cmd-hist div")].slice(-3).map((d) => d.textContent || "").join(" ⏎ "));
+ok(/REPLICAR/i.test(ecoAr), "AR = ARRAY de AutoCAD, hecho con REPLICAR (el Replicate de ETABS)", ecoAr.slice(0, 70));
+await esc();
+// y Esc cancela de verdad la pregunta: si no, el comando siguiente se lee como su respuesta
+const trasEsc = await pag.evaluate(() => document.getElementById("hk3-cmd-prompt")?.textContent || "");
+ok(!/desplazamiento/i.test(trasEsc), "…y Esc cancela la pregunta de REPLICAR", trasEsc.slice(0, 50));
+
 // y uno que no es de AutoCAD ni de aquí: sigue diciendo desconocido
 const rx = await teclea("zzz");
 ok(/desconocido/i.test(rx.ultima), "un comando inventado sigue siendo «desconocido»", rx.ultima.slice(0, 50));

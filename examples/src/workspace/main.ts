@@ -6511,7 +6511,7 @@ try {
   const ACAD_FALTA: Record<string, [string, string]> = {
     mi: ["MIRROR (simetría)", "todavía no; copie y mueva, o dibuje el otro lado"],
     ro: ["ROTATE (girar)", "todavía no; vuelva a dibujar con las coordenadas giradas"],
-    ar: ["ARRAY (matriz)", "todavía no; use COPIAR (CO) varias veces, o la Rejilla del panel"],
+
     sc: ["SCALE (escalar)", "todavía no; vuelva a dibujar con las medidas nuevas"],
     f: ["FILLET (empalme)", "todavía no; use RECORTAR (TR) y ALARGAR (EX)"],
     cha: ["CHAMFER (chaflán)", "todavía no; use RECORTAR (TR) y ALARGAR (EX)"],
@@ -6776,6 +6776,55 @@ try {
     (window as any).__hekatanRibbon?.marcar?.(tool);
     (window as any).__hekatanCadRefreshPrompt?.();
   };
+  // ── REPLICAR — el «Replicate» de ETABS y el ARRAY de AutoCAD ─────────────
+  // El motor ya estaba (`__hekatanReplicateSelection`), pero solo se llegaba a él
+  // por los campos del panel. Aquí va como COMANDO, que es como se usa en ETABS,
+  // SAP2000 y AutoCAD, y en una sola línea si se quiere:
+  //   REP 0,0,3.2         una copia 3.20 m más arriba
+  //   REP 0,0,3.2 2       dos copias (el 2.º y el 3.er piso)
+  //   REP piso 3.2 2      lo mismo, diciendo «piso» (sube en Z)
+  //   REP                 pregunta el desplazamiento y las copias, paso a paso
+  // Y con dos puntos (desde–hasta) sigue estando COPIAR (CO), como el COPY de AutoCAD.
+  const REP_NOMBRES = new Set(["replicar", "rep", "ar", "array", "matriz"]);
+  let repEsperando: null | "delta" | "copias" | "p1" | "p2" = null;
+  let repDelta: [number, number, number] = [0, 0, 0];
+  let repP1: [number, number, number] = [0, 0, 0];
+  const repSeleccion = () => (window as any).__hekatanSelectionSize?.() ?? -1;
+  const repHacer = (d: [number, number, number], n: number) => {
+    const hechas = (window as any).__hekatanReplicateSelection?.(d[0], d[1], d[2], n);
+    if (!hechas) {
+      flash("✕ REPLICAR: no hay nada designado. Designe objetos (S o ventana) y repita.", false);
+      return;
+    }
+    flash(`✓ Replicado ×${n} — Δ (${d[0]}, ${d[1]}, ${d[2]}) m`, true);
+  };
+  /** Lee «0,0,3.2», «piso 3.2» o «3.2» (que se entiende como subir en Z). */
+  const repLeerDelta = (txt: string): [number, number, number] | null => {
+    const t = txt.trim().toLowerCase().replace(/^(piso|planta|story|arriba)\s*/, "");
+    const v = t.split(/[,;\s]+/).filter(Boolean).map(Number);
+    if (v.some((q) => !isFinite(q))) return null;
+    if (v.length === 1) return [0, 0, v[0]];        // una cifra = subir esa altura
+    if (v.length === 2) return [v[0], v[1], 0];
+    if (v.length >= 3) return [v[0], v[1], v[2]];
+    return null;
+  };
+
+  // Escape cancela la pregunta de REPLICAR. El gancho `__hekatanEscapeCancel` ya se
+  // llamaba desde el cuadro de comandos, pero NADIE lo definía: al pulsar Esc la
+  // pregunta seguía viva y el comando siguiente se leía como su respuesta («zzz»
+  // contestaba al desplazamiento en vez de salir «desconocido»).
+  // ¿Hay un comando esperando respuesta? Lo consulta el ribbon para no robarle las
+  // teclas 1-4 (sus vistas) al cuadro de comandos mientras se contesta.
+  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando;
+
+  (window as any).__hekatanEscapeCancel = () => {
+    if (!repEsperando) return false;
+    repEsperando = null;
+    flash("REPLICAR cancelado", false);
+    (window as any).__hekatanCadRefreshPrompt?.();
+    return true;
+  };
+
   const run = (raw: string) => {
     const cmd = raw.trim().toLowerCase();
     if (!cmd) return;
@@ -6786,6 +6835,80 @@ try {
       if ((window as any).__hekatanCadOption?.(cmd)) {
         // Cerrar acaba el comando, como en AutoCAD; desHacer sigue en él
         if (cmd === "c" || cmd === "cerrar") activarTool("select");
+        return;
+      }
+    }
+    // 1 bis. REPLICAR: o bien en una línea, o preguntando paso a paso
+    if (repEsperando) {
+      if (cmd === "esc" || cmd === "cancelar") { repEsperando = null; flash("REPLICAR cancelado", false); return; }
+      // «P» = dar el desplazamiento con DOS PUNTOS (punto base → segundo punto), que es
+      // el «offset a cierto punto» de ETABS y el punto base del COPY de AutoCAD.
+      if (repEsperando === "p1") {
+        const q = repLeerDelta(raw);
+        if (!q) { flash("✕ Punto no válido. Escriba «x,y,z».", false); return; }
+        repP1 = q; repEsperando = "p2";
+        setPrompt(`REPLICAR — segundo punto (desde ${q[0]}, ${q[1]}, ${q[2]}):`);
+        return;
+      }
+      if (repEsperando === "p2") {
+        const q = repLeerDelta(raw);
+        if (!q) { flash("✕ Punto no válido. Escriba «x,y,z».", false); return; }
+        repDelta = [q[0] - repP1[0], q[1] - repP1[1], q[2] - repP1[2]];
+        repEsperando = "copias";
+        setPrompt(`REPLICAR Δ (${+repDelta[0].toFixed(4)}, ${+repDelta[1].toFixed(4)}, ${+repDelta[2].toFixed(4)}) m — número de copias <1>:`);
+        return;
+      }
+      if (repEsperando === "delta") {
+        const lc0 = raw.trim().toLowerCase();
+        if (lc0 === "p" || lc0 === "punto" || lc0 === "2p" || lc0 === "dospuntos") {
+          repEsperando = "p1";
+          setPrompt("REPLICAR — punto base x,y,z:");
+          return;
+        }
+        const d = repLeerDelta(raw);
+        if (!d) { flash("✕ Δ no válido. Escriba «0,0,3.2», o «P» para darlo con dos puntos.", false); return; }
+        repDelta = d; repEsperando = "copias";
+        setPrompt(`REPLICAR Δ (${d[0]}, ${d[1]}, ${d[2]}) m — número de copias <1>:`);
+        return;
+      }
+      const n = Math.max(1, Math.round(Number(raw.trim()) || 1));
+      repEsperando = null;
+      repHacer(repDelta, n);
+      (window as any).__hekatanCadRefreshPrompt?.();
+      return;
+    }
+    {
+      const partes = raw.trim().split(/\s+/);
+      const c0 = partes[0].toLowerCase();
+      if (REP_NOMBRES.has(c0)) {
+        if (repSeleccion() === 0) {
+          flash("✕ REPLICAR: primero designe objetos (S, o ventana clic-clic).", false);
+          activarTool("select");
+          return;
+        }
+        const resto = partes.slice(1).join(" ");
+        if (!resto) {
+          repEsperando = "delta";
+          setPrompt("REPLICAR — desplazamiento Δx,Δy,Δz (o solo la altura, p. ej. 3.2) [P=dos puntos]:");
+          return;
+        }
+        // «REP P x1,y1,z1 x2,y2,z2 [copias]» — de un punto a otro, en una sola línea
+        const mP = resto.match(/^(?:p|punto|2p)\s+(\S+)\s+(\S+)(?:\s+(\d+))?\s*$/i);
+        if (mP) {
+          const a = repLeerDelta(mP[1]), b = repLeerDelta(mP[2]);
+          if (!a || !b) { flash("✕ REPLICAR: puntos no válidos. Uso «REP P 0,0,0 3,0,4 [copias]».", false); return; }
+          repHacer([b[0] - a[0], b[1] - a[1], b[2] - a[2]], Math.max(1, parseInt(mP[3] || "1", 10)));
+          return;
+        }
+        const d = repLeerDelta(resto.replace(/\s+\d+$/, ""));
+        const mN = resto.match(/(\d+)\s*$/);
+        // «rep 0,0,3.2 2» → el último número es el nº de copias, salvo que sea parte del Δ
+        const trozos = resto.split(/\s+/);
+        const nCopias = trozos.length > 1 && /^\d+$/.test(trozos[trozos.length - 1])
+          ? Math.max(1, parseInt(trozos[trozos.length - 1], 10)) : 1;
+        const d2 = repLeerDelta(trozos.slice(0, nCopias > 1 ? -1 : undefined).join(" ")) || d;
+        if (!d2) { flash("✕ REPLICAR: uso «REP 0,0,3.2 [copias]» o «REP» a secas.", false); return; }
+        repHacer(d2, nCopias);
         return;
       }
     }
@@ -6920,7 +7043,11 @@ try {
         // si no, «ar» se completaba a «área» y el usuario recibía otra herramienta en vez
         // de la explicación. Lo tecleado a propósito manda.
         const lc = v.toLowerCase();
-        const cmd = (ALIASES[lc] || ESPECIALES[lc] || ACAD_FALTA[lc]) ? v : (sug || v);
+        // Con ESPACIOS la línea lleva argumentos («rep 0,0,3.1»): el autocompletado
+        // la recortaba a «rep» y el comando preguntaba el desplazamiento que ya
+        // se le había dado. Lo tecleado con argumentos se respeta tal cual.
+        const cmd = (v.includes(" ") || ALIASES[lc] || ESPECIALES[lc] || ACAD_FALTA[lc] || REP_NOMBRES.has(lc))
+          ? v : (sug || v);
         run(cmd); setCmdText("");
       } else if (ev.key === "Escape") {
         setCmdText(""); inp.blur();
@@ -7059,8 +7186,15 @@ try {
 // ═══════════════════════════════════════════════════════════════
 window.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  // una pregunta de comando abierta (REPLICAR) se cancela aunque el foco esté en el cuadro
+  if ((window as any).__hekatanEscapeCancel?.()) return;
   const ae = document.activeElement as HTMLElement | null;
-  if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // editando texto
+  // El cuadro de comandos NO es «texto que se está editando»: es la línea de órdenes
+  // del CAD, y ahí Esc cancela el comando igual que en AutoCAD. Con el foco puesto en
+  // él (que es donde queda al teclear un comando) la herramienta seguía activa: tras
+  // «PL» + Esc, la «C» siguiente se leía como CERRAR la polilínea en vez de CÍRCULO.
+  const esLineaOrdenes = !!ae && (ae.id === "hk3-cmd-input" || ae.id === "hk3-dyn-input");
+  if (ae && !esLineaOrdenes && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // editando texto
   const tool = (window as any).__hekatanCadState?.get?.()?.tool;
   if (!tool || tool === "select" || tool === "none") return; // ya en Seleccionar → nada que cancelar
   // Cancelar el comando: volver a Seleccionar (el handler de la app finaliza el

@@ -711,6 +711,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       const t = hooks.getTool();
       const dibujando = t && t !== "select" && t !== "none";
       if (dibujando) return;                       // un dígito es una coordenada
+      // …y también cuando un COMANDO está preguntando algo (REPLICAR pide el Δ, los
+      // puntos y las copias con la herramienta en «select»). Sin esto, el primer
+      // carácter de «2,0,20» cambiaba de vista y BORRABA el cuadro: llegaba «,0,20».
+      // El guardia `enCampo` no basta porque en el keydown del primer carácter el
+      // cuadro todavía está vacío.
+      if ((window as any).__hekatanCadEsperaRespuesta?.()) return;
       e.preventDefault(); VISTAS[v][3](); decir(`Vista: ${VISTAS[v][1]}`);
       setTimeout(limpiarCmd, 0); return;
     }
