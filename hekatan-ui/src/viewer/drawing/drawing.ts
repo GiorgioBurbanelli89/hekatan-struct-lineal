@@ -583,7 +583,11 @@ export function drawing({
   );
   rubberBand.frustumCulled = false;
   rubberBand.visible = false;
+  rubberBand.name = "rubberBand";
   scene.add(rubberBand);
+  // expuesta para poder MEDIR desde fuera si la goma acaba donde el marcador del
+  // cursor (cli/_dbg_cursor_coincide.mjs): sin referencia no hay forma de mirarlo
+  (window as any).__hekatanRubberBand = rubberBand;
 
   // ── PREVIEW del ÁREA LIBRE (polígono) ──
   // Línea cyan que muestra el contorno del polígono mientras se clickea.
@@ -2160,10 +2164,10 @@ export function drawing({
   // marcador se fija a un tamaño en píxeles: igual a cualquier zoom y en las dos
   // cámaras. El halo mide 0.015 m de radio con escala 1.
   // Radio aparente del halo, en píxeles. AutoCAD trae 5 de fábrica (su marcador
-  // de referencia a objetos); aquí va a 3 porque Jorge lo quiere más discreto:
+  // de referencia a objetos); aquí va a 2 porque Jorge lo quiere más discreto:
   // el cursor tiene que dejar VER el punto que va a marcar, no taparlo.
   // Se puede regular desde fuera con `__hekatanSnapPx(n)`.
-  let _snapPx = 3;
+  let _snapPx = 2;
   const metrosPorPixel = (punto: THREE.Vector3) => {
     const cam = getActiveCamera() as any;
     const h = rendererElm?.clientHeight || 700;
@@ -2175,7 +2179,12 @@ export function drawing({
   const updateSnapMarkerScale = () => {
     if (!snapMarker.visible) return;
     const s = (_snapPx * metrosPorPixel(snapMarker.position)) / 0.015;
-    snapMarker.scale.setScalar(Math.max(0.02, Math.min(60, s)));
+    // ⚠️ Sin margen de sobra, el TOPE recorta la escala y el marcador deja de medir lo
+    // mismo. Medido el 8-sep-2026 en planta: alejando a zoom ×0.0156 el tope de 60
+    // dejaba el halo en 0.84 px en vez de los 2 que toca — se veía encoger al alejar,
+    // que es justo lo que este cálculo venía a arreglar. El tope solo está para que un
+    // valor absurdo no reviente la escena, no para limitar el zoom.
+    snapMarker.scale.setScalar(Math.max(1e-4, Math.min(1e5, s)));
   };
   // expuestos para poder MEDIR el tamaño aparente desde fuera (cli/ctl_cursor_tamano.mjs).
   // El marcador va por referencia: buscarlo en la escena por `geometry.type` no vale,
@@ -2214,11 +2223,9 @@ export function drawing({
     if (hoverPtHL.visible) updateHoverPtScale();
     // Mismo tratamiento para osnapMarker (Endpoint/Mid/Per/etc.) creado más
     // abajo. Lo referenciamos por window porque la closure todavía no lo tiene.
-    const om = (window as any).__hekatanOsnapMarkerRef as THREE.Group | undefined;
-    if (om?.visible) {
-      const dist2 = getActiveCamera().position.distanceTo(om.position);
-      om.scale.setScalar(Math.max(0.05, dist2 / _snapBaseDist));
-    }
+    // El glifo de referencia a objetos (Punto final / Medio / Perpendicular…): se
+    // referencia por window porque se crea más abajo que este manejador.
+    (window as any).__hekatanUpdateOsnapScale?.();
     // Esferas cyan de selección — mismo tratamiento.
     updateSelectionPtScale();
   });
@@ -3726,17 +3733,36 @@ export function drawing({
       (c as any).material?.dispose?.();
     }
     const col = osnapColors[type] ?? 0xffffff;
-    // Cuadrado pequeño + label
-    const s = 0.05;
+    // ⚠️ El cuadrado se dibujaba con medio lado de 0.05 m EN EL MUNDO, cosido a la
+    // coordenada del punto y con el grupo en el origen: crecía al acercar y se
+    // encogía al alejar, que es justo lo que Jorge ve moverse. (Y el trozo que iba a
+    // reescalarlo usaba `_snapBaseDist`, una variable que no se declara en ningún
+    // sitio: código muerto que además habría reventado el manejador del zoom.)
+    // Ahora es un cuadrado UNITARIO en el origen; el grupo se lleva al punto y la
+    // ESCALA lo deja del mismo tamaño en píxeles, como el halo.
     const sqGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(x-s, y-s, z), new THREE.Vector3(x+s, y-s, z),
-      new THREE.Vector3(x+s, y-s, z), new THREE.Vector3(x+s, y+s, z),
-      new THREE.Vector3(x+s, y+s, z), new THREE.Vector3(x-s, y+s, z),
-      new THREE.Vector3(x-s, y+s, z), new THREE.Vector3(x-s, y-s, z),
+      new THREE.Vector3(-1, -1, 0), new THREE.Vector3(+1, -1, 0),
+      new THREE.Vector3(+1, -1, 0), new THREE.Vector3(+1, +1, 0),
+      new THREE.Vector3(+1, +1, 0), new THREE.Vector3(-1, +1, 0),
+      new THREE.Vector3(-1, +1, 0), new THREE.Vector3(-1, -1, 0),
     ]);
     osnapMarker.add(new THREE.LineSegments(sqGeo, new THREE.LineBasicMaterial({ color: col, linewidth: 2 })));
-    osnapMarker.position.set(0, 0, 0);
+    osnapMarker.position.set(x, y, z);
     osnapMarker.visible = true;
+    updateOsnapScale();
+  };
+  // Medio lado del glifo, en píxeles. El de AutoCAD ronda los 6; aquí 4, para que
+  // deje ver el punto (el halo va a 2 px de radio).
+  let _osnapPx = 4;
+  const updateOsnapScale = () => {
+    if (!osnapMarker.visible) return;
+    osnapMarker.scale.setScalar(_osnapPx * metrosPorPixel(osnapMarker.position));
+  };
+  (window as any).__hekatanOsnapMarkerRef = osnapMarker;
+  (window as any).__hekatanUpdateOsnapScale = updateOsnapScale;
+  (window as any).__hekatanOsnapPx = (n?: number) => {
+    if (typeof n === "number" && n > 0) { _osnapPx = n; updateOsnapScale(); viewerRender(); }
+    return _osnapPx;
   };
   const hideOsnap = () => { osnapMarker.visible = false; };
   // Compute closest snap for current cursor world point
@@ -3744,11 +3770,20 @@ export function drawing({
     const opts = (window as any).__hekatanOsnap as Record<string, boolean>;
     const pts = drawingObj.points.rawVal as [number,number,number][];
     const polys = drawingObj.polylines?.rawVal ?? [];
-    let best: { type: string; x: number; y: number; z: number; d: number } | null = null;
+    let best: { type: string; x: number; y: number; z: number; d: number; r: number } | null = null;
+    // PRIORIDAD entre referencias, como en AutoCAD: dentro de la mirilla manda el TIPO,
+    // no la distancia. Todo lo que llega aquí ya está dentro de `tol`, así que basta con
+    // ordenar por rango y, a igual rango, por cercanía. Sin esto, «Cercano» —que cae
+    // EXACTO sobre la línea, distancia 0— se comía la Intersección y el Punto final,
+    // que son los que se quieren coger.
+    const RANGO: Record<string, number> = {
+      end: 0, node: 0, int: 1, mid: 2, cen: 3, per: 4, nea: 5,
+    };
     const consider = (type: string, x: number, y: number, z: number) => {
       const d = Math.hypot(x - px, y - py, z - pz);
       if (d > tol) return;
-      if (!best || d < best.d) best = { type, x, y, z, d };
+      const r = RANGO[type] ?? 9;
+      if (!best || r < best.r || (r === best.r && d < best.d)) best = { type, x, y, z, d, r };
     };
     // NODE: cada punto existente
     if (opts.node || opts.end) {
@@ -3797,7 +3832,9 @@ export function drawing({
         const d = Math.hypot(px-k.c[0], py-k.c[1], pz-k.c[2]);
         if (d < tol || Math.abs(d - k.r) < tol) {
           const dd = Math.min(d, tol * 0.5);
-          if (!best || dd < (best as any).d) best = { type: "cen", x: k.c[0], y: k.c[1], z: k.c[2], d: dd };
+          const rc = 3;   // el rango de «Centro», igual que en RANGO
+          if (!best || rc < (best as any).r || (rc === (best as any).r && dd < (best as any).d))
+            best = { type: "cen", x: k.c[0], y: k.c[1], z: k.c[2], d: dd, r: rc };
         }
       }
     }
@@ -3834,6 +3871,61 @@ export function drawing({
         // los extremos compartidos ya los da END; aquí interesan los cruces
         const esExtremo = [p1, p2, p3, p4].some((e) => Math.hypot(e[0]-q1[0], e[1]-q1[1], e[2]-q1[2]) < 1e-6);
         if (!esExtremo) consider("int", q1[0], q1[1], q1[2]);
+      }
+    }
+    // ── EJES DE REPLANTEO Y NIVELES ────────────────────────────────────────
+    // Faltaban, y es donde se replantea un edificio: el cursor solo redondeaba a
+    // múltiplos de `__hekatanSnap2D` (0.5 m de fábrica), así que con ejes a 4.60 o
+    // 7.25 el punto caía CERCA del cruce, nunca encima. Es lo que se veía: el punto
+    // y el cruce de ejes no coincidían. Ahora un eje se referencia como cualquier
+    // línea (INTERSECCIÓN entre dos ejes, PUNTO FINAL y CERCANO sobre el eje) y,
+    // además, el cruce de un eje con un NIVEL, que es el punto de una elevación.
+    const ejes = ((window as any).__hekatanAxisGrids ?? []) as
+      { start: [number, number, number]; end: [number, number, number] }[];
+    const niveles = ((window as any).__hekatanLevels ?? []) as { z: number }[];
+    const segEjes = ejes
+      .filter((g) => g && g.start && g.end)
+      .map((g) => [g.start, g.end] as [number, number, number][]);
+    for (const [a, b] of segEjes) {
+      if (opts.end) {
+        consider("end", a[0], a[1], a[2]);
+        consider("end", b[0], b[1], b[2]);
+      }
+      const dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2];
+      const len2 = dx*dx + dy*dy + dz*dz;
+      if (len2 < 1e-12) continue;
+      const t = Math.max(0, Math.min(1, ((px-a[0])*dx + (py-a[1])*dy + (pz-a[2])*dz) / len2));
+      if (opts.nea) consider("nea", a[0]+t*dx, a[1]+t*dy, a[2]+t*dz);
+      // eje × NIVEL: el punto del eje a la cota del nivel (solo si el eje sube)
+      if (opts.int && Math.abs(dz) > 1e-9) {
+        for (const n of niveles) {
+          const tn = (n.z - a[2]) / dz;
+          if (tn < -1e-6 || tn > 1 + 1e-6) continue;
+          consider("int", a[0]+tn*dx, a[1]+tn*dy, n.z);
+        }
+      }
+    }
+    // INTERSECCIÓN entre dos ejes. Se miran en 2D sobre el plano de trabajo: dos
+    // ejes de planta son coplanarios pero pueden estar a cotas distintas, y lo que
+    // se quiere coger es su cruce EN LA COTA DONDE SE DIBUJA.
+    if (opts.int || opts.node) {
+      for (let i = 0; i < segEjes.length; i++) for (let j = i + 1; j < segEjes.length; j++) {
+        const [p1, p2] = segEjes[i], [p3, p4] = segEjes[j];
+        const ux = p2[0]-p1[0], uy = p2[1]-p1[1];
+        const vx = p4[0]-p3[0], vy = p4[1]-p3[1];
+        const den = ux*vy - uy*vx;
+        if (Math.abs(den) < 1e-12) continue;                   // paralelos
+        const wx = p1[0]-p3[0], wy = p1[1]-p3[1];
+        const sPar = (vx*wy - vy*wx) / den;
+        const tPar = (ux*wy - uy*wx) / den;
+        if (sPar < -1e-6 || sPar > 1+1e-6 || tPar < -1e-6 || tPar > 1+1e-6) continue;
+        // La cota del cruce es la del PLANO DE TRABAJO, como en ETABS: el cruce de
+        // dos ejes existe en todas las plantas, y el punto que se quiere coger está
+        // en la que se está dibujando. Con la z CRUDA del cursor el cruce salía
+        // siempre a distancia 0 y se comía las demás referencias — el cruce de un
+        // eje con un nivel, por ejemplo, no se podía coger nunca.
+        const zt = (window as any).__hekatanCadState?.get?.()?.workZ;
+        consider("int", p1[0] + sPar*ux, p1[1] + sPar*uy, typeof zt === "number" ? zt : pz);
       }
     }
     // Líneas auxiliares: endpoint, midpoint, nearest, perpendicular

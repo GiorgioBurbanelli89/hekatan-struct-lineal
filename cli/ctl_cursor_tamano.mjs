@@ -62,13 +62,26 @@ const radioPx = () => pag.evaluate(() => {
            orto: !!cam.isOrthographicCamera, escala: +g.scale.x.toFixed(4) };
 });
 const forzarUpdate = () => pag.evaluate(() => { const v = document.querySelector("#viewer"); v.__ctx.render?.(); });
+// el GLIFO de referencia a objetos (el cuadrito de Punto final / Medio / Perpendicular):
+// medio lado aparente, en píxeles. Se dibujaba con medio lado de 0.05 m EN EL MUNDO, así
+// que crecía al acercar y se encogía al alejar — lo vio Jorge, no la prueba.
+const glifoPx = () => pag.evaluate(() => {
+  const om = (window).__hekatanOsnapMarkerRef;
+  if (!om) return null;
+  const mpp = (window).__hekatanMetrosPorPixel?.(om.position);
+  if (!mpp) return null;
+  return +((om.scale.x * 1) / mpp).toFixed(2);   // el cuadrado es unitario: medio lado = escala
+});
 
 for (const [vista, boton] of [["planta (ortográfica)", "Planta"], ["3D (perspectiva)", "3D"]]) {
   await pag.evaluate((b) => [...document.querySelectorAll("#hk-ribbon button")]
     .find((q) => (q.textContent || "").includes(b))?.click(), boton);
   await espera(1200);
   const medidas = [];
-  for (const z of [1, 4, 16]) {
+  // ALEJAR y acercar: hasta el 8-sep-2026 solo se probaba acercando (1, 4, 16) y el
+  // tope de escala del marcador (`Math.min(60, s)`) solo salta ALEJANDO — Jorge lo vio
+  // antes que la prueba.
+  for (const z of [1 / 64, 1 / 8, 1, 4, 16]) {
     await pag.evaluate((f) => {
       const c = document.querySelector("#viewer").__ctx.camera;
       if (c.isOrthographicCamera) { c.zoom = f; c.updateProjectionMatrix(); }
@@ -85,13 +98,42 @@ for (const [vista, boton] of [["planta (ortográfica)", "Planta"], ["3D (perspec
     const r = await radioPx();
     if (r) medidas.push({ z, ...r });
   }
-  if (medidas.length < 3) { ok(false, `${vista}: se puede medir el marcador`); continue; }
+  if (medidas.length < 5) { ok(false, `${vista}: se puede medir el marcador`); continue; }
   const px = medidas.map((m) => m.px);
   const disp = (Math.max(...px) - Math.min(...px)) / Math.max(...px) * 100;
-  console.log(`   ${vista}: ${medidas.map((m) => `zoom×${m.z} → ${m.px}px`).join(" · ")}`);
+  console.log(`   ${vista}: ${medidas.map((m) => `zoom×${(+m.z).toFixed(4).replace(/0+$/, "")} → ${m.px}px`).join(" · ")}`);
   ok(disp < 15, `${vista}: el marcador se ve IGUAL a cualquier zoom`, `dispersión ${disp.toFixed(1)} % (antes crecía con el zoom)`);
-  ok(px.every((q) => q > 2 && q < 8), `${vista}: y del tamaño del marcador de AutoCAD (2–8 px)`, `${px.join(", ")} px`);
+  ok(px.every((q) => q > 0.8 && q < 4), `${vista}: y fino, que deje ver el punto (1–4 px)`, `${px.join(", ")} px`);
 }
+// ── EL GLIFO DE REFERENCIA A OBJETOS, a cinco zooms, en las dos cámaras ──────
+for (const [vista, boton] of [["planta (ortográfica)", "Planta"], ["3D (perspectiva)", "3D"]]) {
+  await pag.evaluate((b) => [...document.querySelectorAll("#hk-ribbon button")]
+    .find((q) => (q.textContent || "").includes(b))?.click(), boton);
+  await espera(1000);
+  const px = [];
+  for (const z of [1 / 64, 1 / 8, 1, 4, 16]) {
+    await pag.evaluate((f) => {
+      const c = document.querySelector("#viewer").__ctx.camera;
+      if (c.isOrthographicCamera) { c.zoom = f; c.updateProjectionMatrix(); }
+      else { c.position.multiplyScalar(1 / Math.sqrt(f)); c.updateMatrixWorld(); }
+    }, z);
+    await pag.evaluate(() => {
+      const om = (window).__hekatanOsnapMarkerRef;
+      if (om) { om.visible = true; om.position.set(0, 0, 0); }
+      (window).__hekatanUpdateOsnapScale?.();
+    });
+    await forzarUpdate(); await espera(250);
+    const r = await glifoPx();
+    if (r != null) px.push(r);
+  }
+  if (px.length < 5) { ok(false, `${vista}: se puede medir el glifo de referencia`); continue; }
+  const disp = (Math.max(...px) - Math.min(...px)) / Math.max(...px) * 100;
+  console.log(`   ${vista} · glifo: ${px.join(", ")} px`);
+  ok(disp < 5, `${vista}: el GLIFO de referencia también se ve igual a cualquier zoom`,
+     `dispersión ${disp.toFixed(1)} % (era 0.05 m del mundo: crecía al acercar)`);
+  ok(px.every((q) => q >= 3 && q <= 6), `${vista}: y con el medio lado que toca (3–6 px)`, `${px.join(", ")} px`);
+}
+
 await nav.close(); srv.close();
 console.log(fallos.length ? `\n${fallos.length} FALLO(S)` : "\nTodo correcto");
 process.exit(fallos.length ? 1 : 0);
