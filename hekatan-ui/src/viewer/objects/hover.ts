@@ -799,6 +799,23 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     }
   }
 
+  /** Los metros que mide UN PÍXEL en el punto dado, con la cámara activa.
+   *
+   * ⚠️ El resaltado del nudo designado se dimensionaba con `0.025 · extensión del
+   * MODELO · escala de dibujo`, y la esfera base tiene radio 1 m. O sea que crecía
+   * con el edificio: en uno de 5 plantas (extensión 21 m) salía una bola de varios
+   * metros que tapaba la estructura — lo vio Jorge en el render del 9-sep-2026.
+   * El tamaño de un marcador no depende de lo grande que sea la obra, depende de la
+   * pantalla: se pide en píxeles y se convierte aquí, como el cursor y la mirilla.
+   */
+  const metrosPorPixel = (punto: THREE.Vector3): number => {
+    const cam = ctx.getActiveCamera() as any;
+    const h = ctx.rendererElm?.clientHeight || 700;
+    if (cam.isOrthographicCamera) return (cam.top - cam.bottom) / (cam.zoom || 1) / h;
+    const dist = cam.position.distanceTo(punto);
+    return (2 * dist * Math.tan(((cam.fov || 50) * Math.PI / 180) / 2)) / h;
+  };
+
   /** Dibuja el resaltado de UN objeto designado. */
   function resaltar(sel: SelItem, extent: number) {
     const elements = ctx.mesh?.elements?.rawVal;
@@ -807,10 +824,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       if (!p) return;
       // Tamaño = consistente con nodes.ts (radio = diámetro/2 * 1.7 = más grande
       // que el hover para distinguir selección persistente)
-      const ds = ctx.derivedDisplayScale?.rawVal ?? 1;
       const m = new THREE.Mesh(nodeGeom, selNodeMat);
       m.position.copy(p);
-      m.scale.setScalar(0.025 * extent * ds);
+      // 7 px de radio: un nudo designado canta sin tapar nada. `nodeGeom` mide 1 m,
+      // así que la escala son directamente los metros que se quieren.
+      m.scale.setScalar(Math.max(1e-4, 7 * metrosPorPixel(p)));
       m.renderOrder = 101;
       selGroup.add(m);
     } else if (sel.type === "frame" && elements) {

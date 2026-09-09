@@ -214,8 +214,36 @@ console.log("       encuadre:", JSON.stringify(enc));
 ok(enc && enc.dentro === 8, "el encuadre deja el edificio ENTERO en pantalla",
    enc ? enc.dentro + " de 8 esquinas dentro" : "sin datos");
 await pag.screenshot({ path: join(OUT, "03_edificio_3d.png") });
-console.log("\n       clics de raton: " + CLICS);
-console.log("       tecleado: " + (TECLEADO.length ? TECLEADO.join(" | ") : "NADA"));
+// ── DÓNDE quedan las vigas ─────────────────────────────────────────────────
+// ⏳ DEFECTO ABIERTO, cazado por Jorge el 9-sep-2026 mirando el render: el anillo de
+// vigas se dibuja en la cota 0 y se replica con todo lo demás, así que quedan vigas
+// SOBRE LA CIMENTACIÓN y NINGUNA EN LA CUBIERTA. Medido: vigas en 0, 3, 6, 9 y 12,
+// y cero en 15. Un edificio lleva viga en cada planta y en la cubierta, no en el suelo.
+//
+// El arreglo es dibujar el anillo con el plano de trabajo en la cota 3 (campo «Cota Z»
+// del ribbon) y replicar desde ahí. NO se ha podido cerrar todavía porque ese campo
+// REENCUADRA la vista al aplicarlo —llama a setPlane + setView— y los clics siguientes
+// caen en otro sitio: el rectángulo exterior no llegaba a dibujarse. Hay que quitarle
+// el reencuadre a «Cota Z» antes (AutoCAD y ETABS no te mueven la vista al cambiar de
+// nivel), y entonces la secuencia sale.
+const niveles = await pag.evaluate(() => {
+  const P = window.__hekatanDrawingPoints?.val || [];
+  const L = window.__hekatanDrawingPolylines?.val || [];
+  const h = {};
+  for (const pl of L) for (let i = 0; i < pl.length - 1; i++) {
+    const a = P[pl[i]], b = P[pl[i + 1]];
+    if (!a || !b) continue;
+    const largo = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    if (Math.abs(a[2] - b[2]) < 1e-6 && largo > 5) {     // viga: horizontal y larga
+      const z = +a[2].toFixed(2); h[z] = (h[z] || 0) + 1;
+    }
+  }
+  return h;
+});
+console.log("       vigas por cota: " + JSON.stringify(niveles) + "   <-- DEFECTO: hay viga en 0 y no en 15");
+console.log("");
+console.log("       clics de raton: " + CLICS);
+
 ok(errores.length === 0, "sin errores de pagina", errores.slice(0, 2).join(" | "));
 
 await nav.close(); srv.close();
