@@ -142,6 +142,11 @@ async function escribeComando(txt) {
   await espera(900);
   await foto(2);
 }
+/** Las cotas Z distintas del modelo: es lo que prueba que el piso replicado llegó. */
+const cotasVideo = () => pag.evaluate(() => {
+  const p = (window).__hekatanDrawingPoints?.val || [];
+  return "cotas " + [...new Set(p.map((q) => +q[2].toFixed(2)))].sort((a, b) => a - b).join(", ");
+});
 const modelo = () => pag.evaluate(() => {
   const g = (k) => { const v = window[k]; return v && v.val ? v.val : []; };
   const pls = g("__hekatanDrawingPolylines");
@@ -553,6 +558,153 @@ const ESCENAS = {
     await esc();
     await foto(8);
     console.log("   final:", JSON.stringify(await modelo()));
+  },
+  // ── El edificio de DOS PISOS, con REPLICAR (el Replicate de ETABS) ────────
+  // Lo pidió Jorge: primer piso de 3.20 m, segundo de 3.10, y que se vea el
+  // replicar (a un piso, con un offset y de un punto a otro).
+  async edificio_2pisos() {
+    abre("edificio_2pisos");
+    await pag.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    await cargar("?t=new-blank");
+    await espera(600);
+    await pag.keyboard.press("Escape");
+    await espera(400);
+    await foto(10);                                // la ventana entera, quieta
+
+    const ESQ = [[0, 0], [6, 0], [6, -5], [0, -5]];
+    const H1 = 3.2, H2 = 3.1;
+    const cmd = async (txt, tras = 400) => {
+      await limpiaComando();
+      const c = await centroDe("#hk3-cmd-input");
+      if (c) await pag.mouse.click(c.x, c.y);
+      await pag.keyboard.type(txt, { delay: 30 });
+      await foto();
+      await pag.keyboard.press("Enter");
+      await espera(tras);
+      await foto();
+    };
+    const esc = async () => { await pag.keyboard.press("Escape"); await espera(300); await foto(); };
+
+    // ── 1) el cursor pasea por los botones, que se vean uno a uno ───────────
+    const cajas = await pag.evaluate(() => [...document.querySelectorAll("#hk-ribbon button")]
+      .slice(0, 12).map((b) => { const r = b.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+    for (const c of cajas) { await mover(c.x, c.y, 2); await foto(); }
+
+    // ── 2) PISO 1: cuatro montantes de 3.20 m, con LÍNEA (de punto a punto) ─
+    await vistaBoton("3D"); await foto(4);
+    for (const [x, y] of ESQ) {
+      await cmd("l");
+      await cmd(`${x},${y},0`, 300);
+      await cmd(`${x},${y},${H1}`, 420);
+      await esc();
+    }
+    await encuadra(); await foto(4);
+
+    // ── 3) las vigas de arriba, polilínea cerrada a la cota 3.20 ────────────
+    await cmd("pl");
+    for (const [x, y] of ESQ) await cmd(`${x},${y},${H1}`, 320);
+    await cmd("c", 600);
+    await esc();
+    await encuadra(); await foto(6);
+    console.log("   piso 1:", JSON.stringify(await modelo()), await cotasVideo());
+
+    // ── 4) el 2.º piso: se REPLICA el anillo de vigas 3.10 m más arriba ────
+    // Se designa SOLO el último objeto (la opción «Last» de AutoCAD). Con «todo»
+    // subirían también las columnas de abajo y el piso de arriba quedaría colgando
+    // de la cota 3.10 en vez de apoyado en las vigas de la 3.20.
+    await cmd("s");
+    await cmd("ultimo", 700);
+    const sel = await pag.evaluate(() => (window).__hekatanSelectionSize?.() ?? 0);
+    console.log(`   designados: ${sel} (el anillo de vigas)`);
+    await foto(4);
+    await cmd("rep", 700);            // pregunta el desplazamiento, como ETABS
+    await foto(4);
+    await cmd(`0,0,${H2}`, 700);      // …y luego el número de copias
+    await foto(4);
+    await cmd("1", 1200);
+    await encuadra(); await foto(8);
+    console.log("   anillo replicado:", JSON.stringify(await modelo()), await cotasVideo());
+
+    // las columnas del 2.º piso, de la cota 3.20 a la 6.30
+    for (const [x, y] of ESQ) {
+      await cmd("l");
+      await cmd(`${x},${y},${H1}`, 300);
+      await cmd(`${x},${y},${H1 + H2}`, 420);
+      await esc();
+    }
+    await encuadra(); await foto(10);
+    console.log("   dos pisos:", JSON.stringify(await modelo()), await cotasVideo());
+
+    // ── 5) el ala de al lado: REPLICAR de un PUNTO a otro, 8 m en X ─────────
+    await cmd("s");
+    await cmd("todo", 700);
+    console.log("   designado todo:", await pag.evaluate(() => (window).__hekatanSelectionSize?.() ?? 0));
+    await foto(3);
+    await cmd("rep", 600);
+    await cmd("p", 700);              // «P» = dar el salto con dos puntos
+    await foto(3);
+    await cmd("0,0,0", 600);          // punto base
+    await cmd("8,0,0", 700);          // segundo punto → Δ = 8 m en X
+    await cmd("1", 1200);
+    await encuadra(); await foto(10);
+    console.log("   con el ala replicada:", JSON.stringify(await modelo()), await cotasVideo());
+
+    // ── 6) apoyos empotrados en las ocho bases ─────────────────────────────
+    // El botón APOYO no es una herramienta de dibujo: enciende la designación y
+    // empotra el NUDO que se clique. Por eso van con el ratón, no tecleados —
+    // una coordenada escrita aquí colocaría un punto, no un apoyo.
+    const pantalla = (x, y, z) => pag.evaluate((wx, wy, wz) => {
+      const v = document.querySelector("#viewer"); const cv = v.querySelector("canvas");
+      const r = cv.getBoundingClientRect(); const cam = v.__ctx.camera; cam.updateMatrixWorld();
+      const m = cam.projectionMatrix.elements, mv = cam.matrixWorldInverse.elements;
+      const tx = mv[0]*wx + mv[4]*wy + mv[8]*wz + mv[12], ty = mv[1]*wx + mv[5]*wy + mv[9]*wz + mv[13];
+      const tz = mv[2]*wx + mv[6]*wy + mv[10]*wz + mv[14], tw = mv[3]*wx + mv[7]*wy + mv[11]*wz + mv[15];
+      const cx = m[0]*tx + m[4]*ty + m[8]*tz + m[12]*tw, cy = m[1]*tx + m[5]*ty + m[9]*tz + m[13]*tw;
+      const cw = m[3]*tx + m[7]*ty + m[11]*tz + m[15]*tw;
+      return { x: r.left + (cx / cw + 1) / 2 * r.width, y: r.top + (1 - cy / cw) / 2 * r.height };
+    }, x, y, z);
+    // ⚠️ El ribbon tapa el centro-arriba del lienzo: un nudo que caiga ahí recibe el
+    // clic el BOTÓN, no el modelo. Se comprueba antes y se dice en el log.
+    const clicMundo = async (x, y, z, fotos = 2) => {
+      const c = await pantalla(x, y, z);
+      const tapado = await pag.evaluate(({ x: px, y: py }) => {
+        const e = document.elementFromPoint(px, py);
+        return e ? e.tagName !== "CANVAS" : true;
+      }, c);
+      if (tapado) { console.log(`   ⚠️ la base (${x},${y},${z}) cae bajo un panel: no se clica`); return false; }
+      await mover(c.x, c.y, 4);
+      await pag.mouse.click(c.x, c.y);
+      await espera(380);
+      await foto(fotos);
+      return true;
+    };
+    await vistaBoton("3D"); await encuadra(); await foto(4);
+    await boton("Apoyo", 900, 2);
+    let puestos = 0;
+    for (const [x, y] of ESQ) {
+      if (await clicMundo(x, y, 0)) puestos++;
+      if (await clicMundo(x + 8, y, 0)) puestos++;
+    }
+    await esc();
+    await encuadra(); await foto(10);
+    console.log(`   apoyos clicados: ${puestos} de 8`);
+    // ── 7) para cerrar, una ÓRBITA en 3D: se ven los dos pisos y las dos alas ─
+    // No se pasa por Frente/Lado: el autoajuste no toca el zoom de la cámara
+    // ORTOGRÁFICA (que es la de los alzados) y el edificio salía recortado.
+    for (let i = 0; i < 24; i++) {
+      await pag.evaluate(() => {
+        const v = document.querySelector("#viewer"); const c = v.__ctx.camera;
+        const a = Math.PI / 24, x = c.position.x, y = c.position.y;
+        c.position.x = x * Math.cos(a) - y * Math.sin(a);
+        c.position.y = x * Math.sin(a) + y * Math.cos(a);
+        c.lookAt(v.__ctx.controls?.target || { x: 0, y: 0, z: 0 });
+        v.__ctx.render?.();
+      });
+      await espera(80);
+      await foto();
+    }
+    console.log("   final:", JSON.stringify(await modelo()), await cotasVideo());
   },
   async cercha() {
     abre("cercha");

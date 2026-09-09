@@ -4462,6 +4462,44 @@ export function drawing({
   // ── REPLICAR selección (estilo ETABS "Replicate Linear") ──
   // Clona los nodos + frames/áreas seleccionados `count` veces, cada copia
   // desplazada (dx·i, dy·i, dz·i). Permite duplicar/extender la estructura.
+  // cuántos objetos hay designados: lo necesita el comando REPLICAR para avisar
+  // «primero designe objetos» en vez de no hacer nada en silencio
+  (window as any).__hekatanSelectionSize = () => selection.size;
+  // DESIGNAR EL ÚLTIMO — la opción «Last» de la designación de AutoCAD: coge el objeto
+  // recién dibujado. Hace falta para replicar UNA parte (el anillo de vigas de una
+  // planta) sin arrastrar el resto: con «todo» las columnas de abajo también subirían
+  // y el piso de arriba quedaría colgando en vez de apoyado.
+  (window as any).__hekatanSelectLast = (): number => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    let i = polys.length - 1;
+    while (i >= 0 && (!polys[i] || polys[i].length < 2)) i--;   // la polilínea vacía marca «trazo terminado»
+    selection.clear();
+    if (i >= 0) selection.add(`poly:${i}`);
+    refreshSelectionGroup();
+    updateStatus(i >= 0 ? "SELECCIÓN 1 objeto (el último dibujado) · Esc suelta"
+                        : "No hay ningún objeto dibujado todavía.");
+    return selection.size;
+  };
+  // DESIGNAR TODO — el «all» de la designación de AutoCAD y el Select All de ETABS.
+  // Faltaba: para replicar un piso entero había que encerrarlo con una ventana, y una
+  // ventana de píxeles deja fuera lo que no quepa en pantalla. Designa cada polilínea
+  // (una polilínea vacía es la marca de «trazo terminado», no un objeto) y los nudos
+  // sueltos, que son los que no aparecen en ninguna.
+  (window as any).__hekatanSelectAll = (): number => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const pts = drawingObj.points?.rawVal ?? [];
+    selection.clear();
+    const enPoly = new Set<number>();
+    polys.forEach((pl, i) => {
+      if (!pl || pl.length < 2) return;
+      selection.add(`poly:${i}`);
+      pl.forEach((n) => enPoly.add(n));
+    });
+    pts.forEach((_, i) => { if (!enPoly.has(i)) selection.add(`pt:${i}`); });
+    refreshSelectionGroup();
+    updateStatus(`SELECCIÓN ${selection.size} objetos (todo el modelo) · Esc suelta`);
+    return selection.size;
+  };
   (window as any).__hekatanReplicateSelection = (
     dx: number, dy: number, dz: number, count: number,
   ): number => {

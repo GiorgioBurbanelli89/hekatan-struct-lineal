@@ -90,6 +90,28 @@ const p1 = await cotas();
 ok(p1.cotas.length === 2 && p1.cotas.includes(0) && p1.cotas.includes(3.2),
    "piso 1: montantes de 0 a 3.20 m y vigas arriba", `cotas ${p1.cotas.join(", ")}`);
 
+// ── DESIGNAR: «TODO» (el all de AutoCAD) y «ÚLTIMO» (su last). Sin ellos, para coger
+// un piso entero había que encerrarlo con una ventana de píxeles, que deja fuera lo
+// que no quepa en pantalla.
+await cmd("s");
+await cmd("todo", 600);
+const nTodo = await pag.evaluate(() => (window).__hekatanSelectionSize?.() ?? 0);
+ok(nTodo >= 5, "«TODO» designa el modelo entero (el all de AutoCAD)", `${nTodo} objetos`);
+await cmd("ultimo", 600);
+const nUlt = await pag.evaluate(() => (window).__hekatanSelectionSize?.() ?? 0);
+ok(nUlt === 1, "«ÚLTIMO» designa solo lo último dibujado (su last)", `${nUlt} objeto`);
+
+// y con ÚLTIMO se replica SOLO el anillo de vigas: así el 2.º piso se apoya en el 1.º
+// (con TODO subirían también las columnas de abajo y quedaría colgando).
+const antesAnillo = await cotas();
+await cmd("rep");
+await cmd("0,0,3.1");
+await cmd("1", 900);
+const anillo = await cotas();
+ok(anillo.cotas.some((z) => Math.abs(z - 6.3) < 0.01) && anillo.nudos === antesAnillo.nudos + 4,
+   "replicando solo el anillo, el 2.º nivel queda a 6.30 m con 4 nudos nuevos",
+   `${antesAnillo.nudos} → ${anillo.nudos} nudos, cotas ${anillo.cotas.join(", ")}`);
+
 // ── PISO 2: se designa todo y se REPLICA 3.10 m hacia arriba
 await cmd("s");                                        // herramienta de selección
 await pag.evaluate(() => (window).__hekatanSelectAll?.());

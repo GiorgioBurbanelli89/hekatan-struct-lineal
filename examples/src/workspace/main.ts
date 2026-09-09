@@ -6605,6 +6605,17 @@ try {
   });
   especial("rehacer", ["redo", "y"], "REHACER", () => (window as any).__hekatanRedo?.());
   especial("cerrar", ["close"], "CERRAR la polilínea", () => (window as any).__hekatanCadOption?.("c"));
+  // DESIGNAR TODO: la opción «all» de la designación de AutoCAD, el Select All de ETABS.
+  // Encerrar el modelo con una ventana deja fuera lo que no quepa en pantalla, y para
+  // replicar un piso hay que cogerlo entero.
+  especial("ultimo", ["last", "ult"], "DESIGNAR el último objeto dibujado", () => {
+    const n = (window as any).__hekatanSelectLast?.() ?? 0;
+    flash(n ? "✓ Designado el último objeto dibujado" : "✕ Todavía no hay nada dibujado", !!n);
+  });
+  especial("todo", ["all", "designartodo", "seltodo"], "DESIGNAR TODO el modelo", () => {
+    const n = (window as any).__hekatanSelectAll?.() ?? 0;
+    flash(n ? `✓ Designados ${n} objetos (todo el modelo)` : "✕ No hay nada que designar", !!n);
+  });
   especial("zoom", ["encuadre", "ze", "fit", "z", "e-zoom"], "ZOOM Extensión", () => (window as any).__hekatanAutoFit?.());
   especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
   especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
