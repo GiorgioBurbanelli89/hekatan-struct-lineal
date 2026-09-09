@@ -362,9 +362,18 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     if (s?.gridSize) s.gridSize.val = ev.value;
   });
 
-  // Toggle global de grid snap
-  (window as any).__hekatanSnapEnabled = true;
-  const proxySnapToggle = { snapEnabled: true };
+  // ── El enganche a la REJILLA viene APAGADO (9-sep-2026, decisión de Jorge) ──
+  // Venía encendido con paso de 0.5 m, y eso ata cada punto a un módulo invisible:
+  // se pedía ORTO y el punto caía igual en el 0.5 más próximo, así que el trazo no
+  // salía recto y parecía que el ORTO no funcionaba. Ninguno de los tres programas
+  // de referencia hace eso de fábrica: AutoCAD trae SNAP apagado (la rejilla es solo
+  // visual), Revit no tiene módulo y engancha a puntos y alineaciones, y ETABS
+  // engancha a los EJES definidos, no a un múltiplo. Lo que sujeta aquí es lo mismo:
+  // las referencias a objetos (nudos, extremos, medios, intersecciones y el cruce de
+  // los ejes de replanteo), el ORTO/POLAR y las coordenadas tecleadas. El botón sigue
+  // ahí, y F9 lo enciende para quien lo quiera.
+  (window as any).__hekatanSnapEnabled = false;
+  const proxySnapToggle = { snapEnabled: false };
   const snapToggleBinding = fPrec.addBinding(proxySnapToggle, "snapEnabled", { label: "🧲 Grid snap (F9)" }).on("change", (ev: any) => {
     (window as any).__hekatanSnapEnabled = !!ev.value;
   });

@@ -2186,6 +2186,22 @@ export function drawing({
     // valor absurdo no reviente la escena, no para limitar el zoom.
     snapMarker.scale.setScalar(Math.max(1e-4, Math.min(1e5, s)));
   };
+  // ── LA MIRILLA de las referencias a objetos, EN PÍXELES ────────────────────
+  // Estaba en METROS FIJOS: `__hekatanSnap2D * 1.2`, o sea 0.6 m pasara lo que
+  // pasara. Eso no se puede usar. Medido el 9-sep-2026 dibujando con el ratón:
+  // acercado, 0.6 m es media pantalla y CADA punto nuevo saltaba encima de uno ya
+  // dibujado (el 3.º cayó sobre el 2.º y el 5.º sobre el 1.º); alejado, 0.6 m es
+  // menos de un píxel y no engancha nunca. AutoCAD, Revit y ETABS usan una mirilla
+  // en PÍXELES alrededor del cursor —el `aperture` de AutoCAD, 10 px de fábrica—,
+  // que es lo único que funciona igual a cualquier zoom.
+  let _aperturaPx = 10;
+  const toleranciaOsnap = (punto: THREE.Vector3) =>
+    Math.max(1e-4, _aperturaPx * metrosPorPixel(punto));
+  (window as any).__hekatanAperturaPx = (n?: number) => {
+    if (typeof n === "number" && n > 0) _aperturaPx = n;
+    return _aperturaPx;
+  };
+
   // expuestos para poder MEDIR el tamaño aparente desde fuera (cli/ctl_cursor_tamano.mjs).
   // El marcador va por referencia: buscarlo en la escena por `geometry.type` no vale,
   // el empaquetado deja las esferas como `BufferGeometry` y no se encuentra.
@@ -2250,7 +2266,7 @@ export function drawing({
     const hit = intersectWorkPlane();
     if (hit.length) {
       const p = hit[0].point;
-      const osnapTol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.2;
+      const osnapTol = toleranciaOsnap(p);
       const osnap = (window as any).__hekatanOsnapCompute?.(p.x, p.y, p.z, osnapTol);
       if (osnap) {
         showOsnap(osnap.type, osnap.x, osnap.y, osnap.z);
@@ -4713,7 +4729,7 @@ export function drawing({
       updateStatus(`📐 Eje → (${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)})`);
     } else {
       // OSNAP primero (prioridad sobre grid snap)
-      const osnapTol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.2;
+      const osnapTol = toleranciaOsnap(point);
       const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol);
       if (osnap) {
         point = new THREE.Vector3(osnap.x, osnap.y, osnap.z);
@@ -5294,7 +5310,7 @@ export function drawing({
       }
 
       // 3) OSNAP (prioridad sobre grid snap, igual que click handler L2946-2951)
-      const osnapTol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.2;
+      const osnapTol = toleranciaOsnap(point);
       const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol);
       if (osnap) {
         point.set(osnap.x, osnap.y, osnap.z);

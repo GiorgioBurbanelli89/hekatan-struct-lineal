@@ -253,28 +253,38 @@ export function getSettings(
     //  - Dimensión   = tamaño TOTAL del grid (cuántos metros mide cada lado)
     //  - Separación  = distancia entre LÍNEAS (cada cuánto se dibuja una)
     //  - Paso cursor = a cuánto SALTA el cursor (independiente del visual)
-    gridFolder.addBinding(settings.gridSize, "val", {
-      label: "Dimensión (m)", min: 1, max: 100, step: 1,
-    });
-    // Separación de las líneas MENORES (toda la malla cuadriculada).
-    gridFolder.addBinding(settings.gridStep, "val", {
-      label: "Separación grid (m)", min: 0.05, max: 5, step: 0.05,
-    });
-    // Separación de las líneas MAYORES (resaltadas) — INDEPENDIENTE en metros.
-    // No es multiplicador: cada slider tiene su propio valor en m.
-    gridFolder.addBinding(settings.gridMajor, "val", {
-      label: "Separación mayores (m)", min: 0.1, max: 50, step: 0.1,
-    });
-    gridFolder.addBinding(settings.cursorSnap, "val", {
-      label: "Paso cursor (m)", min: 0.05, max: 5, step: 0.05,
-    });
-    gridFolder.addBinding(settings.gridVisible, "val", { label: "Mostrar" });
-    gridFolder.addBinding(settings.gridOpacity, "val", {
-      label: "Opacidad", min: 0, max: 1, step: 0.05,
-    });
+    // ── Lo que se usa, a la vista; el ajuste fino, recogido ──────────────────
+    // Estaban los SIETE mandos sueltos (dimensión, separación menor, separación
+    // mayor, paso del cursor, mostrar, opacidad y los tres planos) y Jorge:
+    // «nos está complicando un montón». AutoCAD, Revit y ETABS no enseñan eso:
+    // enseñan encender/apagar y en qué plano se dibuja, y el resto vive en un
+    // cuadro aparte que casi nadie abre. Aquí igual.
+    //
+    // Y el «Paso cursor» ya no manda en el dibujo: el enganche a la rejilla va
+    // APAGADO de fábrica y lo que sujeta el punto es la mirilla de referencias,
+    // que se mide en PÍXELES. Se deja porque sigue valiendo si se enciende el
+    // enganche con F9, pero no tiene por qué estar delante.
+    gridFolder.addBinding(settings.gridVisible, "val", { label: "Mostrar la rejilla" });
     gridFolder.addBinding(settings.gridXY, "val", { label: "Plano XY (planta)" });
     gridFolder.addBinding(settings.gridXZ, "val", { label: "Plano XZ (frontal)" });
     gridFolder.addBinding(settings.gridYZ, "val", { label: "Plano YZ (lateral)" });
+    const gridFino = gridFolder.addFolder({ title: "⚙ Ajuste fino", expanded: false });
+    gridFino.addBinding(settings.gridSize, "val", {
+      label: "Dimensión (m)", min: 1, max: 100, step: 1,
+    });
+    gridFino.addBinding(settings.gridStep, "val", {
+      label: "Separación (m)", min: 0.05, max: 5, step: 0.05,
+    });
+    gridFino.addBinding(settings.gridMajor, "val", {
+      label: "Separación mayores (m)", min: 0.1, max: 50, step: 0.1,
+    });
+    gridFino.addBinding(settings.cursorSnap, "val", {
+      label: "Paso cursor con F9 (m)", min: 0.05, max: 5, step: 0.05,
+    });
+    gridFino.addBinding(settings.gridOpacity, "val", {
+      label: "Opacidad", min: 0, max: 1, step: 0.05,
+    });
+
     // NOTA: deformScale XY/Z se bindean en Analysis Outputs JUNTO al toggle
     // "Deformed shape" para evitar duplicacion y mantener UX coherente.
     // ── QUE SE VE ──

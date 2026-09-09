@@ -3855,8 +3855,9 @@ function buildParamsPane() {
     // funcionando — esto solo controla el snap a la malla cuadriculada.
     // El toggle de grid snap + atajo F9 vive ahora en getCadPanel.ts (el panel
     // CAD real). Acá solo dejamos el binding legacy por compatibilidad.
-    (window as any).__hekatanSnapEnabled = true;
-    const proxySnapToggle = { snapEnabled: true };
+    // Apagado por defecto, como en AutoCAD: ver la nota larga en getCadPanel.ts
+    (window as any).__hekatanSnapEnabled = false;
+    const proxySnapToggle = { snapEnabled: false };
     fCad.addBinding(proxySnapToggle, "snapEnabled", { label: "🧲 Grid snap (F9)" }).on("change", (ev: any) => {
       (window as any).__hekatanSnapEnabled = !!ev.value;
     });
