@@ -1104,6 +1104,12 @@ export function drawing({
     const dist = cam.position.distanceTo(worldPos);
     return Math.max(0.05, dist / 10);    // perspective: 10m → scale 1
   };
+  // ⏳ PENDIENTE (9-sep-2026): esto sigue siendo proporcional al tamaño de LA ESCENA,
+  // no al de la pantalla, que es el mismo defecto ya corregido en el cursor y en la
+  // mirilla. Con el edificio de 5 plantas, el nudo designado sale como una bola que
+  // tapa el modelo. Se probó pasarlo a píxeles (5 px) y salió MÁS GRANDE, así que la
+  // bola no viene solo de aquí: hay otro camino que la dibuja y hay que encontrarlo
+  // antes de tocar este ayudante, que lo comparten hover, selección y puntos auxiliares.
   const updateHoverPtScale = () => {
     if (!hoverPtHL.visible) return;
     hoverPtHL.scale.setScalar(markerScreenScale(hoverPtHL.position));

@@ -940,13 +940,44 @@ function autoScaleDeformedShape() {
  * /placa/etc. entre en pantalla con un margen razonable, sin que ocupe toda la
  * plataforma. Se llama después de cada build/rebuild.
  */
-function autoFitCamera() {
+// ⚠️ El encuadre se PERDÍA a la primera. Medido el 9-sep-2026 con un edificio de 5
+// plantas dibujado a ratón: tras un solo `autoFitCamera()` la cámara miraba a (0,0,0)
+// y solo 3 de las 8 esquinas del modelo caían en pantalla; llamándolo DOS veces, el
+// punto de mira quedaba en (6, -5, 7.5) y entraban las 8. Lo que se cuela en medio es
+// el propio encuadre: al terminar ajusta `gridSize`, y ese cambio es reactivo y
+// recoloca la cámara después. Se vuelve a aplicar en el fotograma siguiente, con un
+// candado para que la segunda pasada no dispare una tercera.
+let _encuadrando = false;
+function autoFitCamera(): void {
+  const primera = !_encuadrando;
+  _encuadrando = true;
+  try {
+    encuadrarAhora();
+  } finally {
+    if (primera) {
+      requestAnimationFrame(() => {
+        try { encuadrarAhora(); } finally { _encuadrando = false; }
+      });
+    }
+  }
+}
+function encuadrarAhora() {
   const ctx = (viewerElm as any).__ctx;
   if (!ctx) return;
   const { camera, controls, render, perspCamera, orthoCamera } = ctx;
   const s = (viewerElm as any).__settings;
   const gridSz = s?.gridSize?.rawVal ?? 10;
-  const nodesArr = states.nodes.rawVal || [];
+  // ⚠️ Aquí solo se miraban los nudos del MODELO FEM (`states.nodes`), y lo que se
+  // acaba de dibujar con el CAD vive en `__hekatanDrawingPoints` hasta que se
+  // reconstruye. Resultado, medido el 9-sep-2026 levantando un edificio de 5 plantas
+  // solo con el ratón: el encuadre daba el edificio por inexistente y encuadraba la
+  // REJILLA, dejando el modelo fuera de cuadro. El encuadre tiene que ver lo que hay
+  // en pantalla, venga del modelo o del lápiz.
+  const dibujados = (() => {
+    const d = (window as any).__hekatanDrawingPoints;
+    return (d?.rawVal ?? d?.val ?? []) as number[][];
+  })();
+  const nodesArr = [...(states.nodes.rawVal || []), ...dibujados];
   // Bounding box del modelo (si hay nodos)
   let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
   for (const n of nodesArr) {
