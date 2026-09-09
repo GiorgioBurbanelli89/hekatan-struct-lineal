@@ -611,7 +611,7 @@ por `SetGeneral`, misma densidad) y `cli/paz_masa_etabs.py`. Test de regresión:
 
 ### ⚠️ Por qué "offsets = 0": ETABS no pesa el brazo rígido
 
-Tal cual, ETABS da `9.0903 … 164.5541`, un **+2.88 % uniforme**. **No es el
+Tal cual, ETABS da `9.0903 … 164.5541`, un **+2.94 % uniforme**. **No es el
 solver**: ETABS pone brazos rígidos automáticos (`auto = SI`, RZ = 0) también
 aquí — 14.20 in en el tope de cada columna, 12.35 y 6.45 en los extremos de las
 vigas — y **descuenta del peso propio el tramo que cae dentro del brazo**.
@@ -625,7 +625,8 @@ Medido con `AssembledJointMass`:
 
 Lo que descuenta son **1857.4 in³ exactos** = `2·24.7·24.7 + 2·24.7·12.9`, o sea
 los offsets **de las vigas** (los de columna no los descuenta). Y √(6.048429 /
-5.707652) = 1.0294, que es el +2.88 % observado. Hekatan lumpea `ρ·A·L/2` con L
+5.707652) = 1.02942, que es exactamente el +2.94 % observado (9.0903/8.8305 = 1.02942):
+la masa y la frecuencia cierran por las dos vías. (Aquí decía +2.88 %: mal escrito.) Hekatan lumpea `ρ·A·L/2` con L
 de nudo a nudo (`getGlobalMassMatrix.cpp`, HRZ, igual que CSI): con offsets = 0
 la masa total coincide al **0.002 %**.
 
