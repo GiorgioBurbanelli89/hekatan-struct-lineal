@@ -113,8 +113,12 @@ export function frameResults(
 function findMax(nodeOutputs: AnalyzeOutputs[ResultType]): number {
   let max: number = 0;
 
+  // ⚠️ En VALOR ABSOLUTO. Con `Math.max` a secas, un diagrama entero NEGATIVO
+  // —el momento de un pórtico bajo viento, sin ir más lejos— dejaba el máximo en
+  // 0, no se normalizaba nada y se dibujaban los kN·m EN CRUDO: picos de cientos
+  // de metros tapando el edificio. El axil y el cortante se salvaban por poco.
   nodeOutputs?.forEach((node) => {
-    const maxInNode = Math.max(...(node ?? [0, 0]));
+    const maxInNode = Math.max(...(node ?? [0, 0]).map((v) => Math.abs(v)));
     if (maxInNode > max) max = maxInNode;
   });
 

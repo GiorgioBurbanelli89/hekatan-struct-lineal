@@ -20,7 +20,7 @@
  * en Tweakpane (secciones/cargas/apoyos) y permite alternar 2D/3D con
  * un toggle. Es el "nuevo proyecto en blanco" de Hekatan.
  */
-import { deform, type Node, type Element } from "hekatan-fem";
+import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 const Ec = 25e6, nu_c = 0.2, Gc = Ec / (2 * (1 + nu_c)), rho_c = 24;
@@ -123,6 +123,29 @@ export const newBlank: ExampleDef = {
       is2D ? [pt[0], 0, pt[2]] : [pt[0], pt[1], pt[2]]
     );
 
+    // ── SOLDAR los puntos que caen en el mismo sitio ────────────────────────
+    //
+    // Cada trazo guarda sus propios extremos: el pórtico de 3 líneas dejaba 6
+    // puntos donde hay 4 nudos, y replicado ocho veces, 72 donde hay 16. Las
+    // barras se TOCABAN en la pantalla y en el modelo estaban sueltas: 36
+    // voladizos flotando, no un edificio. Es el «merge joints» de ETABS.
+    //
+    // Se sueldan los ÍNDICES, no el array: `nodes` sigue siendo 1:1 con los
+    // puntos dibujados (los apoyos y las cargas entran por ese índice directo,
+    // y `pt:i` de la selección también). El punto repetido queda huérfano, sin
+    // ninguna barra, y `getZerosIndices` del solver le quita los GDL.
+    const TOL_SOLDAR = 1e-4;                       // 0.1 mm
+    const canon = new Int32Array(nodes.length);
+    {
+      const donde = new Map<string, number>();
+      for (let i = 0; i < nodes.length; i++) {
+        const k = nodes[i].map((v) => Math.round(v / TOL_SOLDAR)).join(",");
+        const ya = donde.get(k);
+        if (ya === undefined) { donde.set(k, i); canon[i] = i; } else canon[i] = ya;
+      }
+    }
+    const sold = (i: number) => (i >= 0 && i < canon.length ? canon[i] : i);
+
     // ── Construir elements según tipo de polilínea ──
     // Polilínea NO marcada como área → cadena de frames (1D, columnas/vigas)
     // Polilínea marcada como área → shell Q4 (4 vértices, elemento 2D)
@@ -140,7 +163,8 @@ export const newBlank: ExampleDef = {
         // ─ ÁREA → shell Q4 ─
         // El click handler cierra la polilínea agregando poly[0] al final,
         // así que poly = [v0, v1, v2, v3, v0]. Tomamos los 4 vértices únicos.
-        const verts = poly.length === 5 ? poly.slice(0, 4) : poly.slice(0, Math.min(4, poly.length));
+        const verts = (poly.length === 5 ? poly.slice(0, 4) : poly.slice(0, Math.min(4, poly.length)))
+          .map(sold);
         if (verts.length !== 4) continue;
         if (verts.some(v => nodes[v] === undefined)) continue;
         const eIdx = elements.length;
@@ -149,7 +173,7 @@ export const newBlank: ExampleDef = {
       } else {
         // ─ POLILÍNEA o LÍNEA → cadena de frames ─
         for (let i = 0; i < poly.length - 1; i++) {
-          const a = poly[i], b = poly[i + 1];
+          const a = sold(poly[i]), b = sold(poly[i + 1]);
           if (a === b || nodes[a] === undefined || nodes[b] === undefined) continue;
           const eIdx = elements.length;
           elements.push([a, b]);
@@ -287,7 +311,7 @@ export const newBlank: ExampleDef = {
       (window as any).__hekatanManualSupports;
     if (manualSup && manualSup.size > 0) {
       for (const [drawIdx, dofs] of manualSup.entries()) {
-        if (drawIdx >= 0 && drawIdx < nodes.length) supports.set(drawIdx, [...dofs]);
+        if (drawIdx >= 0 && drawIdx < nodes.length) supports.set(sold(drawIdx), [...dofs]);
       }
     }
 
@@ -329,7 +353,7 @@ export const newBlank: ExampleDef = {
       (window as any).__hekatanManualLoads;
     if (cargasActivas && manualLoads && manualLoads.size > 0) {
       for (const [drawIdx, lds] of manualLoads.entries()) {
-        if (drawIdx >= 0 && drawIdx < nodes.length) loads.set(drawIdx, [...lds]);
+        if (drawIdx >= 0 && drawIdx < nodes.length) loads.set(sold(drawIdx), [...lds]);
       }
     }
 
@@ -368,7 +392,7 @@ export const newBlank: ExampleDef = {
         if (drawIdx < 0 || drawIdx >= nodes.length) continue; // índice DIRECTO (ver apoyos)
         // dof: 0=Ux, 1=Uy, 2=Uz, 3=Rx, 4=Ry, 5=Rz
         for (let dof = 0; dof < 6; dof++) {
-          if (kArr[dof] !== 0) springsList.push({ node: drawIdx, dof, k: kArr[dof] });
+          if (kArr[dof] !== 0) springsList.push({ node: sold(drawIdx), dof, k: kArr[dof] });
         }
       }
     }
@@ -387,7 +411,14 @@ export const newBlank: ExampleDef = {
           states.elementInputs.val,
           springsList.length > 0 ? springsList : undefined,
         );
-        console.log(`[NewBlank] Solve OK — ${nodes.length} nodos, ${elements.length} elementos, ${supports.size} apoyos, ${loads.size} cargas, ${springsList.length} springs`);
+        // Los DIAGRAMAS (teclas A S D) leen `analyzeOutputs`, no las flechas:
+        // sin esta llamada la tecla cambiaba el rótulo y la barra seguía pelada.
+        states.analyzeOutputs.val = analyze(
+          nodes, elements, states.elementInputs.val, states.deformOutputs.rawVal,
+        );
+        const nud = new Set<number>();
+        for (const e of elements) for (const n of e as number[]) nud.add(n);
+        console.log(`[NewBlank] Solve OK — ${nud.size} nudos (de ${nodes.length} puntos), ${elements.length} elementos, ${supports.size} apoyos, ${loads.size} cargas, ${springsList.length} springs`);
       } catch (e: any) {
         console.warn(`[NewBlank] Solver falló: ${e.message}`);
       }

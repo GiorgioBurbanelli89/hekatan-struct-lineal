@@ -2067,6 +2067,14 @@ const SECTION_DB: Record<string, SectionProps> = {
 (window as any).__hekatanSectionDB = SECTION_DB;
 window.addEventListener("hk:property-applied", (ev: any) => {
   const { kind, ids, prop, value } = ev.detail || {};
+  // ⚠️ Sin `value` esto hacía `[...undefined]` y reventaba con «a is not iterable»,
+  // y con él se iba el visor entero. Se anotó meses como «pedir un diagrama en un
+  // modelo sin calcular»: no era el diagrama, era un aviso de propiedad sin valor.
+  if (!Array.isArray(ids) || !prop) return;
+  if (value === undefined || value === null) {
+    console.warn(`[hk:property-applied] «${prop}» sin valor — no se aplica nada`);
+    return;
+  }
   if (kind === "nodes") {
     const ptIdxs = (ids as string[]).filter(id => id.startsWith("pt:")).map(id => parseInt(id.slice(3)));
     if (prop === "supports") {
@@ -6834,13 +6842,13 @@ try {
   let repUltimo: { d: [number, number, number]; n: number } | null = null;
   let repP1: [number, number, number] = [0, 0, 0];
   const repSeleccion = () => (window as any).__hekatanSelectionSize?.() ?? -1;
-  const repHacer = (d: [number, number, number], n: number) => {
-    const hechas = (window as any).__hekatanReplicateSelection?.(d[0], d[1], d[2], n);
+  const repHacer = (d: [number, number, number], n: number, desde = 0) => {
+    const hechas = (window as any).__hekatanReplicateSelection?.(d[0], d[1], d[2], n, desde);
     if (!hechas) {
       flash("✕ REPLICAR: no hay nada designado. Designe objetos (S o ventana) y repita.", false);
       return;
     }
-    repUltimo = { d: [d[0], d[1], d[2]], n };
+    repUltimo = { d: [d[0], d[1], d[2]], n: desde + n };
     flash(`✓ Replicado ×${n} — Δ (${d[0]}, ${d[1]}, ${d[2]}) m · «x5» repite, «/5» subdivide`, true);
   };
   /** Lee «0,0,3.2», «piso 3.2» o «3.2» (que se entiende como subir en Z). */
@@ -6934,7 +6942,9 @@ try {
         const n = Math.max(1, parseInt((mRep || mDiv)![1], 10));
         const d = repUltimo.d;
         if (mRep) {
-          repHacer(d, n);
+          // «cinco veces MÁS»: se arranca donde acabó la réplica anterior, o la
+          // primera copia caería sobre la que ya está.
+          repHacer(d, n, repUltimo.n);
           flash(`✓ ×${n} más a Δ (${d[0]}, ${d[1]}, ${d[2]}) m`, true);
         } else {
           // se deshace la copia que había y se siembra n veces la distancia partida

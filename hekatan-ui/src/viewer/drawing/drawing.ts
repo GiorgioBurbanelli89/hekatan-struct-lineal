@@ -4680,10 +4680,14 @@ export function drawing({
     updateStatus(`SELECCIÓN ${selection.size} objetos (todo el modelo) · Esc suelta`);
     return selection.size;
   };
+  // `desde` = cuántas copias hay YA puestas a ese mismo paso. Sin él, «x5» volvía
+  // a poner la copia 1 encima de la que ya estaba: dos barras en el mismo sitio,
+  // el doble de rigidez en esa planta y nada que lo delate en pantalla.
   (window as any).__hekatanReplicateSelection = (
-    dx: number, dy: number, dz: number, count: number,
+    dx: number, dy: number, dz: number, count: number, desde = 0,
   ): number => {
     count = Math.max(1, Math.round(count || 1));
+    desde = Math.max(0, Math.round(desde || 0));
     const ids = [...selection];
     const pts = drawingObj.points.rawVal;
     const polys = drawingObj.polylines?.rawVal ?? [];
@@ -4691,11 +4695,18 @@ export function drawing({
     const nodeSet = new Set<number>();
     const polyIdxSet = new Set<number>();
     const segPairs: [number, number][] = [];
+    // ⚠️ La designación puede haber QUEDADO VIEJA: «/5» deshace la réplica que
+    // había, y las copias que se lleva el deshacer siguen designadas. Con
+    // `polys[p].map` sobre una polilínea que ya no existe se caía todo el visor
+    // («Cannot read properties of undefined»). Se queda con lo que sobrevive —
+    // que son justo los objetos originales, los que hay que volver a sembrar.
     ids.forEach((id) => {
-      if (id.startsWith("pt:")) nodeSet.add(+id.slice(3));
+      if (id.startsWith("pt:")) { const n = +id.slice(3); if (pts[n]) nodeSet.add(n); }
       else if (id.startsWith("poly:")) {
-        const p = +id.slice(5); polyIdxSet.add(p);
-        (polys[p] || []).forEach((n) => nodeSet.add(n));
+        const p = +id.slice(5);
+        if (!polys[p] || polys[p].length < 2) return;
+        polyIdxSet.add(p);
+        polys[p].forEach((n) => nodeSet.add(n));
       } else if (id.startsWith("seg:")) {
         const parts = id.split(":"); const P = +parts[1], S = +parts[2];
         const poly = polys[P] || []; const a = poly[S], b = poly[S + 1];
@@ -4710,7 +4721,8 @@ export function drawing({
     const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
     const origNodes = [...nodeSet];
     for (let i = 1; i <= count; i++) {
-      const ox = dx * i, oy = dy * i, oz = dz * i;
+      const j = desde + i;
+      const ox = dx * j, oy = dy * j, oz = dz * j;
       const map = new Map<number, number>();
       origNodes.forEach((n) => {
         map.set(n, newPts.length);

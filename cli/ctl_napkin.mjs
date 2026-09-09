@@ -38,7 +38,8 @@ const nav = await puppeteer.launch({ headless: "new",
   args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--enable-webgl"] });
 const pag = await nav.newPage();
 await pag.setViewport({ width: 1280, height: 720 });
-const errores = []; pag.on("pageerror", (e) => errores.push(e.message));
+const errores = []; const pilas = [];
+pag.on("pageerror", (e) => { errores.push(e.message); pilas.push((e.stack || "").split(String.fromCharCode(10)).slice(0, 5).join(" | ")); });
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const fallos = [];
 const ok = (c, q, d = "") => { console.log(`${c ? "  ✓" : "  ✗"} ${q}${d ? "  —  " + d : ""}`); if (!c) fallos.push(q); };
@@ -114,8 +115,12 @@ await pag.keyboard.press("Escape"); await espera(300);
 // ── DESTELLO al cambiar una propiedad ───────────────────────────────────────
 const dest = await pag.evaluate(() => {
   if (typeof window.__hekatanDestello !== "function") return { hay: false };
+  // con VALOR, como lo manda el panel de propiedades y el botón «Apoyo». Sin él
+  // el aviso reventaba el visor (`[...undefined]`) — arreglado en main.ts, y aquí
+  // se manda bien porque es lo que pasa de verdad.
   window.dispatchEvent(new CustomEvent("hk:property-applied",
-    { detail: { kind: "nodes", ids: ["pt:0", "pt:1"], prop: "supports" } }));
+    { detail: { kind: "nodes", ids: ["pt:0", "pt:1"], prop: "supports",
+                value: [true, true, true, true, true, true] } }));
   const v = document.querySelector("#viewer");
   let n = 0;
   v.__ctx.scene.traverse((o) => {
@@ -172,18 +177,18 @@ ok(c2.some((z) => Math.abs(z - 18) < 0.01) || Math.max(...c2) >= 15,
 await cmd("todo", 500);
 await cmd("/3", 1200);
 const c3 = await cotas();
-// ⏳ «/3» aún no cierra: deshace la réplica y vuelve a sembrar, pero el deshacer
-// se lleva también la designación y la siembra sale vacía. Se MIDE y se dice, no
-// se da por bueno.
-const div_ok = c3.some((z) => Math.abs(z - 1) < 0.01);
-console.log(`  ⏳ «/3» pendiente — cotas ${c3.slice(0, 6).join(", ")}` +
-            (div_ok ? "  (¡ya funciona! quitar esta nota)" : "  (el deshacer se lleva la designación)"));
+// «/3» parte el paso en tres. Lo que lo tenía parado: el deshacer se lleva las
+// copias y sus ids seguían designados, así que la resiembra caía sobre
+// polilíneas que ya no existían. Ahora se queda con lo que sobrevive.
+ok(c3.some((z) => Math.abs(z - 1) < 0.01), "«/3» subdivide ese paso en tres",
+   `cotas ${c3.slice(0, 6).join(", ")}`);
 
 const diag = errores.filter((e) => /not iterable|reading .map./.test(e));
 const otros = errores.filter((e) => !/not iterable|reading .map./.test(e));
 if (diag.length) {
-  console.log(`  ⏳ pedir un diagrama en un modelo SIN calcular aún revienta en otro sitio: ` +
-              diag[0].slice(0, 70));
+  console.log(`  ✗ «a is not iterable» de vuelta: ` +
+              diag[0].slice(0, 70) + " >> " + (pilas[errores.indexOf(diag[0])] || "").slice(0, 400));
+  fallos.push("a is not iterable");
 }
 ok(otros.length === 0, "sin otros errores de página", otros.slice(0, 2).join(" | "));
 await nav.close(); srv.close();
