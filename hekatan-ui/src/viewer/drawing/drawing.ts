@@ -2272,8 +2272,16 @@ export function drawing({
     const hit = intersectWorkPlane();
     if (hit.length) {
       const p = hit[0].point;
+      // ── ALT: «ahora no me enganches» ────────────────────────────────────
+      // Idea tomada del cuaderno Napkin (picobloc), y es la que faltaba: ahora que
+      // la mirilla va en píxeles y engancha bien, hace falta poder decirle que no.
+      // Con ALT pulsado no hay referencia ni rejilla: el punto cae donde está el
+      // cursor, en crudo. Es lo mismo que hace AutoCAD.
+      const sinEnganche = event.altKey;
       const osnapTol = toleranciaOsnap(p);
-      const osnap = (window as any).__hekatanOsnapCompute?.(p.x, p.y, p.z, osnapTol);
+      const osnap = sinEnganche
+        ? null
+        : (window as any).__hekatanOsnapCompute?.(p.x, p.y, p.z, osnapTol);
       if (osnap) {
         showOsnap(osnap.type, osnap.x, osnap.y, osnap.z);
         snapMarker.position.set(osnap.x, osnap.y, osnap.z);
@@ -2283,7 +2291,7 @@ export function drawing({
         hideOsnap();
         // Toggle global: si __hekatanSnapEnabled es false, NO snap a grid.
         // El cursor queda en la coordenada raw del raycaster.
-        const snapEnabled = (window as any).__hekatanSnapEnabled !== false;
+        const snapEnabled = !sinEnganche && (window as any).__hekatanSnapEnabled !== false;
         const snap = (window as any).__hekatanSnap2D ?? 0.5;
         if (snapEnabled && snap > 0) {
           p.x = Math.round(p.x / snap) * snap;
@@ -3974,6 +3982,64 @@ export function drawing({
     }
     return best ? { type: best.type, x: best.x, y: best.y, z: best.z } : null;
   };
+  // ── DESTELLO al cambiar una propiedad (idea de Napkin) ────────────────────
+  // Cuando cambia la sección, el apoyo o la carga de algo, ese algo PARPADEA un
+  // segundo. Sin esto, cambias una sección desde el panel y no tienes ninguna
+  // señal de que el cambio haya llegado a la barra que creías.
+  const grupoDestello = new THREE.Group();
+  grupoDestello.frustumCulled = false;
+  scene.add(grupoDestello);
+  const matDestello = new THREE.LineBasicMaterial({
+    color: 0xe6c463, transparent: true, opacity: 1.0, depthTest: false,
+  });
+  let _destelloHasta = 0;
+  const limpiarDestello = () => {
+    for (const o of grupoDestello.children.slice()) {
+      grupoDestello.remove(o);
+      (o as THREE.Line).geometry?.dispose?.();
+    }
+  };
+  (window as any).__hekatanDestello = (ids: string[]) => {
+    limpiarDestello();
+    const pts = drawingObj.points?.rawVal ?? [];
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    for (const id of ids || []) {
+      const trozos = String(id).split(":");
+      let coords: number[][] = [];
+      if (trozos[0] === "pt") {
+        const q = pts[+trozos[1]];
+        if (q) coords = [q, [q[0] + 0.001, q[1], q[2]]];
+      } else if (trozos[0] === "seg") {
+        const poly = polys[+trozos[1]] || [];
+        const a = pts[poly[+trozos[2]]], b = pts[poly[+trozos[2] + 1]];
+        if (a && b) coords = [a, b];
+      } else if (trozos[0] === "poly") {
+        const poly = polys[+trozos[1]] || [];
+        coords = poly.map((i: number) => pts[i]).filter(Boolean);
+      }
+      if (coords.length < 2) continue;
+      const g = new THREE.BufferGeometry().setFromPoints(
+        coords.map((q) => new THREE.Vector3(q[0], q[1], q[2])));
+      const ln = new THREE.Line(g, matDestello);
+      ln.renderOrder = 1200;
+      grupoDestello.add(ln);
+    }
+    if (!grupoDestello.children.length) return;
+    _destelloHasta = performance.now() + 900;
+    const tic = () => {
+      const queda = _destelloHasta - performance.now();
+      if (queda <= 0) { limpiarDestello(); viewerRender(); return; }
+      matDestello.opacity = Math.min(1, queda / 900) * 0.95;
+      viewerRender();
+      requestAnimationFrame(tic);
+    };
+    requestAnimationFrame(tic);
+  };
+  window.addEventListener("hk:property-applied", (ev: any) => {
+    const ids = ev?.detail?.ids;
+    if (Array.isArray(ids) && ids.length) (window as any).__hekatanDestello(ids);
+  });
+
   (window as any).__hekatanOsnapCompute = computeOsnap;
   (window as any).__hekatanOsnapShow = showOsnap;
   (window as any).__hekatanOsnapHide = hideOsnap;

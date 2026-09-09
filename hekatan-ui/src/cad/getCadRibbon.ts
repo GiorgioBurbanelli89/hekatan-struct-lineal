@@ -720,6 +720,38 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       e.preventDefault(); VISTAS[v][3](); decir(`Vista: ${VISTAS[v][1]}`);
       setTimeout(limpiarCmd, 0); return;
     }
+    // ── A S D F: axial, cortante, momento y deformada ─────────────────────
+    // Idea del cuaderno Napkin (picobloc): las cuatro salidas que se miran al
+    // revisar un modelo, a una tecla, sin ir al desplegable. Van con los MISMOS
+    // guardias que las vistas 1-4: si el foco está en un campo, o un comando está
+    // preguntando, la letra es texto y no un atajo — en esta app la «a» tecleada
+    // en el cuadro de órdenes es el ARCO de AutoCAD.
+    const DIAGRAMAS: Record<string, [string, string]> = {
+      a: ["normals", "Axil"],
+      s: ["shearsY", "Cortante 2-2"],
+      d: ["bendingsZ", "Momento 3-3"],
+    };
+    const kk = e.key.toLowerCase();
+    if (kk in DIAGRAMAS || kk === "f") {
+      const st = (window as any).__hekatanSettings?.();
+      if (!st) return;
+      e.preventDefault();
+      if (kk === "f") {
+        // la deformada no es un diagrama de barra: es el modelo desplazado
+        if (st.deformedShape) st.deformedShape.val = !st.deformedShape.rawVal;
+        if (st.frameResults) st.frameResults.val = "none";
+        decir(`Deformada ${st.deformedShape?.rawVal ? "ON" : "OFF"}`);
+      } else {
+        const [val, nom] = DIAGRAMAS[kk];
+        if (st.frameResults) {
+          const yaEsta = st.frameResults.rawVal === val;
+          st.frameResults.val = yaEsta ? "none" : val;
+          decir(yaEsta ? "Diagrama apagado" : `Diagrama: ${nom}`);
+        }
+      }
+      setTimeout(limpiarCmd, 0);
+      return;
+    }
     if (e.key === "Escape") { hooks.finish?.(); decir("Dibujo cerrado."); }
   }, true);
 

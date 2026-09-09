@@ -6831,6 +6831,7 @@ try {
   const REP_NOMBRES = new Set(["replicar", "rep", "ar", "array", "matriz"]);
   let repEsperando: null | "delta" | "copias" | "p1" | "p2" = null;
   let repDelta: [number, number, number] = [0, 0, 0];
+  let repUltimo: { d: [number, number, number]; n: number } | null = null;
   let repP1: [number, number, number] = [0, 0, 0];
   const repSeleccion = () => (window as any).__hekatanSelectionSize?.() ?? -1;
   const repHacer = (d: [number, number, number], n: number) => {
@@ -6839,7 +6840,8 @@ try {
       flash("✕ REPLICAR: no hay nada designado. Designe objetos (S o ventana) y repita.", false);
       return;
     }
-    flash(`✓ Replicado ×${n} — Δ (${d[0]}, ${d[1]}, ${d[2]}) m`, true);
+    repUltimo = { d: [d[0], d[1], d[2]], n };
+    flash(`✓ Replicado ×${n} — Δ (${d[0]}, ${d[1]}, ${d[2]}) m · «x5» repite, «/5» subdivide`, true);
   };
   /** Lee «0,0,3.2», «piso 3.2» o «3.2» (que se entiende como subir en Z). */
   const repLeerDelta = (txt: string): [number, number, number] | null => {
@@ -6919,6 +6921,34 @@ try {
       repHacer(repDelta, n);
       (window as any).__hekatanCadRefreshPrompt?.();
       return;
+    }
+    // ── «x5» y «/5» sobre lo último replicado (idea del cuaderno Napkin) ────
+    // Puesta una copia a una distancia, «x5» la repite cinco veces más y «/5»
+    // parte ESA distancia en cinco pasos iguales. Es lo que se hace de verdad al
+    // sembrar pórticos: pones el primero a la luz que toca y luego dices cuántos.
+    {
+      const t = raw.trim().toLowerCase();
+      const mRep = t.match(/^x\s*(\d+)$/);
+      const mDiv = t.match(/^\/\s*(\d+)$/);
+      if ((mRep || mDiv) && repUltimo) {
+        const n = Math.max(1, parseInt((mRep || mDiv)![1], 10));
+        const d = repUltimo.d;
+        if (mRep) {
+          repHacer(d, n);
+          flash(`✓ ×${n} más a Δ (${d[0]}, ${d[1]}, ${d[2]}) m`, true);
+        } else {
+          // se deshace la copia que había y se siembra n veces la distancia partida
+          (window as any).__hekatanUndo?.();
+          const dd: [number, number, number] = [d[0] / n, d[1] / n, d[2] / n];
+          repHacer(dd, n);
+          flash(`✓ /${n}: ${n} pasos de Δ (${+dd[0].toFixed(4)}, ${+dd[1].toFixed(4)}, ${+dd[2].toFixed(4)}) m`, true);
+        }
+        return;
+      }
+      if ((mRep || mDiv) && !repUltimo) {
+        flash("✕ «x5» y «/5» necesitan una réplica antes. Use REPLICAR primero.", false);
+        return;
+      }
     }
     {
       const partes = raw.trim().split(/\s+/);

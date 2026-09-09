@@ -52,6 +52,12 @@ export function frameResults(
       const element = mesh.elements?.rawVal[index] ?? [0, 1]; // TODO: improve this
       const node1 = derivedNodes.rawVal[element[0]];
       const node2 = derivedNodes.rawVal[element[1]];
+      // ⚠️ Si el nudo no está, `new THREE.Vector3(...node2)` revienta con
+      // «a is not iterable» y se lleva por delante TODO el visor. Pasa al pedir un
+      // diagrama en un modelo que aún no se ha calculado, o dibujado a mano en el
+      // CAD: hay salidas de una corrida anterior y no hay nudos que las sostengan.
+      // Se salta ese elemento y se sigue, que es lo que espera quien pulsa la tecla.
+      if (!node1 || !node2) return;
       const length = new THREE.Vector3(...node2).distanceTo(
         new THREE.Vector3(...node1)
       );
