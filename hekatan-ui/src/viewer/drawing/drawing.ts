@@ -668,6 +668,12 @@ export function drawing({
   // «estás a su misma altura / en su misma vertical». Sin eso, bajando una
   // columna no hay forma de parar en la cota de la base de al lado: el ángulo lo
   // da el ORTO, pero la COTA no la da nadie.
+  // las copias tenues de la rejilla en cada nivel (ver el derive de gridTarget)
+  const sueloGrids: THREE.Group[] = [];
+  const disposeSuelo = (g: THREE.Group) => g.traverse((o: any) => {
+    o.geometry?.dispose?.();
+    o.material?.dispose?.();
+  });
   const trackLine = mkPolarLine(0xffc400);
   (trackLine.material as THREE.LineDashedMaterial).dashSize = 0.28;
   (trackLine.material as THREE.LineDashedMaterial).gapSize = 0.16;
@@ -2848,6 +2854,48 @@ export function drawing({
       },
       viewerRender
     );
+
+    // ── LA REJILLA EN TODAS LAS ALTURAS ─────────────────────────────────────
+    //
+    // La rejilla era UNA y se movía con el plano de trabajo: al subir la cota a 21 m
+    // para clicar la cubierta se subía con ella, y el edificio quedaba COLGANDO por
+    // debajo. La rejilla del nivel 0 es el SUELO —la base, donde solo hay nudos de
+    // apoyo— y no se puede ir.
+    //
+    // Ahora se dibuja una copia TENUE en cada nivel del modelo (las cotas distintas
+    // de lo dibujado, el 0 siempre) y la del plano de trabajo se queda como está,
+    // brillante. Es lo que enseñan ETABS y Revit: los planos de planta puestos, y
+    // resaltado aquel en el que estás dibujando.
+    {
+      const wz = drawingObj.gridTarget.val.position[2];
+      const enPlanta = Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3;  // rotX = π/2
+      for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
+      sueloGrids.length = 0;
+      if (enPlanta) {
+        const P = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
+        const cotas = new Set<number>([0]);
+        for (const p of P) cotas.add(+p[2].toFixed(3));
+        for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
+          if (isFinite(l?.z)) cotas.add(+l.z.toFixed(3));
+        const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
+        for (const z of lista) {
+          if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
+          const copia = gridObj.clone(true);
+          copia.name = `hekatan-grid-nivel-${z}`;
+          copia.traverse((o: any) => {
+            if (!o.material) return;
+            o.material = o.material.clone();
+            o.material.transparent = true;
+            // el suelo (0) se ve algo más que los pisos intermedios: es la base
+            o.material.opacity = (o.material.opacity ?? 1) * (Math.abs(z) < 1e-6 ? 0.5 : 0.22);
+          });
+          copia.position.set(0, 0, z);
+          copia.quaternion.copy(qPreGeo);                  // tumbada, sin el giro del plano
+          scene.add(copia);
+          sueloGrids.push(copia);
+        }
+      }
+    }
 
     plane.position.set(...drawingObj.gridTarget.val.position);
     plane.quaternion.setFromEuler(

@@ -11,15 +11,17 @@
  *   node cli/demo_napkin.mjs
  */
 import puppeteer from "puppeteer";
-import { readFileSync, existsSync, statSync, mkdirSync, rmSync } from "fs";
+import { readFileSync, existsSync, statSync, mkdirSync, rmSync, readdirSync } from "fs";
 import { createServer } from "http";
 import { fileURLToPath } from "url";
 import { dirname, join, extname } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = join(__dirname, "shots", "napkin");
-rmSync(OUT, { recursive: true, force: true });
+// ⚠️ Borrar la CARPETA falla con EBUSY si algo la tiene abierta (el visor del GIF,
+// una consola parada dentro). Se borran los fotogramas y se deja la carpeta.
 mkdirSync(OUT, { recursive: true });
+for (const f of readdirSync(OUT)) if (/^f\d+\.png$/.test(f)) rmSync(join(OUT, f), { force: true });
 const BASE = "/hekatan-struct-lineal/";
 const raiz = join(__dirname, "..", "website", "src", "examples");
 const PUERTO = 4768;
@@ -77,7 +79,11 @@ await pag.evaluate(() => {
     "text-shadow:0 1px 3px #000;pointer-events:none";
   document.body.appendChild(r);
 });
-const rotulo = (t) => pag.evaluate((t) => { document.getElementById("hk-rotulo").textContent = t; }, t);
+/** Cambia el rótulo del paso y le deja tiempo para leerse (medio segundo largo). */
+const rotulo = async (t) => {
+  await pag.evaluate((t) => { document.getElementById("hk-rotulo").textContent = t; }, t);
+  await foto(5);
+};
 
 // ── EL CURSOR, DIBUJADO ─────────────────────────────────────────────────────
 // El ratón de verdad no sale en las capturas —el navegador no lo pinta—, así que en
@@ -121,17 +127,23 @@ const raton = async (x, y, pasos = 12) => {
     const px = p0[0] + (x - p0[0]) * t, py = p0[1] + (y - p0[1]) * t;
     await pag.mouse.move(px, py);
     await pag.evaluate(({ x, y }) => window.__demoCursor(x, y), { x: px, y: py });
-    if (i % 3 === 0) await foto();      // la flecha se ve VIAJAR, no teletransportarse
+    if (i % 5 === 0) await foto();      // la flecha se ve VIAJAR, no teletransportarse
   }
+  await foto(2);                        // y se PARA donde va a pulsar
 };
-/** Clic con su aro, para que en el GIF se vea DÓNDE se pulsó. */
+/**
+ * Clic con su aro. El GIF tiene que dejar ver QUÉ se pulsa: el aro aparece, se
+ * mantiene, se pulsa, y se mantiene otro poco. Antes pasaba en dos fotogramas —
+ * «te fuiste de largo, no se entendía que hiciste clic».
+ */
 const clic = async (x, y, opts = {}) => {
   await pag.evaluate(({ x, y }) => window.__demoClic(x, y), { x, y });
-  await foto(2);
+  await foto(4);                        // se ve el aro ANTES de pulsar
   await pag.mouse.click(x, y, opts); CLICS++;
-  await espera(140);
-  await foto();
+  await espera(160);
+  await foto(4);                        // y DESPUÉS, con lo que haya pasado
   await pag.evaluate(() => window.__demoSoltar());
+  await foto();
 };
 
 // ── SOLO RATÓN ───────────────────────────────────────────────────────────────
@@ -199,7 +211,11 @@ const campoRibbon = async (title, valor) => {
   await pag.keyboard.type(String(valor), { delay: 90 });   // se ve teclear
   await foto(2);
   await pag.keyboard.press("Enter");
-  await espera(500);
+  // ⚠️ La casilla «Cota Z» no solo cambia la cota: llama a setPlane + setView, y ESO
+  // reencuadra la cámara. Si se encuadra a mano antes de que termine, manda la suya
+  // y el modelo sale de canto (las plantas del GIF salían vacías).
+  await espera(1100);
+  await foto(2);
   return true;
 };
 const modelo = () => pag.evaluate(() => {
@@ -265,33 +281,43 @@ const mirar3D = (margen = 1.05, foco = null) => pag.evaluate(({ margen, foco, BX
   return { rad: +rad.toFixed(2), d: +d.toFixed(2) };
 }, { margen, foco, BX: BANDA.x, BY: BANDA.y });
 
-// ═══ 1 · LA PLANTA, con el RECTÁNGULO: dos clics ═════════════════════════════
+// ═══ 1 · LAS COLUMNAS, desde la BASE ════════════════════════════════════════
+// ⚠️ El nivel 0 es la BASE: ahí no va estructura, solo los nudos de apoyo. Las
+// vigas van en el nivel +3. Antes se dibujaba el contorno de vigas en el 0 y eso
+// no es una planta, es el suelo.
 await pulsar("Planta", 1100);
-await mirarPlanta(3, -2.5, 11);
-await rotulo("1 · el contorno de la planta: dos clics");
+await mirarPlanta(3, -2.5, 16);
+await rotulo("1 · columnas desde la base: un clic en cada esquina");
 await espera(500); await foto(3);
-await pulsar("Rect");
-await clicMundo([0, 0, 0]);
-await clicMundo([6, -5, 0], 700);
-await pag.keyboard.press("Escape"); await espera(300);
-await foto(4);
-const m1 = await modelo();
-
-// ═══ 2 · LAS COLUMNAS: un clic en cada esquina ══════════════════════════════
-await rotulo("2 · columnas: un clic en cada esquina (3 m por defecto)");
-await foto(2);
 await pulsar("Columna");
 const ESQ = [[0, 0, 0], [6, 0, 0], [6, -5, 0], [0, -5, 0]];
 for (const P of ESQ) { await clicMundo(P, 420); await foto(); }
 await pag.keyboard.press("Escape"); await espera(300);
 await foto(3);
+const m1 = await modelo();
+
+// ═══ 2 · EL NIVEL +3: ahí sí van las vigas ══════════════════════════════════
+await rotulo("2 · cota Z = 3: el plano de trabajo sube al nivel 1");
+await foto(2);
+await campoRibbon("Cota Z", 3);
+await mirarPlanta(3, -2.5, 16);
+await espera(400); await foto(3);
+await rotulo("3 · las vigas del nivel 1: dos clics");
+await pulsar("Rect");
+await clicMundo([0, 0, 3]);
+await clicMundo([6, -5, 3], 700);
+await pag.keyboard.press("Escape"); await espera(300);
+await foto(4);
 const m2 = await modelo();
 
-// ═══ 3 · APOYOS: botón y clic en los cuatro nudos de la base ════════════════
+// ═══ 3 · APOYOS en la base ══════════════════════════════════════════════════
 // El destello dorado avisa de que la propiedad LLEGÓ. Es del cuaderno Napkin: se
 // edita encima del objeto y el objeto contesta.
-await rotulo("3 · apoyos: lo aplicado PARPADEA en dorado");
-await foto(2);
+await rotulo("4 · vuelta a la base (Z = 0) para los apoyos");
+await campoRibbon("Cota Z", 0);
+await mirarPlanta(3, -2.5, 16);
+await espera(400); await foto(2);
+await rotulo("5 · apoyos: lo aplicado PARPADEA en dorado");
 await pulsar("Apoyo");
 for (const P of ESQ) { await clicMundo(P, 200); await foto(2); }
 await espera(500); await foto(2);
@@ -299,14 +325,14 @@ await espera(500); await foto(2);
 // ═══ 4 · SUBIR: la planta se hace edificio desde el propio ribbon ══════════
 // «⇈ Subir» es el Replicate Linear de ETABS y, sin nada designado, sube TODO —
 // que es lo que se quiere el 90 % de las veces. Ni ventana de designación ni panel.
-await rotulo("4 · ribbon: subir 6 pisos de 3 m");
+await rotulo("6 · ribbon: subir 6 pisos de 3 m");
 await foto(2);
 const nPisos = await campoRibbon("Cuantos pisos", 6);
 await foto(2);
 await pulsar("Subir", 1600);
 const m3 = await modelo();
 await pulsar("3D", 900);
-await mirar3D(1.15);
+await mirar3D(1.35);
 await espera(700); await foto(8);
 
 // ═══ 5 · CARGA en la cubierta, subiendo el PLANO DE TRABAJO ════════════════
@@ -314,12 +340,12 @@ await espera(700); await foto(8);
 // en el plano y el nudo de la cubierta queda a 21 m de ahí. Por eso el ribbon
 // tiene la casilla «Cota Z» — se sube el plano a la cubierta y ya se clica.
 const zTop = m3.cotas.slice(-1)[0];
-await rotulo("5 · cota Z = " + zTop + " m: el plano de trabajo sube a la cubierta");
+await rotulo("7 · cota Z = " + zTop + " m: el plano sube a la cubierta");
 await foto(2);
 const cota = await campoRibbon("Cota Z", zTop);
 await mirarPlanta(3, -2.5, 13);
 await espera(500); await foto(3);
-await rotulo("6 · carga: clic en los cuatro nudos de la cubierta");
+await rotulo("8 · carga: clic en los cuatro nudos de la cubierta");
 await pulsar("Carga");
 let cargados = 0;
 const quien = [];
@@ -332,8 +358,12 @@ await espera(400); await foto(2);
 await pag.keyboard.press("Escape"); await espera(300);
 await pag.evaluate(() => document.activeElement && document.activeElement.blur());
 await espera(1500);
+// ⚠️ La cota vuelve al SUELO antes de enseñar el resultado. Dejarla en 21 subía la
+// rejilla del plano de trabajo hasta la cubierta y el edificio salía COLGANDO por
+// debajo de ella: el nivel 0 es la base, y es la referencia que hay que ver.
+await campoRibbon("Cota Z", 0);
 await pulsar("3D", 900);
-await mirar3D(1.15);            // 0.80 y 0.95 recortaban la cabeza del edificio
+await mirar3D(1.35);            // 0.80/0.95/1.15 recortaban la cabeza del edificio
 await espera(600); await foto(3);
 
 // ═══ 7 · A S D F: los diagramas a una tecla ════════════════════════════════
@@ -349,7 +379,7 @@ const escala = await pag.evaluate(() => {
   if (s?.deformScale) s.deformScale.val = 300;
   return { rejilla: s?.gridSize?.rawVal ?? null, mando: s?.displayScale?.rawVal ?? null };
 });
-const NOM = { a: "7 · «A» axil", s: "8 · «S» cortante", d: "9 · «D» momento" };
+const NOM = { a: "9 · «A» axil", s: "10 · «S» cortante", d: "11 · «D» momento" };
 // ⚠️ Se vuelve a encuadrar ANTES de cada foto: al encender un diagrama el
 // workspace rehace el modelo y con eso se re-encuadra solo, así que el axil salía
 // con un encuadre y el momento con otro. Se fija el mismo para los cuatro.
@@ -357,16 +387,16 @@ for (const t of ["a", "s", "d"]) {
   await rotulo(NOM[t]);
   await pag.keyboard.press(t);
   await espera(1200);
-  await mirar3D(1.15);
+  await mirar3D(1.35);
   await espera(400);
   await foto(6);
 }
-await rotulo("10 · «F» deformada (x300)");
+await rotulo("12 · «F» deformada (x300)");
 await pag.keyboard.press("f"); await espera(1200);
 // «F» CONMUTA: si venía encendida, esa pulsación la apaga. Se mira y se corrige.
 const defOn = await pag.evaluate(() => !!window.__hekatanSettings?.()?.deformedShape?.rawVal);
 if (!defOn) { await pag.keyboard.press("f"); await espera(1200); }
-await mirar3D(1.15);
+await mirar3D(1.35);
 await espera(400); await foto(8);
 
 const m4 = await modelo();
