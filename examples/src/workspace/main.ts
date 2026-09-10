@@ -3032,8 +3032,21 @@ function montarMenuContextual(pane: any) {
   document.body.appendChild(menu);
 
   const cerrar = () => { menu.style.display = "none"; };
-  window.addEventListener("click", cerrar);
+  // ⚠️ Se cerraba con el `click` de la ventana, en fase de burbuja — y el lienzo del
+  // CAD se queda con el clic (`stopPropagation`), así que a la ventana no le llegaba
+  // NUNCA: el menú se abría y ya no había forma de cerrarlo salvo elegir algo.
+  // Ahora se cierra en el `pointerdown` de CAPTURA (que pasa antes que nadie),
+  // con Esc, con la rueda y al orbitar. Un pointerdown DENTRO del menú no lo cierra,
+  // o no se podría elegir.
+  window.addEventListener("pointerdown", (e) => {
+    if (!menu.contains(e.target as Node)) cerrar();
+  }, true);
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrar(); }, true);
+  window.addEventListener("wheel", cerrar, true);
   window.addEventListener("blur", cerrar);
+  try { (viewerElm as any).__ctx?.controls?.addEventListener?.("change", cerrar); } catch {}
+  (window as any).__hekatanMenuCerrar = cerrar;
+  (window as any).__hekatanMenuVisible = () => menu.style.display !== "none";
 
   // capture:true + stopPropagation: el modo CAD usa el boton derecho para
   // cerrar polilinea y se comia el menu antes de que llegara aca.

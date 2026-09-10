@@ -3045,8 +3045,13 @@ export function drawing({
       if (segMatch(sa, sb)) { selection.add(`aux:${i}`); added++; }
     }
     refreshSelectionGroup();
+    // Si la VENTANA (izq→der) no cogió nada, se dice por qué: no es que no
+    // funcione, es que exige el objeto ENTERO dentro. Es la primera confusión de
+    // cualquiera que venga de arrastrar sin mirar la dirección.
     updateStatus(
-      `${isCrossing ? "🟢 Crossing" : "🔵 Window"} — ${added} item(s) ${isMulti ? "agregados a" : "→"} selección (total ${selection.size})`,
+      added === 0 && !isCrossing
+        ? "🔵 Window (izq→der) — 0: solo coge lo que quede ENTERO dentro. De DERECHA a IZQUIERDA (🟢 captura) coge todo lo que toque."
+        : `${isCrossing ? "🟢 Crossing" : "🔵 Window"} — ${added} item(s) ${isMulti ? "agregados a" : "→"} selección (total ${selection.size})`,
     );
     dragRect.style.display = "none";
   };
