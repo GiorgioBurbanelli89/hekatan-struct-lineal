@@ -476,8 +476,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     "color:#cbd5e1", "font:13px/1.65 system-ui,-apple-system,Segoe UI,sans-serif",
   ].join(";") + ";";
   guia.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-      <div style="font:600 16px inherit;color:#22d3ee">Cómo usar · cuatro pasos</div>
+    <div id="hk-guia-barra" title="Arrastrame para moverme · doble clic para volver al centro" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;cursor:move;user-select:none;touch-action:none">
+      <div style="font:600 16px inherit;color:#22d3ee">⠿ Cómo usar · cuatro pasos</div>
       <button type="button" id="hk-guia-cerrar" title="Cerrar (Esc)" style="width:24px;height:24px;border-radius:50%;border:1px solid #1e3a4a;background:transparent;color:#94a3b8;cursor:pointer;font:600 13px inherit">✕</button>
     </div>
     <div style="color:#64748b;font-size:11px;margin-bottom:10px">Pasa el ratón por un botón de arriba y te dice cómo se usa · ? o F1 abren y cierran esto</div>
@@ -522,9 +522,84 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       <input type="checkbox" id="hk-guia-nomas" style="margin:0"> No volver a mostrar al abrir un archivo nuevo
     </label>`;
 
+  // ── La guía se ARRASTRA por su barra de título ────────────────────────────
+  //
+  // Tapaba justo el centro del lienzo y lo único que se podía hacer era cerrarla:
+  // o la leías o dibujabas, pero no las dos cosas. Ahora se coge del título y se
+  // deja donde estorbe menos; doble clic en la barra la devuelve al centro. Dónde
+  // la dejaste se recuerda, que si no hay que recolocarla en cada arranque.
+  const LS_POS = "hk_guia_pos";
+  const colocar = (x: number, y: number) => {
+    // ⚠️ El tope se mide contra la VENTANA, no contra el padre. El padre de la guía
+    // mide 332 px de alto (es la caja del ribbon, no el lienzo): midiendo con él,
+    // la guía no bajaba de ahí — se arrastraba en horizontal y en vertical se
+    // quedaba clavada. `x` e `y` llegan en coordenadas del padre; se pasan a
+    // pantalla, se topan, y se vuelven.
+    const hr = (guia.offsetParent as HTMLElement | null)?.getBoundingClientRect();
+    const ox = hr?.left ?? 0, oy = hr?.top ?? 0;
+    const w = guia.offsetWidth || 640;
+    const vx = Math.max(8, Math.min(window.innerWidth - w - 8, x + ox));
+    // abajo se deja llegar hasta el borde menos la barra de título: siempre queda
+    // de dónde cogerla para traerla de vuelta
+    const vy = Math.max(8, Math.min(window.innerHeight - 40, y + oy));
+    guia.style.left = `${Math.round(vx - ox)}px`;
+    guia.style.top = `${Math.round(vy - oy)}px`;
+    guia.style.transform = "none";
+    // marca para que la piel del CAD deje de imponerle su `top` (lo clava con
+    // !important, que gana al estilo en línea)
+    guia.setAttribute("data-movida", "1");
+  };
+  const centrar = () => {
+    guia.style.left = "50%";
+    guia.style.top = "120px";
+    guia.style.transform = "translateX(-50%)";
+    guia.removeAttribute("data-movida");   // vuelve a mandar la piel del CAD
+    try { localStorage.removeItem(LS_POS); } catch {}
+  };
+  const recordarPos = () => {
+    try { localStorage.setItem(LS_POS, JSON.stringify(
+      { x: parseFloat(guia.style.left) || 0, y: parseFloat(guia.style.top) || 0 })); } catch {}
+  };
+  const restaurarPos = () => {
+    try {
+      const g = localStorage.getItem(LS_POS);
+      if (!g) return;
+      const { x, y } = JSON.parse(g);
+      if (isFinite(x) && isFinite(y)) colocar(x, y);
+    } catch {}
+  };
+  {
+    const barraG = guia.querySelector("#hk-guia-barra") as HTMLElement | null;
+    let cogida: { dx: number; dy: number } | null = null;
+    barraG?.addEventListener("pointerdown", (e: PointerEvent) => {
+      if ((e.target as HTMLElement)?.closest("button")) return;   // la ✕ es la ✕
+      const r = guia.getBoundingClientRect();
+      cogida = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      try { barraG.setPointerCapture(e.pointerId); } catch {}
+      e.preventDefault();
+    });
+    barraG?.addEventListener("pointermove", (e: PointerEvent) => {
+      if (!cogida) return;
+      const hr = (guia.offsetParent as HTMLElement | null)?.getBoundingClientRect();
+      colocar(e.clientX - cogida.dx - (hr?.left ?? 0), e.clientY - cogida.dy - (hr?.top ?? 0));
+    });
+    const soltar = (e: PointerEvent) => {
+      if (!cogida) return;
+      cogida = null;
+      try { barraG?.releasePointerCapture(e.pointerId); } catch {}
+      recordarPos();
+    };
+    barraG?.addEventListener("pointerup", soltar);
+    barraG?.addEventListener("pointercancel", soltar);
+    barraG?.addEventListener("dblclick", centrar);
+    (window as any).__hekatanGuiaMover = (x: number, y: number) => { colocar(x, y); recordarPos(); };
+    (window as any).__hekatanGuiaCentrar = centrar;
+  }
+
   const verGuia = (v?: boolean) => {
     const on = v ?? (guia.style.display === "none");
     guia.style.display = on ? "block" : "none";
+    if (on) restaurarPos();
   };
   guia.querySelector("#hk-guia-cerrar")?.addEventListener("click", () => verGuia(false));
   const chkNoMas = guia.querySelector("#hk-guia-nomas") as HTMLInputElement | null;

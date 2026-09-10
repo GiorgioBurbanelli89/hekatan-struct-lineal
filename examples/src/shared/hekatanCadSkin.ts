@@ -188,7 +188,14 @@ body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
    su linea de estado y la guia lo mismo que la barra de herramientas. */
 body.hk-cad #hk-ribbon{ top:40px !important; }
 body.hk-cad #hk-ribbon-estado{ top:106px !important; }
-body.hk-cad #hk-ribbon-guia{ top:292px !important; max-height:calc(100% - 360px) !important; }
+/* La guia se PUEDE ARRASTRAR: en cuanto se mueve se le pone el atributo data-movida
+   y esta regla deja de aplicarle. Con el !important sin condicion no habia forma de
+   cambiarle el top desde el arrastre —se movia en horizontal y en vertical se
+   quedaba clavada en 292 px— porque !important gana al estilo en linea.
+   (Ojo: esto es CSS dentro de una plantilla de texto; un acento invertido aqui la
+   cierra y el build casca con «Expected ; but found data».) */
+body.hk-cad #hk-ribbon-guia:not([data-movida]){ top:292px !important; max-height:calc(100% - 360px) !important; }
+body.hk-cad #hk-ribbon-guia[data-movida]{ max-height:calc(100% - 120px); }
 
 /* ── la LINEA DE COMANDO, acoplada abajo y a todo lo ancho ───────────── */
 /* Estaba flotando en el centro con un cian que no es de ninguna de las dos
