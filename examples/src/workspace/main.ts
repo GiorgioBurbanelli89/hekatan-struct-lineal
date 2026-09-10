@@ -7005,6 +7005,13 @@ try {
           activarTool("select");
           return;
         }
+        // ⚠️ REPLICAR CANCELA lo que hubiera en curso, como cualquier orden de
+        // AutoCAD. Sin esto, con COPIAR activo el prompt decía REPLICAR pero el
+        // ribbon seguía con Copiar encendido y su prompt reaparecía al primer clic:
+        // lo que se tecleaba a continuación se lo comía la pregunta de REPLICAR
+        // («COPIAR Precise punto base: rep» → «Δ no válido»). Se apaga la herramienta
+        // anterior y se deja el ratón en designar, que es donde tiene que estar.
+        activarTool("select");
         const resto = partes.slice(1).join(" ");
         if (!resto) {
           repEsperando = "delta";

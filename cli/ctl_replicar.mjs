@@ -218,7 +218,17 @@ const pulsarRibbon = async (txt, ms = 800) => {
 const prompt = () => pag.evaluate(() => document.getElementById("hk3-cmd-prompt")?.textContent || "");
 ok(await pulsarRibbon("Replicar", 500), "el ribbon tiene su botón REPLICAR");
 await cmd("s"); await cmd("todo", 600);
+// ⚠️ Con COPIAR en marcha: REPLICAR tiene que CANCELARLO. Si no, el prompt decía
+// REPLICAR con el ribbon en Copiar y su prompt volvía al primer clic — y lo tecleado
+// se lo comía la pregunta de REPLICAR («COPIAR Precise punto base: rep»).
+await pulsarRibbon("Copiar", 600);
 await pulsarRibbon("Replicar", 800);
+const trasRep = await pag.evaluate(() => ({
+  tool: (window).__hekatanCadState?.get?.()?.tool,
+  sel: (window).__hekatanSelectionSize?.() ?? 0,
+}));
+ok(trasRep.tool === "select", "REPLICAR cancela la herramienta que hubiera (COPIAR)", String(trasRep.tool));
+ok(trasRep.sel > 0, "y NO se lleva por delante la designación", `${trasRep.sel} objetos`);
 const pr1 = await prompt();
 ok(/desplazamiento/i.test(pr1), "el botón lanza la misma orden: pide el desplazamiento", pr1.slice(0, 54));
 await cmd("0,0,3", 500);
