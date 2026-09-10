@@ -2289,7 +2289,11 @@ export function drawing({
         snapMarker.position.set(osnap.x, osnap.y, osnap.z);
         snapMarker.visible = true;
         p.set(osnap.x, osnap.y, osnap.z);
+        // El nombre de la referencia, junto al cursor: en AutoCAD sale «Punto
+        // final», «Intersección»… y es lo que te dice a QUÉ te estás enganchando.
+        mostrarEtiquetaOsnap(osnap.type, event.clientX, event.clientY);
       } else {
+        ocultarEtiquetaOsnap();
         hideOsnap();
         // Toggle global: si __hekatanSnapEnabled es false, NO snap a grid.
         // El cursor queda en la coordenada raw del raycaster.
@@ -3760,6 +3764,10 @@ export function drawing({
   (window as any).__hekatanOsnap = (window as any).__hekatanOsnap ?? {
     end: true, mid: true, node: true, cen: true,
     per: false, nea: false, int: true,
+    // ORIGEN y CRUCE DE REJILLA: lo que hace falta para arrancar un dibujo con el
+    // ratón cuando NO hay nada dibujado todavía. Sin ellos, en un lienzo vacío no
+    // hay a qué engancharse: el primer punto solo se puede teclear.
+    ori: true, grid: true,
   };
   // Snap marker visual (cuadrado coloreado por tipo + label)
   const osnapMarker = new THREE.Group();
@@ -3769,6 +3777,7 @@ export function drawing({
   const osnapColors: Record<string, number> = {
     end: 0xff3344, mid: 0xfbbf24, node: 0x60a5fa, cen: 0x34d399,
     per: 0xc084fc, nea: 0xff7eb6, int: 0xff8800,
+    ori: 0xffffff, grid: 0x22d3ee,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
     while (osnapMarker.children.length) {
@@ -3809,6 +3818,32 @@ export function drawing({
     return _osnapPx;
   };
   const hideOsnap = () => { osnapMarker.visible = false; };
+  // ── El NOMBRE de la referencia, junto al cursor (AutoCAD lo llama tooltip de
+  // referencia). Sin él, el cuadradito de color no dice a qué te enganchas.
+  const OSNAP_NOMBRE: Record<string, string> = {
+    ori: "Origen (0,0,0)", grid: "Cruce de rejilla", end: "Punto final",
+    node: "Nudo", mid: "Punto medio", cen: "Centro", int: "Intersección",
+    per: "Perpendicular", nea: "Cercano",
+  };
+  const etiqOsnap = document.createElement("div");
+  etiqOsnap.id = "hk-osnap-etiqueta";
+  etiqOsnap.style.cssText = [
+    "position:fixed", "z-index:99995", "display:none", "pointer-events:none",
+    "padding:2px 7px", "border-radius:4px", "white-space:nowrap",
+    "background:rgba(15,23,42,0.92)", "border:1px solid rgba(148,163,184,.45)",
+    "color:#e2e8f0", "font:12px Consolas,monospace",
+  ].join(";") + ";";
+  document.body.appendChild(etiqOsnap);
+  const mostrarEtiquetaOsnap = (tipo: string, cx: number, cy: number) => {
+    const t = OSNAP_NOMBRE[tipo];
+    if (!t) { etiqOsnap.style.display = "none"; return; }
+    etiqOsnap.textContent = t;
+    etiqOsnap.style.color = "#" + (osnapColors[tipo] ?? 0xffffff).toString(16).padStart(6, "0");
+    etiqOsnap.style.left = (cx + 18) + "px";
+    etiqOsnap.style.top = (cy - 26) + "px";
+    etiqOsnap.style.display = "block";
+  };
+  const ocultarEtiquetaOsnap = () => { etiqOsnap.style.display = "none"; };
   // Compute closest snap for current cursor world point
   const computeOsnap = (px: number, py: number, pz: number, tol: number): { type: string; x: number; y: number; z: number } | null => {
     const opts = (window as any).__hekatanOsnap as Record<string, boolean>;
@@ -3821,7 +3856,7 @@ export function drawing({
     // EXACTO sobre la línea, distancia 0— se comía la Intersección y el Punto final,
     // que son los que se quieren coger.
     const RANGO: Record<string, number> = {
-      end: 0, node: 0, int: 1, mid: 2, cen: 3, per: 4, nea: 5,
+      ori: 0, end: 0, node: 0, int: 1, grid: 2, mid: 2, cen: 3, per: 4, nea: 5,
     };
     const consider = (type: string, x: number, y: number, z: number) => {
       const d = Math.hypot(x - px, y - py, z - pz);
@@ -3829,6 +3864,42 @@ export function drawing({
       const r = RANGO[type] ?? 9;
       if (!best || r < best.r || (r === best.r && d < best.d)) best = { type, x, y, z, d, r };
     };
+    // ── ORIGEN (0,0,0) ────────────────────────────────────────────────────
+    // Es el punto de referencia del modelo y en un lienzo vacío es lo ÚNICO que
+    // hay. Sin esto, «dibujar desde el origen» obligaba a teclear la coordenada.
+    if (opts.ori !== false) consider("ori", 0, 0, 0);
+
+    // ── CRUCE DE LA REJILLA ───────────────────────────────────────────────
+    // El cruce de la cuadrícula visible, sobre el PLANO DE TRABAJO — es lo que se
+    // clica en ETABS y en Revit. Ojo: esto NO es el enganche global a la rejilla
+    // (F9), que REDONDEA todo lo que se toca; esto es una referencia más, que solo
+    // manda si el cursor está dentro de la mirilla, y deja el resto del dibujo a
+    // mano alzada.
+    // ⚠️ Solo con el ENGANCHE (F9) encendido. La cuadrícula de fondo cubre TODO el
+    // plano: si fuera referencia siempre, con una mirilla de 10 px casi cualquier
+    // clic caería en un cruce y se acabó el dibujo a mano alzada, que es justo lo
+    // que se pidió. Con F9 encendido el enganche manda —pero ahora engancha al
+    // cruce CERCANO en vez de redondear todo lo que se toca.
+    if (opts.grid !== false && (window as any).__hekatanSnapEnabled === true) {
+      const cfg = (window as any).__hekatanGridConfig as
+        { minorStep?: number; gridSize?: number } | undefined;
+      const paso = cfg?.minorStep && cfg.minorStep > 0 ? cfg.minorStep : 1;
+      const mitad = (cfg?.gridSize ?? 30) / 2;
+      const plano = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+      const cae = (v: number) => Math.round(v / paso) * paso;
+      const dentro = (a: number, b: number) => Math.abs(a) <= mitad + 1e-9 && Math.abs(b) <= mitad + 1e-9;
+      if (plano === "xz") {
+        const gx = cae(px), gz = cae(pz);
+        if (dentro(gx, gz)) consider("grid", gx, py, gz);
+      } else if (plano === "yz") {
+        const gy = cae(py), gz = cae(pz);
+        if (dentro(gy, gz)) consider("grid", px, gy, gz);
+      } else {
+        const gx = cae(px), gy = cae(py);
+        if (dentro(gx, gy)) consider("grid", gx, gy, pz);
+      }
+    }
+
     // NODE: cada punto existente
     if (opts.node || opts.end) {
       pts.forEach(p => {
@@ -3859,6 +3930,26 @@ export function drawing({
         }
       }
     }
+    // CENTRO de un ÁREA (el centroide del paño). Es donde se pincha para poner una
+    // carga repartida o para arrancar un eje por el medio de la losa; sin él, del
+    // paño solo se podían coger las esquinas y los bordes.
+    if (opts.cen) {
+      const areas = drawingObj.areas?.rawVal ?? [];
+      for (const ai of areas) {
+        const poly = polys[ai];
+        if (!poly || poly.length < 3) continue;
+        // el último vértice repite el primero cuando la polilínea está cerrada
+        const idx = poly[0] === poly[poly.length - 1] ? poly.slice(0, -1) : poly;
+        let cx = 0, cy = 0, cz = 0, n = 0;
+        for (const k of idx) {
+          const q = pts[k];
+          if (!q) continue;
+          cx += q[0]; cy += q[1]; cz += q[2]; n++;
+        }
+        if (n >= 3) consider("cen", cx / n, cy / n, cz / n);
+      }
+    }
+
     // CENTRO de circulos y arcos: con el cursor sobre la circunferencia (o
     // sobre el propio centro), como en AutoCAD. El candidato queda a tol/2
     // para que un extremo o un nudo mas cercano al cursor le ganen.
@@ -4184,7 +4275,22 @@ export function drawing({
   const refreshPrompt = () => {
     try {
       const p = promptFor();
-      (window as any).__hekatanCadPrompt?.(p.txt, p.ops);
+      // ── LIENZO EN BLANCO: decir SOBRE QUÉ referenciarse ────────────────────
+      //
+      // «¿Cómo me guío, sobre qué me referencio?». La rejilla de fondo NO es una
+      // referencia: es papel cuadriculado. La referencia de verdad, en ETABS y en
+      // Revit, son los EJES de replanteo (A/B/C · 1/2/3) y los niveles; en AutoCAD,
+      // la coordenada tecleada y, a partir del segundo punto, distancia y ángulo.
+      // Con el lienzo vacío no hay ni una cosa ni la otra, así que se dice.
+      const hayEjes = (((window as any).__hekatanAxisGrids?.rawVal
+                      ?? (window as any).__hekatanAxisGrids?.val
+                      ?? (window as any).__hekatanAxisGrids) as any[] | undefined)?.length ?? 0;
+      const hayPuntos = (drawingObj.points?.rawVal ?? []).length;
+      const pideOrigen = /primer punto|punto inicial|vértice 1|Precise punto:/i.test(p.txt);
+      const txt = (pideOrigen && !hayEjes && !hayPuntos)
+        ? `${p.txt}  —  teclee la coordenada (0,0,0) o pulse 🏗 Rejilla para replantear ejes y niveles`
+        : p.txt;
+      (window as any).__hekatanCadPrompt?.(txt, p.ops);
     } catch {}
   };
   (window as any).__hekatanCadRefreshPrompt = refreshPrompt;

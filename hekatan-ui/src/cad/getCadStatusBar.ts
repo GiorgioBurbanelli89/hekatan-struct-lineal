@@ -53,13 +53,13 @@ export function addCadStatusBar(): HTMLElement {
     botones.push({ el: b, on });
     conm.appendChild(b);
   };
-  boton("SNAP F9", "Forzar el cursor a la rejilla (F9)",
+  boton("SNAP F9", "Engancha a los CRUCES de la rejilla (F9). Apagado, el punto cae donde esta el cursor",
     () => W.__hekatanSnapEnabled !== false, () => W.__hekatanToggleSnap?.());
   boton("ORTO F8", "Solo horizontales y verticales (F8)",
     () => !!W.__hekatanOrthoMode, () => W.__hekatanToggleOrtho?.());
   boton("POLAR F10", "Rastreo polar a 45° (F10)",
     () => W.__hekatanPolarTrack !== false, () => W.__hekatanTogglePolar?.());
-  boton("OSNAP F3", "Referencia a objetos: extremo, medio, nudo, intersección (F3)",
+  boton("OSNAP F3", "Referencias: origen, extremo, medio, nudo, centro de area, interseccion (F3)",
     () => W.__hekatanOsnapOn !== false, () => W.__hekatanToggleOsnap?.());
 
   const unidades = document.createElement("span");
