@@ -661,6 +661,21 @@ export function drawing({
   const polarY = mkPolarLine(0x00ff00);  // verde Y
   const polarZ = mkPolarLine(0x0088ff);  // azul Z
   polarLines.add(polarX, polarY, polarZ);
+  // ── RASTREO DE REFERENCIA (el «object snap tracking» de AutoCAD) ──────────
+  //
+  // Las líneas de arriba salen del ÚLTIMO punto y solo dicen ángulo. Lo que
+  // faltaba es la otra referencia: la que sale de un nudo YA DIBUJADO y te dice
+  // «estás a su misma altura / en su misma vertical». Sin eso, bajando una
+  // columna no hay forma de parar en la cota de la base de al lado: el ángulo lo
+  // da el ORTO, pero la COTA no la da nadie.
+  const trackLine = mkPolarLine(0xffc400);
+  (trackLine.material as THREE.LineDashedMaterial).dashSize = 0.28;
+  (trackLine.material as THREE.LineDashedMaterial).gapSize = 0.16;
+  (trackLine.material as THREE.LineDashedMaterial).opacity = 0.9;
+  trackLine.frustumCulled = false;
+  trackLine.visible = false;
+  trackLine.renderOrder = 98;
+  scene.add(trackLine);
   // ── Planos de referencia ortogonales (estilo SketchUp inferencing) ──
   // 3 rectángulos coloreados centrados en el último punto, uno por cada
   // plano principal (XY verde / XZ rojo / YZ azul). Sirven como guía visual
@@ -889,6 +904,18 @@ export function drawing({
   // que el commit coincida con lo que se ve (evita el "2 cursores"). null = sin
   // enganche de eje en este frame.
   let _axisSnapPoint: THREE.Vector3 | null = null;
+  // ── LO QUE SE VE ES LO QUE CAE ───────────────────────────────────────────
+  //
+  // El movimiento del ratón calculaba el punto con TODO puesto (referencia,
+  // enganche, ORTO/POLAR a ±6°, rastreo) y lo enseñaba; y después el CLIC volvía a
+  // calcularlo por su cuenta, con otras reglas —el ORTO del clic mira el eje
+  // dominante y no sabe nada del polar ni del rastreo—. Bajando una columna se veía
+  // la goma a plomo y caía un punto en (3.63, 3.63, −4.05).
+  //
+  // Se guarda el punto que se ESTÁ enseñando junto al píxel donde está el ratón; si
+  // el clic cae en ese mismo píxel (±3 px), se commitea ese punto y no se recalcula
+  // nada. Es lo que hace AutoCAD: el clic confirma lo que marca el cursor.
+  let _puntoPrevisto: { p: THREE.Vector3; x: number; y: number } | null = null;
   // Label DOM que muestra qué eje está bloqueado
   const axisLockBadge = document.createElement("div");
   axisLockBadge.id = "hk-axis-lock-badge";
@@ -2268,6 +2295,9 @@ export function drawing({
   // Prioridad: OSNAP (Endpoint/Midpoint/etc.) > grid snap 2D
   // ADEMÁS: rubber band desde último punto al cursor + polar tracking
   rendererElm.addEventListener("pointermove", (event: PointerEvent) => {
+    // Dónde está la cruz, en PÍXELES: es contra esto que se mide la mirilla de
+    // las referencias (ver `consider` en computeOsnap).
+    (window as any).__hekatanCursorPx = { x: event.clientX, y: event.clientY };
     const _camForRay = setPointerFromEvent(event);
     if (!_camForRay) return;
     raycaster.setFromCamera(pointer, _camForRay);
@@ -2283,7 +2313,8 @@ export function drawing({
       const osnapTol = toleranciaOsnap(p);
       const osnap = sinEnganche
         ? null
-        : (window as any).__hekatanOsnapCompute?.(p.x, p.y, p.z, osnapTol);
+        : (window as any).__hekatanOsnapCompute?.(p.x, p.y, p.z, osnapTol,
+                                                  { x: event.clientX, y: event.clientY });
       if (osnap) {
         showOsnap(osnap.type, osnap.x, osnap.y, osnap.z);
         snapMarker.position.set(osnap.x, osnap.y, osnap.z);
@@ -2385,8 +2416,10 @@ export function drawing({
         // Sincronizar panel fijo de coords (siempre visible)
         const fixedReadout = document.getElementById("hk-coord-fixed");
         if (fixedReadout) fixedReadout.textContent = coords;
+        _puntoPrevisto = { p: coordPt.clone(), x: event.clientX, y: event.clientY };
         rubberBand.visible = false;
         polarLines.visible = false;
+        trackLine.visible = false;
         viewerRender();
         return;
       }
@@ -2427,6 +2460,7 @@ export function drawing({
         // Hide rubberband + polar in delete mode (no sentido)
         rubberBand.visible = false;
         polarLines.visible = false;
+        trackLine.visible = false;
         hideRubberLabel();
         coordReadout.style.left = event.clientX + "px";
         coordReadout.style.top = event.clientY + "px";
@@ -2593,6 +2627,54 @@ export function drawing({
           // lo tenga activo manualmente; pero si llegamos acá axisLock=null).
           if (!axisLock) axisLockBadge.style.display = "none";
         }
+        // ── RASTREO: alinearse con un nudo YA DIBUJADO ────────────────────
+        // Se busca un nudo que comparta una coordenada con el cursor (dentro de la
+        // mirilla, en píxeles). Si lo hay, esa coordenada se CLAVA en la del nudo y
+        // sale la línea de rastreo hasta él, con su rótulo. Es lo que permite bajar
+        // una columna y parar exactamente en la cota de la base de al lado.
+        //
+        // Si el ORTO/POLAR ya fijó un eje, el rastreo solo puede tocar el eje LIBRE
+        // (el que queda por decidir); si no, cualquiera de los tres.
+        let rastreo: { q: number[]; eje: "x" | "y" | "z" } | null = null;
+        // El rastreo es una REFERENCIA más: lo apaga el mismo interruptor (F3).
+        if (!sinEnganche && (window as any).__hekatanTrack !== false
+            && (window as any).__hekatanOsnapOn !== false) {
+          const ptsTrack = drawingObj.points.rawVal as [number, number, number][];
+          const ejes: Array<"x" | "y" | "z"> = effectiveLock ? [effectiveLock] : ["z", "x", "y"];
+          // en PÍXELES, como la mirilla: se mide cuánto se movería el punto en
+          // pantalla al alinearlo con el nudo, no cuántos metros hay de diferencia
+          const cursorPx = { x: event.clientX, y: event.clientY };
+          let mejor = Infinity;
+          for (const q of ptsTrack) {
+            if (Math.abs(q[0] - lastPt[0]) < 1e-9 && Math.abs(q[1] - lastPt[1]) < 1e-9
+                && Math.abs(q[2] - lastPt[2]) < 1e-9) continue;      // el propio origen del trazo
+            for (const e of ejes) {
+              const cand = new THREE.Vector3(
+                e === "x" ? q[0] : p.x, e === "y" ? q[1] : p.y, e === "z" ? q[2] : p.z);
+              const s2 = aPixeles(cand.x, cand.y, cand.z);
+              if (!s2) continue;
+              const d = Math.hypot(s2.x - cursorPx.x, s2.y - cursorPx.y);
+              if (d < _aperturaPx && d < mejor) { mejor = d; rastreo = { q, eje: e }; }
+            }
+          }
+        }
+        if (rastreo) {
+          if (rastreo.eje === "x") p.x = rastreo.q[0];
+          else if (rastreo.eje === "y") p.y = rastreo.q[1];
+          else p.z = rastreo.q[2];
+          trackLine.geometry.setFromPoints([
+            new THREE.Vector3(rastreo.q[0], rastreo.q[1], rastreo.q[2]),
+            new THREE.Vector3(p.x, p.y, p.z),
+          ]);
+          (trackLine as any).computeLineDistances?.();
+          trackLine.visible = true;
+          snapMarker.position.set(p.x, p.y, p.z);
+          snapMarker.visible = true;
+          mostrarEtiquetaOsnap("track", event.clientX, event.clientY);
+        } else {
+          trackLine.visible = false;
+        }
+        _puntoPrevisto = { p: p.clone(), x: event.clientX, y: event.clientY };
         const dL = Math.hypot(p.x - lastPt[0], p.y - lastPt[1], p.z - lastPt[2]);
         const ang = Math.atan2(p.y - lastPt[1], p.x - lastPt[0]) * 180 / Math.PI;
         const coordsRb = `X=${p.x.toFixed(2)} Y=${p.y.toFixed(2)} Z=${p.z.toFixed(2)}`;
@@ -3777,7 +3859,7 @@ export function drawing({
   const osnapColors: Record<string, number> = {
     end: 0xff3344, mid: 0xfbbf24, node: 0x60a5fa, cen: 0x34d399,
     per: 0xc084fc, nea: 0xff7eb6, int: 0xff8800,
-    ori: 0xffffff, grid: 0x22d3ee,
+    ori: 0xffffff, grid: 0x22d3ee, track: 0xffc400,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
     while (osnapMarker.children.length) {
@@ -3822,6 +3904,7 @@ export function drawing({
   // referencia). Sin él, el cuadradito de color no dice a qué te enganchas.
   const OSNAP_NOMBRE: Record<string, string> = {
     ori: "Origen (0,0,0)", grid: "Cruce de rejilla", end: "Punto final",
+    track: "Alineado con un nudo",
     node: "Nudo", mid: "Punto medio", cen: "Centro", int: "Intersección",
     per: "Perpendicular", nea: "Cercano",
   };
@@ -3845,7 +3928,27 @@ export function drawing({
   };
   const ocultarEtiquetaOsnap = () => { etiqOsnap.style.display = "none"; };
   // Compute closest snap for current cursor world point
-  const computeOsnap = (px: number, py: number, pz: number, tol: number): { type: string; x: number; y: number; z: number } | null => {
+  /** Un punto del mundo → píxel del lienzo, con la cámara activa. */
+  const _vProy = new THREE.Vector3();
+  const aPixeles = (x: number, y: number, z: number): { x: number; y: number } | null => {
+    const cam = getActiveCamera();
+    if (!cam) return null;
+    const r = rendererElm.getBoundingClientRect();
+    _vProy.set(x, y, z).project(cam);
+    if (!isFinite(_vProy.x) || !isFinite(_vProy.y)) return null;
+    return {
+      x: r.left + (_vProy.x * 0.5 + 0.5) * r.width,
+      y: r.top + (-_vProy.y * 0.5 + 0.5) * r.height,
+    };
+  };
+  (window as any).__hekatanAPixeles = aPixeles;
+
+  const computeOsnap = (px: number, py: number, pz: number, tol: number,
+                        cursorPx?: { x: number; y: number }): { type: string; x: number; y: number; z: number } | null => {
+    // ⚠️ El botón OSNAP (F3) se conmutaba y NO LO MIRABA NADIE: encendido o apagado,
+    // las referencias seguían tirando igual. Es el interruptor de las referencias,
+    // como en AutoCAD; apagado, el punto cae donde está el cursor.
+    if ((window as any).__hekatanOsnapOn === false) return null;
     const opts = (window as any).__hekatanOsnap as Record<string, boolean>;
     const pts = drawingObj.points.rawVal as [number,number,number][];
     const polys = drawingObj.polylines?.rawVal ?? [];
@@ -3858,9 +3961,30 @@ export function drawing({
     const RANGO: Record<string, number> = {
       ori: 0, end: 0, node: 0, int: 1, grid: 2, mid: 2, cen: 3, per: 4, nea: 5,
     };
+    // ⚠️ LA MIRILLA SE MIDE EN PANTALLA, no en el mundo.
+    //
+    // Se medía la distancia del candidato al punto del PLANO DE TRABAJO. En planta
+    // eso da igual, pero en isométrico el rayo cruza el plano lejísimos del nudo que
+    // se está señalando: dibujando una columna hacia abajo desde una esquina a 3 m
+    // de altura, el clic caía en (3.63, 3.63, 0) y NINGÚN nudo fuera del plano podía
+    // engancharse nunca. Por eso «no había referencia» al bajar la columna.
+    //
+    // AutoCAD mide la apertura en píxeles alrededor de la cruz: cualquier cosa que
+    // se VEA cerca del cursor se puede coger, esté en el plano o no. Eso es esto.
+    // Se pasa por PARÁMETRO, no por una global: quien pregunta por un punto suelto
+    // (una prueba, un guion) no tiene cursor y se mide en el mundo, como antes.
+    const curPx = cursorPx;
     const consider = (type: string, x: number, y: number, z: number) => {
-      const d = Math.hypot(x - px, y - py, z - pz);
-      if (d > tol) return;
+      let d: number;
+      if (curPx) {
+        const q = aPixeles(x, y, z);
+        if (!q) return;
+        d = Math.hypot(q.x - curPx.x, q.y - curPx.y);
+        if (d > _aperturaPx) return;
+      } else {
+        d = Math.hypot(x - px, y - py, z - pz);
+        if (d > tol) return;
+      }
       const r = RANGO[type] ?? 9;
       if (!best || r < best.r || (r === best.r && d < best.d)) best = { type, x, y, z, d, r };
     };
@@ -4865,6 +4989,7 @@ export function drawing({
   };
 
   rendererElm.addEventListener("click", (event: PointerEvent) => {
+    (window as any).__hekatanCursorPx = { x: event.clientX, y: event.clientY };
     // Ignorar click que viene de drag (rotación)
     if (pointerDownAndMovedCount > 5) {
       pointerDownAndMovedCount = 0;
@@ -4928,13 +5053,20 @@ export function drawing({
     // Si el pointermove enganchó a un EJE 3D auxiliar, commitear EXACTAMENTE
     // ahí (coincide con lo que se ve; evita el "2 cursores" y permite columnas
     // verticales por Z aunque el plano de trabajo sea XY).
-    if (_axisSnapPoint) {
+    if (_puntoPrevisto
+        && Math.abs(event.clientX - _puntoPrevisto.x) <= 3
+        && Math.abs(event.clientY - _puntoPrevisto.y) <= 3) {
+      // el punto que el cursor estaba marcando: referencia, ORTO/POLAR y rastreo ya
+      // aplicados en el movimiento. No se recalcula nada.
+      point = _puntoPrevisto.p.clone();
+    } else if (_axisSnapPoint) {
       point = _axisSnapPoint.clone();
       updateStatus(`📐 Eje → (${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)})`);
     } else {
       // OSNAP primero (prioridad sobre grid snap)
       const osnapTol = toleranciaOsnap(point);
-      const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol);
+      const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol,
+                                                            { x: event.clientX, y: event.clientY });
       if (osnap) {
         point = new THREE.Vector3(osnap.x, osnap.y, osnap.z);
         updateStatus(`🎯 Snap [${osnap.type.toUpperCase()}] → (${point.x.toFixed(2)}, ${point.y.toFixed(2)}, ${point.z.toFixed(2)})`);
@@ -5515,7 +5647,8 @@ export function drawing({
 
       // 3) OSNAP (prioridad sobre grid snap, igual que click handler L2946-2951)
       const osnapTol = toleranciaOsnap(point);
-      const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol);
+      const osnap = (window as any).__hekatanOsnapCompute?.(point.x, point.y, point.z, osnapTol,
+                                                            { x: event.clientX, y: event.clientY });
       if (osnap) {
         point.set(osnap.x, osnap.y, osnap.z);
       } else {

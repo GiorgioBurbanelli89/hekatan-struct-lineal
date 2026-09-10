@@ -54,6 +54,14 @@ await cmd("pl");
 // clic se lo lleva el BOTÓN, no el dibujo (ya pasó en el vídeo del modelo nuevo)
 const PIX = [[437,352],[812,391],[901,548],[566,612],[389,486]];
 let mov = 0, n = 0, peor = 0;
+// ⚠️ Aquí se mide el trazo LIBRE, así que se apagan las dos ayudas que MUEVEN el
+// punto a propósito, igual que haría cualquiera en AutoCAD para dibujar a mano
+// alzada (el enganche a la rejilla, F9, ya viene apagado):
+//   · OSNAP (F3): un clic a menos de 10 px de un nudo o del origen engancha.
+//   · POLAR (F10): a menos de 6° de un eje, endereza el trazo — vale hasta 7 cm a
+//     esta escala, y desde que el clic confirma lo que enseña el cursor, se NOTA.
+await pag.evaluate(() => { window.__hekatanOsnapOn = false; window.__hekatanPolarTrack = false; });
+await esperar(300);
 for (const [px,py] of PIX) {
   await pag.mouse.move(px, py, {steps: 8}); await esperar(420);
   const antes = await pag.evaluate(()=>{
@@ -93,6 +101,7 @@ ok(await pag.evaluate(() => window.__hekatanSnapEnabled === false),
 // EXACTAMENTE aqui». Con el enganche apagado eso es mentira: el punto cae bajo el
 // cursor y el anillo se quedaba en la interseccion de 0.5 m mas cercana. Se veian
 // DOS cursores a 10 px uno del otro.
+await pag.evaluate(() => { window.__hekatanOsnapOn = true; window.__hekatanPolarTrack = true; });
 const anillos = async () => pag.evaluate(() => {
   const v = document.querySelector("#viewer");
   const out = [];
