@@ -20444,6 +20444,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
             b("\u2715 REPLICAR: primero designe objetos (S, o ventana clic-clic).", false), v("select");
             return;
           }
+          v("select");
           const te = D.slice(1).join(" ");
           if (!te) {
             Z = "delta", h("REPLICAR \u2014 desplazamiento \u0394x,\u0394y,\u0394z (o solo la altura, p. ej. 3.2) [P=dos puntos]:");
