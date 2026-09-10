@@ -88,6 +88,38 @@ ok(peor < 0.01, "cada punto cae DONDE está el cursor (menos de 1 cm)",
    `media ${(mov / n).toFixed(4)} m · peor ${peor.toFixed(4)} m`);
 ok(await pag.evaluate(() => window.__hekatanSnapEnabled === false),
    "el enganche a la rejilla viene APAGADO, como el SNAP de AutoCAD");
+// ── UN SOLO CURSOR ─────────────────────────────────────────────────────────
+// El resaltador de nudos de la rejilla (anillo ambar) dice «el clic caeria
+// EXACTAMENTE aqui». Con el enganche apagado eso es mentira: el punto cae bajo el
+// cursor y el anillo se quedaba en la interseccion de 0.5 m mas cercana. Se veian
+// DOS cursores a 10 px uno del otro.
+const anillos = async () => pag.evaluate(() => {
+  const v = document.querySelector("#viewer");
+  const out = [];
+  v.__ctx.scene.traverse((o) => {
+    if (!o.visible || o.type !== "Group") return;
+    const hijos = o.children || [];
+    const esAnillo = hijos.some((c) => c.geometry?.type === "RingGeometry"
+      && c.material?.color?.getHexString?.() === "ffc400");
+    if (esAnillo) out.push([+o.position.x.toFixed(3), +o.position.y.toFixed(3), +o.position.z.toFixed(3)]);
+  });
+  return out;
+});
+const cvr = await pag.evaluate(() => {
+  const r = document.querySelector("#viewer").querySelector("canvas").getBoundingClientRect();
+  return { x: r.left + r.width * 0.42, y: r.top + r.height * 0.66 };
+});
+await pag.mouse.move(cvr.x, cvr.y, { steps: 8 }); await esperar(500);
+const conSnapOff = await anillos();
+ok(conSnapOff.length === 0, "con el enganche APAGADO hay UN solo cursor",
+   conSnapOff.length ? `un anillo suelto en ${JSON.stringify(conSnapOff[0])}` : "sin anillo de rejilla");
+await pag.evaluate(() => window.__hekatanToggleSnap?.());
+await pag.mouse.move(cvr.x + 3, cvr.y - 2, { steps: 4 }); await esperar(500);
+const conSnapOn = await anillos();
+ok(conSnapOn.length === 1, "y con el enganche ENCENDIDO vuelve, que para eso está",
+   JSON.stringify(conSnapOn[0] ?? null));
+await pag.evaluate(() => window.__hekatanToggleSnap?.());
+
 const ap = await pag.evaluate(() => window.__hekatanAperturaPx?.());
 ok(ap >= 4 && ap <= 20, "la mirilla de referencias va en PÍXELES, no en metros fijos", `${ap} px`);
 await nav.close(); srv.close();

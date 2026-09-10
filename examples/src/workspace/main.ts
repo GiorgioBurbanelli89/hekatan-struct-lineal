@@ -6369,6 +6369,16 @@ try {
   // celda. Así "resalta" claramente cuando estás sobre un nodo del grid.
   const onMove = (e: PointerEvent) => {
     const c = getCanvas(); if (!c) return;
+    // ⚠️ Este anillo dice «el clic caería EXACTAMENTE aquí». Eso solo es verdad si
+    // el enganche a la rejilla está encendido, y viene APAGADO de fábrica (como el
+    // SNAP de AutoCAD): con él apagado el punto cae bajo el cursor y el anillo se
+    // quedaba pegado a la intersección de 0.5 m más cercana. Se veían DOS cursores
+    // a 10 px uno del otro, y el que mentía era este. Con ALT tampoco: ALT es
+    // justamente «sin enganche».
+    if ((window as any).__hekatanSnapEnabled === false || e.altKey) {
+      if (hl.visible) { hl.visible = false; render(); }
+      return;
+    }
     const r = c.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, ctx.camera);
