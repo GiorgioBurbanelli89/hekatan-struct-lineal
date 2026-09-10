@@ -418,6 +418,21 @@ export const plantillas: ExampleDef = {
     const fy = YV.length > 1 ? finos(YV, D, volY)
                              : { c: [0], eje: [true], vol: [false] };
     const XF = fx.c, YF = fy.c;
+    // ── Los ejes DE VERDAD, sin contar el volado ────────────────────────────
+    // Con volado, `XF` empieza en el borde del voladizo, no en el eje A. Los muros
+    // y las diagonales se colocaban con índices contados desde 0 —«el primer vano»—
+    // y con eso el muro se iba al VOLADIZO: de 6 m de largo pasaba a medir lo que
+    // midiera el volado, colgado del borde de la losa y sin columna debajo. Es lo
+    // que se vio al subir el volado a 0.75 m: «se acortó el muro». Aquí quedan los
+    // índices de los ejes reales, que son a los que hay que amarrar la estructura.
+    const ejesDe = (g: { eje: boolean[]; vol: boolean[] }) =>
+      g.eje.map((e, i) => (e && !g.vol[i] ? i : -1)).filter((i) => i >= 0);
+    const ejeX = ejesDe(fx);
+    const ejeY = ejesDe(fy);
+    const iEjeA = ejeX[0] ?? 0;                       // primer eje real en X
+    const iEjeB = ejeX[1] ?? (XF.length - 1);         // el siguiente: un vano
+    const jFach1 = ejeY[0] ?? 0;                      // fachadas en Y
+    const jFach2 = ejeY[ejeY.length - 1] ?? (YF.length - 1);
 
     // ── Nudos: la malla fina repetida en cada nivel ─────────────────────────
     //
@@ -445,25 +460,31 @@ export const plantillas: ExampleDef = {
     // esto, `N(i, j, 0)` devolvía `undefined` para los nudos intermedios del
     // muro, el elemento salía con un nudo inexistente y `analyze` reventaba en
     // `computeQ4ShellStresses` — el `deform` en cambio seguía y daba un número.
-    const hastaMuro = Math.min(D, XF.length - 1);
-    const medioD = D % 2 === 0 ? D / 2 : -1;
+    const hastaMuro = iEjeB;
+    const medioD = D % 2 === 0 ? iEjeA + D / 2 : -1;
     // ⚠️ El MURO ocupa toda la banda, así que necesita todos sus nudos. Las
     // DIAGONALES en cambio solo tocan tres columnas —los dos extremos del vano y
     // el centro de la viga—, y mantener viva la banda entera dejaba 22 nudos
     // huérfanos en el arriostrado. Cada uno pide lo suyo, ni más ni menos.
     const enMuro = (i: number, j: number, k: number) => {
-      if (j !== 0 && j !== YF.length - 1) return false;
-      if (conMuros) return i <= hastaMuro;                // el muro ocupa la banda entera
+      if (j !== jFach1 && j !== jFach2) return false;
+      if (conMuros) return i >= iEjeA && i <= hastaMuro;  // el muro ocupa la banda entera
       if (!conDiagonales) return false;
       // La V invertida arranca en las ESQUINAS de abajo y sube al centro de la
       // viga de arriba: el nudo del centro solo hace falta de la primera planta
       // para arriba. Mantenerlo vivo en la base dejaba 2 huérfanos.
-      if (i === 0 || i === hastaMuro) return true;
+      if (i === iEjeA || i === hastaMuro) return true;
       return medioD > 0 && i === medioD && k > 0;
     };
     const vive = (i: number, j: number, k: number) => {
       const cruce = fx.eje[i] && fy.eje[j];
-      if (cruce) return true;
+      // ⚠️ En la BASE, un cruce del volado NO es un nudo.
+      // El volado añade un eje más a cada lado, y sus cruces contaban como cruce de
+      // ejes: nacía un nudo en la cimentación donde no hay columna, y como el apoyo
+      // se pone en TODO nudo con z = 0, salía un empotramiento colgado en el aire.
+      // Con 4x4 ejes y volado eran 36 apoyos en vez de 16 — los «apoyos ficticios»
+      // que se ven en la captura. Arriba sí valen: ahí está la losa del voladizo.
+      if (cruce) return k > 0 || (!fx.vol[i] && !fy.vol[j]);
       if (enMuro(i, j, k)) return true;                // muro o diagonal: hasta abajo
       if (k === 0) return false;                       // la base: solo columnas
       if (hayLosaAqui) return true;                    // la losa sujeta todo
@@ -530,16 +551,16 @@ export const plantillas: ExampleDef = {
     // nudo en el centro del vano, o sea `divisiones por vano` par — con D impar
     // no hay centro y se cae a la diagonal simple de esquina a esquina.
     if (conDiagonales) {
-      const hastaX = Math.min(D, XF.length - 1);
-      const medio = D % 2 === 0 ? D / 2 : -1;
+      const hastaX = iEjeB;
+      const medio = medioD;
       for (let j = 0; j < YF.length; j++) {
-        if (!fy.eje[j]) continue;
+        if (!fy.eje[j] || fy.vol[j]) continue;
         for (let k = 0; k < Z.length - 1; k++) {
           if (medio > 0) {
-            push([N(0, j, k), N(medio, j, k + 1)], "diag");
+            push([N(iEjeA, j, k), N(medio, j, k + 1)], "diag");
             push([N(hastaX, j, k), N(medio, j, k + 1)], "diag");
           } else {
-            push([N(0, j, k), N(hastaX, j, k + 1)], "diag");
+            push([N(iEjeA, j, k), N(hastaX, j, k + 1)], "diag");
           }
         }
       }
@@ -550,10 +571,9 @@ export const plantillas: ExampleDef = {
     // altura. Es la disposición más común y la que hace de verdad un sistema
     // dual: el pórtico toma la gravedad y los muros la mayor parte del corte.
     if (conMuros && YF.length > 1) {
-      const hastaX = Math.min(D, XF.length - 1);   // un vano, de eje a eje
-      for (const j of [0, YF.length - 1])
+      for (const j of [jFach1, jFach2])
         for (let k = 0; k < Z.length - 1; k++)
-          for (let i = 0; i < hastaX; i++)
+          for (let i = iEjeA; i < iEjeB; i++)      // un vano, de eje REAL a eje real
             push([N(i, j, k), N(i + 1, j, k), N(i + 1, j, k + 1), N(i, j, k + 1)], "muro");
     }
 
