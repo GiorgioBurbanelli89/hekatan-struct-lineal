@@ -201,6 +201,33 @@ await cmd("rep");
 const msg = await ultimo();
 ok(/designe/i.test(msg), "sin designar nada, avisa en vez de callarse", msg.slice(0, 62));
 await pag.keyboard.press("Escape"); await espera(250);
+// ── y el BOTÓN del ribbon, que es por donde lo va a buscar cualquiera ──────
+// REPLICAR vivía solo en el cuadro de comandos y en una carpeta del panel de
+// propiedades: escondido, siendo la orden que convierte un pórtico en un edificio.
+const pulsarRibbon = async (txt, ms = 800) => {
+  const c = await pag.evaluate((t) => {
+    const b = [...document.querySelectorAll("#hk-ribbon button")]
+      .filter((e) => e.offsetParent !== null && (e.textContent || "").includes(t))[0];
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, txt);
+  if (!c) return false;
+  await pag.mouse.click(c.x, c.y); await espera(ms); return true;
+};
+const prompt = () => pag.evaluate(() => document.getElementById("hk3-cmd-prompt")?.textContent || "");
+ok(await pulsarRibbon("Replicar", 500), "el ribbon tiene su botón REPLICAR");
+await cmd("s"); await cmd("todo", 600);
+await pulsarRibbon("Replicar", 800);
+const pr1 = await prompt();
+ok(/desplazamiento/i.test(pr1), "el botón lanza la misma orden: pide el desplazamiento", pr1.slice(0, 54));
+await cmd("0,0,3", 500);
+const pr2 = await prompt();
+ok(/copias/i.test(pr2), "…y después cuántas copias", pr2.slice(0, 54));
+await cmd("2", 900);
+const cotasBoton = await cotas();
+ok(cotasBoton.cotas.length > 3, "y replica de verdad", `cotas ${cotasBoton.cotas.slice(0, 6).join(", ")}`);
+
 ok(errores.length === 0, "sin errores de página", errores.slice(0, 2).join(" | "));
 
 await nav.close(); srv.close();

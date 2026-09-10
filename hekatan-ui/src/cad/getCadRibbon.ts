@@ -104,6 +104,8 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
       { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: clic en una esquina, mueve, clic en la otra (izq→der ventana, der→izq captura). Arrastrar orbita." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
+      { id: "replicar", icono: "⛁", nombre: "Replicar", tecla: "REP",
+        ayuda: "con algo designado: desplazamiento y cuántas copias, como el Replicate de ETABS. Para pisos, «⇈ Subir»." },
       { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
       { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
       { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
@@ -218,6 +220,22 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   };
 
   const usar = (h: Herr) => {
+    // REPLICAR no es una herramienta de dibujo: es la orden REP, la misma que se
+    // teclea. Estaba solo en el cuadro de comandos y en una carpeta del panel de
+    // propiedades — o sea, escondida. Es la que convierte un pórtico en un
+    // edificio, así que va en el ribbon con las demás de Modificar.
+    if (h.id === "replicar") {
+      const n = (window as any).__hekatanSelectionSize?.() ?? 0;
+      if (!n) {
+        hooks.setTool("select");
+        decir("REPLICAR — primero designá lo que querés copiar (S, o ventana clic-clic).");
+        pintarActivo();
+        return;
+      }
+      (window as any).__hekatanCadRun?.("rep");
+      decir("REPLICAR — contestá el desplazamiento y cuántas copias en el cuadro de comandos.");
+      return;
+    }
     if (h.id === "apoyo" || h.id === "carga") {
       modoAplicar = h.id as "apoyo" | "carga";
       hooks.setTool("select");
