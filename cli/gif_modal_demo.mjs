@@ -55,8 +55,17 @@ async function servirLocal() {
 
 const arg = process.argv[2];
 const URL_BASE = (!arg || arg === "local") ? await servirLocal() : arg;
+// Cada entrada es `ejemplo` o `ejemplo:plantilla`, donde plantilla es el numero de
+// `tipo` de las Plantillas (0 portico 2D · 1 portico 3D · 2 portico+losa · 4 losa
+// plana · 6 portico+losa+MUROS (dual) · 7 arriostrado). Sin numero, el ejemplo se
+// abre tal cual.
 const EJEMPLOS = (process.argv[3] ||
   "beams,galpon-bodega,test-m-dual,mesa-torsion").split(",");
+const NOMBRE_PLANTILLA = {
+  0: "Pórtico plano (2D)", 1: "Pórtico 3D", 2: "Pórtico + losa (aporte de losa)",
+  3: "Solo rejilla", 4: "Losa plana sobre columnas", 5: "Losa con vigas de borde",
+  6: "Pórtico + losa + muros (dual)", 7: "Pórtico arriostrado (CBF)",
+};
 
 // ── Frecuencias de ETABS 22, SOLO donde existe una referencia de verdad ──
 // Nada de numeros de memoria: cada lista viene de una corrida de ETABS sobre el
@@ -130,7 +139,9 @@ const OVERLAY = `
 })()`;
 
 const gifs = [];
-for (const EJ of EJEMPLOS) {
+for (const ENTRADA of EJEMPLOS) {
+  const [EJ, PLANT] = ENTRADA.split(":");
+  const plantilla = PLANT === undefined ? null : Number(PLANT);
   const pag = await navegador.newPage();
   await pag.setViewport({ width: 1600, height: 1000 });
   const errores = [];
@@ -143,7 +154,7 @@ for (const EJ of EJEMPLOS) {
   await pag.evaluate(OVERLAY);
 
   let k = 0;
-  const pre = `demo_${EJ}_`;
+  const pre = `demo_${plantilla === null ? EJ : EJ + "_" + plantilla}_`;
   for (const f of readdirSync(OUT)) if (f.startsWith(pre)) unlinkSync(join(OUT, f));
   const foto = async () => {
     await pag.screenshot({ path: join(OUT, `${pre}${String(++k).padStart(3, "0")}.png`) });
@@ -193,6 +204,49 @@ for (const EJ of EJEMPLOS) {
   await rotulo(`1 · Ejemplo cargado: ${nombre || EJ}`);
   await quieto(4, 300);
 
+  // ── 0b. elegir la PLANTILLA con el cursor ──────────────────────────────────
+  // El desplegable de Tweakpane es un <select> de verdad: el cursor viaja hasta el,
+  // se ve el clic, y se elige la opcion. Asi el GIF ensena de donde sale el modelo
+  // en vez de aparecer ya montado.
+  if (plantilla !== null) {
+    const pp = await puntoDe("fila", "Plantilla");
+    if (pp) {
+      await rotulo("2 · el cursor abre «Plantilla»");
+      await viajar(pp, 7);
+      await pag.mouse.down(); await espera(140); await foto();
+      await pag.mouse.up();   await espera(200); await foto();
+      await rotulo(`3 · elige «${NOMBRE_PLANTILLA[plantilla] ?? plantilla}»`);
+      // Se le pone un id al <select> y se elige con `page.select`, que dispara los
+      // eventos como el navegador. Tocar el descriptor de `value` a mano fallaba
+      // («Cannot read properties of undefined») y el GIF salia con el modelo por
+      // defecto: las dos plantillas daban las MISMAS frecuencias, que fue como se vio.
+      // ⚠️ El `value` de las opciones NO es el número: Tweakpane pone la ETIQUETA
+      // («▦ Pórtico plano (2D)»). Pidiendo "6" el navegador no encuentra opción y se
+      // queda en la primera — las dos plantillas salían con las MISMAS frecuencias.
+      // Se busca la opción por su texto.
+      const hay = await pag.evaluate((nom) => {
+        const f = window.__fila("Plantilla");
+        const s = f && f.querySelector("select");
+        if (!s) return null;
+        s.id = "hk-demo-plantilla";
+        const o = [...s.options].find((x) => (x.textContent || "").includes(nom));
+        return o ? o.value : null;
+      }, NOMBRE_PLANTILLA[plantilla]);
+      if (hay) {
+        await pag.select("#hk-demo-plantilla", hay);
+        await espera(2500);
+        await quieto(6, 500);
+        const puesta = await pag.evaluate(() =>
+          document.getElementById("hk-demo-plantilla")?.value);
+        if (!String(puesta).includes(NOMBRE_PLANTILLA[plantilla]))
+          console.log(`  ✗ la plantilla NO cambió: pedida «${NOMBRE_PLANTILLA[plantilla]}», quedó «${puesta}»`);
+        else console.log(`  ✓ plantilla · ${puesta}`);
+      } else {
+        console.log("  ✗ no encuentro el desplegable «Plantilla»");
+      }
+    }
+  }
+
   // ── 1. al boton de modal ──
   let p = await puntoDe("boton", "Correr modal");
   if (!p) {
@@ -212,11 +266,11 @@ for (const EJ of EJEMPLOS) {
     await pag.close();
     continue;
   }
-  await rotulo("2 · el cursor va al botón «▶ Correr modal + animar»");
+  await rotulo("4 · el cursor va al botón «▶ Correr modal + animar»");
   await viajar(p, 8);
 
   // ── 2. clic ──
-  await rotulo("3 · CLIC — el modal resuelve");
+  await rotulo("5 · CLIC — el modal resuelve");
   await pag.mouse.down(); await espera(120); await foto();
   await pag.mouse.up();  await espera(120); await foto();
   await quieto(6, 500);
@@ -224,9 +278,9 @@ for (const EJ of EJEMPLOS) {
   // ── 3. encender la tabla de participacion de masa ──
   const pt = await puntoDe("fila", "Mostrar tabla");
   if (pt) {
-    await rotulo("4 · el cursor enciende «📋 Mostrar tabla»");
+    await rotulo("6 · el cursor enciende «📋 Mostrar tabla»");
     await viajar(pt, 6);
-    await rotulo("5 · CLIC — sale la participación de masa modo a modo");
+    await rotulo("7 · CLIC — sale la participación de masa modo a modo");
     await pag.mouse.down(); await espera(120); await foto();
     await pag.mouse.up();  await espera(900); await foto();
     await quieto(4, 350);
@@ -235,7 +289,7 @@ for (const EJ of EJEMPLOS) {
   // ── 4. recorrer los modos con el slider ──
   const pm = await puntoDe("fila", "Modo #");
   if (pm) {
-    await rotulo("6 · el cursor mueve el slider «Modo #»");
+    await rotulo("8 · el cursor mueve el slider «Modo #»");
     await viajar(pm, 6);
   }
   const ref = ETABS[EJ];
@@ -266,7 +320,7 @@ for (const EJ of EJEMPLOS) {
     } else {
       linea = `${st.f} · T=${st.T} · ${st.dom}   (sin referencia de ETABS para este modelo)`;
     }
-    await rotulo(`7 · Modo ${m} — Hekatan ${linea}`);
+    await rotulo(`9 · Modo ${m} — Hekatan ${linea}`);
     console.log(`  modo ${m}: ${linea}`);
     await quieto(3, 300);
   }
@@ -281,13 +335,14 @@ for (const EJ of EJEMPLOS) {
   if (errores.length) console.log("  errores JS:", errores.slice(0, 3));
   await pag.close();
 
-  const gif = join(OUT, `demo_${EJ}.gif`);
+  const etiqueta = plantilla === null ? EJ : `${EJ}_${plantilla}`;
+  const gif = join(OUT, `demo_${etiqueta}.gif`);
   execFileSync("ffmpeg", ["-y", "-framerate", "4", "-i", join(OUT, `${pre}%03d.png`),
     "-vf", "scale=1000:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse",
     gif], { stdio: "pipe" });
   const kb = statSync(gif).size / 1024;
-  console.log(`  ${k} cuadros → demo_${EJ}.gif (${kb.toFixed(0)} KB)`);
-  gifs.push({ ej: EJ, nombre: nombre || EJ, gif: `demo_${EJ}.gif`, kb, k, comp, ref });
+  console.log(`  ${k} cuadros → demo_${etiqueta}.gif (${kb.toFixed(0)} KB)`);
+  gifs.push({ ej: etiqueta, nombre: nombre || EJ, gif: `demo_${etiqueta}.gif`, kb, k, comp, ref });
 }
 
 await navegador.close();

@@ -81,11 +81,29 @@ const radiografia = () => pag.evaluate(() => {
   const st = window.__hekatanStates || {};
   const nodes = st.nodes?.rawVal ?? st.nodes?.val ?? [];
   const els = st.elements?.rawVal ?? st.elements?.val ?? [];
+  // ¿el modelo sigue DENTRO del cuadro? Al crecer la rejilla, el viewer le robaba
+  // el encuadre a la cámara y la mandaba al origen: el edificio salía gigante y
+  // cortado. Se mide la distancia del punto de mira al centro del modelo, en
+  // tamaños de modelo — si mira a más de medio modelo de distancia, está fuera.
+  let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+  for (const n of nodes) for (let i = 0; i < 3; i++) {
+    if (n[i] < mn[i]) mn[i] = n[i];
+    if (n[i] > mx[i]) mx[i] = n[i];
+  }
+  const ctx = document.querySelector("#viewer").__ctx;
+  const t = ctx?.controls?.target;
+  let desvio = 0;
+  if (nodes.length && t) {
+    const c = [0, 1, 2].map((i) => (mn[i] + mx[i]) / 2);
+    const diag = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) || 1;
+    desvio = Math.hypot(t.x - c[0], t.y - c[1], t.z - c[2]) / diag;
+  }
   return {
     n: nodes.length,
     e: els.length,
     nan: nodes.filter((x) => x.some((v) => !Number.isFinite(v))).length,
     fuera: els.filter((x) => x.some((i) => i >= nodes.length || i < 0)).length,
+    desvio: +desvio.toFixed(3),
   };
 });
 
@@ -100,7 +118,11 @@ const PLANTILLAS = [
   [7, "Pórtico arriostrado (CBF)"],
 ];
 // Los mismos gestos que hace el usuario: correr modal, animar, y mover los vanos.
-const GESTOS = [["nx", 6], ["sx", 8], ["pisos", 6], ["ny", 5]];
+// `volado` entra porque lo cazó Jorge: mover el volado perimetral con la animación
+// puesta también rompía el dibujo. Es el mismo animador, pero el modelo cambia de OTRA
+// forma (la losa se pasa del último eje), así que se prueba aparte.
+const GESTOS = [["nx", 6], ["sx", 8], ["pisos", 6], ["ny", 5],
+                ["volado", 1.5], ["volado", 3], ["volado", 0], ["h", 4], ["ms", 1.5]];
 
 for (const [tipo, plant] of PLANTILLAS) {
   console.log(`\n── ${plant} ${"─".repeat(Math.max(0, 46 - plant.length))}`);
@@ -126,10 +148,11 @@ for (const [tipo, plant] of PLANTILLAS) {
     catch { /* la pestaña ya no está: lo cuenta el estado() de abajo */ }
     await espera(13000);
     const e = await estado();
-    ok(!e.muerta && e.fuera === 0 && e.nan === 0,
+    ok(!e.muerta && e.fuera === 0 && e.nan === 0 && e.desvio <= 0.5,
        `«${par}» → ${val} con la animación puesta no rompe el dibujo`,
        e.muerta ? `LA PESTAÑA SE MURIÓ (${e.motivo})`
-                : `${e.n} nudos · ${e.e} elementos · ${e.fuera} elementos fuera de rango · ${e.nan} nudos NaN`);
+                : `${e.n} nudos · ${e.e} elementos · ${e.fuera} fuera de rango · ${e.nan} NaN` +
+                  ` · la cámara mira a ${e.desvio} modelos del centro`);
     if (e.muerta) { cayo = true; break; }
   }
   if (cayo) { await abrir(); continue; }

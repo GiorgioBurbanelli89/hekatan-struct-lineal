@@ -368,12 +368,28 @@ export function getViewer({
     // cámara está alineada con +Z y X≈0, Y≈0.
     const isPlan = Math.abs(camera.position.x) < 0.1 && Math.abs(camera.position.y) < 0.1
                    && camera.position.z > 0;
-    if (isPlan) {
-      camera.position.set(0, 0, z2fit2);
-    } else {
-      camera.position.set(0.5 * gs, -z2fit2, 0.5 * gs);
+    // ⚠️ SOLO cuando el lienzo está vacío.
+    //
+    // El comentario de arriba ya decía «reposicionamos SOLO si todavía está cerca del
+    // default», pero esa guarda nunca se escribió: se calculaba `curDist` y se tiraba
+    // con `void curDist`. Con un modelo en pantalla el resultado era que la cámara se
+    // iba al ORIGEN cada vez que la rejilla crecía.
+    //
+    // Y la rejilla crece sola: al subir «volado perimetral» la losa se sale de la
+    // rejilla, el workspace agranda `gridSize`, y esto le robaba el encuadre al
+    // `autoFitCamera()` que acababa de enmarcar el modelo. Medido (dual 3x3, 3 pisos,
+    // volado 0.25): el modelo está centrado en (6, 6.5, 4.8) y la cámara acababa
+    // mirando a (0,0,0) desde 8.5 m — el edificio, fuera de cuadro y gigante. Eso era
+    // el «bug visual» al mover el volado con el modal animando.
+    const hayModelo = ((mesh?.nodes?.rawVal ?? mesh?.nodes?.val ?? []) as unknown[]).length > 0;
+    if (!hayModelo) {
+      if (isPlan) {
+        camera.position.set(0, 0, z2fit2);
+      } else {
+        camera.position.set(0.5 * gs, -z2fit2, 0.5 * gs);
+      }
+      controls.target.set(0, 0, 0);
     }
-    controls.target.set(0, 0, 0);
     // minDistance proporcional al grid (no menos de 0.1m para grids chicos)
     controls.minDistance = Math.max(0.05, gs * 0.01);
     // maxDistance ~50× el grid para que el zoom out tenga aire pero no se
