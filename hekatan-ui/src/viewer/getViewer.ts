@@ -225,9 +225,13 @@ export function getViewer({
       if (!m || !("opacity" in m)) return;
       const name = (o.name as string) ?? "";
       // 3 niveles de opacidad — borde > major > minor
-      let baseMax = 0.35;  // minor
+      // ⚠️ Subidos el 9-sep-2026. El color de rejilla del tema oscuro es 0x2c3647
+      // sobre un fondo casi negro, y la menor iba ADEMÁS a 0.45 de ese color y 0.35
+      // de opacidad: se mezclaba con el fondo y no se veía NADA. El lienzo salía
+      // vacío y no había sobre qué referenciarse para poner el primer punto.
+      let baseMax = 0.55;  // minor
       if (name.includes("border")) baseMax = 1.0;
-      else if (name.includes("major")) baseMax = 0.75;
+      else if (name.includes("major")) baseMax = 0.95;
       (m as any).opacity = factor * baseMax;
     });
   };

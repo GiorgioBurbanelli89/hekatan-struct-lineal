@@ -56,8 +56,13 @@ export function grid(
   const halfSize = gridSize / 2;
   const majorEff = Math.max(minorStep, Math.round(majorStep / minorStep) * minorStep);
   majorStep = majorEff;
-  const majorColor = new THREE.Color(t.grid);
-  const minorColor = new THREE.Color(t.grid).multiplyScalar(0.45);
+  // La MAYOR es la referencia que se mira (cada 5 m): va un punto por encima del
+  // color de rejilla. La menor, un punto por debajo. Las dos sobre un fondo casi
+  // negro, así que el contraste se gana con el COLOR, no con la opacidad.
+  const majorColor = new THREE.Color(t.grid).multiplyScalar(1.3);
+  // ⚠️ 0.45 dejaba la línea menor por DEBAJO del fondo en el tema oscuro (grid
+  // 0x2c3647 → 0x141920, y el fondo es 0x0b1220): rejilla invisible.
+  const minorColor = new THREE.Color(t.grid).multiplyScalar(0.8);
 
   // Helper: construye geometría de líneas paralelas en un plano.
   // El plano se especifica por sus 2 ejes (u, v) — los ejes que NO son

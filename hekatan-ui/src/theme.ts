@@ -33,7 +33,12 @@ const DARK: ThemeColors = {
   // de AutoCAD (registro, Drawing Window): un fondo casi negro con tinte azul y
   // una rejilla dos escalones por encima, no un gris neutro.
   background: 0x0e1116,
-  grid: 0x2c3647,
+  // ⚠️ Subida el 9-sep-2026 de 0x2c3647 a 0x44546e. Con la anterior, la línea de
+  // rejilla quedaba a 25 puntos del fondo (0x0e1116) y con 1 píxel de ancho no se
+  // veía: el lienzo parecía VACÍO y no había sobre qué referenciarse para poner el
+  // primer punto. AutoCAD pone su rejilla dos escalones por encima del fondo, no
+  // uno.
+  grid: 0x44546e,
   axisArrow: 0x888888,
   elementLine: 0xffffff,
   nodePoint: 0xffffff,

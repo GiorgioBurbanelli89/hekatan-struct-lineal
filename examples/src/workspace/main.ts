@@ -1027,6 +1027,11 @@ function encuadrarAhora() {
     const halfH = Math.max(extent * 0.6, 5);
     orthoCamera.left = -halfH * aspect; orthoCamera.right = halfH * aspect;
     orthoCamera.top = halfH; orthoCamera.bottom = -halfH;
+    // ⚠️ Y el ZOOM a 1. Se recalculaba el marco pero se dejaba el zoom que hubiera
+    // (las vistas de planta lo dejan en 12 y pico), así que el encuadre salía
+    // multiplicado por él: en planta, tras generar la rejilla de ejes, la malla
+    // aparecía descentrada y a trozos. «Encuadrar» quiere decir que se ve TODO.
+    orthoCamera.zoom = 1;
     orthoCamera.updateProjectionMatrix();
     controls.update();
     render?.();
