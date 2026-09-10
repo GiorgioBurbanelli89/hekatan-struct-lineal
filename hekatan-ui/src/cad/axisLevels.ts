@@ -31,6 +31,17 @@ export interface Level {
   label: string;
   /** Cota Z en metros */
   z: number;
+  /**
+   * De PISO o AUXILIAR, como en ETABS.
+   *
+   *   piso — planta de verdad: es la que sale como STORY en el .e2k / .s2k y la que
+   *          reparte la masa. En Hekatan la marcan las cotas del propio modelo.
+   *   aux  — plano de referencia: sirve para dibujar a esa altura (un descanso de
+   *          escalera, el arranque de un muro) y NO es una planta del modelo.
+   *
+   * Sin tipo se entiende «aux»: los que añade el usuario a mano no crean plantas.
+   */
+  tipo?: "piso" | "aux";
 }
 
 // ── Los ejes se dibujan como EJES, no como barras ──────────────────────────

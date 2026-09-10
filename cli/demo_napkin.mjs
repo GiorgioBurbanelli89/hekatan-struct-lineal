@@ -79,6 +79,61 @@ await pag.evaluate(() => {
 });
 const rotulo = (t) => pag.evaluate((t) => { document.getElementById("hk-rotulo").textContent = t; }, t);
 
+// ── EL CURSOR, DIBUJADO ─────────────────────────────────────────────────────
+// El ratón de verdad no sale en las capturas —el navegador no lo pinta—, así que en
+// el GIF los clics ocurrían solos y no se entendía nada. Se dibuja una flecha que
+// sigue al ratón de puppeteer y suelta un aro al clicar. Cada `raton()` mueve las
+// dos cosas a la vez para que no se separen nunca.
+await pag.evaluate(() => {
+  const c = document.createElement("div");
+  c.id = "hk-cursor";
+  c.style.cssText = "position:fixed;left:-100px;top:-100px;z-index:100000;pointer-events:none;" +
+    "width:22px;height:22px;transform:translate(-2px,-2px)";
+  c.innerHTML =
+    '<svg viewBox="0 0 24 24" width="22" height="22">' +
+    '<path d="M4 2 L4 19 L9 14.5 L12 21.5 L15 20 L12 13.5 L18.5 13.5 Z" ' +
+    'fill="#ffffff" stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  document.body.appendChild(c);
+  const aro = document.createElement("div");
+  aro.id = "hk-cursor-aro";
+  aro.style.cssText = "position:fixed;z-index:99999;pointer-events:none;display:none;" +
+    "width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;" +
+    "border:2.5px solid #22d3ee;background:rgba(34,211,238,.18)";
+  document.body.appendChild(aro);
+  window.__demoCursor = (x, y) => {
+    const c2 = document.getElementById("hk-cursor");
+    c2.style.left = x + "px"; c2.style.top = y + "px";
+  };
+  window.__demoClic = (x, y) => {
+    const a = document.getElementById("hk-cursor-aro");
+    a.style.left = x + "px"; a.style.top = y + "px"; a.style.display = "block";
+  };
+  window.__demoSoltar = () => { document.getElementById("hk-cursor-aro").style.display = "none"; };
+});
+/** Mueve el ratón DE VERDAD y la flecha dibujada, juntos. */
+const raton = async (x, y, pasos = 12) => {
+  const p0 = await pag.evaluate(() => {
+    const c = document.getElementById("hk-cursor");
+    return [parseFloat(c.style.left) || 0, parseFloat(c.style.top) || 0];
+  });
+  for (let i = 1; i <= pasos; i++) {
+    const t = i / pasos;
+    const px = p0[0] + (x - p0[0]) * t, py = p0[1] + (y - p0[1]) * t;
+    await pag.mouse.move(px, py);
+    await pag.evaluate(({ x, y }) => window.__demoCursor(x, y), { x: px, y: py });
+    if (i % 3 === 0) await foto();      // la flecha se ve VIAJAR, no teletransportarse
+  }
+};
+/** Clic con su aro, para que en el GIF se vea DÓNDE se pulsó. */
+const clic = async (x, y, opts = {}) => {
+  await pag.evaluate(({ x, y }) => window.__demoClic(x, y), { x, y });
+  await foto(2);
+  await pag.mouse.click(x, y, opts); CLICS++;
+  await espera(140);
+  await foto();
+  await pag.evaluate(() => window.__demoSoltar());
+};
+
 // ── SOLO RATÓN ───────────────────────────────────────────────────────────────
 /**
  * Pulsa un boton por su texto. Dos guardas que costaron una tanda entera:
@@ -99,7 +154,8 @@ const pulsar = async (txt, ms = 700) => {
     return { x: b.r.left + b.r.width / 2, y: b.r.top + b.r.height / 2 };
   }, { t: txt, AN: W, AL: H });
   if (!c) { console.log("  x no se ve el boton: " + txt); return false; }
-  await pag.mouse.click(c.x, c.y); CLICS++;
+  await raton(c.x, c.y);
+  await clic(c.x, c.y);
   await espera(ms);
   return true;
 };
@@ -122,9 +178,9 @@ const clicMundo = async (P, ms = 380) => {
     const e = document.elementFromPoint(q.x, q.y); return e ? e.tagName !== "CANVAS" : true;
   }, c);
   if (tapado) { console.log(`  ✗ (${P.join(",")}) cae bajo un panel`); return false; }
-  await pag.mouse.move(c.x, c.y, { steps: 6 });
-  await espera(150);
-  await pag.mouse.click(c.x, c.y); CLICS++;
+  await raton(c.x, c.y);
+  await espera(120);
+  await clic(c.x, c.y);
   await espera(ms);
   return true;
 };
@@ -138,8 +194,10 @@ const campoRibbon = async (title, valor) => {
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }, title);
   if (!c) { console.log("  x no se ve la casilla: " + title); return false; }
-  await pag.mouse.click(c.x, c.y, { clickCount: 3 }); CLICS++;
-  await pag.keyboard.type(String(valor));
+  await raton(c.x, c.y);
+  await clic(c.x, c.y, { clickCount: 3 });
+  await pag.keyboard.type(String(valor), { delay: 90 });   // se ve teclear
+  await foto(2);
   await pag.keyboard.press("Enter");
   await espera(500);
   return true;
