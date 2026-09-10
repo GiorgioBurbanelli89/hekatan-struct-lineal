@@ -157,6 +157,20 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
     };
   }
 
+  /**
+   * ¿La foto guardada es de la malla que hay AHORA en pantalla?
+   *
+   * Si el usuario mueve «líneas en X» o «nº de pisos» con el modal animando, el modelo
+   * se REGENERA debajo: otros nudos, otros elementos. La foto que guardó el animador es
+   * del modelo de antes, y volcarla encima deja los nudos VIEJOS con los elementos
+   * NUEVOS — barras que apuntan a nudos que ya no existen. Medido: dual de 4 pisos,
+   * «líneas en X» 4 → 6 con la animación puesta: 68 nudos contra 124 elementos, 51 de
+   * ellos fuera de rango. Eso es el destrozo visual, no un modo que falte.
+   */
+  function mismaMalla(foto: Node[]): boolean {
+    return foto.length > 0 && foto.length === mesh.nodes.rawVal.length;
+  }
+
   function stopInternal(restore: boolean) {
     if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
     if (restore) {
@@ -167,10 +181,18 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
       // que podría estar corrompido si el usuario encadenó play→stop→play).
       // Forzamos render inmediato para que el canvas Three.js refleje los nodos
       // al momento, sin esperar un evento reactivo.
-      const src = trueOriginalNodes.length > 0 ? trueOriginalNodes : originalNodes;
+      const src = mismaMalla(trueOriginalNodes) ? trueOriginalNodes
+                : mismaMalla(originalNodes) ? originalNodes
+                : [];
       if (src.length > 0) {
         mesh.nodes.val = src.map((n) => [...n] as Node);
         getCtx()?.render();
+      } else {
+        // El modelo se rehizo debajo: la foto ya no es de esta malla. No se restaura
+        // nada — el modelo nuevo ya está bien puesto — y se tira la foto vieja para
+        // que no la use el siguiente play().
+        trueOriginalNodes = [];
+        originalNodes = [];
       }
     }
   }
@@ -195,7 +217,8 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
     // actuales, que pueden estar mid-animación de otro modo). Sin esto, cambiar
     // de modo mientras anima ACUMULA la deformada del modo anterior → al volver
     // al modo 1 se ve una deformada "sumada" horrible.
-    originalNodes = (trueOriginalNodes.length > 0 ? trueOriginalNodes : mesh.nodes.rawVal).map((n) => [...n] as Node);
+    if (!mismaMalla(trueOriginalNodes)) trueOriginalNodes = mesh.nodes.rawVal.map((n) => [...n] as Node);
+    originalNodes = trueOriginalNodes.map((n) => [...n] as Node);
     const nNodes = originalNodes.length;
 
     // ── El modo tiene que ser de ESTA malla ──────────────────────────────────
@@ -270,8 +293,16 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
     if (st?.deformedShape) { if (savedDeformedShape === null) savedDeformedShape = st.deformedShape.val; st.deformedShape.val = false; }
     mode = Math.max(0, Math.min((results.frequencies?.length ?? 1) - 1, i));
     const shape = results.modeShapes[mode];
-    const base = (trueOriginalNodes.length > 0 ? trueOriginalNodes : mesh.nodes.rawVal).map((n) => [...n] as Node);
+    if (!mismaMalla(trueOriginalNodes)) trueOriginalNodes = mesh.nodes.rawVal.map((n) => [...n] as Node);
+    const base = trueOriginalNodes.map((n) => [...n] as Node);
     const nNodes = base.length;
+    // El modo tiene que ser de ESTA malla; si no, se dibujaría una deformada mentirosa
+    // (los nudos que sobran se quedan quietos). Ver la nota de startInternal().
+    if (Math.floor(shape.length / 6) !== nNodes) {
+      console.warn(`[animateMode] el modo estatico es de otra malla: ` +
+        `${Math.floor(shape.length / 6)} nudos contra ${nNodes} en pantalla. No lo dibujo.`);
+      return;
+    }
     let xMin = Infinity, yMin = Infinity, zMin = Infinity, xMax = -Infinity, yMax = -Infinity, zMax = -Infinity;
     for (const n of base) { if (n[0] < xMin) xMin = n[0]; if (n[0] > xMax) xMax = n[0]; if (n[1] < yMin) yMin = n[1]; if (n[1] > yMax) yMax = n[1]; if (n[2] < zMin) zMin = n[2]; if (n[2] > zMax) zMax = n[2]; }
     const extent = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2) || 1;

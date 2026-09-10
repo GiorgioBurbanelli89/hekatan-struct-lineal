@@ -34,9 +34,13 @@
   padding: 3px 10px;
 }
 
+/* El logo trae su propio fondo (el cuadrado oscuro de la marca): el boton no pinta
+   nada detras ni recorta, o el porticoo dorado se pierde. Va PRIMERO en la fila: al
+   final se salia de la pantalla en ventanas estrechas y no se veia. */
 #toolbar .btn-icon {
-  background-color: rgb(0 95 115);
-  fill: rgb(255, 255, 255);
+  background-color: transparent;
+  padding: 0;
+  border-radius: 6px;
 }
 
 /* Dropdown */

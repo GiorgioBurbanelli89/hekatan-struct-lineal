@@ -310,6 +310,25 @@ const segModal = (dof: number) => 2.07e-11 * Math.pow(dof, 2.5);
 const SEG_CONFIRMAR = 5;
 
 /** Pregunta si vale la pena seguir. `true` = seguir. Sin `confirm` (Node), sigue. */
+/**
+ * Tope de GDL para el modal.
+ *
+ * Medido con `cli/ctl_modal_techo.mjs` sobre el dual, que es la plantilla más pesada:
+ *
+ *     4x4x4 pisos   1 470 nudos    8 820 GDL   ✓
+ *     5x5x4         2 535         15 210 GDL   ✓
+ *     6x6x4         3 890         23 340 GDL   ✓
+ *     6x6x6         5 812         34 872 GDL   ✓
+ *     7x7x6                                    ✗ se muere la pestaña
+ *
+ * Se deja en 40 000: por encima del mayor que aguantó y por debajo del que mata.
+ * Es el techo de una máquina modesta con el render por software; el que tenga más
+ * puede subirlo desde la consola con `window.__hekatanDofMaxModal = 60000`.
+ */
+const DOF_MAX_MODAL_DEFECTO = 40000;
+const topeModal = () =>
+  Number((window as any).__hekatanDofMaxModal) || DOF_MAX_MODAL_DEFECTO;
+
 function confirmarSiTarda(dof: number, seg: number, nudos: number, malla: number,
                           que: string): boolean {
   if (seg <= SEG_CONFIRMAR || typeof confirm !== "function") return true;
@@ -855,6 +874,29 @@ export const plantillas: ExampleDef = {
     }
     if (!nodes?.length || !elements?.length || !ni?.supports?.size || !ei?.densities?.size) return;
     const dofM = nodes.length * 6;
+    (window as any).__hekatanModalInfo = { dof: dofM, nudos: nodes.length, malla: msM };
+    // ── Techo de tamaño ──────────────────────────────────────────────────────
+    // Por encima de cierto tamaño el solver modal NO lanza un error que se pueda
+    // atrapar: se queda sin memoria y se lleva la PESTAÑA por delante. Un aviso de
+    // «va a tardar» no sirve, porque no es tiempo: es memoria. Medido con
+    // `cli/ctl_modal_techo.mjs` sobre el dual (lo más pesado: pórtico + losa +
+    // muros). Se corta ANTES y se dice por qué, que es lo que se puede hacer.
+    if (dofM > topeModal()) {
+      try {
+        modalPanel.render({ frequencies: [], modeShapes: [], massParticipation: [] }, {
+          title: "Plantilla",
+          properties: [
+            `⚠ Modelo demasiado grande para el modal: ${dofM.toLocaleString()} GDL ` +
+            `(${nodes.length.toLocaleString()} nudos, malla ${msM} m).`,
+            `El tope es ${topeModal().toLocaleString()} GDL — por encima el solver se ` +
+            `queda sin memoria y se lleva la pestaña.`,
+            "Subí «malla del modal (m)» o bajá pisos / líneas de eje.",
+          ],
+        });
+      } catch { /* el panel puede no estar montado */ }
+      try { (window as any).__hekatanModalStop?.(); } catch { /* sin animador */ }
+      return;
+    }
     if (!confirmarSiTarda(dofM, segModal(dofM), nodes.length, msM, "El modal")) {
       try {
         modalPanel.render({ frequencies: [], modeShapes: [], massParticipation: [] },
@@ -880,7 +922,23 @@ export const plantillas: ExampleDef = {
         ],
       });
     } catch (e: any) {
+      // El modal puede fallar de verdad (el solver WASM se queda sin memoria con
+      // mallas grandes: «memory access out of bounds»). Antes solo se escribia en la
+      // consola: en pantalla se quedaba la tabla del modelo ANTERIOR y la animacion
+      // seguia moviendo un modo que ya no era de esta malla — parecia un fallo del
+      // dibujo. Ahora se DICE, y se para la animacion.
       console.warn("[Plantillas] modal:", e?.message);
+      try { (window as any).__hekatanModalStop?.(); } catch { /* sin animador */ }
+      try {
+        modalPanel.render({ frequencies: [], modeShapes: [], massParticipation: [] }, {
+          title: "Plantilla",
+          properties: [
+            `⚠ El modal no salio con esta malla: ${e?.message ?? "error del solver"}.`,
+            `${nodes.length} nudos · ${dofM.toLocaleString()} GDL · malla del modal ${msM} m.`,
+            "Subi «malla del modal (m)» o baja pisos / lineas de eje y volve a correrlo.",
+          ],
+        });
+      } catch { /* el panel puede no estar montado */ }
     }
   },
 

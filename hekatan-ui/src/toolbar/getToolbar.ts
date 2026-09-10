@@ -24,6 +24,9 @@ export function getToolbar({
 
   const template = html`
     <div class="buttons-container">
+      <button class="btn btn-icon" @click=${onIconClick}>
+        ${getAwatifSvg()}
+      </button>
       ${buttons?.map(
         (button) =>
           html`<button class="btn btn-text" @click=${onButtonClick}>
@@ -32,9 +35,6 @@ export function getToolbar({
       )}
       <button class="btn btn-text btn-theme" @click=${onThemeClick} title="Toggle light/dark theme">
         ${themeLabel()}
-      </button>
-      <button class="btn btn-icon" @click=${onIconClick}>
-        ${getAwatifSvg()}
       </button>
     </div>
 
@@ -100,5 +100,8 @@ function getAwatifSvg(): TemplateResult {
   // Solución: import.meta.env.BASE_URL de Vite, que se inyecta correctamente
   // en dev ("/") y en builds con DEPLOY_BASE ("/hekatan-struct-lineal/").
   const base = (import.meta as any).env?.BASE_URL ?? "/";
-  return html`<img src="${base}img/hekatan-logo.png" alt="Hekatan" style="width:22px;height:22px;border-radius:4px;">`;
+  // El logo lleva el NOMBRE: portico dorado + «Hekatan STRUCT». El icono suelto no
+  // dice de que programa es, y a 26 px un cuadrado dorado no se lee como marca.
+  return html`<img src="${base}img/hekatan-lockup.png" alt="Hekatan Struct"
+    style="height:28px;width:auto;border-radius:6px;display:block;">`;
 }
