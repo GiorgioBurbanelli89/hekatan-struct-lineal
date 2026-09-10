@@ -446,33 +446,43 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   cajaV.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
   const filaV = document.createElement("div");
   filaV.style.cssText = "display:flex;gap:3px;";
-  const VISTAS: Array<[string, string, string, () => void]> = [
-    ["⬇", "Planta", "1", () => { hooks.setPlane("xy"); hooks.setView("plan"); }],
-    ["➡", "Frente", "2", () => { hooks.setPlane("xz"); hooks.setView("elevX"); }],
-    ["⬅", "Lado",   "3", () => { hooks.setPlane("yz"); hooks.setView("elevY"); }],
+  // ⚠️ Cada vista DICE su plano. La vista no es solo mirar desde otro lado: cambia
+  // el PLANO DE TRABAJO, o sea dónde cae el clic. Con los botones diciendo solo
+  // «Planta / Frente / Lado» hay que acordarse de cuál es cuál, y la barra de estado
+  // («Plano XZ») queda lejos del botón que lo acaba de cambiar.
+  const VISTAS: Array<[string, string, string, string, () => void]> = [
+    ["⬇", "Planta", "XY", "1", () => { hooks.setPlane("xy"); hooks.setView("plan"); }],
+    ["➡", "Frente", "XZ", "2", () => { hooks.setPlane("xz"); hooks.setView("elevX"); }],
+    ["⬅", "Lado",   "YZ", "3", () => { hooks.setPlane("yz"); hooks.setView("elevY"); }],
     // ⚠️ El 3D tambien devuelve el plano de trabajo a la PLANTA. Sin esto, quien
     // pasaba por «Frente» o «Lado» se quedaba con la rejilla de pie y los clics
     // cayendo en un plano vertical para siempre: no habia forma de volver desde
     // el ribbon, y lo que se veia era una rejilla vertical flotando.
-    ["🧊", "3D",     "4", () => { hooks.setPlane("xy"); hooks.setView("iso"); }],
+    ["🧊", "3D",     "XY", "4", () => { hooks.setPlane("xy"); hooks.setView("iso"); }],
   ];
-  for (const [ic, nom, tecla, fn] of VISTAS) {
+  const DONDE_CAE: Record<string, string> = {
+    XY: "el clic cae en la planta, a la cota Z de la casilla",
+    XZ: "el clic cae en el alzado frontal, en Y = 0",
+    YZ: "el clic cae en el alzado lateral, en X = 0",
+  };
+  for (const [ic, nom, plano, tecla, fn] of VISTAS) {
     const b = document.createElement("button");
     b.type = "button";
-    b.title = `${nom} (${tecla})`;
+    b.title = `${nom} — plano ${plano}: ${DONDE_CAE[plano]} (${tecla})`;
     b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
-      "gap:1px;width:44px;height:46px;cursor:pointer;background:transparent;border:1px solid transparent;" +
+      "gap:0;width:46px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
       "border-radius:7px;color:#cbd5e1;font-family:inherit;";
-    b.innerHTML = `<span style="font-size:15px;line-height:1">${ic}</span>` +
-      `<span style="font-size:10px;line-height:1.1">${nom}</span>` +
-      `<span style="font-size:8px;opacity:.55;line-height:1">${tecla}</span>`;
-    b.addEventListener("click", () => { fn(); decir(`Vista: ${nom}`); });
+    b.innerHTML = `<span style="font-size:14px;line-height:1">${ic}</span>` +
+      `<span style="font-size:10px;line-height:1.15">${nom}</span>` +
+      `<span style="font-size:9px;line-height:1.1;color:#22d3ee;letter-spacing:.5px">${plano}</span>` +
+      `<span style="font-size:8px;opacity:.5;line-height:1">${tecla}</span>`;
+    b.addEventListener("click", () => { fn(); decir(`Vista ${nom} — plano ${plano}: ${DONDE_CAE[plano]}.`); });
     b.addEventListener("mouseenter", () => { b.style.background = "rgba(34,211,238,.13)"; });
     b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
     filaV.appendChild(b);
   }
   const rotV = document.createElement("div");
-  rotV.textContent = "Vista";
+  rotV.textContent = "Vista · plano de trabajo";
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
   barra.appendChild(cajaV);
@@ -814,7 +824,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       // El guardia `enCampo` no basta porque en el keydown del primer carácter el
       // cuadro todavía está vacío.
       if ((window as any).__hekatanCadEsperaRespuesta?.()) return;
-      e.preventDefault(); VISTAS[v][3](); decir(`Vista: ${VISTAS[v][1]}`);
+      e.preventDefault(); VISTAS[v][4](); decir(`Vista ${VISTAS[v][1]} — plano ${VISTAS[v][2]}`);
       setTimeout(limpiarCmd, 0); return;
     }
     // ── A S D F: axial, cortante, momento y deformada ─────────────────────
@@ -863,7 +873,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       for (const g of GRUPOS) for (const h of g.items) if (h.id === id) usar(h);
     },
     grid: lanzarGrid,
-    vista: (i: number) => { const v = VISTAS[i]; if (v) { v[3](); decir(`Vista: ${v[1]}`); } },
+    vista: (i: number) => { const v = VISTAS[i]; if (v) { v[4](); decir(`Vista ${v[1]} — plano ${v[2]}`); } },
     marcar: (tool: string) => { if (tool !== "select" || modoAplicar) { modoAplicar = null; (window as any).__hekatanBloquearVentana = false; } pintarActivo(); },
     estado: () => estado.textContent,
     herramientas: () => [...botones.keys()],

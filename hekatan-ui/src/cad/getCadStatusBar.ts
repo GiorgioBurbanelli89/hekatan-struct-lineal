@@ -59,8 +59,103 @@ export function addCadStatusBar(): HTMLElement {
     () => !!W.__hekatanOrthoMode, () => W.__hekatanToggleOrtho?.());
   boton("POLAR F10", "Rastreo polar a 45° (F10)",
     () => W.__hekatanPolarTrack !== false, () => W.__hekatanTogglePolar?.());
-  boton("OSNAP F3", "Referencias: origen, extremo, medio, nudo, centro de area, interseccion (F3)",
+  boton("OSNAP F3", "Referencias: origen, extremo, medio, nudo, centro, interseccion... (F3). CLIC DERECHO: elegir cuales",
     () => W.__hekatanOsnapOn !== false, () => W.__hekatanToggleOsnap?.());
+
+  // ── CUADRO DE REFERENCIAS (el «Object Snap Settings» de AutoCAD) ──────────
+  //
+  // Los enganches existían todos, pero no había DÓNDE elegirlos: el botón OSNAP
+  // solo los encendía o apagaba en bloque. En AutoCAD se abre con el clic derecho
+  // sobre ese mismo botón, y en Revit es la lista de «Snaps». Aquí igual: clic
+  // derecho sobre OSNAP F3 → la lista, con su tecla y lo que engancha cada uno.
+  const REFS: Array<[string, string, string]> = [
+    ["ori",  "Origen (0,0,0)",     "el punto de partida del modelo"],
+    ["end",  "Punto final",        "los extremos de cada barra"],
+    ["node", "Nudo",               "los puntos dibujados"],
+    ["int",  "Intersección",       "donde se cruzan dos líneas o dos ejes"],
+    ["mid",  "Punto medio",        "la mitad de una barra"],
+    ["cen",  "Centro",             "el centro de un círculo y el centroide de un paño"],
+    ["per",  "Perpendicular",      "el pie de la perpendicular a una barra"],
+    ["nea",  "Cercano",            "el punto de la barra más próximo al cursor"],
+    ["grid", "Cruce de rejilla",   "los cruces de la cuadrícula — pide SNAP (F9)"],
+    ["track","Rastreo",            "se alinea con un nudo ya dibujado y traza la guía"],
+  ];
+  const cuadro = document.createElement("div");
+  cuadro.id = "hk-osnap-cuadro";
+  cuadro.style.cssText = [
+    "position:fixed", "z-index:99999", "display:none", "padding:8px 10px",
+    "background:var(--hk-chrome, rgba(10,18,32,.98))", "border:1px solid var(--hk-foco, #22d3ee)",
+    "border-radius:8px", "box-shadow:0 10px 30px rgba(0,0,0,.55)",
+    "font:12px Consolas,monospace", "color:var(--hk-texto, #cbd5e1)", "min-width:270px",
+  ].join(";") + ";";
+  const leerRef = (k: string) => k === "track"
+    ? W.__hekatanTrack !== false
+    : (W.__hekatanOsnap?.[k] ?? false);
+  const ponerRef = (k: string, v: boolean) => {
+    if (k === "track") { W.__hekatanTrack = v; return; }
+    W.__hekatanOsnap = W.__hekatanOsnap ?? {};
+    W.__hekatanOsnap[k] = v;
+  };
+  {
+    const tit = document.createElement("div");
+    tit.textContent = "Referencias a objetos (OSNAP · F3)";
+    tit.style.cssText = "color:var(--hk-foco,#22d3ee);font-weight:600;margin-bottom:6px";
+    cuadro.appendChild(tit);
+    for (const [k, nombre, ayuda] of REFS) {
+      const fila = document.createElement("label");
+      fila.title = ayuda;
+      fila.style.cssText = "display:flex;align-items:center;gap:7px;padding:2px 0;cursor:pointer";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = leerRef(k);
+      chk.style.cssText = "margin:0;cursor:pointer";
+      chk.addEventListener("change", () => {
+        ponerRef(k, chk.checked);
+        // encender una referencia con el OSNAP apagado no serviría de nada
+        if (chk.checked && W.__hekatanOsnapOn === false) W.__hekatanOsnapOn = true;
+        pintar();
+      });
+      const txt = document.createElement("span");
+      txt.textContent = nombre;
+      fila.append(chk, txt);
+      cuadro.appendChild(fila);
+    }
+    const pie = document.createElement("div");
+    pie.textContent = "F3 las apaga todas · ALT las suelta mientras mueves";
+    pie.style.cssText = "margin-top:7px;color:var(--hk-suave,#64748b);font-size:11px";
+    cuadro.appendChild(pie);
+    document.body.appendChild(cuadro);
+  }
+  const abrirCuadro = (x: number, y: number) => {
+    for (const [k] of REFS) {
+      const c = cuadro.querySelectorAll("input")[REFS.findIndex((r) => r[0] === k)] as HTMLInputElement;
+      if (c) c.checked = leerRef(k);
+    }
+    cuadro.style.display = "block";
+    const r = cuadro.getBoundingClientRect();
+    cuadro.style.left = Math.max(6, Math.min(x - r.width / 2, window.innerWidth - r.width - 6)) + "px";
+    cuadro.style.top = Math.max(6, y - r.height - 12) + "px";
+  };
+  const cerrarCuadro = () => { cuadro.style.display = "none"; };
+  window.addEventListener("pointerdown", (e) => {
+    if (!cuadro.contains(e.target as Node)) cerrarCuadro();
+  }, true);
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarCuadro(); }, true);
+  W.__hekatanOsnapCuadro = (x?: number, y?: number) => {
+    const b = botones.find(({ el }) => (el.textContent || "").includes("OSNAP"))?.el;
+    const r = b?.getBoundingClientRect();
+    abrirCuadro(x ?? (r ? r.left + r.width / 2 : 200), y ?? (r ? r.top : 400));
+  };
+
+  {
+    const bOsnap = botones.find(({ el }) => (el.textContent || "").includes("OSNAP"))?.el;
+    bOsnap?.addEventListener("contextmenu", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const r = bOsnap.getBoundingClientRect();
+      abrirCuadro(r.left + r.width / 2, r.top);
+    });
+    if (bOsnap) bOsnap.textContent = "OSNAP F3 ▾";
+  }
 
   const unidades = document.createElement("span");
   unidades.textContent = "m · kN";
