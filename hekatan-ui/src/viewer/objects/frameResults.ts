@@ -24,6 +24,29 @@ export function frameResults(
   derivedNodes: State<Node[]>,
   deridedDisplayScale: State<number>
 ): THREE.Group {
+  /**
+   * El tamaño del diagrama sale del MODELO, no de la rejilla.
+   *
+   * Antes era `0.05 · gridSize`: con la rejilla de 30 m que trae el lienzo, un
+   * pórtico de 6 m salía con un diagrama de metro y medio y el rótulo encima —
+   * tapaba la estructura entera y había que irse a «Display scale» a bajarlo a
+   * mano. Va con la diagonal de lo que hay dibujado, que es lo que hacen ETABS y
+   * SAP: el diagrama se ve igual de grande en un edificio que en una viga.
+   * `displayScale` sigue mandando encima, para el que quiera más o menos.
+   */
+  const tamañoBase = (): number => {
+    const N = derivedNodes.rawVal;
+    if (!N?.length) return 0.05 * settings.gridSize.rawVal;
+    const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+    for (const n of N) for (let i = 0; i < 3; i++) {
+      if (n[i] < mn[i]) mn[i] = n[i];
+      if (n[i] > mx[i]) mx[i] = n[i];
+    }
+    const diag = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]);
+    if (!isFinite(diag) || diag <= 0) return 0.05 * settings.gridSize.rawVal;
+    return 0.025 * diag;
+  };
+
   // init
   const group = new THREE.Group();
   const resultObjects = {
@@ -83,8 +106,7 @@ export function frameResults(
           : false
       );
 
-      const size = 0.05 * settings.gridSize.rawVal;
-      resultObject.updateScale(size * deridedDisplayScale.rawVal);
+      resultObject.updateScale(tamañoBase() * deridedDisplayScale.rawVal);
 
       group.add(resultObject);
     });
@@ -96,7 +118,8 @@ export function frameResults(
 
     if (settings.frameResults.rawVal == "none") return;
 
-    const size = 0.05 * settings.gridSize.val;
+    settings.gridSize.val;   // se sigue mirando: si no hay nada dibujado, manda la rejilla
+    const size = tamañoBase();
     group.children.forEach((c) =>
       (c as IResultObject).updateScale(size * deridedDisplayScale.rawVal)
     );

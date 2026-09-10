@@ -432,7 +432,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     ["⬇", "Planta", "1", () => { hooks.setPlane("xy"); hooks.setView("plan"); }],
     ["➡", "Frente", "2", () => { hooks.setPlane("xz"); hooks.setView("elevX"); }],
     ["⬅", "Lado",   "3", () => { hooks.setPlane("yz"); hooks.setView("elevY"); }],
-    ["🧊", "3D",     "4", () => hooks.setView("iso")],
+    // ⚠️ El 3D tambien devuelve el plano de trabajo a la PLANTA. Sin esto, quien
+    // pasaba por «Frente» o «Lado» se quedaba con la rejilla de pie y los clics
+    // cayendo en un plano vertical para siempre: no habia forma de volver desde
+    // el ribbon, y lo que se veia era una rejilla vertical flotando.
+    ["🧊", "3D",     "4", () => { hooks.setPlane("xy"); hooks.setView("iso"); }],
   ];
   for (const [ic, nom, tecla, fn] of VISTAS) {
     const b = document.createElement("button");

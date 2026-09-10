@@ -282,23 +282,14 @@ await espera(600); await foto(3);
 // El tamaño del diagrama es `0.05 · gridSize · displayScale` (frameResults.ts): con
 // la rejilla de 20 m y la escala de fábrica tapa el edificio. Se baja para que se
 // lea la FORMA, que es de lo que va esto.
-// ⚠️ Dos trampas juntas en el tamaño del diagrama:
-//   · el tamaño es `0.05 · gridSize · escala`, o sea que va con la REJILLA, no con
-//     el modelo, y el número que lo rotula es 0.6 de eso;
-//   · y `displayScale` NO es el multiplicador: es un mando de −10 a +10 que el
-//     visor pasa por `10^(s/10)`. Poniéndole «0.30» se pedía 1.07×, no 0.30×.
-// Los rótulos salían de un metro de alto y tapaban el edificio. Se pide el tamaño
-// en METROS y se despeja el mando: s = 10·log10(quiero / (0.05·gridSize)).
+// Ya NO se toca el tamaño del diagrama: desde el 9-sep va con la diagonal del
+// modelo (`frameResults.ts`), no con la rejilla, así que sale bien de fábrica. Lo
+// único que se sube es la deformada: aquí la carga es toda vertical —es lo que pone
+// el botón CARGA— y sin amplificar no se ve el acortamiento de las columnas.
 const escala = await pag.evaluate(() => {
   const s = window.__hekatanSettings?.();
-  const g = s?.gridSize?.rawVal ?? 20;
-  const quiero = 0.55;                       // medio metro de diagrama, para que se lea
-  const mando = 10 * Math.log10(quiero / (0.05 * g));
-  if (s?.displayScale) s.displayScale.val = mando;
-  // Aquí la carga es toda vertical (es lo que pone el botón CARGA), así que la
-  // deformada es el acortamiento de las columnas: sin amplificar mucho no se ve.
   if (s?.deformScale) s.deformScale.val = 300;
-  return { rejilla: g, mando: +mando.toFixed(2), tam: +(0.05 * g * Math.pow(10, mando / 10)).toFixed(3) };
+  return { rejilla: s?.gridSize?.rawVal ?? null, mando: s?.displayScale?.rawVal ?? null };
 });
 const NOM = { a: "7 · «A» axil", s: "8 · «S» cortante", d: "9 · «D» momento" };
 // ⚠️ Se vuelve a encuadrar ANTES de cada foto: al encender un diagrama el
@@ -332,6 +323,6 @@ console.log("casillas del ribbon (pisos / cota Z):", nPisos, "/", cota);
 console.log("cargas puestas a clic:", cargados, "en la cota", zTop, "m · el mapa iba", quien.join(" -> "));
 console.log("cotas:", m4.cotas.join(", "));
 console.log("apoyos/cargas guardados:", puestos.apoyos, "/", puestos.cargas);
-console.log("rejilla:", escala.rejilla, "m · mando displayScale:", escala.mando, "→ diagrama de", escala.tam, "m");
+console.log("rejilla:", escala.rejilla, "m · displayScale de fabrica:", escala.mando);
 console.log("solver:", solve);
 await nav.close(); srv.close();
