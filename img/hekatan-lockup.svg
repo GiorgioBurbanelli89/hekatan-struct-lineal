@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="210" viewBox="0 0 780 210">
+<defs>
+    <radialGradient id="pbg" cx="30%" cy="0%" r="120%">
+      <stop offset="0%" stop-color="#241d10"/><stop offset="55%" stop-color="#14110a"/><stop offset="100%" stop-color="#0b0906"/>
+    </radialGradient>
+    <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7a5310"/><stop offset="0.26" stop-color="#d3a53c"/><stop offset="0.44" stop-color="#ffe98f"/><stop offset="0.5" stop-color="#fffbe8"/><stop offset="0.6" stop-color="#f2cf5e"/><stop offset="0.8" stop-color="#a8781d"/><stop offset="1" stop-color="#e6c463"/>
+    </linearGradient>
+    <linearGradient id="gh" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7a5310"/><stop offset="0.26" stop-color="#d3a53c"/><stop offset="0.44" stop-color="#ffe98f"/><stop offset="0.5" stop-color="#fffbe8"/><stop offset="0.6" stop-color="#f2cf5e"/><stop offset="0.8" stop-color="#a8781d"/><stop offset="1" stop-color="#e6c463"/>
+    </linearGradient>
+    <radialGradient id="bb" cx="34%" cy="26%" r="74%">
+      <stop offset="0%" stop-color="#fffdf2"/><stop offset="20%" stop-color="#fff3c4"/><stop offset="66%" stop-color="#e6bf4a"/><stop offset="100%" stop-color="#7a5310"/>
+    </radialGradient>
+    <linearGradient id="goldtext" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff3c4"/><stop offset="50%" stop-color="#f2cf5e"/><stop offset="100%" stop-color="#c9972f"/>
+    </linearGradient>
+  </defs>
+  <rect width="780" height="210" rx="28" fill="url(#pbg)"/>
+  <g transform="translate(-84.2,4) scale(1.15)">
+<g transform="translate(81.75,24) scale(1.75)">
+    <g fill="none" stroke="#ffffff" stroke-width="0.8">
+      <path d="M21 46 A 3 3 0 0 0 27 46" opacity="0.7"/><path d="M17.8 46 A 6.2 6.2 0 0 0 30.2 46" opacity="0.45"/><path d="M14.6 46 A 9.4 9.4 0 0 0 33.4 46" opacity="0.26"/>
+      <path d="M55 46 A 3 3 0 0 0 61 46" opacity="0.7"/><path d="M51.8 46 A 6.2 6.2 0 0 0 64.2 46" opacity="0.45"/><path d="M48.6 46 A 9.4 9.4 0 0 0 67.4 46" opacity="0.26"/>
+    </g>
+    <line x1="10" y1="46" x2="72" y2="46" stroke="#7a6a34" stroke-width="1" opacity="0.7"/>
+    <path d="M24 46 C 24 40 30 33 30 27 C 30 21 36 15 36 9" fill="none" stroke="url(#gg)" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M58 46 C 58 40 64 33 64 27 C 64 21 70 15 70 9" fill="none" stroke="url(#gg)" stroke-width="1.7" stroke-linecap="round"/>
+    <path d="M30 27 C 33.64 25.5 40.36 25.5 44 27 C 47.64 28.5 60.36 28.5 64 27" fill="none" stroke="url(#gh)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M36 9 C 39.64 7.5 46.36 7.5 50 9 C 53.64 10.5 66.36 10.5 70 9" fill="none" stroke="url(#gh)" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="30" cy="27" r="2.6" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="29.12" cy="26.01" r="0.83" fill="#fffef7" opacity="0.95"/>
+    <circle cx="64" cy="27" r="2.6" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="63.12" cy="26.01" r="0.83" fill="#fffef7" opacity="0.95"/>
+    <circle cx="36" cy="9" r="2.6" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="35.12" cy="8.01" r="0.83" fill="#fffef7" opacity="0.95"/>
+    <circle cx="70" cy="9" r="2.6" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="69.12" cy="8.01" r="0.83" fill="#fffef7" opacity="0.95"/>
+    <circle cx="24" cy="46" r="1.9" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="23.35" cy="45.28" r="0.61" fill="#fffef7" opacity="0.95"/>
+    <circle cx="58" cy="46" r="1.9" fill="url(#bb)" stroke="#5e3f0c" stroke-width="0.4"/><circle cx="57.35" cy="45.28" r="0.61" fill="#fffef7" opacity="0.95"/>
+    <polyline fill="none" stroke="#7f96b3" stroke-width="1.15" points="6,67.9 8,64.9 10,72.2 12,64.1 14,71 16,65.7 18,70.6 20,67.3 22,69.3 24,68.7 26,66.7 28,70.2 30,68.9 32,67.2 34,66.4 36,68.8 38,66.5 40,69 42,68.8 44,67.2 46,68.9 48,67.3 50,68.1 52,68.4 54,69.1 56,68.2 58,69.1 60,68.2 62,68.7 64,68.4 66,68.5 68,68.7 70,68.5 72,68.9"/>
+  </g>
+  </g>
+  <text x="215" y="108" font-family="Georgia, 'Times New Roman', serif" font-size="76" fill="url(#goldtext)">Hekatan</text>
+  <text x="219" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="36" letter-spacing="11" fill="#7f96b3">STRUCT</text>
+</svg>
