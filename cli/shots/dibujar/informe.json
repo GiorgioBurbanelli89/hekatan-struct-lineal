@@ -1,0 +1,64 @@
+{
+ "bitacora": [
+  {
+   "paso": "Columna 3D · 4 clics",
+   "ok": true,
+   "creado": {
+    "nudos": 0,
+    "barras": 0,
+    "cascaras": 0
+   },
+   "nota": ""
+  },
+  {
+   "paso": "Línea (frame) · 2 vigas",
+   "ok": true,
+   "creado": {
+    "nudos": 0,
+    "barras": 0,
+    "cascaras": 0
+   },
+   "nota": ""
+  },
+  {
+   "paso": "Área rectangular · 2 clics",
+   "ok": true,
+   "creado": {
+    "nudos": 4,
+    "barras": 0,
+    "cascaras": 1
+   },
+   "nota": ""
+  }
+ ],
+ "secciones": {
+  "filas": [
+   {
+    "et": "Material",
+    "visible": false,
+    "control": "lista"
+   },
+   {
+    "et": "Material shell",
+    "visible": false,
+    "control": "lista"
+   }
+  ],
+  "botones": [],
+  "manualSections": "{}"
+ },
+ "traSeleccion": {
+  "conSeleccion": [],
+  "sel": "null"
+ },
+ "fin": {
+  "nudos": 4,
+  "elementos": 1,
+  "barras": 0,
+  "cascaras": 1
+ },
+ "errores": [
+  "[console] Failed to load resource: net::ERR_ADDRESS_INVALID",
+  "[console] Failed to load resource: net::ERR_ADDRESS_INVALID"
+ ]
+}

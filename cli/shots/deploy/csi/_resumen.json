@@ -1,0 +1,110 @@
+[
+ {
+  "id": "guerra-ej1-zapata-cuadrada",
+  "pageerror": [],
+  "console": [],
+  "alerts": [
+   "F2K descargado (modelo completo).\n\n289 nudos · 256 elementos\n289 nudos con muelle Winkler · 289 nudos cargados\n\nImpórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File"
+  ],
+  "exports": {
+   "📤 Exportar F2K": {
+    "filename": "guerra-ej1-zapata-cuadrada_1788697756967.f2k",
+    "bytes": 166274,
+    "ms": 393,
+    "points": 0,
+    "lines": 0,
+    "areas": 0,
+    "springs": 0,
+    "muellesPunto": 0,
+    "tablas": 23,
+    "primera": "File \"guerra-ej1-zapata-cuadrada.f2k\" exportado desde Hekatan Struct Lineal"
+   }
+  },
+  "titulo": "Ej.1 · Zapata Aislada Cuadrada (3.45×3.45×0.45)",
+  "botones": [
+   "📤 Exportar F2K",
+   "📥 Importar F2K…"
+  ]
+ },
+ {
+  "id": "safe-bench-losa-cimentacion",
+  "pageerror": [],
+  "console": [],
+  "alerts": [
+   "F2K descargado (modelo completo).\n\n227 nudos · 198 elementos\n221 nudos con muelle Winkler · 6 nudos cargados\n\nImpórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File"
+  ],
+  "exports": {
+   "📤 Exportar F2K": {
+    "filename": "safe-bench-losa-cimentacion_1788697770781.f2k",
+    "bytes": 98369,
+    "ms": 310,
+    "points": 0,
+    "lines": 0,
+    "areas": 0,
+    "springs": 0,
+    "muellesPunto": 0,
+    "tablas": 29,
+    "primera": "File \"safe-bench-losa-cimentacion.f2k\" exportado desde Hekatan Struct Lineal"
+   }
+  },
+  "titulo": "SAFE Benchmark · Losa Cimentación 6×8×0.50m, 6 cols (Δ +0.33%)",
+  "botones": [
+   "📤 Exportar F2K",
+   "📥 Importar F2K…"
+  ]
+ },
+ {
+  "id": "guerra-ej4-zapata-combinada-rectangular",
+  "pageerror": [],
+  "console": [],
+  "alerts": [
+   "F2K descargado (modelo completo).\n\n341 nudos · 300 elementos\n341 nudos con muelle Winkler · 341 nudos cargados\n\nImpórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File"
+  ],
+  "exports": {
+   "📤 Exportar F2K": {
+    "filename": "guerra-ej4-zapata-combinada-rectangular_1788697783720.f2k",
+    "bytes": 188113,
+    "ms": 329,
+    "points": 0,
+    "lines": 0,
+    "areas": 0,
+    "springs": 0,
+    "muellesPunto": 0,
+    "tablas": 23,
+    "primera": "File \"guerra-ej4-zapata-combinada-rectangular.f2k\" exportado desde Hekatan Struc"
+   }
+  },
+  "titulo": "Ej.4 · Zapata Combinada Rectangular (7.50×2.50)",
+  "botones": [
+   "📤 Exportar F2K",
+   "📥 Importar F2K…"
+  ]
+ },
+ {
+  "id": "zapata-aislada",
+  "pageerror": [],
+  "console": [],
+  "alerts": [
+   "F2K descargado correctamente.\n\nks=1030 kN/m³\nP_dead=196.1 kN\n\nAbrilo en SAFE 20.x: File → Import → SAFE Text File (.f2k)"
+  ],
+  "exports": {
+   "📤 Exportar F2K": {
+    "filename": "Zapata_Hekatan_1788697797402.f2k",
+    "bytes": 6241,
+    "ms": 323,
+    "points": 0,
+    "lines": 0,
+    "areas": 0,
+    "springs": 1,
+    "muellesPunto": 0,
+    "tablas": 20,
+    "primera": "File \"Zapata_Hekatan.f2k\" exportado desde Hekatan Struct Lineal 2026-09-06 at 7:"
+   }
+  },
+  "titulo": "Zapata Aislada — Hekatan vs SAFE/Calcpad (Bowles)",
+  "botones": [
+   "📤 Exportar F2K",
+   "📥 Importar F2K…"
+  ]
+ }
+]

@@ -1,0 +1,63 @@
+File CLI Modeler (comandos) — Hekatan export.$2k was saved on m/d/yy at h:mm:ss
+ 
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes
+ 
+TABLE:  "CONNECTIVITY - FRAME"
+   Frame=1   JointI=1   JointJ=2   IsCurved=No
+   Frame=2   JointI=2   JointJ=3   IsCurved=No
+   Frame=3   JointI=3   JointJ=4   IsCurved=No
+ 
+TABLE:  "COORDINATE SYSTEMS"
+   Name=GLOBAL   Type=Cartesian   X=0   Y=0   Z=0   AboutZ=0   AboutY=0   AboutX=0
+ 
+TABLE:  "DATABASE FORMAT TYPES"
+   UnitsCurr=Yes   OverrideE=No
+ 
+TABLE:  "FRAME SECTION ASSIGNMENTS"
+   Frame=1   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=2   AutoSelect=N.A.   AnalSect=SEC2   MatProp=Default
+   Frame=3   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+ 
+TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
+   SectionName=SEC1   Material=MAT_25000000_n0.2000   Shape=General   t3=0.3968626967   t2=0.4031621045   Area=0.16   TorsConst=0.003584   I33=0.0021   I22=0.0021   I23=0   AS2=0.1333333333   AS3=0.1333333333 _
+        Color=Blue   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1
+   SectionName=SEC2   Material=MAT_25000000_n0.2000   Shape=General   t3=0.4732863826   t2=0.3169328455   Area=0.15   TorsConst=0.00315   I33=0.0028   I22=0.0028   I23=0   AS2=0.125   AS3=0.125 _
+        Color=Blue   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1
+ 
+TABLE:  "JOINT COORDINATES"
+   Joint=1   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=0   SpecialJt=No
+   Joint=2   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=3   SpecialJt=No
+   Joint=3   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=3   SpecialJt=No
+   Joint=4   CoordSys=GLOBAL   CoordType=Cartesian   XorR=5   Y=0   Z=0   SpecialJt=No
+ 
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=1   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=4   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=1
+ 
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+ 
+TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1
+ 
+TABLE:  "JOINT LOADS - FORCE"
+   Joint=2   LoadPat=DEAD   CoordSys=GLOBAL   F1=10   F2=0   F3=-50   M1=0   M2=0   M3=0
+   Joint=3   LoadPat=DEAD   CoordSys=GLOBAL   F1=10   F2=0   F3=-50   M1=0   M2=0   M3=0
+ 
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=MAT_25000000_n0.2000   Type=Concrete   SymType=Isotropic   TempDepend=No   Color=Green
+ 
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=MAT_25000000_n0.2000   UnitWeight=24.0345   UnitMass=2.45   E1=2.50000000e+7   G12=1.04166667e+7   U12=0.2   A1=9.9E-06
+ 
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=MAT_25000000_n0.2000   Fc=27579   eFc=27579   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=24.1.0   CurrUnits="KN, m, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+ 
+END TABLE DATA

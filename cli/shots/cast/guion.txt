@@ -1,0 +1,11 @@
+0.33  | Esta es la ventana de Hekatan Struct lineal al abrirla.
+5.57  | A la derecha se elige por dónde empezar: un archivo existente, un ejemplo, o una de las nueve plantillas.
+14.04  | Se pulsa una, y la estructura llega armada: geometría, secciones, cargas y resultados.
+18.99  | El panel de la izquierda no modela: representa. Elige qué resultado se dibuja sobre el modelo.
+26.34  | Y cuánto se amplifica la deformada. Sube la escala: el movimiento se ve, pero la estructura es la misma.
+35.06  | En el centro, el modelo. La rejilla es el plano de trabajo: la altura a la que cae cada clic.
+44.48  | Arriba a la derecha, la posición del cursor sobre ese plano. Es lo que confirma dónde va a caer el punto.
+54.16  | Abajo, la línea de comando, para cuando la medida tiene que ser exacta.
+60.44  | Seis, cero, cero es un punto. Arroba seis, ángulo cuarenta y cinco es una distancia y una dirección desde el punto anterior.
+70.97  | Y la cruceta de la esquina encuadra la vista: mueve la cámara, nunca la estructura.
+78.31  | Con esto ya se puede empezar. En el siguiente, una plantilla entera.

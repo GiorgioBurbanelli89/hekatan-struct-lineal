@@ -1,0 +1,13 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 1000 });
+await p.goto(`https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=edificio-dual`, { waitUntil: "networkidle2", timeout: 120000 });
+await new Promise((r) => setTimeout(r, 8000));
+await p.screenshot({ path: "cli/shots/deploy/_rr_0_carga.png" });
+await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); ctx.render?.(); });
+await new Promise((r) => setTimeout(r, 800)); await p.screenshot({ path: "cli/shots/deploy/_rr_1_render.png" });
+await p.evaluate(() => { const s = window.__hekatanSettings?.(); s.shellResults.val = "vonMises"; });
+await new Promise((r) => setTimeout(r, 2000)); await p.screenshot({ path: "cli/shots/deploy/_rr_2_vm_sinrender.png" });
+await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); ctx.render?.(); });
+await new Promise((r) => setTimeout(r, 800)); await p.screenshot({ path: "cli/shots/deploy/_rr_3_vm_render.png" });
+await nav.close();

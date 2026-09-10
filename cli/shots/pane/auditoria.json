@@ -1,0 +1,9511 @@
+{
+ "hecho": [
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🎓 Test M — Dual (pórtico + losa + muros)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎓 Test M — Dual (pórtico + losa + muros)",
+   "et": "Categoría",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎓 Test M — Dual (pórtico + losa + muros)",
+   "et": "Ejemplo",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🛠 Herramientas FEM",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "🔍 Inspect — derivación FEM por elemento",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "📈 Modal+ ASCE 7-22 §12.9.1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "📜 Solver Log + tiempos",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "🧮 Calculadora FEM (MATLAB-style)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "💻 CLI cad.* (terminal)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "📄 Report Explained (PDF imprimible)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "▶ Calcular (forzar re-build)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Vista",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "🏗 Isométrica",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "⬇ Planta (X-Y)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "→ Elevación X (frente)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "↑ Elevación Y (lado)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📷 Imagen y GIF",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "📷 PNG de la vista",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "frames",
+   "ctl": "texto",
+   "val": "36",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "ms/frame",
+   "ctl": "texto",
+   "val": "80",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "🎞 GIF orbitando",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🔀 Vista doble (split)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "Activar",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "Panel derecho",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "🔄 Re-encuadrar derecha",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "🎬 Demo simulador CAD",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📍 Ejes (frames individuales)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje A (X=0.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje B (X=0.71 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje C (X=1.43 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje D (X=2.14 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje E (X=2.86 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje F (X=3.57 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje G (X=4.29 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje H (X=5.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje I (X=5.71 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje J (X=6.43 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje K (X=7.14 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje L (X=7.86 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje M (X=8.57 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje N (X=9.29 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje O (X=10.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 1 (Y=0.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 2 (Y=0.71 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 3 (Y=1.43 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 4 (Y=2.14 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 5 (Y=2.86 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 6 (Y=3.57 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 7 (Y=4.29 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 8 (Y=5.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 9 (Y=5.71 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 10 (Y=6.43 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 11 (Y=7.14 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 12 (Y=7.86 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 13 (Y=8.57 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 14 (Y=9.29 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "Eje 15 (Y=10.00 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "👁 Mostrar ejes en escena",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✏ Herramientas CAD",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✏ Dibujar",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "● Nodo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "／ Línea (frame)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "⌒ Polilínea",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "▭ Rectángulo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "○ Círculo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "⌒ Arco (3 ptos)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "┊ Línea auxiliar",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "✦ Punto auxiliar",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▦ Áreas (shells)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▦ Área 4-clics (shell Q4)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▭ Área rectangular (2 clics)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "⬡ Área libre (polígono → malla)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▱ Losa con chaflanes (rect + arcos)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🧊 En 3D",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▌ Columna 3D (1 click + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▥ Pared Q4 3D (2 clicks + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "◣ Plano inclinado (3 puntos)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "⬛ Enderezar plano a XY (sin mover camara)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✂ Modificar",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "🖱 Seleccionar",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "↗ Prolongar línea",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "🗑 Borrar (hover + click)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🎯 Precisión (snap, orto, osnap)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Modos de dibujo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "ORTO (90°)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "POLAR (45°)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "Segmentos arc/círc",
+   "ctl": "texto",
+   "val": "12",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "Chaflán r (m)",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Object Snap (OSNAP)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🔴 Endpoint",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟡 Midpoint",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🔵 Node",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟢 Center",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟣 Perpendicular",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🌸 Nearest",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟠 Intersection",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🧲 Grid snap (F9)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Paso snap (m)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Snap 2D fino (m)",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Snap 3D (m)",
+   "ctl": "texto",
+   "val": "0.25",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Plano de trabajo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano XY (planta)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano XZ (elevación frontal)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano YZ (elevación lateral)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "🧊 Vista isométrica (3D)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "🔀 Vista doble (planta + iso)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "📐 Mostrar/ocultar planos de ref. (Z=0,3,6,9,12)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "▦ Planos ref. ortogonales (XY/XZ/YZ del último pto)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Tamaño área planos ref. (m)",
+   "ctl": "texto",
+   "val": "8.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Dimensión grid (m)",
+   "ctl": "texto",
+   "val": "10",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Cota Z (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🛠 Acciones",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "⏹ Finalizar dibujo (Esc)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "🗑 Limpiar todo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "📋 Copiar comandos a CLI",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🏢 Plantas de pisos",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=0m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=3m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=6m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=9m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=12m",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📍 Ejes y Niveles (Revit)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Eje (letra A,B,C...)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Eje (número 1,2,3...)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🗑 Limpiar ejes",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "Cota nivel (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Agregar nivel a la cota Z elegida",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🏢 Niveles típicos (0,3,6,9,12 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🗑 Limpiar niveles",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🏗 Rejilla (ejes + niveles de una vez)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos X (m)",
+   "ctl": "texto",
+   "val": "6,6,6",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos Y (m)",
+   "ctl": "texto",
+   "val": "5,5",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Alturas de piso (m)",
+   "ctl": "texto",
+   "val": "3,3,3",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Columnas en los cruces",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "🏗 Generar rejilla",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "🗑 Limpiar rejilla (ejes y niveles)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🎯 Acciones de selección",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Divisiones",
+   "ctl": "texto",
+   "val": "4",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "✂ Mallar línea seleccionada (N divisiones)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Ux (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Uy (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Uz (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Rx (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Ry (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Rz (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "📌 Aplicar apoyo a nodos seleccionados",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "🔓 Liberar apoyos de nodos seleccionados",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "🗑 Limpiar selección",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Altura extrusión (m)",
+   "ctl": "texto",
+   "val": "3.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir X",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir Y",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir Z",
+   "ctl": "texto",
+   "val": "1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir nodo→frame (1 nodo seleccionado + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir frame→área (1+ segmentos seleccionados + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "💬 AI Assistant (gratis)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "Provider",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "Modelo",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "API Key",
+   "ctl": "texto",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "💻 CLI Comandos",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "▶ Ejecutar ahora (Ctrl+Enter)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "Comparar con",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "🗑 Limpiar comandos",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📂 Abrir .heks",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "💾 Guardar .heks",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📂 Importar .tcl (OpenSees)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "💾 Exportar .tcl (OpenSees)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Pórtico 2D (inline)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Cantilever (inline)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Pórtico 2D (bloques)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🪨 Cimentación (diseño + SAFE F2K)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "Cardinal Point col.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "👁 Calcular y ver cimentación",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "🏢 Volver a vista superestructura",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "🧮 Análisis FEM solo cimentación",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "📤 Exportar F2K cimentación COMPLETA",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "📥 Importar F2K cimentación COMPLETA",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📋 Load Patterns",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Dead (Dead)  SW=1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "🗑 Delete pattern",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Live (Live)  SW=0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "🗑 Delete pattern",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "+ Add New Pattern",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📊 Load Cases",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Dead (Linear Static)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Dead×1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Live (Linear Static)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Live×1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Modal (Modal - Eigen)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Modal",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "(none)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Max Modes",
+   "ctl": "texto",
+   "val": "12",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "+ Add New Case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Σ Load Combinations",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Servicio D+L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1·Dead + 1·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.4D: 1.4·Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.2D+1.6L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.2·Dead + 1.6·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D+1.7L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead + 1.7·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "+ Add New Combo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "⚡ Generar NEC-SE-CG",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "ETABS",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "Peso propio",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "Cargas aplicadas a",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "ETABS",
+   "et": "📤 Exportar E2K",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "ETABS",
+   "et": "📥 Importar E2K",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "SAP",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "CFT en SAP",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "SAP",
+   "et": "📤 Exportar S2K",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "SAP",
+   "et": "📥 Importar S2K",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Unidades",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "Fuerza",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "Desplazamiento",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "🔲 Auto-mesh shells (ETABS-like)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🌐 Sistema (preset)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🌐 Sistema (preset)",
+   "et": "Preset",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Display Units (granular)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Stress (σ, vM, pressure)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Subgrade modulus (ks)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Stiffness trans (K spring)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Length section (espesor, h, b)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Geometría",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "N° vanos X",
+   "ctl": "texto",
+   "val": "2",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "N° vanos Y",
+   "ctl": "texto",
+   "val": "2",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "N° pisos",
+   "ctl": "texto",
+   "val": "4",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "Malla shell [m] (ETABS≈0.6)",
+   "ctl": "texto",
+   "val": "0.75",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🧱 Muros de corte",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "N° de muros",
+   "ctl": "texto",
+   "val": "1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Espesor muro [m]",
+   "ctl": "texto",
+   "val": "0.25",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · dirección",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · línea (eje)",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · vano inicial",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · ancho (vanos)",
+   "ctl": "texto",
+   "val": "1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · ⤺ posición fina [m]",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · ⟷ largo fino [m]",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🟦 Losas",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🟦 Losas",
+   "et": "Espesor losa [m]",
+   "ctl": "texto",
+   "val": "0.20",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Secciones",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Secciones",
+   "et": "Columna b [m]",
+   "ctl": "texto",
+   "val": "0.40",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Secciones",
+   "et": "Viga b [m]",
+   "ctl": "texto",
+   "val": "0.30",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Secciones",
+   "et": "Viga h [m]",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Cargas",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Cargas",
+   "et": "Carga [tonf/m²]",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Sísmico NEC",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "NEC Z (zona)",
+   "ctl": "texto",
+   "val": "0.40",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "NEC suelo",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "NEC región",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "NEC R",
+   "ctl": "texto",
+   "val": "8.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "NEC I",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "Normativa (factores)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "¿Irregular? → control 85% (NEC)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sísmico NEC",
+   "et": "ASCE Cd (amplif. deriva)",
+   "ctl": "texto",
+   "val": "5.5",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Vanos X (svx)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos X (svx)",
+   "et": "Vano X-1 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos X (svx)",
+   "et": "Vano X-2 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Vanos Y (svy)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos Y (svy)",
+   "et": "Vano Y-1 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos Y (svy)",
+   "et": "Vano Y-2 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Alturas (sp)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 1 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 2 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 3 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 4 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Settings",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Settings",
+   "et": "Display scale",
+   "ctl": "texto",
+   "val": "-3.0",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Grid",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Dimensión (m)",
+   "ctl": "texto",
+   "val": "30",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación grid (m)",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación mayores (m)",
+   "ctl": "texto",
+   "val": "5.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Paso cursor (m)",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Mostrar",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Opacidad",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XY (planta)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XZ (frontal)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano YZ (lateral)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "👁 Ver",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Nodes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Elements",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Edges (delim.)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Caras (fill)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Frames (todos)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Columnas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Vigas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Zapatas (shells z≤0)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Losas (shells z>0)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "🎨 Color por tipo",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Nodes indexes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Elements indexes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Orientations",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sections",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Extruido (3D)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Labels (30x50)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Columnas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Vigas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Piso",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📌 Analysis Inputs",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Supports",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Loads",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Resortes (Winkler)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Cotas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🔬 Analyze",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔬 Analyze",
+   "et": "Case results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📋 Tablas",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Base Reactions",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Modal Periods & Mass",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Story Forces",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Story Drifts",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Centers of Mass & Rigidity",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "⚡ Modal + Animación",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "⚡ Modal + Animación",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "⚡ Modal + Animación",
+   "et": "▶ Correr modal + animar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "⚡ Modal + Animación",
+   "et": "📋 Tabla de modos",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "⚡ Modal + Animación",
+   "et": "📈 Mostrar espectro",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🔢 N° de modos (subir si masa <90%)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "cantidad",
+   "ctl": "texto",
+   "val": "24",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "tope (máx)",
+   "ctl": "texto",
+   "val": "60",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Método modal (masa ≥90%)",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Diafragma rígido (como ETABS) → ΣU≈100%",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Modo #",
+   "ctl": "texto",
+   "val": "1",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Modo",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Frecuencia",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Período",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Dominante",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Estado",
+   "ctl": "texto",
+   "val": "⏸ Detenido",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "⏹ Detener y restaurar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "▶ Reanudar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Node results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Frame results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Shell results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "🎨 Paleta colores",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "📐 Rango colormap",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Solid results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Deformed shape",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Scale XY",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Scale Z",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✂️ Cortes X/Y/Z",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar X",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos X (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir X",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar Y",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos Y (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir Y",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar Z",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos Z (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir Z",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  }
+ ],
+ "nuevo": [
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📄 Archivo nuevo (lienzo CAD 2D/3D)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📄 Archivo nuevo (lienzo CAD 2D/3D)",
+   "et": "Categoría",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📄 Archivo nuevo (lienzo CAD 2D/3D)",
+   "et": "Ejemplo",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🛠 Herramientas FEM",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "🔍 Inspect — derivación FEM por elemento",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "📜 Solver Log + tiempos",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "🧮 Calculadora FEM (MATLAB-style)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "💻 CLI cad.* (terminal)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "📄 Report Explained (PDF imprimible)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "▶ Calcular (forzar re-build)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Vista",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "🏗 Isométrica",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "⬇ Planta (X-Y)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "→ Elevación X (frente)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "Vista",
+   "et": "↑ Elevación Y (lado)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📷 Imagen y GIF",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "📷 PNG de la vista",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "frames",
+   "ctl": "texto",
+   "val": "36",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "ms/frame",
+   "ctl": "texto",
+   "val": "80",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "🎞 GIF orbitando",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🔀 Vista doble (split)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "Activar",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "Panel derecho",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "🔄 Re-encuadrar derecha",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "🎬 Demo simulador CAD",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📍 Ejes (frames individuales)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "(modelo vacío — dibujá nodos)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "👁 Mostrar ejes en escena",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✏ Herramientas CAD",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✏ Dibujar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "● Nodo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "／ Línea (frame)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "⌒ Polilínea",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "▭ Rectángulo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "○ Círculo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "⌒ Arco (3 ptos)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "┊ Línea auxiliar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✏ Dibujar",
+   "et": "✦ Punto auxiliar",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▦ Áreas (shells)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▦ Área 4-clics (shell Q4)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▭ Área rectangular (2 clics)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "⬡ Área libre (polígono → malla)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "▱ Losa con chaflanes (rect + arcos)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🧊 En 3D",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▌ Columna 3D (1 click + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▥ Pared Q4 3D (2 clicks + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "◣ Plano inclinado (3 puntos)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "⬛ Enderezar plano a XY (sin mover camara)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✂ Modificar",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "🖱 Seleccionar",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "↗ Prolongar línea",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "✂ Modificar",
+   "et": "🗑 Borrar (hover + click)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🎯 Precisión (snap, orto, osnap)",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Modos de dibujo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "ORTO (90°)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "POLAR (45°)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "Segmentos arc/círc",
+   "ctl": "texto",
+   "val": "12",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modos de dibujo",
+   "et": "Chaflán r (m)",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Object Snap (OSNAP)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🔴 Endpoint",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟡 Midpoint",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🔵 Node",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟢 Center",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟣 Perpendicular",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🌸 Nearest",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🟠 Intersection",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "🧲 Grid snap (F9)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Paso snap (m)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Snap 2D fino (m)",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Object Snap (OSNAP)",
+   "et": "Snap 3D (m)",
+   "ctl": "texto",
+   "val": "0.25",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Plano de trabajo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano XY (planta)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano XZ (elevación frontal)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Plano YZ (elevación lateral)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "🧊 Vista isométrica (3D)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "🔀 Vista doble (planta + iso)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "📐 Mostrar/ocultar planos de ref. (Z=0,3,6,9,12)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "▦ Planos ref. ortogonales (XY/XZ/YZ del último pto)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Tamaño área planos ref. (m)",
+   "ctl": "texto",
+   "val": "8.0",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Dimensión grid (m)",
+   "ctl": "texto",
+   "val": "10",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "Cota Z (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🛠 Acciones",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "⏹ Finalizar dibujo (Esc)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "🗑 Limpiar todo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🛠 Acciones",
+   "et": "📋 Copiar comandos a CLI",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🏢 Plantas de pisos",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=0m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=3m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=6m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=9m",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "Piso a Z=12m",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📍 Ejes y Niveles (Revit)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Eje (letra A,B,C...)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Eje (número 1,2,3...)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🗑 Limpiar ejes",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "Cota nivel (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "➕ Agregar nivel a la cota Z elegida",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🏢 Niveles típicos (0,3,6,9,12 m)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "🗑 Limpiar niveles",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🏗 Rejilla (ejes + niveles de una vez)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos X (m)",
+   "ctl": "texto",
+   "val": "6,6,6",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos Y (m)",
+   "ctl": "texto",
+   "val": "5,5",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Alturas de piso (m)",
+   "ctl": "texto",
+   "val": "3,3,3",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Columnas en los cruces",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "🏗 Generar rejilla",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "🗑 Limpiar rejilla (ejes y niveles)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🎯 Acciones de selección",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Divisiones",
+   "ctl": "texto",
+   "val": "4",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "✂ Mallar línea seleccionada (N divisiones)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Ux (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Uy (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Uz (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Rx (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Ry (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "DOF Rz (restringido)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "📌 Aplicar apoyo a nodos seleccionados",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "🔓 Liberar apoyos de nodos seleccionados",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "🗑 Limpiar selección",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Altura extrusión (m)",
+   "ctl": "texto",
+   "val": "3.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir X",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir Y",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Dir Z",
+   "ctl": "texto",
+   "val": "1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir nodo→frame (1 nodo seleccionado + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir frame→área (1+ segmentos seleccionados + altura)",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "💬 AI Assistant (gratis)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "Provider",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "Modelo",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💬 AI Assistant (gratis)",
+   "et": "API Key",
+   "ctl": "texto",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "💻 CLI Comandos",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "▶ Ejecutar ahora (Ctrl+Enter)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "Comparar con",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "🗑 Limpiar comandos",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📂 Abrir .heks",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "💾 Guardar .heks",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📂 Importar .tcl (OpenSees)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "💾 Exportar .tcl (OpenSees)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Pórtico 2D (inline)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Cantilever (inline)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "💻 CLI Comandos",
+   "et": "📋 Pórtico 2D (bloques)",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🪨 Cimentación (diseño + SAFE F2K)",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "Cardinal Point col.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "👁 Calcular y ver cimentación",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "🏢 Volver a vista superestructura",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "🧮 Análisis FEM solo cimentación",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "📤 Exportar F2K cimentación COMPLETA",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "📥 Importar F2K cimentación COMPLETA",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📋 Load Patterns",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Dead (Dead)  SW=1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "🗑 Delete pattern",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Live (Live)  SW=0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "🗑 Delete pattern",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "+ Add New Pattern",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📊 Load Cases",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Dead (Linear Static)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Dead×1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Live (Linear Static)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Live×1",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Modal (Modal - Eigen)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Modal",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "(none)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Max Modes",
+   "ctl": "texto",
+   "val": "12",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "🗑 Delete case",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "+ Add New Case",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Σ Load Combinations",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Servicio D+L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1·Dead + 1·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.4D: 1.4·Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.2D+1.6L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.2·Dead + 1.6·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D+1.7L",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead + 1.7·Live",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "🗑 Delete combo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "+ Add New Combo",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "⚡ Generar NEC-SE-CG",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "ETABS",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "Peso propio",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "Cargas aplicadas a",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "ETABS",
+   "et": "📤 Exportar E2K",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "ETABS",
+   "et": "📥 Importar E2K",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "SAP",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "CFT en SAP",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "SAP",
+   "et": "📤 Exportar S2K",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "SAP",
+   "et": "📥 Importar S2K",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Unidades",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "Fuerza",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "Desplazamiento",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Unidades",
+   "et": "🔲 Auto-mesh shells (ETABS-like)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🌐 Sistema (preset)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🌐 Sistema (preset)",
+   "et": "Preset",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Display Units (granular)",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Stress (σ, vM, pressure)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Subgrade modulus (ks)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Stiffness trans (K spring)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Display Units (granular)",
+   "et": "Length section (espesor, h, b)",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Modo",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Modo",
+   "et": "Espacio de trabajo",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Sección frames",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección frames",
+   "et": "Material",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección frames",
+   "et": "b columna",
+   "ctl": "texto",
+   "val": "0.40",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección frames",
+   "et": "h columna",
+   "ctl": "texto",
+   "val": "0.40",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección frames",
+   "et": "b viga",
+   "ctl": "texto",
+   "val": "0.30",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección frames",
+   "et": "h viga",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Sección shells",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección shells",
+   "et": "Espesor shell",
+   "ctl": "texto",
+   "val": "0.20",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Sección shells",
+   "et": "Material shell",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Apoyos",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Apoyos",
+   "et": "Tipo apoyo en Z mínimo",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Cargas",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Cargas",
+   "et": "Aplicar cargas auto",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Cargas",
+   "et": "Pertenecen al patron",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Cargas",
+   "et": "Fz vertical/nodo",
+   "ctl": "texto",
+   "val": "-10",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Cargas",
+   "et": "Fx lateral/nodo",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Solver",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Solver",
+   "et": "Auto-resolver",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📊 Calculados",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📊 Calculados",
+   "et": "Stats",
+   "ctl": "texto",
+   "val": "0 nodos · 0 frames · 0 shells",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📊 Calculados",
+   "et": "💡 Tip",
+   "ctl": "texto",
+   "val": "Línea = 2 clicks · Polilínea = N clicks + click derecho · Área = 4 clicks",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "Settings",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Settings",
+   "et": "Display scale",
+   "ctl": "texto",
+   "val": "-3.0",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📐 Grid",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Dimensión (m)",
+   "ctl": "texto",
+   "val": "30",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación grid (m)",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación mayores (m)",
+   "ctl": "texto",
+   "val": "5.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Paso cursor (m)",
+   "ctl": "texto",
+   "val": "0.50",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Mostrar",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Opacidad",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XY (planta)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XZ (frontal)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano YZ (lateral)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "👁 Ver",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Nodes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Elements",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Edges (delim.)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Caras (fill)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Frames (todos)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Columnas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Vigas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Zapatas (shells z≤0)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Losas (shells z>0)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "🎨 Color por tipo",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Nodes indexes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Elements indexes",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Orientations",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sections",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Extruido (3D)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Labels (30x50)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Columnas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Vigas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "👁 Ver",
+   "et": "Sec. Piso",
+   "ctl": "lista",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📌 Analysis Inputs",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Supports",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Loads",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Resortes (Winkler)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📌 Analysis Inputs",
+   "et": "Cotas",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "🔬 Analyze",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔬 Analyze",
+   "et": "Case results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "📋 Tablas",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Base Reactions",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Modal Periods & Mass",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Story Forces",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Story Drifts",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "📋 Tablas",
+   "et": "Centers of Mass & Rigidity",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Node results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Frame results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Shell results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "🎨 Paleta colores",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "📐 Rango colormap",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Solid results",
+   "ctl": "lista",
+   "val": "",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Deformed shape",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Scale XY",
+   "ctl": "texto",
+   "val": "1.0",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "Scale Z",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": true
+  },
+  {
+   "tipo": "carpeta",
+   "carpeta": "",
+   "et": "✂️ Cortes X/Y/Z",
+   "vis": true
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar X",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos X (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir X",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar Y",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos Y (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir Y",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "Cortar Z",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "pos Z (m)",
+   "ctl": "texto",
+   "val": "0.0",
+   "vis": false
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂️ Cortes X/Y/Z",
+   "et": "invertir Z",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false
+  }
+ ],
+ "marcasHecho": [
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▌ Columna 3D (1 click + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▥ Pared Q4 3D (2 clicks + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos X (m)",
+   "ctl": "texto",
+   "val": "6,6,6",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos Y (m)",
+   "ctl": "texto",
+   "val": "5,5",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Alturas de piso (m)",
+   "ctl": "texto",
+   "val": "3,3,3",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Divisiones",
+   "ctl": "texto",
+   "val": "4",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "✂ Mallar línea seleccionada (N divisiones)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Altura extrusión (m)",
+   "ctl": "texto",
+   "val": "3.0",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir nodo→frame (1 nodo seleccionado + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir frame→área (1+ segmentos seleccionados + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "🗑 Delete pattern",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Live×1",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Modal",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "(none)",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "🗑 Delete case",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Servicio D+L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.2D+1.6L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.2·Dead + 1.6·Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D+1.7L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead + 1.7·Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "N° vanos X",
+   "ctl": "texto",
+   "val": "2",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Geometría",
+   "et": "N° vanos Y",
+   "ctl": "texto",
+   "val": "2",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · vano inicial",
+   "ctl": "texto",
+   "val": "0",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧱 Muros de corte",
+   "et": "Muro 1 · ancho (vanos)",
+   "ctl": "texto",
+   "val": "1",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos X (svx)",
+   "et": "Vano X-1 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos X (svx)",
+   "et": "Vano X-2 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos Y (svy)",
+   "et": "Vano Y-1 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vanos Y (svy)",
+   "et": "Vano Y-2 [m]",
+   "ctl": "texto",
+   "val": "5.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 1 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 2 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 3 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Alturas (sp)",
+   "et": "Piso 4 h [m]",
+   "ctl": "texto",
+   "val": "3.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación grid (m)",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación mayores (m)",
+   "ctl": "texto",
+   "val": "5.0",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XY (planta)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "⚡ Modal + Animación",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Modo",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Frecuencia",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Período",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "Dominante",
+   "ctl": "texto",
+   "val": "—",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔢 N° de modos (subir si masa <90%)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  }
+ ],
+ "marcasNuevo": [
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Herramientas FEM",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "Vista",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📷 Imagen y GIF",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🔀 Vista doble (split)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes (frames individuales)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✏ Dibujar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▦ Áreas (shells)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▌ Columna 3D (1 click + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🧊 En 3D",
+   "et": "▥ Pared Q4 3D (2 clicks + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🧊 En 3D",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "✂ Modificar",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Plano de trabajo",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🛠 Acciones",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏢 Plantas de pisos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📍 Ejes y Niveles (Revit)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos X (m)",
+   "ctl": "texto",
+   "val": "6,6,6",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Vanos Y (m)",
+   "ctl": "texto",
+   "val": "5,5",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "Alturas de piso (m)",
+   "ctl": "texto",
+   "val": "3,3,3",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🏗 Rejilla (ejes + niveles de una vez)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Divisiones",
+   "ctl": "texto",
+   "val": "4",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "✂ Mallar línea seleccionada (N divisiones)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "Altura extrusión (m)",
+   "ctl": "texto",
+   "val": "3.0",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir nodo→frame (1 nodo seleccionado + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "🎯 Acciones de selección",
+   "et": "⬆ Extruir frame→área (1+ segmentos seleccionados + altura)",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "💻 CLI Comandos",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": true,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "🪨 Cimentación (diseño + SAFE F2K)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Dead)  SW=1",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Self Weight Mult.",
+   "ctl": "texto",
+   "val": "0.00",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "Auto Lateral",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "🗑 Delete pattern",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Live)  SW=0",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Dead",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Dead (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "Live×1",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Live (Linear Static)",
+   "et": "🗑 Delete case",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Modal",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Type",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Initial Cond.",
+   "ctl": "lista",
+   "val": "",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "Patterns",
+   "ctl": "texto",
+   "val": "(none)",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "🗑 Delete case",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Modal (Modal - Eigen)",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "Servicio D+L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ Servicio D+L: 1·Dead + 1·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D: 1.4·Dead",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.2D+1.6L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.2·Dead + 1.6·Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.2D+1.6L: 1.2·Dead + 1.6·Live",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Name",
+   "ctl": "texto",
+   "val": "1.4D+1.7L",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "Formula",
+   "ctl": "texto",
+   "val": "1.4·Dead + 1.7·Live",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "boton",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "🗑 Delete combo",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "▸ 1.4D+1.7L: 1.4·Dead + 1.7·Live",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "ETABS",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "SAP",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación grid (m)",
+   "ctl": "texto",
+   "val": "1.00",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Separación mayores (m)",
+   "ctl": "texto",
+   "val": "5.0",
+   "vis": false,
+   "marcas": "PARAM"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📐 Grid",
+   "et": "Plano XY (planta)",
+   "ctl": "casilla",
+   "val": "on",
+   "vis": false,
+   "marcas": "REPETIDA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  },
+  {
+   "tipo": "fila",
+   "carpeta": "📋 Tablas",
+   "et": "",
+   "ctl": "",
+   "val": "",
+   "vis": false,
+   "marcas": "VACIA"
+  }
+ ]
+}

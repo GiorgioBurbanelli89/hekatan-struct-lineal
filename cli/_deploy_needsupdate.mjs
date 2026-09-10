@@ -1,0 +1,15 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 1000 });
+await p.goto(`https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=edificio-dual`, { waitUntil: "networkidle2", timeout: 120000 });
+await new Promise((r) => setTimeout(r, 8000));
+const info = await p.evaluate(() => { const s = window.__hekatanSettings?.(); s.shellResults.val = "vonMises"; s.deformedShape.val = false; return 1; });
+await new Promise((r) => setTimeout(r, 2000));
+const a = await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); let cm; ctx.scene.traverse((o) => { if (o.name === "__hekatan_shell_colormap") cm = o; }); const S = cm.geometry.attributes.scalar; return { s1399: +S.getX(1399).toFixed(3), version: S.version, count: S.count }; });
+await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); ctx.render?.(); });
+await new Promise((r) => setTimeout(r, 600)); await p.screenshot({ path: "cli/shots/deploy/_nu_0.png" });
+await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); let cm; ctx.scene.traverse((o) => { if (o.name === "__hekatan_shell_colormap") cm = o; }); cm.geometry.attributes.scalar.needsUpdate = true; ctx.render?.(); });
+await new Promise((r) => setTimeout(r, 600)); await p.screenshot({ path: "cli/shots/deploy/_nu_1.png" });
+await p.evaluate(() => { const ctx = [...document.querySelectorAll("div")].map(d => d.__ctx).find(Boolean); let cm; ctx.scene.traverse((o) => { if (o.name === "__hekatan_shell_colormap") cm = o; }); const g = cm.geometry; const S = g.attributes.scalar; const nuevo = new S.constructor(new Float32Array(S.array), 1); g.deleteAttribute("scalar"); g.setAttribute("scalar", nuevo); ctx.render?.(); });
+await new Promise((r) => setTimeout(r, 600)); await p.screenshot({ path: "cli/shots/deploy/_nu_2.png" });
+console.log(JSON.stringify(a)); await nav.close();

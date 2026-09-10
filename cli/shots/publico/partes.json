@@ -1,0 +1,186 @@
+{
+ "cajas": [
+  {
+   "id": "",
+   "cls": "tp-rotv tp-cntv tp-rotv-expanded t",
+   "x": 943,
+   "y": 97,
+   "w": 320,
+   "h": 348,
+   "txt": "Hekatan Struct¿Con qué vas a trabajar?📂 Archivo existente🧪"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_b",
+   "x": 943,
+   "y": 97,
+   "w": 320,
+   "h": 24,
+   "txt": "Hekatan Struct"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_t",
+   "x": 971,
+   "y": 97,
+   "w": 264,
+   "h": 24,
+   "txt": "Hekatan Struct"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_c",
+   "x": 943,
+   "y": 121,
+   "w": 320,
+   "h": 324,
+   "txt": "¿Con qué vas a trabajar?📂 Archivo existente🧪 Ejemplos📐 Nu"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 947,
+   "y": 125,
+   "w": 288,
+   "h": 24,
+   "txt": "¿Con qué vas a trabajar?"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 947,
+   "y": 201,
+   "w": 288,
+   "h": 24,
+   "txt": "📐 Nuevo modelo · Plantillas"
+  },
+  {
+   "id": "hk3-cmd-ghost",
+   "cls": "",
+   "x": 529,
+   "y": 674,
+   "w": 280,
+   "h": 26,
+   "txt": ""
+  },
+  {
+   "id": "hk3-cmd-input",
+   "cls": "",
+   "x": 529,
+   "y": 674,
+   "w": 280,
+   "h": 26,
+   "txt": ""
+  },
+  {
+   "id": "viewer",
+   "cls": "",
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 720,
+   "txt": "SettingsDisplay scale📐 GridDimensión (m)Separación grid (m)"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv tp-cntv tp-rotv-expanded t",
+   "x": 8,
+   "y": 8,
+   "w": 300,
+   "h": 409,
+   "txt": "SettingsDisplay scale📐 GridDimensión (m)Separación grid (m)"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_b",
+   "x": 8,
+   "y": 8,
+   "w": 300,
+   "h": 24,
+   "txt": "Settings"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_t",
+   "x": 36,
+   "y": 8,
+   "w": 244,
+   "h": 24,
+   "txt": "Settings"
+  },
+  {
+   "id": "",
+   "cls": "tp-rotv_c",
+   "x": 8,
+   "y": 32,
+   "w": 300,
+   "h": 385,
+   "txt": "Display scale📐 GridDimensión (m)Separación grid (m)Separaci"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 12,
+   "y": 60,
+   "w": 268,
+   "h": 24,
+   "txt": "📐 Grid"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 12,
+   "y": 84,
+   "w": 268,
+   "h": 24,
+   "txt": "👁 Ver"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 12,
+   "y": 108,
+   "w": 268,
+   "h": 24,
+   "txt": "📌 Analysis Inputs"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 12,
+   "y": 132,
+   "w": 268,
+   "h": 24,
+   "txt": "🔬 Analyze"
+  },
+  {
+   "id": "",
+   "cls": "tp-fldv_t",
+   "x": 12,
+   "y": 393,
+   "w": 268,
+   "h": 24,
+   "txt": "✂️ Cortes X/Y/Z"
+  },
+  {
+   "id": "toolbar",
+   "cls": "",
+   "x": 1195,
+   "y": 5,
+   "w": 80,
+   "h": 32,
+   "txt": "☀ Hekatan Struct Lineal — Source Code Contact Author Based o"
+  }
+ ],
+ "carpetas": [
+  "¿Con qué vas a trabajar?",
+  "📐 Nuevo modelo · Plantillas",
+  "📐 Grid",
+  "👁 Ver",
+  "📌 Analysis Inputs",
+  "🔬 Analyze",
+  "✂️ Cortes X/Y/Z"
+ ],
+ "ejemplo": "Hekatan Struct",
+ "titulo": "Hekatan Struct Lineal"
+}

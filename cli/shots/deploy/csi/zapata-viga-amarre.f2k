@@ -1,0 +1,150 @@
+File "Cimentacion_Edificio_Hekatan.f2k" exportado desde Hekatan Struct Lineal 2026-09-06 at 7:13:06 a.m.
+File contains 2 zapatas en un solo modelo SAFE.
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAFE   Version=20.3.0   ProgLevel="Post Tensioning"   LicenseNum=3010-*12MBTJ2L34MJLQ5   CurrUnits="tonf, m, C"   CompBmCode="AISC 360-16"   ConcFrmCode="ACI 318-19"   ConcSlbCode="ACI 318-19"
+ 
+TABLE:  "MATERIAL PROPERTIES - GENERAL"
+   Material=4000Psi   Type=Concrete   SymType=Isotropic   Grade="f'c 4000 psi"   Color=Gray8Dark   GUID=be156dcf-bfe3-456c-b268-d9753705d74e
+   Material=A615Gr60   Type=Rebar   SymType=Uniaxial   Grade="Grade 60"   Color=Green   GUID=17cf5a2b-7e63-45d1-a621-a5eafb6755da
+ 
+TABLE:  "MATERIAL PROPERTIES - BASIC MECHANICAL PROPERTIES"
+   Material=4000Psi   DensityType=Weight   UnitWeight=2.447318911147028   UnitMass=0.24955707720241146   E1=2043511.2908077682   G12=851463.0378365702   U12=0.2   A1=9.9E-06
+   Material=A615Gr60   DensityType=Weight   UnitWeight=7.849   UnitMass=0.800380   E1=20389019.16   A1=6.5E-06
+ 
+TABLE:  "MATERIAL PROPERTIES - CONCRETE DATA"
+   Material=4000Psi   Fc=1853.8690026160107   LtWtConc=No   IsUserFr=No   SSCurveOpt=Mander   SSHysType=Concrete   SFc=0.00221914   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0
+ 
+TABLE:  "MATERIAL PROPERTIES - REBAR DATA"
+   Material=A615Gr60   Fy=42184.18   Fu=63276.27   Fye=46402.60   Fue=69603.89   SSCurveOpt=Simple   SSHysType=Kinematic   SHard=0.01   SCap=0.09   FinalSlope=-0.1
+ 
+TABLE:  "AREA SECTION PROPERTY DEFINITIONS - SUMMARY"
+   Name=Footing1   Type=Slab   "Element Type"=Shell-Thin   Material=4000Psi   "Total Thickness"=0.5
+   Name=Stiff1     Type=Slab   "Element Type"=Shell-Thin   Material=4000Psi   "Total Thickness"=0.5
+   Name=Footing2   Type=Slab   "Element Type"=Shell-Thin   Material=4000Psi   "Total Thickness"=0.5
+   Name=Stiff2     Type=Slab   "Element Type"=Shell-Thin   Material=4000Psi   "Total Thickness"=0.5
+ 
+TABLE:  "SLAB PROPERTY DEFINITIONS"
+   Name=Footing1   "Modeling Type"=Shell-Thin   "Property Type"=Footing   Material=4000Psi   "Slab Thickness"=0.5   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   GUID=489fa941-fcf0-4cc6-bbe6-bce4421e53b4   Orthotropic?=No
+   Name=Stiff1     "Modeling Type"=Shell-Thin   "Property Type"=Stiff     Material=4000Psi   "Slab Thickness"=0.5   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=100   "m22 Modifier"=100   "m12 Modifier"=100   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=0   "Weight Modifier"=0   Color=Cyan   GUID=50eb99f9-c205-4a6c-8fe5-2480b4b920c8   Orthotropic?=No
+   Name=Footing2   "Modeling Type"=Shell-Thin   "Property Type"=Footing   Material=4000Psi   "Slab Thickness"=0.5   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   GUID=d3b0e835-0f9f-4c11-8e93-50ad17a3df1f   Orthotropic?=No
+   Name=Stiff2     "Modeling Type"=Shell-Thin   "Property Type"=Stiff     Material=4000Psi   "Slab Thickness"=0.5   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=100   "m22 Modifier"=100   "m12 Modifier"=100   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=0   "Weight Modifier"=0   Color=Cyan   GUID=9aa87c28-c793-44e8-a610-556c52346e3f   Orthotropic?=No
+ 
+TABLE:  "SPRING PROPERTY DEFINITIONS - AREA SPRINGS"
+   Name=ASpr1   "Subgrade Modulus"=203.94324259558567   "Nonlinear Option"="Compression Only"   Color=Green   GUID=3db9b005-204f-4eb3-8990-3fe801cfa38b
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   Name=Dead   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=1   GUID=ad10c87f-eb38-4b95-b08b-4a2d719668e9
+   Name=Live   "Is Auto Load"=No   Type=Live   "Self Weight Multiplier"=0   GUID=97261094-47c4-41e3-9c65-16324093d95e
+ 
+TABLE:  "LOAD CASE DEFINITIONS - SUMMARY"
+   Name=Dead   Type="Linear Static"   GUID=f62c41d8-48ac-453e-a6a1-d878a2447d5d
+   Name=Live   Type="Linear Static"   GUID=039d769b-6dfd-479c-8971-3e5be5460b60
+ 
+TABLE:  "LOAD CASE DEFINITIONS - LINEAR STATIC"
+   Name=Dead   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=Dead   "Load SF"=1   "Design Type"="Program Determined"   GUID=3f19f219-adae-417e-8ac0-b1d7fccac374
+   Name=Live   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=Live   "Load SF"=1   "Design Type"="Program Determined"   GUID=bfaeb56a-7f1b-489c-a341-4e5eafa3308b
+ 
+TABLE:  "MASS SOURCE DEFINITION"
+   Name=MsSrc1   "Is Default"=Yes   "Include Lateral Mass?"=No   "Include Vertical Mass?"=Yes   "Lump Mass?"=Yes   "Source Self Mass?"=Yes   "Source Added Mass?"=Yes   "Source Load Patterns?"=No   "Move Mass Centroid?"=No   GUID=0a947999-c4c6-4694-a629-66fa9cad8ca0
+ 
+TABLE:  "COMBINATION DEFINITIONS"
+   Name=Pu_1.4D+1.7L   Type="Linear Add"   "Is Auto"=No   "Load Name"=Dead   "Scale Factor"=1.4   GUID=811f40e7-32f8-44db-9910-62533471a5a7
+   Name=Pu_1.4D+1.7L   "Load Name"=Live   "Scale Factor"=1.7
+ 
+TABLE:  "POINT OBJECT CONNECTIVITY"
+   UniqueName=1   "Is Auto Point"=No   IsSpecial=No   X=0   Y=0   Z=0   GUID=41b693d5-0e1b-40fe-96f8-1583731c8d5a
+   UniqueName=2   "Is Auto Point"=No   IsSpecial=No   X=2   Y=0   Z=0   GUID=9e68dd36-161e-4791-814b-c374cc0deb3b
+   UniqueName=3   "Is Auto Point"=No   IsSpecial=No   X=2   Y=2   Z=0   GUID=85675f14-6731-4a9e-820f-2798957bc25d
+   UniqueName=4   "Is Auto Point"=No   IsSpecial=No   X=0   Y=2   Z=0   GUID=16cbb0c2-1ff3-4e70-9e6d-a8a6099989a8
+   UniqueName=5   "Is Auto Point"=No   IsSpecial=No   X=0   Y=0.8   Z=0   GUID=21b7df41-6499-4681-81b4-70563c0acb85
+   UniqueName=6   "Is Auto Point"=No   IsSpecial=No   X=0.4   Y=0.8   Z=0   GUID=3b8f0fe7-fdee-443b-9f78-1782003d56ac
+   UniqueName=7   "Is Auto Point"=No   IsSpecial=No   X=0.4   Y=1.2   Z=0   GUID=96008848-2a4d-412d-a522-ca4d4d6daa01
+   UniqueName=8   "Is Auto Point"=No   IsSpecial=No   X=0   Y=1.2   Z=0   GUID=e086ee3e-df4c-4e42-9c4e-68b0ea148fef
+   UniqueName=9   "Is Auto Point"=No   IsSpecial=Yes   X=0.2   Y=1   Z=0   GUID=2880a169-efe7-4bbf-b98d-5c23f68a59a6
+   UniqueName=10   "Is Auto Point"=No   IsSpecial=No   X=5   Y=0   Z=0   GUID=0cb7ed5a-d768-4e49-8608-9c4f9659a0a3
+   UniqueName=11   "Is Auto Point"=No   IsSpecial=No   X=7.5   Y=0   Z=0   GUID=23625ce1-2cce-4f7d-8213-74bbd4e4d66e
+   UniqueName=12   "Is Auto Point"=No   IsSpecial=No   X=7.5   Y=2   Z=0   GUID=4dc6cdbf-ec57-4faa-ad88-fbc4cb08f947
+   UniqueName=13   "Is Auto Point"=No   IsSpecial=No   X=5   Y=2   Z=0   GUID=0c40560f-dec1-4775-afed-628c68a6b88c
+   UniqueName=14   "Is Auto Point"=No   IsSpecial=No   X=6.05   Y=0.8   Z=0   GUID=853f2671-0e51-46b5-8c31-7f8d4c82dca1
+   UniqueName=15   "Is Auto Point"=No   IsSpecial=No   X=6.45   Y=0.8   Z=0   GUID=fea38f5a-a573-4696-b8f9-5d48e8056488
+   UniqueName=16   "Is Auto Point"=No   IsSpecial=No   X=6.45   Y=1.2   Z=0   GUID=92689577-3e20-4b3b-b9dc-40d722fba03f
+   UniqueName=17   "Is Auto Point"=No   IsSpecial=No   X=6.05   Y=1.2   Z=0   GUID=fbb12f23-37d4-4d12-a6f4-40852c529434
+   UniqueName=18   "Is Auto Point"=No   IsSpecial=Yes   X=6.25   Y=1   Z=0   GUID=f190ea04-d2f9-4034-8702-de1e4911e08a
+ 
+TABLE:  "FLOOR OBJECT CONNECTIVITY"
+   "Unique Name"=1        UniquePt1=1   UniquePt2=2   UniquePt3=3   UniquePt4=4   Perimeter=8   Area=4   GUID=f32d21be-6891-4556-87ea-1e9e00e40ed1
+   "Unique Name"=LOAD1    UniquePt1=5   UniquePt2=6   UniquePt3=7   UniquePt4=8   Perimeter=1.6   Area=0.16000000000000003   GUID=8fd70dd7-425f-45a7-851a-34182d0a5bb0
+   "Unique Name"=2        UniquePt1=10   UniquePt2=11   UniquePt3=12   UniquePt4=13   Perimeter=9   Area=5   GUID=8b4f1f8d-8002-46de-a7b0-54eec9414bf6
+   "Unique Name"=LOAD2    UniquePt1=14   UniquePt2=15   UniquePt3=16   UniquePt4=17   Perimeter=1.6   Area=0.16000000000000003   GUID=33168755-59ec-4d7b-a002-3959401b15fe
+ 
+TABLE:  "JOINT ASSIGNMENTS - FLOOR MESHING OPTION"
+   UniqueName=9   IncludeInMesh=Yes
+   UniqueName=18   IncludeInMesh=Yes
+ 
+TABLE:  "JOINT LOADS ASSIGNMENTS - FORCE"
+   UniqueName=9   "Load Pattern"=Dead   FX=0   FY=0   FZ=-25   MX=1   MY=2.5   MZ=0   "X Dimension"=0.4   "Y Dimension"=0.4   GUID=a75139ae-39e0-4395-b0f8-b7097066f0ea
+   UniqueName=18   "Load Pattern"=Dead   FX=0   FY=0   FZ=-40   MX=1   MY=2.5   MZ=0   "X Dimension"=0.4   "Y Dimension"=0.4   GUID=a8d01622-f4cf-4945-a6ee-01f73077454f
+ 
+TABLE:  "AREA ASSIGNMENTS - SUMMARY"
+   UniqueName=1        "Section Property"=Footing1   "Property Type"=Slab   Spring=ASpr1
+   UniqueName=LOAD1    "Section Property"=Stiff1     "Property Type"=Slab
+   UniqueName=2        "Section Property"=Footing2   "Property Type"=Slab   Spring=ASpr1
+   UniqueName=LOAD2    "Section Property"=Stiff2     "Property Type"=Slab
+ 
+TABLE:  "AREA ASSIGNMENTS - SECTION PROPERTIES"
+   UniqueName=1        "Section Property"=Footing1   "Property Type"=Slab
+   UniqueName=LOAD1    "Section Property"=Stiff1     "Property Type"=Slab
+   UniqueName=2        "Section Property"=Footing2   "Property Type"=Slab
+   UniqueName=LOAD2    "Section Property"=Stiff2     "Property Type"=Slab
+ 
+TABLE:  "AREA ASSIGNMENTS - INSERTION POINT"
+   UniqueName=1        "Cardinal Point"=Top   Transform=No
+   UniqueName=LOAD1    "Cardinal Point"=Top   Transform=No
+   UniqueName=2        "Cardinal Point"=Top   Transform=No
+   UniqueName=LOAD2    "Cardinal Point"=Top   Transform=No
+ 
+TABLE:  "AREA ASSIGNMENTS - AREA SPRINGS"
+   UniqueName=1   "Spring Property"=ASpr1
+   UniqueName=2   "Spring Property"=ASpr1
+ 
+TABLE:  "AREA ASSIGNMENTS - FLOOR AUTO MESH OPTIONS"
+   UniqueName=1        "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=LOAD1    "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=2        "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=LOAD2    "Mesh Option"=Default   "Add Restraints"=No
+ 
+TABLE:  "AREA ASSIGNMENTS - AUTO EDGE CONSTRAINTS"
+   UniqueName=1        Constraint=Yes
+   UniqueName=LOAD1    Constraint=Yes
+   UniqueName=2        Constraint=Yes
+   UniqueName=LOAD2    Constraint=Yes
+ 
+TABLE:  "ANALYSIS OPTIONS - AUTOMATIC MESH SETTINGS FOR FLOORS"
+   "Mesh Option"=Rectangular   "Use Localized Meshing"=Yes   "Merge Joints"=Yes   "Maximum Mesh Size"=0.33
+ 
+TABLE:  "ANALYSIS MODELING OPTIONS"
+   "Two Dimensional Only"=No   "Rigid Diaphragm At Top"=No   "Ignore Vertical Offsets"=Yes
+ 
+TABLE:  "ANALYSIS OPTIONS - SAPFIRE OPTIONS"
+   "Solver Option"=Advanced   "Analysis Process"=Auto   "Number Analysis Threads"=0   "Max File Size"=0
+ 
+TABLE:  "ANALYSIS OPTIONS - DESIGN AND RESPONSE RECOVERY OPTIONS"
+   "Number Design Threads"=0   "Number Recovery Threads"=0   "Use Memory Mapped Files"="Program Determined"   "Allow Model Differences"=No
+ 
+TABLE:  "ANALYSIS OPTIONS - CRACKING ANALYSIS OPTIONS"
+   "Reinforcement Source"="User and Designed"   "Minimum Tension Ratio"=0.0018   "Minimum Compression Ratio"=0
+ 
+TABLE:  "FRAME SECTION PROPERTY DEFINITIONS - SUMMARY"
+   Name=VAmarre_0.250x0.300   Material=4000Psi   Shape="Concrete Rectangular"   Color=Magenta   Area=0.075   J=0.000984375   I33=0.0005625   I22=0.00039062499999999997   As2=0.0625   As3=0.0625   S33Pos=0.00375   S33Neg=0.00375   S22Pos=0.0031249999999999997   S22Neg=0.0031249999999999997   Z33=0.005625   Z22=0.0046875   R33=0.08660254037844387   R22=0.07216878364870322   "CG Offset 3"=0   "CG Offset 2"=0   "PNA Offset 3"=0   "PNA Offset 2"=0   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I33 Modifier"=1   "I22 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1
+ 
+TABLE:  "FRAME SECTION PROPERTY DEFINITIONS - CONCRETE RECTANGULAR"
+   Name=VAmarre_0.250x0.300   Material=4000Psi   "From File?"=No   Depth=0.3   Width=0.25   "Rigid Zone?"=No   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "Section Type"=Beam   "Longitudinal Rebar Material"=A615Gr60   "Shear Rebar Material"=A615Gr60   "Flange Dimension Option"="Analysis Property"   "Cover Top"=0.06   "Cover Bottom"=0.06   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I22 Modifier"=1   "I33 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Magenta   GUID=0b7d6630-c198-4617-83d9-a18b13152868
+ 
+TABLE:  "BEAM OBJECT CONNECTIVITY"
+   "Unique Name"=1   UniquePtI=9   UniquePtJ=18   Length=6.05   GUID=67b024a6-21c1-427b-9321-28714ad47efa
+ 
+TABLE:  "FRAME ASSIGNMENTS - SECTION PROPERTIES"
+   UniqueName=1   Shape="Concrete Rectangular"   "Auto Select List"=N.A.   "Section Property"=VAmarre_0.250x0.300
+ 
+END TABLE DATA
