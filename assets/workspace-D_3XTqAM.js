@@ -2451,6 +2451,13 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
           ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)."
         },
         {
+          id: "replicar",
+          icono: "\u26C1",
+          nombre: "Replicar",
+          tecla: "REP",
+          ayuda: "con algo designado: desplazamiento y cu\xE1ntas copias, como el Replicate de ETABS. Para pisos, \xAB\u21C8 Subir\xBB."
+        },
+        {
           id: "offset",
           icono: "\u21C9",
           nombre: "Desfase",
@@ -2572,6 +2579,15 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       } catch {
       }
     }, l = (T) => {
+      var _a3, _b;
+      if (T.id === "replicar") {
+        if (!(((_a3 = window.__hekatanSelectionSize) == null ? void 0 : _a3.call(window)) ?? 0)) {
+          t.setTool("select"), i("REPLICAR \u2014 primero design\xE1 lo que quer\xE9s copiar (S, o ventana clic-clic)."), a();
+          return;
+        }
+        (_b = window.__hekatanCadRun) == null ? void 0 : _b.call(window, "rep"), i("REPLICAR \u2014 contest\xE1 el desplazamiento y cu\xE1ntas copias en el cuadro de comandos.");
+        return;
+      }
       if (T.id === "apoyo" || T.id === "carga") {
         S = T.id, t.setTool("select"), window.__hekatanBloquearVentana = true, a(), i(`${T.nombre} \u2014 ${T.ayuda}`);
         return;
