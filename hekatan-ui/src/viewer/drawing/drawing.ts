@@ -1869,8 +1869,10 @@ export function drawing({
     return true;
   };
   // Resetear el plano de trabajo a horizontal (XY, Z=0).
+  // ⚠️ Horizontal es rotX = π/2: la geometría del plano viene pre-rotada (está en
+  // X-Z). Con rotación cero, el botón «reset horizontal» dejaba el plano DE PIE.
   (window as any).__hekatanResetPlaneXY = () => {
-    if (drawingObj.gridTarget) drawingObj.gridTarget.val = { position: [0, 0, 0], rotation: [0, 0, 0] };
+    if (drawingObj.gridTarget) drawingObj.gridTarget.val = { position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0] };
     inclinedPlaneActive = false;   // síncrono
     inclinedHelper.visible = false;
     viewerRender();
@@ -2738,13 +2740,25 @@ export function drawing({
   van.derive(() => {
     if (!drawingObj.gridTarget) return;
 
+    // ⚠️ El MISMO giro va a dos objetos que NO parten de la misma postura:
+    //   · `plane` (el del raycaster) trae la geometría pre-girada rotX(π/2), así
+    //     que con π/2 queda TUMBADO (planta) y con 0, de pie;
+    //   · `gridObj` (la rejilla que se ve) tiene sus líneas ya en X-Y, o sea que
+    //     con 0 está tumbada y con π/2 se pone DE PIE.
+    // Se le pasaba el giro tal cual a los dos: el lienzo en blanco abría con la
+    // rejilla de canto flotando mientras la barra decía «Plano XY». Se compone el
+    // giro con la pre-rotación de la geometría para que los dos acaben igual.
+    const qPlano = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...drawingObj.gridTarget.val.rotation)
+    );
+    const qPreGeo = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0), Math.PI / 2
+    );
     interpolate(
       gridObj,
       {
         position: new THREE.Vector3(...drawingObj.gridTarget.val.position),
-        quaternion: new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(...drawingObj.gridTarget.val.rotation)
-        ),
+        quaternion: qPlano.clone().multiply(qPreGeo),
       },
       viewerRender
     );

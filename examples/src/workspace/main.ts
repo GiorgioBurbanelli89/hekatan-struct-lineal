@@ -339,8 +339,16 @@ function ofrecerRecuperar(): void {
 }
 
 // Grid centrado en el origen mundial (convención CAD).
+//
+// ⚠️ De salida va en PLANTA, y eso es `rotX = π/2`, no cero. La geometría del
+// plano viene pre-rotada (está en X-Z, que es donde la deja three con su «arriba»
+// en Y), así que con rotación cero la rejilla sale DE PIE y el clic cae en un
+// plano vertical — aunque la barra de estado dijera «Plano XY». Se veía nada más
+// abrir el lienzo en blanco: una rejilla de canto flotando y coordenadas de
+// X = −198 m al mover el ratón. No se cazó antes porque todas las pruebas
+// empiezan pulsando «Planta», que lo arreglaba por el camino.
 const drawingGridTarget: State<{ position: [number,number,number]; rotation: [number,number,number] }> =
-  van.state({ position: [0, 0, 0], rotation: [0, 0, 0] });
+  van.state({ position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0] });
 // Expongo los van states a globals para que ejemplos (newBlank, etc.)
 // puedan LEER los puntos/polylines dibujados con mouse y construir
 // nodes/elements del FEM directamente.
