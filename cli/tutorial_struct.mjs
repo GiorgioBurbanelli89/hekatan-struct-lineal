@@ -310,6 +310,28 @@ const api = {
     await foto(2);
     return true;
   },
+  /**
+   * PLIEGA una carpeta abierta (con el cursor). Para hacer sitio: «CLI Comandos» viene
+   * abierta con su cuadro de texto y empuja «Cargas» por debajo de lo que se graba.
+   */
+  cerrar: async (titulo, ms = 600) => {
+    const r = await pag.evaluate((t) => {
+      const tit = [...document.querySelectorAll(".tp-fldv_t")].find((x) => (x.textContent || "").trim().endsWith(t));
+      const f = tit && tit.closest(".tp-fldv");
+      if (!f || f.classList.contains("tp-fldv-cpl")) return null;
+      const q = f.querySelector(":scope > .tp-fldv_b").getBoundingClientRect();
+      return { x: q.left, y: q.top, w: q.width, h: q.height };
+    }, titulo);
+    if (!r) return false;
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+    await foto(2);
+    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await espera(ms);
+    await pag.evaluate(() => window.__tutSinCaja());
+    await foto(2);
+    return true;
+  },
   /** Cuadro + nota por selector CSS. */
   marcarSel: async (sel, nota) => {
     const r = await rect("sel", sel);

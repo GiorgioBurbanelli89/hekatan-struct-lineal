@@ -113,9 +113,9 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     host.innerHTML = `
       <div class="hk-d2-bar" style="display:flex;align-items:center;gap:10px;padding:7px 10px;
            background:#141a24;border-bottom:1px solid #2f3b50;cursor:move;user-select:none">
-        <b style="color:#e6c463">📐 Diagrama 2D</b>
-        <span class="hk-d2-tit" style="color:#9fb0c6"></span>
-        <label style="margin-left:auto">plano
+        <b style="color:#e6c463;white-space:nowrap">📐 Diagrama 2D</b>
+        <span class="hk-d2-tit" style="color:#9fb0c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto"></span>
+        <label style="margin-left:auto;white-space:nowrap">plano
           <select class="hk-d2-plano" style="background:#1b2230;color:#dbe6f5;border:1px solid #33415c;border-radius:4px">
             <option value="XZ">Alzado XZ</option><option value="YZ">Alzado YZ</option><option value="XY">Planta XY</option>
           </select></label>
@@ -208,8 +208,12 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       vmin = Math.min(vmin, p.v); vmax = Math.max(vmax, p.v);
     }
     const du = umax - umin || 1, dv = vmax - vmin || 1;
-    const M = 70;                                   // margen en px (los rótulos van fuera de la barra)
-    const esc = Math.min((W - 2 * M) / du, (H - 2 * M) / dv);
+    // El diagrama sobresale de las barras un 12 % del lado mayor (más el rótulo), y
+    // hacia fuera en las columnas de fachada. Con solo 70 px de margen, en una ventana
+    // estrecha las columnas de los bordes y sus valores quedaban cortados.
+    const sale = 0.12 * Math.max(du, dv);           // en metros, a cada lado
+    const M = 46;                                   // px para los rótulos
+    const esc = Math.min((W - 2 * M) / (du + 2 * sale), (H - 2 * M) / (dv + 2 * sale));
     const ox = (W - du * esc) / 2, oy = (H - dv * esc) / 2;
     const px = (u: number) => ox + (u - umin) * esc;
     const py = (v: number) => H - (oy + (v - vmin) * esc);   // v hacia ARRIBA en pantalla
@@ -223,9 +227,22 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       return e;
     };
 
+    // Hacia dónde va un valor POSITIVO en pantalla: el lado de ETABS (momento → la cara
+    // que tracciona) proyectado en el plano. Si el resultado trabaja en OTRO plano —el
+    // M3 de una columna vista en el alzado YZ, que es flexión en X— no se dibuja: se
+    // vería de canto en ETABS, y pintarlo girado hacía creer que es de este pórtico.
+    const ladoEn = new Map<number, [number, number] | null>();
+    for (const b of barras) {
+      const ang = mesh.elementInputs?.rawVal?.localAngles?.get?.(b.i) ?? 0;
+      const pl = proyectar(ladoPositivo(clave ?? "normals", ejesCSI(N[E[b.i][0]], N[E[b.i][1]], ang)), estado.plano);
+      const ln = Math.hypot(pl.u, pl.v);
+      ladoEn.set(b.i, ln > 0.3 ? [pl.u / ln, -pl.v / ln] : null);     // en pantalla la y crece hacia abajo
+    }
+    const fuera = barras.filter((b) => !ladoEn.get(b.i)).length;
     // el máximo del plano: fija la escala del diagrama (el mayor, al 12 % del lado)
     let vmaxAbs = 0;
     if (R) for (const b of barras) {
+      if (!ladoEn.get(b.i)) continue;
       const r = R instanceof Map ? R.get(b.i) : R[b.i];
       if (r) vmaxAbs = Math.max(vmaxAbs, Math.abs(r[0] ?? 0), Math.abs(r[1] ?? 0));
     }
@@ -239,20 +256,10 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     for (const b of barras) {
       const x1 = px(b.a.u), y1 = py(b.a.v), x2 = px(b.b.u), y2 = py(b.b.v);
       const L = Math.hypot(x2 - x1, y2 - y1) || 1;
-      // hacia dónde va un valor POSITIVO: el lado de ETABS (momento → la cara que
-      // tracciona), proyectado en el plano. Si el resultado se dibuja fuera del plano
-      // (el M2 de una viga vista en alzado), la normal a la barra, abajo el momento.
-      const ang = mesh.elementInputs?.rawVal?.localAngles?.get?.(b.i) ?? 0;
-      const lado = ladoPositivo(clave!, ejesCSI(N[E[b.i][0]], N[E[b.i][1]], ang));
-      const pl = proyectar(lado, estado.plano);
-      let nx = pl.u, ny = -pl.v;                     // en pantalla la y crece hacia abajo
-      const ln = Math.hypot(nx, ny);
-      if (ln > 0.3) { nx /= ln; ny /= ln; }
-      else {
-        nx = (y2 - y1) / L; ny = -(x2 - x1) / L;
-        if (esMomento && ny < 0) { nx = -nx; ny = -ny; }
-      }
-      const r = R ? (R instanceof Map ? R.get(b.i) : R[b.i]) : null;
+      void L;
+      const lado = ladoEn.get(b.i);
+      const [nx, ny] = lado ?? [0, 0];
+      const r = R && lado ? (R instanceof Map ? R.get(b.i) : R[b.i]) : null;
       // ⚠️ El par es de FUERZAS DE EXTREMO, no del diagrama: tomándolo tal cual la viga
       // salía en dientes de sierra (21,38 a un lado del nudo y −21,38 al otro). En el
       // nudo i el diagrama es −r0 y en el j +r1 (M2 al revés): `diagramaCSI`.
@@ -305,6 +312,7 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       ? "Elegí un resultado en «Frame results» (Axial, Cortante, Momento) para ver su diagrama aquí."
       : `${barras.length} barras en el plano · máximo ${fmt(vmaxAbs)} ${UNIDAD[clave] ?? ""}` +
         (esMomento ? " · el momento va del lado de la tracción" : "") +
+        (fuera ? ` · ${fuera} barra(s) con este resultado en otro plano (sin dibujar)` : "") +
         " · clic en una barra: su gráfico";
   }
 
@@ -385,7 +393,7 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       ].join(";");
       hostB.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">' +
-        '<b style="color:#e6c463">📈 Barra</b><span class="hk-b-tit" style="color:#9fb0c6"></span>' +
+        '<b style="color:#e6c463;white-space:nowrap">📈 Barra</b><span class="hk-b-tit" style="color:#9fb0c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto"></span>' +
         '<select class="hk-b-pl" style="margin-left:auto;background:#1b2230;color:#dbe6f5;border:1px solid #33415c;border-radius:4px">' +
         '<option value="12">plano 1-2 (V2 · M3)</option><option value="13">plano 1-3 (V3 · M2)</option></select>' +
         '<button class="hk-b-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button>' +

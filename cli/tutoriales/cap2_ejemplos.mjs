@@ -36,6 +36,8 @@ export const pasos = [
       await a.marcar("fila", "Ejemplo", "Y dentro, el ejemplo: un pórtico de un piso.");
       await a.quieto(3, 300);
       await a.elegir("Ejemplo", "Pórtico 2D (un piso)", 7000);
+      // la línea de comandos viene abierta y empuja «Cargas» fuera de cuadro
+      await a.cerrar("CLI Comandos");
       // La deformada viene exagerada y un pórtico plano en isométrica no se lee:
       // se apaga la deformada y se mira de FRENTE, como en un plano.
       await a.ajuste("deformedShape", false);
@@ -50,6 +52,7 @@ export const pasos = [
       await a.quieto(3, 300);
       await a.elegir("Frame results", "Moment 3-3", 5000);
       console.log("    max M tras encender:", await a.maximo());
+      await a.ajuste("deformedShape", false);
       await a.alzado();
       await a.sinCuadro(); await a.quieto(7, 300);
     },
@@ -65,6 +68,7 @@ export const pasos = [
       await a.quieto(3, 300);
       await a.param("Ex lateral", "Ex", 120, 5000);
       console.log("    max M tras Ex 120:", await a.maximo());
+      await a.ajuste("deformedShape", false);
       await a.alzado();
       await a.sinCuadro(); await a.quieto(8, 300);
     },
@@ -77,6 +81,7 @@ export const pasos = [
       await a.quieto(3, 300);
       await a.param("Ancho vano", "width", 9, 5000);
       console.log("    max M tras vano 9:", await a.maximo());
+      await a.ajuste("deformedShape", false);
       await a.alzado();
       await a.sinCuadro(); await a.quieto(8, 300);
     },
@@ -89,6 +94,7 @@ export const pasos = [
       await a.quieto(3, 300);
       await a.param("h viga", "vigaH", 0.8, 5000);
       console.log("    max M tras h viga 0.8:", await a.maximo());
+      await a.ajuste("deformedShape", false);
       await a.alzado();
       await a.sinCuadro(); await a.quieto(8, 300);
     },

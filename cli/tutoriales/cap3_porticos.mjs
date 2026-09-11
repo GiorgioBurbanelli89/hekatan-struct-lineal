@@ -55,22 +55,13 @@ export const pasos = [
     },
   },
   {
-    rotulo: "5 · El plano: los pórticos de la otra dirección",
+    rotulo: "5 · El plano: la otra dirección o una planta",
     hacer: async (a) => {
-      await a.marcarSel("#hk-diagrama-2d .hk-d2-plano", "Alzado YZ: los pórticos en la otra dirección.");
-      await a.quieto(3, 300);
-      await a.pag.evaluate(() => {
-        const s = document.querySelector("#hk-diagrama-2d .hk-d2-plano");
-        s.value = "YZ"; s.dispatchEvent(new Event("change"));
-      });
-      await a.espera(1500);
-      await a.sinCuadro(); await a.quieto(6, 300);
-      // de vuelta al XZ, el de la carga lateral, para el gráfico de la barra
-      await a.pag.evaluate(() => {
-        const s = document.querySelector("#hk-diagrama-2d .hk-d2-plano");
-        s.value = "XZ"; s.dispatchEvent(new Event("change"));
-      });
-      await a.espera(1200); await a.quieto(3, 300);
+      // Solo se señala: en este edificio la carga es en X, y en el alzado YZ el M3 de
+      // las columnas trabaja en el otro plano — la vista lo deja sin dibujar, como ETABS.
+      await a.marcarSel("#hk-diagrama-2d .hk-d2-plano", "Alzado XZ, alzado YZ o planta XY.");
+      await a.quieto(7, 300);
+      await a.sinCuadro(); await a.quieto(2, 300);
     },
   },
   {

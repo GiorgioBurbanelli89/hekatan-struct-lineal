@@ -69,6 +69,13 @@ ok(tit0 !== tit1 && tit1.includes("y = " + porticos[1].split("y = ")[1].replace(
 await pag.click("#hk-diagrama-2d .hk-d2-ant"); await espera(800);
 const tit2 = await pag.$eval("#hk-diagrama-2d .hk-d2-tit", (e) => e.textContent);
 ok(tit2 === tit0, "◀ vuelve al anterior", tit2);
+// en el alzado YZ el M3 de las columnas es flexión en X: otro plano, no se dibuja
+await pag.evaluate(() => { const s = document.querySelector("#hk-diagrama-2d .hk-d2-plano"); s.value = "YZ"; s.dispatchEvent(new Event("change")); });
+await espera(800);
+const pieYZ = await pag.$eval("#hk-diagrama-2d .hk-d2-pie", (e) => e.textContent);
+ok(/otro plano/.test(pieYZ), "alzado YZ: el M3 de las columnas no se pinta (es de otro plano)", pieYZ);
+await pag.evaluate(() => { const s = document.querySelector("#hk-diagrama-2d .hk-d2-plano"); s.value = "XZ"; s.dispatchEvent(new Event("change")); });
+await espera(800);
 // clic en una VIGA del alzado (la línea de toque más horizontal)
 const nToque = await pag.$$eval("#hk-diagrama-2d line", (ls) => ls.filter((l) => l.getAttribute("stroke") === "transparent").length);
 ok(nToque > 0, "cada barra del alzado se puede pulsar", nToque + " barras");
