@@ -140,6 +140,13 @@ export interface ExampleDef {
   name: string;
   category: string;
   /**
+   * Los PATRONES de carga del ejemplo, además de Dead y Live (que siempre están, como
+   * en ETABS): p. ej. `[{ nombre: "Ex", tipo: "Seismic" }]`. El workspace crea un caso por
+   * patrón y las combinaciones sísmicas, y el ejemplo reparte sus cargas con
+   * `cargasDelCaso()` (shared/cargasPorCaso.ts) para que cada caso muestre SOLO lo suyo.
+   */
+  patrones?: Array<{ nombre: string; tipo: LoadPattern["type"] }>;
+  /**
    * Si `true`, este ejemplo es un caso de **benchmark validado** — se compara
    * contra una referencia conocida (Paz 6.3, Serquen SF-70, OpenSees, CalculiX,
    * Bowles, etc.). En el selector del workspace aparece con un emoji 🏁

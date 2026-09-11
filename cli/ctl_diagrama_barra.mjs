@@ -51,8 +51,22 @@ await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { ti
 await espera(6000);
 
 
+
+// El CASO de carga: desde el 11-sep-2026 cada caso lleva solo lo suyo y el ejemplo abre en
+// «Dead». Este test mira momentos de carga lateral y de gravedad completa: elige su caso.
+const elegirCaso = async (texto) => {
+  const v = await pag.evaluate((t) => {
+    const f = [...document.querySelectorAll(".tp-lblv")].find((x) => (x.querySelector(".tp-lblv_l")?.textContent || "").trim() === "Case results");
+    const s = f?.querySelector("select"); if (!s) return null;
+    document.querySelectorAll("#hk-caso").forEach((x) => x.removeAttribute("id")); s.id = "hk-caso";
+    const o = [...s.options].find((o) => o.textContent.trim() === t); return o ? o.value : null;
+  }, texto);
+  if (v == null) { console.log("  x no hay caso " + texto); return false; }
+  await pag.select("#hk-caso", v); await espera(2500); return true;
+};
 const errores = [];
 pag.on("pageerror", (e) => errores.push(String(e)));
+await elegirCaso("Ex");
 // Momento 3-3 encendido y la vista 2D abierta en el alzado XZ
 await pag.evaluate(() => { window.__hekatanSettings().frameResults.val = "bendingsZ"; });
 await espera(2500);
@@ -98,7 +112,7 @@ if (barra) {
   const L = Number(barra.tit.match(/L = ([\d.]+)/)[1]);
   // viga sin carga repartida dentro del tramo: V constante y el M cambia V·L de punta a punta
   const dM = num(M, "máx") - num(M, "mín"), vv = Math.abs(num(V, "máx"));
-  ok(Math.abs(dM - vv * L) < 0.02 * dM + 0.05, "dM = V·L en la viga (el momento cuadra con el cortante)",
+  ok(dM > 1 && Math.abs(dM - vv * L) < 0.02 * dM + 0.05, "dM = V·L en la viga (el momento cuadra con el cortante)",
     `ΔM ${dM.toFixed(2)} · V·L ${(vv * L).toFixed(2)}`);
   console.log("    " + barra.filas.join("\n    "));
 }
@@ -112,8 +126,7 @@ await pag.screenshot({ path: join(OUT, PUB ? "publico.png" : "local.png") });
 await pag.goto(URL_.replace("edificio-frame-nec", "portico-2d"), { waitUntil: "networkidle2", timeout: 180000 });
 await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
 await espera(5000);
-await pag.evaluate(() => window.__hekatanSetParam("Ex", 0));
-await espera(3000);
+await elegirCaso("Σ Servicio D+L");        // 1·Dead + 1·Live: la gravedad completa, sin lateral
 const formas = () => pag.evaluate(() => {
   const out = [];
   document.querySelector("#viewer").__ctx.scene.traverse((o) => {

@@ -8,6 +8,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { cargasDelCaso, sumar, type Carga6 } from "../shared/cargasPorCaso";
 import { computeCortanteBasal } from "../espectro-nec/espectroNec";
 
 const G_GRAVITY = 9.81;
@@ -20,6 +21,7 @@ export const edificioFrameNec: ExampleDef = {
   id: "edificio-frame-nec",
   name: "Edificio pórtico · carga lateral NEC",
   category: "1️⃣ Frames · 🎯 n GDL Sistemas",
+  patrones: [{ nombre: "Ex", tipo: "Seismic" }],
   defaultShellResult: "none",
   availableShellResults: [],
   hasModal: true,
@@ -66,13 +68,18 @@ export const edificioFrameNec: ExampleDef = {
       N: pisos, he: p.he, wPiso: p.wPiso, tipoTa: "Hormigón sin muros",
     });
     const nPP = nx * ny;
-    const loads = new Map<number, [number, number, number, number, number, number]>();
+    // POR PATRÓN: el peso de cada piso → Dead, las fuerzas sísmicas NEC → Ex. El caso que
+    // se mira decide cuáles entran (shared/cargasPorCaso.ts); antes iban siempre las dos.
+    const pD = new Map<number, Carga6>(), pE = new Map<number, Carga6>();
     for (let k = 1; k < nz; k++) {
       const Fx = cb.pisos[k - 1].Fx / nPP;
       const Pz = -p.wPiso / nPP;
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++)
-        loads.set(idx(i, j, k), [Fx, 0, Pz, 0, 0, 0]);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        sumar(pD, idx(i, j, k), [0, 0, Pz, 0, 0, 0]);
+        sumar(pE, idx(i, j, k), [Fx, 0, 0, 0, 0, 0]);
+      }
     }
+    const loads = cargasDelCaso({ Dead: pD, Ex: pE });
 
     // Secciones
     const cA = p.colB * p.colH, cIz = p.colB * p.colH ** 3 / 12, cIy = p.colH * p.colB ** 3 / 12;

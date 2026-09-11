@@ -4,6 +4,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { cargasDelCaso, sumar, type Carga6 } from "../shared/cargasPorCaso";
 
 const G_GRAVITY = 9.81;
 const Ec = 25e6, nu_c = 0.2, Gc = Ec / (2 * (1 + nu_c)), rho_c = 24 / G_GRAVITY;
@@ -19,6 +20,7 @@ export const portico2D: ExampleDef = {
   id: "portico-2d",
   name: "Pórtico 2D (un piso)",
   category: "1️⃣ Frames · 🎯 3 GDL Pórtico plano",
+  patrones: [{ nombre: "Ex", tipo: "Seismic" }],
   defaultShellResult: "none",
   availableShellResults: [],
   hasModal: true,
@@ -68,18 +70,17 @@ export const portico2D: ExampleDef = {
       [3, [true, true, true, true, true, true]],
     ]);
 
-    // Cargas
-    const loads = new Map<number,[number,number,number,number,number,number]>();
-    if (fz !== 0) {
-      for (let i = 1; i < nodes.length; i++) {
-        if (i === 3) continue;
-        loads.set(i, [0, 0, fz, 0, 0, 0]);
-      }
+    // Cargas, POR PATRÓN: muerta (CM) → Dead, viva (CV) → Live, lateral → Ex. El caso que
+    // se mira decide cuáles entran (shared/cargasPorCaso.ts); antes iban siempre las tres.
+    const pD = new Map<number, Carga6>(), pL = new Map<number, Carga6>(), pE = new Map<number, Carga6>();
+    for (let i = 1; i < nodes.length; i++) {
+      if (i === 3) continue;
+      if (p.CM) sumar(pD, i, [0, 0, p.CM, 0, 0, 0]);
+      if (p.CV) sumar(pL, i, [0, 0, p.CV, 0, 0, 0]);
     }
-    if (fx !== 0) {
-      const prev = loads.get(2) ?? [0, 0, 0, 0, 0, 0];
-      loads.set(2, [fx, 0, prev[2], 0, 0, 0]);
-    }
+    if (fx !== 0) sumar(pE, 2, [fx, 0, 0, 0, 0, 0]);
+    const loads = cargasDelCaso({ Dead: pD, Live: pL, Ex: pE });
+    void fz;
 
     // Propiedades según material
     const E = p.mat < 0.5 ? Ec : Es;

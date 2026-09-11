@@ -517,6 +517,29 @@ function loadExample(ex: ExampleDef) {
       ...cm, cases: cm.cases.map(c => ({ ...c })),
     }));
   }
+  // Los patrones PROPIOS del ejemplo (p. ej. «Ex» sísmico): su patrón, su caso y las
+  // combinaciones sísmicas de la NEC-SE-CG (1.2D + 1.0E + L y 0.9D + 1.0E). Se AÑADEN a lo
+  // que haya (también a lo guardado de antes, que no los traía): sin su caso, la carga
+  // lateral no se podía mirar sola y todo salía sumado.
+  for (const pt of ex.patrones ?? []) {
+    if (!loadPatterns.val.find((x) => x.name === pt.nombre))
+      loadPatterns.val = [...loadPatterns.val, { name: pt.nombre, type: pt.tipo, selfWeightMultiplier: 0, autoLateralLoad: "None" } as any];
+    if (!loadCases.val.find((x) => x.name === pt.nombre)) {
+      const iModal = loadCases.val.findIndex((x) => x.type?.startsWith("Modal"));
+      const caso = { name: pt.nombre, type: "Linear Static", patterns: [{ pattern: pt.nombre, scaleFactor: 1 }], initialCondition: "Zero" } as any;
+      const lista = [...loadCases.val];
+      lista.splice(iModal < 0 ? lista.length : iModal, 0, caso);
+      loadCases.val = lista;
+    }
+    if (pt.tipo === "Seismic") {
+      const combos = [
+        { name: `1.2D+1L+1${pt.nombre}`, type: "Linear Add", cases: [{ case: "Dead", scaleFactor: 1.2 }, { case: "Live", scaleFactor: 1 }, { case: pt.nombre, scaleFactor: 1 }] },
+        { name: `0.9D+1${pt.nombre}`, type: "Linear Add", cases: [{ case: "Dead", scaleFactor: 0.9 }, { case: pt.nombre, scaleFactor: 1 }] },
+      ];
+      for (const cm of combos)
+        if (!loadCombinations.val.find((x: any) => x.name === cm.name)) loadCombinations.val = [...loadCombinations.val, cm as any];
+    }
+  }
   // Default activeLoadCase = primer case (Dead) si no hay seleccionado
   if (!loadCases.val.find(c => c.name === activeLoadCase.val)) {
     activeLoadCase.val = loadCases.val[0]?.name ?? "Dead";
@@ -573,6 +596,7 @@ function loadExample(ex: ExampleDef) {
   // viewer, así que al cambiar de ejemplo (o salir del modo FEM) las
   // columnas/vigas seguían invisibles. Forzamos defaults ON aquí para
   // que cada ejemplo arranque con la superestructura visible.
+  ponerFactoresDelCaso();
   ex.build?.(toSIParams(), states, modalPanel);
 
   // ── Auto-mesh shells ETABS-style (toggle global) ──
@@ -832,6 +856,9 @@ function mountCaseResultsInSettings() {
         try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
         __modalActivo = false;   // el usuario pidió un combo estático → salir del modo modal
         activeLoadCase.val = v.slice(8); rebuild();
+        // cada caso con SU escala de deformada, como ETABS: con la del caso anterior (Dead,
+        // que casi no desplaza) el sismo salía con el edificio tumbado
+        try { autoScaleDeformedShape(); } catch {}
       } else {
         // Si el caso elegido NO es modal, detener la animación para ver el resultado
         // estático (sin esto, rebuild() la re-animaría por el disparador isPlaying()).
@@ -841,6 +868,7 @@ function mountCaseResultsInSettings() {
           __modalActivo = false;   // caso estático elegido → salir del modo modal
         } else __modalActivo = true;
         activeLoadCase.val = e.value; rebuild();
+        try { autoScaleDeformedShape(); } catch {}   // su escala, no la del caso anterior
         // Sincronizar el "Caso activo" del pane derecho (Load Cases) con esta selección.
         try { __loadPanel?.rebuildCases(); } catch {}
       }
@@ -1128,6 +1156,25 @@ function toSIParams(): Record<string, number> {
   return si;
 }
 
+/**
+ * El factor de cada PATRÓN para lo que se está mirando (ver shared/cargasPorCaso.ts):
+ * un caso → sus patrones; una combinación → Σ factor del combo × factor del caso.
+ * Tiene que estar puesto ANTES de CADA build — también el primero, al abrir el ejemplo:
+ * sin eso el ejemplo se abría con «Dead» en el selector y la suma de todo en pantalla.
+ */
+function ponerFactoresDelCaso() {
+  (window as any).__hekatanActiveCase = activeLoadCase.val;
+  const cm = loadCombinations.val.find((c: any) => c.name === activeLoadCase.val);
+  const factores: Record<string, number> = {};
+  const deCaso = (nombre: string, f: number) => {
+    const c = loadCases.val.find((x) => x.name === nombre);
+    (c?.patterns ?? []).forEach((pp: any) => { factores[pp.pattern] = (factores[pp.pattern] ?? 0) + f * pp.scaleFactor; });
+  };
+  if (cm) cm.cases.forEach((cc: any) => deCaso(cc.case, cc.scaleFactor));
+  else deCaso(activeLoadCase.val, 1);
+  (window as any).__hekatanFactoresPatron = factores;
+}
+
 function rebuild() {
   if (!currentExample) return;
   resetStates();
@@ -1142,6 +1189,7 @@ function rebuild() {
   } else {
     (window as any).__hekatanActiveCombo = null;
   }
+  ponerFactoresDelCaso();
   currentExample.build(toSIParams(), states, modalPanel);
 
   // ── Active Case dispatcher ──
