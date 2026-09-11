@@ -1,33 +1,34 @@
 #!/usr/bin/env node
 /**
- * MOTOR de tutoriales de Hekatan Struct — la plantilla de la que salen los vídeos.
- *
- * Graba la APLICACIÓN DE VERDAD (ribbon + panel + visor 3D) en fotogramas de
- * 1280×720, con el cursor DIBUJADO, siguiendo una lista de pasos declarada aparte.
- * Cada capítulo vive en `cli/tutoriales/<nombre>.mjs` y solo dice QUÉ se hace; el
- * cómo (servidor, navegador, cursor, encuadres, comprobaciones) está aquí.
+ * MOTOR de tutoriales de Hekatan Struct — la app DE VERDAD, en alta definición.
  *
  *     node cli/tutorial_struct.mjs plantillas_modal
  *
- * Deja `frames_tut_<nombre>/f000.png…` + `pasos.json` (en qué fotograma empieza y
- * acaba cada paso, para que la voz del guion `.hs` cuadre con lo que se ve).
+ * Graba el deploy tal cual (panel + visor + mandos) y le pinta encima lo que un
+ * vídeo necesita y una captura pelada no tiene: el cursor, un CUADRO sobre el mando
+ * del que se habla y una nota al lado. Deja `frames_tut_<nombre>/f000.png…` a
+ * 1920×1080 y `pasos.json` con el fotograma en que empieza y acaba cada paso.
  *
- * Por qué fotogramas y no un iframe dentro de la escena HTML: el motor de vídeo
- * (`hsweb.js`) carga la escena por `file://` y la app se sirve por `http://`; desde
- * una no se puede tocar la otra. Con fotogramas, además, la captura se revisa antes
- * de gastar un render — que es la regla de la GUIA_VIDEO: mirar los frames.
+ * ── POR QUÉ SE VE NÍTIDO (que era el problema) ──────────────────────────────
  *
- * Reglas de la GUIA_VIDEO que este motor cumple solo:
- *   · 1280×720 con `deviceScaleFactor 2` (se captura al doble y se reduce: el texto
- *     se conserva; ampliar lo borra);
- *   · la VENTANA ENTERA, no solo el lienzo — el que mira tiene que ver dónde está
- *     el botón que se toca;
- *   · y comprueba que los fotogramas sean DISTINTOS: un visor que no repinta da una
- *     secuencia idéntica y el vídeo sale congelado pareciendo correcto.
+ * Jorge: «esa resolución está horrible». El texto de los menús mide 11-12 px de CSS;
+ * en un máster de 1280×720 eso es papilla y no hay compresor que lo arregle. Aquí:
+ *
+ *   · se captura con `deviceScaleFactor 2`: la ventana de 1280×720 sale a 2560×1440;
+ *   · la vista general se REDUCE a 1920×1080 — reducir conserva el texto, ampliar lo
+ *     borra;
+ *   · y el primer plano de un menú es un RECORTE 1:1: 960×540 de CSS son exactamente
+ *     1920×1080 píxeles del fichero. Es un zoom ×2 sin un solo píxel inventado.
+ *
+ * Con eso el texto del menú pasa de 11 px a 22 px reales en pantalla.
+ *
+ * ⚠️ El máster sale a 1920×1080, no a los 1280×720 que fija la GUIA_VIDEO. Es la
+ * única forma de que un menú se lea; queda anotado para decidirlo, no escondido.
  */
 import puppeteer from "puppeteer";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, readdirSync, unlinkSync } from "fs";
 import { createServer } from "http";
+import { execFileSync } from "child_process";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join, extname } from "path";
 
@@ -38,6 +39,15 @@ const cap = await import(pathToFileURL(join(__dirname, "tutoriales", CAP + ".mjs
 const OUT = join(__dirname, "..", "frames_tut_" + CAP);
 mkdirSync(OUT, { recursive: true });
 for (const f of readdirSync(OUT)) if (/\.(png|json)$/.test(f)) unlinkSync(join(OUT, f));
+
+const FFMPEG = process.env.FFMPEG ||
+  "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const ANCHO = 1280, ALTO = 720;          // la ventana, en CSS
+// Se graba la ventana SIN la banda de órdenes de abajo (640 de 720): esos 80 px de CSS
+// se convierten en la franja negra donde va el subtítulo. Así el subtítulo no se come
+// la interfaz y —lo que importa— no hay que encoger la imagen para hacerle sitio.
+const ALTO_UTIL = 640;
+const ZW = 960, ZH = 480;                // primer plano en CSS; ×2 = 1920×960 NATIVOS
 
 const BASE = "/hekatan-struct-lineal/";
 const raiz = join(__dirname, "..", "website", "src", "examples");
@@ -60,7 +70,7 @@ const nav = await puppeteer.launch({ headless: "new",
   args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
          "--use-angle=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] });
 const pag = await nav.newPage();
-await pag.setViewport({ width: 1280, height: 720, deviceScaleFactor: 2 });
+await pag.setViewport({ width: ANCHO, height: ALTO, deviceScaleFactor: 2 });
 const avisos = [];
 pag.on("pageerror", (e) => avisos.push("pageerror: " + e.message.slice(0, 160)));
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -69,115 +79,195 @@ await pag.goto("http://localhost:4780" + BASE + "workspace/?t=" + (cap.ejemplo |
 await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
 await espera(7000);
 
-// ── El cursor, DIBUJADO ──────────────────────────────────────────────────────
-// El ratón de verdad no sale en las capturas: sin esto los clics ocurren solos y el
-// tutorial no enseña nada. La flecha sigue al ratón de puppeteer y suelta un aro al
-// pulsar, que se mantiene unos fotogramas para que se VEA el clic.
+// ── La capa que se pinta ENCIMA de la app ───────────────────────────────────
+// Cursor, cuadro y nota. El ratón de verdad no sale en las capturas, y sin cuadro no
+// se sabe de qué mando se está hablando: era lo que Jorge pedía («resaltando o con
+// cuadros»). Va como overlay sobre la app real, no sobre una imitación.
 await pag.evaluate(() => {
-  const c = document.createElement("div");
-  c.id = "hk-tut-cursor";
-  c.style.cssText = "position:fixed;left:-100px;top:-100px;z-index:2147483647;" +
-    "pointer-events:none;width:22px;height:22px";
-  c.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22">' +
+  const capa = document.createElement("div");
+  capa.id = "hk-tut-capa";
+  capa.style.cssText = "position:fixed;inset:0;z-index:2147483647;pointer-events:none";
+  document.body.appendChild(capa);
+  const cur = document.createElement("div");
+  cur.style.cssText = "position:fixed;left:-100px;top:-100px;width:26px;height:26px";
+  cur.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26">' +
     '<path d="M4 2 L4 19 L9 14.5 L12 21.5 L15 20 L12 13.5 L18.5 13.5 Z" fill="#fff" ' +
     'stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-  document.body.appendChild(c);
-  const a = document.createElement("div");
-  a.id = "hk-tut-aro";
-  a.style.cssText = "position:fixed;z-index:2147483646;pointer-events:none;display:none;" +
-    "width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;" +
-    "border:2.5px solid #22d3ee;background:rgba(34,211,238,.18)";
-  document.body.appendChild(a);
-  const r = document.createElement("div");
-  r.id = "hk-tut-rotulo";
-  r.style.cssText = "position:fixed;left:22px;top:14px;z-index:2147483645;color:#e6c463;" +
-    "font:600 19px ui-monospace,Consolas,monospace;text-shadow:0 1px 4px #000;" +
-    "pointer-events:none;max-width:900px";
-  document.body.appendChild(r);
-  window.__tutCursor = (x, y) => { c.style.left = x + "px"; c.style.top = y + "px"; };
-  window.__tutAro = (x, y) => { a.style.left = x + "px"; a.style.top = y + "px"; a.style.display = "block"; };
-  window.__tutSoltar = () => { a.style.display = "none"; };
-  // El rótulo es para REVISAR los fotogramas. En el vídeo estorba: repite el
-  // subtítulo de School y se pisa con la barra de la app. `TUT_ROTULO=0` lo apaga.
-  window.__tutRotulo = (t) => { r.textContent = t; };
-  window.__tutSinRotulo = () => { r.style.display = "none"; };
+  capa.appendChild(cur);
+  const caja = document.createElement("div");
+  caja.style.cssText = "position:fixed;display:none;border:3px solid #22d3ee;border-radius:6px;" +
+    "box-shadow:0 0 0 4px rgba(34,211,238,.18),0 0 22px rgba(34,211,238,.55)";
+  capa.appendChild(caja);
+  const nota = document.createElement("div");
+  nota.style.cssText = "position:fixed;display:none;background:rgba(8,12,18,.96);" +
+    "border:1px solid #22d3ee;border-left:5px solid #22d3ee;border-radius:6px;color:#e8f6fb;" +
+    "font:600 15px 'Segoe UI',system-ui,sans-serif;padding:9px 13px;max-width:420px;" +
+    "box-shadow:0 8px 26px rgba(0,0,0,.7);line-height:1.35";
+  capa.appendChild(nota);
+  window.__tutCursor = (x, y) => { cur.style.left = x + "px"; cur.style.top = y + "px"; };
+  window.__tutSinCaja = () => { caja.style.display = "none"; nota.style.display = "none"; };
+  /** Cuadro sobre el rectángulo `r` y, si hay texto, una nota al lado que no lo tape. */
+  window.__tutCaja = (r, txt, lim) => {
+    caja.style.display = "block";
+    caja.style.left = (r.x - 5) + "px"; caja.style.top = (r.y - 4) + "px";
+    caja.style.width = (r.w + 10) + "px"; caja.style.height = (r.h + 8) + "px";
+    if (!txt) { nota.style.display = "none"; return; }
+    nota.style.display = "block"; nota.textContent = txt;
+    const n = nota.getBoundingClientRect();
+    // al LADO antes que debajo: debajo tapa la fila siguiente, que suele ser justo
+    // la que se está explicando
+    let x, y = Math.max(lim.y + 6, Math.min(lim.y + lim.h - n.height - 6, r.y + r.h / 2 - n.height / 2));
+    if (r.x + r.w + 20 + n.width < lim.x + lim.w - 6) x = r.x + r.w + 20;
+    else if (r.x - 20 - n.width > lim.x + 6) x = r.x - 20 - n.width;
+    else { x = Math.max(lim.x + 6, Math.min(lim.x + lim.w - n.width - 6, r.x));
+           y = r.y + r.h + 16 + n.height < lim.y + lim.h ? r.y + r.h + 16 : r.y - n.height - 16; }
+    nota.style.left = x + "px"; nota.style.top = y + "px";
+  };
 });
 
-if (process.env.TUT_ROTULO === "0") await pag.evaluate(() => window.__tutSinRotulo());
-
+// ── La captura ───────────────────────────────────────────────────────────────
 let k = 0;
+let zona = null;      // null = ventana entera; si no, el recorte 1:1 de 960×540
+const clipDe = () => zona
+  ? { x: zona.x, y: zona.y, width: ZW, height: ZH }
+  : { x: 0, y: 0, width: ANCHO, height: ALTO_UTIL };
 const foto = async (n = 1) => {
   for (let i = 0; i < n; i++)
-    await pag.screenshot({ path: join(OUT, "f" + String(k++).padStart(3, "0") + ".png") });
+    await pag.screenshot({ path: join(OUT, "f" + String(k++).padStart(3, "0") + ".png"),
+                           clip: clipDe() });
 };
+/** El recuadro que se ve ahora, para que la nota no se salga de cuadro. */
+const limite = () => zona ? { x: zona.x, y: zona.y, w: ZW, h: ZH }
+                          : { x: 0, y: 0, w: ANCHO, h: ALTO_UTIL };
+
 const raton = async (x, y, pasos = 12) => {
-  const p0 = await pag.evaluate(() => {
-    const c = document.getElementById("hk-tut-cursor");
-    return [parseFloat(c.style.left) || 640, parseFloat(c.style.top) || 360];
-  });
+  const p0 = await pag.evaluate(() => window.__tutXY || { x: 640, y: 360 });
   for (let i = 1; i <= pasos; i++) {
     const t = i / pasos;
-    const px = p0[0] + (x - p0[0]) * t, py = p0[1] + (y - p0[1]) * t;
+    const px = p0.x + (x - p0.x) * t, py = p0.y + (y - p0.y) * t;
     await pag.mouse.move(px, py);
-    await pag.evaluate((q) => window.__tutCursor(q.x, q.y), { x: px, y: py });
+    await pag.evaluate((q) => { window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x: px, y: py });
     if (i % 4 === 0) await foto();
   }
+  await pag.evaluate((q) => { window.__tutXY = q; }, { x, y });
   await foto(2);
 };
-const clic = async (x, y) => {
-  await pag.evaluate((q) => window.__tutAro(q.x, q.y), { x, y });
-  await foto(3);
-  await pag.mouse.click(x, y);
-  await espera(200);
-  await foto(3);
-  await pag.evaluate(() => window.__tutSoltar());
-};
-/** Punto del centro de un control buscado por su TEXTO (botón) o su etiqueta (fila). */
-const punto = (que, texto) => pag.evaluate((q) => {
-  const dentro = (e) => {
-    const r = e.getBoundingClientRect();
-    return r.width > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth;
-  };
+/** Rectángulo (CSS) de un control buscado por su texto o por su etiqueta. */
+const rect = (que, texto) => pag.evaluate((q) => {
   let e = null;
   if (q.q === "boton") {
     e = [...document.querySelectorAll("button, .tp-btnv_b")]
-      .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t) && dentro(x))[0];
+      .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t))[0];
   } else {
-    const fila = [...document.querySelectorAll(".tp-lblv")]
+    e = [...document.querySelectorAll(".tp-lblv")]
       .find((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q.t));
-    e = fila && dentro(fila) ? fila : null;
   }
   if (!e) return null;
+  // Los paneles llevan más mandos de los que caben. Sin traerlo a la vista, medir un
+  // mando que está por debajo del corte daba un rectángulo fuera de pantalla: el
+  // recorte iba a parar a un trozo negro y el paso se perdía («separación X (m)»).
+  let p = e.parentElement;
+  while (p && p !== document.body) {
+    if (p.scrollHeight > p.clientHeight + 4) {
+      const rp = p.getBoundingClientRect(), re = e.getBoundingClientRect();
+      if (re.top < rp.top + 6) p.scrollTop -= (rp.top + 30 - re.top);
+      else if (re.bottom > rp.bottom - 6) p.scrollTop += (re.bottom + 30 - rp.bottom);
+      break;
+    }
+    p = p.parentElement;
+  }
   const r = e.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return null;
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
 }, { q: que, t: texto });
 
 const api = {
   pag, espera, foto,
-  /** Deja el rótulo del paso y unos fotogramas para leerlo. */
-  rotulo: async (t) => { await pag.evaluate((s) => window.__tutRotulo(s), t); await foto(3); },
-  /** Quieto n fotogramas (para que la voz pueda hablar sobre lo que se ve). */
+  /** Quieto n fotogramas, para que la voz pueda hablar sobre lo que se ve. */
   quieto: async (n, ms = 260) => { for (let i = 0; i < n; i++) { await espera(ms); await foto(); } },
-  /** Va al control y lo pulsa, con el cursor a la vista. */
-  pulsar: async (texto, ms = 900) => {
-    const p = await punto("boton", texto);
-    if (!p) { console.log("  x no se ve el boton: " + texto); return false; }
-    await raton(p.x, p.y); await clic(p.x, p.y); await espera(ms); return true;
+  /** Vista general: la ventana entera. */
+  general: async () => { zona = null; await pag.evaluate(() => window.__tutSinCaja()); },
+  /**
+   * PRIMER PLANO de un mando: recorte 1:1 de 960×540 CSS centrado en él. Los píxeles
+   * son los del fichero, así que se ve como en la pantalla, no ampliado.
+   */
+  cerca: async (que, texto) => {
+    const r = await rect(que, texto);
+    if (!r) { console.log("  x no se ve: " + texto); return false; }
+    zona = { x: Math.max(0, Math.min(ANCHO - ZW, Math.round(r.x + r.w / 2 - ZW / 2))),
+             y: Math.max(0, Math.min(ALTO_UTIL - ZH, Math.round(r.y + r.h / 2 - ZH / 2))) };
+    return true;
   },
-  /** Lleva el cursor a la fila del parámetro y lo cambia (se ve dónde está). */
+  /** Cuadro + nota sobre un mando (y el cursor va hasta él). */
+  marcar: async (que, texto, nota) => {
+    const r = await rect(que, texto);
+    if (!r) { console.log("  x no se ve: " + texto); return false; }
+    await raton(r.x + r.w - 14, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, q.n, q.l), { r, n: nota || "", l: limite() });
+    await foto(3);
+    return true;
+  },
+  sinCuadro: async () => { await pag.evaluate(() => window.__tutSinCaja()); },
+  /**
+   * ABRE una carpeta del panel, con el cursor, si está plegada.
+   *
+   * Media app arranca plegada — es lo que hay que enseñar: el mando no está escondido,
+   * está en su carpeta. Y sin abrirla, sus filas miden 0×0 y el primer plano se iba a
+   * un trozo negro (pasó con «separación X (m)»).
+   */
+  abrir: async (titulo, ms = 700) => {
+    const r = await pag.evaluate((t) => {
+      const c = [...document.querySelectorAll(".tp-fldv_b, .tp-fldv_t")]
+        .find((x) => (x.textContent || "").includes(t));
+      if (!c) return null;
+      const fld = c.closest(".tp-fldv");
+      const plegada = fld && !fld.classList.contains("tp-fldv-expanded");
+      const b = c.getBoundingClientRect();
+      return { x: b.left, y: b.top, w: b.width, h: b.height, plegada };
+    }, titulo);
+    if (!r) { console.log("  x no se ve la carpeta: " + titulo); return false; }
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+    await foto(2);
+    if (r.plegada) { await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2); await espera(ms); }
+    await pag.evaluate(() => window.__tutSinCaja());
+    await foto(2);
+    return true;
+  },
+  /** Va al botón y lo pulsa, con el cursor y el cuadro a la vista. */
+  pulsar: async (texto, ms = 900) => {
+    const r = await rect("boton", texto);
+    if (!r) { console.log("  x no se ve el boton: " + texto); return false; }
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+    await foto(3);
+    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await espera(250); await foto(3);
+    await pag.evaluate(() => window.__tutSinCaja());
+    await espera(ms);
+    return true;
+  },
+  /** Cambia un parámetro; el cursor se para en su fila para que se vea cuál es. */
   param: async (etiqueta, clave, valor, ms = 3000) => {
-    const p = await punto("fila", etiqueta);
-    if (p) { await raton(p.x, p.y); await pag.evaluate((q) => window.__tutAro(q.x, q.y), p); await foto(3); }
+    const r = await rect("fila", etiqueta);
+    if (r) {
+      await raton(r.x + r.w - 30, r.y + r.h / 2);
+      await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+      await foto(2);
+    }
     await pag.evaluate((q) => window.__hekatanSetParam(q.c, q.v), { c: clave, v: valor });
     await espera(ms);
-    await pag.evaluate(() => window.__tutSoltar());
     await foto(3);
-    return !!p;
+    return !!r;
   },
   /** Elige una opción de un desplegable del panel, por su texto. */
   elegir: async (etiqueta, textoOpcion, ms = 3500) => {
-    const p = await punto("fila", etiqueta);
-    if (p) { await raton(p.x, p.y); await clic(p.x, p.y); }
+    const r = await rect("fila", etiqueta);
+    if (r) {
+      await raton(r.x + r.w - 30, r.y + r.h / 2);
+      await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+      await foto(2);
+    }
     const val = await pag.evaluate((q) => {
       const fila = [...document.querySelectorAll(".tp-lblv")]
         .find((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q.e));
@@ -199,7 +289,6 @@ const marcas = [];
 console.log("== " + (cap.titulo || CAP) + " ==");
 for (const paso of cap.pasos) {
   const desde = k;
-  await api.rotulo(paso.rotulo);
   await paso.hacer(api);
   marcas.push({ rotulo: paso.rotulo, desde, hasta: k - 1, cuadros: k - desde });
   console.log("  " + String(desde).padStart(4) + "-" + String(k - 1).padStart(4) + "  " + paso.rotulo);
@@ -207,13 +296,23 @@ for (const paso of cap.pasos) {
 writeFileSync(join(OUT, "pasos.json"), JSON.stringify({ titulo: cap.titulo, pasos: marcas }, null, 1));
 await nav.close(); srv.close();
 
-// ── ¿se mueve? Fotogramas iguales = vídeo congelado que parece bueno ─────────
-const listado = readdirSync(OUT).filter((f) => /\.png$/.test(f)).sort();
-let iguales = 0;
-for (let i = 1; i < listado.length; i++) {
-  const a = readFileSync(join(OUT, listado[i - 1])), b = readFileSync(join(OUT, listado[i]));
-  if (a.length === b.length && a.equals(b)) iguales++;
+// ── Todo a 1920×1080 ────────────────────────────────────────────────────────
+// La vista general viene a 2560×1440 y se REDUCE (conserva el texto); el primer plano
+// ya viene a 1920×1080 nativos y no se toca. Mezclar tamaños rompe el vídeo, así que
+// se normalizan aquí y no en el guion.
+const listado = readdirSync(OUT).filter((f) => /^f\d+\.png$/.test(f)).sort();
+let escalados = 0;
+// El primer plano ya viene a 1920×1080 nativos; la vista general, a 2560×1440. Se
+// normaliza uno a uno: mezclar tamaños en la misma carpeta rompe el vídeo.
+for (const f of listado) {
+  const p = join(OUT, f);
+  const tmp = join(OUT, "_t.png");
+  execFileSync(FFMPEG, ["-y", "-v", "error", "-i", p,
+    // 1920×960 (la general se REDUCE 0.75 exacto; el primer plano ya viene así, 1:1)
+    // y debajo una franja negra de 120 px para el subtítulo.
+    "-vf", "scale=1920:960:flags=lanczos,pad=1920:1080:0:0:black", tmp], { stdio: "pipe" });
+  execFileSync("cmd", ["/c", "move", "/y", tmp, p], { stdio: "pipe" });
+  escalados++;
 }
-console.log("\n" + listado.length + " fotogramas en " + OUT);
-console.log(iguales ? "AVISO: " + iguales + " pares IDENTICOS" : "OK: todos distintos");
+console.log("\n" + escalados + " fotogramas a 1920x1080 en " + OUT);
 if (avisos.length) console.log("avisos:", avisos.slice(0, 5));
