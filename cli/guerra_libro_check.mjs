@@ -33,7 +33,10 @@ export function campo(id) {
   const st = { nodes:S([]), elements:S([]), nodeInputs:S({}), elementInputs:S({}), deformOutputs:S({}), analyzeOutputs:S({}), objects3D:S([]), springs:S([]),
     loadPatterns:S([]), loadCases:S([]), loadCombinations:S([]), activeLoadCase:S("Dead") };
   ex.build(p, st, { render(){}, clear(){}, show(){}, hide(){} });
-  const ks = p.ks_tm3;                       // tonf/m3 (para pasar Uz[m] a tonf/m2)
+  // ks en tonf/m3. Unos ejemplos lo llaman ks_tm3 (ya en tonf/m3); otros, como ej6,
+  // lo llaman ks en kN/m3 -> /9.80665. Sin este fallback ej6 daba ks=undefined y todo
+  // su sigma salia NaN (era bug del tool, no del modelo).
+  const ks = p.ks_tm3 ?? (p.ks != null ? p.ks / 9.80665 : undefined);
   const nodes = st.nodes.val.map(n => [n[0], n[1]]);
   const uz = new Array(nodes.length).fill(0);
   st.deformOutputs.val?.deformations?.forEach((u,i) => { uz[i] = u[2]; });
