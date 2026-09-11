@@ -405,6 +405,11 @@ export function getSettings(
     outputs.addButton({ title: "📐 Ver diagrama en 2D (alzado / planta)" }).on("click", () => {
       (window as any).__hekatanDiagrama2D?.();
     });
+    // El «Diagram for Frame Object» de ETABS: axil, cortante y momento a lo largo de
+    // la barra designada, de nudo a nudo del pórtico (aunque la malla la parta).
+    outputs.addButton({ title: "📈 Gráfico de la barra designada" }).on("click", () => {
+      (window as any).__hekatanDiagramaBarra?.();
+    });
 
     outputs.addBinding(settings.shellResults, "val", {
       // Componentes del diálogo "Shell Forces/Stresses" de ETABS, en su mismo orden:
