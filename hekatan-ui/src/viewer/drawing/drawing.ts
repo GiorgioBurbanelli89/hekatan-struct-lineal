@@ -3451,6 +3451,24 @@ export function drawing({
         const n = (window as any).__hekatanReplicateSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
         updateStatus(n ? `⧉ Replicado ×${n} (Δ ${editState.dx},${editState.dy},${editState.dz} m)` : "⚠ Nada que replicar — seleccioná nodos/frames/áreas");
       });
+      // ── Volado sobre la viga designada ──
+      // Una viga de 5 m + «vuelo 1.5» = un voladizo de 1.5 m de vuelo por 5 m de ancho.
+      // No alarga la viga: la replica en perpendicular y cose las dos.
+      const voladoState = { vuelo: 1.5, losa: true, borde: true, ambos: true };
+      const fVol = fEdit.addFolder({ title: "⌐ Volado sobre la viga designada", expanded: false });
+      fVol.addBinding(voladoState, "vuelo", { label: "vuelo (m)", min: 0.1, max: 6, step: 0.05 });
+      fVol.addBinding(voladoState, "losa", { label: "con paño de losa (si no, hueca)" });
+      fVol.addBinding(voladoState, "borde", { label: "con viga de borde" });
+      fVol.addBinding(voladoState, "ambos", { label: "a los dos lados" });
+      fVol.addButton({ title: "⌐ Poner volado (VOL)" }).on("click", () => {
+        const n = (window as any).__hekatanVoladoSelection?.(voladoState.vuelo, {
+          losa: voladoState.losa, vigaBorde: voladoState.borde,
+          lados: voladoState.ambos ? "ambos" : "afuera",
+        });
+        updateStatus(n ? `⌐ Volado de ${voladoState.vuelo} m en ${n} paño(s)` +
+                          (voladoState.losa ? " con losa" : " hueco")
+                       : "⚠ Designá una VIGA (un segmento) y volvé a pulsar");
+      });
       fEdit.addButton({ title: "→ Mover selección (1 copia, sin duplicar geometría base)" }).on("click", () => {
         // Mover = replicar 1 y borrar original sería complejo; por ahora replica.
         const n = (window as any).__hekatanReplicateSelection?.(editState.dx, editState.dy, editState.dz, 1);
@@ -5039,6 +5057,98 @@ export function drawing({
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     return count;
+  };
+
+  /**
+   * VOLADO sobre las vigas designadas.
+   *
+   * No alarga la viga: la REPLICA a `largo` metros, en perpendicular, y cose las dos
+   * con dos vigas de vuelo — o sea el voladizo que se dibuja de verdad en obra. Una
+   * viga de 5 m da un voladizo de `largo` de vuelo por 5 m de ancho.
+   *
+   *   losa       ON  → el paño queda relleno (una losa en voladizo)
+   *                OFF → queda HUECA: solo el marco de vigas
+   *   vigaBorde  ON  → se pone la viga del borde libre (la réplica)
+   *                OFF → solo las dos vigas de vuelo, sin cerrar
+   *   lados      "ambos"  → a los dos lados de la viga
+   *              "afuera" → solo hacia fuera del dibujo (el lado que se aleja del centro)
+   *
+   * La perpendicular se toma EN PLANTA: una viga es horizontal, y el voladizo sale a
+   * su lado, no hacia arriba. Si la viga fuera vertical (una columna) no hay plano en
+   * el que apoyar el vuelo y se descarta, en vez de sacar un paño de canto.
+   */
+  (window as any).__hekatanVoladoSelection = (
+    largo: number,
+    opciones: { losa?: boolean; vigaBorde?: boolean; lados?: "ambos" | "afuera" } = {},
+  ): number => {
+    const L = Number(largo);
+    if (!Number.isFinite(L) || Math.abs(L) < 1e-6) return 0;
+    const conLosa = opciones.losa !== false;
+    const conBorde = opciones.vigaBorde !== false;
+    const lados = opciones.lados === "afuera" ? "afuera" : "ambos";
+
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    // las vigas designadas, como parejas de nudos
+    const vigas: [number, number][] = [];
+    [...selection].forEach((id) => {
+      if (id.startsWith("seg:")) {
+        const p = id.split(":"); const P = +p[1], S = +p[2];
+        const poly = polys[P] || []; const a = poly[S], b = poly[S + 1];
+        if (a != null && b != null) vigas.push([a, b]);
+      } else if (id.startsWith("poly:")) {
+        const poly = polys[+id.slice(5)] || [];
+        for (let i = 0; i + 1 < poly.length; i++) vigas.push([poly[i], poly[i + 1]]);
+      }
+    });
+    if (!vigas.length) return 0;
+
+    // el centro del dibujo, para saber cuál es «afuera»
+    let cx = 0, cy = 0;
+    for (const p of pts) { cx += p[0]; cy += p[1]; }
+    cx /= Math.max(1, pts.length); cy /= Math.max(1, pts.length);
+
+    pushUndo();
+    const newPts = [...pts];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    let hechos = 0;
+
+    for (const [ia, ib] of vigas) {
+      const A = pts[ia], B = pts[ib];
+      if (!A || !B) continue;
+      const dx = B[0] - A[0], dy = B[1] - A[1];
+      const len = Math.hypot(dx, dy);
+      if (len < 1e-6) continue;                    // vertical en planta: no es viga
+      // perpendicular en planta, normalizada
+      let px = -dy / len, py = dx / len;
+      // ¿hacia dónde es «afuera»? El punto medio de la viga contra el centro del dibujo.
+      const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+      if ((mx - cx) * px + (my - cy) * py < 0) { px = -px; py = -py; }
+      const sentidos = lados === "ambos" ? [1, -1] : [1];
+      for (const s of sentidos) {
+        const ox = px * L * s, oy = py * L * s;
+        const iA2 = newPts.length; newPts.push([A[0] + ox, A[1] + oy, A[2]]);
+        const iB2 = newPts.length; newPts.push([B[0] + ox, B[1] + oy, B[2]]);
+        newPolys.push([ia, iA2]);                  // vuelo en el arranque
+        newPolys.push([ib, iB2]);                  // vuelo en el otro extremo
+        if (conBorde) newPolys.push([iA2, iB2]);   // la viga de borde: la réplica
+        if (conLosa) {
+          newAreas.push(newPolys.length);
+          newPolys.push([ia, ib, iB2, iA2, ia]);   // el paño, cerrado
+        }
+        hechos++;
+      }
+    }
+    if (!hechos) return 0;
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return hechos;
   };
 
   rendererElm.addEventListener("click", (event: PointerEvent) => {

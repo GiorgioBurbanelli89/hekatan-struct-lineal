@@ -399,6 +399,12 @@ export function getSettings(
       },
       label: "Frame results",
     });
+    // La vista 2D: el plano de la barra designada (o el primer alzado XZ) con SOLO
+    // el diagrama elegido arriba, sin perspectiva y con sus valores. También se abre
+    // con doble clic sobre una barra.
+    outputs.addButton({ title: "📐 Ver diagrama en 2D (alzado / planta)" }).on("click", () => {
+      (window as any).__hekatanDiagrama2D?.();
+    });
 
     outputs.addBinding(settings.shellResults, "val", {
       // Componentes del diálogo "Shell Forces/Stresses" de ETABS, en su mismo orden:

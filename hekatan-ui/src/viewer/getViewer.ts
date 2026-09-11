@@ -25,6 +25,7 @@ import { drawing, Drawing } from "./drawing/drawing";
 import { shellResults } from "./objects/shellResults";
 import { frameColorMap } from "./objects/frameColorMap";
 import { setupHover } from "./objects/hover";
+import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
 import { getLegend } from "../color-map/getLegend";
@@ -616,6 +617,21 @@ export function getViewer({
       nodeResults(mesh, settings, derivedNodes, derivedDisplayScale),
       frameResults(mesh, settings, derivedNodes, derivedDisplayScale)
     );
+
+    // ── Vista 2D del diagrama (alzado / planta, solo ese resultado) ──
+    // Una sola por página: la ventana y `window.__hekatanDiagrama2D` son globales.
+    if (!(window as any).__hekatanDiagrama2D) {
+      iniciarDiagrama2D(mesh as any, settings);
+      // DOBLE CLIC sobre una barra con un resultado puesto → su alzado en 2D. El
+      // primer clic ya la designó (hover.ts), así que el plano sale de ella.
+      renderer.domElement.addEventListener("dblclick", () => {
+        const r = settings.frameResults?.rawVal;
+        if (!r || r === "none") return;
+        const sel = ((window as any).__hekatanModelSelection as any[] | undefined) ?? [];
+        if (!sel.some((x) => x.type === "frame")) return;
+        setTimeout(() => (window as any).__hekatanDiagrama2D?.(), 60);
+      });
+    }
 
     // ── Hover-highlight global (nodos + elementos en cualquier ejemplo) ──
     const hoverGroup = setupHover({
