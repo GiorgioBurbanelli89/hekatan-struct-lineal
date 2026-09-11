@@ -89,7 +89,7 @@ import { v as $E, __tla as __tla_74 } from "./vigaFlexionCompositeEncasedCantile
 import { p as JE, __tla as __tla_75 } from "./portico2D-Dnwl8Aq5.js";
 import { c as zE, __tla as __tla_76 } from "./cerramiento-Bw_SWVr1.js";
 import { t as jE, __tla as __tla_77 } from "./tower3D-nDk8x5lQ.js";
-import { g as ZE, __tla as __tla_78 } from "./galpon-Bsh2yw_q.js";
+import { g as ZE, __tla as __tla_78 } from "./galpon-CAy3OQg_.js";
 import { g as WE, __tla as __tla_79 } from "./galponBodega-CYrWYII7.js";
 import { e as qE, __tla as __tla_80 } from "./edifAcero-BBKduTUA.js";
 import { m as KE, __tla as __tla_81 } from "./mezanine-D-yYyQsc.js";
