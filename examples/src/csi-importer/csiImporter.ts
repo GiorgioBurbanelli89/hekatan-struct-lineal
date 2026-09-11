@@ -43,6 +43,50 @@ const COLOR: Record<string, number> = {
   COLUMN: 0xef4444, BEAM: 0x22c55e, BRACE: 0x3b82f6, AREA: 0xf59e0b,
 };
 
+/**
+ * La CUBIERTA de ETABS es una losa `MODELINGTYPE "Membrane"`: un paño que solo
+ * trabaja EN SU PLANO y ata los nudos de la parte alta. Al exportar por OAPI un
+ * EDB con la cubierta sin dibujar como área (o cuando el modelo llega con la
+ * cubierta como pura carga), las áreas NO viajan y los tirantes/correas del
+ * techo se quedan SUELTOS: no llegan a un apoyo y la matriz sale singular.
+ *
+ * Esto recupera los paños de cubierta a partir de la propia topología de barras:
+ * cada cuadrilátero CERRADO (a-b-c-d-a, las 4 barras existen) por encima de la
+ * media de alturas es un paño de techo, ahí es donde ETABS pone la membrana.
+ * No se inventa geometría: los 4 nudos y los 4 lados ya están en el modelo.
+ */
+function detectarPanosCubierta(nodes: Node[], elements: Element[], zCorte: number): number[][] {
+  const N = nodes.length;
+  const key = (a: number, b: number) => (a < b ? a + "_" + b : b + "_" + a);
+  const edge = new Set<string>();
+  const adj: number[][] = Array.from({ length: N }, () => []);
+  for (const e of elements) {
+    if (e.length === 2) { edge.add(key(e[0], e[1])); adj[e[0]].push(e[1]); adj[e[1]].push(e[0]); }
+  }
+  const has = (a: number, b: number) => edge.has(key(a, b));
+  const vistos = new Set<string>();
+  const panos: number[][] = [];
+  for (let a = 0; a < N; a++) {
+    for (const b of adj[a]) {
+      if (b < a) continue;
+      for (const c of adj[b]) {
+        if (c === a) continue;
+        for (const d of adj[c]) {
+          if (d === b || d === a || !has(d, a)) continue;
+          const ns = [a, b, c, d];
+          const zm = (nodes[a][2] + nodes[b][2] + nodes[c][2] + nodes[d][2]) / 4;
+          if (zm < zCorte) continue;
+          const id = ns.slice().sort((x, y) => x - y).join("-");
+          if (vistos.has(id)) continue;
+          vistos.add(id);
+          panos.push([a, b, c, d]);   // orden de anillo (a→b→c→d→a)
+        }
+      }
+    }
+  }
+  return panos;
+}
+
 function vacio(states: any, msg: string) {
   states.nodes.val = [];
   states.elements.val = [];
@@ -69,6 +113,14 @@ export const csiImporter: ExampleDef = {
     verVigas: { default: 1, boolean: true, label: "Vigas", folder: "👁 Ver por tipo" },
     verDiagonales: { default: 1, boolean: true, label: "Diagonales", folder: "👁 Ver por tipo" },
     verAreas: { default: 1, boolean: true, label: "Áreas", folder: "👁 Ver por tipo" },
+    // ── Cubierta como slab membrana (lo que ETABS no exportó como área) ──
+    cubierta: { default: 0, boolean: true, label: "Poner cubierta (slab membrana)", folder: "🏠 Cubierta" },
+    formaCubierta: {
+      default: 2, label: "Formulación de la placa",
+      options: { "Membrana (solo su plano)": 2, "Shell-Thin (Kirchhoff)": 1, "Shell-Thick (Mindlin)": 0 },
+      folder: "🏠 Cubierta",
+    },
+    tCubierta: { default: 60, min: 20, max: 300, step: 5, label: "Espesor cubierta (mm)", folder: "🏠 Cubierta" },
   },
   computedLabels(_p, states) {
     const m: ModeloImportado | undefined = (window as any).__hekatanImportedModel;
@@ -131,6 +183,27 @@ export const csiImporter: ExampleDef = {
       if (!ei[k]) ei[k] = new Map();
     }
 
+    // ── Cubierta como slab membrana ───────────────────────────────────────
+    // Acopla los nudos altos que quedaron sueltos (la membrana que ETABS no
+    // exportó como área). Los paños salen de la topología real; la formulación
+    // la elige el usuario (por defecto Membrana = solo trabaja en su plano).
+    let panosCubierta: number[][] = [];
+    if (p.cubierta && elements.length < 3000) {
+      const zs = nodes.map((n) => n[2]);
+      const zCorte = Math.min(...zs) + 0.5 * (Math.max(...zs) - Math.min(...zs));
+      panosCubierta = detectarPanosCubierta(nodes, elements, zCorte);
+      const E = 2.146e7, nu = 0.2, G = E / (2 * (1 + nu)), rho = 2.4;   // f'c=210 kg/cm²
+      const tC = (p.tCubierta ?? 60) / 1000;                            // mm → m
+      for (const q of panosCubierta) {
+        const i = elements.length;
+        elements.push(q as Element);
+        ei.elasticities.set(i, E); ei.shearModuli.set(i, G);
+        ei.poissonsRatios.set(i, nu); ei.densities.set(i, rho);
+        (ei.thicknesses ??= new Map()).set(i, tC);
+        (ei.plateFormulations ??= new Map()).set(i, p.formaCubierta ?? 2);
+      }
+    }
+
     states.nodes.val = nodes;
     states.elements.val = elements;
     states.nodeInputs.val = {
@@ -141,6 +214,21 @@ export const csiImporter: ExampleDef = {
 
     // Color por tipo, para que se lea de un vistazo que hay en el archivo
     const objs: THREE.Object3D[] = [];
+    // Los paños de cubierta, como membrana traslúcida naranja sobre el techo.
+    if (panosCubierta.length) {
+      const pos: number[] = [];
+      for (const q of panosCubierta) {
+        const [a, b, c, d] = q.map((k) => nodes[k]);
+        pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+        pos.push(a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2]);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      objs.push(new THREE.Mesh(g, new THREE.MeshLambertMaterial({
+        color: COLOR.AREA, transparent: true, opacity: 0.5, side: THREE.DoubleSide,
+      })));
+    }
     const porTipo = new Map<string, THREE.Vector3[]>();
     elements.forEach((e, i) => {
       const t = m.tipos?.[idxOrig[i]] ?? (e.length === 4 ? "AREA" : "BEAM");
@@ -161,10 +249,13 @@ export const csiImporter: ExampleDef = {
     states.objects3D.val = objs;
 
     const secs = new Set(m.secciones ?? []);
+    const forma = ["Shell-Thick", "Shell-Thin", "Membrana"][p.formaCubierta ?? 2] ?? "Membrana";
     console.log(`[CSI Importer] ${m.archivo} (${m.fuente}): ${nodes.length} nudos, `
-      + `${elements.length}/${m.elements.length} elementos visibles, `
+      + `${elements.length}/${m.elements.length} elementos, `
       + `${secs.size} secciones, ${m.supports?.length ?? 0} apoyos, `
-      + `${m.loads?.length ?? 0} cargas. Secciones: ${[...secs].join(", ")}`);
+      + `${m.loads?.length ?? 0} cargas`
+      + (panosCubierta.length ? `, cubierta: ${panosCubierta.length} paños (${forma})` : "")
+      + `. Secciones: ${[...secs].join(", ")}`);
   },
 };
 
