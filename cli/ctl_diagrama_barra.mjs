@@ -96,6 +96,61 @@ if (barra) {
   console.log("    " + barra.filas.join("\n    "));
 }
 await pag.screenshot({ path: join(OUT, PUB ? "publico.png" : "local.png") });
+
+// ── El SIGNO y el PLANO de ETABS, en un pórtico plano con solo gravedad ──────────
+// Viga empotrada-empotrada de hecho (pórtico de un piso): ETABS da M3 NEGATIVO en los
+// extremos (tracción arriba) y POSITIVO en el centro (tracción abajo), y el axil de
+// las columnas negativo (compresión). Antes Struct escribía los momentos al revés y
+// dibujaba V2/M3 fuera del plano del pórtico.
+await pag.goto(URL_.replace("edificio-frame-nec", "portico-2d"), { waitUntil: "networkidle2", timeout: 180000 });
+await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
+await espera(5000);
+await pag.evaluate(() => window.__hekatanSetParam("Ex", 0));
+await espera(3000);
+const formas = () => pag.evaluate(() => {
+  const out = [];
+  document.querySelector("#viewer").__ctx.scene.traverse((o) => {
+    if (o.isMesh && o.geometry?.type === "ShapeGeometry" && o.visible) out.push(o.uuid);
+  });
+  return out;
+});
+const antes = new Set(await formas());
+await pag.evaluate(() => { window.__hekatanSettings().deformedShape.val = false; window.__hekatanSettings().frameResults.val = "bendingsZ"; });
+await espera(2500);
+const fueraPlano = await pag.evaluate((viejas) => {
+  let peor = 0, n = 0;
+  const v = new (document.querySelector("#viewer").__ctx.scene.position.constructor)();
+  document.querySelector("#viewer").__ctx.scene.traverse((o) => {
+    if (!(o.isMesh && o.geometry?.type === "ShapeGeometry" && o.visible) || viejas.includes(o.uuid)) return;
+    o.updateMatrixWorld(true);
+    const p = o.geometry.attributes.position;
+    for (let k = 0; k < p.count; k++) { v.fromBufferAttribute(p, k).applyMatrix4(o.matrixWorld); peor = Math.max(peor, Math.abs(v.y)); n++; }
+  });
+  return { peor, n };
+}, [...antes]);
+ok(fueraPlano.n > 0 && fueraPlano.peor < 1e-6, "el 3D dibuja M3 en el plano del pórtico (y = 0)",
+  `${fueraPlano.n} vértices, |y| máx ${fueraPlano.peor.toExponential(1)}`);
+await pag.evaluate(() => window.__hekatanDiagrama2D({ plano: "XZ" }));
+await espera(1200);
+await pag.evaluate(() => {
+  const ls = [...document.querySelectorAll("#hk-diagrama-2d line")].filter((l) => l.getAttribute("stroke") === "transparent");
+  const hs = ls.filter((l) => Math.abs(+l.getAttribute("y1") - +l.getAttribute("y2")) < 0.5);
+  hs[Math.floor(hs.length / 2)].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+});
+await espera(1000);
+const viga = await pag.evaluate(() => [...document.querySelectorAll("#hk-diagrama-barra .hk-b-cuerpo > div")].map((d) => d.textContent));
+const nume = (t, k) => Number((t.match(new RegExp(k + " (-?[0-9.]+)")) || [])[1]);
+const Mmax = nume(viga[2], "máx"), Mmin = nume(viga[2], "mín");
+ok(Mmax > 0 && Mmin < 0 && Math.abs(Mmax - 21.46) < 0.05 && Math.abs(Mmin + 16.04) < 0.05,
+  "M3 de la viga con el signo de ETABS: +21,46 en el centro, −16,04 en los extremos", viga[2]);
+await pag.evaluate(() => {
+  const ls = [...document.querySelectorAll("#hk-diagrama-2d line")].filter((l) => l.getAttribute("stroke") === "transparent");
+  ls.find((l) => Math.abs(+l.getAttribute("x1") - +l.getAttribute("x2")) < 0.5).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+});
+await espera(1000);
+const col = await pag.evaluate(() => [...document.querySelectorAll("#hk-diagrama-barra .hk-b-cuerpo > div")].map((d) => d.textContent));
+ok(Math.abs(nume(col[0], "máx") + 37.5) < 0.05, "axil de la columna negativo (compresión), como ETABS", col[0]);
+await pag.screenshot({ path: join(OUT, PUB ? "publico_gravedad.png" : "local_gravedad.png") });
 ok(errores.length === 0, "sin errores de página", errores.join(" | "));
 await nav.close(); srv?.close();
 console.log(fallos.length ? `\nFALLAN ${fallos.length}` : "\nTODO OK");

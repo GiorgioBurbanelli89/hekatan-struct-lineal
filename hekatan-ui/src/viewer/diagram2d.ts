@@ -12,15 +12,16 @@
  * de cada tramo ya dan la curva.
  *
  * ── Convención ────────────────────────────────────────────────────────────────
- * El MOMENTO se dibuja del lado de la tracción, que es del lado del acero: positivo
- * hacia ABAJO en una viga (el eje invertido de las estructuras). Cortante y axil, al
- * lado izquierdo de la barra según va de su nudo i a su nudo j.
+ * Valores y lados, los de ETABS (`objects/utils/diagramaCSI.ts`): el MOMENTO del lado
+ * de la tracción, que es del lado del acero — positivo hacia ABAJO en una viga —; el
+ * cortante y el axil hacia el eje +2 de la barra.
  *
  *   window.__hekatanDiagrama2D()                  abre la ventana (plano por defecto:
  *                                                  el de la barra designada, si hay)
  *   window.__hekatanDiagrama2D({ plano: "XZ", en: 0 })
  */
 import type { State } from "vanjs-core";
+import { ejesCSI, diagramaCSI, ladoPositivo } from "./objects/utils/diagramaCSI";
 
 type Nodo = number[];
 type Plano = "XZ" | "YZ" | "XY";
@@ -29,6 +30,7 @@ interface Malla {
   nodes?: State<Nodo[]>;
   elements?: State<number[][]>;
   analyzeOutputs?: State<any>;
+  elementInputs?: State<any>;
 }
 
 const NOMBRE: Record<string, string> = {
@@ -237,17 +239,24 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     for (const b of barras) {
       const x1 = px(b.a.u), y1 = py(b.a.v), x2 = px(b.b.u), y2 = py(b.b.v);
       const L = Math.hypot(x2 - x1, y2 - y1) || 1;
-      // normal «izquierda» en pantalla (y crece hacia abajo): (dy, -dx)/L
-      let nx = (y2 - y1) / L, ny = -(x2 - x1) / L;
-      // el momento, del lado de la tracción: positivo hacia ABAJO en una viga. En
-      // pantalla «abajo» es +y, así que se voltea la normal si apunta hacia arriba.
-      if (esMomento && ny < 0) { nx = -nx; ny = -ny; }
+      // hacia dónde va un valor POSITIVO: el lado de ETABS (momento → la cara que
+      // tracciona), proyectado en el plano. Si el resultado se dibuja fuera del plano
+      // (el M2 de una viga vista en alzado), la normal a la barra, abajo el momento.
+      const ang = mesh.elementInputs?.rawVal?.localAngles?.get?.(b.i) ?? 0;
+      const lado = ladoPositivo(clave!, ejesCSI(N[E[b.i][0]], N[E[b.i][1]], ang));
+      const pl = proyectar(lado, estado.plano);
+      let nx = pl.u, ny = -pl.v;                     // en pantalla la y crece hacia abajo
+      const ln = Math.hypot(nx, ny);
+      if (ln > 0.3) { nx /= ln; ny /= ln; }
+      else {
+        nx = (y2 - y1) / L; ny = -(x2 - x1) / L;
+        if (esMomento && ny < 0) { nx = -nx; ny = -ny; }
+      }
       const r = R ? (R instanceof Map ? R.get(b.i) : R[b.i]) : null;
-      // ⚠️ El par es de FUERZAS DE EXTREMO, no del diagrama: en el nudo j el diagrama
-      // vale −r[1]. Tomándolo tal cual, la viga salía en dientes de sierra — 21,38 a un
-      // lado del nudo y −21,38 al otro —. Es la misma conversión que hace el 3D
-      // (`LinearResult`: el rótulo del extremo 2 es `result[1] * -1`).
-      const v1 = r ? Number(r[0] ?? 0) : 0, v2 = r ? -Number(r[1] ?? 0) : 0;
+      // ⚠️ El par es de FUERZAS DE EXTREMO, no del diagrama: tomándolo tal cual la viga
+      // salía en dientes de sierra (21,38 a un lado del nudo y −21,38 al otro). En el
+      // nudo i el diagrama es −r0 y en el j +r1 (M2 al revés): `diagramaCSI`.
+      const [v1, v2] = r ? diagramaCSI(clave!, r) : [0, 0];
       if (r && k > 0) {
         const s = esMomento ? 1 : 1;
         const p1 = [x1 + nx * v1 * k * s, y1 + ny * v1 * k * s];
@@ -432,13 +441,12 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       nudoPrev = fin;
     });
     const Ltot = x;
-    // el valor del DIAGRAMA en un extremo de tramo: r0 en el nudo i, −r1 en el j
-    // (el par del cálculo son fuerzas de extremo; misma conversión que el 3D)
+    // el valor del DIAGRAMA en un extremo de tramo, con el signo de ETABS
+    // (el par del cálculo son fuerzas de extremo: `diagramaCSI`, igual que el 3D)
     const valor = (clave: string, p: { e: number; fin: 0 | 1 }) => {
       const R = (A as any)[clave];
       const r = R ? (R instanceof Map ? R.get(p.e) : R[p.e]) : null;
-      if (!r) return 0;
-      return p.fin === 0 ? Number(r[0] ?? 0) : -Number(r[1] ?? 0);
+      return r ? diagramaCSI(clave, r)[p.fin] : 0;
     };
     const a0 = N[E[cad[0]][0]], z = (v: number) => v.toFixed(2);
     (hostB.querySelector(".hk-b-tit") as HTMLSpanElement).textContent =

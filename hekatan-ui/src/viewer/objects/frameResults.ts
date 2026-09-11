@@ -4,7 +4,7 @@ import { AnalyzeOutputs, Node } from "hekatan-fem";
 import { Mesh } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
 
-import { getTransformationMatrixBeam } from "./utils/getTransformationMatrixBeam";
+import { ejesCSI, diagramaCSI, ladoPositivo } from "./utils/diagramaCSI";
 import { ConstantResult } from "./resultObjects/ConstantResult";
 import { LinearResult } from "./resultObjects/LinearResult";
 import { IResultObject } from "./resultObjects/IResultObject";
@@ -85,25 +85,29 @@ export function frameResults(
         new THREE.Vector3(...node1)
       );
       const maxResult = findMax(mesh.analyzeOutputs?.rawVal[resultType]);
-      const normalizedResult = result?.map(
-        (n) => n / (maxResult === 0 ? 1 : maxResult)
-      );
-      const rotation = getTransformationMatrixBeam(node1, node2);
+      // Los ejes y el signo de ETABS (ver utils/diagramaCSI.ts). Antes iba la tríada
+      // vieja de awatif con un `flipAxis` por tipo: V2 y M3 salían en HORIZONTAL, fuera
+      // del plano del pórtico, y el momento con el signo cambiado.
+      const ang = (mesh as any).elementInputs?.rawVal?.localAngles?.get?.(index) ?? 0;
+      const ejes = ejesCSI(node1, node2, ang);
+      const lado = ladoPositivo(resultType, ejes);
+      const ex = new THREE.Vector3(...ejes.e1), ey = new THREE.Vector3(...lado);
+      // la figura se dibuja en su plano x-y: x a lo largo de la barra, y hacia el lado
+      // donde va un valor positivo
+      const rotation = new THREE.Matrix4().makeBasis(ex, ey, ex.clone().cross(ey));
+      const [di, dj] = diagramaCSI(resultType, result);
+      // LinearResult escribe result[0] en el nudo i y −result[1] en el j;
+      // ConstantResult escribe result[1]
+      const res: [number, number] = resultObjects[resultType] === LinearResult ? [di, -dj] : [di, dj];
+      const normalizedResult = res.map((n) => n / (maxResult === 0 ? 1 : maxResult));
       const resultObject = new resultObjects[resultType](
         node1,
         node2,
         length,
         rotation,
-        result ?? [0, 0],
-        normalizedResult ?? [0, 0],
-        [
-          ResultType.normals,
-          ResultType.shearsZ,
-          ResultType.torsions,
-          ResultType.bendingsY,
-        ].includes(resultType)
-          ? true
-          : false
+        res,
+        normalizedResult,
+        false
       );
 
       resultObject.updateScale(tamañoBase() * deridedDisplayScale.rawVal);

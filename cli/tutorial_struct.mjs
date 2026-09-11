@@ -87,7 +87,8 @@ await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
 // sirven, pero en el vídeo el cursor pasa por encima de los botones del panel y la
 // etiqueta los tapa («Pórtico 3D» salía debajo de «X=4.50 Y=39.50»). Se ocultan.
 await pag.addStyleTag({ content:
-  "#hk-coord-readout, #hk-coord-fixed { display:none !important }" });
+  // (y la entrada dinámica #hk-dyn, «Designe objetos…», que también sigue al ratón)
+  "#hk-coord-readout, #hk-coord-fixed, #hk-dyn { display:none !important }" });
 
 // ── La capa que se pinta ENCIMA de la app ───────────────────────────────────
 // Cursor, cuadro y nota. El ratón de verdad no sale en las capturas, y sin cuadro no
@@ -143,8 +144,12 @@ const clipDe = () => zona
   : { x: 0, y: 0, width: ANCHO, height: ALTO_UTIL };
 const foto = async (n = 1) => {
   for (let i = 0; i < n; i++)
+    // ⚠️ `captureBeyondViewport: false`. Con el valor por defecto, puppeteer cambia las
+    // métricas de la ventana para cada captura con recorte: eso dispara «resize», la app
+    // reencuadra la cámara (scheduleRefit → autoFitCamera, que no mira si el usuario la
+    // movió) y el alzado volvía a la isométrica en la foto siguiente.
     await pag.screenshot({ path: join(OUT, "f" + String(k++).padStart(3, "0") + ".png"),
-                           clip: clipDe() });
+                           clip: clipDe(), captureBeyondViewport: false });
 };
 /** El recuadro que se ve ahora, para que la nota no se salga de cuadro. */
 const limite = () => zona ? { x: zona.x, y: zona.y, w: ZW, h: ZH }
@@ -327,6 +332,29 @@ const api = {
     await espera(ms);
     return true;
   },
+  /**
+   * Cuadro + nota sobre un RECTÁNGULO cualquiera (CSS). Para lo que no es un mando del
+   * panel: una barra del alzado 2D es una línea de SVG, y su caja mide 0 de alto.
+   */
+  marcarR: async (r, nota) => {
+    if (!r) { console.log("  x no hay rectangulo"); return false; }
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, q.n, q.l), { r, n: nota || "", l: limite() });
+    await foto(3);
+    return true;
+  },
+  /** Va a un rectángulo y hace clic en su centro, con el cursor y el cuadro a la vista. */
+  pulsarR: async (r, ms = 900) => {
+    if (!r) { console.log("  x no hay rectangulo"); return false; }
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+    await foto(3);
+    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await espera(250); await foto(3);
+    await pag.evaluate(() => window.__tutSinCaja());
+    await espera(ms);
+    return true;
+  },
   /** Cambia un parámetro; el cursor se para en su fila para que se vea cuál es. */
   param: async (etiqueta, clave, valor, ms = 3000) => {
     const r = await rect("fila", etiqueta);
@@ -397,6 +425,11 @@ const api = {
       cam.position.set(c[0], c[1] - ext * 2.1, c[2] + ext * 0.12);
       cam.lookAt(c[0], c[1], c[2]);
       ctl.update?.(); v.__ctx.render?.();
+      // Que la app lo tome como una vista PUESTA A MANO: cada rebuild (cambiar un
+      // parámetro, apagar la deformada) llama a autoFitCamera salvo que el usuario haya
+      // movido la cámara, y eso se sabe por el evento «start» de los controles. Sin él
+      // la vista volvía a la isométrica ~1 s después y el vídeo salía en diagonal.
+      ctl.dispatchEvent?.({ type: "start" });
     });
     await espera(400);
   },
