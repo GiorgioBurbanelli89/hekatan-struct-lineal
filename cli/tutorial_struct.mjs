@@ -497,17 +497,20 @@ await nav.close(); srv.close();
 // ya viene a 1920×1080 nativos y no se toca. Mezclar tamaños rompe el vídeo, así que
 // se normalizan aquí y no en el guion.
 const listado = readdirSync(OUT).filter((f) => /^f\d+\.png$/.test(f)).sort();
+// UN solo ffmpeg para todos: lanzar uno por foto (300 veces) costaba ~5 min por
+// capítulo solo en arrancar el programa. 1920×960 (la general se REDUCE 0.75 exacto;
+// el primer plano ya viene así, 1:1) y debajo una franja negra de 120 px para el
+// subtítulo.
+const TMP = join(OUT, "_1080");
+mkdirSync(TMP, { recursive: true });
+execFileSync(FFMPEG, ["-y", "-v", "error", "-start_number", "0", "-i", join(OUT, "f%03d.png"),
+  "-vf", "scale=1920:960:flags=lanczos,pad=1920:1080:0:0:black", "-start_number", "0",
+  join(TMP, "f%03d.png")], { stdio: "pipe" });
 let escalados = 0;
-// El primer plano ya viene a 1920×1080 nativos; la vista general, a 2560×1440. Se
-// normaliza uno a uno: mezclar tamaños en la misma carpeta rompe el vídeo.
 for (const f of listado) {
-  const p = join(OUT, f);
-  const tmp = join(OUT, "_t.png");
-  execFileSync(FFMPEG, ["-y", "-v", "error", "-i", p,
-    // 1920×960 (la general se REDUCE 0.75 exacto; el primer plano ya viene así, 1:1)
-    // y debajo una franja negra de 120 px para el subtítulo.
-    "-vf", "scale=1920:960:flags=lanczos,pad=1920:1080:0:0:black", tmp], { stdio: "pipe" });
-  execFileSync("cmd", ["/c", "move", "/y", tmp, p], { stdio: "pipe" });
+  const p = join(TMP, f);
+  if (!existsSync(p)) continue;
+  writeFileSync(join(OUT, f), readFileSync(p)); unlinkSync(p);
   escalados++;
 }
 console.log("\n" + escalados + " fotogramas a 1920x1080 en " + OUT);
