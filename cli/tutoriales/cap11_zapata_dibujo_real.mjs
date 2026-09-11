@@ -28,6 +28,38 @@ const clicEn = async (a, wx, wy) => { const s = await proj(a, wx, wy, 0); if (!s
 const tool = async (a, t) => { await a.pag.evaluate((tt) => { try { window.__hekatanCadState && window.__hekatanCadState.setTool(tt); } catch(e){} }, t); };
 const setP = async (a, c, v) => { await a.pag.evaluate((q) => { try { window.__hekatanSetParam && window.__hekatanSetParam(q.c, q.v); } catch(e){} }, { c, v }); };
 const hoverW = async (a, wx, wy, n = 8) => { const s = await proj(a, wx, wy, 0); if (!s) return; await mover(a, s.x, s.y, 18); await a.quieto(n, 340); };
+// Expande una carpeta del panel (Tweakpane) clickeando su encabezado.
+const abrirCarpeta = async (a, texto) => {
+  const r = await a.pag.evaluate((t) => {
+    const el = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent || "").includes(t));
+    if (!el) return null;
+    el.scrollIntoView({ block: "center" });
+    const expandido = el.getAttribute("aria-expanded");
+    const b = el.getBoundingClientRect();
+    return { x: b.left + b.width / 2, y: b.top + b.height / 2, expandido };
+  }, texto);
+  if (r && r.expandido !== "true") { await mover(a, r.x, r.y, 16); await a.quieto(1, 280); await a.pag.mouse.click(r.x, r.y); await a.quieto(2, 320); }
+  return !!r;
+};
+// Elige un BOTÓN de herramienta por su texto: lo trae a la vista, lleva el cursor y la
+// flecha hasta él, lo resalta con nota, y hace clic. Así se ve DE DÓNDE sale.
+const elegirBoton = async (a, texto, nota) => {
+  const r = await a.pag.evaluate((t) => {
+    const b = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(t));
+    if (!b) return null;
+    b.scrollIntoView({ block: "center", inline: "nearest" });
+    const rc = b.getBoundingClientRect();
+    return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
+  }, texto);
+  if (!r) return false;
+  await mover(a, r.x + r.w - 22, r.y + r.h / 2, 24);
+  await a.pag.evaluate((q) => { window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }); }, { r, n: nota });
+  await a.quieto(6, 340);
+  await a.pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+  await a.pag.evaluate(() => window.__tutSinCaja());
+  await a.quieto(2, 320);
+  return true;
+};
 
 export const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada("Dibujando la zapata", "Capítulo 11", 16); } },
@@ -39,10 +71,18 @@ export const pasos = [
     },
   },
   {
-    rotulo: "2 · Herramienta Área rectangular y clic en 2 esquinas",
+    rotulo: "2 · Elegimos la herramienta Área rectangular",
     hacer: async (a) => {
-      await tool(a, "rectarea");
-      await a.quieto(3, 320);
+      // La flecha apunta al botón «Losa» de la BARRA SUPERIOR (siempre visible): esa
+      // es la herramienta de área/losa. Se resalta, se clickea, y queda activa.
+      const ok = await elegirBoton(a, "Losa", "Aquí, en la barra: «Losa» — la herramienta de área. Se dibuja con clics.");
+      await tool(a, "rectarea");   // usamos el área rectangular (2 clics)
+      await a.quieto(2, 320);
+    },
+  },
+  {
+    rotulo: "3 · Clic en las 2 esquinas opuestas",
+    hacer: async (a) => {
       await clicEn(a, 0, 0);          // esquina 1 — se ve el cursor ir hasta ahí
       await clicEn(a, 3.45, 3.45);    // esquina 2 opuesta → rectángulo (shell)
       await a.quieto(4, 340);

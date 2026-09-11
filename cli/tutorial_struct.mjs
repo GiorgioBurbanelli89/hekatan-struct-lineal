@@ -139,13 +139,23 @@ await pag.evaluate(() => {
     "font:600 15px 'Segoe UI',system-ui,sans-serif;padding:9px 13px;max-width:420px;" +
     "box-shadow:0 8px 26px rgba(0,0,0,.7);line-height:1.35";
   capa.appendChild(nota);
+  // Flecha grande que apunta al botón/fila resaltado (Jorge: «no se sabe dónde es»).
+  const flecha = document.createElement("div");
+  flecha.style.cssText = "position:fixed;display:none;font-size:58px;line-height:1;color:#facc15;" +
+    "filter:drop-shadow(0 0 7px rgba(250,204,21,.95));z-index:2147483646;pointer-events:none;" +
+    "transform:translateY(-50%);font-family:'Segoe UI Symbol',system-ui";
+  flecha.textContent = "➤";   // ➤
+  capa.appendChild(flecha);
+  window.__tutFlecha = (x, y) => { flecha.style.display = "block"; flecha.style.left = (x - 60) + "px"; flecha.style.top = y + "px"; };
   window.__tutCursor = (x, y) => { cur.style.left = x + "px"; cur.style.top = y + "px"; };
-  window.__tutSinCaja = () => { caja.style.display = "none"; nota.style.display = "none"; };
+  window.__tutSinCaja = () => { caja.style.display = "none"; nota.style.display = "none"; flecha.style.display = "none"; };
   /** Cuadro sobre el rectángulo `r` y, si hay texto, una nota al lado que no lo tape. */
   window.__tutCaja = (r, txt, lim) => {
     caja.style.display = "block";
     caja.style.left = (r.x - 5) + "px"; caja.style.top = (r.y - 4) + "px";
     caja.style.width = (r.w + 10) + "px"; caja.style.height = (r.h + 8) + "px";
+    // Flecha a la izquierda del recuadro, apuntándolo.
+    window.__tutFlecha(r.x, r.y + r.h / 2);
     if (!txt) { nota.style.display = "none"; return; }
     nota.style.display = "block"; nota.textContent = txt;
     const n = nota.getBoundingClientRect();

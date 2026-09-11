@@ -66,6 +66,10 @@ export const newBlank: ExampleDef = {
     // ── Sección por defecto para shells dibujados ──
     tShell: P("Sección shells", "Espesor shell (m)", 0.20, 0.05, 1.00, 0.01),
     matShell: PE("Sección shells", "Material shell", 0, { "Hormigón": 0, "Acero": 1 }),
+    // Formulación del elemento de placa (como en ETABS/SAP): Shell-Thick (Mindlin,
+    // con cortante — apto para zapatas gruesas), Shell-Thin (Kirchhoff, losas delgadas),
+    // o Membrana (solo en su plano).
+    formaPlaca: PE("Sección shells", "Formulación placa", 0, { "Shell-Thick (Mindlin)": 0, "Shell-Thin (Kirchhoff)": 1, "Membrana": 2 }),
 
     // ── Zapata: mallar el área dibujada + suelo Winkler ──
     // Dibujas un rectángulo (área) y aquí lo conviertes en zapata: se subdivide
@@ -276,6 +280,7 @@ export const newBlank: ExampleDef = {
     const densities = new Map<number, number>();
     const poissons = new Map<number, number>();
     const thicknesses = new Map<number, number>();
+    const plateFormulations = new Map<number, number>();   // 0 Thick · 1 Thin · 2 Membrana (por shell)
 
     for (let i = 0; i < elements.length; i++) {
       if (shellIdx.has(i)) {
@@ -285,6 +290,7 @@ export const newBlank: ExampleDef = {
         densities.set(i, rho_sh);
         poissons.set(i, nu_sh);
         thicknesses.set(i, (p.tShell ?? 0.20) as number);
+        plateFormulations.set(i, Math.round(p.formaPlaca ?? 0));   // 0 Thick · 1 Thin · 2 Membrana
       } else {
         // Frame 1D — propiedades de sección rectangular
         const isCol = colIdx.has(i);
@@ -442,7 +448,7 @@ export const newBlank: ExampleDef = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy,
       torsionalConstants: J, densities, poissonsRatios: poissons,
-      thicknesses,
+      thicknesses, plateFormulations,
     } as any;
     states.objects3D.val = [];
 
