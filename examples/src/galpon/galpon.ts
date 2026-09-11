@@ -175,6 +175,9 @@ export const galpon: ExampleDef = {
     const forma = formaSeccionDe(p);
     const sectionShapes = new Map<number, any>();
     const thicknesses = new Map<number, number>();
+    // 2 = Membrane (solo trabaja en su plano) para los paños de cubierta, así
+    // el e2k/s2k salen con MODELINGTYPE "Membrane" y no como placa gruesa.
+    const plateFormulations = new Map<number, number>();
     // Barras (0 .. nFrames-1): sección de acero.
     for (let i = 0; i < nFrames; i++) {
       elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
@@ -186,6 +189,7 @@ export const galpon: ExampleDef = {
     for (let i = nFrames; i < elements.length; i++) {
       elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
       thicknesses.set(i, tCub); densities.set(i, 0);
+      plateFormulations.set(i, 2);   // Membrane
     }
 
     states.nodes.val = nodes;
@@ -194,7 +198,7 @@ export const galpon: ExampleDef = {
     states.elementInputs.val = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: I22, momentsOfInertiaZ: I33, torsionalConstants: J,
-      densities, poissonsRatios: poissons, sectionShapes, thicknesses,
+      densities, poissonsRatios: poissons, sectionShapes, thicknesses, plateFormulations,
     };
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);
     states.deformOutputs.val = deformOut;
