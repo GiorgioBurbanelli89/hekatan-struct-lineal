@@ -10,7 +10,7 @@ import { g as Ni } from "./styles-DjzQZscE.js";
 import { c as Ai } from "./renderModalTable-BJWFR1R0.js";
 import { f as mn, d as Hn, h as Es, e as co, g as na, u as Ti, i as Dn, j as di, s as Po, k as go, l as bo, m as xo, n as La, o as mi, p as pi, q as Mi, t as Oi, r as ui } from "./units-DYymsd53.js";
 import { c as Ci } from "./csiImporter-BJVhY2kE.js";
-import { c as Li, p as fi, __tla as __tla_1 } from "./cliModeler-q8vLMynZ.js";
+import { c as Li, p as fi, __tla as __tla_1 } from "./cliModeler-BxlZQmwi.js";
 import { c as Ri } from "./cadDraw-ep-wMkm-.js";
 import { v as hi, __tla as __tla_2 } from "./vigaMedioElastico-BAdLFXmO.js";
 import { z as Pi, __tla as __tla_3 } from "./zapataVigaAmarre-DouaoTLq.js";
