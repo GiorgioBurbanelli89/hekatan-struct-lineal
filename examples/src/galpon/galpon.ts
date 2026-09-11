@@ -24,7 +24,7 @@ export const galpon: ExampleDef = {
   name: "Galpón (nave industrial)",
   category: "1️⃣ Frames · 🎯 n GDL Sistemas",
   defaultShellResult: "none",
-  availableShellResults: [],
+  availableShellResults: ["none", "membraneXX", "membraneYY", "vonMises"],
   hasModal: true,
   params: {
     span:     P("Geometría", "Luz (m)", 12, 6, 30, 0.5),
@@ -48,6 +48,9 @@ export const galpon: ExampleDef = {
     ...paramsSeccion("Secciones", { forma: FORMAS["Tubo rectangular"], h: 150, b: 150, t: 6,
                                     tf: 7.4, tw: 5.0 }),
     CM:       P("Cargas", "CM por nodo (kN)", -1, -10, 0, 0.1),
+    cubierta: { default: 1, boolean: true, label: "Cubierta (membrana)", folder: "Cubierta" },
+    tCub:     P("Cubierta", "Espesor cubierta (mm)", 6, 1, 25, 1),
+    qCub:     P("Cubierta", "Carga cubierta (kN/m²)", -0.15, -3, 0, 0.05),
   },
   build(p, states) {
     const span = p.span, length = p.length, height = p.height, archRise = p.archRise;
@@ -88,6 +91,34 @@ export const galpon: ExampleDef = {
       for (let iNode = 2; iNode < nid[0].length - 1; iNode += 2)
         elements.push([nid[iy][iNode], nid[iy + 1][iNode + 1]]);
 
+    // ── Cubierta: paños Q4 de MEMBRANA sobre el techo ──────────────────────
+    // Cada paño va entre dos cerchas (iy, iy+1) y dos nodos del arco (k, k+1).
+    // Sus 4 esquinas SON nodos de correa (las correas cruzan todos los nodos de
+    // techo), así que la carga de la cubierta baja a las correas por los nudos
+    // compartidos — es el «la membrana reparte a las correas» de una nave real.
+    const cubierta = p.cubierta > 0.5;
+    const tCub = p.tCub / 1000;            // mm → m
+    const nFrames = elements.length;       // todo lo de arriba son barras
+    const panels: number[][] = [];
+    if (cubierta) {
+      for (let iy = 0; iy < yDiv; iy++)
+        for (let k = 2; k < nid[0].length - 1; k++) {
+          const q = [nid[iy][k], nid[iy][k + 1], nid[iy + 1][k + 1], nid[iy + 1][k]];
+          panels.push(q);
+          elements.push(q as unknown as Element);
+        }
+    }
+    // Área 3D de un cuadrilátero (dos triángulos por el producto cruz).
+    const areaQuad = (q: number[]) => {
+      const P0 = nodes[q[0]], P1 = nodes[q[1]], P2 = nodes[q[2]], P3 = nodes[q[3]];
+      const cross = (a: number[], b: number[], c: number[]) => {
+        const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+        const x = u[1]*v[2]-u[2]*v[1], y = u[2]*v[0]-u[0]*v[2], z = u[0]*v[1]-u[1]*v[0];
+        return 0.5 * Math.hypot(x, y, z);
+      };
+      return cross(P0, P1, P2) + cross(P0, P2, P3);
+    };
+
     // Supports en base de columnas (empotrados)
     const supports = new Map<number,[boolean,boolean,boolean,boolean,boolean,boolean]>();
     for (let iy = 0; iy < yn; iy++) {
@@ -97,10 +128,22 @@ export const galpon: ExampleDef = {
 
     // Cargas verticales (CM) en nodos del arco (techo)
     const loads = new Map<number,[number,number,number,number,number,number]>();
+    const addFz = (n: number, fz: number) => {
+      const cur = loads.get(n) ?? [0, 0, 0, 0, 0, 0];
+      cur[2] += fz; loads.set(n, cur as [number,number,number,number,number,number]);
+    };
     if (p.CM !== 0) {
       for (let iy = 0; iy < yn; iy++)
         for (let i = 2; i < nid[iy].length; i++)
-          loads.set(nid[iy][i], [0, 0, p.CM, 0, 0, 0]);
+          addFz(nid[iy][i], p.CM);
+    }
+    // Carga de la cubierta (kN/m²): tributaria a las 4 esquinas de cada paño =
+    // los nudos de correa. Así «la membrana reparte a las correas».
+    if (cubierta && p.qCub !== 0) {
+      for (const q of panels) {
+        const fn = p.qCub * areaQuad(q) / 4;
+        for (const n of q) addFz(n, fn);
+      }
     }
 
     /**
@@ -131,11 +174,18 @@ export const galpon: ExampleDef = {
     // barrer y el galpon se sigue viendo con lineas.
     const forma = formaSeccionDe(p);
     const sectionShapes = new Map<number, any>();
-    for (let i = 0; i < elements.length; i++) {
+    const thicknesses = new Map<number, number>();
+    // Barras (0 .. nFrames-1): sección de acero.
+    for (let i = 0; i < nFrames; i++) {
       elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
       densities.set(i, rho_s);
       areas.set(i, A); I33.set(i, moiZ); I22.set(i, moiY); J.set(i, sec.J);
       sectionShapes.set(i, forma);
+    }
+    // Paños de cubierta (nFrames .. fin): membrana delgada, peso via qCub.
+    for (let i = nFrames; i < elements.length; i++) {
+      elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
+      thicknesses.set(i, tCub); densities.set(i, 0);
     }
 
     states.nodes.val = nodes;
@@ -144,7 +194,7 @@ export const galpon: ExampleDef = {
     states.elementInputs.val = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: I22, momentsOfInertiaZ: I33, torsionalConstants: J,
-      densities, poissonsRatios: poissons, sectionShapes,
+      densities, poissonsRatios: poissons, sectionShapes, thicknesses,
     };
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);
     states.deformOutputs.val = deformOut;
