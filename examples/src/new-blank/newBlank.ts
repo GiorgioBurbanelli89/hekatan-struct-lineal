@@ -29,6 +29,16 @@ const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 78;
 // Helpers para params con folder
 const P = (folder: string, label: string, def: number, min: number, max: number, step: number) =>
   ({ default: def, min, max, step, label, folder });
+// Área 3D de un cuadrilátero (dos triángulos por el producto cruz).
+function quadArea(nodes: number[][], q: number[]): number {
+  const P0 = nodes[q[0]], P1 = nodes[q[1]], P2 = nodes[q[2]], P3 = nodes[q[3]];
+  const cr = (a: number[], b: number[], c: number[]) => {
+    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+    return 0.5 * Math.hypot(u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]);
+  };
+  return cr(P0, P1, P2) + cr(P0, P2, P3);
+}
+
 const PE = (folder: string, label: string, def: number, options: Record<string, number>) =>
   ({ default: def, label, folder, options });
 
@@ -37,7 +47,7 @@ export const newBlank: ExampleDef = {
   name: "📄 Archivo nuevo (lienzo CAD 2D/3D)",
   category: "🧪 Utilidades",
   defaultShellResult: "none",
-  availableShellResults: [],
+  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY"],
   hasModal: false,
   params: {
     // ── Modo dimensión ──
@@ -56,6 +66,13 @@ export const newBlank: ExampleDef = {
     // ── Sección por defecto para shells dibujados ──
     tShell: P("Sección shells", "Espesor shell (m)", 0.20, 0.05, 1.00, 0.01),
     matShell: PE("Sección shells", "Material shell", 0, { "Hormigón": 0, "Acero": 1 }),
+
+    // ── Zapata: mallar el área dibujada + suelo Winkler ──
+    // Dibujas un rectángulo (área) y aquí lo conviertes en zapata: se subdivide
+    // en nx×ny celdas y, con ks>0, se ponen resortes de suelo (Winkler) nodales
+    // k=ks·A_trib → sale el mapa de presión de contacto.
+    mallaZapata: P("🧰 Zapata / Suelo", "Malla del área (nx = ny)", 1, 1, 12, 1),
+    ksSuelo:     P("🧰 Zapata / Suelo", "Suelo ks (tonf/m³, 0 = off)", 0, 0, 8000, 50),
 
     // ── Apoyos automáticos en nodos del nivel más bajo ──
     // Default = "Sin apoyo automático" — el lienzo arranca limpio. El
@@ -153,6 +170,16 @@ export const newBlank: ExampleDef = {
     const colIdx = new Set<number>();
     const beamIdx = new Set<number>();
     const shellIdx = new Set<number>();
+    // Malla de la zapata dibujada + qué shells/nudos forman zapata (para Winkler).
+    const nMalla = Math.max(1, Math.round(p.mallaZapata ?? 1));
+    const zapataShells = new Set<number>();
+    const zapataNodes = new Set<number>();
+    // Mapa posición→índice para SOLDAR los nudos de malla que caen sobre un nudo
+    // ya dibujado (p. ej. el nudo central donde va la carga de la columna).
+    const TOL_MESH = 1e-3;
+    const posKey = (q: Node) => `${Math.round(q[0]/TOL_MESH)},${Math.round(q[1]/TOL_MESH)},${Math.round(q[2]/TOL_MESH)}`;
+    const nodeAt = new Map<string, number>();
+    for (let i = 0; i < nodes.length; i++) nodeAt.set(posKey(nodes[i]), sold(i));
     // Mapeo segId ("polyIdx:segIdx") → elementIdx para que el listener del
     // Properties Pane pueda resolver qué frame FEM corresponde a cada
     // segmento dibujado. Necesario para asignar sec manuales por segId.
@@ -167,9 +194,47 @@ export const newBlank: ExampleDef = {
           .map(sold);
         if (verts.length !== 4) continue;
         if (verts.some(v => nodes[v] === undefined)) continue;
-        const eIdx = elements.length;
-        elements.push(verts as unknown as Element);
-        shellIdx.add(eIdx);
+        if (nMalla <= 1) {
+          const eIdx = elements.length;
+          elements.push(verts as unknown as Element);
+          shellIdx.add(eIdx); zapataShells.add(eIdx);
+          for (const v of verts) zapataNodes.add(v);
+        } else {
+          // Subdividir el quad en nMalla×nMalla celdas (interpolación bilineal),
+          // reutilizando las 4 esquinas. Igual que automallar la losa dibujada.
+          const [c0, c1, c2, c3] = verts;
+          const P0 = nodes[c0], P1 = nodes[c1], P2 = nodes[c2], P3 = nodes[c3];
+          const bil = (s: number, t: number): Node => [
+            (1-s)*(1-t)*P0[0] + s*(1-t)*P1[0] + s*t*P2[0] + (1-s)*t*P3[0],
+            (1-s)*(1-t)*P0[1] + s*(1-t)*P1[1] + s*t*P2[1] + (1-s)*t*P3[1],
+            (1-s)*(1-t)*P0[2] + s*(1-t)*P1[2] + s*t*P2[2] + (1-s)*t*P3[2],
+          ];
+          const grid: number[][] = [];
+          for (let gi = 0; gi <= nMalla; gi++) {
+            const fila: number[] = [];
+            for (let gj = 0; gj <= nMalla; gj++) {
+              if (gi === 0 && gj === 0) fila.push(c0);
+              else if (gi === nMalla && gj === 0) fila.push(c1);
+              else if (gi === nMalla && gj === nMalla) fila.push(c2);
+              else if (gi === 0 && gj === nMalla) fila.push(c3);
+              else {
+                const pos = bil(gi/nMalla, gj/nMalla);
+                const key = posKey(pos);
+                let ni = nodeAt.get(key);
+                if (ni === undefined) { ni = nodes.length; nodes.push(pos); nodeAt.set(key, ni); }
+                fila.push(ni);
+              }
+            }
+            grid.push(fila);
+          }
+          for (let gi = 0; gi < nMalla; gi++) for (let gj = 0; gj < nMalla; gj++) {
+            const q = [grid[gi][gj], grid[gi+1][gj], grid[gi+1][gj+1], grid[gi][gj+1]];
+            const eIdx = elements.length;
+            elements.push(q as unknown as Element);
+            shellIdx.add(eIdx); zapataShells.add(eIdx);
+            for (const v of q) zapataNodes.add(v);
+          }
+        }
       } else {
         // ─ POLILÍNEA o LÍNEA → cadena de frames ─
         for (let i = 0; i < poly.length - 1; i++) {
@@ -396,12 +461,28 @@ export const newBlank: ExampleDef = {
         }
       }
     }
+    // ── Suelo Winkler bajo la zapata dibujada: k = ks·A_trib por nudo (dof Uz) ──
+    const ks_kNm3 = (p.ksSuelo ?? 0) * 9.80665;   // tonf/m³ → kN/m³
+    if (ks_kNm3 > 0 && zapataNodes.size > 0) {
+      const aTrib = new Map<number, number>();
+      for (const eIdx of zapataShells) {
+        const e = elements[eIdx] as number[];
+        const A = quadArea(nodes, e);
+        for (const n of e) aTrib.set(n, (aTrib.get(n) ?? 0) + A / 4);
+      }
+      for (const [n, A] of aTrib) {
+        const kv = ks_kNm3 * A;
+        springsList.push({ node: n, dof: 2, k: kv });         // vertical (Winkler)
+        springsList.push({ node: n, dof: 0, k: kv * 0.5 });   // lateral X (fricción del suelo)
+        springsList.push({ node: n, dof: 1, k: kv * 0.5 });   // lateral Y — evita que la zapata quede suelta
+      }
+    }
 
     if (
       Math.round(p.autoSolve ?? 1) === 1 &&
       nodes.length > 0 &&
       elements.length > 0 &&
-      supports.size > 0 &&
+      (supports.size > 0 || springsList.length > 0) &&   // una zapata se sostiene por sus resortes, sin apoyo rígido
       loads.size > 0
     ) {
       try {
@@ -416,6 +497,29 @@ export const newBlank: ExampleDef = {
         states.analyzeOutputs.val = analyze(
           nodes, elements, states.elementInputs.val, states.deformOutputs.rawVal,
         );
+        // ── Presión de contacto del suelo (Winkler): σ = ks·Uz por nudo ──
+        if (ks_kNm3 > 0 && zapataShells.size > 0) {
+          try {
+            const U = states.deformOutputs.rawVal.deformations;
+            const ao: any = states.analyzeOutputs.rawVal ?? {};
+            const pressure = new Map<number, number[]>();
+            let pmin = 0, pmax = 0;
+            for (const eIdx of zapataShells) {
+              const e = elements[eIdx] as number[];
+              const vals = e.map((n) => {
+                const uz = U.get(n)?.[2] ?? 0;
+                const pp = ks_kNm3 * uz;        // kN/m² (compresión < 0)
+                if (pp < pmin) pmin = pp;
+                if (pp > pmax) pmax = pp;
+                return pp;
+              });
+              pressure.set(eIdx, vals);
+            }
+            ao.pressure = pressure;
+            ao.colorMapRanges = { ...(ao.colorMapRanges ?? {}), pressure: [pmax, pmin] };
+            states.analyzeOutputs.val = ao;
+          } catch (e: any) { console.warn("[NewBlank] presión:", e?.message ?? e); }
+        }
         const nud = new Set<number>();
         for (const e of elements) for (const n of e as number[]) nud.add(n);
         console.log(`[NewBlank] Solve OK — ${nud.size} nudos (de ${nodes.length} puntos), ${elements.length} elementos, ${supports.size} apoyos, ${loads.size} cargas, ${springsList.length} springs`);
