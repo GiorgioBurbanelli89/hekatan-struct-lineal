@@ -94,7 +94,7 @@ import { g as WE, __tla as __tla_79 } from "./galponBodega-CYrWYII7.js";
 import { e as qE, __tla as __tla_80 } from "./edifAcero-BBKduTUA.js";
 import { m as KE, __tla as __tla_81 } from "./mezanine-D-yYyQsc.js";
 import { e as QE, __tla as __tla_82 } from "./edificioFrameNec-Bzzb7TkJ.js";
-import { n as er, __tla as __tla_83 } from "./newBlank-DMTa5c93.js";
+import { n as er, __tla as __tla_83 } from "./newBlank-0Hy4P3VP.js";
 import { downloadZapataF2k as tr } from "./f2kExporter-CcrVIqWt.js";
 import { parseZapataF2k as nr } from "./f2kImporter-Cp9ARV1y.js";
 import { exportEdificioCimentacionF2k as ls, downloadEdificioCimentacionF2k as or } from "./f2kCimentacionCompleta-Ct_BuFMO.js";
