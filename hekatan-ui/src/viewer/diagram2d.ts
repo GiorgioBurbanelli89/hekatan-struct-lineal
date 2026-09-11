@@ -162,6 +162,7 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
 
   function pintar() {
     if (!host || host.hidden) return;
+    const enGrafico = new Set<number>(hostB && !hostB.hidden && barraActual >= 0 ? cadenaDe(barraActual) : []);
     const svg = host.querySelector(".hk-d2-svg") as SVGSVGElement;
     const tit = host.querySelector(".hk-d2-tit") as HTMLSpanElement;
     const pie = host.querySelector(".hk-d2-pie") as HTMLDivElement;
@@ -259,6 +260,9 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
         rotulos.push({ x: p2[0] + nx * 12, y: p2[1] + ny * 12, t: fmt(v2), peso: Math.abs(v2) });
       }
       el("line", { x1, y1, x2, y2, stroke: "#e6ecf5", "stroke-width": 2.2, "stroke-linecap": "round" });
+      // la barra cuyo gráfico está abierto, en amarillo: se sabe cuál se está mirando
+      if (enGrafico.has(b.i))
+        el("line", { x1, y1, x2, y2, stroke: "#e6c463", "stroke-width": 5, "stroke-linecap": "round" });
       // una línea gorda e invisible encima, para poder pulsar la barra con el ratón
       const toque = el("line", { x1, y1, x2, y2, stroke: "transparent", "stroke-width": 14,
         style: "cursor:pointer;pointer-events:stroke" });
@@ -378,14 +382,33 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
         '<button class="hk-b-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button>' +
         '</div><div class="hk-b-cuerpo" style="padding:6px 10px 10px"></div>';
       document.body.appendChild(hostB);
-      hostB.querySelector(".hk-b-x")!.addEventListener("click", () => { hostB!.hidden = true; });
+      hostB.querySelector(".hk-b-x")!.addEventListener("click", () => { hostB!.hidden = true; acomodar(); pintar(); });
       (hostB.querySelector(".hk-b-pl") as HTMLSelectElement).addEventListener("change", (ev) => {
         planoLocal = (ev.target as HTMLSelectElement).value as "12" | "13";
         pintarBarra();
       });
     }
     hostB.hidden = false;
+    acomodar();
     pintarBarra();
+    pintar();
+  }
+
+  // Las dos ventanas a la vez: el alzado a la izquierda y el gráfico de la barra a la
+  // derecha, lado a lado. Encima una de otra tapaban el ◀ ▶ y medio pórtico.
+  function acomodar() {
+    if (!host || !hostB) return;
+    const W = window.innerWidth, ancho = Math.min(560, Math.round(W * 0.4));
+    hostB.style.width = ancho + "px";
+    if (!hostB.hidden && !host.hidden) {
+      host.style.transform = "none";
+      host.style.left = "12px";
+      host.style.width = W - ancho - 36 + "px";
+      hostB.style.top = host.getBoundingClientRect().top + "px";
+    } else if (!host.hidden) {
+      host.style.left = "50%"; host.style.transform = "translateX(-50%)";
+      host.style.width = "min(900px,92vw)";
+    }
   }
 
   function pintarBarra() {
@@ -426,21 +449,22 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       : [["normals", "Axial P", "kN", false], ["shearsZ", "Cortante V3", "kN", false], ["bendingsY", "Momento M2", "kN·m", true]];
     const cuerpo = hostB.querySelector(".hk-b-cuerpo") as HTMLDivElement;
     cuerpo.innerHTML = "";
-    const W = 590, H = 120, M = 46;
+    const W = Math.max(300, cuerpo.clientWidth), H = 124, M = 46;
+    const yc = (H - 14) / 2;                     // el eje; abajo queda la franja de 0 … L
     for (const [clave, nombre, unidad, invertido] of graficos) {
       const vs = pts.map((p) => valor(clave, p));
       const vmax = Math.max(...vs), vmin = Math.min(...vs);
       const amp = Math.max(Math.abs(vmax), Math.abs(vmin)) || 1;
       const px = (xx: number) => M + (xx / (Ltot || 1)) * (W - 2 * M);
       // el MOMENTO, positivo hacia abajo (del lado de la tracción); el resto, hacia arriba
-      const py = (v: number) => H / 2 + (invertido ? 1 : -1) * (v / amp) * (H / 2 - 18);
+      const py = (v: number) => yc + (invertido ? 1 : -1) * (v / amp) * (yc - 16);
       const fmt = (v: number) => Math.abs(v) >= 100 ? v.toFixed(1) : Math.abs(v) >= 10 ? v.toFixed(2) : v.toFixed(3);
-      let poli = px(0) + "," + H / 2 + " ";
+      let poli = px(0) + "," + yc + " ";
       pts.forEach((p, k) => { poli += px(p.x) + "," + py(vs[k]) + " "; });
-      poli += px(Ltot) + "," + H / 2;
+      poli += px(Ltot) + "," + yc;
       const iMax = vs.indexOf(vmax), iMin = vs.indexOf(vmin);
       const rot = (i: number, color: string) => {
-        const yy = py(vs[i]) + (py(vs[i]) < H / 2 ? -5 : 13);
+        const yy = py(vs[i]) + (py(vs[i]) < yc ? -5 : 13);
         return '<text x="' + px(pts[i].x) + '" y="' + yy + '" text-anchor="middle" fill="' + color +
           '" font-size="11" font-weight="700" paint-order="stroke" stroke="#0b0e14" stroke-width="3">' +
           fmt(vs[i]) + "</text>";
@@ -452,7 +476,7 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
         '<span style="color:#9fb0c6">máx ' + fmt(vmax) + " · mín " + fmt(vmin) +
         (invertido ? " · positivo hacia abajo" : "") + "</span></div>" +
         '<svg width="' + W + '" height="' + H + '" style="display:block;background:#0e131c;border-radius:4px">' +
-        '<line x1="' + M + '" y1="' + H / 2 + '" x2="' + (W - M) + '" y2="' + H / 2 + '" stroke="#e6ecf5" stroke-width="2"/>' +
+        '<line x1="' + M + '" y1="' + yc + '" x2="' + (W - M) + '" y2="' + yc + '" stroke="#e6ecf5" stroke-width="2"/>' +
         '<polygon points="' + poli + '" fill="' + color + '" fill-opacity=".35" stroke="' + color + '" stroke-width="1.4"/>' +
         rot(0, "#f2f5fa") + rot(pts.length - 1, "#f2f5fa") +
         (iMax > 0 && iMax < pts.length - 1 ? rot(iMax, "#8fd3ff") : "") +
