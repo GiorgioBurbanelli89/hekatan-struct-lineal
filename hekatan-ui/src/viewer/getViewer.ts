@@ -812,6 +812,7 @@ export function getViewer({
   // Permiten zoom in/out, pan en 4 direcciones y reset sin necesidad de scroll
   // wheel o gestos de trackpad. Útiles también en pantallas touch.
   const navOverlay = document.createElement("div");
+  navOverlay.id = "hk-nav-camara";   // la piel CAD lo sube sobre la ventana de comandos
   navOverlay.style.cssText = [
     "position:absolute","right:8px","bottom:8px","z-index:50",
     "display:grid","grid-template-columns:repeat(3, 32px)","gap:2px",

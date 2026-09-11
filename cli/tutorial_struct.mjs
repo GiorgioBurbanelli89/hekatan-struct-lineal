@@ -50,7 +50,8 @@ const ANCHO = 1280, ALTO = 720;          // la ventana, en CSS
 // inglés (Jorge: «subtítulos en inglés en la parte inferior»), y necesita ~200 px.
 // Se graba 52 px de CSS menos por abajo en vez de encoger la imagen: la interfaz
 // sale al mismo tamaño y nítida. 588 × 1.5 = 882 px de imagen + 198 de franja.
-const ALTO_UTIL = 588;
+// Solo inglés (11-sep-2026): con UN idioma basta la franja de 120 px → 640 de interfaz.
+const ALTO_UTIL = 640;
 const H_OUT = Math.round(ALTO_UTIL * 1.5);
 const ZW = 960, ZH = 480;                // primer plano en CSS; ×2 = 1920×960 NATIVOS
 
@@ -478,11 +479,11 @@ const api = {
       const w = document.createElement("div"); w.id = "hk-tut-portada";
       w.style.cssText = "position:fixed;inset:0;z-index:2147483644;background:radial-gradient(ellipse at 50% 40%,#16202e 0%,#070a10 75%);" +
         "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;font-family:'Segoe UI',system-ui,sans-serif";
-      w.innerHTML = '<img src="' + q.logo + '" style="height:92px">' +
+      w.innerHTML = '<img src="' + q.logo + '" style="height:210px;border-radius:26px;box-shadow:0 14px 40px rgba(0,0,0,.6)">' +
         '<div style="color:#e6c463;font:600 20px Segoe UI,system-ui,sans-serif;letter-spacing:3px;text-transform:uppercase">' + q.cap + "</div>" +
         '<div style="color:#f2f5fa;font:700 40px Segoe UI,system-ui,sans-serif;text-align:center;max-width:1000px;line-height:1.2">' + q.tit + "</div>";
       document.body.appendChild(w);
-    }, { tit: titulo, cap: capitulo, logo: BASE + "img/hekatan-lockup.png" });
+    }, { tit: titulo, cap: capitulo, logo: LOGO_CUADRADO });
     await espera(600);
     await foto(n);
     await pag.evaluate(() => document.getElementById("hk-tut-portada")?.remove());
@@ -712,6 +713,11 @@ const api = {
     await espera(600);
   },
 };
+
+// El logo CUADRADO de Hekatan Struct (branding/products/struct), no el rótulo apaisado
+// de la barra de herramientas: Jorge, 11-sep-2026 — «es cuadrado y lo mostraste rectangular».
+const LOGO_CUADRADO = "data:image/png;base64," + readFileSync(join(__dirname, "..", "..",
+  "branding", "products", "struct", "hekatan_struct_logo_300.png")).toString("base64");
 
 const marcas = [];
 console.log("== " + (cap.titulo || CAP) + " ==");

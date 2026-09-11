@@ -83,6 +83,16 @@ ok(Math.abs(e.fx - 30) < 1e-6 && e.fz === 0, "Ex: solo la lateral", JSON.stringi
 await elegirCaso("Σ 1.2D+1L+1Ex"); const c = await resumen();
 ok(Math.abs(c.fx - 30) < 1e-6 && Math.abs(c.fz - (1.2 * -50 - 25)) < 1e-6, "1.2D+1L+1Ex: la suma con sus factores", JSON.stringify(c));
 ok(d.mmax !== e.mmax && c.mmax > 0, "los resultados cambian con el caso", `M máx Dead ${d.mmax} · Ex ${e.mmax} · combo ${c.mmax}`);
+// las flechas: una por COMPONENTE (la vertical y la horizontal por separado), no una inclinada
+const flechas = await pag.evaluate(() => {
+  const g = document.querySelector("#viewer").__ctx.scene.getObjectByName("loadsGroup");
+  const out = [];
+  g?.children.forEach((o) => { if (o.type === "ArrowHelper") { const d = o.userData?.dir; if (d) out.push([d.x, d.y, d.z]); } });
+  return out;
+});
+const inclinadas = flechas.filter((d) => [d[0], d[1], d[2]].filter((x) => Math.abs(x) > 1e-9).length > 1).length;
+ok(flechas.length > 0 && inclinadas === 0, "combinación: flechas separadas por sentido (ninguna inclinada)", `${flechas.length} flechas, ${inclinadas} inclinadas`);
+await pag.screenshot({ path: join(OUT, (PUB ? "pub_" : "") + "combo_flechas.png") });
 await pag.screenshot({ path: join(OUT, (PUB ? "pub_" : "") + "combo.png") });
 // el edificio NEC: peso de piso (Dead) y fuerzas sísmicas (Ex), por separado
 await pag.goto(URL_.replace("portico-2d", "edificio-frame-nec"), { waitUntil: "networkidle2", timeout: 180000 });

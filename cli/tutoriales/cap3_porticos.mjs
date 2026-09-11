@@ -35,7 +35,8 @@ export const pasos = [
       await a.casilla("Deformed shape");
       await a.marcar("fila", "Frame results", "Momento 3-3, en todo el edificio.");
       await a.quieto(2, 300);
-      await a.elegir("Frame results", "Moment 3-3", 4000);
+      await a.elegir("Frame results", "Moment 3-3", 3000);
+      await a.elegir("Case results", "Ex", 4000);   // el sismo: Dead solo trae el peso
       await a.sinCuadro(); await a.quieto(6, 300);
     },
   },

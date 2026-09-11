@@ -59,7 +59,11 @@ export const pasos = [
     hacer: async (a) => {
       await a.marcar("fila", "Frame results", "Momento 3-3: el diagrama, con su valor en cada tramo.");
       await a.quieto(3, 300);
-      await a.elegir("Frame results", "Moment 3-3", 5000);
+      await a.elegir("Frame results", "Moment 3-3", 4000);
+      // cada caso lleva SOLO su carga: se elige la combinación sísmica para ver todo junto
+      await a.marcar("fila", "Case results", "El caso: la combinación 1.2D + L + Ex.");
+      await a.quieto(2, 300);
+      await a.elegir("Case results", "Σ 1.2D+1L+1Ex", 5000);
       console.log("    max M tras encender:", await a.maximo());
       await a.sinCuadro(); await a.quieto(7, 300);
     },

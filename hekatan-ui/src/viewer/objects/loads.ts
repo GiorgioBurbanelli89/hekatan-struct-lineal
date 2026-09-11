@@ -3,6 +3,7 @@ import van, { State } from "vanjs-core";
 import { Node } from "hekatan-fem";
 import { Structure } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
+import { Text } from "./Text";
 
 export function loads(
   structure: Structure,
@@ -34,7 +35,7 @@ export function loads(
 
     if (!settings.loads.val) return;
 
-    group.children.forEach((o) => (o as THREE.ArrowHelper).dispose());
+    group.children.forEach((o: any) => o.dispose?.());
     group.clear();
 
     const nodes = derivedNodes.val;
@@ -106,40 +107,64 @@ export function loads(
       dibujar = [...mejor.values()].map((m) => m.i);
     }
 
+    // UNA FLECHA POR COMPONENTE, con su largo y su valor — como ETABS.
+    // Antes era una flecha por nudo en la dirección de la SUMA: en una combinación con peso
+    // y sismo en el mismo nudo salía INCLINADA, y todas medían igual (Jorge: «se ve feo
+    // solo la suma de cargas en diferentes sentidos»). Ahora la vertical y la horizontal
+    // van cada una por su lado; el largo sigue a la magnitud (con un mínimo para que se
+    // vea) y la punta toca el nudo. Vertical en naranja, lateral en rojo.
+    let maxAbs = 0;
+    for (const index of dibujar) {
+      const load = structure.nodeInputs!.val!.loads!.get(index)!;
+      for (let c = 0; c < 3; c++) maxAbs = Math.max(maxAbs, Math.abs(load[c]));
+    }
+    const conValor = dibujar.length <= 60;
+    const fmt = (v: number) => {
+      const a = Math.abs(v);
+      return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
+    };
     for (const index of dibujar) {
       const load = structure.nodeInputs!.val!.loads!.get(index)!;
       const position = nodes[index];
       if (!position) continue;
-
-      const dir = new THREE.Vector3(...load.slice(0, 3));
-      if (dir.lengthSq() < 1e-30) continue; // skip zero loads
-      dir.normalize();
-
-      const arrow = new THREE.ArrowHelper(
-        dir,
-        new THREE.Vector3(...position),
-        1,
-        0xee9b00,
-        0.3,
-        0.3
-      );
-
-      const scale = size * derivedDisplayScale.rawVal;
-      arrow.scale.set(scale, scale, scale);
-
-      group.add(arrow);
+      for (let c = 0; c < 3; c++) {
+        const v = load[c];
+        if (!(Math.abs(v) > 1e-9 * (maxAbs || 1))) continue;
+        const dir = new THREE.Vector3(c === 0 ? Math.sign(v) : 0, c === 1 ? Math.sign(v) : 0, c === 2 ? Math.sign(v) : 0);
+        const rel = 0.45 + 0.55 * (maxAbs ? Math.abs(v) / maxAbs : 1);
+        const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(...position), 1,
+          c === 2 ? 0xee9b00 : 0xe5382b, 0.3, 0.3);
+        arrow.userData = { nudo: position, dir, rel };
+        group.add(arrow);
+        if (conValor) {
+          const t = new Text(fmt(v), c === 2 ? "#f5b642" : "#ff6b5e");
+          t.userData = { nudo: position, dir, rel, texto: true };
+          group.add(t);
+        }
+      }
     }
+    colocar(size * derivedDisplayScale.rawVal);
   });
 
-  // on derivedDisplayScale update scale
+  /** Tamaño y sitio de cada flecha y su valor: la punta en el nudo, la cola hacia fuera. */
+  function colocar(escala: number) {
+    group.children.forEach((o: any) => {
+      const u = o.userData;
+      if (!u?.dir) return;
+      const largo = escala * u.rel;
+      const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -largo * (u.texto ? 1.12 : 1));
+      o.position.copy(cola);
+      if (u.texto) o.updateScale(escala * 0.38);
+      else o.scale.set(largo, largo, largo);
+    });
+  }
+
   van.derive(() => {
     derivedDisplayScale.val; // triggers update
 
     if (!settings.loads.rawVal) return;
 
-    const size = getArrowSize(derivedNodes.rawVal);
-    const scale = size * derivedDisplayScale.rawVal;
-    group.children.forEach((c) => c.scale.set(scale, scale, scale));
+    colocar(getArrowSize(derivedNodes.rawVal) * derivedDisplayScale.rawVal);
   });
 
   // on settings.loads update update visibility

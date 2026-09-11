@@ -176,6 +176,13 @@ body.hk-cad #hk-pane-host{
   right:0 !important; left:auto !important;
   border-left:1px solid var(--hk-borde) !important; border-right:0 !important;
 }
+/* La botonera de la camara (flechas, zoom, casa) iba a 8 px del fondo del visor, y el
+   visor llega hasta abajo: la ventana de comandos la tapaba casi entera y quedaba
+   bajo el panel derecho, sin poder pulsarse. Va encima de la ventana de comandos y a la
+   izquierda del panel. */
+body.hk-cad #hk-nav-camara{
+  bottom:calc(var(--hk-cmd-hueco, 66px) + 10px) !important; right:332px !important;
+}
 /* ── lo que ya flotaba y ahora choca con la barra de titulo ─────────── */
 /* El lector de coordenadas se DUPLICABA con el de la barra de estado, y ahi
    arriba tapaba el nombre del programa. En un CAD las coordenadas viven en la
