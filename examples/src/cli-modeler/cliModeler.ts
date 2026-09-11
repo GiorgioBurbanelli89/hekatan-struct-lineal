@@ -1051,7 +1051,9 @@ export const cliModeler: ExampleDef = {
   name: "CLI Modeler (comandos)",
   category: "🧪 Utilidades",
   defaultShellResult: "none",
-  availableShellResults: [],
+  // Con `areaspring` (Winkler) se calcula la presión de contacto del suelo, así que
+  // el mapa de presión se puede ver aquí también, no solo en los ejemplos param.
+  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY", "membraneXX"],
   params: {},
   build(_p, states) {
     // Lee el script de window (lo escribe el folder Tweakpane).
@@ -1588,6 +1590,37 @@ export const cliModeler: ExampleDef = {
           );
         } catch (e: any) {
           console.warn("[CLI Modeler] analyze:", e?.message ?? e);
+        }
+        // ── Presión de contacto del suelo (Winkler): σ = ks·Uz por nudo ──────
+        // Para los shells con `areaspring`. Así una zapata escrita a mano en la
+        // ventana de comandos muestra el mismo mapa de presión que los ejemplos
+        // parametrizados (Jorge, 11-sep-2026: «arréglalo, para eso son los videos»).
+        if (m.areaSprings.length > 0) {
+          try {
+            const U = states.deformOutputs.val.deformations;
+            const ao: any = states.analyzeOutputs.val ?? {};
+            const pressure: Map<number, number[]> = ao.pressure instanceof Map ? ao.pressure : new Map();
+            let pmin = 0, pmax = 0;
+            for (const asr of m.areaSprings) {
+              const eIdx = shellIdxOf.get(asr.id);
+              if (eIdx === undefined) continue;
+              const el = elements[eIdx] as number[];
+              const vals = el.map((n) => {
+                const uz = U.get(n)?.[2] ?? 0;
+                const p = asr.ks * uz;              // kN/m³ · m = kN/m² (compresión < 0)
+                if (p < pmin) pmin = p;
+                if (p > pmax) pmax = p;
+                return p;
+              });
+              pressure.set(eIdx, vals);
+            }
+            if (pressure.size > 0) {
+              ao.pressure = pressure;
+              ao.colorMapRanges = { ...(ao.colorMapRanges ?? {}), pressure: [pmax, pmin] };
+              states.analyzeOutputs.val = ao;
+              console.log(`[CLI Modeler] presión Winkler: ${pressure.size} shells, σ ${pmin.toFixed(0)}..${pmax.toFixed(0)} kN/m²`);
+            }
+          } catch (e: any) { console.warn("[CLI Modeler] presión:", e?.message ?? e); }
         }
         // Tensiones de los solidos MEZCLADOS (analyze no sabe de H8): la misma
         // recuperacion que hex8Solve, elemento a elemento, con sus desplazamientos.
