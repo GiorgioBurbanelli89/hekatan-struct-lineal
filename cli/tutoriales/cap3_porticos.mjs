@@ -11,14 +11,28 @@
 import { barra2d } from "./_barras2d.mjs";
 
 export const titulo = "Hekatan Struct · pórtico a pórtico, barra a barra";
-export const ejemplo = "edificio-frame-nec";
+export const ruta = "workspace/";
 
 export const pasos = [
   {
+    rotulo: "Portada",
+    hacer: async (a) => { await a.portada("Pórtico a pórtico, barra a barra", "Capítulo 3", 16); },
+  },
+  {
+    rotulo: "0 · Desde el menú: el edificio de ejemplo",
+    hacer: async (a) => {
+      // como lo haría una persona: menú principal → Ejemplos → categoría → ejemplo
+      await a.general(); await a.quieto(2, 300);
+      await a.pulsar("Ejemplos", 5000);
+      await a.elegir("Categoría", "n GDL Sistemas", 4000);
+      await a.elegir("Ejemplo", "Edificio pórtico · carga lateral NEC", 7000);
+      await a.quieto(3, 300);
+    },
+  },
+  {
     rotulo: "1 · Un edificio y su diagrama de momentos",
     hacer: async (a) => {
-      await a.ajuste("deformedShape", false);
-      await a.general(); await a.quieto(3, 300);
+      await a.casilla("Deformed shape");
       await a.marcar("fila", "Frame results", "Momento 3-3, en todo el edificio.");
       await a.quieto(2, 300);
       await a.elegir("Frame results", "Moment 3-3", 4000);

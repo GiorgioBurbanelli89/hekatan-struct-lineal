@@ -46,7 +46,12 @@ const ANCHO = 1280, ALTO = 720;          // la ventana, en CSS
 // Se graba la ventana SIN la banda de órdenes de abajo (640 de 720): esos 80 px de CSS
 // se convierten en la franja negra donde va el subtítulo. Así el subtítulo no se come
 // la interfaz y —lo que importa— no hay que encoger la imagen para hacerle sitio.
-const ALTO_UTIL = 640;
+// 588 y no 640 (11-sep-2026): la franja de abajo lleva DOS subtítulos, español e
+// inglés (Jorge: «subtítulos en inglés en la parte inferior»), y necesita ~200 px.
+// Se graba 52 px de CSS menos por abajo en vez de encoger la imagen: la interfaz
+// sale al mismo tamaño y nítida. 588 × 1.5 = 882 px de imagen + 198 de franja.
+const ALTO_UTIL = 588;
+const H_OUT = Math.round(ALTO_UTIL * 1.5);
 const ZW = 960, ZH = 480;                // primer plano en CSS; ×2 = 1920×960 NATIVOS
 
 const BASE = "/hekatan-struct-lineal/";
@@ -64,7 +69,8 @@ const srv = createServer((req, res) => {
   res.writeHead(200, { "content-type": MIME[extname(f)] || "application/octet-stream" });
   res.end(readFileSync(f));
 });
-await new Promise((r) => srv.listen(4780, r));
+const PUERTO = Number(process.env.HK_PUERTO || 4780);
+await new Promise((r) => srv.listen(PUERTO, r));
 
 const nav = await puppeteer.launch({ headless: "new",
   args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
@@ -73,11 +79,23 @@ const pag = await nav.newPage();
 await pag.setViewport({ width: ANCHO, height: ALTO, deviceScaleFactor: 2 });
 const avisos = [];
 pag.on("pageerror", (e) => avisos.push("pageerror: " + e.message.slice(0, 160)));
+// Un alert() (p. ej. «exportado») deja la página parada hasta que alguien lo cierre.
+let ultimoDialogo = null;
+pag.on("dialog", (d) => { ultimoDialogo = d.message(); avisos.push("dialogo: " + d.message().slice(0, 120)); d.accept().catch(() => {}); });
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 // `cap.ruta` deja abrir cualquier página del deploy — la PORTADA, por ejemplo, que es
 // donde se elige con qué trabajar y no tiene visor 3D que esperar.
 const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
-await pag.goto("http://localhost:4780" + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+// ⚠️ A veces la primera carga sale «net::ERR_ABORTED» (la página se redirige a sí
+// misma al arrancar, sobre todo con la máquina cargada). No es un fallo: se sigue
+// esperando al visor.
+try {
+  await pag.goto("http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+} catch (e) {
+  if (!/ERR_ABORTED/.test(String(e))) throw e;
+  console.log("  (carga abortada y rehecha: " + String(e).slice(0, 60) + ")");
+  await espera(3000);
+}
 if (!cap.ruta || /workspace/.test(cap.ruta))
   await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
 await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
@@ -88,7 +106,12 @@ await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
 // etiqueta los tapa («Pórtico 3D» salía debajo de «X=4.50 Y=39.50»). Se ocultan.
 await pag.addStyleTag({ content:
   // (y la entrada dinámica #hk-dyn, «Designe objetos…», que también sigue al ratón)
-  "#hk-coord-readout, #hk-coord-fixed, #hk-dyn { display:none !important }" });
+  "#hk-coord-readout, #hk-coord-fixed, #hk-dyn { display:none !important }" +
+  // Se graban 588 de los 720 px (abajo va la franja de dos subtítulos): las últimas
+  // filas de cada panel quedaban fuera del cuadro aunque el panel bajara del todo
+  // («Ex lateral» del pórtico). Un margen al final deja subirlas. No cambia nada de
+  // lo que el usuario puede hacer: solo añade hueco para desplazar.
+  "#hk-pane-host, #settings { padding-bottom: 72px !important; box-sizing: border-box !important }" });
 
 // ── La capa que se pinta ENCIMA de la app ───────────────────────────────────
 // Cursor, cuadro y nota. El ratón de verdad no sale en las capturas, y sin cuadro no
@@ -133,6 +156,22 @@ await pag.evaluate(() => {
     else { x = Math.max(lim.x + 6, Math.min(lim.x + lim.w - n.width - 6, r.x));
            y = r.y + r.h + 16 + n.height < lim.y + lim.h ? r.y + r.h + 16 : r.y - n.height - 16; }
     nota.style.left = x + "px"; nota.style.top = y + "px";
+  };
+});
+
+// ── Las DESCARGAS: se capturan para enseñar el archivo ──────────────────────
+// Exportar (.e2k, .s2k, .f2k) crea un <a download> con un blob y lo pulsa. En el vídeo
+// eso no se ve: no hay barra de descargas. Se intercepta el clic, se lee el blob y el
+// motor enseña el principio del archivo (api.archivo) — lo que el usuario abriría.
+await pag.evaluate(() => {
+  const orig = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    if (this.download && /^blob:/.test(this.href)) {
+      const nombre = this.download;
+      fetch(this.href).then((r) => r.text()).then((texto) => { window.__tutDescarga = { nombre, texto }; });
+      return;
+    }
+    return orig.call(this);
   };
 });
 
@@ -197,6 +236,9 @@ const rect = (que, texto) => pag.evaluate((q) => {
         filas.find((x) => x.offsetParent !== null) || filas[0];
   }
   if (!e) return null;
+  // Primero, que el navegador lo traiga al centro de su panel (mueve todos los
+  // contenedores que haga falta). El bucle de abajo queda para lo que no se mueva así.
+  if (q.q !== "sel") { try { e.scrollIntoView({ block: "center", inline: "nearest" }); } catch {} }
   // Los paneles llevan más mandos de los que caben. Sin traerlo a la vista, medir un
   // mando que está por debajo del corte daba un rectángulo fuera de pantalla: el
   // recorte iba a parar a un trozo negro y el paso se perdía («separación X (m)»).
@@ -385,18 +427,170 @@ const api = {
     await espera(ms);
     return true;
   },
-  /** Cambia un parámetro; el cursor se para en su fila para que se vea cuál es. */
+  /**
+   * Enseña el archivo que se acaba de exportar: una ventana con su nombre, su tamaño y
+   * sus primeras líneas, al lado derecho. `marcas` resalta las líneas que contienen
+   * esas palabras (p. ej. ["JOINT", "FRAME"]).
+   */
+  archivo: async (nota, { lineas = 18, desde = 0, marcas = [], buscar = null } = {}) => {
+    for (let i = 0; i < 30 && !(await pag.evaluate(() => !!window.__tutDescarga)); i++) await espera(200);
+    const info = await pag.evaluate((q) => {
+      const d = window.__tutDescarga;
+      if (!d) return null;
+      const todas = d.texto.split(/\r?\n/);
+      if (q.buscar) { const k = todas.findIndex((l) => l.includes(q.buscar)); if (k > 0) q.desde = Math.max(0, k - 1); }
+      const ver = todas.slice(q.desde, q.desde + q.lineas);
+      let w = document.getElementById("hk-tut-archivo");
+      if (!w) {
+        w = document.createElement("div"); w.id = "hk-tut-archivo";
+        w.style.cssText = "position:fixed;right:18px;top:64px;width:600px;z-index:2147483646;" +
+          "background:#0b1018;border:1px solid #22d3ee;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.7);" +
+          "font:12px Consolas,monospace;color:#cfe3ee;overflow:hidden";
+        document.body.appendChild(w);
+      }
+      const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      w.innerHTML = '<div style="padding:8px 12px;background:#12202c;border-bottom:1px solid #22d3ee;' +
+        'font:600 14px Segoe UI,system-ui,sans-serif;color:#e8f6fb">📄 ' + esc(d.nombre) +
+        '<span style="float:right;color:#8fb3c6;font-weight:400">' + todas.length + " líneas · " +
+        (d.texto.length / 1024).toFixed(1) + " KB</span></div>" +
+        '<pre style="margin:0;padding:8px 12px;white-space:pre;overflow:hidden;line-height:17px">' +
+        ver.map((l) => {
+          const m = q.marcas.some((k) => l.includes(k));
+          return '<span style="' + (m ? "color:#ffd166;font-weight:700" : "") + '">' + esc(l.slice(0, 78)) + "</span>";
+        }).join("\n") + "</pre>";
+      return { nombre: d.nombre, lineas: todas.length, kb: +(d.texto.length / 1024).toFixed(1), texto: d.texto };
+    }, { lineas, desde, marcas, buscar });
+    if (!info) { console.log("  x no se capturo ninguna descarga"); return null; }
+    if (nota) await pag.evaluate((n) => {
+      const r = document.getElementById("hk-tut-archivo").getBoundingClientRect();
+      window.__tutCaja({ x: r.left, y: r.top, w: r.width, h: r.height }, n,
+        { x: 0, y: 0, w: innerWidth, h: 640 });
+    }, nota);
+    await foto(3);
+    return info;
+  },
+  /**
+   * PORTADA: «Bienvenidos a Hekatan Struct» — el logo con el nombre y de qué trata el
+   * capítulo, sobre la app ya abierta. Dura lo que dure su frase.
+   */
+  portada: async (titulo, capitulo, n = 14) => {
+    await pag.evaluate((q) => {
+      const w = document.createElement("div"); w.id = "hk-tut-portada";
+      w.style.cssText = "position:fixed;inset:0;z-index:2147483644;background:radial-gradient(ellipse at 50% 40%,#16202e 0%,#070a10 75%);" +
+        "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;font-family:'Segoe UI',system-ui,sans-serif";
+      w.innerHTML = '<img src="' + q.logo + '" style="height:92px">' +
+        '<div style="color:#e6c463;font:600 20px Segoe UI,system-ui,sans-serif;letter-spacing:3px;text-transform:uppercase">' + q.cap + "</div>" +
+        '<div style="color:#f2f5fa;font:700 40px Segoe UI,system-ui,sans-serif;text-align:center;max-width:1000px;line-height:1.2">' + q.tit + "</div>";
+      document.body.appendChild(w);
+    }, { tit: titulo, cap: capitulo, logo: BASE + "img/hekatan-lockup.png" });
+    await espera(600);
+    await foto(n);
+    await pag.evaluate(() => document.getElementById("hk-tut-portada")?.remove());
+    await foto(1);
+  },
+  /**
+   * El AVISO (alert) que la app acaba de dar. El navegador sin pantalla lo acepta solo
+   * y no sale en la foto; la persona sí lo ve y pulsa «Aceptar». Se dibuja como el de
+   * Chrome, el cursor va al botón y lo pulsa.
+   */
+  dialogo: async (quieto = 6) => {
+    for (let i = 0; i < 15 && !ultimoDialogo; i++) await espera(200);
+    if (!ultimoDialogo) { console.log("  x no hubo aviso"); return null; }
+    const msg = ultimoDialogo; ultimoDialogo = null;
+    const b = await pag.evaluate((m) => {
+      const w = document.createElement("div"); w.id = "hk-tut-alert";
+      w.style.cssText = "position:fixed;left:50%;top:22px;transform:translateX(-50%);width:440px;z-index:2147483646;" +
+        "background:#2b2b2b;color:#e8e8e8;border-radius:8px;box-shadow:0 10px 36px rgba(0,0,0,.75);" +
+        "font:13px 'Segoe UI',system-ui,sans-serif;padding:18px 20px 14px";
+      const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      w.innerHTML = '<div style="font-weight:600;margin-bottom:10px">Este sitio dice</div>' +
+        '<div style="white-space:pre-wrap;line-height:1.45">' + esc(m) + "</div>" +
+        '<div style="text-align:right;margin-top:14px"><span id="hk-tut-alert-ok" style="display:inline-block;' +
+        'background:#8ab4f8;color:#202124;border-radius:16px;padding:6px 20px;font-weight:600">Aceptar</span></div>';
+      document.body.appendChild(w);
+      const r = document.getElementById("hk-tut-alert-ok").getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, msg);
+    await foto(quieto);
+    await raton(b.x, b.y, 10);
+    await foto(2);
+    await pag.evaluate(() => document.getElementById("hk-tut-alert")?.remove());
+    await foto(1);
+    return msg;
+  },
+  /** Quita la ventana del archivo y vacía la descarga capturada. */
+  sinArchivo: async () => {
+    await pag.evaluate(() => { document.getElementById("hk-tut-archivo")?.remove(); window.__tutDescarga = null; window.__tutSinCaja(); });
+  },
+  /**
+   * Cambia un parámetro COMO LO HARÍA UNA PERSONA: el cursor va a la casilla del
+   * número, clic, se borra, se escribe el valor y Enter. Antes el valor se ponía por
+   * dentro (`__hekatanSetParam`) con el cursor quieto encima: Jorge — «tiene que ser
+   * realista, usando el clic del mouse».
+   */
   param: async (etiqueta, clave, valor, ms = 3000) => {
     const r = await rect("fila", etiqueta);
-    if (r) {
-      await raton(r.x + r.w - 30, r.y + r.h / 2);
-      await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
-      await foto(2);
+    const caja = r && await pag.evaluate((q) => {
+      const filas = [...document.querySelectorAll(".tp-lblv")]
+        .filter((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q) && x.offsetParent !== null);
+      const f = filas.find((x) => x.closest("#hk-pane-host")) || filas[0];
+      const i = f && [...f.querySelectorAll("input")].filter((x) => x.type !== "checkbox" && x.offsetParent !== null).pop();
+      if (!i) return null;
+      document.querySelectorAll("#hk-tut-num").forEach((x) => x.removeAttribute("id"));
+      i.id = "hk-tut-num";
+      const b = i.getBoundingClientRect();
+      return { x: b.left, y: b.top, w: b.width, h: b.height };
+    }, etiqueta);
+    if (!caja) {
+      console.log("  x sin casilla de numero: " + etiqueta + " (se pone por dentro)");
+      await pag.evaluate((q) => window.__hekatanSetParam(q.c, q.v), { c: clave, v: valor });
+      await espera(ms); await foto(3);
+      return false;
     }
-    await pag.evaluate((q) => window.__hekatanSetParam(q.c, q.v), { c: clave, v: valor });
+    await raton(caja.x + caja.w / 2, caja.y + caja.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r: caja, l: limite() });
+    await foto(2);
+    await pag.click("#hk-tut-num", { clickCount: 3 });
+    await pag.keyboard.down("Control"); await pag.keyboard.press("KeyA"); await pag.keyboard.up("Control");
+    await foto(1);
+    for (const c of String(valor)) { await pag.keyboard.type(c); await espera(90); await foto(1); }
+    await pag.keyboard.press("Enter");
     await espera(ms);
+    await pag.evaluate(() => window.__tutSinCaja());
     await foto(3);
-    return !!r;
+    return true;
+  },
+  /** Clic en la CASILLA de una fila (encender/apagar), con el cursor a la vista. */
+  casilla: async (etiqueta, ms = 1200) => {
+    // primero la fila a la vista (desplaza su panel si hace falta), luego su casilla
+    if (!(await rect("fila", etiqueta))) { console.log("  x no se ve la fila: " + etiqueta); return false; }
+    const r = await pag.evaluate((q) => {
+      const filas = [...document.querySelectorAll(".tp-lblv")]
+        .filter((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q) && x.offsetParent !== null);
+      const f = filas[0];
+      const c = f && (f.querySelector(".tp-ckbv_w") || f.querySelector("input[type=checkbox]"));
+      if (!c) return null;
+      const b = c.getBoundingClientRect();
+      return { x: b.left, y: b.top, w: Math.max(b.width, 16), h: Math.max(b.height, 16) };
+    }, etiqueta);
+    if (!r) { console.log("  x no se ve la casilla: " + etiqueta); return false; }
+    await raton(r.x + r.w / 2, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+    await foto(2);
+    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await espera(ms);
+    await pag.evaluate(() => window.__tutSinCaja());
+    await foto(2);
+    return true;
+  },
+  /**
+   * Cambia la VISTA con los botones de la app (carpeta «Vista» del panel): el cursor
+   * abre la carpeta y pulsa el botón. Nada de mover la cámara por dentro: si la vista
+   * cambia, se tiene que ver quién la cambió.
+   */
+  vista: async (boton, ms = 1200) => {
+    await api.abrir("Vista");
+    return api.pulsar(boton, ms);
   },
   /** Elige una opción de un desplegable del panel, por su texto. */
   elegir: async (etiqueta, textoOpcion, ms = 3500) => {
@@ -418,11 +612,48 @@ const api = {
       s.id = "hk-tut-select";
       // la opción IGUAL antes que la que solo la contiene: «Moment 3-3» también está
       // dentro de «Moment 3-3 (diagram)», que es otra cosa (pinta colores)
-      const o = [...s.options].find((x) => (x.textContent || "").trim() === q.t) ||
-                [...s.options].find((x) => (x.textContent || "").includes(q.t));
+      // el texto con los espacios juntados: «Cimentaciones  (4️⃣)» lleva dos
+      const n = (t) => (t || "").replace(/\s+/g, " ").trim();
+      const o = [...s.options].find((x) => n(x.textContent) === n(q.t)) ||
+                [...s.options].find((x) => n(x.textContent).includes(n(q.t)));
       return o ? o.value : null;
     }, { e: etiqueta, t: textoOpcion });
     if (val == null) { console.log("  x no se ve la opcion: " + textoOpcion); return false; }
+    // LA LISTA ABIERTA. El navegador sin pantalla no pinta la lista de un <select> al
+    // pulsarlo, y en el vídeo el valor cambiaba «solo». Se dibuja la lista con SUS
+    // opciones debajo del desplegable, el cursor baja hasta la elegida y hace clic.
+    const lista = await pag.evaluate((v) => {
+      window.__tutSinCaja();                       // el cuadro de la fila, fuera: la lista lo tapa
+      const s = document.getElementById("hk-tut-select");
+      const r = s.getBoundingClientRect();
+      const ops = [...s.options].map((o) => ({ t: (o.textContent || "").trim(), v: o.value }));
+      const alto = 22, n = ops.length;
+      const top = Math.max(40, Math.min(r.bottom + 2, 580 - Math.min(n, 14) * alto));
+      const w = document.createElement("div"); w.id = "hk-tut-lista";
+      w.style.cssText = "position:fixed;z-index:2147483645;left:" + Math.min(r.left, innerWidth - 240) + "px;top:" + top + "px;width:" +
+        Math.max(r.width, 230) + "px;overflow:hidden;background:#1b2230;" +
+        "border:1px solid #3a4a66;border-radius:4px;box-shadow:0 8px 24px rgba(0,0,0,.6);" +
+        "font:12px 'Segoe UI',system-ui,sans-serif;color:#dbe6f5";
+      const i0 = Math.max(0, ops.findIndex((o) => o.v === v) - 10);
+      ops.slice(i0, i0 + 14).forEach((o) => {
+        const d = document.createElement("div");
+        d.textContent = o.t; d.dataset.v = o.v;
+        d.style.cssText = "height:" + alto + "px;line-height:" + alto + "px;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+        w.appendChild(d);
+      });
+      document.body.appendChild(w);
+      const el = [...w.children].find((d) => d.dataset.v === v);
+      const q = el.getBoundingClientRect();
+      return { x: q.left + Math.min(q.width - 20, 80), y: q.top + q.height / 2 };
+    }, val);
+    await foto(2);
+    await raton(lista.x, lista.y, 10);
+    await pag.evaluate((v) => {
+      const el = [...document.querySelectorAll("#hk-tut-lista > div")].find((d) => d.dataset.v === v);
+      if (el) { el.style.background = "#22d3ee"; el.style.color = "#06121a"; el.style.fontWeight = "700"; }
+    }, val);
+    await foto(2);
+    await pag.evaluate(() => document.getElementById("hk-tut-lista")?.remove());
     await pag.select("#hk-tut-select", val);
     await espera(ms);
     const quedo = await pag.evaluate((e) => {
@@ -431,7 +662,8 @@ const api = {
       const s = fila && fila.querySelector("select");
       return s ? (s.options[s.selectedIndex] || {}).textContent : null;
     }, etiqueta);
-    if (!quedo || quedo.trim() !== textoOpcion && !quedo.includes(textoOpcion))
+    const nn = (t) => (t || "").replace(/\s+/g, " ").trim();
+    if (!quedo || nn(quedo) !== nn(textoOpcion) && !nn(quedo).includes(nn(textoOpcion)))
       console.log("  x el desplegable «" + etiqueta + "» quedo en «" + quedo + "», no en «" + textoOpcion + "»");
     await foto(4);
     return true;
@@ -504,7 +736,7 @@ const listado = readdirSync(OUT).filter((f) => /^f\d+\.png$/.test(f)).sort();
 const TMP = join(OUT, "_1080");
 mkdirSync(TMP, { recursive: true });
 execFileSync(FFMPEG, ["-y", "-v", "error", "-start_number", "0", "-i", join(OUT, "f%03d.png"),
-  "-vf", "scale=1920:960:flags=lanczos,pad=1920:1080:0:0:black", "-start_number", "0",
+  "-vf", "scale=1920:" + H_OUT + ":flags=lanczos,pad=1920:1080:0:0:black", "-start_number", "0",
   join(TMP, "f%03d.png")], { stdio: "pipe" });
 let escalados = 0;
 for (const f of listado) {
