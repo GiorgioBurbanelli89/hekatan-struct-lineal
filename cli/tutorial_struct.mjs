@@ -193,14 +193,18 @@ const rect = (que, texto) => pag.evaluate((q) => {
   let p = e.parentElement;
   while (p && p !== document.body) {
     if (p.scrollHeight > p.clientHeight + 4) {
+      // a media altura, lejos del borde de abajo — ahí la barra de órdenes lo tapa y
+      // además cae fuera de los 640 px que se graban
       const rp = p.getBoundingClientRect(), re = e.getBoundingClientRect();
-      if (re.top < rp.top + 6) p.scrollTop -= (rp.top + 30 - re.top);
-      else if (re.bottom > rp.bottom - 6) p.scrollTop += (re.bottom + 30 - rp.bottom);
+      if (re.top < rp.top + 40 || re.bottom > Math.min(rp.bottom, 560))
+        p.scrollTop += re.top - (rp.top + Math.min(rp.height, 540) * 0.4);
       break;
     }
     p = p.parentElement;
   }
   const r = e.getBoundingClientRect();
+  // 0×0 = está dentro de una carpeta PLEGADA: no es un sitio, es que no se ve
+  if (r.width < 2 || r.height < 2) return null;
   if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return null;
   return { x: r.left, y: r.top, w: r.width, h: r.height };
 }, { q: que, t: texto });
@@ -248,21 +252,56 @@ const api = {
    * un trozo negro (pasó con «separación X (m)»).
    */
   abrir: async (titulo, ms = 700) => {
-    const r = await pag.evaluate((t) => {
-      const c = [...document.querySelectorAll(".tp-fldv_b, .tp-fldv_t")]
-        .find((x) => (x.textContent || "").includes(t));
-      if (!c) return null;
-      const fld = c.closest(".tp-fldv");
-      const plegada = fld && !fld.classList.contains("tp-fldv-expanded");
-      const b = c.getBoundingClientRect();
-      return { x: b.left, y: b.top, w: b.width, h: b.height, plegada };
+    // ⚠️ Las carpetas van ANIDADAS («Cargas» está dentro de «Parámetros»). Abrir solo la
+    // de dentro no sirve si la de fuera sigue plegada: la fila seguía midiendo 0×0 y el
+    // recorte se iba a una esquina, con la nota diciendo «de 30 a 120 kN» sobre nada.
+    // Se abren TODAS las carpetas plegadas del camino, de fuera hacia dentro, y luego
+    // se desplaza el panel para que el título quede a la vista.
+    const plan = await pag.evaluate((t) => {
+      const tits = [...document.querySelectorAll(".tp-fldv_t")];
+      // el título que ES esa carpeta (igual) antes que el que solo la contiene
+      const tit = tits.find((x) => (x.textContent || "").trim() === t) ||
+                  tits.find((x) => (x.textContent || "").trim().endsWith(t)) ||
+                  tits.find((x) => (x.textContent || "").includes(t));
+      if (!tit) return null;
+      const cadena = [];
+      let f = tit.closest(".tp-fldv");
+      while (f) { cadena.unshift(f); f = f.parentElement && f.parentElement.closest(".tp-fldv"); }
+      cadena.forEach((c, i) => { c.dataset.tutAbrir = String(i); });
+      // ⚠️ En esta versión de Tweakpane la plegada LLEVA `tp-fldv-cpl`; no es que le
+      // falte `tp-fldv-expanded`. Con la comprobación al revés todas parecían plegadas
+      // y se pulsaban también las abiertas — que se CERRABAN.
+      return cadena.map((c) => c.classList.contains("tp-fldv-cpl"));
     }, titulo);
-    if (!r) { console.log("  x no se ve la carpeta: " + titulo); return false; }
-    await raton(r.x + r.w / 2, r.y + r.h / 2);
-    await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
-    await foto(2);
-    if (r.plegada) { await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2); await espera(ms); }
-    await pag.evaluate(() => window.__tutSinCaja());
+    if (!plan) { console.log("  x no se ve la carpeta: " + titulo); return false; }
+    for (let i = 0; i < plan.length; i++) {
+      // traer el título a la vista ANTES de ir con el ratón
+      const r = await pag.evaluate((n) => {
+        const f = document.querySelector('[data-tut-abrir="' + n + '"]');
+        const b = f && f.querySelector(":scope > .tp-fldv_b");
+        if (!b) return null;
+        const host = document.getElementById("hk-pane-host") || b.closest("[style*=overflow]");
+        if (host) {
+          // SIEMPRE a un tercio de altura, no «que asome». El panel sigue por DEBAJO de
+          // la barra de órdenes: una carpeta que asomaba en el borde de abajo quedaba
+          // tapada por la barra y el clic caía en la barra (pasó con «Cargas»).
+          const rh = host.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          host.scrollTop += rb.top - (rh.top + Math.min(rh.height, 540) * 0.3);
+        }
+        const q = b.getBoundingClientRect();
+        return { x: q.left, y: q.top, w: q.width, h: q.height };
+      }, i);
+      if (!r || !plan[i]) continue;          // ya estaba abierta: no se toca
+      await raton(r.x + r.w / 2, r.y + r.h / 2);
+      await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
+      await foto(2);
+      await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+      await espera(ms);
+    }
+    await pag.evaluate(() => {
+      document.querySelectorAll("[data-tut-abrir]").forEach((x) => x.removeAttribute("data-tut-abrir"));
+      window.__tutSinCaja();
+    });
     await foto(2);
     return true;
   },
@@ -314,6 +353,10 @@ const api = {
         .find((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q.e));
       const s = fila && fila.querySelector("select");
       if (!s) return null;
+      // ⚠️ Quitar el id al desplegable de la vez ANTERIOR. Si no, quedan dos con el
+      // mismo id y `page.select` cambia el primero —el viejo—: «Frame results» se
+      // quedaba en «none» mientras el vídeo decía que se encendía el diagrama.
+      document.querySelectorAll("#hk-tut-select").forEach((x) => x.removeAttribute("id"));
       s.id = "hk-tut-select";
       const o = [...s.options].find((x) => (x.textContent || "").includes(q.t));
       return o ? o.value : null;
@@ -321,8 +364,46 @@ const api = {
     if (val == null) { console.log("  x no se ve la opcion: " + textoOpcion); return false; }
     await pag.select("#hk-tut-select", val);
     await espera(ms);
+    const quedo = await pag.evaluate((e) => {
+      const fila = [...document.querySelectorAll(".tp-lblv")]
+        .find((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(e));
+      const s = fila && fila.querySelector("select");
+      return s ? (s.options[s.selectedIndex] || {}).textContent : null;
+    }, etiqueta);
+    if (!quedo || !quedo.includes(textoOpcion))
+      console.log("  x el desplegable «" + etiqueta + "» quedo en «" + quedo + "», no en «" + textoOpcion + "»");
     await foto(4);
     return true;
+  },
+  /**
+   * Cámara de FRENTE (alzado XZ), encuadrada al modelo. Un pórtico plano visto en
+   * isométrica no se lee: la viga y las columnas se cruzan en diagonal.
+   */
+  alzado: async () => {
+    await pag.evaluate(() => {
+      const st = window.__hekatanStates || {};
+      const N = st.nodes?.rawVal || [];
+      if (!N.length) return;
+      const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+      for (const n of N) for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], n[i]); mx[i] = Math.max(mx[i], n[i]); }
+      const c = mn.map((v, i) => (v + mx[i]) / 2);
+      const ext = Math.max(mx[0] - mn[0], mx[2] - mn[2], 1);
+      const v = document.querySelector("#viewer"), cam = v.__ctx.camera, ctl = v.__ctx.controls;
+      cam.up.set(0, 0, 1);
+      ctl.target.set(c[0], c[1], c[2]);
+      cam.position.set(c[0], c[1] - ext * 2.1, c[2] + ext * 0.12);
+      cam.lookAt(c[0], c[1], c[2]);
+      ctl.update?.(); v.__ctx.render?.();
+    });
+    await espera(400);
+  },
+  /** Ajusta un mando de «Settings» del visor (deformada, escalas…). */
+  ajuste: async (clave, valor) => {
+    await pag.evaluate((q) => {
+      const s = window.__hekatanSettings?.();
+      if (s && s[q.k]) s[q.k].val = q.v;
+    }, { k: clave, v: valor });
+    await espera(600);
   },
 };
 
