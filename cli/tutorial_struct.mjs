@@ -82,6 +82,13 @@ if (!cap.ruta || /workspace/.test(cap.ruta))
   await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
 await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
 
+// ── Lo que en un tutorial ESTORBA ────────────────────────────────────────────
+// La etiqueta «X=… Y=… Z=…» y la cruz roja siguen al ratón por el lienzo: dibujando
+// sirven, pero en el vídeo el cursor pasa por encima de los botones del panel y la
+// etiqueta los tapa («Pórtico 3D» salía debajo de «X=4.50 Y=39.50»). Se ocultan.
+await pag.addStyleTag({ content:
+  "#hk-coord-readout, #hk-coord-fixed { display:none !important }" });
+
 // ── La capa que se pinta ENCIMA de la app ───────────────────────────────────
 // Cursor, cuadro y nota. El ratón de verdad no sale en las capturas, y sin cuadro no
 // se sabe de qué mando se está hablando: era lo que Jorge pedía («resaltando o con
@@ -167,6 +174,11 @@ const rect = (que, texto) => pag.evaluate((q) => {
   let e = null;
   if (q.q === "sel") {
     e = [...document.querySelectorAll(q.t)].filter((x) => x.offsetParent !== null)[0];
+  } else if (q.q === "carpeta") {
+    // el TÍTULO de una carpeta del panel («¿Con qué vas a trabajar?», «Nuevo modelo»)
+    e = [...document.querySelectorAll(".tp-fldv_b, .tp-fldv_t")]
+      .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t))[0];
+    if (e && e.classList.contains("tp-fldv_t")) e = e.closest(".tp-fldv_b") || e;
   } else if (q.q === "boton") {
     e = [...document.querySelectorAll("button, .tp-btnv_b, a.card")]
       .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t))[0];
@@ -264,8 +276,8 @@ const api = {
     return true;
   },
   /** Va al botón y lo pulsa, con el cursor y el cuadro a la vista. */
-  pulsar: async (texto, ms = 900) => {
-    const r = await rect("boton", texto);
+  pulsar: async (texto, ms = 900, que = "boton") => {
+    const r = await rect(que, texto);
     if (!r) { console.log("  x no se ve el boton: " + texto); return false; }
     await raton(r.x + r.w / 2, r.y + r.h / 2);
     await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
