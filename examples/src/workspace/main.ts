@@ -5486,6 +5486,16 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
             + `${model.elements.length} elementos, ${nSec} secciones, `
             + `${(model.nodeInputs?.supports as Map<number, boolean[]>)?.size ?? 0} apoyos. `
             + `Se muestra en «Importar CSI» con SUS datos.`);
+          // ⚠️ Cambiar la URL RECARGA la página y la variable global se pierde: el
+          // «Importar E2K» de esta carpeta abría «Importar CSI» VACÍO (0 nudos; lo
+          // cazó ctl_importar_csi.mjs, 11-sep-2026). Viaja en sessionStorage, que
+          // sobrevive a la navegación de la misma pestaña, y se recoge al arrancar.
+          try {
+            sessionStorage.setItem("__hekatan_modelo_importado__",
+              JSON.stringify((window as any).__hekatanImportedModel));
+          } catch (e: any) {
+            console.warn("[Importar E2K] no cabe en sessionStorage:", e?.message ?? e);
+          }
           const u = new URL(window.location.href);
           u.searchParams.set("t", "csi-importer");
           window.location.href = u.toString();
@@ -7761,6 +7771,17 @@ modalAnimator = createModalAnimator({
 // `__hekatan_pending_import__` y navega a ?t=new-blank. Acá lo leemos
 // ANTES de que cargue new-blank y populamos los globals que su `build()`
 // consume.
+// El .e2k que «Importar E2K» (carpeta ETABS) dejó antes de recargar: ver su handler.
+try {
+  const imp = sessionStorage.getItem("__hekatan_modelo_importado__");
+  if (imp) {
+    (window as any).__hekatanImportedModel = JSON.parse(imp);
+    sessionStorage.removeItem("__hekatan_modelo_importado__");
+    console.log(`[Importar E2K] modelo recuperado: ${(window as any).__hekatanImportedModel?.archivo}`);
+  }
+} catch (e: any) {
+  console.warn("[Importar E2K] no se pudo recuperar el modelo:", e?.message ?? e);
+}
 try {
   const pending = localStorage.getItem("__hekatan_pending_import__");
   if (pending) {
