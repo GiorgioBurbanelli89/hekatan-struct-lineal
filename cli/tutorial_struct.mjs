@@ -358,7 +358,10 @@ const api = {
       // quedaba en «none» mientras el vídeo decía que se encendía el diagrama.
       document.querySelectorAll("#hk-tut-select").forEach((x) => x.removeAttribute("id"));
       s.id = "hk-tut-select";
-      const o = [...s.options].find((x) => (x.textContent || "").includes(q.t));
+      // la opción IGUAL antes que la que solo la contiene: «Moment 3-3» también está
+      // dentro de «Moment 3-3 (diagram)», que es otra cosa (pinta colores)
+      const o = [...s.options].find((x) => (x.textContent || "").trim() === q.t) ||
+                [...s.options].find((x) => (x.textContent || "").includes(q.t));
       return o ? o.value : null;
     }, { e: etiqueta, t: textoOpcion });
     if (val == null) { console.log("  x no se ve la opcion: " + textoOpcion); return false; }
@@ -370,7 +373,7 @@ const api = {
       const s = fila && fila.querySelector("select");
       return s ? (s.options[s.selectedIndex] || {}).textContent : null;
     }, etiqueta);
-    if (!quedo || !quedo.includes(textoOpcion))
+    if (!quedo || quedo.trim() !== textoOpcion && !quedo.includes(textoOpcion))
       console.log("  x el desplegable «" + etiqueta + "» quedo en «" + quedo + "», no en «" + textoOpcion + "»");
     await foto(4);
     return true;
@@ -397,6 +400,14 @@ const api = {
     });
     await espera(400);
   },
+  /** El mayor |valor| del resultado de barras que está puesto (para decirlo en la voz). */
+  maximo: async (clave = "bendingsZ") => pag.evaluate((k) => {
+    const R = window.__hekatanStates?.analyzeOutputs?.rawVal?.[k];
+    let m = 0;
+    if (R) for (const v of (R instanceof Map ? R.values() : Object.values(R)))
+      for (const x of v || []) m = Math.max(m, Math.abs(+x || 0));
+    return +m.toFixed(2);
+  }, clave),
   /** Ajusta un mando de «Settings» del visor (deformada, escalas…). */
   ajuste: async (clave, valor) => {
     await pag.evaluate((q) => {

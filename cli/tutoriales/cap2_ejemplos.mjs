@@ -44,9 +44,10 @@ export const pasos = [
     rotulo: "3 · Para ver lo que cambia: el diagrama de momentos",
     hacer: async (a) => {
       await a.cerca("fila", "Frame results");
-      await a.marcar("fila", "Frame results", "Momento 3-3: el diagrama que se va a mover con cada mando.");
+      await a.marcar("fila", "Frame results", "Momento 3-3: el diagrama, con su valor en cada tramo.");
       await a.quieto(4, 300);
-      await a.elegir("Frame results", "Moment 3-3 (diagram)", 5000);
+      await a.elegir("Frame results", "Moment 3-3", 5000);
+      console.log("    max M tras encender:", await a.maximo());
       await a.alzado();
       await a.sinCuadro(); await a.general(); await a.quieto(8, 300);
     },
@@ -61,6 +62,7 @@ export const pasos = [
       await a.marcar("carpeta", "Cargas", "Cargas: la lateral en el tope, de 30 a 120 kN.");
       await a.quieto(4, 300);
       await a.param("Ex lateral", "Ex", 120, 5000);
+      console.log("    max M tras Ex 120:", await a.maximo());
       await a.alzado();
       await a.sinCuadro(); await a.general(); await a.quieto(9, 300);
     },
@@ -73,6 +75,7 @@ export const pasos = [
       await a.marcar("fila", "Ancho vano", "De 5 a 9 metros: el pórtico se rehace, y el diagrama con él.");
       await a.quieto(4, 300);
       await a.param("Ancho vano", "width", 9, 5000);
+      console.log("    max M tras vano 9:", await a.maximo());
       await a.alzado();
       await a.sinCuadro(); await a.general(); await a.quieto(9, 300);
     },
@@ -85,12 +88,21 @@ export const pasos = [
       await a.marcar("fila", "h viga", "De 50 a 80 cm de canto: la viga toma más momento que las columnas.");
       await a.quieto(4, 300);
       await a.param("h viga", "vigaH", 0.8, 5000);
+      console.log("    max M tras h viga 0.8:", await a.maximo());
       await a.alzado();
       await a.sinCuadro(); await a.general(); await a.quieto(9, 300);
     },
   },
   {
-    rotulo: "7 · Y todo se recalcula solo",
-    hacer: async (a) => { await a.general(); await a.quieto(8, 300); },
+    rotulo: "7 · Y el mismo diagrama, en 2D",
+    hacer: async (a) => {
+      await a.general();
+      await a.cerca("boton", "Ver diagrama en 2D");
+      await a.marcar("boton", "Ver diagrama en 2D", "El alzado, plano, con solo el diagrama y sus valores.");
+      await a.quieto(4, 300);
+      await a.sinCuadro();
+      await a.pulsar("Ver diagrama en 2D", 2500);
+      await a.general(); await a.quieto(16, 300);
+    },
   },
 ];
