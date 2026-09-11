@@ -1,11 +1,12 @@
 import "./modulepreload-polyfill-B5Qt9EMX.js";
-import { p as o, __tla as __tla_0 } from "./portico2D-y6YSRc6n.js";
+import { p as o, __tla as __tla_0 } from "./portico2D-Dnwl8Aq5.js";
 import { r, __tla as __tla_1 } from "./runExampleStandalone-BgL0W0Bd.js";
 import "./analyze-DgLgRmKg.js";
 import "./pureFunctionsAny.generated-DeJSBP3k.js";
 import { __tla as __tla_2 } from "./didacticCpp-CnEP9H1T.js";
 import { __tla as __tla_3 } from "./deform-CK_Uh0DH.js";
 import "./preload-helper-V2P8TQsQ.js";
+import "./cargasPorCaso-B_GZ_-rO.js";
 import "./theme-Dxpmbnyd.js";
 import "./tweakpane-BXg6ZhiP.js";
 import "./getViewer-CYaSHj--.js";
