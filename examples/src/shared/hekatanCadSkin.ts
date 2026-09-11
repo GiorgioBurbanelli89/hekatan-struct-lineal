@@ -165,7 +165,7 @@ body{ background: var(--hk-chrome); }
    restaurar» salia cortado por la mitad y parecia que el panel no llegaba. */
 body.hk-cad #settings,
 body.hk-cad #hk-pane-host{
-  top:30px !important; bottom:66px !important; max-height:none !important;
+  top:30px !important; bottom:var(--hk-cmd-hueco, 66px) !important; max-height:none !important;
   border-radius:0 !important; box-shadow:none !important;
 }
 body.hk-cad #settings{

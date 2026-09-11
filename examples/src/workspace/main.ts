@@ -6762,6 +6762,17 @@ try {
   fila.append(bHist, label, ops, cmdWrap);
   bar.append(hist, fila);
   document.body.appendChild(bar);
+  // Las paletas acaban donde EMPIEZA esta ventana, midiéndola: desde que lleva
+  // historial encima del prompt mide ~95 px, no los 40 del `bottom:66px` fijo, y en
+  // 1280×720 tapaba la última carpeta del panel derecho («Cargas» del pórtico 2D no
+  // se podía pulsar: el clic caía en el historial). La piel CAD lee --hk-cmd-hueco.
+  const medirHueco = () => {
+    const r = bar.getBoundingClientRect();
+    if (r.height > 0) document.documentElement.style.setProperty("--hk-cmd-hueco", Math.ceil(window.innerHeight - r.top) + "px");
+  };
+  new ResizeObserver(medirHueco).observe(bar);
+  window.addEventListener("resize", medirHueco);
+  medirHueco();
 
   // ── Historial ────────────────────────────────────────────────────────────
   let histAbierto = false;

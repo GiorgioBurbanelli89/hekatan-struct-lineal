@@ -188,8 +188,13 @@ const rect = (que, texto) => pag.evaluate((q) => {
     e = [...document.querySelectorAll("button, .tp-btnv_b, a.card")]
       .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t))[0];
   } else {
-    e = [...document.querySelectorAll(".tp-lblv")]
-      .find((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q.t));
+    // ⚠️ La fila VISIBLE. Al cambiar de ejemplo desde el menú queda un panel viejo,
+    // oculto, con las mismas etiquetas: cogiendo la primera se medía esa (0×0) y la
+    // fila «Ex lateral» salía «no se ve» aunque estaba ahí.
+    const filas = [...document.querySelectorAll(".tp-lblv")]
+      .filter((x) => ((x.querySelector(".tp-lblv_l") || {}).textContent || "").includes(q.t));
+    e = filas.find((x) => x.offsetParent !== null && x.closest("#hk-pane-host")) ||
+        filas.find((x) => x.offsetParent !== null) || filas[0];
   }
   if (!e) return null;
   // Los paneles llevan más mandos de los que caben. Sin traerlo a la vista, medir un
@@ -211,8 +216,10 @@ const rect = (que, texto) => pag.evaluate((q) => {
   // 0×0 = está dentro de una carpeta PLEGADA: no es un sitio, es que no se ve
   if (r.width < 2 || r.height < 2) return null;
   if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return null;
+  // por debajo de lo que se graba (la banda de órdenes): el cuadro saldría cortado
+  if (r.bottom > q.lim) return null;
   return { x: r.left, y: r.top, w: r.width, h: r.height };
-}, { q: que, t: texto });
+}, { q: que, t: texto, lim: ALTO_UTIL });
 
 const api = {
   pag, espera, foto,
@@ -263,7 +270,8 @@ const api = {
     // Se abren TODAS las carpetas plegadas del camino, de fuera hacia dentro, y luego
     // se desplaza el panel para que el título quede a la vista.
     const plan = await pag.evaluate((t) => {
-      const tits = [...document.querySelectorAll(".tp-fldv_t")];
+      // los títulos VISIBLES (un panel viejo oculto repite los mismos nombres)
+      const tits = [...document.querySelectorAll(".tp-fldv_t")].filter((x) => x.offsetParent !== null);
       // el título que ES esa carpeta (igual) antes que el que solo la contiene
       const tit = tits.find((x) => (x.textContent || "").trim() === t) ||
                   tits.find((x) => (x.textContent || "").trim().endsWith(t)) ||
