@@ -74,10 +74,13 @@ await pag.setViewport({ width: ANCHO, height: ALTO, deviceScaleFactor: 2 });
 const avisos = [];
 pag.on("pageerror", (e) => avisos.push("pageerror: " + e.message.slice(0, 160)));
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-await pag.goto("http://localhost:4780" + BASE + "workspace/?t=" + (cap.ejemplo || "plantillas"),
-  { waitUntil: "networkidle2", timeout: 180000 });
-await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
-await espera(7000);
+// `cap.ruta` deja abrir cualquier página del deploy — la PORTADA, por ejemplo, que es
+// donde se elige con qué trabajar y no tiene visor 3D que esperar.
+const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
+await pag.goto("http://localhost:4780" + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+if (!cap.ruta || /workspace/.test(cap.ruta))
+  await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
+await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
 
 // ── La capa que se pinta ENCIMA de la app ───────────────────────────────────
 // Cursor, cuadro y nota. El ratón de verdad no sale en las capturas, y sin cuadro no
@@ -152,11 +155,20 @@ const raton = async (x, y, pasos = 12) => {
   await pag.evaluate((q) => { window.__tutXY = q; }, { x, y });
   await foto(2);
 };
-/** Rectángulo (CSS) de un control buscado por su texto o por su etiqueta. */
+/**
+ * Rectángulo (CSS) de un control.
+ *
+ *   "boton"  por el texto del botón
+ *   "fila"   por la etiqueta de la fila del panel
+ *   "sel"    por un selector CSS — hace falta para la PORTADA, que no es un panel de
+ *            mandos sino tres tarjetas: «Modelo nuevo», «Modelo existente», «Ejemplos».
+ */
 const rect = (que, texto) => pag.evaluate((q) => {
   let e = null;
-  if (q.q === "boton") {
-    e = [...document.querySelectorAll("button, .tp-btnv_b")]
+  if (q.q === "sel") {
+    e = [...document.querySelectorAll(q.t)].filter((x) => x.offsetParent !== null)[0];
+  } else if (q.q === "boton") {
+    e = [...document.querySelectorAll("button, .tp-btnv_b, a.card")]
       .filter((x) => x.offsetParent !== null && (x.textContent || "").includes(q.t))[0];
   } else {
     e = [...document.querySelectorAll(".tp-lblv")]
@@ -198,6 +210,14 @@ const api = {
              y: Math.max(0, Math.min(ALTO_UTIL - ZH, Math.round(r.y + r.h / 2 - ZH / 2))) };
     return true;
   },
+  /** Primer plano por selector CSS (tarjetas de la portada, cabeceras, lo que sea). */
+  cercaSel: async (sel) => {
+    const r = await rect("sel", sel);
+    if (!r) { console.log("  x no se ve: " + sel); return false; }
+    zona = { x: Math.max(0, Math.min(ANCHO - ZW, Math.round(r.x + r.w / 2 - ZW / 2))),
+             y: Math.max(0, Math.min(ALTO_UTIL - ZH, Math.round(r.y + r.h / 2 - ZH / 2))) };
+    return true;
+  },
   /** Cuadro + nota sobre un mando (y el cursor va hasta él). */
   marcar: async (que, texto, nota) => {
     const r = await rect(que, texto);
@@ -232,6 +252,15 @@ const api = {
     if (r.plegada) { await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2); await espera(ms); }
     await pag.evaluate(() => window.__tutSinCaja());
     await foto(2);
+    return true;
+  },
+  /** Cuadro + nota por selector CSS. */
+  marcarSel: async (sel, nota) => {
+    const r = await rect("sel", sel);
+    if (!r) { console.log("  x no se ve: " + sel); return false; }
+    await raton(r.x + r.w - 22, r.y + r.h / 2);
+    await pag.evaluate((q) => window.__tutCaja(q.r, q.n, q.l), { r, n: nota || "", l: limite() });
+    await foto(3);
     return true;
   },
   /** Va al botón y lo pulsa, con el cursor y el cuadro a la vista. */
