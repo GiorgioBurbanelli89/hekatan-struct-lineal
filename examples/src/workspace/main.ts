@@ -4362,38 +4362,35 @@ solve`;
       try { rebuild(); } catch (e) { console.error("[CSI Importer] rebuild error:", e); }
       try { autoFitCamera(); } catch {}
     };
-    const triggerImport = (kind: "f2k" | "e2k" | "s2k") => {
+    const triggerImportF2k = () => {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = `.${kind},.txt`;
+      input.accept = ".f2k,.txt";
       input.onchange = async (ev: any) => {
         const file = ev.target.files?.[0];
         if (!file) return;
         try {
           const text = await file.text();
-          if (kind === "f2k") {
-            const { parseEdificioCimentacionF2k } = await import("../shared/f2kCimentacionImporter");
-            const data = parseEdificioCimentacionF2k(text);
-            (window as any).__hekatanImportedCim = data;
-            console.log("[CSI Importer] F2K parseado:", data);
-            const wMsg = data._warnings && data._warnings.length
-              ? `\n\n⚠ Warnings:\n${data._warnings.map((w: string) => "• " + w).join("\n")}`
-              : "";
-            alert(`✅ F2K cargado:\n• ${data.zapatas.length} zapatas\n• ${data.vigasAmarre?.length ?? 0} vigas\n• ks = ${Math.round(data.ks_kNm3)} kN/m³${wMsg}`);
-            forceRebuildAndFit();
-          } else {
-            alert(`Importador ${kind.toUpperCase()} aún no implementado. Por ahora solo F2K (SAFE).`);
-          }
+          const { parseEdificioCimentacionF2k } = await import("../shared/f2kCimentacionImporter");
+          const data = parseEdificioCimentacionF2k(text);
+          (window as any).__hekatanImportedCim = data;
+          console.log("[CSI Importer] F2K parseado:", data);
+          const wMsg = data._warnings && data._warnings.length
+            ? `\n\n⚠ Warnings:\n${data._warnings.map((w: string) => "• " + w).join("\n")}`
+            : "";
+          alert(`✅ F2K cargado:\n• ${data.zapatas.length} zapatas\n• ${data.vigasAmarre?.length ?? 0} vigas\n• ks = ${Math.round(data.ks_kNm3)} kN/m³${wMsg}`);
+          forceRebuildAndFit();
         } catch (e: any) {
-          alert(`❌ Error al importar ${kind.toUpperCase()}: ${e.message}`);
+          alert(`❌ Error al importar F2K: ${e.message}`);
           console.error(e);
         }
       };
       input.click();
     };
-    fImp.addButton({ title: "📥 F2K (SAFE) — Cimentación" }).on("click", () => triggerImport("f2k"));
-    fImp.addButton({ title: "📥 E2K (ETABS) — Edificio (próximo)" }).on("click", () => triggerImport("e2k"));
-    fImp.addButton({ title: "📥 S2K (SAP2000) — Modelo (próximo)" }).on("click", () => triggerImport("s2k"));
+    fImp.addButton({ title: "📥 F2K (SAFE) — Cimentación" }).on("click", () => triggerImportF2k());
+    // E2K y S2K se importan desde las carpetas "ETABS" / "SAP2000" (botón «Importar
+    // E2K/S2K»), que usan parseE2k/parseS2k de verdad. Los botones "(próximo)" que
+    // había aquí eran tapones y confundían (Jorge, 11-sep-2026): eliminados.
     fImp.addButton({ title: "🗑 Limpiar y vaciar escena" }).on("click", () => {
       delete (window as any).__hekatanImportedCim;
       forceRebuildAndFit();
@@ -6542,7 +6539,7 @@ try {
   // (controls) y resize/MAXIMIZAR. NO los ocultamos — son parte del cursor.
   // (Mi anillo de snap #ffc400 NO tiene cruz de ejes → no se toca; ya es
   // constante por su propio fitScale.)
-  const CURSOR_TARGET_PX = 7; // radio en pantalla del marcador de referencia
+  const CURSOR_TARGET_PX = 4; // radio en pantalla del marcador de referencia (7→4: cursor más chico)
   const _hwp = new THREE.Vector3();
   const _hrt = new THREE.Vector3();
   const clampCursorMarkers = () => {
