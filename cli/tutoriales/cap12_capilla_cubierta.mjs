@@ -1,9 +1,11 @@
 /**
- * Capítulo 12 — El reto de la CAPILLA, importada BIEN. El modelo real de ETABS
- * (Capilla Analítico.EDB) se trae con `etabs-cli geom` (OAPI): geometría 3D
- * exacta, nudo a nudo. Antes, reparseando el texto e2k, salían 306 nudos con
- * 116 sueltos; ahora son los 152 nudos / 187 barras de ETABS, todo conectado a
- * los 26 apoyos. Se enseña con el cursor, que se pone ROJO al hacer clic.
+ * Capítulo 12 — La CAPILLA importada bien de ETABS, y con su CUBIERTA DE ZINC.
+ *
+ * El modelo real (Capilla Analítico.EDB) se trae con `etabs-cli geom` (OAPI):
+ * 152 nudos / 187 barras / 26 apoyos, exacto y sin nudos sueltos (antes, al
+ * reparsear el texto e2k, salían 306 con 116 sueltos). Es el esqueleto de acero.
+ * Encima va la cubierta de ZINC como losa MEMBRANA (reparte la carga a las
+ * correas), igual que en el galpón. Todo con el cursor, que se pone ROJO al clic.
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -12,7 +14,7 @@ import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CAPILLA = JSON.parse(readFileSync(join(__dirname, "capilla_model.json"), "utf8"));
 
-export const titulo = "Hekatan Struct · la capilla, importada bien";
+export const titulo = "Hekatan Struct · la capilla y su cubierta de zinc";
 export const ruta = "workspace/?t=csi-importer";
 
 const proj = async (a, wx, wy, wz = 0) => a.pag.evaluate(({ wx, wy, wz }) => {
@@ -32,7 +34,6 @@ const mover = async (a, x, y, steps = 24) => {
 };
 const setP = async (a, c, v) => { await a.pag.evaluate((q) => { try { window.__hekatanSetParam && window.__hekatanSetParam(q.c, q.v); } catch(e){} }, { c, v }); };
 
-// Abre una carpeta del panel (Tweakpane) si está plegada.
 const abrirCarpeta = async (a, titulo) => {
   await a.pag.evaluate((f) => {
     const btn = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent || "").includes(f));
@@ -45,26 +46,38 @@ const abrirCarpeta = async (a, titulo) => {
   }, titulo);
 };
 
-// CLIC visible sobre una FILA del panel: lleva el cursor, lo pone ROJO con el
-// aro (se ve el clic), y recién ahí cambia el parámetro. Es lo que pidió Jorge.
+const filaRect = async (a, texto) => a.pag.evaluate((t) => {
+  const lab = [...document.querySelectorAll(".tp-lblv_l, .tp-ckbv_l, label")].find((x) => (x.textContent || "").includes(t));
+  const row = lab ? (lab.closest(".tp-lblv, .tp-ckbv") || lab.parentElement) : null;
+  if (!row) return null;
+  row.scrollIntoView({ block: "center" });
+  const rc = row.getBoundingClientRect();
+  return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
+}, texto);
+
+// CLIC visible sobre una fila: cursor ROJO + aro, y luego cambia el parámetro.
 const clicFila = async (a, texto, clave, valor, nota) => {
-  const r = await a.pag.evaluate((t) => {
-    const lab = [...document.querySelectorAll(".tp-lblv_l, .tp-ckbv_l, label")].find((x) => (x.textContent || "").includes(t));
-    const row = lab ? (lab.closest(".tp-lblv, .tp-ckbv") || lab.parentElement) : null;
-    if (!row) return null;
-    row.scrollIntoView({ block: "center" });
-    const rc = row.getBoundingClientRect();
-    return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
-  }, texto);
+  const r = await filaRect(a, texto);
   if (!r || r.w < 5) return false;
   const cx = r.x + r.w - 16, cy = r.y + r.h / 2;
   await mover(a, cx, cy, 22);
   if (nota) { await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }), { r, n: nota }); await a.quieto(4, 320); }
-  await a.pag.evaluate((q) => window.__tutClick(q.x, q.y), { x: cx, y: cy });  // cursor ROJO + aro
+  await a.pag.evaluate((q) => window.__tutClick(q.x, q.y), { x: cx, y: cy });
   await a.quieto(3, 320);
   await setP(a, clave, valor);
   await a.pag.evaluate(() => window.__tutSinCaja());
   await a.quieto(3, 320);
+  return true;
+};
+
+// Resalta una fila (flecha + recuadro) sin clic: el «dónde se elige».
+const resaltarParam = async (a, texto, nota) => {
+  const r = await filaRect(a, texto);
+  if (!r || r.w < 5) return false;
+  await mover(a, r.x + r.w - 22, r.y + r.h / 2, 22);
+  await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }), { r, n: nota });
+  await a.quieto(6, 340);
+  await a.pag.evaluate(() => window.__tutSinCaja());
   return true;
 };
 
@@ -79,9 +92,9 @@ const orbitar = async (a, dx, dy, n = 6) => {
 };
 
 export const pasos = [
-  { rotulo: "Portada", hacer: async (a) => { await a.portada("La capilla, importada bien", "Capítulo 12", 16); } },
+  { rotulo: "Portada", hacer: async (a) => { await a.portada("La capilla y su cubierta de zinc", "Capítulo 12", 16); } },
   {
-    rotulo: "1 · La traemos de ETABS con etabs-cli (geometría exacta)",
+    rotulo: "1 · La traemos de ETABS con etabs-cli (152 nudos, 187 barras)",
     hacer: async (a) => {
       await a.pag.evaluate((model) => {
         window.__hekatanImportedModel = model;
@@ -93,35 +106,37 @@ export const pasos = [
     },
   },
   {
-    rotulo: "2 · Es la capilla de verdad: 152 nudos, 187 barras",
+    rotulo: "2 · El esqueleto de acero: nave, columnas y correas",
     hacer: async (a) => {
-      await orbitar(a, 170, 30, 5);
-      await orbitar(a, -120, -20, 5);
+      await orbitar(a, 160, 25, 5);
+      await orbitar(a, -110, -20, 5);
     },
   },
   {
-    rotulo: "3 · Un clic (cursor ROJO) apaga las vigas: se ve la cubierta",
+    rotulo: "3 · Un clic (cursor ROJO): le ponemos la cubierta de zinc",
     hacer: async (a) => {
-      await abrirCarpeta(a, "Ver por tipo");
+      await abrirCarpeta(a, "Cubierta");
       await a.quieto(1, 260);
-      await clicFila(a, "Vigas", "verVigas", 0,
-        "Clic: el cursor se pone ROJO. Apagamos las «Vigas» para ver la cubierta de perfiles.");
+      await clicFila(a, "Poner cubierta", "cubierta", 1,
+        "Clic: la cubierta de ZINC como losa membrana (reparte a las correas).");
     },
   },
   {
-    rotulo: "4 · La cubierta son diagonales tubulares (72 barras)",
+    rotulo: "4 · El zinc: paños de membrana que cubren el techo",
     hacer: async (a) => {
       await a.general();
       await orbitar(a, 150, -25, 6);
     },
   },
   {
-    rotulo: "5 · Vigas de vuelta, todo conectado a los 26 apoyos",
+    rotulo: "5 · Membrana: el zinc solo trabaja en su plano (como ETABS)",
     hacer: async (a) => {
-      await clicFila(a, "Vigas", "verVigas", 1,
-        "Otro clic: vuelven las vigas. Todo llega a apoyo — nada suelto, resuelve.");
+      await abrirCarpeta(a, "Cubierta");
+      await a.quieto(1, 260);
+      await resaltarParam(a, "Formulación de la placa",
+        "Membrana = solo su plano. El zinc no da rigidez a flexión, reparte carga.");
       await a.general();
-      await orbitar(a, -180, 25, 7);
+      await orbitar(a, -170, 25, 6);
     },
   },
 ];

@@ -44,18 +44,21 @@ const COLOR: Record<string, number> = {
 };
 
 /**
- * La CUBIERTA de ETABS es una losa `MODELINGTYPE "Membrane"`: un paño que solo
- * trabaja EN SU PLANO y ata los nudos de la parte alta. Al exportar por OAPI un
- * EDB con la cubierta sin dibujar como área (o cuando el modelo llega con la
- * cubierta como pura carga), las áreas NO viajan y los tirantes/correas del
- * techo se quedan SUELTOS: no llegan a un apoyo y la matriz sale singular.
+ * La CUBIERTA de una nave/capilla de acero es una BÓVEDA (o faldón) de correas
+ * sobre arcos. ETABS pone el zinc como losa `MODELINGTYPE "Membrane"`, pero al
+ * exportar el EDB sin dibujar el área esa membrana NO viaja: el techo llega solo
+ * como barras. Aquí se reconstruye la superficie del zinc SIN inventar geometría.
  *
- * Esto recupera los paños de cubierta a partir de la propia topología de barras:
- * cada cuadrilátero CERRADO (a-b-c-d-a, las 4 barras existen) por encima de la
- * media de alturas es un paño de techo, ahí es donde ETABS pone la membrana.
- * No se inventa geometría: los 4 nudos y los 4 lados ya están en el modelo.
+ * Método (bóveda): los ARCOS son las cadenas de barras `BRACE`; se agrupan por
+ * sección (nº de nudos + centro en X), se ordenan por Y y entre arcos
+ * consecutivos se tienden paños. Cubre TODA la superficie aunque las correas no
+ * caigan en cada nudo del arco (era lo que dejaba «huecos» con el método viejo
+ * de solo cuadriláteros cerrados, que se conserva de reserva).
  */
-function detectarPanosCubierta(nodes: Node[], elements: Element[], zCorte: number): number[][] {
+function detectarPanosCubierta(nodes: Node[], elements: Element[], zCorte: number, tipos?: string[]): number[][] {
+  const loft = tipos ? panosBoveda(nodes, elements, tipos) : [];
+  if (loft.length) return loft;
+  // ── Reserva: cuadriláteros cerrados por encima de la media de alturas ──
   const N = nodes.length;
   const key = (a: number, b: number) => (a < b ? a + "_" + b : b + "_" + a);
   const edge = new Set<string>();
@@ -66,22 +69,55 @@ function detectarPanosCubierta(nodes: Node[], elements: Element[], zCorte: numbe
   const has = (a: number, b: number) => edge.has(key(a, b));
   const vistos = new Set<string>();
   const panos: number[][] = [];
-  for (let a = 0; a < N; a++) {
-    for (const b of adj[a]) {
-      if (b < a) continue;
-      for (const c of adj[b]) {
-        if (c === a) continue;
-        for (const d of adj[c]) {
-          if (d === b || d === a || !has(d, a)) continue;
-          const ns = [a, b, c, d];
-          const zm = (nodes[a][2] + nodes[b][2] + nodes[c][2] + nodes[d][2]) / 4;
-          if (zm < zCorte) continue;
-          const id = ns.slice().sort((x, y) => x - y).join("-");
-          if (vistos.has(id)) continue;
-          vistos.add(id);
-          panos.push([a, b, c, d]);   // orden de anillo (a→b→c→d→a)
-        }
-      }
+  for (let a = 0; a < N; a++) for (const b of adj[a]) { if (b < a) continue;
+    for (const c of adj[b]) { if (c === a) continue;
+      for (const d of adj[c]) { if (d === b || d === a || !has(d, a)) continue;
+        if ((nodes[a][2] + nodes[b][2] + nodes[c][2] + nodes[d][2]) / 4 < zCorte) continue;
+        const id = [a, b, c, d].slice().sort((x, y) => x - y).join("-");
+        if (vistos.has(id)) continue; vistos.add(id); panos.push([a, b, c, d]); } } }
+  return panos;
+}
+
+/** Paños de una bóveda por lofting entre arcos (cadenas de barras BRACE). */
+function panosBoveda(nodes: Node[], elements: Element[], tipos: string[]): number[][] {
+  const adj = new Map<number, number[]>();
+  elements.forEach((e, k) => { if (e.length === 2 && tipos[k] === "BRACE") {
+    (adj.get(e[0]) ?? adj.set(e[0], []).get(e[0])!).push(e[1]);
+    (adj.get(e[1]) ?? adj.set(e[1], []).get(e[1])!).push(e[0]); } });
+  if (!adj.size) return [];
+  // componentes conexas = arcos
+  const seen = new Set<number>(); const arcos: number[][] = [];
+  for (const s of adj.keys()) { if (seen.has(s)) continue;
+    const c: number[] = []; const q = [s]; seen.add(s);
+    while (q.length) { const u = q.pop()!; c.push(u); for (const v of adj.get(u)!) if (!seen.has(v)) { seen.add(v); q.push(v); } }
+    arcos.push(c); }
+  // ordenar cada arco a lo largo de la cadena, desde un extremo
+  const ordenar = (comp: number[]) => {
+    const dentro = new Set(comp);
+    const gr = (n: number) => adj.get(n)!.filter((x) => dentro.has(x));
+    let ini = comp.find((n) => gr(n).length === 1) ?? comp[0];
+    const orden = [ini]; const vis = new Set([ini]); let cur = ini;
+    for (;;) { const nx = gr(cur).find((x) => !vis.has(x)); if (nx == null) break; orden.push(nx); vis.add(nx); cur = nx; }
+    return orden.length === comp.length ? orden : comp;
+  };
+  const cad = arcos.map(ordenar);
+  const cenX = (a: number[]) => a.reduce((s, n) => s + nodes[n][0], 0) / a.length;
+  const cenY = (a: number[]) => a.reduce((s, n) => s + nodes[n][1], 0) / a.length;
+  // agrupar por sección (nº de nudos + centro X redondeado)
+  const grupos = new Map<string, number[][]>();
+  cad.forEach((a) => { const k = a.length + ":" + Math.round(cenX(a) / 4);
+    (grupos.get(k) ?? grupos.set(k, []).get(k)!).push(a); });
+  const d2 = (p: number, q: number) => (nodes[p][0]-nodes[q][0])**2 + (nodes[p][2]-nodes[q][2])**2;
+  const panos: number[][] = [];
+  for (const arcs of grupos.values()) {
+    if (arcs.length < 2) continue;
+    arcs.sort((A, B) => cenY(A) - cenY(B));
+    for (let g = 0; g < arcs.length - 1; g++) {
+      const A = arcs[g]; const B = arcs[g + 1].slice();
+      if (A.length !== B.length) continue;
+      const n = A.length;
+      if (d2(A[0], B[0]) + d2(A[n-1], B[n-1]) > d2(A[0], B[n-1]) + d2(A[n-1], B[0])) B.reverse();
+      for (let m = 0; m < n - 1; m++) panos.push([A[m], A[m+1], B[m+1], B[m]]);
     }
   }
   return panos;
@@ -120,7 +156,7 @@ export const csiImporter: ExampleDef = {
       options: { "Membrana (solo su plano)": 2, "Shell-Thin (Kirchhoff)": 1, "Shell-Thick (Mindlin)": 0 },
       folder: "🏠 Cubierta",
     },
-    tCubierta: { default: 60, min: 20, max: 300, step: 5, label: "Espesor cubierta (mm)", folder: "🏠 Cubierta" },
+    tCubierta: { default: 60, min: 0.5, max: 300, step: 0.5, label: "Espesor cubierta (mm)", folder: "🏠 Cubierta" },
   },
   computedLabels(_p, states) {
     const m: ModeloImportado | undefined = (window as any).__hekatanImportedModel;
@@ -188,10 +224,12 @@ export const csiImporter: ExampleDef = {
     // exportó como área). Los paños salen de la topología real; la formulación
     // la elige el usuario (por defecto Membrana = solo trabaja en su plano).
     let panosCubierta: number[][] = [];
-    if (p.cubierta && elements.length < 3000) {
+    if (p.cubierta && m.elements.length < 3000) {
       const zs = nodes.map((n) => n[2]);
       const zCorte = Math.min(...zs) + 0.5 * (Math.max(...zs) - Math.min(...zs));
-      panosCubierta = detectarPanosCubierta(nodes, elements, zCorte);
+      // Detecta sobre el modelo COMPLETO (m.elements/m.tipos), no el filtrado por
+      // visibilidad: si el usuario oculta las vigas, la cubierta no debe cambiar.
+      panosCubierta = detectarPanosCubierta(nodes, m.elements, zCorte, m.tipos);
       const E = 2.146e7, nu = 0.2, G = E / (2 * (1 + nu)), rho = 2.4;   // f'c=210 kg/cm²
       const tC = (p.tCubierta ?? 60) / 1000;                            // mm → m
       for (const q of panosCubierta) {
