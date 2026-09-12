@@ -683,6 +683,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   const LS = "hekatan.ribbon.plegado";
   const bPlegar = document.createElement("button");
   bPlegar.type = "button";
+  bPlegar.id = "hk-ribbon-plegar";
   bPlegar.title = "Plegar la barra (Ctrl+`)";
   bPlegar.textContent = "▴";
   bPlegar.style.cssText = "width:26px;height:26px;margin-left:4px;cursor:pointer;" +

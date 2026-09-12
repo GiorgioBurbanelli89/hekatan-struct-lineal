@@ -66,24 +66,39 @@ const GRID = () => {
 export const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada("Novedades", "Capítulo 14", 16); } },
   {
-    rotulo: "1 · Barras que forman celdas cerradas (pliego el menú de dibujo)",
+    rotulo: "1 · Barras que forman celdas cerradas (el menú abierto tapa)",
     hacer: async (a) => {
       await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo","0"); } catch(e){} });
+      // El ribbon ARRANCA ABIERTO para que se vea que tapa la escena (y luego
+      // el cursor lo pliegue a la vista, sin trampa).
+      await a.pag.evaluate(() => { try { window.__hekatanRibbonPlegar?.(false); } catch(e){} });
       await a.general(); await a.quieto(2, 300);
       const g = GRID();
       await a.pag.evaluate((g) => {
         window.__hekatanDrawingPoints.val = g.P; window.__hekatanDrawingPolylines.val = g.PL; window.__hekatanDrawingAreas.val = [];
-        try { window.__hekatanRebuild?.(); } catch(e){}
-        // El ribbon de dibujo es opaco y tapa la escena: se pliega (✏ Dibujar)
-        // para VER lo que se crea. También es corredizo, como los demás menús.
-        try { window.__hekatanRibbonPlegar?.(true); } catch(e){}
-        try { window.__hekatanAutoFit?.(); } catch(e){}
+        try { window.__hekatanRebuild?.(); window.__hekatanAutoFit?.(); } catch(e){}
       }, g);
       await a.quieto(3, 330);
     },
   },
   {
-    rotulo: "2 · Rellenar área: hover resalta, clic crea",
+    rotulo: "2 · Plego el menú de dibujo CON EL CURSOR (botón ▴)",
+    hacer: async (a) => {
+      // Enmarcar el botón de plegar para que se vea CUÁL es.
+      const r = await rectDe(a, "#hk-ribbon-plegar");
+      if (r) {
+        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }),
+          { r, n: "El menú de dibujo es opaco y tapa la escena. Este botón lo pliega." });
+        await a.quieto(5, 340);
+        await a.pag.evaluate(() => window.__tutSinCaja());
+        // Clic REAL del cursor rojo sobre el botón ▴.
+        await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2);
+        await a.quieto(4, 340);   // ya plegado: se ve toda la geometría
+      }
+    },
+  },
+  {
+    rotulo: "3 · Rellenar área: hover resalta, clic crea",
     hacer: async (a) => {
       await a.pag.evaluate(() => window.__hekatanCadState.setTool("fillarea"));
       const s = await proj(a, 1, 1, 0);   // centro de una celda
@@ -93,7 +108,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "3 · Llenar TODAS las celdas cerradas",
+    rotulo: "4 · Llenar TODAS las celdas cerradas",
     hacer: async (a) => {
       await botonEnCarpeta(a, "Áreas (shells)", "Llenar TODAS", "Un clic: rellena TODAS las celdas cerradas de golpe.");
       await a.pag.evaluate(() => { const f = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent||"").includes("Áreas (shells)")); if (f) f.click(); });
@@ -101,7 +116,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "4 · La regla: medir / acotar",
+    rotulo: "5 · La regla: medir / acotar",
     hacer: async (a) => {
       await a.pag.evaluate(() => window.__hekatanCadState.setTool("medir"));
       await clicRojoW(a, 0, 0, 0);
@@ -110,7 +125,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "5 · Puerta corrediza DERECHA: ocultar y mostrar el panel",
+    rotulo: "6 · Puerta corrediza DERECHA: ocultar y mostrar el panel",
     hacer: async (a) => {
       const r = await rectDe(a, "#hk-pane-toggle");
       if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
@@ -118,7 +133,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "6 · Puerta corrediza IZQUIERDA: los ajustes también",
+    rotulo: "7 · Puerta corrediza IZQUIERDA: los ajustes también",
     hacer: async (a) => {
       const r = await rectDe(a, "#hk-settings-toggle");
       if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
@@ -126,7 +141,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "7 · Volver al menú principal",
+    rotulo: "8 · Volver al menú principal",
     hacer: async (a) => {
       const r = await rectDe(a, "#hk-home-btn");
       if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(5, 350); }

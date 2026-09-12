@@ -1,5 +1,6 @@
 Estas son las novedades de Hekatan Struct.
-Dibujamos barras que forman celdas cerradas; el menú de dibujo es opaco, así que lo plegamos para ver bien la escena.
+Dibujamos barras que forman celdas cerradas; fíjate que el menú de dibujo, opaco, tapa parte de la escena.
+Con este botón plego el menú de dibujo, y ahora se ve toda la geometría; también es corredizo.
 Con la herramienta rellenar área, al pasar el ratón la celda se resalta, y al hacer clic se crea el área.
 Un solo botón llena de golpe todas las celdas cerradas.
 La regla mide y acota; engancha a las esquinas, por eso marca cuatro metros exactos.
