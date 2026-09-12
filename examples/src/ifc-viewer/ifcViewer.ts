@@ -43,8 +43,11 @@ function refrescarPanelObjetos(grupos: Grupo[]): void {
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "hk-ifc-objs";
+    // `bottom` anclado SOBRE la ventana de comandos: `--hk-cmd-hueco` es el alto
+    // que ésta reserva abajo (la fija la consola CAD). Así el panel NUNCA choca
+    // con la barra de comandos ni con la de estado, mida lo que mida.
     panel.style.cssText =
-      "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:120;background:rgba(16,22,30,0.96);" +
+      "position:fixed;left:50%;bottom:calc(var(--hk-cmd-hueco, 66px) + 14px);transform:translateX(-50%);z-index:120;background:rgba(16,22,30,0.96);" +
       "color:#cde;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 9px;" +
       "font:11px system-ui,sans-serif;max-height:38vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:220px;";
     document.body.appendChild(panel);
@@ -53,7 +56,7 @@ function refrescarPanelObjetos(grupos: Grupo[]): void {
   if (!document.getElementById("hk-ifc-tab")) {
     const tab = document.createElement("button");
     tab.id = "hk-ifc-tab"; tab.textContent = "🏛 Objetos IFC ⟩"; tab.title = "Mostrar objetos IFC";
-    tab.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:121;display:none;padding:6px 12px;" +
+    tab.style.cssText = "position:fixed;left:50%;bottom:calc(var(--hk-cmd-hueco, 66px) + 14px);transform:translateX(-50%);z-index:121;display:none;padding:6px 12px;" +
       "border:1px solid #3a4a5f;border-radius:8px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4)";
     tab.onclick = () => slidePanelObjetos(false);
     document.body.appendChild(tab);
