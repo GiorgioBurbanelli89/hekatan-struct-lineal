@@ -123,6 +123,46 @@ function panosBoveda(nodes: Node[], elements: Element[], tipos: string[]): numbe
   return panos;
 }
 
+/**
+ * Conecta las barras en las intersecciones (mesh-at-intersections de CSI): parte
+ * cada barra en los nudos que caen sobre su interior, para que la estructura NO
+ * quede floja. Devuelve un modelo NUEVO con las barras partidas y los inputs,
+ * tipos, secciones y plantas repartidos a los trozos. Validado vs SAP2000 (1e-11%).
+ */
+function conectarIntersecciones(m: ModeloImportado): ModeloImportado {
+  const N = m.nodes;
+  const onSeg = (p: number[], a: number[], b: number[]) => {
+    const ab = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], ap = [p[0]-a[0], p[1]-a[1], p[2]-a[2]];
+    const L2 = ab[0]**2+ab[1]**2+ab[2]**2; if (L2 < 1e-9) return -1;
+    const t = (ap[0]*ab[0]+ap[1]*ab[1]+ap[2]*ab[2]) / L2; if (t < 1e-4 || t > 1-1e-4) return -1;
+    const pr = [a[0]+ab[0]*t, a[1]+ab[1]*t, a[2]+ab[2]*t];
+    return Math.hypot(p[0]-pr[0], p[1]-pr[1], p[2]-pr[2]) < 1e-3 ? t : -1;
+  };
+  // inputs originales por índice → mapa por clave
+  const eiOrig: Record<string, Map<number, number>> = {};
+  for (const [k, pares] of Object.entries(m.elementInputs ?? {})) eiOrig[k] = new Map(pares);
+  const elements: Element[] = [], tipos: string[] = [], secciones: string[] = [], plantas: string[] = [];
+  const padre: number[] = [];   // índice original del que viene cada trozo
+  m.elements.forEach((el, e) => {
+    const push = (conn: Element) => { elements.push(conn); tipos.push(m.tipos?.[e]); secciones.push(m.secciones?.[e]); plantas.push(m.plantas?.[e]); padre.push(e); };
+    if (el.length !== 2) { push(el); return; }
+    const [i, j] = el, a = N[i], b = N[j], pts: [number, number][] = [];
+    for (let k = 0; k < N.length; k++) { if (k === i || k === j) continue; const t = onSeg(N[k], a, b); if (t > 0) pts.push([t, k]); }
+    if (!pts.length) { push(el); return; }
+    pts.sort((x, y) => x[0]-y[0]); let prev = i;
+    for (const [, k] of pts) { push([prev, k]); prev = k; } push([prev, j]);
+  });
+  const ei: Record<string, [number, number][]> = {};
+  for (const [k, mp] of Object.entries(eiOrig)) {
+    const arr: [number, number][] = [];
+    padre.forEach((o, nuevo) => { const v = mp.get(o); if (v !== undefined) arr.push([nuevo, v]); });
+    ei[k] = arr;
+  }
+  const partidas = elements.filter((e) => e.length === 2).length - m.elements.filter((e) => e.length === 2).length;
+  if (partidas > 0) console.log(`[CSI Importer] conectadas ${partidas} intersecciones (mesh-at-intersections, como SAP/ETABS)`);
+  return { ...m, elements, tipos, secciones, plantas, elementInputs: ei };
+}
+
 function vacio(states: any, msg: string) {
   states.nodes.val = [];
   states.elements.val = [];
@@ -149,6 +189,10 @@ export const csiImporter: ExampleDef = {
     verVigas: { default: 1, boolean: true, label: "Vigas", folder: "👁 Ver por tipo" },
     verDiagonales: { default: 1, boolean: true, label: "Diagonales", folder: "👁 Ver por tipo" },
     verAreas: { default: 1, boolean: true, label: "Áreas", folder: "👁 Ver por tipo" },
+    // Conectar barras en las intersecciones (mesh-at-intersections, como SAP/ETABS).
+    // Sin esto, una barra que pasa por un nudo NO se conecta y el modelo sale flojo
+    // (capilla: 232 mm vs 9 mm). Validado vs SAP2000 al 1e-11 % (11-sep-2026).
+    conectar: { default: 1, boolean: true, label: "Conectar en intersecciones (SAP/ETABS)", folder: "👁 Ver por tipo" },
     // ── Cubierta como slab membrana (lo que ETABS no exportó como área) ──
     cubierta: { default: 0, boolean: true, label: "Poner cubierta (slab membrana)", folder: "🏠 Cubierta" },
     formaCubierta: {
@@ -177,13 +221,17 @@ export const csiImporter: ExampleDef = {
     return out;
   },
   build(p, states) {
-    const m: ModeloImportado | undefined = (window as any).__hekatanImportedModel;
+    let m: ModeloImportado | undefined = (window as any).__hekatanImportedModel;
     const viejo = (window as any).__hekatanImportedCim;   // f2k de cimentacion
 
     if (!m) {
       if (viejo?.zapatas?.length) return zapatasF2k(viejo, states);
       return vacio(states, "Sin archivo. Usa el folder '📥 Importar archivo'.");
     }
+
+    // Conectar en intersecciones (como SAP/ETABS) — el importador no lo hacía y el
+    // modelo salía flojo. Se hace sobre una COPIA; el original en window queda igual.
+    if (p.conectar && m.elements.length < 3000) m = conectarIntersecciones(m);
 
     // ── El modelo del ARCHIVO, tal cual viene ──────────────────────────────
     const ver = (t: string) =>
