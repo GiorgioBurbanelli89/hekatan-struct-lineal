@@ -2682,12 +2682,19 @@ export function drawing({
         const lastPt = allPts[lastIdx];
         let effectiveLock = axisLock;
         _axisSnapPoint = null; // reset por frame
+        // ⚠️ Si la mirilla YA enganchó un objeto (nudo, punto medio…), ese punto
+        // manda: ni el eje auxiliar, ni ORTO, ni el polar, ni el rastreo lo
+        // mueven. Es la regla de AutoCAD (la referencia a objetos tiene
+        // prioridad sobre el rastreo polar). Sin esto, una cumbrera con 0.6° de
+        // pendiente que acaba en un nudo existente salía horizontal: el polar
+        // (±6°) la aplanaba DESPUÉS de que el osnap hubiera dado el nudo exacto.
+        const enganchadoAObjeto = !!osnap;
         // ── SNAP a EJES auxiliares en 3D (X/Y/Z desde el último punto) ──
         // Si el mouse pasa CERCA (en pantalla) de la LÍNEA de un eje, engancha
         // el punto al punto de ESE eje 3D más cercano al rayo de cámara. Permite
         // alinear al eje Z (vertical) aunque el plano de trabajo sea XY, y a X/Y
         // en cualquier vista. Tiene prioridad sobre ORTO/polar.
-        if (!effectiveLock && (window as any).__hekatanAxisSnap !== false) {
+        if (!effectiveLock && !enganchadoAObjeto && (window as any).__hekatanAxisSnap !== false) {
           const rectAx = rendererElm.getBoundingClientRect();
           const mx = event.clientX, my = event.clientY;
           const Lax = (settings.gridSize?.rawVal ?? 10);
@@ -2728,7 +2735,7 @@ export function drawing({
         }
         // ── ORTO mode (F8) ── auto-detecta el eje dominante si está activo.
         const orthoOn = !!(window as any).__hekatanOrthoMode;
-        if (!effectiveLock && orthoOn) {
+        if (!effectiveLock && !enganchadoAObjeto && orthoOn) {
           const dx = Math.abs(p.x - lastPt[0]);
           const dy = Math.abs(p.y - lastPt[1]);
           const dz = Math.abs(p.z - lastPt[2]);
@@ -2756,7 +2763,7 @@ export function drawing({
         // punto → enganchar a ese eje. Eso lo RESALTA (la lógica de abajo lo
         // pinta) y hace que al clickear el punto caiga JUSTO sobre el eje.
         const polarOn = (window as any).__hekatanPolarTrack !== false; // default ON
-        if (!effectiveLock && polarOn) {
+        if (!effectiveLock && !enganchadoAObjeto && polarOn) {
           const dxr = p.x - lastPt[0], dyr = p.y - lastPt[1], dzr = p.z - lastPt[2];
           const len = Math.hypot(dxr, dyr, dzr);
           if (len > 1e-3) {
@@ -2816,7 +2823,7 @@ export function drawing({
         // (el que queda por decidir); si no, cualquiera de los tres.
         let rastreo: { q: number[]; eje: "x" | "y" | "z" } | null = null;
         // El rastreo es una REFERENCIA más: lo apaga el mismo interruptor (F3).
-        if (!sinEnganche && (window as any).__hekatanTrack !== false
+        if (!sinEnganche && !enganchadoAObjeto && (window as any).__hekatanTrack !== false
             && (window as any).__hekatanOsnapOn !== false) {
           const ptsTrack = drawingObj.points.rawVal as [number, number, number][];
           const ejes: Array<"x" | "y" | "z"> = effectiveLock ? [effectiveLock] : ["z", "x", "y"];

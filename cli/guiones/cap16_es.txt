@@ -1,7 +1,7 @@
-En este tutorial replicamos una capilla como estructura analítica, solo con el cursor y el menú de dibujo.
-Lienzo limpio. Le decimos al arco que se discretice en seis líneas rectas, porque ETABS no admite curvas.
-El primer pórtico: dos columnas y un arco de medio punto por tres puntos. Míralo nacer: el arco se convierte en seis barras.
-Repetimos el pórtico a lo largo, en los ejes tres, seis, nueve y doce.
-Cosemos los pórticos con vigas longitudinales en cada nudo del arco; así cada tramo queda como una celda cerrada.
-Con un clic en llenar todas las celdas cerradas, cada celda se vuelve un paño de zinc, un área membrana que sigue la curva de la bóveda.
-Y ésta es la capilla como estructura analítica; giramos para verla completa.
+Vamos a replicar la capilla real, la del modelo de ETABS, barra por barra y nudo por nudo, solo con el cursor y el menú de dibujo, y voy a decir cada cosa que hago.
+Preparo el lienzo: lo dejo vacío, apago la rejilla porque las cotas reales no son redondas, apago el modo orto, apago el enganche a ejes auxiliares y el rastreo polar para que el cursor no se pegue a un eje al marcar un nudo, y cierro los dos paneles laterales con sus puertas corredizas para dibujar con todo el lienzo.
+Primer eje, Y igual a ocho setenta y cuatro. Pongo el plano de trabajo en el alzado frontal de ese eje y con la herramienta Línea dibujo cada barra del modelo entre sus dos nudos: las dos columnas, los tres tramos rectos del arco, que ya es así en ETABS porque ETABS no admite curvas, el cabio, la viga de cumbrera y los cinco tramos del arco del ala hasta el suelo.
+Hago lo mismo en los otros siete ejes: cambio el plano de trabajo al alzado de cada eje, acerco la cámara, y dibujo sus barras con Línea, nudo a nudo.
+Ahora los planos laterales, y después el plano de planta en cada cota: ahí van las vigas longitudinales que cruzan los ejes, otra vez con Línea entre sus nudos.
+Por último las diagonales del entrepiso, enganchando con osnap a nudos que ya están dibujados. Y una nota: ese entrepiso, colgado arriba junto a la cumbrera, es un error del modelo de ETABS que el IFC delata; aquí lo replico igual para comparar, y luego lo bajamos.
+Ésta es la capilla del EDB replicada; arrastro con el ratón y giramos para verla completa.
