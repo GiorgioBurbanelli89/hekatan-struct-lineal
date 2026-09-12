@@ -3,4 +3,5 @@ Importamos el IFC y vemos el modelo completo en tres dimensiones.
 El panel lista los objetos del modelo: podemos ocultar o aislar cada uno.
 El panel también es corredizo: se minimiza o se esconde del todo, para no tapar los otros menús.
 La regla mide sobre el modelo y engancha a las esquinas.
-El corte se activa en el panel Cortes equis, ye, zeta: marco Cortar Zeta y el edificio se abre para ver los niveles por dentro.
+El corte se activa en el panel Cortes equis, ye, zeta: subo la altura del plano con el slider y, con el ratón, marco la casilla Cortar Zeta.
+El edificio se abre en ese plano; giramos despacio para ver los niveles por dentro.

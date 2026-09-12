@@ -9,14 +9,25 @@ const host = async (a) => a.pag.evaluate(() => {
   const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera);
   if (!h) return null; const r = h.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height };
 });
-const mover = async (a, x, y, steps = 22) => {
-  await a.pag.mouse.move(x, y, { steps });
-  await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x, y });
+// Mueve el cursor LENTO y VISIBLE: lo pinta en cada tramo del recorrido y
+// captura un fotograma por tramo (antes saltaba al destino de golpe). Más
+// `pasos` = más lento.
+const mover = async (a, x, y, pasos = 18) => {
+  const p0 = await a.pag.evaluate(() => window.__tutXY || { x: 640, y: 300 });
+  for (let i = 1; i <= pasos; i++) {
+    const cx = p0.x + (x - p0.x) * (i / pasos), cy = p0.y + (y - p0.y) * (i / pasos);
+    await a.pag.mouse.move(cx, cy);
+    await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x: cx, y: cy });
+    await a.quieto(1, 55);
+  }
 };
 const clicRojoPx = async (a, x, y) => {
-  await mover(a, x, y, 22); await a.quieto(2, 300);
+  await mover(a, x, y, 18);
+  await a.quieto(5, 320);   // el cursor se POSA sobre el control (se ve dónde)
   await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x, y });
-  await a.quieto(3, 320); await a.pag.mouse.click(x, y); await a.quieto(2, 300);
+  await a.quieto(5, 320);   // clic rojo BIEN visible
+  await a.pag.mouse.click(x, y);
+  await a.quieto(4, 320);   // se ve el efecto
 };
 const orbit = async (a, dx, dy, n = 6) => {
   const r = await host(a); if (!r) return;
@@ -26,11 +37,12 @@ const orbit = async (a, dx, dy, n = 6) => {
   await a.pag.mouse.move(cx, cy);
   await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x: cx, y: cy });
   await a.pag.mouse.down();
-  const K = 16;
+  const K = 18;
   for (let i = 1; i <= K; i++) {
     const x = cx + (dx * i) / K, y = cy + (dy * i) / K;
     await a.pag.mouse.move(x, y);
     await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x, y });
+    await a.quieto(1, 55);   // captura cada tramo → giro SUAVE (no a saltos)
   }
   await a.pag.mouse.up();
   await a.quieto(n, 320);
@@ -173,18 +185,26 @@ export const pasos = [
         return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2, rx: rr.left, ry: rr.top, rw: rr.width, rh: rr.height };
       });
       if (cz) {
-        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "Marco «Cortar Z» y el modelo se abre para ver el interior.", { x: 0, y: 0, w: 1280, h: 720 }), cz);
-        await a.quieto(4, 340);
+        // El cursor se acerca LENTO a la casilla y se posa; el recuadro señala
+        // ESTE es el botón que activa el corte; luego el clic rojo bien visible.
+        await mover(a, cz.x, cz.y, 18);
+        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "ESTE botón activa el corte: marco «Cortar Z» con el ratón.", { x: 0, y: 0, w: 1280, h: 720 }), cz);
+        await a.quieto(7, 360);   // se ve BIEN qué casilla se va a pulsar
         await a.pag.evaluate(() => window.__tutSinCaja());
         await clicRojoPx(a, cz.x, cz.y);
       }
       // Limpiar cualquier rectángulo de selección o regla a medias que haya
-      // quedado colgando sobre el modelo antes del giro final.
+      // quedado colgando sobre el modelo.
       await a.pag.keyboard.press("Escape");
       await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.("select"); } catch(e){} try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){} });
-      await a.quieto(3, 340);   // ya se ve el corte a media altura
-      await orbit(a, 120, -30, 5);
-      await orbit(a, -90, 20, 5);
+      await a.quieto(6, 360);   // el modelo YA está cortado: se ve el interior
+    },
+  },
+  {
+    rotulo: "6 · El modelo se abre: giramos para ver el interior",
+    hacer: async (a) => {
+      await orbit(a, 120, -30, 6);
+      await orbit(a, -90, 20, 6);
     },
   },
 ];
