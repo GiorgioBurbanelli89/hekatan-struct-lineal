@@ -66,14 +66,18 @@ const GRID = () => {
 export const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada("Novedades", "Capítulo 14", 16); } },
   {
-    rotulo: "1 · Barras que forman celdas cerradas",
+    rotulo: "1 · Barras que forman celdas cerradas (pliego el menú de dibujo)",
     hacer: async (a) => {
       await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo","0"); } catch(e){} });
       await a.general(); await a.quieto(2, 300);
       const g = GRID();
       await a.pag.evaluate((g) => {
         window.__hekatanDrawingPoints.val = g.P; window.__hekatanDrawingPolylines.val = g.PL; window.__hekatanDrawingAreas.val = [];
-        try { window.__hekatanRebuild?.(); window.__hekatanAutoFit?.(); } catch(e){}
+        try { window.__hekatanRebuild?.(); } catch(e){}
+        // El ribbon de dibujo es opaco y tapa la escena: se pliega (✏ Dibujar)
+        // para VER lo que se crea. También es corredizo, como los demás menús.
+        try { window.__hekatanRibbonPlegar?.(true); } catch(e){}
+        try { window.__hekatanAutoFit?.(); } catch(e){}
       }, g);
       await a.quieto(3, 330);
     },
