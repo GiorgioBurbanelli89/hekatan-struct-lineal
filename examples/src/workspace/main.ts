@@ -2374,8 +2374,10 @@ if (window.innerWidth > 600) {
   backBtn.id = "hk-back-btn";
   backBtn.textContent = "← Volver";
   backBtn.title = "Volver al ejemplo/ventana anterior";
+  // z-index 500 > la barra de titulo (#hk-cad-tit, z 400): si no, queda DETRAS
+  // de ella y no se ve (medido en cap14: el cursor pulsaba un boton invisible).
   backBtn.style.cssText =
-    "position:fixed;top:6px;left:calc(50% - 240px);z-index:102;padding:5px 12px;" +
+    "position:fixed;top:4px;left:calc(50% - 250px);z-index:500;padding:5px 12px;" +
     "border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;" +
     "cursor:pointer;font:12px system-ui;display:none;box-shadow:0 2px 8px rgba(0,0,0,.4);";
   backBtn.addEventListener("click", () => { try { (window as any).__hekatanVolver?.(); } catch {} });
@@ -2388,7 +2390,7 @@ if (window.innerWidth > 600) {
   homeBtn.textContent = "🏠 Menú";
   homeBtn.title = "Volver al menú principal";
   homeBtn.style.cssText =
-    "position:fixed;top:6px;left:calc(50% - 330px);z-index:102;padding:5px 12px;" +
+    "position:fixed;top:4px;left:calc(50% - 350px);z-index:500;padding:5px 12px;" +
     "border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;" +
     "cursor:pointer;font:12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4);";
   homeBtn.addEventListener("click", () => {

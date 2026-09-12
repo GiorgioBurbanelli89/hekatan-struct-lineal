@@ -141,10 +141,23 @@ export const pasos = [
     },
   },
   {
-    rotulo: "8 · Volver al menú principal",
+    rotulo: "8 · Volver al menú principal (botón 🏠 Menú)",
     hacer: async (a) => {
+      // Soltar la herramienta y borrar el tooltip de osnap que si no queda
+      // encima del botón, tapándolo.
+      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
+        document.querySelectorAll(".hk-osnap-tip,#hk-osnap-tip,[data-osnap-tip]").forEach(n=>n.remove()); });
+      await a.quieto(2, 300);
       const r = await rectDe(a, "#hk-home-btn");
-      if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(5, 350); }
+      if (r) {
+        // Enmarcar el botón para que se vea CUÁL es antes de pulsarlo.
+        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }),
+          { r, n: "🏠 Menú: vuelve a la ventana principal desde cualquier ejemplo." });
+        await a.quieto(4, 340);
+        await a.pag.evaluate(() => window.__tutSinCaja());
+        await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2);
+        await a.quieto(5, 350);
+      }
     },
   },
 ];
