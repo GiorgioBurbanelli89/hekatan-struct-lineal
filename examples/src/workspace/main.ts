@@ -2286,6 +2286,38 @@ paneHost.style.cssText =
   "box-shadow:0 6px 24px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);";
 document.body.appendChild(paneHost);
 
+// ── Botón CORREDIZO (escritorio): desliza el panel horizontalmente fuera de la
+// pantalla —como una puerta— para liberar el lienzo, y lo trae de vuelta. Jorge,
+// 11-sep-2026: «que se deslice el menú completo horizontalmente hasta que lo
+// requiera, en el botón». En móvil ya está el drawer, así que solo desktop.
+if (window.innerWidth > 600) {
+  const paneToggle = document.createElement("button");
+  paneToggle.id = "hk-pane-toggle";
+  paneToggle.textContent = "⟩";
+  paneToggle.title = "Ocultar el panel (corredizo)";
+  paneToggle.style.cssText =
+    "position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:101;" +
+    "width:24px;height:60px;border:none;border-radius:8px 0 0 8px;" +
+    "background:rgba(30,40,55,0.96);color:#8fe;cursor:pointer;font-size:15px;" +
+    "box-shadow:-2px 0 10px rgba(0,0,0,.45);";
+  document.body.appendChild(paneToggle);
+  const PANE_HID_KEY = "hk_paneHidden";
+  let paneHidden = false;
+  const setPaneHidden = (hid: boolean) => {
+    paneHidden = hid;
+    paneHost.style.transition = "transform .25s ease, opacity .25s ease";
+    paneHost.style.transform = hid ? "translateX(120%)" : "";
+    paneHost.style.opacity = hid ? "0" : "";
+    paneHost.style.pointerEvents = hid ? "none" : "";
+    paneToggle.textContent = hid ? "⟨" : "⟩";
+    paneToggle.title = hid ? "Mostrar el panel" : "Ocultar el panel (corredizo)";
+    try { localStorage.setItem(PANE_HID_KEY, hid ? "1" : "0"); } catch {}
+  };
+  paneToggle.addEventListener("click", () => setPaneHidden(!paneHidden));
+  try { if (localStorage.getItem(PANE_HID_KEY) === "1") setPaneHidden(true); } catch {}
+  (window as any).__hekatanTogglePane = () => setPaneHidden(!paneHidden);
+}
+
 // ── Mobile UX: bottom-drawer pattern + 2 FAB toggles ─────────────────
 // En viewports <= 600px (móvil), tanto #settings como #hk-pane-host
 // se ocultan por default (translateY(100%)) y se muestran cuando el
