@@ -1,5 +1,5 @@
 /**
- * Capítulo 15 — Mejoras del VISOR IFC: importar y ver el modelo, ocultar/aislar
+ * Tutorial 5 — Mejoras del VISOR IFC: importar y ver el modelo, ocultar/aislar
  * objetos, medir con la regla (OSNAP a esquinas) y recortar para ver por dentro.
  */
 export const titulo = "Hekatan Struct · el visor IFC";
@@ -49,7 +49,7 @@ const orbit = async (a, dx, dy, n = 6) => {
 };
 
 export const pasos = [
-  { rotulo: "Portada", hacer: async (a) => { await a.portada("El visor IFC", "Capítulo 15", 16); } },
+  { rotulo: "Portada", hacer: async (a) => { await a.portada("El visor IFC", "Tutorial 5", 16); } },
   {
     rotulo: "1 · Importar el IFC y ver el modelo",
     hacer: async (a) => {
@@ -136,7 +136,7 @@ export const pasos = [
       await a.pag.keyboard.press("Escape");
       await a.pag.keyboard.press("Escape");
       await a.pag.evaluate(() => {
-        try { window.__hekatanCadState?.setTool?.("select"); } catch(e){}
+        try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
         try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){}
       });
       await a.quieto(2, 320);
@@ -193,16 +193,19 @@ export const pasos = [
         await a.pag.evaluate(() => window.__tutSinCaja());
         await clicRojoPx(a, cz.x, cz.y);
       }
-      // Limpiar cualquier rectángulo de selección o regla a medias que haya
-      // quedado colgando sobre el modelo.
+      // SIN herramienta (no «select») para que el arrastre del giro NO dibuje
+      // un rectángulo de selección; y limpiar cualquier regla a medias.
       await a.pag.keyboard.press("Escape");
-      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.("select"); } catch(e){} try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){} });
+      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){} try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){} });
       await a.quieto(6, 360);   // el modelo YA está cortado: se ve el interior
     },
   },
   {
     rotulo: "6 · El modelo se abre: giramos para ver el interior",
     hacer: async (a) => {
+      // Asegurar que no hay herramienta activa: el giro es solo cámara, sin
+      // que el arrastre deje un rectángulo de selección.
+      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){} });
       await orbit(a, 120, -30, 6);
       await orbit(a, -90, 20, 6);
     },

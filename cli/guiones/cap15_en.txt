@@ -3,5 +3,5 @@ We import the IFC and see the whole model in three dimensions.
 The panel lists the model objects: we can hide or isolate each one.
 The panel also slides: it minimizes or hides completely, so it never covers the other menus.
 The ruler measures on the model and snaps to corners.
-The cut is activated in the Cuts X, Y, Z panel: I raise the plane height with the slider and, with the mouse, I check the Cut Z box.
-The building opens at that plane; we orbit slowly to see the levels inside.
+To cut I use the Cuts X, Y, Z panel. First I choose the height by dragging the pos Z slider with the mouse; then, with the mouse, I check the Cut Z box, and that activates the cut.
+The building opens right at that height; by dragging with the mouse I orbit the model to see the levels inside.
