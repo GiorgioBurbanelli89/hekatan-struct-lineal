@@ -17283,7 +17283,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
   }
   {
     const e = document.createElement("button");
-    e.id = "hk-back-btn", e.textContent = "\u2190 Volver", e.title = "Volver al ejemplo/ventana anterior", e.style.cssText = "position:fixed;top:6px;left:calc(50% - 240px);z-index:102;padding:5px 12px;border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:12px system-ui;display:none;box-shadow:0 2px 8px rgba(0,0,0,.4);", e.addEventListener("click", () => {
+    e.id = "hk-back-btn", e.textContent = "\u2190 Volver", e.title = "Volver al ejemplo/ventana anterior", e.style.cssText = "position:fixed;top:4px;left:calc(50% - 250px);z-index:500;padding:5px 12px;border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:12px system-ui;display:none;box-shadow:0 2px 8px rgba(0,0,0,.4);", e.addEventListener("click", () => {
       var _a3;
       try {
         (_a3 = window.__hekatanVolver) == null ? void 0 : _a3.call(window);
@@ -17293,7 +17293,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       e.style.display = n ? "block" : "none";
     };
     const t = document.createElement("button");
-    t.id = "hk-home-btn", t.textContent = "\u{1F3E0} Men\xFA", t.title = "Volver al men\xFA principal", t.style.cssText = "position:fixed;top:6px;left:calc(50% - 330px);z-index:102;padding:5px 12px;border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4);", t.addEventListener("click", () => {
+    t.id = "hk-home-btn", t.textContent = "\u{1F3E0} Men\xFA", t.title = "Volver al men\xFA principal", t.style.cssText = "position:fixed;top:4px;left:calc(50% - 350px);z-index:500;padding:5px 12px;border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4);", t.addEventListener("click", () => {
       var _a3, _b;
       try {
         Nn.length = 0, (_a3 = window.__hekatanActualizarBotonVolver) == null ? void 0 : _a3.call(window, false);
