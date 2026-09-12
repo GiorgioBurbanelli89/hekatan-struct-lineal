@@ -71,7 +71,11 @@ export const pasos = [
   {
     rotulo: "2 · Ocultar / aislar objetos (panel con la info)",
     hacer: async (a) => {
-      // Panel hk-ifc-objs abajo-izquierda: destacar y ocultar 2 objetos.
+      // El panel arranca MINIMIZADO (abajo-centro, no tapa los menús). Se
+      // expande CON EL CURSOR (botón ▢) para ver la lista.
+      const bm0 = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-min"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
+      if (bm0) { await clicRojoPx(a, bm0.x, bm0.y); await a.quieto(2, 320); }
+      // Panel hk-ifc-objs: destacar y ocultar 2 objetos.
       const r = await a.pag.evaluate(() => { const p = document.getElementById("hk-ifc-objs"); if (!p) return null; const rc = p.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height }; });
       if (r) { await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 720 }), { r, n: "Lista de objetos del IFC: color, nº de triángulos, ocultar y «solo»." }); await a.quieto(5, 340); await a.pag.evaluate(() => window.__tutSinCaja()); }
       // Ocultar dos objetos (checkboxes) para que se vea el efecto.

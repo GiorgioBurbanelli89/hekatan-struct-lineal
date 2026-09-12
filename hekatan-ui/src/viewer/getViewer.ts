@@ -871,7 +871,12 @@ export function getViewer({
   if (getComputedStyle(viewerElm).position === "static") {
     viewerElm.style.position = "relative";
   }
-  viewerElm.appendChild(navOverlay);
+  // Solo en pantallas TÁCTILES (móvil/tablet): en computadora se orbita, hace
+  // zoom y pan con el ratón, así que el pad estorba. `pointer: coarse` es true
+  // cuando el puntero principal es un dedo, false con ratón/trackpad.
+  const punteroTactil = typeof window.matchMedia === "function"
+    && window.matchMedia("(pointer: coarse)").matches;
+  if (punteroTactil) viewerElm.appendChild(navOverlay);
 
   return viewerElm;
 }

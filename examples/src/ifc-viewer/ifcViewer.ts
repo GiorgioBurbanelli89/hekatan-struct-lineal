@@ -17,16 +17,19 @@ interface Grupo { positions: number[]; color: [number, number, number]; }
 const ifcHidden = new Set<number>();
 let ifcSolo = -1;   // -1 = ninguno aislado
 let ifcPanelHidden = false;   // panel corredizo (puerta) deslizado fuera
-let ifcMin = false;           // panel minimizado (solo cabecera)
+let ifcMin = true;            // panel minimizado por defecto (solo cabecera): no
+                              // tapa los menús laterales; el usuario lo expande.
 
-/** Desliza el panel de objetos fuera/dentro (puerta corrediza) + tab para reabrir. */
+/** Desliza el panel de objetos fuera/dentro (puerta corrediza) + tab para reabrir.
+ *  El panel va ABAJO-CENTRO (fuera de las columnas de Settings y parámetros), así
+ *  que se centra con translateX(-50%) y se esconde bajando (translateY). */
 function slidePanelObjetos(hide: boolean): void {
   ifcPanelHidden = hide;
   const panel = document.getElementById("hk-ifc-objs");
   const tab = document.getElementById("hk-ifc-tab");
   if (panel) {
     panel.style.transition = "transform .25s ease, opacity .25s ease";
-    panel.style.transform = hide ? "translateX(-115%)" : "";
+    panel.style.transform = hide ? "translateX(-50%) translateY(130%)" : "translateX(-50%)";
     panel.style.opacity = hide ? "0" : "";
     panel.style.pointerEvents = hide ? "none" : "";
   }
@@ -41,17 +44,17 @@ function refrescarPanelObjetos(grupos: Grupo[]): void {
     panel = document.createElement("div");
     panel.id = "hk-ifc-objs";
     panel.style.cssText =
-      "position:fixed;left:16px;bottom:16px;z-index:120;background:rgba(16,22,30,0.95);" +
-      "color:#cde;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 10px;" +
-      "font:11px system-ui,sans-serif;max-height:44vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:200px;";
+      "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:120;background:rgba(16,22,30,0.96);" +
+      "color:#cde;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 9px;" +
+      "font:11px system-ui,sans-serif;max-height:38vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:220px;";
     document.body.appendChild(panel);
   }
-  // Tab para reabrir cuando está deslizado (puerta corrediza).
+  // Tab (abajo-centro, sobre la barra de comandos) para reabrir cuando está deslizado.
   if (!document.getElementById("hk-ifc-tab")) {
     const tab = document.createElement("button");
-    tab.id = "hk-ifc-tab"; tab.textContent = "🏛 Objetos ⟩"; tab.title = "Mostrar objetos IFC";
-    tab.style.cssText = "position:fixed;left:0;bottom:16px;z-index:121;display:none;padding:6px 10px;" +
-      "border:1px solid #3a4a5f;border-radius:0 8px 8px 0;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:2px 0 8px rgba(0,0,0,.4)";
+    tab.id = "hk-ifc-tab"; tab.textContent = "🏛 Objetos IFC ⟩"; tab.title = "Mostrar objetos IFC";
+    tab.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:121;display:none;padding:6px 12px;" +
+      "border:1px solid #3a4a5f;border-radius:8px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4)";
     tab.onclick = () => slidePanelObjetos(false);
     document.body.appendChild(tab);
   }
