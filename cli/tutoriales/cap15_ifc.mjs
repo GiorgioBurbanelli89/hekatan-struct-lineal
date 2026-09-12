@@ -122,8 +122,9 @@ export const pasos = [
       // Limpiar la regla de paso 4: soltar herramienta y borrar la cota (label
       // DOM + línea de la escena) para que no quede flotando sobre el modelo.
       await a.pag.keyboard.press("Escape");
+      await a.pag.keyboard.press("Escape");
       await a.pag.evaluate(() => {
-        try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
+        try { window.__hekatanCadState?.setTool?.("select"); } catch(e){}
         try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){}
       });
       await a.quieto(2, 320);
@@ -177,6 +178,10 @@ export const pasos = [
         await a.pag.evaluate(() => window.__tutSinCaja());
         await clicRojoPx(a, cz.x, cz.y);
       }
+      // Limpiar cualquier rectángulo de selección o regla a medias que haya
+      // quedado colgando sobre el modelo antes del giro final.
+      await a.pag.keyboard.press("Escape");
+      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.("select"); } catch(e){} try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){} });
       await a.quieto(3, 340);   // ya se ve el corte a media altura
       await orbit(a, 120, -30, 5);
       await orbit(a, -90, 20, 5);
