@@ -21,8 +21,18 @@ const clicRojoPx = async (a, x, y) => {
 const orbit = async (a, dx, dy, n = 6) => {
   const r = await host(a); if (!r) return;
   const cx = r.x + r.w * 0.5, cy = r.y + r.h * 0.5;
-  await a.pag.mouse.move(cx, cy); await a.pag.mouse.down();
-  await a.pag.mouse.move(cx + dx, cy + dy, { steps: 22 }); await a.pag.mouse.up();
+  // Cursor VISIBLE durante el giro: se pinta en cada tramo del arrastre para
+  // que se vea que es el ratón quien orbita el modelo (no la cámara sola).
+  await a.pag.mouse.move(cx, cy);
+  await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x: cx, y: cy });
+  await a.pag.mouse.down();
+  const K = 16;
+  for (let i = 1; i <= K; i++) {
+    const x = cx + (dx * i) / K, y = cy + (dy * i) / K;
+    await a.pag.mouse.move(x, y);
+    await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x, y });
+  }
+  await a.pag.mouse.up();
   await a.quieto(n, 320);
 };
 
@@ -31,6 +41,23 @@ export const pasos = [
   {
     rotulo: "1 · Importar el IFC y ver el modelo",
     hacer: async (a) => {
+      await a.general(); await a.quieto(2, 320);
+      // Señalar con el CURSOR el botón de importar (el diálogo de archivo del
+      // sistema no se puede grabar, así que aquí se carga el mismo IFC).
+      const r = await a.pag.evaluate(() => {
+        const b = [...document.querySelectorAll("button")].find((x) => /Importar IFC/i.test(x.textContent || ""));
+        if (!b) return null; b.scrollIntoView({ block: "center" });
+        const rc = b.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
+      });
+      if (r) {
+        await mover(a, r.x + r.w / 2, r.y + r.h / 2, 22);
+        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 720 }),
+          { r, n: "Importar IFC: se elige el archivo .ifc y se ve el modelo." });
+        await a.quieto(4, 340);
+        await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x: r.x + r.w / 2, y: r.y + r.h / 2 });
+        await a.quieto(2, 300);
+        await a.pag.evaluate(() => window.__tutSinCaja());
+      }
       await a.pag.evaluate(async (base) => {
         const M = await fetch(base + "ifc_church.json").then((r) => r.json());
         window.__hekatanIfcMesh = M;
