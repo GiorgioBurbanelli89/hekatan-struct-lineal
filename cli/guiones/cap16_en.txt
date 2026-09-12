@@ -1,7 +1,7 @@
 In this tutorial we replicate a chapel as an analytic structure, using only the cursor and the drawing menu.
-Clean canvas, front plane, and we tell the arc to discretize into eight straight lines, because ETABS does not allow curves.
-The first frame: two columns and a three-point arc. As it is drawn, the arc becomes eight bars.
+Clean canvas. We tell the arc to discretize into six straight lines, because ETABS does not allow curves.
+The first frame: two columns and a semicircular arc through three points. Watch it appear: the arc becomes six bars.
 We repeat the frame along the axes at three, six, nine and twelve.
-We stitch the frames with longitudinal beams: the ridge on top and the eaves on the sides.
-The zinc roof is drawn as area panels, a membrane between each pair of frames.
+We stitch the frames with longitudinal beams at every node of the arc, so each bay becomes a closed cell.
+One click on fill all closed cells turns each cell into a zinc panel, a membrane area that follows the curve of the vault.
 And this is the chapel as an analytic structure; we orbit to see it complete.
