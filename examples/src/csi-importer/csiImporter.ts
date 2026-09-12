@@ -201,6 +201,12 @@ export const csiImporter: ExampleDef = {
       folder: "🏠 Cubierta",
     },
     tCubierta: { default: 60, min: 0.5, max: 300, step: 0.5, label: "Espesor cubierta (mm)", folder: "🏠 Cubierta" },
+    modoCubierta: {
+      default: 0, label: "Modo",
+      options: { "Membrana (arriostra)": 0, "Zinc como carga (a correas)": 1 },
+      folder: "🏠 Cubierta",
+    },
+    qCubierta: { default: 0.5, min: 0, max: 10, step: 0.05, label: "Carga cubierta (kN/m²)", folder: "🏠 Cubierta" },
   },
   computedLabels(_p, states) {
     const m: ModeloImportado | undefined = (window as any).__hekatanImportedModel;
@@ -272,6 +278,7 @@ export const csiImporter: ExampleDef = {
     // exportó como área). Los paños salen de la topología real; la formulación
     // la elige el usuario (por defecto Membrana = solo trabaja en su plano).
     let panosCubierta: number[][] = [];
+    const zincLoads = new Map<number, number>();   // nudo → Fz del zinc (modo carga)
     if (p.cubierta && m.elements.length < 3000) {
       const zs = nodes.map((n) => n[2]);
       const zCorte = Math.min(...zs) + 0.5 * (Math.max(...zs) - Math.min(...zs));
@@ -280,28 +287,57 @@ export const csiImporter: ExampleDef = {
       panosCubierta = detectarPanosCubierta(nodes, m.elements, zCorte, m.tipos);
       const E = 2.146e7, nu = 0.2, G = E / (2 * (1 + nu)), rho = 2.4;   // f'c=210 kg/cm²
       const tC = (p.tCubierta ?? 60) / 1000;                            // mm → m
-      for (const q of panosCubierta) {
-        const i = elements.length;
-        elements.push(q as Element);
-        ei.elasticities.set(i, E); ei.shearModuli.set(i, G);
-        ei.poissonsRatios.set(i, nu); ei.densities.set(i, rho);
-        (ei.thicknesses ??= new Map()).set(i, tC);
-        (ei.plateFormulations ??= new Map()).set(i, p.formaCubierta ?? 2);
+      if ((p.modoCubierta ?? 0) === 1) {
+        // ── ZINC COMO CARGA (a las correas) ──────────────────────────────
+        // El zinc no es elemento estructural: es una lámina que lleva su peso +
+        // sobrecarga a las correas. Se reparte q·A lumped a las 4 esquinas del
+        // paño (correas). No añade rigidez. (Para one-way estricto haría falta
+        // el vano; lumped a esquinas es la aproximación del importador.)
+        const q = p.qCubierta ?? 0.5;                                   // kN/m²
+        const area4 = (P: number[][]) => {   // área del quad (2 triángulos)
+          const tri = (a: number[], b: number[], c: number[]) => {
+            const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+            const cx = u[1]*v[2]-u[2]*v[1], cy = u[2]*v[0]-u[0]*v[2], cz = u[0]*v[1]-u[1]*v[0];
+            return 0.5 * Math.hypot(cx, cy, cz); };
+          return tri(P[0], P[1], P[2]) + tri(P[0], P[2], P[3]);
+        };
+        for (const qd of panosCubierta) {
+          const A = area4(qd.map((k) => nodes[k]));
+          const fz = -q * A / 4;
+          for (const n of qd) { const L = zincLoads.get(n) ?? 0; zincLoads.set(n, L + fz); }
+        }
+      } else {
+        // ── MEMBRANA (arriostra + reparte) ───────────────────────────────
+        for (const qd of panosCubierta) {
+          const i = elements.length;
+          elements.push(qd as Element);
+          ei.elasticities.set(i, E); ei.shearModuli.set(i, G);
+          ei.poissonsRatios.set(i, nu); ei.densities.set(i, rho);
+          (ei.thicknesses ??= new Map()).set(i, tC);
+          (ei.plateFormulations ??= new Map()).set(i, p.formaCubierta ?? 2);
+        }
       }
     }
 
     states.nodes.val = nodes;
     states.elements.val = elements;
+    const loadsMap = new Map((m.loads ?? []) as any);
+    // Añadir la carga del zinc (modo carga) a las correas, sumando si el nudo ya tenía carga.
+    for (const [n, fz] of zincLoads) {
+      const prev = (loadsMap.get(n) as number[]) ?? [0, 0, 0, 0, 0, 0];
+      loadsMap.set(n, [prev[0], prev[1], (prev[2] ?? 0) + fz, prev[3] ?? 0, prev[4] ?? 0, prev[5] ?? 0]);
+    }
     states.nodeInputs.val = {
       supports: new Map((m.supports ?? []) as any),
-      loads: new Map((m.loads ?? []) as any),
+      loads: loadsMap,
     };
     states.elementInputs.val = ei as any;
 
     // Color por tipo, para que se lea de un vistazo que hay en el archivo
     const objs: THREE.Object3D[] = [];
     // Los paños de cubierta, como membrana traslúcida naranja sobre el techo.
-    if (panosCubierta.length) {
+    // Solo en modo MEMBRANA (en modo carga no hay elemento, solo carga a correas).
+    if (panosCubierta.length && (p.modoCubierta ?? 0) === 0) {
       const pos: number[] = [];
       for (const q of panosCubierta) {
         const [a, b, c, d] = q.map((k) => nodes[k]);
