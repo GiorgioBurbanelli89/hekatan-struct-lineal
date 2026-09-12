@@ -1,14 +1,14 @@
 const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/edificioAporticado-CD6g5J3a.js","assets/analyze-DgLgRmKg.js","assets/pureFunctionsAny.generated-DeJSBP3k.js","assets/didacticCpp-CnEP9H1T.js","assets/deform-CK_Uh0DH.js","assets/preload-helper-V2P8TQsQ.js","assets/cadSections-DVtTZU6U.js","assets/cotas3D-DKHxKaCI.js","assets/theme-DQ--CgsI.js"])))=>i.map(i=>d[i]);
 import "./modulepreload-polyfill-B5Qt9EMX.js";
 import { _ as kt } from "./preload-helper-V2P8TQsQ.js";
-import { _ as Ln, V as Nt, B as Ro, a2 as Ss, d as aa, g as sa, h as ia, i as ra, j as la, b as Ii, r as Ni, a4 as cs, v as lt, Y as Ai, Z as ga, F as di, N as Ti, M as jo, e as mi, D as Is, ai as pi, R as Mi, f as ba, S as Oi, t as Ns, o as As, P as ui, U as Ci, W as fi } from "./theme-DQ--CgsI.js";
+import { _ as Ln, V as Nt, B as Ro, a2 as Ss, d as aa, g as sa, h as ia, i as ra, j as la, b as Ii, r as Ni, a4 as cs, v as lt, Y as Ai, Z as ga, F as di, N as Ti, M as jo, e as mi, D as Is, ai as pi, R as Mi, f as xa, S as Oi, t as Ns, o as As, P as ui, U as Ci, W as fi } from "./theme-DQ--CgsI.js";
 import { P as to } from "./tweakpane-BXg6ZhiP.js";
 import { a as Ht } from "./analyze-DgLgRmKg.js";
-import { d as bt, m as Zo, __tla as __tla_0 } from "./didacticCpp-CnEP9H1T.js";
+import { d as xt, m as Zo, __tla as __tla_0 } from "./didacticCpp-CnEP9H1T.js";
 import { c as Li, d as Ri, g as hi } from "./getViewer-DoAG4kNs.js";
 import { g as Pi } from "./styles-0iLl92Fx.js";
 import { c as gi } from "./renderModalTable-BJWFR1R0.js";
-import { f as un, d as Vn, e as To, g as Ea, t as bi, r as xi, i as Xn, j as Di, s as Fo, k as yo, l as Bo, m as Yo, n as xa, o as Fi, p as yi, q as Bi, h as ds, u as Yi } from "./units-D6XsaEPz.js";
+import { f as un, d as Vn, e as To, g as Ea, t as xi, r as bi, i as Xn, j as Di, s as Fo, k as yo, l as Bo, m as Yo, n as ba, o as Fi, p as yi, q as Bi, h as ds, u as Yi } from "./units-D6XsaEPz.js";
 import { c as Xi } from "./csiImporter-iyUvnBA3.js";
 import { c as vi, p as Ui, __tla as __tla_1 } from "./cliModeler-BxlZQmwi.js";
 import { c as wi } from "./cadDraw-C6PJzRpg.js";
@@ -55,8 +55,8 @@ import { b as Rr, __tla as __tla_41 } from "./benchmarkPaz8_1-DO7rcflm.js";
 import { b as hr, __tla as __tla_42 } from "./benchmarkPaz9_3-C_5aU68K.js";
 import { b as Pr, __tla as __tla_43 } from "./benchmarkPaz10_7-Bkn-vKHI.js";
 import { b as gr, __tla as __tla_44 } from "./benchmarkPaz11_1-Rcqk0pbf.js";
-import { b as br, __tla as __tla_45 } from "./benchmarkPaz12_1-CImp9HXB.js";
-import { b as xr, __tla as __tla_46 } from "./benchmarkPaz13_1-NvvSOmpC.js";
+import { b as xr, __tla as __tla_45 } from "./benchmarkPaz12_1-CImp9HXB.js";
+import { b as br, __tla as __tla_46 } from "./benchmarkPaz13_1-NvvSOmpC.js";
 import { m as Dr, __tla as __tla_47 } from "./muroLargueros-D_11g1cN.js";
 import { p as Ts, a as Fr } from "./e2kParser-UQm6yNuB.js";
 import { m as yr, __tla as __tla_48 } from "./mesaTorsion-CHq9JzkQ.js";
@@ -703,7 +703,7 @@ Promise.all([
     }), N = new la(O);
     return N.position.copy(r), N.scale.set(0.028, 0.028, 1), N.userData.isAxisLabel = true, t.add(N), t;
   }
-  function bl(e, t = 20) {
+  function xl(e, t = 20) {
     const n = new Ln();
     n.name = `level-${e.label}`;
     const [o, s] = Array.isArray(t) ? t : [
@@ -733,7 +733,7 @@ Promise.all([
     }), S = new la(A);
     return S.position.set(o - 1.2, 0, e.z), S.scale.set(0.08, 0.02, 1), S.userData.isLevelLabel = true, n.add(S), n;
   }
-  const xl = {
+  const bl = {
     id: "ollama",
     name: "\u{1F999} Ollama (local, gratis)",
     supportsVision: true,
@@ -1045,7 +1045,7 @@ O cambi\xE1 a otro provider (Gemini/Groq/OpenRouter) que solo requiere API key.`
       return ((_d = (_c = (_b = (await a.json()).choices) == null ? void 0 : _b[0]) == null ? void 0 : _c.message) == null ? void 0 : _d.content) ?? "";
     }
   }, ps = [
-    xl,
+    bl,
     Fl,
     yl,
     Bl
@@ -1347,19 +1347,19 @@ support 4  1 1 1 1 1 1`;
       0,
       1,
       0
-    ], 4906624), b = R([
+    ], 4906624), x = R([
       0,
       0,
       1
     ], 6333946);
-    C.add(v, P, b, F), C.renderOrder = 999;
+    C.add(v, P, x, F), C.renderOrder = 999;
     const _ = (X, $) => {
       var _a4, _b, _c;
       const Q = o.__ctx, Y = Q == null ? void 0 : Q.scene;
       if (!Y) return;
       C.parent || Y.add(C), C.position.set($[0], $[1], $[2]);
       const h = (((_b = (_a4 = o.__settings) == null ? void 0 : _a4.gridSize) == null ? void 0 : _b.rawVal) ?? 30) / 12;
-      C.scale.set(h, h, h), v.visible = true, P.visible = true, b.visible = true;
+      C.scale.set(h, h, h), v.visible = true, P.visible = true, x.visible = true;
       const G = X === "xy" ? `PLANTA  Z = ${$[2].toFixed(2)}` : X === "xz" ? `ALZADO X-Z  Y = ${$[1].toFixed(2)}` : `ALZADO Y-Z  X = ${$[0].toFixed(2)}`;
       y(G), F.position.set(0, 0, 1.35), C.visible = true, window.__hekatanPuntoRef = $, window.__hekatanPlanoRef = X, (_c = Q == null ? void 0 : Q.render) == null ? void 0 : _c.call(Q);
     };
@@ -1648,7 +1648,7 @@ support 4  1 1 1 1 1 1`;
       let X = 1 / 0, $ = -1 / 0;
       for (const Q of fe) X = Math.min(X, Q.start[0], Q.end[0]), $ = Math.max($, Q.start[0], Q.end[0]);
       (!isFinite(X) || $ - X < 1) && (X = 0, $ = 12);
-      for (const Q of pe) ue.add(bl(Q, [
+      for (const Q of pe) ue.add(xl(Q, [
         X,
         $
       ]));
@@ -2075,7 +2075,7 @@ support 4  1 1 1 1 1 1`;
     }).on("change", (X) => {
       M.providerId = X.value, $t.setProvider(M.providerId), M.apiKey = $t.getKey(M.providerId), ct();
     });
-    const x = {
+    const b = {
       id: ""
     };
     let U = null;
@@ -2120,10 +2120,10 @@ support 4  1 1 1 1 1 1`;
     ].join(";") + ";";
     const Ae = document.createElement("div");
     Ae.style.cssText = "display:flex;gap:6px;";
-    const be = document.createElement("button");
-    be.textContent = "\u25B6 Generar", be.style.cssText = "flex:1;padding:6px;background:#22d3ee;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;";
+    const xe = document.createElement("button");
+    xe.textContent = "\u25B6 Generar", xe.style.cssText = "flex:1;padding:6px;background:#22d3ee;color:#000;border:none;border-radius:4px;cursor:pointer;font-weight:bold;";
     const ot = document.createElement("button");
-    ot.textContent = "\u2717 Limpiar im\xE1genes", ot.style.cssText = "padding:6px 10px;background:#444;color:#ddd;border:none;border-radius:4px;cursor:pointer;", Ae.appendChild(be), Ae.appendChild(ot);
+    ot.textContent = "\u2717 Limpiar im\xE1genes", ot.style.cssText = "padding:6px 10px;background:#444;color:#ddd;border:none;border-radius:4px;cursor:pointer;", Ae.appendChild(xe), Ae.appendChild(ot);
     const Ze = document.createElement("textarea");
     Ze.placeholder = "La respuesta del AI aparecer\xE1 ac\xE1...", Ze.readOnly = true, Ze.style.cssText = Se.style.cssText + "min-height:120px;background:#0a0a0a;";
     const at = document.createElement("button");
@@ -2188,7 +2188,7 @@ support 4  1 1 1 1 1 1`;
       const $ = {};
       for (const h of X.models) $[h.name] = h.id;
       const Q = $t.getModel(X.id);
-      if (x.id = Q || X.defaultModel, M.model = x.id, U = k.addBinding(x, "id", {
+      if (b.id = Q || X.defaultModel, M.model = b.id, U = k.addBinding(b, "id", {
         label: "Modelo",
         options: $
       }), U.on("change", (h) => {
@@ -2246,7 +2246,7 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
           Lt.textContent = "\u{1F50C} Test conexi\xF3n";
         }
       }
-    }, z.appendChild(Lt), be.onclick = async () => {
+    }, z.appendChild(Lt), xe.onclick = async () => {
       const X = Xo(M.providerId);
       if (!X) {
         alert("Provider no encontrado.");
@@ -2260,7 +2260,7 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
         alert("Escrib\xED un prompt o peg\xE1 una imagen.");
         return;
       }
-      be.disabled = true, be.textContent = "\u23F3 Generando...", Ze.value = "Esperando respuesta del modelo...", at.disabled = true;
+      xe.disabled = true, xe.textContent = "\u23F3 Generando...", Ze.value = "Esperando respuesta del modelo...", at.disabled = true;
       try {
         const $ = await X.send({
           msg: {
@@ -2277,12 +2277,12 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       } catch ($) {
         Ze.value = `\u274C Error: ${($ == null ? void 0 : $.message) ?? $}`;
       } finally {
-        be.disabled = false, be.textContent = "\u25B6 Generar";
+        xe.disabled = false, xe.textContent = "\u25B6 Generar";
       }
     }, Se.addEventListener("input", () => {
       M.prompt = Se.value;
     }), Se.addEventListener("keydown", (X) => {
-      (X.ctrlKey || X.metaKey) && X.key === "Enter" && (X.preventDefault(), be.click());
+      (X.ctrlKey || X.metaKey) && X.key === "Enter" && (X.preventDefault(), xe.click());
     }), at.onclick = () => {
       var _a4, _b;
       const X = Ze.value.trim();
@@ -2528,8 +2528,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
     const o = /* @__PURE__ */ new Map(), s = () => {
       const M = t.getTool();
       for (const [g, D] of o) {
-        const x = g === "apoyo" || g === "carga" ? E === g : E === null && g === M;
-        D.style.background = x ? "#0e7490" : "transparent", D.style.borderColor = x ? "#22d3ee" : "transparent", D.style.color = x ? "#ecfeff" : "#cbd5e1";
+        const b = g === "apoyo" || g === "carga" ? E === g : E === null && g === M;
+        D.style.background = b ? "#0e7490" : "transparent", D.style.borderColor = b ? "#22d3ee" : "transparent", D.style.color = b ? "#ecfeff" : "#cbd5e1";
       }
     };
     let a = "Elige una herramienta arriba, o teclea su comando y Enter (L, PL, REC, COL, M, CO).", l = false;
@@ -2537,8 +2537,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       var _a4, _b;
       const M = document.getElementById("hk-ribbon-estado");
       if (!M || l) return;
-      const g = (_b = (_a4 = window.__hekatanCadState) == null ? void 0 : _a4.get) == null ? void 0 : _b.call(_a4), D = (g == null ? void 0 : g.workPlane) ?? "xy", x = D === "xy" ? "PLANTA (X-Y)" : D === "xz" ? "ALZADO FRONTAL (X-Z)" : "ALZADO LATERAL (Y-Z)", U = Number((g == null ? void 0 : g.workZ) ?? 0), w = D === "xy" ? ` \xB7 cota Z = ${U.toFixed(2)} m` : "", J = window.__hekatanPuntoRef, z = D === "xz" && J ? ` \xB7 pasa por Y = ${J[1].toFixed(2)} m` : D === "yz" && J ? ` \xB7 pasa por X = ${J[0].toFixed(2)} m` : "";
-      M.innerHTML = `<b style="color:#22d3ee">Dibujando en ${x}</b><span style="color:#64748b">${w}${z}</span><span style="color:#334155"> \u2502 </span><span>${a}</span>`;
+      const g = (_b = (_a4 = window.__hekatanCadState) == null ? void 0 : _a4.get) == null ? void 0 : _b.call(_a4), D = (g == null ? void 0 : g.workPlane) ?? "xy", b = D === "xy" ? "PLANTA (X-Y)" : D === "xz" ? "ALZADO FRONTAL (X-Z)" : "ALZADO LATERAL (Y-Z)", U = Number((g == null ? void 0 : g.workZ) ?? 0), w = D === "xy" ? ` \xB7 cota Z = ${U.toFixed(2)} m` : "", J = window.__hekatanPuntoRef, z = D === "xz" && J ? ` \xB7 pasa por Y = ${J[1].toFixed(2)} m` : D === "yz" && J ? ` \xB7 pasa por X = ${J[0].toFixed(2)} m` : "";
+      M.innerHTML = `<b style="color:#22d3ee">Dibujando en ${b}</b><span style="color:#64748b">${w}${z}</span><span style="color:#334155"> \u2502 </span><span>${a}</span>`;
     }, i = (M) => {
       a = M, r();
     };
@@ -2555,7 +2555,7 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       if (!M || M.size === 0) return;
       const g = [
         ...M
-      ].filter((x) => x.startsWith("pt:"));
+      ].filter((b) => b.startsWith("pt:"));
       if (!g.length) return;
       const D = E === "apoyo" ? {
         kind: "nodes",
@@ -2644,8 +2644,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
           s(), O("");
         }), o.set(w.id, J), D.appendChild(J);
       }
-      const x = document.createElement("div");
-      x.textContent = M.titulo, x.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px", g.appendChild(D), g.appendChild(x), n.appendChild(g);
+      const b = document.createElement("div");
+      b.textContent = M.titulo, b.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px", g.appendChild(D), g.appendChild(b), n.appendChild(g);
       const U = document.createElement("div");
       U.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;", n.appendChild(U);
     }
@@ -2654,8 +2654,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
     const m = document.createElement("div");
     m.style.cssText = "display:flex;gap:3px;align-items:center;";
     const d = (M, g, D) => {
-      const x = document.createElement("input");
-      return x.type = "text", x.value = g, x.placeholder = M, x.title = M, x.style.cssText = `width:${D};height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;`, x;
+      const b = document.createElement("input");
+      return b.type = "text", b.value = g, b.placeholder = M, b.title = M, b.style.cssText = `width:${D};height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;`, b;
     }, u = d("Vanos en X, p.ej. 6,6,5 o 4x6", "4x6", "62px"), p = d("Vanos en Y", "3x5", "62px"), T = d("Alturas de piso", "4x3", "56px"), C = document.createElement("button");
     C.type = "button", C.textContent = "\u{1F3D7} Rejilla", C.title = "Genera ejes A,B,C\u2026 y 1,2,3\u2026, los niveles y las columnas en los cruces (G)", C.style.cssText = "height:26px;padding:0 10px;cursor:pointer;background:#0e7490;border:1px solid #22d3ee;border-radius:6px;color:#ecfeff;font:600 11px inherit;";
     const R = () => {
@@ -2678,19 +2678,19 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
     const v = document.createElement("div");
     v.style.cssText = "display:flex;gap:3px;align-items:center;";
     const P = (M, g, D) => {
-      const x = document.createElement("input");
-      return x.type = "text", x.value = M, x.title = D, x.style.cssText = `width:${g};height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;`, x;
-    }, b = P("0", "48px", "Cota Z del plano de planta, en metros"), _ = P("3", "44px", "Altura de piso para subir la planta, en metros"), V = P("3", "36px", "Cuantos pisos subir"), K = () => {
+      const b = document.createElement("input");
+      return b.type = "text", b.value = M, b.title = D, b.style.cssText = `width:${g};height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;`, b;
+    }, x = P("0", "48px", "Cota Z del plano de planta, en metros"), _ = P("3", "44px", "Altura de piso para subir la planta, en metros"), V = P("3", "36px", "Cuantos pisos subir"), K = () => {
       var _a4, _b;
-      const M = parseFloat(b.value);
+      const M = parseFloat(x.value);
       if (!isFinite(M)) {
-        b.value = "0";
+        x.value = "0";
         return;
       }
       const g = (_b = (_a4 = window.__hekatanCadState) == null ? void 0 : _a4.get) == null ? void 0 : _b.call(_a4);
       g && (g.workZ = M), t.setPlane("xy"), t.setView("plan"), i(`Plano de planta a la cota Z = ${M.toFixed(2)} m. Lo que dibujes cae ahi.`), r();
     };
-    b.addEventListener("change", K), b.addEventListener("keydown", (M) => {
+    x.addEventListener("change", K), x.addEventListener("keydown", (M) => {
       M.key === "Enter" && K();
     });
     const ee = document.createElement("button");
@@ -2701,14 +2701,14 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
         i("La altura de piso tiene que ser un numero distinto de 0.");
         return;
       }
-      const D = window, x = D.__hekatanSelection;
-      if (!x) {
+      const D = window, b = D.__hekatanSelection;
+      if (!b) {
         i("No se puede replicar: no hay seleccion disponible.");
         return;
       }
-      x.size === 0 && ((((_a4 = D.__hekatanDrawingPoints) == null ? void 0 : _a4.val) ?? []).forEach((w, J) => x.add("pt:" + J)), (((_b = D.__hekatanDrawingPolylines) == null ? void 0 : _b.val) ?? []).forEach((w, J) => x.add("poly:" + J)));
+      b.size === 0 && ((((_a4 = D.__hekatanDrawingPoints) == null ? void 0 : _a4.val) ?? []).forEach((w, J) => b.add("pt:" + J)), (((_b = D.__hekatanDrawingPolylines) == null ? void 0 : _b.val) ?? []).forEach((w, J) => b.add("poly:" + J)));
       const U = ((_c = D.__hekatanReplicateSelection) == null ? void 0 : _c.call(D, 0, 0, M, g)) ?? 0;
-      x.clear();
+      b.clear();
       try {
         (_d = D.__hekatanRefreshSelection) == null ? void 0 : _d.call(D);
       } catch {
@@ -2718,7 +2718,7 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       } catch {
       }
       i(`${U} copia${U === 1 ? "" : "s"} cada ${M} m. Ya hay ${g + 1} plantas.`);
-    }), v.append(b, ee, _, document.createTextNode("\xD7"), V);
+    }), v.append(x, ee, _, document.createTextNode("\xD7"), V);
     const Ee = document.createElement("div");
     Ee.textContent = "Cota Z \xB7 subir alt \xD7 n\xBA", Ee.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px", y.append(v, Ee), n.appendChild(y);
     const Ne = document.createElement("div");
@@ -2780,9 +2780,9 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       XZ: "el clic cae en el alzado frontal, en Y = 0",
       YZ: "el clic cae en el alzado lateral, en X = 0"
     };
-    for (const [M, g, D, x, U] of ae) {
+    for (const [M, g, D, b, U] of ae) {
       const w = document.createElement("button");
-      w.type = "button", w.title = `${g} \u2014 plano ${D}: ${fe[D]} (${x})`, w.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:46px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;border-radius:7px;color:#cbd5e1;font-family:inherit;", w.innerHTML = `<span style="font-size:14px;line-height:1">${M}</span><span style="font-size:10px;line-height:1.15">${g}</span><span style="font-size:9px;line-height:1.1;color:#22d3ee;letter-spacing:.5px">${D}</span><span style="font-size:8px;opacity:.5;line-height:1">${x}</span>`, w.addEventListener("click", () => {
+      w.type = "button", w.title = `${g} \u2014 plano ${D}: ${fe[D]} (${b})`, w.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:46px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;border-radius:7px;color:#cbd5e1;font-family:inherit;", w.innerHTML = `<span style="font-size:14px;line-height:1">${M}</span><span style="font-size:10px;line-height:1.15">${g}</span><span style="font-size:9px;line-height:1.1;color:#22d3ee;letter-spacing:.5px">${D}</span><span style="font-size:8px;opacity:.5;line-height:1">${b}</span>`, w.addEventListener("click", () => {
         U(), i(`Vista ${g} \u2014 plano ${D}: ${fe[D]}.`);
       }), w.addEventListener("mouseenter", () => {
         w.style.background = "rgba(34,211,238,.13)";
@@ -2858,8 +2858,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
     </label>`;
     const De = "hk_guia_pos", ue = (M, g) => {
       var _a4;
-      const D = (_a4 = me.offsetParent) == null ? void 0 : _a4.getBoundingClientRect(), x = (D == null ? void 0 : D.left) ?? 0, U = (D == null ? void 0 : D.top) ?? 0, w = me.offsetWidth || 640, J = Math.max(8, Math.min(window.innerWidth - w - 8, M + x)), z = Math.max(8, Math.min(window.innerHeight - 40, g + U));
-      me.style.left = `${Math.round(J - x)}px`, me.style.top = `${Math.round(z - U)}px`, me.style.transform = "none", me.setAttribute("data-movida", "1");
+      const D = (_a4 = me.offsetParent) == null ? void 0 : _a4.getBoundingClientRect(), b = (D == null ? void 0 : D.left) ?? 0, U = (D == null ? void 0 : D.top) ?? 0, w = me.offsetWidth || 640, J = Math.max(8, Math.min(window.innerWidth - w - 8, M + b)), z = Math.max(8, Math.min(window.innerHeight - 40, g + U));
+      me.style.left = `${Math.round(J - b)}px`, me.style.top = `${Math.round(z - U)}px`, me.style.transform = "none", me.setAttribute("data-movida", "1");
     }, Ye = () => {
       me.style.left = "50%", me.style.top = "120px", me.style.transform = "translateX(-50%)", me.removeAttribute("data-movida");
       try {
@@ -2886,37 +2886,37 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
     {
       const M = me.querySelector("#hk-guia-barra");
       let g = null;
-      M == null ? void 0 : M.addEventListener("pointerdown", (x) => {
+      M == null ? void 0 : M.addEventListener("pointerdown", (b) => {
         var _a4;
-        if ((_a4 = x.target) == null ? void 0 : _a4.closest("button")) return;
+        if ((_a4 = b.target) == null ? void 0 : _a4.closest("button")) return;
         const U = me.getBoundingClientRect();
         g = {
-          dx: x.clientX - U.left,
-          dy: x.clientY - U.top
+          dx: b.clientX - U.left,
+          dy: b.clientY - U.top
         };
         try {
-          M.setPointerCapture(x.pointerId);
+          M.setPointerCapture(b.pointerId);
         } catch {
         }
-        x.preventDefault();
-      }), M == null ? void 0 : M.addEventListener("pointermove", (x) => {
+        b.preventDefault();
+      }), M == null ? void 0 : M.addEventListener("pointermove", (b) => {
         var _a4;
         if (!g) return;
         const U = (_a4 = me.offsetParent) == null ? void 0 : _a4.getBoundingClientRect();
-        ue(x.clientX - g.dx - ((U == null ? void 0 : U.left) ?? 0), x.clientY - g.dy - ((U == null ? void 0 : U.top) ?? 0));
+        ue(b.clientX - g.dx - ((U == null ? void 0 : U.left) ?? 0), b.clientY - g.dy - ((U == null ? void 0 : U.top) ?? 0));
       });
-      const D = (x) => {
+      const D = (b) => {
         if (g) {
           g = null;
           try {
-            M == null ? void 0 : M.releasePointerCapture(x.pointerId);
+            M == null ? void 0 : M.releasePointerCapture(b.pointerId);
           } catch {
           }
           We();
         }
       };
-      M == null ? void 0 : M.addEventListener("pointerup", D), M == null ? void 0 : M.addEventListener("pointercancel", D), M == null ? void 0 : M.addEventListener("dblclick", Ye), window.__hekatanGuiaMover = (x, U) => {
-        ue(x, U), We();
+      M == null ? void 0 : M.addEventListener("pointerup", D), M == null ? void 0 : M.addEventListener("pointercancel", D), M == null ? void 0 : M.addEventListener("dblclick", Ye), window.__hekatanGuiaMover = (b, U) => {
+        ue(b, U), We();
       }, window.__hekatanGuiaCentrar = Ye;
     }
     const je = (M) => {
@@ -3044,7 +3044,7 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
         M.preventDefault(), ae[D][4](), i(`Vista ${ae[D][1]} \u2014 plano ${ae[D][2]}`), setTimeout(k, 0);
         return;
       }
-      const x = {
+      const b = {
         a: [
           "normals",
           "Axil"
@@ -3058,12 +3058,12 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
           "Momento 3-3"
         ]
       }, U = M.key.toLowerCase();
-      if (U in x || U === "f") {
+      if (U in b || U === "f") {
         const w = (_b = window.__hekatanSettings) == null ? void 0 : _b.call(window);
         if (!w) return;
         if (M.preventDefault(), U === "f") w.deformedShape && (w.deformedShape.val = !w.deformedShape.rawVal), w.frameResults && (w.frameResults.val = "none"), i(`Deformada ${((_c = w.deformedShape) == null ? void 0 : _c.rawVal) ? "ON" : "OFF"}`);
         else {
-          const [J, z] = x[U];
+          const [J, z] = b[U];
           if (w.frameResults) {
             const j = w.frameResults.rawVal === J;
             w.frameResults.val = j ? "none" : J, i(j ? "Diagrama apagado" : `Diagrama: ${z}`);
@@ -3671,9 +3671,9 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
         ]
       ].forEach((v) => {
         const P = document.createElement("tr");
-        v.forEach((b, _) => {
+        v.forEach((x, _) => {
           const V = document.createElement("td");
-          V.textContent = b, Object.assign(V.style, {
+          V.textContent = x, Object.assign(V.style, {
             padding: "4px 8px",
             background: _ % 2 === 0 ? "rgba(165,180,252,0.08)" : "transparent",
             color: _ % 2 === 0 ? "#a5b4fc" : "#cbd5e1",
@@ -3723,12 +3723,12 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
         fontFamily: "ui-monospace, Menlo, monospace"
       }), C.forEach((v) => {
         const P = document.createElement("tr");
-        v.forEach((b) => {
+        v.forEach((x) => {
           const _ = document.createElement("td");
-          _.textContent = Zl(b), Object.assign(_.style, {
+          _.textContent = Zl(x), Object.assign(_.style, {
             padding: "3px 6px",
             borderBottom: "1px solid rgba(255,255,255,0.04)",
-            color: Math.abs(b) < 1e-12 ? "#475569" : "#cbd5e1",
+            color: Math.abs(x) < 1e-12 ? "#475569" : "#cbd5e1",
             textAlign: "right",
             minWidth: "60px"
           }), P.appendChild(_);
@@ -4000,8 +4000,8 @@ Inici\xE1 Ollama o instalalo desde ollama.com`);
       let C = 0, R = 0, F = 0, y = 0;
       if (Array.isArray(T)) C = T[0] ?? 0, R = T[1] ?? 0, F = T[2] ?? 0, y = T[5] ?? 0;
       else if (T && typeof T == "object") {
-        const b = T;
-        C = b.ux ?? 0, R = b.uy ?? 0, F = b.uz ?? 0, y = b.rz ?? 0;
+        const x = T;
+        C = x.ux ?? 0, R = x.uy ?? 0, F = x.uz ?? 0, y = x.rz ?? 0;
       }
       r += C, i += R, E += y, c < 0 && C > 0.5 && (c = m), A < 0 && R > 0.5 && (A = m), S < 0 && y > 0.5 && (S = m), I < 0 && r > 0.9 && (I = m), O < 0 && i > 0.9 && (O = m);
       let v = "\u2014";
@@ -4276,8 +4276,8 @@ max(abs(u))
 ` + (C.textContent ?? "")
       ], {
         type: "text/plain;charset=utf-8"
-      }), P = URL.createObjectURL(v), b = document.createElement("a");
-      b.href = P, b.download = `hekatan_calc_${Date.now()}.txt`, document.body.appendChild(b), b.click(), document.body.removeChild(b), setTimeout(() => URL.revokeObjectURL(P), 1e3);
+      }), P = URL.createObjectURL(v), x = document.createElement("a");
+      x.href = P, x.download = `hekatan_calc_${Date.now()}.txt`, document.body.appendChild(x), x.click(), document.body.removeChild(x), setTimeout(() => URL.revokeObjectURL(P), 1e3);
     }, n.appendChild(o);
     const s = document.createElement("select");
     Object.assign(s.style, {
@@ -4443,11 +4443,11 @@ T1 = 0.1 * N    % aprox NEC-SE-DS
       padding: "0 6px",
       lineHeight: "1"
     }), S.onclick = () => y.hide(), n.appendChild(S), t.appendChild(n);
-    function I(v, P, b) {
+    function I(v, P, x) {
       const _ = document.createElement("button");
       return _.textContent = v, Object.assign(_.style, {
         background: P,
-        border: `1px solid ${b}`,
+        border: `1px solid ${x}`,
         color: "#dbeafe",
         padding: "4px 10px",
         borderRadius: "3px",
@@ -4506,7 +4506,7 @@ T1 = 0.1 * N    % aprox NEC-SE-DS
       const v = d.value.split(`
 `).length;
       let P = "";
-      for (let b = 1; b <= Math.max(v, 5); b++) P += b + `
+      for (let x = 1; x <= Math.max(v, 5); x++) P += x + `
 `;
       m.textContent = P, m.scrollTop = d.scrollTop;
     }
@@ -4557,11 +4557,11 @@ T1 = 0.1 * N    % aprox NEC-SE-DS
       const v = d.value, P = {
         modelVars: ((_a4 = e.getModelVars) == null ? void 0 : _a4.call(e)) ?? {}
       };
-      let b;
+      let x;
       try {
-        b = aE(v, P);
+        x = aE(v, P);
       } catch (_) {
-        b = [
+        x = [
           {
             type: "error",
             source: v,
@@ -4569,7 +4569,7 @@ T1 = 0.1 * N    % aprox NEC-SE-DS
           }
         ];
       }
-      await lE(C, b);
+      await lE(C, x);
     }
     document.body.appendChild(t);
     const y = {
@@ -5383,7 +5383,7 @@ High-level generators:
       for (let F = 0; F <= n; F++) {
         const y = [];
         for (let v = 0; v <= n; v++) {
-          const P = F / n, b = v / n, _ = (1 - P) * (1 - b) * T[0][0] + P * (1 - b) * T[1][0] + P * b * T[2][0] + (1 - P) * b * T[3][0], V = (1 - P) * (1 - b) * T[0][1] + P * (1 - b) * T[1][1] + P * b * T[2][1] + (1 - P) * b * T[3][1], K = a(_, V, C);
+          const P = F / n, x = v / n, _ = (1 - P) * (1 - x) * T[0][0] + P * (1 - x) * T[1][0] + P * x * T[2][0] + (1 - P) * x * T[3][0], V = (1 - P) * (1 - x) * T[0][1] + P * (1 - x) * T[1][1] + P * x * T[2][1] + (1 - P) * x * T[3][1], K = a(_, V, C);
           let ee = l.get(K);
           ee === void 0 && (e.nodes.push([
             _,
@@ -5425,14 +5425,14 @@ High-level generators:
       }
       if (P.length === 0) continue;
       P.sort((V, K) => V.t - K.t);
-      let b = p[0];
+      let x = p[0];
       const _ = [];
       for (const V of P) _.push([
-        b,
+        x,
         V.nodeIdx
-      ]), b = V.nodeIdx;
+      ]), x = V.nodeIdx;
       _.push([
-        b,
+        x,
         p[1]
       ]), e.elements[u] = _[0];
       for (let V = 1; V < _.length; V++) {
@@ -5640,7 +5640,7 @@ High-level generators:
     const t = Cs(e), n = (_a3 = t == null ? void 0 : t.renderer) == null ? void 0 : _a3.domElement;
     return !n || !(t == null ? void 0 : t.render) ? (console.warn("[PNG] sin canvas/render"), null) : (t.render(), await new Promise((o) => n.toBlob(o, "image/png")));
   }
-  async function bE(e, t = "hekatan_struct.png") {
+  async function xE(e, t = "hekatan_struct.png") {
     const n = await Ls(e);
     return n && fs(n, t), n;
   }
@@ -5697,9 +5697,9 @@ High-level generators:
   }
   function hs(e) {
     let t = document.getElementById("hk-ifc-objs");
-    if (t || (t = document.createElement("div"), t.id = "hk-ifc-objs", t.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:120;background:rgba(16,22,30,0.96);color:#cde;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 9px;font:11px system-ui,sans-serif;max-height:38vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:220px;", document.body.appendChild(t)), !document.getElementById("hk-ifc-tab")) {
+    if (t || (t = document.createElement("div"), t.id = "hk-ifc-objs", t.style.cssText = "position:fixed;left:50%;bottom:calc(var(--hk-cmd-hueco, 66px) + 14px);transform:translateX(-50%);z-index:120;background:rgba(16,22,30,0.96);color:#cde;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 9px;font:11px system-ui,sans-serif;max-height:38vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:220px;", document.body.appendChild(t)), !document.getElementById("hk-ifc-tab")) {
       const l = document.createElement("button");
-      l.id = "hk-ifc-tab", l.textContent = "\u{1F3DB} Objetos IFC \u27E9", l.title = "Mostrar objetos IFC", l.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:121;display:none;padding:6px 12px;border:1px solid #3a4a5f;border-radius:8px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4)", l.onclick = () => Ho(false), document.body.appendChild(l);
+      l.id = "hk-ifc-tab", l.textContent = "\u{1F3DB} Objetos IFC \u27E9", l.title = "Mostrar objetos IFC", l.style.cssText = "position:fixed;left:50%;bottom:calc(var(--hk-cmd-hueco, 66px) + 14px);transform:translateX(-50%);z-index:121;display:none;padding:6px 12px;border:1px solid #3a4a5f;border-radius:8px;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4)", l.onclick = () => Ho(false), document.body.appendChild(l);
     }
     const n = pn ? "" : e.map((l, r) => {
       const i = l.color.map((A) => Math.round(A * 255)), E = Math.round(l.positions.length / 9), c = !On.has(r) && (Qt < 0 || Qt === r);
@@ -5740,7 +5740,7 @@ High-level generators:
       On.clear(), Qt = -1, s();
     }), Ho(Rs);
   }
-  function xE() {
+  function bE() {
     var _a3, _b;
     (_a3 = document.getElementById("hk-ifc-objs")) == null ? void 0 : _a3.remove(), (_b = document.getElementById("hk-ifc-tab")) == null ? void 0 : _b.remove();
   }
@@ -5847,7 +5847,7 @@ High-level generators:
           torsionalConstants: /* @__PURE__ */ new Map(),
           densities: /* @__PURE__ */ new Map(),
           poissonsRatios: /* @__PURE__ */ new Map()
-        }, t.objects3D.val = [], xE(), console.log("[IFC] Sin modelo. Usa '\u{1F4E5} Importar IFC'.");
+        }, t.objects3D.val = [], bE(), console.log("[IFC] Sin modelo. Usa '\u{1F4E5} Importar IFC'.");
         return;
       }
       const o = Math.max(0.1, Math.min(1, (e.opacidad ?? 100) / 100)), s = [];
@@ -6053,10 +6053,10 @@ High-level generators:
         ];
         Te[0] += C, T.set(q, Te);
       }
-      const R = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Map(), y = /* @__PURE__ */ new Map(), v = /* @__PURE__ */ new Map(), P = /* @__PURE__ */ new Map(), b = /* @__PURE__ */ new Map(), _ = /* @__PURE__ */ new Map(), V = /* @__PURE__ */ new Map(), K = /* @__PURE__ */ new Map(), ee = /* @__PURE__ */ new Map(), Ee = /* @__PURE__ */ new Map();
+      const R = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Map(), y = /* @__PURE__ */ new Map(), v = /* @__PURE__ */ new Map(), P = /* @__PURE__ */ new Map(), x = /* @__PURE__ */ new Map(), _ = /* @__PURE__ */ new Map(), V = /* @__PURE__ */ new Map(), K = /* @__PURE__ */ new Map(), ee = /* @__PURE__ */ new Map(), Ee = /* @__PURE__ */ new Map();
       for (let re = 0; re < d; re++) R.set(re, e.t), F.set(re, e.E), y.set(re, e.nu), v.set(re, 24);
       const Ne = e.t, de = e.bH, Le = e.E / (2 * (1 + e.nu));
-      for (let re = d; re < c.length; re++) P.set(re, Ne * de), b.set(re, Ne * de ** 3 / 12), _.set(re, de * Ne ** 3 / 12), V.set(re, Ne * de ** 3 / 12 + de * Ne ** 3 / 12), F.set(re, e.E), K.set(re, Le), v.set(re, 24), ee.set(re, [
+      for (let re = d; re < c.length; re++) P.set(re, Ne * de), x.set(re, Ne * de ** 3 / 12), _.set(re, de * Ne ** 3 / 12), V.set(re, Ne * de ** 3 / 12 + de * Ne ** 3 / 12), F.set(re, e.E), K.set(re, Le), v.set(re, 24), ee.set(re, [
         0,
         0,
         1
@@ -6076,14 +6076,14 @@ High-level generators:
         densities: v,
         areas: P,
         momentsOfInertiaY: _,
-        momentsOfInertiaZ: b,
+        momentsOfInertiaZ: x,
         torsionalConstants: V,
         shearModuli: K,
         orientations: ee,
         sectionShapes: Ee
       };
       try {
-        t.deformOutputs.val = bt(r, c, {
+        t.deformOutputs.val = xt(r, c, {
           supports: p,
           loads: T
         }, t.elementInputs.val), t.analyzeOutputs.val = Ht(r, c, t.elementInputs.val, t.deformOutputs.val);
@@ -6265,7 +6265,7 @@ High-level generators:
         loads: r
       }, t.elementInputs.val = Po(s.length, e.t, e.E, e.nu);
       try {
-        t.deformOutputs.val = bt(o, s, {
+        t.deformOutputs.val = xt(o, s, {
           supports: l,
           loads: r
         }, t.elementInputs.val), t.analyzeOutputs.val = Ht(o, s, t.elementInputs.val, t.deformOutputs.val);
@@ -6389,7 +6389,7 @@ High-level generators:
         loads: i
       }, t.elementInputs.val = Po(a.length, e.t, e.E, e.nu);
       try {
-        t.deformOutputs.val = bt(s, a, {
+        t.deformOutputs.val = xt(s, a, {
           supports: r,
           loads: i
         }, t.elementInputs.val), t.analyzeOutputs.val = Ht(s, a, t.elementInputs.val, t.deformOutputs.val);
@@ -6492,7 +6492,7 @@ High-level generators:
         loads: r
       }, t.elementInputs.val = Po(s.length, e.t, e.E, e.nu);
       try {
-        t.deformOutputs.val = bt(o, s, {
+        t.deformOutputs.val = xt(o, s, {
           supports: l,
           loads: r
         }, t.elementInputs.val), t.analyzeOutputs.val = Ht(o, s, t.elementInputs.val, t.deformOutputs.val);
@@ -6621,7 +6621,7 @@ High-level generators:
         loads: A
       }, t.elementInputs.val = Po(i.length, e.t, e.E, e.nu, 0);
       try {
-        t.deformOutputs.val = bt(r, i, {
+        t.deformOutputs.val = xt(r, i, {
           supports: c,
           loads: A
         }, t.elementInputs.val), t.analyzeOutputs.val = Ht(r, i, t.elementInputs.val, t.deformOutputs.val);
@@ -6903,9 +6903,9 @@ High-level generators:
           N[0] - d[0],
           N[1] - d[1],
           N[2] - d[2]
-        ], R = (Le, re) => Le[0] * re[0] + Le[1] * re[1] + Le[2] * re[2], F = R(p, p), y = R(p, T), v = R(T, T), P = R(p, C), b = R(T, C), _ = F * v - y * y;
+        ], R = (Le, re) => Le[0] * re[0] + Le[1] * re[1] + Le[2] * re[2], F = R(p, p), y = R(p, T), v = R(T, T), P = R(p, C), x = R(T, C), _ = F * v - y * y;
         if (Math.abs(_) < 1e-14) continue;
-        const V = (y * b - v * P) / _, K = (F * b - y * P) / _;
+        const V = (y * x - v * P) / _, K = (F * x - y * P) / _;
         if (V <= 1e-6 || V >= 1 - 1e-6 || K <= 1e-6 || K >= 1 - 1e-6) continue;
         const ee = [
           N[0] + V * p[0],
@@ -7140,8 +7140,8 @@ High-level generators:
           y[2][0] - y[0][0],
           y[2][1] - y[0][1],
           y[2][2] - y[0][2]
-        ], b = v[1] * P[2] - v[2] * P[1], _ = v[2] * P[0] - v[0] * P[2], V = v[0] * P[1] - v[1] * P[0], K = Math.hypot(b, _, V) || 1, ee = [
-          b / K,
+        ], x = v[1] * P[2] - v[2] * P[1], _ = v[2] * P[0] - v[0] * P[2], V = v[0] * P[1] - v[1] * P[0], K = Math.hypot(x, _, V) || 1, ee = [
+          x / K,
           _ / K,
           V / K
         ], Ee = Math.hypot(v[0], v[1], v[2]) || 1, Ne = [
@@ -7201,18 +7201,18 @@ High-level generators:
           m.push(T, T + 1, T + 2), u.push(0);
           continue;
         }
-        const R = kE(C).sort((b, _) => _ - b), F = Math.max(R[0], 1e-30) * 1e-9, y = R.filter((b) => b >= F).length;
+        const R = kE(C).sort((x, _) => _ - x), F = Math.max(R[0], 1e-30) * 1e-9, y = R.filter((x) => x >= F).length;
         if (u.push(y), y === 3) continue;
         const v = Math.max(C[0][0], C[1][1], C[2][2], 1e-30);
         let P = 0;
-        for (let b = 0; b < 3; b++) C[b][b] < v * 1e-9 && (m.push(T + b), P++);
+        for (let x = 0; x < 3; x++) C[x][x] < v * 1e-9 && (m.push(T + x), P++);
         if (P < 3 - y) {
-          const b = [
+          const x = [
             0,
             1,
             2
           ].sort((_, V) => C[_][_] - C[V][V]);
-          for (const _ of b) {
+          for (const _ of x) {
             if (P >= 3 - y) break;
             m.includes(T + _) || (m.push(T + _), P++, d = true);
           }
@@ -7443,9 +7443,9 @@ High-level generators:
       }
       if (!v.length) break;
       v.sort((_, V) => V.m - _.m);
-      const P = v[Math.floor(v.length / 2)].m, b = v.filter((_) => _.m > P * 100);
-      if (!b.length) break;
-      for (const _ of b) A.add(_.orig);
+      const P = v[Math.floor(v.length / 2)].m, x = v.filter((_) => _.m > P * 100);
+      if (!x.length) break;
+      for (const _ of x) A.add(_.orig);
       s = _o(s, (_) => !_.some((V) => A.has(V))), r = l ? co(s).muelles : [], $a(s), E.vueltas = N + 1;
     }
     E.deMecanismos = A.size;
@@ -10626,10 +10626,10 @@ $ LOAD CASES
       const { listo: A, informe: S } = zE(n, {
         cortarBajo: e.cimentacion ? 0 : void 0,
         vueltasMecanismo: 6
-      }, bt);
+      }, xt);
       t.nodes.val = A.nodes, t.elements.val = A.elements, t.nodeInputs.val = A.nodeInputs, t.elementInputs.val = A.elementInputs;
       try {
-        const I = bt(A.nodes, A.elements, A.nodeInputs, A.elementInputs, A.muelles);
+        const I = xt(A.nodes, A.elements, A.nodeInputs, A.elementInputs, A.muelles);
         t.deformOutputs.val = I, t.analyzeOutputs.val = Ht(A.nodes, A.elements, A.elementInputs, I);
         const O = jE(I, A.muelles), N = O.apoyos + O.muelles, m = Math.abs(N + S.cargaZ), d = Math.max(Math.abs(N), Math.abs(S.cargaZ), 1e-9);
         let u = 0;
@@ -10788,7 +10788,7 @@ $ LOAD CASES
   function gs(e, t = 0.055, n = 0.9) {
     return t * Math.pow(e, n);
   }
-  function bs(e, t, n, o) {
+  function xs(e, t, n, o) {
     const s = e.Sa(t), a = o.I * s / Math.max(o.R * o.phiP * o.phiE, 1e-6);
     return {
       Cs: a,
@@ -10846,7 +10846,7 @@ ${p}
     return Math.sqrt(Math.max(s, 0));
   }
   const an = 6;
-  function xs(e, t, n, o = false) {
+  function bs(e, t, n, o = false) {
     const s = e.map(() => [
       0,
       0,
@@ -10963,10 +10963,10 @@ ${p}
     0,
     1
   ], l = false) {
-    const r = e.length, i = xs(e, t, o, l), E = n.supports, c = [], A = [], S = (R) => {
+    const r = e.length, i = bs(e, t, o, l), E = n.supports, c = [], A = [], S = (R) => {
       const F = /* @__PURE__ */ new Map();
       for (let v = 0; v < r; v++) R[v].some((P) => P !== 0) && F.set(v, R[v].slice());
-      const y = bt(e, t, {
+      const y = xt(e, t, {
         supports: E,
         loads: F
       }, o).deformations;
@@ -10988,9 +10988,9 @@ ${p}
           const V = za(v, c[_], i);
           ja(v, -V, c[_]), ja(P, -V, A[_]);
         }
-        const b = Math.sqrt(Math.max(za(v, v, i), 0));
-        if (b < 1e-9) break;
-        Za(v, 1 / b), Za(P, 1 / b), c.push(v), A.push(P), F = Io(r);
+        const x = Math.sqrt(Math.max(za(v, v, i), 0));
+        if (x < 1e-9) break;
+        Za(v, 1 / x), Za(P, 1 / x), c.push(v), A.push(P), F = Io(r);
         for (let _ = 0; _ < r; _++) for (let V = 0; V < 3; V++) F[_][V] = i[_][V] * v[_][V];
       }
     }
@@ -11018,15 +11018,15 @@ ${p}
       const F = Math.max(N[R], 0), y = Math.sqrt(F) / (2 * Math.PI);
       if (!isFinite(y) || y <= 1e-6) continue;
       const v = Io(r);
-      for (let b = 0; b < I; b++) {
-        const _ = m[b][R];
-        for (let V = 0; V < r; V++) for (let K = 0; K < an; K++) v[V][K] += _ * c[b][V][K];
+      for (let x = 0; x < I; x++) {
+        const _ = m[x][R];
+        for (let V = 0; V < r; V++) for (let K = 0; K < an; K++) v[V][K] += _ * c[x][V][K];
       }
       const P = new Array(an).fill(0);
-      for (let b = 0; b < 3; b++) {
+      for (let x = 0; x < 3; x++) {
         let _ = 0;
-        for (let V = 0; V < r; V++) _ += i[V][b] * v[V][b];
-        P[b] = _ * _ / u[b];
+        for (let V = 0; V < r; V++) _ += i[V][x] * v[V][x];
+        P[x] = _ * _ / u[x];
       }
       p.push(y), T.push(P), C.push(v.flat());
     }
@@ -11038,7 +11038,7 @@ ${p}
     };
   }
   function ES(e, t, n, o, s = 12) {
-    const a = e.length, l = xs(e, t, o), r = n.supports, i = (te) => l[te][0], E = (te) => Math.round(e[te][2] * 1e3) / 1e3, c = [
+    const a = e.length, l = bs(e, t, o), r = n.supports, i = (te) => l[te][0], E = (te) => Math.round(e[te][2] * 1e3) / 1e3, c = [
       ...new Set(e.map((te, q) => E(q)))
     ].sort((te, q) => te - q), A = c[0], I = c.filter((te) => te > A + 1e-6).map((te) => {
       const q = e.map((he, me) => me).filter((he) => Math.abs(E(he) - te) < 1e-6 && i(he) > 0);
@@ -11079,7 +11079,7 @@ ${p}
         q[3 * ae] = fe / Te.Mj, q[3 * ae + 1] = pe / Te.Mj, q[3 * ae + 2] = he / Te.Ij;
       }), q;
     }, d = (te) => {
-      const q = bt(e, t, {
+      const q = xt(e, t, {
         supports: r,
         loads: te
       }, o).deformations;
@@ -11122,13 +11122,13 @@ ${p}
     I.forEach((te, q) => {
       p[3 * q] = te.Mj, p[3 * q + 1] = te.Mj, p[3 * q + 2] = te.Ij;
     });
-    const T = p.map(Math.sqrt), C = u.map((te, q) => te.map((Te, ae) => T[q] * Te * T[ae])), { val: R, vec: F } = Ds(C), y = R.map((te, q) => q).sort((te, q) => R[q] - R[te]), v = new Array(N).fill(0), P = new Array(N).fill(0), b = new Array(N).fill(0);
-    for (let te = 0; te < O; te++) v[3 * te] = 1, P[3 * te + 1] = 1, b[3 * te + 2] = 1;
+    const T = p.map(Math.sqrt), C = u.map((te, q) => te.map((Te, ae) => T[q] * Te * T[ae])), { val: R, vec: F } = Ds(C), y = R.map((te, q) => q).sort((te, q) => R[q] - R[te]), v = new Array(N).fill(0), P = new Array(N).fill(0), x = new Array(N).fill(0);
+    for (let te = 0; te < O; te++) v[3 * te] = 1, P[3 * te + 1] = 1, x[3 * te + 2] = 1;
     const _ = (te) => {
       let q = 0;
       for (let Te = 0; Te < N; Te++) q += p[Te] * te[Te] * te[Te];
       return q || 1;
-    }, V = _(v), K = _(P), ee = _(b), Ee = [], Ne = [], de = [], Le = Math.min(s, N);
+    }, V = _(v), K = _(P), ee = _(x), Ee = [], Ne = [], de = [], Le = Math.min(s, N);
     let re = 0;
     for (const te of y) {
       if (re >= Le) break;
@@ -11143,7 +11143,7 @@ ${p}
         for (let Ye = 0; Ye < N; Ye++) ue += p[Ye] * fe[Ye] * De[Ye];
         return ue;
       }, he = new Array(an).fill(0);
-      he[0] = pe(v) * pe(v) / V, he[1] = pe(P) * pe(P) / K, he[5] = pe(b) * pe(b) / ee;
+      he[0] = pe(v) * pe(v) / V, he[1] = pe(P) * pe(P) / K, he[5] = pe(x) * pe(x) / ee;
       const me = Io(a);
       I.forEach((De, ue) => {
         const Ye = fe[3 * ue], We = fe[3 * ue + 1], et = fe[3 * ue + 2];
@@ -11254,33 +11254,33 @@ ${p}
     if (n.walls) {
       const Z = R(m), L = (f, B, H) => Math.max(B, Math.min(f | 0, H));
       for (const f of IS(e)) {
-        const B = f.dir === 0, H = B ? N : O, W = B ? y : F, k = H[H.length - 1], M = B ? A : S, g = B ? S : A, D = B ? O[L(f.line, 0, M)] : N[L(f.line, 0, M)], x = L(f.start, 0, g - 1), U = Math.max(1, Math.min(f.span, g - x));
-        let w = H[x] + f.off, J = H[x + U] + f.off + f.extra;
+        const B = f.dir === 0, H = B ? N : O, W = B ? y : F, k = H[H.length - 1], M = B ? A : S, g = B ? S : A, D = B ? O[L(f.line, 0, M)] : N[L(f.line, 0, M)], b = L(f.start, 0, g - 1), U = Math.max(1, Math.min(f.span, g - b));
+        let w = H[b] + f.off, J = H[b + U] + f.off + f.extra;
         w = Math.max(0, Math.min(w, k)), J = Math.max(w + 0.1, Math.min(J, k));
         const z = W.filter((Ae) => Ae > w + 1e-6 && Ae < J - 1e-6), j = [
           w,
           ...z,
           J
-        ], Se = (Ae, be) => B ? [
+        ], Se = (Ae, xe) => B ? [
           D,
           Ae,
-          be
+          xe
         ] : [
           Ae,
           D,
-          be
+          xe
         ];
-        for (let Ae = 0; Ae < j.length - 1; Ae++) for (let be = 0; be < Z.length - 1; be++) T.push([
-          p(...Se(j[Ae], Z[be])),
-          p(...Se(j[Ae + 1], Z[be])),
-          p(...Se(j[Ae + 1], Z[be + 1])),
-          p(...Se(j[Ae], Z[be + 1]))
+        for (let Ae = 0; Ae < j.length - 1; Ae++) for (let xe = 0; xe < Z.length - 1; xe++) T.push([
+          p(...Se(j[Ae], Z[xe])),
+          p(...Se(j[Ae + 1], Z[xe])),
+          p(...Se(j[Ae + 1], Z[xe + 1])),
+          p(...Se(j[Ae], Z[xe + 1]))
         ]), C.push("wall");
       }
     }
-    const b = s * s, _ = s ** 4 / 12, V = 0.141 * s ** 4, K = a * l, ee = a * l ** 3 / 12, Ee = l * a ** 3 / 12, Ne = a * l ** 3 / 12 + l * a ** 3 / 12, de = () => /* @__PURE__ */ new Map(), Le = de(), re = de(), te = de(), q = de(), Te = de(), ae = de(), fe = de(), pe = de(), he = de(), me = de(), De = de(), ue = de(), Ye = de();
+    const x = s * s, _ = s ** 4 / 12, V = 0.141 * s ** 4, K = a * l, ee = a * l ** 3 / 12, Ee = l * a ** 3 / 12, Ne = a * l ** 3 / 12 + l * a ** 3 / 12, de = () => /* @__PURE__ */ new Map(), Le = de(), re = de(), te = de(), q = de(), Te = de(), ae = de(), fe = de(), pe = de(), he = de(), me = de(), De = de(), ue = de(), Ye = de();
     C.forEach((Z, L) => {
-      Le.set(L, Fs), re.set(L, ys), q.set(L, No), te.set(L, SS), Z === "slab" || Z === "wall" ? (he.set(L, Z === "wall" ? i : r), me.set(L, 2), De.set(L, 2)) : Z === "col" ? (Te.set(L, b), ae.set(L, _), fe.set(L, _), pe.set(L, V), ue.set(L, 5 / 6 * b), Ye.set(L, 5 / 6 * b)) : (Te.set(L, K), ae.set(L, ee), fe.set(L, Ee), pe.set(L, Ne), ue.set(L, 5 / 6 * K), Ye.set(L, 5 / 6 * K));
+      Le.set(L, Fs), re.set(L, ys), q.set(L, No), te.set(L, SS), Z === "slab" || Z === "wall" ? (he.set(L, Z === "wall" ? i : r), me.set(L, 2), De.set(L, 2)) : Z === "col" ? (Te.set(L, x), ae.set(L, _), fe.set(L, _), pe.set(L, V), ue.set(L, 5 / 6 * x), Ye.set(L, 5 / 6 * x)) : (Te.set(L, K), ae.set(L, ee), fe.set(L, Ee), pe.set(L, Ne), ue.set(L, 5 / 6 * K), Ye.set(L, 5 / 6 * K));
     });
     const We = /* @__PURE__ */ new Map();
     d.forEach((Z, L) => {
@@ -11316,7 +11316,7 @@ ${p}
           0,
           1,
           2
-        ].map((H) => d[T[L][1]][H] - d[T[L][0]][H])), B = Pe * No * (Z === "col" ? b : K) * f;
+        ].map((H) => d[T[L][1]][H] - d[T[L][0]][H])), B = Pe * No * (Z === "col" ? x : K) * f;
         for (const H of T[L]) Ie(H, B / 2);
       }
     }), Xe && (n.slab ? C.forEach((Z, L) => {
@@ -11349,7 +11349,7 @@ ${p}
       shearAreasY: ue,
       shearAreasZ: Ye
     }, !(o == null ? void 0 : o.soloGeometria)) try {
-      t.deformOutputs.val = bt(d, T, t.nodeInputs.val, t.elementInputs.val), t.analyzeOutputs.val = Ht(d, T, t.elementInputs.val, t.deformOutputs.val);
+      t.deformOutputs.val = xt(d, T, t.nodeInputs.val, t.elementInputs.val), t.analyzeOutputs.val = Ht(d, T, t.elementInputs.val, t.deformOutputs.val);
     } catch (Z) {
       console.warn("[Test M] an\xE1lisis:", Z == null ? void 0 : Z.message);
     }
@@ -11383,7 +11383,7 @@ ${p}
         R: l,
         phiP: 1,
         phiE: 1
-      }), A = Math.max(...t.map((d) => d[2]), 1e-6), S = s && s > 0 ? s : gs(A), I = Bs(t, n, o), { Cs: O, V: N, SaTa: m } = bs(c, S, I, {
+      }), A = Math.max(...t.map((d) => d[2]), 1e-6), S = s && s > 0 ? s : gs(A), I = Bs(t, n, o), { Cs: O, V: N, SaTa: m } = xs(c, S, I, {
         I: r,
         R: l,
         phiP: 1,
@@ -11495,7 +11495,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
       const p = ((_d = u.frequencies) == null ? void 0 : _d[0]) ? 1 / u.frequencies[0] : void 0, T = dS(e, c, A, I, p);
       let C, R = [];
       try {
-        const y = e.necZ ?? 0.4, v = e.necR ?? 8, P = e.necI ?? 1, b = 0.05, _ = Aa[(e.necSoil ?? 4) | 0], V = da[(e.necReg ?? 0) | 0], K = ((e.norma ?? 0) | 0) === 1, ee = !!(e.irregular ?? 0), Ee = e.cd ?? 5.5, Ne = Na({
+        const y = e.necZ ?? 0.4, v = e.necR ?? 8, P = e.necI ?? 1, x = 0.05, _ = Aa[(e.necSoil ?? 4) | 0], V = da[(e.necReg ?? 0) | 0], K = ((e.norma ?? 0) | 0) === 1, ee = !!(e.irregular ?? 0), Ee = e.cd ?? 5.5, Ne = Na({
           Z: y,
           soil: _,
           region: V,
@@ -11505,7 +11505,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
           phiE: 1
         });
         C = nS(Ne, p);
-        const de = Bs(c, A, I), Le = Math.max(...c.map((Ie) => Ie[2]), 1e-6), re = p && p > 0 ? p : gs(Le), te = bs(Ne, re, de, {
+        const de = Bs(c, A, I), Le = Math.max(...c.map((Ie) => Ie[2]), 1e-6), re = p && p > 0 ? p : gs(Le), te = xs(Ne, re, de, {
           I: P,
           R: v,
           phiP: 1,
@@ -11513,11 +11513,11 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
         }).V, q = u.frequencies ?? [], Te = u.massParticipation ?? [], ae = q.map((Ie) => Ie > 0 ? 1 / Ie : 0), fe = (Ie) => q.map((Z, L) => {
           var _a4;
           return P * Ne.Sad(Z > 0 ? 1 / Z : 0) * (((_a4 = Te[L]) == null ? void 0 : _a4[Ie]) ?? 0) * de;
-        }), pe = Ja(fe(0), ae, "CQC", b), he = Ja(fe(1), ae, "CQC", b), me = Math.hypot(pe, he), De = K ? 1 : ee ? 0.85 : 0.8, ue = te > 0 ? me / te : 0, Ye = ue < De ? De / Math.max(ue, 1e-6) : 1;
+        }), pe = Ja(fe(0), ae, "CQC", x), he = Ja(fe(1), ae, "CQC", x), me = Math.hypot(pe, he), De = K ? 1 : ee ? 0.85 : 0.8, ue = te > 0 ? me / te : 0, Ye = ue < De ? De / Math.max(ue, 1e-6) : 1;
         R = [
           `\u2550\u2550 NORMA DE AN\xC1LISIS: ${K ? "ASCE 7-22 (factores)" : "NEC-15 (Ecuador)"} \xB7 peligro s\xEDsmico SIEMPRE Ecuador (Z, Fa/Fd/Fs, espectro NEC) \u2550\u2550`,
           "\u2500\u2500 CORTANTE BASAL \u2014 est\xE1tico vs din\xE1mico \u2500\u2500",
-          `EST\xC1TICO V = ${te.toFixed(1)} kN  \xB7  DIN\xC1MICO Vx=${pe.toFixed(1)} Vy=${he.toFixed(1)} \u2192 V=${me.toFixed(1)} kN  (CQC+SRSS, \u03B6=${b})`,
+          `EST\xC1TICO V = ${te.toFixed(1)} kN  \xB7  DIN\xC1MICO Vx=${pe.toFixed(1)} Vy=${he.toFixed(1)} \u2192 V=${me.toFixed(1)} kN  (CQC+SRSS, \u03B6=${x})`,
           `CONTROL Vdin/Vest = ${(ue * 100).toFixed(0)} %  ${ue >= De ? `\u2713 \u2265 ${(De * 100).toFixed(0)}%` : `\u2717 < ${(De * 100).toFixed(0)}% \u2192 escalar \xD7${Ye.toFixed(2)}`}  (${K ? "ASCE 7-22 \xA712.9.1.4" : `NEC-15 \xA76.2.2.b ${ee ? "irregular" : "regular"}`})`
         ];
         const We = [];
@@ -11544,7 +11544,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
                 Se[0] += z, f.set(j, Se);
               });
             });
-            const H = bt(c, A, {
+            const H = xt(c, A, {
               supports: S.supports,
               loads: f
             }, I).deformations, W = (U) => ((H.get ? H.get(U) : H[U]) || [
@@ -11554,10 +11554,10 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
               return w.reduce((J, z) => J + W(z), 0) / Math.max(w.length, 1);
             }), M = K ? Ee / Math.max(P, 1e-6) : 0.75 * v, g = K ? `\u03B4x=Cd\xB7\u03B4xe/Ie (Cd=${Ee}, Ie=${P}) \xB7 ASCE \xA712.8.6` : `\u0394M=0.75\xB7R\xB7\u0394E (R=${v}) \xB7 NEC \xA76.3.9`, D = (U, w) => String(U).padStart(w);
             R.push(`\u2500\u2500 DERIVAS Y CORTANTE POR PISO (${g}) \u2500\u2500`), R.push("Piso   z(m)  Fx(kN)  Vx(kN)   \u03B4(mm)  \u0394M(mm)  deriva%");
-            let x = 0;
+            let b = 0;
             for (let U = Ie.length - 1; U >= 0; U--) {
-              const w = Ie[U], J = U > 0 ? Ie[U - 1] : 0, z = U > 0 ? k[U - 1] : 0, j = L.slice(U).reduce((be, ot) => be + ot, 0), Se = M * (k[U] - z), Ae = Math.abs(Se) / Math.max(w - J, 1e-6);
-              x = Math.max(x, Ae), We.push({
+              const w = Ie[U], J = U > 0 ? Ie[U - 1] : 0, z = U > 0 ? k[U - 1] : 0, j = L.slice(U).reduce((xe, ot) => xe + ot, 0), Se = M * (k[U] - z), Ae = Math.abs(Se) / Math.max(w - J, 1e-6);
+              b = Math.max(b, Ae), We.push({
                 piso: U + 1,
                 z: w,
                 Fx: L[U],
@@ -11568,7 +11568,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
                 ok: Ae <= 0.02
               }), R.push(`${D(U + 1, 3)}  ${D(w.toFixed(2), 6)} ${D(L[U].toFixed(1), 7)} ${D(j.toFixed(1), 7)} ${D((k[U] * 1e3).toFixed(1), 7)} ${D((Se * 1e3).toFixed(1), 7)} ${D((Ae * 100).toFixed(2), 7)} ${Ae <= 0.02 ? "\u2713" : "\u2717"}`);
             }
-            R.push(`m\xE1x deriva = ${(x * 100).toFixed(2)} %  ${x <= 0.02 ? "\u2713 \u2264 2%" : "\u2717 > 2% (no cumple)"}   \xB7   V base = ${te.toFixed(1)} kN (= \u03A3 Fx)`);
+            R.push(`m\xE1x deriva = ${(b * 100).toFixed(2)} %  ${b <= 0.02 ? "\u2713 \u2264 2%" : "\u2717 > 2% (no cumple)"}   \xB7   V base = ${te.toFixed(1)} kN (= \u03A3 Fx)`);
           }
         } catch (Ie) {
           console.warn("derivas:", Ie == null ? void 0 : Ie.message);
@@ -11578,15 +11578,15 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
         const Xe = [
           ...new Set(c.map((Z) => +Z[2].toFixed(2)))
         ].sort((Z, L) => Z - L).filter((Z) => Z > 0.05).map((Z, L) => {
-          const f = c.filter((x) => Math.abs(x[2] - Z) < 0.02), B = f.reduce((x, U) => x + U[0], 0) / Math.max(f.length, 1), H = f.reduce((x, U) => x + U[1], 0) / Math.max(f.length, 1);
+          const f = c.filter((b) => Math.abs(b[2] - Z) < 0.02), B = f.reduce((b, U) => b + U[0], 0) / Math.max(f.length, 1), H = f.reduce((b, U) => b + U[1], 0) / Math.max(f.length, 1);
           let W = 0, k = 0, M = 0;
-          for (const x of A) if (x.length === 2) {
-            const U = c[x[0]], w = c[x[1]];
+          for (const b of A) if (b.length === 2) {
+            const U = c[b[0]], w = c[b[1]];
             Math.abs(U[0] - w[0]) < 0.01 && Math.abs(U[1] - w[1]) < 0.01 && Math.max(U[2], w[2]) >= Z - 0.01 && Math.min(U[2], w[2]) <= Z - 0.01 && (W += 1, k += U[0], M += U[1]);
-          } else if (x.length === 4) {
-            const U = x.map((J) => c[J]), w = U.map((J) => J[2]);
+          } else if (b.length === 4) {
+            const U = b.map((J) => c[J]), w = U.map((J) => J[2]);
             if (Math.max(...w) - Math.min(...w) > 0.5 && Math.max(...w) >= Z - 0.01 && Math.min(...w) <= Z - 0.01) {
-              const J = U.reduce((Ae, be) => Ae + be[0], 0) / 4, z = U.reduce((Ae, be) => Ae + be[1], 0) / 4, Se = 10 * (Math.max(...U.map((Ae) => Ae[0])) - Math.min(...U.map((Ae) => Ae[0])) + (Math.max(...U.map((Ae) => Ae[1])) - Math.min(...U.map((Ae) => Ae[1]))) || 0.3);
+              const J = U.reduce((Ae, xe) => Ae + xe[0], 0) / 4, z = U.reduce((Ae, xe) => Ae + xe[1], 0) / 4, Se = 10 * (Math.max(...U.map((Ae) => Ae[0])) - Math.min(...U.map((Ae) => Ae[0])) + (Math.max(...U.map((Ae) => Ae[1])) - Math.min(...U.map((Ae) => Ae[1]))) || 0.3);
               W += Se, k += Se * J, M += Se * z;
             }
           }
@@ -12020,7 +12020,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
         walls: true
       });
     }
-  }, bo = "2\uFE0F\u20E3 Shells \xB7 \u{1F300} Drilling ITW", Xs = "4\uFE0F\u20E3 Mixtos \xB7 \u{1F300} Drilling ITW", xn = [
+  }, xo = "2\uFE0F\u20E3 Shells \xB7 \u{1F300} Drilling ITW", Xs = "4\uFE0F\u20E3 Mixtos \xB7 \u{1F300} Drilling ITW", bn = [
     "vonMises",
     "membraneXX",
     "membraneYY",
@@ -12087,7 +12087,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     e.nodes.val = t, e.elements.val = n, e.nodeInputs.val = {
       supports: o,
       loads: s
-    }, e.elementInputs.val = a, e.objects3D.val = [], e.deformOutputs.val = bt(t, n, {
+    }, e.elementInputs.val = a, e.objects3D.val = [], e.deformOutputs.val = xt(t, n, {
       supports: o,
       loads: s
     }, a), e.analyzeOutputs.val = Ht(t, n, a, e.deformOutputs.val);
@@ -12096,7 +12096,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     var _a3, _b, _c;
     return ((_c = (_b = (_a3 = e.deformOutputs.val) == null ? void 0 : _a3.deformations) == null ? void 0 : _b.get(t)) == null ? void 0 : _c[n]) ?? NaN;
   };
-  function xo(e, t) {
+  function bo(e, t) {
     return {
       "\u03B4 calculado": e.toExponential(5),
       "\u03B4 referencia": t.toExponential(5),
@@ -12106,10 +12106,10 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
   const fS = {
     id: "itw-test-1-flexion-pura",
     name: "ITW Test I \xB7 Flexi\xF3n pura (\u03B4 = 3.0 exacto)",
-    category: bo,
+    category: xo,
     benchmark: true,
     defaultShellResult: "membraneXX",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       L: {
         default: 10,
@@ -12183,17 +12183,17 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     computedLabels(e, t) {
       const n = Math.round(e.na), o = Math.round(e.nb), s = e.t * Math.pow(e.H, 3) / 12, a = e.M * e.L * e.L / (2 * e.E * s);
       return {
-        ...xo(Math.abs(sn(t, o * (n + 1) + n, 2)), a),
+        ...bo(Math.abs(sn(t, o * (n + 1) + n, 2)), a),
         "por qu\xE9": "flexi\xF3n pura = soluci\xF3n EXACTA con cualquier malla"
       };
     }
   }, LS = {
     id: "itw-test-2-voladizo",
     name: "ITW Test II \xB7 Voladizo corto a cortante (\u03B4 = 0.3553)",
-    category: bo,
+    category: xo,
     benchmark: true,
     defaultShellResult: "vonMises",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       L: {
         default: 48,
@@ -12270,17 +12270,17 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     computedLabels(e, t) {
       const n = Math.round(e.na), o = Math.round(e.nb), s = Math.round(o / 2);
       return {
-        ...xo(Math.abs(sn(t, s * (n + 1) + n, 2)), 0.3553),
+        ...bo(Math.abs(sn(t, s * (n + 1) + n, 2)), 0.3553),
         "por qu\xE9": "4:1 y malla 8\xD73: donde un Q4 sin drilling se queda corto"
       };
     }
   }, RS = {
     id: "itw-test-3-cook",
     name: "ITW Test III \xB7 Membrana de Cook (\u03B4 = 23.91)",
-    category: bo,
+    category: xo,
     benchmark: true,
     defaultShellResult: "vonMises",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       E: {
         default: 1,
@@ -12362,17 +12362,17 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     computedLabels(e, t) {
       const n = Math.round(e.na), o = Math.round(e.nb), s = Math.round(o / 2);
       return {
-        ...xo(Math.abs(sn(t, s * (n + 1) + n, 2)), 23.91),
+        ...bo(Math.abs(sn(t, s * (n + 1) + n, 2)), 23.91),
         "por qu\xE9": "malla distorsionada: ning\xFAn elemento es rectangular"
       };
     }
   }, hS = {
     id: "itw-test-4-hemisferio",
     name: "ITW Test IV \xB7 Hemisferio pinchado (\u03B4 = 0.094)",
-    category: bo,
+    category: xo,
     benchmark: true,
     defaultShellResult: "displacementX",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       R: {
         default: 10,
@@ -12496,7 +12496,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     computedLabels(e, t) {
       const n = Math.round(e.na), o = Math.round(e.nb);
       return {
-        ...xo(Math.abs(sn(t, o * (n + 1) + 0, 0)), 0.094),
+        ...bo(Math.abs(sn(t, o * (n + 1) + 0, 0)), 0.094),
         "\u26A0\uFE0F paper (Tabla IV)": "4\xD74 = 0.087548 \xB7 8\xD78 = 0.093714",
         "\u26A0\uFE0F SAP2000 8\xD78": "0.093751",
         estado: "DEFICIT ABIERTO nuestro: el paper NO bloquea aqu\xED"
@@ -12507,7 +12507,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     name: "ITW \xB7 Muros acoplados (el momento entra por el drilling)",
     category: Xs,
     defaultShellResult: "vonMises",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       W: {
         default: 2,
@@ -12684,7 +12684,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     name: "ITW \xB7 Muro + viga en voladizo (sin drilling ser\xEDa un mecanismo)",
     category: Xs,
     defaultShellResult: "vonMises",
-    availableShellResults: xn,
+    availableShellResults: bn,
     params: {
       W: {
         default: 2,
@@ -12846,7 +12846,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
         "giro de la esquina (drilling)": sn(t, a, 4).toExponential(4)
       };
     }
-  }, bS = [
+  }, xS = [
     fS,
     LS,
     RS,
@@ -12872,7 +12872,7 @@ El an\xE1lisis va a tardar ~${Math.round(E)} s y la p\xE1gina queda sin responde
     }, (a, l) => l * n);
   }
   const lo = (e) => e.length ? e[e.length - 1] : 0;
-  function xS(e, t, n, o, s) {
+  function bS(e, t, n, o, s) {
     const a = n / o, l = e - t, r = t * 1, i = e - t / 2, E = l * a, c = l / 2, A = (r * i + E * c) / (r + E), I = (t ** 3 / 12 + r * (i - A) ** 2 + a * l ** 3 / 12 + E * (c - A) ** 2) / (e ** 3 / 12), O = s ? I : t ** 3 / 12 / (e ** 3 / 12);
     return [
       1,
@@ -13193,7 +13193,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         vol: [
           false
         ]
-      }, y = R.c, v = F.c, P = (Y) => Y.eje.map((h, G) => h && !Y.vol[G] ? G : -1).filter((h) => h >= 0), b = P(R), _ = P(F), V = b[0] ?? 0, K = b[1] ?? y.length - 1, ee = _[0] ?? 0, Ee = _[_.length - 1] ?? v.length - 1, Ne = i && v.length > 1, de = K, Le = I % 2 === 0 ? V + I / 2 : -1, re = (Y, h, G) => h !== ee && h !== Ee ? false : E ? Y >= V && Y <= de : c ? Y === V || Y === de ? true : Le > 0 && Y === Le && G > 0 : false, te = (Y, h, G) => R.eje[Y] && F.eje[h] ? G > 0 || !R.vol[Y] && !F.vol[h] : re(Y, h, G) ? true : G === 0 ? false : !!(Ne || l && (R.eje[Y] || F.eje[h])), q = [], Te = /* @__PURE__ */ new Map();
+      }, y = R.c, v = F.c, P = (Y) => Y.eje.map((h, G) => h && !Y.vol[G] ? G : -1).filter((h) => h >= 0), x = P(R), _ = P(F), V = x[0] ?? 0, K = x[1] ?? y.length - 1, ee = _[0] ?? 0, Ee = _[_.length - 1] ?? v.length - 1, Ne = i && v.length > 1, de = K, Le = I % 2 === 0 ? V + I / 2 : -1, re = (Y, h, G) => h !== ee && h !== Ee ? false : E ? Y >= V && Y <= de : c ? Y === V || Y === de ? true : Le > 0 && Y === Le && G > 0 : false, te = (Y, h, G) => R.eje[Y] && F.eje[h] ? G > 0 || !R.vol[Y] && !F.vol[h] : re(Y, h, G) ? true : G === 0 ? false : !!(Ne || l && (R.eje[Y] || F.eje[h])), q = [], Te = /* @__PURE__ */ new Map();
       for (let Y = 0; Y < a.length; Y++) for (let h = 0; h < v.length; h++) for (let G = 0; G < y.length; G++) te(G, h, Y) && (Te.set(`${G},${h},${Y}`, q.length), q.push([
         y[G],
         v[h],
@@ -13257,7 +13257,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         const ie = e.hviga, se = e.bviga, ne = ie / 20, le = ie / 40, Oe = ie - 2 * ne;
         Ie = 2 * se * ne + Oe * le, Z = (se * Math.pow(ie, 3) - (se - le) * Math.pow(Oe, 3)) / 12, L = (2 * ne * Math.pow(se, 3) + Oe * Math.pow(le, 3)) / 12, f = (2 * se * Math.pow(ne, 3) + Oe * Math.pow(le, 3)) / 3;
       } else Re = e.bcol * e.bcol, Pe = Math.pow(e.bcol, 4) / 12, Xe = 0.141 * Math.pow(e.bcol, 4), Ie = e.bviga * e.hviga, Z = e.bviga * Math.pow(e.hviga, 3) / 12, L = e.hviga * Math.pow(e.bviga, 3) / 12, f = Z + L;
-      const B = () => /* @__PURE__ */ new Map(), H = B(), W = B(), k = B(), M = B(), g = B(), D = B(), x = B(), U = B(), w = B(), J = B(), z = B(), j = B(), Se = B(), Ae = /* @__PURE__ */ new Map(), be = 15100 * Math.sqrt(e.fc) * 98.0665, ot = 0.2, Ze = 24 / Wa, at = /* @__PURE__ */ new Set();
+      const B = () => /* @__PURE__ */ new Map(), H = B(), W = B(), k = B(), M = B(), g = B(), D = B(), b = B(), U = B(), w = B(), J = B(), z = B(), j = B(), Se = B(), Ae = /* @__PURE__ */ new Map(), xe = 15100 * Math.sqrt(e.fc) * 98.0665, ot = 0.2, Ze = 24 / Wa, at = /* @__PURE__ */ new Set();
       pe.forEach((Y, h) => {
         if (Y === "col") for (const G of fe[h]) at.add(G);
       });
@@ -13268,18 +13268,18 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
       };
       pe.forEach((Y, h) => {
         if (Y === "losa" || Y === "muro") {
-          H.set(h, be), W.set(h, ot), k.set(h, be / (2 * (1 + ot))), M.set(h, Ze), w.set(h, Y === "muro" ? e.tmuro : e.tlosa);
+          H.set(h, xe), W.set(h, ot), k.set(h, xe / (2 * (1 + ot))), M.set(h, Ze), w.set(h, Y === "muro" ? e.tmuro : e.tlosa);
           const oe = Y === "muro" ? e.formMuro : e.formLosa, ie = oe === 40 || oe === 41, se = oe === 50 || oe === 51;
-          j.set(h, ie ? oe === 40 ? 1 : 0 : se ? 1 : oe), ie && Se.set(h, 0), se && Ae.set(h, xS(e.tlosa, e.tLoseta, e.bNervio, e.sNervio, oe === 51));
+          j.set(h, ie ? oe === 40 ? 1 : 0 : se ? 1 : oe), ie && Se.set(h, 0), se && Ae.set(h, bS(e.tlosa, e.tLoseta, e.bNervio, e.sNervio, oe === 51));
           return;
         }
         if (H.set(h, Ye), W.set(h, We), k.set(h, et), M.set(h, je * (Y === "viga" ? qe(h) : 1)), Y === "diag") {
           const oe = e.bdiag, ie = ue ? oe / 20 : oe, se = ue ? oe - 2 * ie : 0, ne = oe * oe - se * se, le = (Math.pow(oe, 4) - Math.pow(se, 4)) / 12;
-          g.set(h, ne), x.set(h, le), D.set(h, le), U.set(h, 2 * le), J.set(h, 5 / 6 * ne), z.set(h, 5 / 6 * ne);
+          g.set(h, ne), b.set(h, le), D.set(h, le), U.set(h, 2 * le), J.set(h, 5 / 6 * ne), z.set(h, 5 / 6 * ne);
           return;
         }
         const G = Y === "col" ? Re : Ie;
-        g.set(h, G), x.set(h, Y === "col" ? Pe : Z), D.set(h, Y === "col" ? Pe : L), U.set(h, Y === "col" ? Xe : f), J.set(h, 5 / 6 * G), z.set(h, 5 / 6 * G);
+        g.set(h, G), b.set(h, Y === "col" ? Pe : Z), D.set(h, Y === "col" ? Pe : L), U.set(h, Y === "col" ? Xe : f), J.set(h, 5 / 6 * G), z.set(h, 5 / 6 * G);
       });
       const Ce = /* @__PURE__ */ new Map();
       q.forEach((Y, h) => {
@@ -13379,7 +13379,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         densities: M,
         areas: g,
         momentsOfInertiaY: D,
-        momentsOfInertiaZ: x,
+        momentsOfInertiaZ: b,
         torsionalConstants: U,
         thicknesses: w,
         shearAreasY: J,
@@ -13399,7 +13399,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         return;
       }
       try {
-        t.deformOutputs.val = bt(q, fe, t.nodeInputs.val, t.elementInputs.val), t.analyzeOutputs.val = Ht(q, fe, t.elementInputs.val, t.deformOutputs.val);
+        t.deformOutputs.val = xt(q, fe, t.nodeInputs.val, t.elementInputs.val), t.analyzeOutputs.val = Ht(q, fe, t.elementInputs.val, t.deformOutputs.val);
       } catch (Y) {
         console.error("[Plantillas] el solver no cerr\xF3:", Y);
       }
@@ -13682,7 +13682,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     }
   ], pt = [
     Gs,
-    ...bS,
+    ...xS,
     CS,
     OS,
     uS,
@@ -13763,8 +13763,8 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     hr,
     Pr,
     gr,
-    br,
     xr,
+    br,
     cr,
     Ar,
     dr,
@@ -13912,11 +13912,11 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     "ASCE 7-22": "ASCE 7-22",
     "NSR-10": "NSR-10",
     "NEC-SE-DS": "NEC-SE-DS"
-  }, b0 = {
+  }, x0 = {
     Zero: "Zero",
     Preset: "Preset"
   };
-  function x0(e, t, n, o) {
+  function b0(e, t, n, o) {
     try {
       const s = `${zs}_${e}`;
       localStorage.setItem(s, JSON.stringify({
@@ -13943,7 +13943,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
   }
   function F0(e) {
     const { pane: t, exampleId: n, loadPatterns: o, loadCases: s, loadCombinations: a, activeLoadCase: l, onChange: r } = e, i = () => {
-      x0(n, o.val, s.val, a.val), r == null ? void 0 : r();
+      b0(n, o.val, s.val, a.val), r == null ? void 0 : r();
     }, E = t.addFolder({
       title: "\u{1F4CB} Load Patterns",
       expanded: false
@@ -14051,7 +14051,7 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
           R.title = `\u25B8 ${p.name} (${p.type})`, i();
         }), p.initialCondition ?? (p.initialCondition = "Zero"), R.addBinding(p, "initialCondition", {
           label: "Initial Cond.",
-          options: b0
+          options: x0
         }).on("change", () => i()), p.patterns ?? (p.patterns = []);
         const F = {
           value: C
@@ -14202,25 +14202,25 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     i(`File "${e.title ?? "Hekatan"}.f2k" exportado desde Hekatan Struct Lineal`), i("File contains the same model that goes to .e2k (ETABS) and .s2k (SAP2000): nodes, frames, shells, restraints, point springs, joint loads."), c(), E("PROGRAM CONTROL"), i('   ProgramName=SAFE   Version=20.3.0   ProgLevel="Post Tensioning"   CurrUnits="kN, m, C"   CompBmCode="AISC 360-16"   ConcFrmCode="ACI 318-19"   ConcSlbCode="ACI 318-19"'), c();
     const S = (P) => {
       var _a4, _b2, _c2, _d2;
-      const b = ((_a4 = s.elasticities) == null ? void 0 : _a4.get(P)) || 0, _ = (_b2 = s.poissonsRatios) == null ? void 0 : _b2.get(P), V = ((_c2 = s.shearModuli) == null ? void 0 : _c2.get(P)) || 0, K = _ !== void 0 ? _ : b > 0 && V > 0 ? Math.max(0, Math.min(0.5, b / (2 * V) - 1)) : 0.2, ee = V > 0 ? V : b > 0 ? b / (2 * (1 + K)) : 0, Ee = ((_d2 = s.densities) == null ? void 0 : _d2.get(P)) || 0;
+      const x = ((_a4 = s.elasticities) == null ? void 0 : _a4.get(P)) || 0, _ = (_b2 = s.poissonsRatios) == null ? void 0 : _b2.get(P), V = ((_c2 = s.shearModuli) == null ? void 0 : _c2.get(P)) || 0, K = _ !== void 0 ? _ : x > 0 && V > 0 ? Math.max(0, Math.min(0.5, x / (2 * V) - 1)) : 0.2, ee = V > 0 ? V : x > 0 ? x / (2 * (1 + K)) : 0, Ee = ((_d2 = s.densities) == null ? void 0 : _d2.get(P)) || 0;
       return {
-        E: b,
+        E: x,
         nu: K,
         G: ee,
         rho: Ee,
-        key: `MAT_${Math.round(b)}_n${K.toFixed(4)}`
+        key: `MAT_${Math.round(x)}_n${K.toFixed(4)}`
       };
     }, I = [], O = [];
-    n.forEach((P, b) => {
-      P.length === 2 ? I.push(b) : (P.length === 3 || P.length === 4) && O.push(b);
+    n.forEach((P, x) => {
+      P.length === 2 ? I.push(x) : (P.length === 3 || P.length === 4) && O.push(x);
     });
     const N = /* @__PURE__ */ new Map();
     for (const P of [
       ...I,
       ...O
     ]) {
-      const b = S(P);
-      N.has(b.key) || N.set(b.key, b);
+      const x = S(P);
+      N.has(x.key) || N.set(x.key, x);
     }
     N.size === 0 && N.set("MAT_DEFAULT", {
       E: 25e6,
@@ -14230,25 +14230,25 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     }), E("MATERIAL PROPERTIES - GENERAL");
     for (const [P] of N) i(`   Material=${P}   Type=Concrete   SymType=Isotropic   Grade="Hekatan"   Color=Gray8Dark`);
     i('   Material=A615Gr60   Type=Rebar   SymType=Uniaxial   Grade="Grade 60"   Color=Green'), c(), E("MATERIAL PROPERTIES - BASIC MECHANICAL PROPERTIES");
-    for (const [P, b] of N) i(`   Material=${P}   DensityType=Weight   UnitWeight=${Ue(b.rho * 9.80665)}   UnitMass=${Ue(b.rho)}   E1=${Ue(b.E)}   G12=${Ue(b.G)}   U12=${Ue(b.nu)}   A1=1E-05`);
+    for (const [P, x] of N) i(`   Material=${P}   DensityType=Weight   UnitWeight=${Ue(x.rho * 9.80665)}   UnitMass=${Ue(x.rho)}   E1=${Ue(x.E)}   G12=${Ue(x.G)}   U12=${Ue(x.nu)}   A1=1E-05`);
     i("   Material=A615Gr60   DensityType=Weight   UnitWeight=76.9729   UnitMass=7.849047   E1=199947978.8   A1=1.17E-05"), c(), E("MATERIAL PROPERTIES - REBAR DATA"), i("   Material=A615Gr60   Fy=413685.5   Fu=620528.2   Fye=455054   Fue=682581   SSCurveOpt=Simple   SSHysType=Kinematic   SHard=0.01   SCap=0.09   FinalSlope=-0.1"), c(), E("MATERIAL PROPERTIES - CONCRETE DATA");
     for (const [P] of N) i(`   Material=${P}   Fc=27579.03   LtWtConc=No   IsUserFr=No   SSCurveOpt=Mander   SSHysType=Concrete   SFc=0.002219   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0`);
     c();
     const m = /* @__PURE__ */ new Map(), d = /* @__PURE__ */ new Map();
     for (const P of I) {
-      const b = ((_a3 = s.areas) == null ? void 0 : _a3.get(P)) || 0, _ = ((_b = s.momentsOfInertiaZ) == null ? void 0 : _b.get(P)) || 0, V = ((_c = s.momentsOfInertiaY) == null ? void 0 : _c.get(P)) || 0, K = ((_d = s.torsionalConstants) == null ? void 0 : _d.get(P)) || 0, ee = S(P).key, Ee = ((_e = s.shearAreasZ) == null ? void 0 : _e.get(P)) ?? 0, Ne = ((_f = s.shearAreasY) == null ? void 0 : _f.get(P)) ?? 0, de = `A${b.toPrecision(6)}_Iz${_.toPrecision(6)}_Iy${V.toPrecision(6)}_J${K.toPrecision(6)}_s${Ee.toPrecision(6)}_${Ne.toPrecision(6)}_${ee}`;
+      const x = ((_a3 = s.areas) == null ? void 0 : _a3.get(P)) || 0, _ = ((_b = s.momentsOfInertiaZ) == null ? void 0 : _b.get(P)) || 0, V = ((_c = s.momentsOfInertiaY) == null ? void 0 : _c.get(P)) || 0, K = ((_d = s.torsionalConstants) == null ? void 0 : _d.get(P)) || 0, ee = S(P).key, Ee = ((_e = s.shearAreasZ) == null ? void 0 : _e.get(P)) ?? 0, Ne = ((_f = s.shearAreasY) == null ? void 0 : _f.get(P)) ?? 0, de = `A${x.toPrecision(6)}_Iz${_.toPrecision(6)}_Iy${V.toPrecision(6)}_J${K.toPrecision(6)}_s${Ee.toPrecision(6)}_${Ne.toPrecision(6)}_${ee}`;
       if (!m.has(de)) {
         let Le = 0.3, re = 0.3;
-        b > 0 && _ > 0 && (Le = Math.sqrt(12 * _ / b), re = b / Le), m.set(de, {
-          A: b,
+        x > 0 && _ > 0 && (Le = Math.sqrt(12 * _ / x), re = x / Le), m.set(de, {
+          A: x,
           Iz: _,
           Iy: V,
           J: K,
           b: re,
           h: Le,
           matKey: ee,
-          As2: Ee > 0 ? Ee : b * 5 / 6,
-          As3: Ne > 0 ? Ne : b * 5 / 6
+          As2: Ee > 0 ? Ee : x * 5 / 6,
+          As3: Ne > 0 ? Ne : x * 5 / 6
         });
       }
       d.set(P, `SEC${[
@@ -14258,20 +14258,20 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     if (m.size > 0) {
       E("FRAME SECTION PROPERTY DEFINITIONS - SUMMARY");
       let P = 0;
-      for (const [, b] of m) P++, i(`   Name=SEC${P}   Material=${b.matKey}   Shape=General   Color=Magenta   Area=${Ue(b.A)}   J=${Ue(b.J * l)}   I33=${Ue(b.Iz)}   I22=${Ue(b.Iy)}   As2=${Ue(b.As2)}   As3=${Ue(b.As3)}   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I33 Modifier"=1   "I22 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1`);
+      for (const [, x] of m) P++, i(`   Name=SEC${P}   Material=${x.matKey}   Shape=General   Color=Magenta   Area=${Ue(x.A)}   J=${Ue(x.J * l)}   I33=${Ue(x.Iz)}   I22=${Ue(x.Iy)}   As2=${Ue(x.As2)}   As3=${Ue(x.As3)}   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I33 Modifier"=1   "I22 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1`);
       c(), E("FRAME SECTION PROPERTY DEFINITIONS - GENERAL"), P = 0;
-      for (const [, b] of m) {
+      for (const [, x] of m) {
         P++;
-        const _ = b.A > 0 ? Math.sqrt(b.Iz / b.A) : 0, V = b.A > 0 ? Math.sqrt(b.Iy / b.A) : 0, K = b.h > 0 ? b.Iz / (b.h / 2) : 0, ee = b.b > 0 ? b.Iy / (b.b / 2) : 0;
-        i(`   Name=SEC${P}   Material=${b.matKey}   Depth=${Ue(b.h)}   Width=${Ue(b.b)}   Area=${Ue(b.A)}   As2=${Ue(b.As2)}   As3=${Ue(b.As3)}   I33=${Ue(b.Iz)}   I22=${Ue(b.Iy)}   I23=0   S33Pos=${Ue(K)}   S33Neg=${Ue(K)}   S22Pos=${Ue(ee)}   S22Neg=${Ue(ee)}   R33=${Ue(_)}   R22=${Ue(V)}   Z33=${Ue(K)}   Z22=${Ue(ee)}   J=${Ue(b.J * l)}   "CG Offset3"=0   "CG Offset2"=0   "PNA Offset3"=0   "PNA Offset2"=0   "SC Offset3"=0   "SC Offset2"=0   "Section Type"=Beam   "Longitudinal Rebar Material"=A615Gr60   "Shear Rebar Material"=A615Gr60   "Flange Dimension Option"="Analysis Property"   "Cover Top"=0.06   "Cover Bottom"=0.06   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I22 Modifier"=1   "I33 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Magenta`);
+        const _ = x.A > 0 ? Math.sqrt(x.Iz / x.A) : 0, V = x.A > 0 ? Math.sqrt(x.Iy / x.A) : 0, K = x.h > 0 ? x.Iz / (x.h / 2) : 0, ee = x.b > 0 ? x.Iy / (x.b / 2) : 0;
+        i(`   Name=SEC${P}   Material=${x.matKey}   Depth=${Ue(x.h)}   Width=${Ue(x.b)}   Area=${Ue(x.A)}   As2=${Ue(x.As2)}   As3=${Ue(x.As3)}   I33=${Ue(x.Iz)}   I22=${Ue(x.Iy)}   I23=0   S33Pos=${Ue(K)}   S33Neg=${Ue(K)}   S22Pos=${Ue(ee)}   S22Neg=${Ue(ee)}   R33=${Ue(_)}   R22=${Ue(V)}   Z33=${Ue(K)}   Z22=${Ue(ee)}   J=${Ue(x.J * l)}   "CG Offset3"=0   "CG Offset2"=0   "PNA Offset3"=0   "PNA Offset2"=0   "SC Offset3"=0   "SC Offset2"=0   "Section Type"=Beam   "Longitudinal Rebar Material"=A615Gr60   "Shear Rebar Material"=A615Gr60   "Flange Dimension Option"="Analysis Property"   "Cover Top"=0.06   "Cover Bottom"=0.06   "Area Modifier"=1   "As2 Modifier"=1   "As3 Modifier"=1   "J Modifier"=1   "I22 Modifier"=1   "I33 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Magenta`);
       }
       c();
     }
     const u = /* @__PURE__ */ new Map(), p = /* @__PURE__ */ new Map();
     for (const P of O) {
-      const b = ((_g = s.thicknesses) == null ? void 0 : _g.get(P)) || 0.1, _ = ((_h = s.plateFormulations) == null ? void 0 : _h.get(P)) ?? 0, V = _ === 1 || _ === 3, K = S(P).key, ee = `t${b.toPrecision(6)}_${V ? "thin" : "thick"}_${K}`;
+      const x = ((_g = s.thicknesses) == null ? void 0 : _g.get(P)) || 0.1, _ = ((_h = s.plateFormulations) == null ? void 0 : _h.get(P)) ?? 0, V = _ === 1 || _ === 3, K = S(P).key, ee = `t${x.toPrecision(6)}_${V ? "thin" : "thick"}_${K}`;
       u.has(ee) || u.set(ee, {
-        t: b,
+        t: x,
         matKey: K,
         thin: V
       }), p.set(P, `LOSA${[
@@ -14281,15 +14281,15 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
     if (u.size > 0) {
       E("AREA SECTION PROPERTY DEFINITIONS - SUMMARY");
       let P = 0;
-      for (const [, b] of u) P++, i(`   Name=LOSA${P}   Type=Slab   "Element Type"=${b.thin ? "Shell-Thin" : "Shell-Thick"}   Material=${b.matKey}   "Total Thickness"=${Ue(b.t)}`);
+      for (const [, x] of u) P++, i(`   Name=LOSA${P}   Type=Slab   "Element Type"=${x.thin ? "Shell-Thin" : "Shell-Thick"}   Material=${x.matKey}   "Total Thickness"=${Ue(x.t)}`);
       c(), E("SLAB PROPERTY DEFINITIONS"), P = 0;
-      for (const [, b] of u) P++, i(`   Name=LOSA${P}   "Modeling Type"=${b.thin ? "Shell-Thin" : "Shell-Thick"}   "Property Type"=Slab   Material=${b.matKey}   "Slab Thickness"=${Ue(b.t)}   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   Orthotropic?=No`);
+      for (const [, x] of u) P++, i(`   Name=LOSA${P}   "Modeling Type"=${x.thin ? "Shell-Thin" : "Shell-Thick"}   "Property Type"=Slab   Material=${x.matKey}   "Slab Thickness"=${Ue(x.t)}   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   Orthotropic?=No`);
       c();
     }
     const T = /* @__PURE__ */ new Map();
     for (const P of o.springs ?? []) {
       if (!(P.k > 0)) continue;
-      const b = T.get(P.node) ?? [
+      const x = T.get(P.node) ?? [
         0,
         0,
         0,
@@ -14297,38 +14297,38 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         0,
         0
       ];
-      b[P.dof] += P.k, T.set(P.node, b);
+      x[P.dof] += P.k, T.set(P.node, x);
     }
     const C = /* @__PURE__ */ new Map(), R = /* @__PURE__ */ new Map();
-    for (const [P, b] of T) {
-      const _ = b.map((K) => +K.toPrecision(12)).join("|");
+    for (const [P, x] of T) {
+      const _ = x.map((K) => +K.toPrecision(12)).join("|");
       let V = (_i2 = [
         ...R.entries()
       ].find(([, K]) => K.map((ee) => +ee.toPrecision(12)).join("|") === _)) == null ? void 0 : _i2[0];
-      V || (V = `SPR${R.size + 1}`, R.set(V, b)), C.set(P, V);
+      V || (V = `SPR${R.size + 1}`, R.set(V, x)), C.set(P, V);
     }
     if (R.size > 0) {
       E("SPRING PROPERTY DEFINITIONS - POINT SPRINGS");
-      for (const [P, b] of R) i(`   Name=${P}   "Stiffness UX"=${Ue(b[0])}   "Stiffness UY"=${Ue(b[1])}   "Stiffness UZ"=${Ue(b[2])}   "Stiffness RX"=${Ue(b[3])}   "Stiffness RY"=${Ue(b[4])}   "Stiffness RZ"=${Ue(b[5])}   "Nonlinear Option"="None (Linear)"   Color=Green`);
+      for (const [P, x] of R) i(`   Name=${P}   "Stiffness UX"=${Ue(x[0])}   "Stiffness UY"=${Ue(x[1])}   "Stiffness UZ"=${Ue(x[2])}   "Stiffness RX"=${Ue(x[3])}   "Stiffness RY"=${Ue(x[4])}   "Stiffness RZ"=${Ue(x[5])}   "Nonlinear Option"="None (Linear)"   Color=Green`);
       c();
     }
-    E("LOAD PATTERN DEFINITIONS"), i(`   Name=${a}   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=0`), c(), E("LOAD CASE DEFINITIONS - SUMMARY"), i(`   Name=${a}   Type="Linear Static"`), c(), E("LOAD CASE DEFINITIONS - LINEAR STATIC"), i(`   Name=${a}   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=${a}   "Load SF"=1   "Design Type"="Program Determined"`), c(), E("MASS SOURCE DEFINITION"), i('   Name=MsSrc1   "Is Default"=Yes   "Include Lateral Mass?"=No   "Include Vertical Mass?"=Yes   "Lump Mass?"=Yes   "Source Self Mass?"=Yes   "Source Added Mass?"=Yes   "Source Load Patterns?"=No   "Move Mass Centroid?"=No'), c(), E("POINT OBJECT CONNECTIVITY"), t.forEach((P, b) => i(`   UniqueName=${b + 1}   "Is Auto Point"=No   IsSpecial=Yes   X=${Ue(P[0])}   Y=${Ue(P[1])}   Z=${Ue(P[2])}`)), c();
-    const F = (P, b) => Math.hypot(b[0] - P[0], b[1] - P[1], b[2] - P[2]);
+    E("LOAD PATTERN DEFINITIONS"), i(`   Name=${a}   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=0`), c(), E("LOAD CASE DEFINITIONS - SUMMARY"), i(`   Name=${a}   Type="Linear Static"`), c(), E("LOAD CASE DEFINITIONS - LINEAR STATIC"), i(`   Name=${a}   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=${a}   "Load SF"=1   "Design Type"="Program Determined"`), c(), E("MASS SOURCE DEFINITION"), i('   Name=MsSrc1   "Is Default"=Yes   "Include Lateral Mass?"=No   "Include Vertical Mass?"=Yes   "Lump Mass?"=Yes   "Source Self Mass?"=Yes   "Source Added Mass?"=Yes   "Source Load Patterns?"=No   "Move Mass Centroid?"=No'), c(), E("POINT OBJECT CONNECTIVITY"), t.forEach((P, x) => i(`   UniqueName=${x + 1}   "Is Auto Point"=No   IsSpecial=Yes   X=${Ue(P[0])}   Y=${Ue(P[1])}   Z=${Ue(P[2])}`)), c();
+    const F = (P, x) => Math.hypot(x[0] - P[0], x[1] - P[1], x[2] - P[2]);
     if (I.length) {
       E("BEAM OBJECT CONNECTIVITY");
       for (const P of I) {
-        const [b, _] = n[P];
-        i(`   "Unique Name"=B${P + 1}   UniquePtI=${b + 1}   UniquePtJ=${_ + 1}   Length=${Ue(F(t[b], t[_]))}`);
+        const [x, _] = n[P];
+        i(`   "Unique Name"=B${P + 1}   UniquePtI=${x + 1}   UniquePtJ=${_ + 1}   Length=${Ue(F(t[x], t[_]))}`);
       }
       c();
     }
     if (O.length) {
       E("FLOOR OBJECT CONNECTIVITY");
       for (const P of O) {
-        const b = n[P], _ = b.map((ee, Ee) => `UniquePt${Ee + 1}=${ee + 1}`).join("   ");
+        const x = n[P], _ = x.map((ee, Ee) => `UniquePt${Ee + 1}=${ee + 1}`).join("   ");
         let V = 0, K = 0;
-        for (let ee = 0; ee < b.length; ee++) {
-          const Ee = t[b[ee]], Ne = t[b[(ee + 1) % b.length]];
+        for (let ee = 0; ee < x.length; ee++) {
+          const Ee = t[x[ee]], Ne = t[x[(ee + 1) % x.length]];
           V += F(Ee, Ne), K += (Ee[0] * Ne[1] - Ne[0] * Ee[1]) / 2;
         }
         i(`   "Unique Name"=A${P + 1}   ${_}   Perimeter=${Ue(V)}   Area=${Ue(Math.abs(K))}`);
@@ -14340,24 +14340,24 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
       ...y.values()
     ].some((P) => P.some(Boolean))) {
       E("JOINT ASSIGNMENTS - RESTRAINTS");
-      for (const [P, b] of [
+      for (const [P, x] of [
         ...y
-      ].sort((_, V) => _[0] - V[0])) b.some(Boolean) && i(`   UniqueName=${P + 1}   UX=${A(b[0])}   UY=${A(b[1])}   UZ=${A(b[2])}   RX=${A(b[3])}   RY=${A(b[4])}   RZ=${A(b[5])}`);
+      ].sort((_, V) => _[0] - V[0])) x.some(Boolean) && i(`   UniqueName=${P + 1}   UX=${A(x[0])}   UY=${A(x[1])}   UZ=${A(x[2])}   RX=${A(x[3])}   RY=${A(x[4])}   RZ=${A(x[5])}`);
       c();
     }
     if (C.size) {
       E("JOINT ASSIGNMENTS - SPRINGS");
-      for (const [P, b] of [
+      for (const [P, x] of [
         ...C
-      ].sort((_, V) => _[0] - V[0])) i(`   UniqueName=${P + 1}   SpringProp=${b}`);
+      ].sort((_, V) => _[0] - V[0])) i(`   UniqueName=${P + 1}   SpringProp=${x}`);
       c();
     }
     const v = o.loadsSolver ?? o.loads;
     if (v && v.size) {
       E("JOINT LOADS ASSIGNMENTS - FORCE");
-      for (const [P, b] of [
+      for (const [P, x] of [
         ...v
-      ].sort((_, V) => _[0] - V[0])) b.some((_) => Math.abs(_) > 1e-12) && i(`   UniqueName=${P + 1}   "Load Pattern"=${a}   FX=${Ue(b[0])}   FY=${Ue(b[1])}   FZ=${Ue(b[2])}   MX=${Ue(b[3])}   MY=${Ue(b[4])}   MZ=${Ue(b[5])}   "X Dimension"=0   "Y Dimension"=0`);
+      ].sort((_, V) => _[0] - V[0])) x.some((_) => Math.abs(_) > 1e-12) && i(`   UniqueName=${P + 1}   "Load Pattern"=${a}   FX=${Ue(x[0])}   FY=${Ue(x[1])}   FZ=${Ue(x[2])}   MX=${Ue(x[3])}   MY=${Ue(x[4])}   MZ=${Ue(x[5])}   "X Dimension"=0   "Y Dimension"=0`);
       c();
     }
     if (I.length) {
@@ -14524,11 +14524,11 @@ ${s} va a tardar ~${Math.round(t)} s y la p\xE1gina queda sin responder mientras
         if (N >= 0 && m >= 0) {
           const d = Mt(I[N + 1]), u = parseFloat(I[m + 1] ?? "0"), p = parseFloat(I[m + 2] ?? "0"), T = parseFloat(I[m + 3] ?? "0"), C = r.get(d), R = i.get(d), F = C && l.get(C.nI), y = C && l.get(C.nJ);
           if (C && R && F && y) {
-            const [v, P, b] = po(F, y, E.get(d) ?? 0), _ = [
+            const [v, P, x] = po(F, y, E.get(d) ?? 0), _ = [
               0,
               1,
               2
-            ].map((V) => T * v[V] + u * P[V] + p * b[V]);
+            ].map((V) => T * v[V] + u * P[V] + p * x[V]);
             a.push(`frameload ${R} ${_.map((V) => +V.toFixed(8)).join(" ")}`);
           }
         }
@@ -15382,7 +15382,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
           }
           Me.nodes.val = r.nodes, Me.elements.val = r.elements, Me.elementInputs.val = {
             ...r.elementInputs
-          }, Me.deformOutputs.val = bt(r.nodes, r.elements, Me.nodeInputs.rawVal, r.elementInputs), Me.analyzeOutputs.val = Ht(r.nodes, r.elements, r.elementInputs, Me.deformOutputs.rawVal);
+          }, Me.deformOutputs.val = xt(r.nodes, r.elements, Me.nodeInputs.rawVal, r.elementInputs), Me.analyzeOutputs.val = Ht(r.nodes, r.elements, r.elementInputs, Me.deformOutputs.rawVal);
         }
       }
     } catch (a) {
@@ -15390,7 +15390,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     }
     const o = () => {
       var _a4, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _i2, _j;
-      const a = xe.__settings;
+      const a = be.__settings;
       a && (((_a4 = a.elements) == null ? void 0 : _a4.val) !== void 0 && (a.elements.val = true), ((_b2 = a.nodes) == null ? void 0 : _b2.val) !== void 0 && (a.nodes.val = true), ((_c2 = a.elemColumns) == null ? void 0 : _c2.val) !== void 0 && (a.elemColumns.val = true), ((_d2 = a.elemBeams) == null ? void 0 : _d2.val) !== void 0 && (a.elemBeams.val = true), ((_e2 = a.sections) == null ? void 0 : _e2.val) !== void 0 && (a.sections.val = true), ((_f2 = a.secColumns) == null ? void 0 : _f2.val) !== void 0 && (a.secColumns.val = true), ((_g2 = a.secBeams) == null ? void 0 : _g2.val) !== void 0 && (a.secBeams.val = true), ((_h2 = a.faces) == null ? void 0 : _h2.val) !== void 0 && (a.faces.val = true), ((_i2 = a.edges) == null ? void 0 : _i2.val) !== void 0 && (a.edges.val = true), ((_j = a.solids) == null ? void 0 : _j.val) !== void 0 && (a.solids.val = true));
     };
     if (o(), [
@@ -15399,14 +15399,14 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       500,
       1e3
     ].forEach((a) => setTimeout(o, a)), ((_h = e.id) == null ? void 0 : _h.startsWith("conexion-")) || e.id === "placa-base") {
-      const a = xe.__settings;
+      const a = be.__settings;
       (a == null ? void 0 : a.displayScale) && (a.displayScale.val = -6);
     }
     if (e.defaultShellResult || e.defaultFrameResult) {
-      const a = xe.__settings;
+      const a = be.__settings;
       (a == null ? void 0 : a.shellResults) && (a.shellResults.val = e.defaultShellResult ?? "none"), (a == null ? void 0 : a.frameResults) && e.defaultFrameResult && (a.frameResults.val = e.defaultFrameResult), (a == null ? void 0 : a.loads) && (a.loads.val = true), (a == null ? void 0 : a.supports) && (a.supports.val = true);
     }
-    ni(e.availableShellResults), fo(), bn(), tn(), Ao();
+    ni(e.availableShellResults), fo(), xn(), tn(), Ao();
     try {
       setTimeout($0, 1200);
     } catch {
@@ -15442,8 +15442,8 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       const d = e.getBoundingClientRect();
       let p = ((m.clientX - d.left) * (l / (d.width || l)) - n) / (l - n - o) * i;
       p = Math.max(0, Math.min(i, p));
-      const T = p / i * c, C = Math.floor(T), R = Math.min(C + 1, A.length - 1), F = T - C, y = (A[C] ?? 0) * (1 - F) + (A[R] ?? 0) * F, v = S(p), P = I(y), b = Math.min(v + 5, l - 64);
-      N.innerHTML = `<line x1="${v.toFixed(1)}" y1="${s}" x2="${v.toFixed(1)}" y2="${r - a}" stroke="#f0f" stroke-width="0.8"/><circle cx="${v.toFixed(1)}" cy="${P.toFixed(1)}" r="3" fill="#f0f"/><rect x="${b.toFixed(1)}" y="${s}" width="60" height="22" rx="3" fill="#000d" stroke="#f0f8"/><text x="${(b + 4).toFixed(1)}" y="${s + 9}" fill="#f8f" font-size="8">T=${p.toFixed(2)} s</text><text x="${(b + 4).toFixed(1)}" y="${s + 18}" fill="#f8f" font-size="8">Sa=${y.toFixed(3)} g</text>`;
+      const T = p / i * c, C = Math.floor(T), R = Math.min(C + 1, A.length - 1), F = T - C, y = (A[C] ?? 0) * (1 - F) + (A[R] ?? 0) * F, v = S(p), P = I(y), x = Math.min(v + 5, l - 64);
+      N.innerHTML = `<line x1="${v.toFixed(1)}" y1="${s}" x2="${v.toFixed(1)}" y2="${r - a}" stroke="#f0f" stroke-width="0.8"/><circle cx="${v.toFixed(1)}" cy="${P.toFixed(1)}" r="3" fill="#f0f"/><rect x="${x.toFixed(1)}" y="${s}" width="60" height="22" rx="3" fill="#000d" stroke="#f0f8"/><text x="${(x + 4).toFixed(1)}" y="${s + 9}" fill="#f8f" font-size="8">T=${p.toFixed(2)} s</text><text x="${(x + 4).toFixed(1)}" y="${s + 18}" fill="#f8f" font-size="8">Sa=${y.toFixed(3)} g</text>`;
     }, e.onmouseleave = () => {
       N && (N.innerHTML = "");
     };
@@ -15660,7 +15660,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
   const rs = 0.07;
   function fo() {
     var _a3, _b;
-    const e = xe.__settings;
+    const e = be.__settings;
     if (!(e == null ? void 0 : e.deformScale)) return;
     const t = Me.nodes.rawVal, n = (_a3 = Me.deformOutputs.rawVal) == null ? void 0 : _a3.deformations;
     if (!(t == null ? void 0 : t.length) || !n) {
@@ -15691,7 +15691,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     e.displayScale && (e.displayScale.val = u ? -6 : -3);
   }
   let Vo = false;
-  function bn() {
+  function xn() {
     const e = !Vo;
     Vo = true;
     try {
@@ -15708,9 +15708,9 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
   }
   function ls() {
     var _a3;
-    const e = xe.__ctx;
+    const e = be.__ctx;
     if (!e) return;
-    const { camera: t, controls: n, render: o, perspCamera: s, orthoCamera: a } = e, l = xe.__settings, r = ((_a3 = l == null ? void 0 : l.gridSize) == null ? void 0 : _a3.rawVal) ?? 10, i = (() => {
+    const { camera: t, controls: n, render: o, perspCamera: s, orthoCamera: a } = e, l = be.__settings, r = ((_a3 = l == null ? void 0 : l.gridSize) == null ? void 0 : _a3.rawVal) ?? 10, i = (() => {
       const _ = window.__hekatanDrawingPoints;
       return (_ == null ? void 0 : _.rawVal) ?? (_ == null ? void 0 : _.val) ?? [];
     })(), E = [
@@ -15724,19 +15724,19 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     F && (m = 0, d = 0, u = 0);
     const y = Math.max(F ? r : R, 2);
     if (n.target.set(m, d, u), a && t === a) {
-      const _ = xe.clientWidth || window.innerWidth, V = xe.clientHeight || window.innerHeight, K = _ / V, ee = Math.max(y * 0.6, 5);
+      const _ = be.clientWidth || window.innerWidth, V = be.clientHeight || window.innerHeight, K = _ / V, ee = Math.max(y * 0.6, 5);
       a.left = -ee * K, a.right = ee * K, a.top = ee, a.bottom = -ee, a.zoom = 1, a.updateProjectionMatrix(), n.update(), o == null ? void 0 : o(), !F && (l == null ? void 0 : l.gridSize) && (l.gridSize.val = Math.max(Math.ceil(Math.max(p, T) * 1.2), 2));
       return;
     }
-    const P = 2.2 * y / Math.sqrt(3), b = (ce == null ? void 0 : ce.viewFrom) ?? [
+    const P = 2.2 * y / Math.sqrt(3), x = (ce == null ? void 0 : ce.viewFrom) ?? [
       1,
       -1,
       1
     ];
-    t.position.set(m + Math.sign(b[0] || 1) * P, d + Math.sign(b[1] || -1) * P, u + Math.sign(b[2] || 1) * P), t.up.set(0, 0, 1), t.isPerspectiveCamera && (t.near = y * 1e-3, t.far = y * 50), t.updateProjectionMatrix(), t.lookAt(m, d, u), n.update(), o == null ? void 0 : o(), !F && (l == null ? void 0 : l.gridSize) && (l.gridSize.val = Math.max(Math.ceil(Math.max(p, T) * 1.2), 2));
+    t.position.set(m + Math.sign(x[0] || 1) * P, d + Math.sign(x[1] || -1) * P, u + Math.sign(x[2] || 1) * P), t.up.set(0, 0, 1), t.isPerspectiveCamera && (t.near = y * 1e-3, t.far = y * 50), t.updateProjectionMatrix(), t.lookAt(m, d, u), n.update(), o == null ? void 0 : o(), !F && (l == null ? void 0 : l.gridSize) && (l.gridSize.val = Math.max(Math.ceil(Math.max(p, T) * 1.2), 2));
   }
   function ni(e) {
-    const t = xe.querySelectorAll("select"), n = {
+    const t = be.querySelectorAll("select"), n = {
       none: "none",
       F11: "membraneXX",
       F22: "membraneYY",
@@ -15762,7 +15762,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       const r = o(l.value), i = r === "none" ? true : r === "pressure" ? !!(e == null ? void 0 : e.includes("pressure")) : !e || e.includes(r);
       l.hidden = !i, l.disabled = !i;
     }
-    const a = xe.__settings;
+    const a = be.__settings;
     if (a == null ? void 0 : a.shellResults) {
       Array.from(s.options).filter((i) => !i.hidden).map((i) => o(i.value)).includes(a.shellResults.val) || (a.shellResults.val = (ce == null ? void 0 : ce.defaultShellResult) || "vonMises");
       const r = Array.from(s.options).findIndex((i) => o(i.value) === a.shellResults.val && !i.hidden);
@@ -15782,7 +15782,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     const e = {
       ...ye
     };
-    for (const [t, n] of Object.entries(ce.params)) n.unitType === "force" && (e[t] = bi(ye[t])), n.unitType === "moment" && (e[t] = xi(ye[t]));
+    for (const [t, n] of Object.entries(ce.params)) n.unitType === "force" && (e[t] = xi(ye[t])), n.unitType === "moment" && (e[t] = bi(ye[t]));
     return e;
   }
   function oi() {
@@ -15833,7 +15833,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     } catch (t) {
       console.warn(`[active case dispatcher] ${(t == null ? void 0 : t.message) ?? t}`);
     }
-    if (Ra || bn(), ce.computedLabels && In) {
+    if (Ra || xn(), ce.computedLabels && In) {
       const t = ce.computedLabels(ye, Me);
       for (const n of Object.keys(In)) n in t && (In[n] = t[n]);
     }
@@ -15853,10 +15853,10 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     ].includes(e);
   }
   window.__hekatanRebuild = Ct;
-  window.__hekatanAutoFit = bn;
+  window.__hekatanAutoFit = xn;
   window.__hekatanParams = () => ye;
   window.__hekatanExample = () => (ce == null ? void 0 : ce.id) ?? null;
-  window.__hekatanSettings = () => xe.__settings;
+  window.__hekatanSettings = () => be.__settings;
   window.__hekatanSetParam = (e, t) => (ye[e] = t, Ct(), ye[e]);
   window.__hekatanGetParams = () => ({
     ...ye
@@ -15870,7 +15870,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
   const Lo = (e = 200) => {
     So && clearTimeout(So), So = setTimeout(() => {
       try {
-        bn();
+        xn();
       } catch {
       }
       So = null;
@@ -17099,7 +17099,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
             ...s
           ]);
           try {
-            const r = xe.__settings;
+            const r = be.__settings;
             (r == null ? void 0 : r.supports) && (r.supports.val = true);
           } catch {
           }
@@ -17109,7 +17109,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
             ...s
           ]);
           try {
-            const r = xe.__settings;
+            const r = be.__settings;
             (r == null ? void 0 : r.loads) && (r.loads.val = true);
           } catch {
           }
@@ -17766,7 +17766,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       }
     }
     console.log(`[Vista \u2194 CAD] preset=${e}, workPlane=${(t == null ? void 0 : t.workPlane) ?? "n/a"}`);
-    const o = xe.__ctx;
+    const o = be.__ctx;
     if (!o) {
       console.warn("[setView] viewer __ctx no disponible");
       return;
@@ -17790,7 +17790,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       const O = I * 1.2;
       s.position.set(c + O * 0.6, A - O * 0.6, S + O * 0.6), s.up.set(0, 0, 1), s.updateProjectionMatrix(), s.lookAt(c, A, S), i(s);
     } else {
-      const O = xe.clientWidth || window.innerWidth, N = xe.clientHeight || window.innerHeight, m = O / N, d = Math.max(I * 0.6, 5), u = d * m;
+      const O = be.clientWidth || window.innerWidth, N = be.clientHeight || window.innerHeight, m = O / N, d = Math.max(I * 0.6, 5), u = d * m;
       a.left = -u, a.right = u, a.top = d, a.bottom = -d;
       const p = 1e3;
       e === "plan" ? (a.position.set(c, A, S + p), a.up.set(0, 1, 0)) : e === "elevX" ? (a.position.set(c, A - p, S), a.up.set(0, 0, 1)) : e === "elevY" && (a.position.set(c + p, A, S), a.up.set(0, 0, 1)), a.updateProjectionMatrix(), a.lookAt(c, A, S), i(a);
@@ -17918,7 +17918,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
   };
   function tc(e) {
     var _a3, _b, _c;
-    const t = xe;
+    const t = be;
     if (!t || t.__menuPuesto) return;
     t.__menuPuesto = true;
     const n = document.createElement("div");
@@ -17944,7 +17944,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       r.key === "Escape" && o();
     }, true), window.addEventListener("wheel", o, true), window.addEventListener("blur", o);
     try {
-      (_c = (_b = (_a3 = xe.__ctx) == null ? void 0 : _a3.controls) == null ? void 0 : _b.addEventListener) == null ? void 0 : _c.call(_b, "change", o);
+      (_c = (_b = (_a3 = be.__ctx) == null ? void 0 : _a3.controls) == null ? void 0 : _b.addEventListener) == null ? void 0 : _c.call(_b, "change", o);
     } catch {
     }
     window.__hekatanMenuCerrar = o, window.__hekatanMenuVisible = () => n.style.display !== "none";
@@ -18158,7 +18158,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     });
     R.on("click", async () => {
       R.title = "\u{1F4F7} guardando\u2026";
-      const L = await bE(xe, "hekatan_struct.png");
+      const L = await xE(be, "hekatan_struct.png");
       R.title = L ? "\u{1F4F7} PNG de la vista" : "\u{1F4F7} PNG \u2014 fall\xF3";
     });
     const F = {
@@ -18181,7 +18181,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       title: "\u{1F39E} GIF orbitando"
     });
     y.on("click", async () => {
-      const L = await ka(xe, {
+      const L = await ka(be, {
         frames: F.frames,
         vueltas: F.vueltas,
         delayMs: F.ms,
@@ -18223,14 +18223,14 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
         };
       },
       pngDataUrl: async () => {
-        const L = await Ls(xe);
+        const L = await Ls(be);
         return L ? await new Promise((f) => {
           const B = new FileReader();
           B.onload = () => f(String(B.result)), B.readAsDataURL(L);
         }) : null;
       },
       gifDataUrl: async (L = 12) => {
-        const f = await ka(xe, {
+        const f = await ka(be, {
           frames: L,
           filename: ""
         });
@@ -18246,26 +18246,26 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     }), P = {
       enabled: false,
       secondary: 0
-    }, b = (L) => {
-      xe.__ctx;
-      const f = xe.clientWidth || window.innerWidth, B = xe.clientHeight || window.innerHeight, H = f / 2 / B, W = Me.nodes.rawVal ?? [];
+    }, x = (L) => {
+      be.__ctx;
+      const f = be.clientWidth || window.innerWidth, B = be.clientHeight || window.innerHeight, H = f / 2 / B, W = Me.nodes.rawVal ?? [];
       let k = 0, M = 0, g = 0, D = 10;
       if (W.length) {
-        let J = 1 / 0, z = 1 / 0, j = 1 / 0, Se = -1 / 0, Ae = -1 / 0, be = -1 / 0;
-        for (const qe of W) qe[0] < J && (J = qe[0]), qe[0] > Se && (Se = qe[0]), qe[1] < z && (z = qe[1]), qe[1] > Ae && (Ae = qe[1]), qe[2] < j && (j = qe[2]), qe[2] > be && (be = qe[2]);
-        k = (J + Se) / 2, M = (z + Ae) / 2, g = (j + be) / 2;
-        const ot = Se - J || 1, Ze = Ae - z || 1, at = be - j || 1;
+        let J = 1 / 0, z = 1 / 0, j = 1 / 0, Se = -1 / 0, Ae = -1 / 0, xe = -1 / 0;
+        for (const qe of W) qe[0] < J && (J = qe[0]), qe[0] > Se && (Se = qe[0]), qe[1] < z && (z = qe[1]), qe[1] > Ae && (Ae = qe[1]), qe[2] < j && (j = qe[2]), qe[2] > xe && (xe = qe[2]);
+        k = (J + Se) / 2, M = (z + Ae) / 2, g = (j + xe) / 2;
+        const ot = Se - J || 1, Ze = Ae - z || 1, at = xe - j || 1;
         D = Math.sqrt(ot * ot + Ze * Ze + at * at) || 5;
       }
       if (L === 0) {
         const J = new Ci(45, H, 0.1, 1e5), z = D * 1.2;
         return J.position.set(k + z * 0.6, M - z * 0.6, g + z * 0.6), J.up.set(0, 0, 1), J.lookAt(k, M, g), J.updateProjectionMatrix(), J;
       }
-      const x = Math.max(D * 0.6, 5), U = new fi(-x * H, x * H, x, -x, -1e5, 1e5), w = 1e3;
+      const b = Math.max(D * 0.6, 5), U = new fi(-b * H, b * H, b, -b, -1e5, 1e5), w = 1e3;
       return L === 1 ? (U.position.set(k, M, g + w), U.up.set(0, 1, 0)) : L === 2 ? (U.position.set(k, M - w, g), U.up.set(0, 0, 1)) : (U.position.set(k + w, M, g), U.up.set(0, 0, 1)), U.lookAt(k, M, g), U.updateProjectionMatrix(), U;
     }, _ = () => {
-      const L = xe.__ctx;
-      (L == null ? void 0 : L.setSplitMode) && (P.enabled ? L.setSplitMode(true, b(P.secondary)) : L.setSplitMode(false));
+      const L = be.__ctx;
+      (L == null ? void 0 : L.setSplitMode) && (P.enabled ? L.setSplitMode(true, x(P.secondary)) : L.setSplitMode(false));
     };
     v.addBinding(P, "enabled", {
       label: "Activar"
@@ -18312,7 +18312,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
         }).on("click", () => {
           var _a5, _b2, _c, _d;
           vt("elevX");
-          const M = xe.__ctx;
+          const M = be.__ctx;
           ((_a5 = M == null ? void 0 : M.controls) == null ? void 0 : _a5.target) && (M.controls.target.x = H, M.camera.position.x = H + 25, (_c = (_b2 = M.controls).update) == null ? void 0 : _c.call(_b2), (_d = M.render) == null ? void 0 : _d.call(M));
         });
       }), B.forEach((H, W) => {
@@ -18321,7 +18321,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
         }).on("click", () => {
           var _a5, _b2, _c, _d;
           vt("elevY");
-          const k = xe.__ctx;
+          const k = be.__ctx;
           ((_a5 = k == null ? void 0 : k.controls) == null ? void 0 : _a5.target) && (k.controls.target.y = H, k.camera.position.y = H - 25, (_c = (_b2 = k.controls).update) == null ? void 0 : _c.call(_b2), (_d = k.render) == null ? void 0 : _d.call(k));
         });
       });
@@ -18346,7 +18346,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     if (ce && (vl({
       parentPane: s,
       expanded: !!Ne,
-      viewerElm: xe,
+      viewerElm: be,
       drawing: {
         points: wt,
         polylines: rn,
@@ -18367,7 +18367,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
         }
       }
     }), new URLSearchParams(location.search).get("ribbon") !== "0" && !document.getElementById("hk-ribbon"))) {
-      const L = xe.parentElement ?? xe;
+      const L = be.parentElement ?? be;
       Ul(L, {
         plegadoPorDefecto: ai(ce == null ? void 0 : ce.id),
         setTool: (f) => {
@@ -18531,10 +18531,10 @@ solve`, B.value = window.__hekatanCliScript ?? "";
 ` + z.slice(0, 5).join(`
 `));
       });
-      const D = /^(deck|deckmode|etabsjoint|etabswalljoint|meshcross|meshatintersections)\b/i, x = {
+      const D = /^(deck|deckmode|etabsjoint|etabswalljoint|meshcross|meshatintersections)\b/i, b = {
         modo: /^\s*deck\s+etabs/m.test(B.value) ? 1 : 0
       };
-      L.addBinding(x, "modo", {
+      L.addBinding(b, "modo", {
         label: "Comparar con",
         options: {
           "SAP2000 (sin directivas)": 0,
@@ -18584,7 +18584,7 @@ solve`, B.value = window.__hekatanCliScript ?? "";
         try {
           const j = (_b2 = (_a4 = window.__hekatanCadState) == null ? void 0 : _a4.get) == null ? void 0 : _b2.call(_a4);
           j && (j.showPlanes = false);
-          const Se = xe.__settings;
+          const Se = be.__settings;
           Se && "custom3D" in Se && (Se.custom3D = true);
         } catch {
         }
@@ -18705,15 +18705,15 @@ solve`, k();
               };
             }, []), g = await k.text(), D = M(g, 1e-3);
             D.archivo = k.name, window.__hekatanIfcMesh = D;
-            const x = pt.find((U) => U.id === "ifc-viewer");
-            if (x && (ce == null ? void 0 : ce.id) !== "ifc-viewer") Xt(x);
+            const b = pt.find((U) => U.id === "ifc-viewer");
+            if (b && (ce == null ? void 0 : ce.id) !== "ifc-viewer") Xt(b);
             else {
               try {
                 Ct();
               } catch {
               }
               try {
-                bn();
+                xn();
               } catch {
               }
             }
@@ -18730,7 +18730,7 @@ solve`, k();
           console.error("[CSI Importer] rebuild error:", H);
         }
         try {
-          bn();
+          xn();
         } catch {
         }
       }, B = () => {
@@ -18746,7 +18746,7 @@ solve`, k();
               };
             }, []), D = g(M);
             window.__hekatanImportedCim = D, console.log("[CSI Importer] F2K parseado:", D);
-            const x = D._warnings && D._warnings.length ? `
+            const b = D._warnings && D._warnings.length ? `
 
 \u26A0 Warnings:
 ${D._warnings.map((U) => "\u2022 " + U).join(`
@@ -18754,7 +18754,7 @@ ${D._warnings.map((U) => "\u2022 " + U).join(`
             alert(`\u2705 F2K cargado:
 \u2022 ${D.zapatas.length} zapatas
 \u2022 ${((_b2 = D.vigasAmarre) == null ? void 0 : _b2.length) ?? 0} vigas
-\u2022 ks = ${Math.round(D.ks_kNm3)} kN/m\xB3${x}`), f();
+\u2022 ks = ${Math.round(D.ks_kNm3)} kN/m\xB3${b}`), f();
           } catch (M) {
             alert(`\u274C Error al importar F2K: ${M.message}`), console.error(M);
           }
@@ -18796,18 +18796,18 @@ ${D._warnings.map((U) => "\u2022 " + U).join(`
               type: "text/plain"
             }), Se = URL.createObjectURL(j), Ae = document.createElement("a");
             Ae.href = Se, Ae.download = z, document.body.appendChild(Ae), Ae.click(), document.body.removeChild(Ae), URL.revokeObjectURL(Se);
-            const be = new Set(B.springs.map((at) => at.node)).size, Ze = [
+            const xe = new Set(B.springs.map((at) => at.node)).size, Ze = [
               ...(B.loadsSolver ?? Me.nodeInputs.val.loads ?? /* @__PURE__ */ new Map()).values()
             ].filter((at) => at.some((qe) => Math.abs(qe) > 1e-12)).length;
-            console.log(`\u2705 F2K exportado desde el modelo: ${Me.nodes.val.length} nudos, ${Me.elements.val.length} elementos, ${be} nudos con muelle, ${Ze} nudos cargados \u2192 ${z}`), alert(`F2K descargado (modelo completo).
+            console.log(`\u2705 F2K exportado desde el modelo: ${Me.nodes.val.length} nudos, ${Me.elements.val.length} elementos, ${xe} nudos con muelle, ${Ze} nudos cargados \u2192 ${z}`), alert(`F2K descargado (modelo completo).
 
 ${Me.nodes.val.length} nudos \xB7 ${Me.elements.val.length} elementos
-${be} nudos con muelle Winkler \xB7 ${Ze} nudos cargados
+${xe} nudos con muelle Winkler \xB7 ${Ze} nudos cargados
 
 Imp\xF3rtalo en SAFE 20.x: File \u2192 Import \u2192 SAFE .f2k Text File`);
             return;
           }
-          const H = f.ks_factor ?? 10.5, W = f.q_adm ?? 20, k = H * W * 9.80665, M = (f.useSimple ?? 1) >= 0.5, g = M ? (f.P_simple ?? 0) * 9.80665 : (f.P_D ?? 10) * 9.80665, D = M ? 0 : (f.P_L ?? 5) * 9.80665, x = M ? (f.Mx_simple ?? 0) * 9.80665 : (f.Mx_D ?? 0) * 9.80665, U = M ? (f.My_simple ?? 0) * 9.80665 : (f.My_D ?? 0) * 9.80665, w = dl({
+          const H = f.ks_factor ?? 10.5, W = f.q_adm ?? 20, k = H * W * 9.80665, M = (f.useSimple ?? 1) >= 0.5, g = M ? (f.P_simple ?? 0) * 9.80665 : (f.P_D ?? 10) * 9.80665, D = M ? 0 : (f.P_L ?? 5) * 9.80665, b = M ? (f.Mx_simple ?? 0) * 9.80665 : (f.Mx_D ?? 0) * 9.80665, U = M ? (f.My_simple ?? 0) * 9.80665 : (f.My_D ?? 0) * 9.80665, w = dl({
             Lz: f.Lz ?? 1.5,
             Bz: f.Bz ?? 1.5,
             tz: f.tz ?? 0.3,
@@ -18815,7 +18815,7 @@ Imp\xF3rtalo en SAFE 20.x: File \u2192 Import \u2192 SAFE .f2k Text File`);
             ks_kNm3: k,
             P_dead_kN: g,
             P_live_kN: D,
-            Mx_dead_kNm: x,
+            Mx_dead_kNm: b,
             My_dead_kNm: U
           }, `Zapata_Hekatan_${Date.now()}.f2k`);
           console.log(`\u2705 F2K exportado: ${w} bytes con ks=${k.toFixed(0)} kN/m\xB3, P_D=${g.toFixed(1)} kN`), alert(`F2K descargado correctamente.
@@ -18869,11 +18869,11 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               alert("No se encontr\xF3 el dropdown 'Vista (toggle)'.");
               return;
             }
-            const x = D.value.includes("Solo cimentaci\xF3n"), U = Array.from(D.options), w = x ? (_a4 = U.find((J) => J.value.includes("Edificio"))) == null ? void 0 : _a4.value : (_b2 = U.find((J) => J.value.includes("Solo cimentaci\xF3n"))) == null ? void 0 : _b2.value;
+            const b = D.value.includes("Solo cimentaci\xF3n"), U = Array.from(D.options), w = b ? (_a4 = U.find((J) => J.value.includes("Edificio"))) == null ? void 0 : _a4.value : (_b2 = U.find((J) => J.value.includes("Solo cimentaci\xF3n"))) == null ? void 0 : _b2.value;
             if (w) {
               D.value = w, D.dispatchEvent(new Event("change", {
                 bubbles: true
-              })), M.title = x ? "\u{1FAA8} Ver TODAS las zapatas FEM" : "\u{1F3E2} Volver al edificio completo";
+              })), M.title = b ? "\u{1FAA8} Ver TODAS las zapatas FEM" : "\u{1F3E2} Volver al edificio completo";
               try {
                 s.refresh();
               } catch {
@@ -18905,9 +18905,9 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               "11 \u2014 Shear Center": 11
             }
           }).on("change", () => {
-            const D = Array.from(document.querySelectorAll("button")).find((x) => {
+            const D = Array.from(document.querySelectorAll("button")).find((b) => {
               var _a4;
-              return (_a4 = x.textContent) == null ? void 0 : _a4.includes("Calcular y ver cimentaci\xF3n");
+              return (_a4 = b.textContent) == null ? void 0 : _a4.includes("Calcular y ver cimentaci\xF3n");
             });
             D && window.__hekatanCimentacionDesigned && (window.__cimSilent = true, D.click());
           }), k.addButton({
@@ -18916,16 +18916,16 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
             var _a4;
             const D = window.__cimSilent === true;
             delete window.__cimSilent;
-            const x = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, U = Ut.rawVal;
-            if (!x || !(U == null ? void 0 : U.length)) {
+            const b = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, U = Ut.rawVal;
+            if (!b || !(U == null ? void 0 : U.length)) {
               D || alert("Sin reacciones a\xFAn \u2014 corre primero el an\xE1lisis del edificio.");
               return;
             }
-            const w = ye, J = w.q_adm_zapata ?? 10, z = w.ks_zapata ?? 1030, j = w.t_zapata ?? 0.3, Se = w.colSize ?? 0.4, Ae = w.Hf_pedestal ?? 0.5, be = [];
+            const w = ye, J = w.q_adm_zapata ?? 10, z = w.ks_zapata ?? 1030, j = w.t_zapata ?? 0.3, Se = w.colSize ?? 0.4, Ae = w.Hf_pedestal ?? 0.5, xe = [];
             let ot = 0, Ze = 0;
-            if (x.forEach((ne, le) => {
+            if (b.forEach((ne, le) => {
               const Oe = U[le];
-              !Oe || Math.abs(Oe[2]) > 1e-6 || (be.push({
+              !Oe || Math.abs(Oe[2]) > 1e-6 || (xe.push({
                 idx: le,
                 x: Oe[0],
                 y: Oe[1],
@@ -18933,7 +18933,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
                 Mx_kN: ne[3],
                 My_kN: ne[4]
               }), Oe[0] > ot && (ot = Oe[0]), Oe[1] > Ze && (Ze = Oe[1]));
-            }), !be.length) {
+            }), !xe.length) {
               alert("No hay apoyos en z=0.");
               return;
             }
@@ -18945,7 +18945,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               return {
                 designAllFootings: ne
               };
-            }, __vite__mapDeps([0,1,2,3,4,5,6,7,8])), qe = at(be, ot, Ze, J, z);
+            }, __vite__mapDeps([0,1,2,3,4,5,6,7,8])), qe = at(xe, ot, Ze, J, z);
             for (const ne of qe) ne.t = j;
             const Ce = await kt(() => import("./theme-DQ--CgsI.js").then((ne) => ne.aj), []), st = Math.max(2, Math.round(w.nSubZapata ?? 4)), ct = new Ce.MeshStandardMaterial({
               color: 4491468,
@@ -19012,10 +19012,10 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               Qe.position.set(ge, Ve, -Ae / 2), Q.push(Qe);
               const rt = new Ce.LineSegments(new Ce.EdgesGeometry(Ke), X.clone());
               rt.position.copy(Qe.position), Q.push(rt);
-              const xt = [
+              const bt = [
                 new Ce.Vector3(ne.x, ne.y, 0),
                 new Ce.Vector3(ne.x, ne.y, -Ae)
-              ], ln = new Ce.BufferGeometry().setFromPoints(xt), yn = new Ce.LineBasicMaterial({
+              ], ln = new Ce.BufferGeometry().setFromPoints(bt), yn = new Ce.LineBasicMaterial({
                 color: 16763904,
                 linewidth: 3
               }), no = new Ce.Line(ln, yn);
@@ -19036,7 +19036,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
                 transparent: true,
                 opacity: 0.65
               }), He = /* @__PURE__ */ new Map(), ke = /* @__PURE__ */ new Map();
-              for (const we of be) {
+              for (const we of xe) {
                 const Fe = we.y.toFixed(4), tt = we.x.toFixed(4);
                 He.has(Fe) || He.set(Fe, []), ke.has(tt) || ke.set(tt, []), He.get(Fe).push(we), ke.get(tt).push(we);
               }
@@ -19095,8 +19095,8 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
                 ]
               ], _t = [];
               for (let Ke = 0; Ke < 4; Ke++) {
-                const [Qe, rt] = mt[Ke], [xt, ln] = mt[(Ke + 1) % 4];
-                _t.push(new Ce.Vector3(Qe, rt, tt), new Ce.Vector3(xt, ln, tt));
+                const [Qe, rt] = mt[Ke], [bt, ln] = mt[(Ke + 1) % 4];
+                _t.push(new Ce.Vector3(Qe, rt, tt), new Ce.Vector3(bt, ln, tt));
               }
               Q.push(new Ce.LineSegments(new Ce.BufferGeometry().setFromPoints(_t), X.clone()));
             }
@@ -19104,7 +19104,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               ...Me.objects3D.val ?? [],
               ...Q
             ];
-            const h = xe.__settings;
+            const h = be.__settings;
             if (h) {
               const ne = window.__hekatanSavedSettings = window.__hekatanSavedSettings ?? {}, le = [
                 "elements",
@@ -19128,7 +19128,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
             }
             window.__hekatanCimentacionDesigned = {
               zapatasD: qe,
-              baseRows: be,
+              baseRows: xe,
               xMax: ot,
               yMax: Ze,
               q_adm: J,
@@ -19150,26 +19150,26 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
           }), k.addButton({
             title: "\u{1F3E2} Volver a vista superestructura"
           }).on("click", () => {
-            const D = xe.__settings, x = window.__hekatanSavedSettings;
-            if (!D || !x) {
+            const D = be.__settings, b = window.__hekatanSavedSettings;
+            if (!D || !b) {
               alert("No hay vista isolada activa.");
               return;
             }
-            for (const U of Object.keys(x)) D[U] && typeof D[U] == "object" && "val" in D[U] && (D[U].val = x[U]);
+            for (const U of Object.keys(b)) D[U] && typeof D[U] == "object" && "val" in D[U] && (D[U].val = b[U]);
             window.__hekatanCimViewIsolated = false, delete window.__hekatanSavedSettings, alert("\u2705 Vista superestructura restaurada."), console.log("[Cimentaci\xF3n] vista superestructura restaurada");
           }), k.addButton({
             title: "\u{1F9EE} An\xE1lisis FEM solo cimentaci\xF3n"
           }).on("click", async () => {
             var _a4, _b2, _c, _d, _e, _f, _g, _h, _i2, _j, _k, _l2, _m, _n2;
-            const D = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, x = Ut.rawVal;
-            if (!D || !(x == null ? void 0 : x.length)) {
+            const D = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, b = Ut.rawVal;
+            if (!D || !(b == null ? void 0 : b.length)) {
               alert("Sin reacciones a\xFAn \u2014 corre primero el an\xE1lisis del edificio.");
               return;
             }
-            const U = ye, w = U.q_adm_zapata ?? 10, J = U.ks_zapata ?? 1030, z = U.t_zapata ?? 0.3, j = U.Hf_pedestal ?? 0.5, Se = U.voladoExtra ?? 0.3, Ae = U.colSize ?? 0.4, be = Math.max(2, Math.round(U.nSubZapata ?? 4)), ot = 25e6, Ze = 0.2, at = ot / (2 * (1 + Ze)), qe = 24, Ce = [];
+            const U = ye, w = U.q_adm_zapata ?? 10, J = U.ks_zapata ?? 1030, z = U.t_zapata ?? 0.3, j = U.Hf_pedestal ?? 0.5, Se = U.voladoExtra ?? 0.3, Ae = U.colSize ?? 0.4, xe = Math.max(2, Math.round(U.nSubZapata ?? 4)), ot = 25e6, Ze = 0.2, at = ot / (2 * (1 + Ze)), qe = 24, Ce = [];
             let st = 0, ct = 0;
             if (D.forEach((ge, Ve) => {
-              const _e2 = x[Ve];
+              const _e2 = b[Ve];
               !_e2 || Math.abs(_e2[2]) > 1e-6 || (Ce.push({
                 idx: Ve,
                 x: _e2[0],
@@ -19207,23 +19207,23 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
               let Tt = 0, nt = 0;
               const $e = Ae / 2;
               ge.tipo === "esquinera" ? (Tt = ge.x < st / 2 ? -(Ve / 2 - $e) : Ve / 2 - $e, nt = ge.y < ct / 2 ? -(_e2 / 2 - $e) : _e2 / 2 - $e) : ge.tipo === "lindero" && (Math.abs(ge.x) < 1e-3 || Math.abs(ge.x - st) < 1e-3 ? Tt = ge.x < st / 2 ? -(Ve / 2 - $e) : Ve / 2 - $e : (Math.abs(ge.y) < 1e-3 || Math.abs(ge.y - ct) < 1e-3) && (nt = ge.y < ct / 2 ? -(_e2 / 2 - $e) : _e2 / 2 - $e));
-              const mt = ge.x - Tt, _t = ge.y - nt, Ke = -j, Qe = Ve / be, rt = _e2 / be, xt = [];
-              for (let it = 0; it <= be; it++) {
+              const mt = ge.x - Tt, _t = ge.y - nt, Ke = -j, Qe = Ve / xe, rt = _e2 / xe, bt = [];
+              for (let it = 0; it <= xe; it++) {
                 const Et = [];
-                for (let Pt = 0; Pt <= be; Pt++) Et.push(Je(mt - Ve / 2 + Pt * Qe, _t - _e2 / 2 + it * rt, Ke));
-                xt.push(Et);
+                for (let Pt = 0; Pt <= xe; Pt++) Et.push(Je(mt - Ve / 2 + Pt * Qe, _t - _e2 / 2 + it * rt, Ke));
+                bt.push(Et);
               }
-              for (let it = 0; it < be; it++) for (let Et = 0; Et < be; Et++) {
+              for (let it = 0; it < xe; it++) for (let Et = 0; Et < xe; Et++) {
                 const Pt = Q.length;
                 Q.push([
-                  xt[it][Et],
-                  xt[it][Et + 1],
-                  xt[it + 1][Et + 1],
-                  xt[it + 1][Et]
+                  bt[it][Et],
+                  bt[it][Et + 1],
+                  bt[it + 1][Et + 1],
+                  bt[it + 1][Et]
                 ]), Oe.set(Pt, ve), Y.set(Pt, ot), le.set(Pt, Ze), h.set(Pt, at), ne.set(Pt, qe);
               }
-              for (let it = 0; it <= be; it++) for (let Et = 0; Et <= be; Et++) {
-                const Pt = Qe * rt * (Et === 0 || Et === be ? 0.5 : 1) * (it === 0 || it === be ? 0.5 : 1), Wt = J * Pt, Yn = Wt * 0.5, Rt = xt[it][Et];
+              for (let it = 0; it <= xe; it++) for (let Et = 0; Et <= xe; Et++) {
+                const Pt = Qe * rt * (Et === 0 || Et === xe ? 0.5 : 1) * (it === 0 || it === xe ? 0.5 : 1), Wt = J * Pt, Yn = Wt * 0.5, Rt = bt[it][Et];
                 He.push({
                   node: Rt,
                   dof: 0,
@@ -19242,7 +19242,7 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
                   k: Wt * 0.1
                 });
               }
-              Be.set(xt[0][0], [
+              Be.set(bt[0][0], [
                 false,
                 false,
                 false,
@@ -19251,19 +19251,19 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
                 true
               ]);
               let ln = 0, yn = 0, no = 1 / 0;
-              for (let it = 0; it <= be; it++) for (let Et = 0; Et <= be; Et++) {
-                const Pt = xt[it][Et], Wt = Math.hypot($[Pt][0] - ge.x, $[Pt][1] - ge.y);
+              for (let it = 0; it <= xe; it++) for (let Et = 0; Et <= xe; Et++) {
+                const Pt = bt[it][Et], Wt = Math.hypot($[Pt][0] - ge.x, $[Pt][1] - ge.y);
                 Wt < no && (no = Wt, ln = it, yn = Et);
               }
               const Bn = Ce.find((it) => it.idx === ge.idx);
-              Ge.set(xt[ln][yn], [
+              Ge.set(bt[ln][yn], [
                 0,
                 0,
                 -Bn.P_kN,
                 Bn.Mx_kN,
                 Bn.My_kN,
                 0
-              ]), ge._nFootCol = xt[ln][yn], ge._zMid = Ke;
+              ]), ge._nFootCol = bt[ln][yn], ge._zMid = Ke;
             }
             const we = Math.round(U.sistemaCimentacion ?? 0);
             if (we === 1) {
@@ -19335,14 +19335,14 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
               thicknesses: Oe
             }, Me.objects3D.val = dt;
             try {
-              const ge = bt($, Q, Me.nodeInputs.val, Me.elementInputs.val, He);
+              const ge = xt($, Q, Me.nodeInputs.val, Me.elementInputs.val, He);
               Me.deformOutputs.val = ge;
               const Ve = Ht($, Q, Me.elementInputs.val, ge), _e2 = w * 9.80665;
               Ve.colorMapRanges == null && (Ve.colorMapRanges = {}), Ve.colorMapRanges.pressure = [
                 -_e2,
                 0
               ], Me.analyzeOutputs.val = Ve;
-              const ve = xe.__settings;
+              const ve = be.__settings;
               ve ? (((_b2 = ve.elements) == null ? void 0 : _b2.val) !== void 0 && (ve.elements.val = true), ((_c = ve.nodes) == null ? void 0 : _c.val) !== void 0 && (ve.nodes.val = true), ((_d = ve.elemColumns) == null ? void 0 : _d.val) !== void 0 && (ve.elemColumns.val = false), ((_e = ve.elemBeams) == null ? void 0 : _e.val) !== void 0 && (ve.elemBeams.val = false), ((_f = ve.sections) == null ? void 0 : _f.val) !== void 0 && (ve.sections.val = false), ((_g = ve.secColumns) == null ? void 0 : _g.val) !== void 0 && (ve.secColumns.val = false), ((_h = ve.secBeams) == null ? void 0 : _h.val) !== void 0 && (ve.secBeams.val = false), ((_i2 = ve.secFloor) == null ? void 0 : _i2.val) !== void 0 && (ve.secFloor.val = false), ((_j = ve.supports) == null ? void 0 : _j.val) !== void 0 && (ve.supports.val = true), ((_k = ve.loads) == null ? void 0 : _k.val) !== void 0 && (ve.loads.val = true), ((_l2 = ve.shellResults) == null ? void 0 : _l2.val) !== void 0 && (ve.shellResults.val = "pressure"), ((_m = ve.deformedShape) == null ? void 0 : _m.val) !== void 0 && (ve.deformedShape.val = true), ((_n2 = ve.custom3D) == null ? void 0 : _n2.val) !== void 0 && (ve.custom3D.val = true)) : console.warn("[FEM Cim] viewerElm.__settings no disponible \u2014 shell results no auto-activado");
               const Tt = [
                 "pressure",
@@ -19380,15 +19380,15 @@ Activ\xE1 Deformed shape para ver la deformaci\xF3n.`), console.log(`[FEM Cim] $
             title: "\u{1F4E4} Exportar F2K cimentaci\xF3n COMPLETA"
           }).on("click", async () => {
             var _a4;
-            const D = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, x = Ut.rawVal;
-            if (!D || !(x == null ? void 0 : x.length)) {
+            const D = (_a4 = Vt.rawVal) == null ? void 0 : _a4.reactions, b = Ut.rawVal;
+            if (!D || !(b == null ? void 0 : b.length)) {
               alert("Sin reacciones a\xFAn \u2014 corre primero el an\xE1lisis del edificio (modo 'Edificio completo').");
               return;
             }
-            const U = ye, w = U.q_adm_zapata ?? 10, J = U.ks_zapata ?? 1030, z = U.t_zapata ?? 0.3, j = U.colSize ?? 0.4, Se = U.Hf_pedestal ?? 0.5, Ae = U.voladoExtra ?? 0.3, be = Math.round(U.sistemaCimentacion ?? 0), ot = Math.round(U.vigaAmarre_pos ?? 0), Ze = U.vigaAmarre_h ?? 0.4, at = U.vigaAmarre_b ?? 0.25, qe = [];
+            const U = ye, w = U.q_adm_zapata ?? 10, J = U.ks_zapata ?? 1030, z = U.t_zapata ?? 0.3, j = U.colSize ?? 0.4, Se = U.Hf_pedestal ?? 0.5, Ae = U.voladoExtra ?? 0.3, xe = Math.round(U.sistemaCimentacion ?? 0), ot = Math.round(U.vigaAmarre_pos ?? 0), Ze = U.vigaAmarre_h ?? 0.4, at = U.vigaAmarre_b ?? 0.25, qe = [];
             let Ce = 0, st = 0;
             if (D.forEach((h, G) => {
-              const oe = x[G];
+              const oe = b[G];
               !oe || Math.abs(oe[2]) > 1e-6 || (qe.push({
                 idx: G,
                 x: oe[0],
@@ -19435,7 +19435,7 @@ Activ\xE1 Deformed shape para ver la deformaci\xF3n.`), console.log(`[FEM Cim] $
                 label: h.idx
               };
             }), Y = [];
-            if (be === 1) {
+            if (xe === 1) {
               const h = ot === 0 ? -Se : -Se / 2, G = /* @__PURE__ */ new Map(), oe = /* @__PURE__ */ new Map();
               for (const ie of qe) {
                 const se = ie.y.toFixed(4), ne = ie.x.toFixed(4);
@@ -19487,9 +19487,9 @@ Activ\xE1 Deformed shape para ver la deformaci\xF3n.`), console.log(`[FEM Cim] $
             title: "\u{1F4E5} Importar F2K cimentaci\xF3n COMPLETA"
           }).on("click", async () => {
             const D = document.createElement("input");
-            D.type = "file", D.accept = ".f2k,.txt", D.onchange = async (x) => {
+            D.type = "file", D.accept = ".f2k,.txt", D.onchange = async (b) => {
               var _a4, _b2, _c;
-              const U = (_a4 = x.target.files) == null ? void 0 : _a4[0];
+              const U = (_a4 = b.target.files) == null ? void 0 : _a4[0];
               if (U) try {
                 const w = await U.text(), { parseEdificioCimentacionF2k: J } = await kt(async () => {
                   const { parseEdificioCimentacionF2k: Ae } = await import("./f2kCimentacionImporter-C8f9SvSZ.js");
@@ -19571,8 +19571,8 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           k
         ], {
           type: "text/plain"
-        }), D = URL.createObjectURL(g), x = document.createElement("a");
-        x.href = D, x.download = M, document.body.appendChild(x), x.click(), document.body.removeChild(x), URL.revokeObjectURL(D);
+        }), D = URL.createObjectURL(g), b = document.createElement("a");
+        b.href = D, b.download = M, document.body.appendChild(b), b.click(), document.body.removeChild(b), URL.revokeObjectURL(D);
       }, W = {
         weightMode: "auto",
         patronCargas: "Dead"
@@ -19632,38 +19632,38 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           var _a4, _b2, _c, _d, _e;
           const g = (_a4 = M.target.files) == null ? void 0 : _a4[0];
           if (g) try {
-            const D = await g.text(), x = Ts(D), U = {};
-            for (const [z, j] of Object.entries(x.elementInputs ?? {})) j instanceof Map && (U[z] = [
+            const D = await g.text(), b = Ts(D), U = {};
+            for (const [z, j] of Object.entries(b.elementInputs ?? {})) j instanceof Map && (U[z] = [
               ...j.entries()
             ]);
             window.__hekatanImportedModel = {
               fuente: "E2K",
               archivo: g.name,
-              nodes: x.nodes,
-              elements: x.elements,
-              tipos: x.elements.map((z, j) => {
+              nodes: b.nodes,
+              elements: b.elements,
+              tipos: b.elements.map((z, j) => {
                 var _a5;
-                return z.length === 4 ? "AREA" : ((_a5 = x.elementTypes) == null ? void 0 : _a5[j]) ?? "BEAM";
+                return z.length === 4 ? "AREA" : ((_a5 = b.elementTypes) == null ? void 0 : _a5[j]) ?? "BEAM";
               }),
-              secciones: x.elements.map((z, j) => {
+              secciones: b.elements.map((z, j) => {
                 var _a5;
-                return ((_a5 = x.elementSections) == null ? void 0 : _a5.get(j)) ?? "\u2014";
+                return ((_a5 = b.elementSections) == null ? void 0 : _a5.get(j)) ?? "\u2014";
               }),
-              plantas: x.elementStories ?? [],
+              plantas: b.elementStories ?? [],
               supports: [
-                ...(((_b2 = x.nodeInputs) == null ? void 0 : _b2.supports) ?? /* @__PURE__ */ new Map()).entries()
+                ...(((_b2 = b.nodeInputs) == null ? void 0 : _b2.supports) ?? /* @__PURE__ */ new Map()).entries()
               ],
               loads: [
-                ...(((_c = x.nodeInputs) == null ? void 0 : _c.loads) ?? /* @__PURE__ */ new Map()).entries()
+                ...(((_c = b.nodeInputs) == null ? void 0 : _c.loads) ?? /* @__PURE__ */ new Map()).entries()
               ],
               elementInputs: U,
-              info: x.info
+              info: b.info
             };
-            const w = new Set(x.elements.map((z, j) => {
+            const w = new Set(b.elements.map((z, j) => {
               var _a5;
-              return (_a5 = x.elementSections) == null ? void 0 : _a5.get(j);
+              return (_a5 = b.elementSections) == null ? void 0 : _a5.get(j);
             })).size;
-            console.log(`\u2705 E2K importado: ${g.name} \u2014 ${x.nodes.length} nudos, ${x.elements.length} elementos, ${w} secciones, ${((_e = (_d = x.nodeInputs) == null ? void 0 : _d.supports) == null ? void 0 : _e.size) ?? 0} apoyos. Se muestra en \xABImportar CSI\xBB con SUS datos.`);
+            console.log(`\u2705 E2K importado: ${g.name} \u2014 ${b.nodes.length} nudos, ${b.elements.length} elementos, ${w} secciones, ${((_e = (_d = b.nodeInputs) == null ? void 0 : _d.supports) == null ? void 0 : _e.size) ?? 0} apoyos. Se muestra en \xABImportar CSI\xBB con SUS datos.`);
             try {
               sessionStorage.setItem("__hekatan_modelo_importado__", JSON.stringify(window.__hekatanImportedModel));
             } catch (z) {
@@ -19699,13 +19699,13 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           var _a4, _b2, _c, _d;
           const g = (_a4 = M.target.files) == null ? void 0 : _a4[0];
           if (g) try {
-            const D = await g.text(), x = Ol(D), U = (x.nodes ?? []).map((j) => [
+            const D = await g.text(), b = Ol(D), U = (b.nodes ?? []).map((j) => [
               j[0],
               j[1],
               j[2]
             ]), w = [], J = [];
-            for (let j = 0; j < (((_b2 = x.elements) == null ? void 0 : _b2.length) ?? 0); j++) {
-              const Se = x.elements[j];
+            for (let j = 0; j < (((_b2 = b.elements) == null ? void 0 : _b2.length) ?? 0); j++) {
+              const Se = b.elements[j];
               Se.length === 4 ? (w.push([
                 ...Se,
                 Se[0]
@@ -19721,7 +19721,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
               polylines: w,
               areas: J,
               timestamp: Date.now()
-            })), console.log(`\u2705 S2K importado: ${g.name} (${((_c = x.nodes) == null ? void 0 : _c.length) ?? 0} nodos, ${((_d = x.elements) == null ? void 0 : _d.length) ?? 0} elementos) \u2192 cargando en new-blank...`);
+            })), console.log(`\u2705 S2K importado: ${g.name} (${((_c = b.nodes) == null ? void 0 : _c.length) ?? 0} nodos, ${((_d = b.elements) == null ? void 0 : _d.length) ?? 0} elementos) \u2192 cargando en new-blank...`);
             const z = new URL(window.location.href);
             z.searchParams.set("t", "new-blank"), window.location.href = z.toString();
           } catch (D) {
@@ -19897,12 +19897,12 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         });
         continue;
       }
-      const W = xa(f.label ?? L), k = f.unitType === "force" ? ` ${Fi()}` : f.unitType === "moment" ? ` ${yi()}` : f.unitType === "disp" ? ` ${Bi()}` : "", g = {
+      const W = ba(f.label ?? L), k = f.unitType === "force" ? ` ${Fi()}` : f.unitType === "moment" ? ` ${yi()}` : f.unitType === "disp" ? ` ${Bi()}` : "", g = {
         label: W + k
       };
       f.options !== void 0 ? g.options = f.options : (f.min !== void 0 && (g.min = f.min), f.max !== void 0 && (g.max = f.max), f.step !== void 0 && (g.step = f.step));
       let D = null;
-      const x = (w, J) => {
+      const b = (w, J) => {
         var _a4;
         if (D) try {
           (_a4 = D.dispose) == null ? void 0 : _a4.call(D);
@@ -19924,11 +19924,11 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           }, 80)) : (jn = (j == null ? void 0 : j.last) === false, ue());
         });
       };
-      x(f.min, f.max), je(f) && f.min !== void 0 && f.max !== void 0 && (We[L] = {
+      b(f.min, f.max), je(f) && f.min !== void 0 && f.max !== void 0 && (We[L] = {
         min: f.min,
         max: f.max
       }, et[L] = {
-        rebuild: (w, J) => x(w, J)
+        rebuild: (w, J) => b(w, J)
       });
       const U = Re.get(L);
       if (U && fn) for (const w of U) {
@@ -19950,23 +19950,23 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         expanded: false
       });
       for (const f of Ie) {
-        const B = ce.params[f], H = xa(B.label ?? f), W = B.step ?? 1, k = Math.abs(B.max - B.min), M = B.min - k * 5, g = B.max + k * 5;
+        const B = ce.params[f], H = ba(B.label ?? f), W = B.step ?? 1, k = Math.abs(B.max - B.min), M = B.min - k * 5, g = B.max + k * 5;
         L.addBinding(We[f], "min", {
           label: `${H} min`,
           min: M,
           max: B.max,
           step: W
         }).on("change", (D) => {
-          const x = Math.min(D.value, We[f].max - W);
-          We[f].min = x, et[f].rebuild(x, We[f].max);
+          const b = Math.min(D.value, We[f].max - W);
+          We[f].min = b, et[f].rebuild(b, We[f].max);
         }), L.addBinding(We[f], "max", {
           label: `${H} max`,
           min: B.min,
           max: g,
           step: W
         }).on("change", (D) => {
-          const x = Math.max(D.value, We[f].min + W);
-          We[f].max = x, et[f].rebuild(We[f].min, x);
+          const b = Math.max(D.value, We[f].min + W);
+          We[f].max = b, et[f].rebuild(We[f].min, b);
         });
       }
     }
@@ -20031,11 +20031,11 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           deformOutputs: Vt,
           analyzeOutputs: gn
         },
-        viewerElm: xe,
+        viewerElm: be,
         scalePercent: 5,
         onStatusChange: () => {
-          const x = At.getStatus();
-          B.mode = x.mode, B.frequency = x.frequency, B.period = x.period, B.dominant = x.dominant, B.state = x.state;
+          const b = At.getStatus();
+          B.mode = b.mode, B.frequency = b.frequency, B.period = b.period, B.dominant = b.dominant, B.state = b.state;
           try {
             f.refresh();
           } catch {
@@ -20045,20 +20045,20 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       let H = null;
       const W = {
         div: Yt.div,
-        render: (x, U) => {
+        render: (b, U) => {
           var _a4;
-          if (H = x, Qs = x, U == null ? void 0 : U.spectrumHtml) {
+          if (H = b, Qs = b, U == null ? void 0 : U.spectrumHtml) {
             ei = U.spectrumHtml;
             try {
               ss();
             } catch {
             }
           }
-          if (Yt.render(x, {
+          if (Yt.render(b, {
             ...U,
             spectrumHtml: void 0
-          }), (_a4 = x == null ? void 0 : x.frequencies) == null ? void 0 : _a4.length) {
-            At.setResults(x), At.setMode(0), At.play(), as.modeIdx = 1;
+          }), (_a4 = b == null ? void 0 : b.frequencies) == null ? void 0 : _a4.length) {
+            At.setResults(b), At.setMode(0), At.play(), as.modeIdx = 1;
             try {
               f.refresh();
             } catch {
@@ -20079,8 +20079,8 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         show: cn
       }, g = f.addBinding(M, "show", {
         label: "\u{1F4CB} Tabla de modos"
-      }).on("change", (x) => {
-        cn = !!x.value;
+      }).on("change", (b) => {
+        cn = !!b.value;
         try {
           Yt.div.style.display = cn ? "block" : "none";
         } catch {
@@ -20098,8 +20098,8 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       };
       f.addBinding(D, "show", {
         label: "\u{1F4C8} Mostrar espectro"
-      }).on("change", (x) => {
-        Co = !!x.value;
+      }).on("change", (b) => {
+        Co = !!b.value;
         try {
           ss();
         } catch {
@@ -20110,22 +20110,22 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         } catch {
         }
       };
-      for (const [x, U] of Object.entries(ce.params)) if (U.inModal) if (U.boolean) {
+      for (const [b, U] of Object.entries(ce.params)) if (U.inModal) if (U.boolean) {
         const w = {
-          [x]: ye[x] >= 0.5
+          [b]: ye[b] >= 0.5
         };
-        f.addBinding(w, x, {
-          label: U.label ?? x
+        f.addBinding(w, b, {
+          label: U.label ?? b
         }).on("change", (J) => {
-          ye[x] = J.value ? 1 : 0, k();
+          ye[b] = J.value ? 1 : 0, k();
         });
-      } else if (U.options) f.addBinding(ye, x, {
-        label: U.label ?? x,
+      } else if (U.options) f.addBinding(ye, b, {
+        label: U.label ?? b,
         options: U.options
       }).on("change", () => k());
       else {
         const w = f.addFolder({
-          title: "\u{1F522} " + (U.label ?? x),
+          title: "\u{1F522} " + (U.label ?? b),
           expanded: true
         }), J = {
           max: U.max ?? 60
@@ -20136,7 +20136,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
             z.dispose();
           } catch {
           }
-          ye[x] > J.max && (ye[x] = J.max), z = w.addBinding(ye, x, {
+          ye[b] > J.max && (ye[b] = J.max), z = w.addBinding(ye, b, {
             label: "cantidad",
             min: U.min ?? 1,
             max: J.max,
@@ -20156,8 +20156,8 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         min: 1,
         max: 60,
         step: 1
-      }).on("change", (x) => {
-        H && At.setMode(Math.round(x.value) - 1);
+      }).on("change", (b) => {
+        H && At.setMode(Math.round(b.value) - 1);
       }), f.addBinding(B, "mode", {
         readonly: true,
         view: "text",
@@ -20214,9 +20214,9 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     gridSize: 30,
     showCotas: true
   };
-  let xe;
+  let be;
   try {
-    xe = hi({
+    be = hi({
       mesh: {
         nodes: Ut,
         elements: nn,
@@ -20246,10 +20246,10 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     <div style="margin-top:12px; color:#9aa1ad">Suele ser la aceleraci\xF3n por hardware del
     navegador. Mir\xE1 <code>edge://gpu</code> o <code>chrome://gpu</code> \u2192 \xABProblems Detected\xBB.</div>
     <div style="margin-top:10px; color:#6b7280; font-size:12px">${String((e == null ? void 0 : e.message) || e).slice(0, 160)}</div>
-  </div>`, xe = t;
+  </div>`, be = t;
   }
   {
-    const e = xe.__ctx;
+    const e = be.__ctx;
     (e == null ? void 0 : e.controls) && e.controls.addEventListener("start", () => {
       Ra = true;
     });
@@ -20270,7 +20270,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     ], a = 20;
     const l = () => {
       var _a3;
-      const r = xe.__ctx;
+      const r = be.__ctx;
       (r == null ? void 0 : r.scene) && (r.scene.traverse((i) => {
         (i.isLine || i.isLineSegments) && i.material && Math.abs((i.material.opacity ?? 0) - 0.55) < 0.02 && (i.material.opacity = o, i.material.needsUpdate = true);
       }), (_a3 = r.render) == null ? void 0 : _a3.call(r));
@@ -20285,7 +20285,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
   })();
   (() => {
     var _a3, _b, _c, _d;
-    const e = xe.__ctx;
+    const e = be.__ctx;
     if (!(e == null ? void 0 : e.scene) || !(e == null ? void 0 : e.camera)) {
       console.warn("[gridHL] __ctx no disponible");
       return;
@@ -20293,18 +20293,18 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     const t = e.scene, n = () => {
       var _a4;
       return (_a4 = e.render) == null ? void 0 : _a4.call(e);
-    }, o = new Ln(), s = new jo(new Mi(0.05, 0.062, 32), new ba({
+    }, o = new Ln(), s = new jo(new Mi(0.05, 0.062, 32), new xa({
       color: 16761856,
       transparent: true,
       opacity: 0.95,
       side: Is,
       depthTest: false
-    })), a = new jo(new Oi(0.012, 16, 16), new ba({
+    })), a = new jo(new Oi(0.012, 16, 16), new xa({
       color: 16761856,
       depthTest: false
     }));
     o.add(s, a), o.renderOrder = 9999, o.frustumCulled = false, o.visible = false, t.add(o);
-    const l = new Ns(), r = new As(), i = new Nt(), E = () => xe.querySelector("canvas"), c = 0.062, A = 3, S = new Nt(), I = new Nt(), O = new Nt(), N = () => {
+    const l = new Ns(), r = new As(), i = new Nt(), E = () => be.querySelector("canvas"), c = 0.062, A = 3, S = new Nt(), I = new Nt(), O = new Nt(), N = () => {
       const K = e.camera, ee = E(), Ee = (ee == null ? void 0 : ee.clientWidth) || 800, Ne = (ee == null ? void 0 : ee.clientHeight) || 600;
       O.set(1, 0, 0).applyQuaternion(K.quaternion), S.copy(o.position).project(K), I.copy(o.position).add(O).project(K);
       const de = (S.x * 0.5 + 0.5) * Ee, Le = (-S.y * 0.5 + 0.5) * Ne, re = (I.x * 0.5 + 0.5) * Ee, te = (-I.y * 0.5 + 0.5) * Ne, ae = 1 / (Math.hypot(re - de, te - Le) || 1) * A / c;
@@ -20343,18 +20343,18 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     }, R = () => {
       o.visible && (o.visible = false, n());
     };
-    xe.addEventListener("pointermove", C), xe.addEventListener("pointerleave", R), (_b = (_a3 = e.controls) == null ? void 0 : _a3.addEventListener) == null ? void 0 : _b.call(_a3, "change", () => {
+    be.addEventListener("pointermove", C), be.addEventListener("pointerleave", R), (_b = (_a3 = e.controls) == null ? void 0 : _a3.addEventListener) == null ? void 0 : _b.call(_a3, "change", () => {
       o.visible && (N(), n());
     });
     let F = 0, y = 0;
-    xe.addEventListener("pointerdown", (K) => {
+    be.addEventListener("pointerdown", (K) => {
       F = K.clientX, y = K.clientY;
-    }), xe.addEventListener("pointerup", (K) => {
+    }), be.addEventListener("pointerup", (K) => {
       var _a4;
       Math.hypot(K.clientX - F, K.clientY - y) > 5 || window.__hekatanRefPlanesOn && o.visible && ((_a4 = window.__hekatanRecenterRefPlanes) == null ? void 0 : _a4.call(window, o.position.x, o.position.y));
     });
-    const v = 4, P = new Nt(), b = new Nt(), _ = () => {
-      const K = xe.__ctx, ee = K == null ? void 0 : K.scene, Ee = K == null ? void 0 : K.camera;
+    const v = 4, P = new Nt(), x = new Nt(), _ = () => {
+      const K = be.__ctx, ee = K == null ? void 0 : K.scene, Ee = K == null ? void 0 : K.camera;
       if (!ee || !Ee) return;
       const Ne = E(), de = (Ne == null ? void 0 : Ne.clientWidth) || 800, Le = (Ne == null ? void 0 : Ne.clientHeight) || 600;
       let re = false;
@@ -20370,18 +20370,18 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           return ((_a4 = De.geometry.parameters) == null ? void 0 : _a4.radius) || 0.01;
         }));
         if (!(ae > 0) || ae > 2) return;
-        te.updateWorldMatrix(true, false), P.setFromMatrixPosition(te.matrixWorld), b.set(1, 0, 0).applyQuaternion(Ee.quaternion);
-        const fe = P.clone().project(Ee), pe = P.clone().add(b).project(Ee), he = Math.hypot((pe.x - fe.x) * 0.5 * de, (pe.y - fe.y) * 0.5 * Le) || 1, me = v / he / ae;
+        te.updateWorldMatrix(true, false), P.setFromMatrixPosition(te.matrixWorld), x.set(1, 0, 0).applyQuaternion(Ee.quaternion);
+        const fe = P.clone().project(Ee), pe = P.clone().add(x).project(Ee), he = Math.hypot((pe.x - fe.x) * 0.5 * de, (pe.y - fe.y) * 0.5 * Le) || 1, me = v / he / ae;
         me > 0 && isFinite(me) && Math.abs(te.scale.x - me) > 1e-6 && (te.scale.setScalar(me), re = true);
       }), re && n();
     };
-    xe.addEventListener("pointermove", () => {
+    be.addEventListener("pointermove", () => {
       _();
     });
     const V = () => {
       window.__hekatanGridPlaneXZ = false, window.__hekatanGridPlaneYZ = false, window.__hekatanOrthoRaycast = false;
     };
-    V(), xe.addEventListener("pointermove", V, true), xe.addEventListener("pointerdown", V, true), (_d = (_c = e.controls) == null ? void 0 : _c.addEventListener) == null ? void 0 : _d.call(_c, "change", _), window.addEventListener("resize", _);
+    V(), be.addEventListener("pointermove", V, true), be.addEventListener("pointerdown", V, true), (_d = (_c = e.controls) == null ? void 0 : _c.addEventListener) == null ? void 0 : _d.call(_c, "change", _), window.addEventListener("resize", _);
   })();
   (() => {
     const e = {
@@ -20688,13 +20688,13 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       offset: "offset",
       axis: "axis",
       chaflan: "chamfer"
-    }, s = {}, a = (M, g, D, x) => {
+    }, s = {}, a = (M, g, D, b) => {
       for (const U of [
         M,
         ...g
       ]) s[U] = {
         canon: M,
-        run: x,
+        run: b,
         eco: D
       };
     };
@@ -20888,8 +20888,8 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     const T = (M, g = "") => {
       const D = String(M ?? "").split("   |   ")[0].trim();
       if (!D) return;
-      const x = i.lastElementChild;
-      if (x && x.dataset.t === D) return;
+      const b = i.lastElementChild;
+      if (b && b.dataset.t === D) return;
       const U = document.createElement("div");
       for (U.dataset.t = D, U.textContent = D, g === "cmd" ? U.style.color = "#cdeefb" : g === "err" ? U.style.color = "#fb7185" : g === "ok" && (U.style.color = "#34d399"), i.appendChild(U); i.children.length > 300; ) i.removeChild(i.firstChild);
       i.scrollTop = i.scrollHeight;
@@ -20898,18 +20898,18 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     let C = [], R = false;
     const F = (M, g = []) => {
       var _a3, _b;
-      A.textContent = M || "Comando:", C = g, S.innerHTML = "", g.length && (S.appendChild(document.createTextNode("[")), g.forEach((x, U) => {
+      A.textContent = M || "Comando:", C = g, S.innerHTML = "", g.length && (S.appendChild(document.createTextNode("[")), g.forEach((b, U) => {
         var _a4, _b2;
-        const w = document.createElement("span"), J = ((_b2 = (_a4 = x.match(/[A-ZÁÉÍÓÚ]/)) == null ? void 0 : _a4[0]) == null ? void 0 : _b2.toLowerCase()) ?? x[0].toLowerCase();
-        w.textContent = x, w.title = `teclee ${J.toUpperCase()} + Enter`, w.style.cssText = "color:#22d3ee;cursor:pointer;text-decoration:underline dotted;", w.addEventListener("click", () => {
+        const w = document.createElement("span"), J = ((_b2 = (_a4 = b.match(/[A-ZÁÉÍÓÚ]/)) == null ? void 0 : _a4[0]) == null ? void 0 : _b2.toLowerCase()) ?? b[0].toLowerCase();
+        w.textContent = b, w.title = `teclee ${J.toUpperCase()} + Enter`, w.style.cssText = "color:#22d3ee;cursor:pointer;text-decoration:underline dotted;", w.addEventListener("click", () => {
           q(J === "h" ? "u" : J), Re("");
         }), S.appendChild(w), U < g.length - 1 && S.appendChild(document.createTextNode("/"));
       }), S.appendChild(document.createTextNode("]:")));
       const D = M.replace(/^[A-ZÁÉÍÓÚÑ0-9 ]+ /, "").replace(/:$/, "");
       me.textContent = D.length > 44 ? D.slice(0, 42) + "\u2026" : D, g.length && !et.childElementCount && (R = true), et.innerHTML = "", et.style.display = g.length ? "flex" : "none";
-      for (const x of g) {
-        const U = ((_b = (_a3 = x.match(/[A-ZÁÉÍÓÚ]/)) == null ? void 0 : _a3[0]) == null ? void 0 : _b.toLowerCase()) ?? x[0].toLowerCase(), w = document.createElement("button");
-        w.type = "button", w.textContent = x, w.title = `${x} \u2014 o teclee ${U.toUpperCase()} + Enter`, w.style.cssText = "background:#0e2a38;border:1px solid #22d3ee;border-radius:4px;color:#22d3ee;font:11px Consolas,monospace;padding:1px 7px;cursor:pointer;line-height:15px;", w.addEventListener("mouseenter", () => {
+      for (const b of g) {
+        const U = ((_b = (_a3 = b.match(/[A-ZÁÉÍÓÚ]/)) == null ? void 0 : _a3[0]) == null ? void 0 : _b.toLowerCase()) ?? b[0].toLowerCase(), w = document.createElement("button");
+        w.type = "button", w.textContent = b, w.title = `${b} \u2014 o teclee ${U.toUpperCase()} + Enter`, w.style.cssText = "background:#0e2a38;border:1px solid #22d3ee;border-radius:4px;color:#22d3ee;font:11px Consolas,monospace;padding:1px 7px;cursor:pointer;line-height:15px;", w.addEventListener("mouseenter", () => {
           w.style.background = "#164e63";
         }), w.addEventListener("mouseleave", () => {
           w.style.background = "#0e2a38";
@@ -20924,7 +20924,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         A.style.color = "#22d3ee";
       }, 900);
     }, v = [];
-    let P = -1, b = "";
+    let P = -1, x = "";
     const _ = () => {
       var _a3, _b, _c;
       return ((_c = (_b = (_a3 = window.__hekatanCadState) == null ? void 0 : _a3.get) == null ? void 0 : _b.call(_a3)) == null ? void 0 : _c.tool) ?? "select";
@@ -20968,7 +20968,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       }, y(`\u2713 Replicado \xD7${g} \u2014 \u0394 (${M[0]}, ${M[1]}, ${M[2]}) m \xB7 \xABx5\xBB repite, \xAB/5\xBB subdivide`, true);
     }, te = (M) => {
       const D = M.trim().toLowerCase().replace(/^(piso|planta|story|arriba)\s*/, "").split(/[,;\s]+/).filter(Boolean).map(Number);
-      return D.some((x) => !isFinite(x)) ? null : D.length === 1 ? [
+      return D.some((b) => !isFinite(b)) ? null : D.length === 1 ? [
         0,
         0,
         D[0]
@@ -21091,12 +21091,12 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
           }
           const Se = te(z.replace(/\s+\d+$/, ""));
           z.match(/(\d+)\s*$/);
-          const Ae = z.split(/\s+/), be = Ae.length > 1 && /^\d+$/.test(Ae[Ae.length - 1]) ? Math.max(1, parseInt(Ae[Ae.length - 1], 10)) : 1, ot = te(Ae.slice(0, be > 1 ? -1 : void 0).join(" ")) || Se;
+          const Ae = z.split(/\s+/), xe = Ae.length > 1 && /^\d+$/.test(Ae[Ae.length - 1]) ? Math.max(1, parseInt(Ae[Ae.length - 1], 10)) : 1, ot = te(Ae.slice(0, xe > 1 ? -1 : void 0).join(" ")) || Se;
           if (!ot) {
             y("\u2715 REPLICAR: uso \xABREP 0,0,3.2 [copias]\xBB o \xABREP\xBB a secas.", false);
             return;
           }
-          re(ot, be);
+          re(ot, xe);
           return;
         }
       }
@@ -21108,11 +21108,11 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         y(`\u2715 \xAB${M.trim()}\xBB no es una coordenada v\xE1lida (1,1,1 \xB7 @5,3 \xB7 5<45 \xB7 5)`, false);
         return;
       }
-      const x = s[g];
-      if (x) {
-        b = g, T(x.eco);
+      const b = s[g];
+      if (b) {
+        x = g, T(b.eco);
         try {
-          x.run();
+          b.run();
         } catch {
           y("\u2715 error", false);
         }
@@ -21124,7 +21124,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         y(w ? `\u2139 \xAB${g.toUpperCase()}\xBB es ${w[0]} en AutoCAD \u2014 ${w[1]}` : `\u2715 \xAB${g}\xBB desconocido. Teclee ? para la ayuda.`, false);
         return;
       }
-      b = g;
+      x = g;
       try {
         V(U);
       } catch {
@@ -21135,14 +21135,14 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     const Te = (M) => {
       const g = M.trim().toLowerCase();
       if (!g || /^@?-?[\d.]/.test(g) || l.includes(g)) return "";
-      let D = l.find((x) => x.startsWith(g) && x.length > g.length);
+      let D = l.find((b) => b.startsWith(g) && b.length > g.length);
       return D || (D = [
         ...Object.keys(t),
         ...Object.keys(s)
-      ].filter((x) => x.startsWith(g) && x.length > g.length).sort((x, U) => x.length - U.length)[0]), D || "";
+      ].filter((b) => b.startsWith(g) && b.length > g.length).sort((b, U) => b.length - U.length)[0]), D || "";
     }, ae = (M) => M.replace(/&/g, "&amp;").replace(/</g, "&lt;"), fe = (M, g) => {
-      const D = M.value, x = Te(D);
-      g.innerHTML = x && D.length ? `<span style="color:transparent">${ae(D)}</span>${ae(x.slice(D.length))}` : "";
+      const D = M.value, b = Te(D);
+      g.innerHTML = b && D.length ? `<span style="color:transparent">${ae(D)}</span>${ae(b.slice(D.length))}` : "";
     }, pe = document.createElement("div");
     pe.id = "hk-dyn", pe.style.cssText = [
       "position:fixed",
@@ -21207,7 +21207,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
               (_b = window.__hekatanFinalizeDraw) == null ? void 0 : _b.call(window), V("select");
               return;
             }
-            b && q(b);
+            x && q(x);
             return;
           }
           v.push(w), v.length > 60 && v.shift();
@@ -21271,7 +21271,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       const M = document.getElementById("hk-rubber-label");
       return !!(M && M.style.display === "block");
     }, k = (M) => M.pointerType === "touch" || M.pointerType === "pen";
-    xe == null ? void 0 : xe.addEventListener("pointermove", (M) => {
+    be == null ? void 0 : be.addEventListener("pointermove", (M) => {
       if (k(M)) {
         pe.style.display = "none";
         return;
@@ -21283,9 +21283,9 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       }
       if (he.style.display = g ? "none" : "flex", R || Ye.value.length === 0 && !C.length) {
         R = false;
-        let x = M.clientX + 16, U = M.clientY + 14;
+        let b = M.clientX + 16, U = M.clientY + 14;
         const w = pe.offsetWidth || 175, J = pe.offsetHeight || 24;
-        x + w > window.innerWidth - 8 && (x = M.clientX - w - 8), U + J > window.innerHeight - 8 && (U = M.clientY - J - 8), pe.style.left = Math.max(4, x) + "px", pe.style.top = Math.max(4, U) + "px";
+        b + w > window.innerWidth - 8 && (b = M.clientX - w - 8), U + J > window.innerHeight - 8 && (U = M.clientY - J - 8), pe.style.left = Math.max(4, b) + "px", pe.style.top = Math.max(4, U) + "px";
       }
       if (pe.style.display = "flex", B()) return;
       const D = document.activeElement;
@@ -21295,7 +21295,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         });
       } catch {
       }
-    }), xe == null ? void 0 : xe.addEventListener("pointerleave", (M) => {
+    }), be == null ? void 0 : be.addEventListener("pointerleave", (M) => {
       const g = M.relatedTarget;
       if (!(g && pe.contains(g)) && !C.length && (pe.style.display = "none"), !k(M) && !B()) try {
         I.focus({
@@ -21346,7 +21346,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     } catch {
     }
   });
-  document.body.append(xe, Pi({
+  document.body.append(be, Pi({
     sourceCode: "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal",
     author: "https://www.linkedin.com/in/jorge-burbano-213741138/"
   }));
@@ -21421,12 +21421,12 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       ];
     }, r = (E) => {
       var _a3, _b, _c, _d, _e, _f, _g, _h, _i2, _j, _k, _l2, _m;
-      const c = xe.__ctx, A = xe.__settings;
+      const c = be.__ctx, A = be.__settings;
       if (!(c == null ? void 0 : c.scene) || !(c == null ? void 0 : c.camera)) {
         t.style.display = "none";
         return;
       }
-      const S = ((_a3 = A == null ? void 0 : A.shellResults) == null ? void 0 : _a3.val) ?? "none", I = xe.querySelector("canvas");
+      const S = ((_a3 = A == null ? void 0 : A.shellResults) == null ? void 0 : _a3.val) ?? "none", I = be.querySelector("canvas");
       if (!I) {
         t.style.display = "none";
         return;
@@ -21461,7 +21461,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         0,
         0,
         0
-      ], b = nn.rawVal, _ = Ut.rawVal, V = b[T];
+      ], x = nn.rawVal, _ = Ut.rawVal, V = x[T];
       let K = P[0], ee = 0, Ee = 0, Ne = 0, de = null;
       const Le = (_f = (_e = d.object) == null ? void 0 : _e.userData) == null ? void 0 : _f.faceLocal;
       if (d.face && p && Le && V && d.point) {
@@ -21555,9 +21555,9 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
             -(1 + ee),
             1 + ee,
             1 - ee
-          ].map((z) => 0.25 * z), M = Re.reduce((z, j, Se) => z + W[Se] * j[0], 0), g = Re.reduce((z, j, Se) => z + k[Se] * j[0], 0), D = Re.reduce((z, j, Se) => z + W[Se] * j[1], 0), x = Re.reduce((z, j, Se) => z + k[Se] * j[1], 0), U = M * x - g * D;
+          ].map((z) => 0.25 * z), M = Re.reduce((z, j, Se) => z + W[Se] * j[0], 0), g = Re.reduce((z, j, Se) => z + k[Se] * j[0], 0), D = Re.reduce((z, j, Se) => z + W[Se] * j[1], 0), b = Re.reduce((z, j, Se) => z + k[Se] * j[1], 0), U = M * b - g * D;
           if (Math.abs(U) < 1e-12) break;
-          const w = (x * B - g * H) / U, J = (-D * B + M * H) / U;
+          const w = (b * B - g * H) / U, J = (-D * B + M * H) / U;
           if (ee -= w, Ee -= J, Math.abs(w) + Math.abs(J) < 1e-6) break;
         }
         ee = Math.max(-1, Math.min(1, ee)), Ee = Math.max(-1, Math.min(1, Ee));
@@ -21613,7 +21613,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     }, i = () => {
       t.style.display = "none", window.__hekatanShellTooltipVisible = false;
     };
-    xe.addEventListener("pointermove", r), xe.addEventListener("pointerleave", i), window.__hekatan_hover_tooltip = t;
+    be.addEventListener("pointermove", r), be.addEventListener("pointerleave", i), window.__hekatan_hover_tooltip = t;
   })();
   At = ds({
     mesh: {
@@ -21622,7 +21622,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
       deformOutputs: Vt,
       analyzeOutputs: gn
     },
-    viewerElm: xe,
+    viewerElm: be,
     scalePercent: 5
   });
   try {
