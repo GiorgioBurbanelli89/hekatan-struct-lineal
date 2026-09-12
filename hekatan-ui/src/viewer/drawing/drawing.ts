@@ -1859,7 +1859,17 @@ export function drawing({
   // (una caja 3D → sus 6 caras). Devuelve cuántas creó. Jorge: "seleccionar todo
   // y que se repinten las áreas de las que cumplen la regla".
   (window as any).__hekatanFillClosedAreas = (): number => {
-    const polys = drawingObj.polylines?.rawVal ?? [];
+    const polysRaw = drawingObj.polylines?.rawVal ?? [];
+    // Nudos COINCIDENTES → uno solo. Una viga dibujada enganchando (osnap) al
+    // nudo de un arco crea un punto NUEVO en la misma coordenada: topológicamente
+    // son dos nudos y la celda nunca cierra (medido: bóveda de arcos + vigas
+    // longitudinales daba 0 áreas). Se canonicaliza por coordenada (1e-4 m),
+    // como el "merge joints" de ETABS.
+    const P = drawingObj.points.rawVal;
+    const canon = new Map<string, number>(); const alias = new Map<number, number>();
+    const key = (p: number[]) => p.map((v) => Math.round(v * 1e4) / 1e4).join(",");
+    for (let i = 0; i < P.length; i++) { const k = key(P[i]); const c = canon.get(k); if (c === undefined) canon.set(k, i); alias.set(i, c ?? i); }
+    const polys = polysRaw.map((poly) => poly.map((ix) => alias.get(ix) ?? ix));
     const adj = new Map<number, Set<number>>();
     const addE = (a: number, b: number) => { if (a === b) return;
       (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b);
