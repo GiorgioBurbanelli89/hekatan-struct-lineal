@@ -1,9 +1,9 @@
 These are the new features of Hekatan Struct.
-We draw bars that form closed cells; notice the drawing menu, being opaque, covers part of the scene.
+With the cursor and the Rectangle tool I draw three closed cells; notice the drawing menu, being opaque, covers part of the scene.
 With this button I fold the drawing menu away, and now the whole geometry shows; it slides too.
 With the fill area tool, hovering highlights the cell, and clicking creates the area.
 A single button fills every closed cell at once.
-The ruler measures and dimensions; it snaps to corners, so it reads exactly four meters.
+The ruler measures and dimensions; it snaps to corners, so it reads exactly six meters.
 All menus slide: this door hides and shows the right panel.
 And this one slides the settings panel on the left, freeing the whole view.
 And this button takes us back to the main menu.

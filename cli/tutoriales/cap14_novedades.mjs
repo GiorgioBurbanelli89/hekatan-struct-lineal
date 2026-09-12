@@ -66,18 +66,29 @@ const GRID = () => {
 export const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada("Novedades", "Capítulo 14", 16); } },
   {
-    rotulo: "1 · Barras que forman celdas cerradas (el menú abierto tapa)",
+    rotulo: "1 · Dibujo celdas cerradas CON EL CURSOR (herramienta Rectángulo)",
     hacer: async (a) => {
       await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo","0"); } catch(e){} });
-      // El ribbon ARRANCA ABIERTO para que se vea que tapa la escena (y luego
-      // el cursor lo pliegue a la vista, sin trampa).
-      await a.pag.evaluate(() => { try { window.__hekatanRibbonPlegar?.(false); } catch(e){} });
+      // Lienzo limpio, ribbon abierto (se ve que tapa; luego el cursor lo pliega).
+      await a.pag.evaluate(() => {
+        window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = []; window.__hekatanDrawingAreas.val = [];
+        try { window.__hekatanRebuild?.(); } catch(e){}
+        try { window.__hekatanRibbonPlegar?.(false); } catch(e){}
+      });
       await a.general(); await a.quieto(2, 300);
-      const g = GRID();
-      await a.pag.evaluate((g) => {
-        window.__hekatanDrawingPoints.val = g.P; window.__hekatanDrawingPolylines.val = g.PL; window.__hekatanDrawingAreas.val = [];
-        try { window.__hekatanRebuild?.(); window.__hekatanAutoFit?.(); } catch(e){}
-      }, g);
+      // Grid snap a 1 m: el clic en vista iso cae en enteros (si no, el
+      // raycast deja 2.95 en vez de 3.0 y la cota sale sucia).
+      await a.pag.evaluate(() => { window.__hekatanSnapEnabled = true; window.__hekatanSnap2D = 1.0; });
+      // Herramienta Rectángulo: cada rectángulo = una celda cerrada (4 barras).
+      // Se dibujan CON EL CURSOR (2 clics cada uno), nada inyectado por código.
+      await a.pag.evaluate(() => window.__hekatanCadState.setTool("rect"));
+      await clicRojoW(a, 0, 0, 0); await clicRojoW(a, 3, 3, 0);   // celda 1
+      await clicRojoW(a, 3, 0, 0); await clicRojoW(a, 6, 3, 0);   // celda 2
+      await clicRojoW(a, 0, 3, 0); await clicRojoW(a, 3, 6, 0);   // celda 3
+      await a.pag.evaluate(() => window.__hekatanCadState.setTool("select"));
+      // Reencuadrar sobre lo dibujado: si no, las celdas quedan diminutas y
+      // los clics siguientes (relleno, regla) caen imprecisos.
+      await a.pag.evaluate(() => { try { window.__hekatanAutoFit?.(); } catch(e){} });
       await a.quieto(3, 330);
     },
   },
@@ -120,8 +131,12 @@ export const pasos = [
     hacer: async (a) => {
       await a.pag.evaluate(() => window.__hekatanCadState.setTool("medir"));
       await clicRojoW(a, 0, 0, 0);
-      await clicRojoW(a, 4, 0, 0);
-      await a.quieto(5, 350);   // se ve la cota (4.000 m)
+      await clicRojoW(a, 6, 0, 0);
+      // Cerrar la medición para que no quede una goma elástica (segunda cota
+      // en vivo) colgando del cursor; queda solo la cota fija 6.000 m.
+      await a.pag.keyboard.press("Escape");
+      await a.pag.evaluate(() => { try { window.__hekatanCadState.setTool("select"); } catch(e){} });
+      await a.quieto(5, 350);   // se ve la cota limpia (6.000 m, engancha a los nudos)
     },
   },
   {
