@@ -1,0 +1,7 @@
+En este tutorial replicamos una capilla como estructura analítica, solo con el cursor y el menú de dibujo.
+Lienzo limpio, plano frontal, y le decimos al arco que se discretice en ocho líneas rectas, porque ETABS no admite curvas.
+El primer pórtico: dos columnas y un arco por tres puntos. Al dibujarlo, el arco se convierte en ocho barras.
+Repetimos el pórtico a lo largo, en los ejes tres, seis, nueve y doce.
+Cosemos los pórticos con vigas longitudinales: la cumbrera arriba y los aleros a los lados.
+La cubierta de zinc se dibuja como paños de área, una membrana entre pórtico y pórtico.
+Y ésta es la capilla como estructura analítica; giramos para verla completa.

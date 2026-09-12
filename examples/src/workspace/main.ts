@@ -1322,6 +1322,9 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // (también usado por el csi-importer para forceRebuildAndFit).
 (window as any).__hekatanRebuild = rebuild;
 (window as any).__hekatanAutoFit = autoFitCamera;
+// Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
+// la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
+(window as any).__hekatanSetView = (p: "iso" | "plan" | "elevX" | "elevY") => { try { setView(p); } catch (e) {} };
 
 // Y los PARÁMETROS vivos, para poder barrer un ejemplo desde fuera:
 //     window.__hekatanParams().na = 16;  window.__hekatanRebuild();

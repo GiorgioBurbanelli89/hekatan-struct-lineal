@@ -1,0 +1,7 @@
+In this tutorial we replicate a chapel as an analytic structure, using only the cursor and the drawing menu.
+Clean canvas, front plane, and we tell the arc to discretize into eight straight lines, because ETABS does not allow curves.
+The first frame: two columns and a three-point arc. As it is drawn, the arc becomes eight bars.
+We repeat the frame along the axes at three, six, nine and twelve.
+We stitch the frames with longitudinal beams: the ridge on top and the eaves on the sides.
+The zinc roof is drawn as area panels, a membrane between each pair of frames.
+And this is the chapel as an analytic structure; we orbit to see it complete.

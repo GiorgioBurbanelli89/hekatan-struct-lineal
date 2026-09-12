@@ -1675,40 +1675,39 @@ export function drawing({
     const v1 = new THREE.Vector3(...p1);
     const v2 = new THREE.Vector3(...p2);
     const v3 = new THREE.Vector3(...p3);
-    // Normal del plano que contiene los 3 puntos
-    const a = new THREE.Vector3().subVectors(v2, v1);
-    const b = new THREE.Vector3().subVectors(v3, v1);
-    const normal = new THREE.Vector3().crossVectors(a, b).normalize();
-    // Centro del círculo: intersección de mediatrices de p1p2 y p2p3 en el plano
-    const m12 = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
-    const m23 = new THREE.Vector3().addVectors(v2, v3).multiplyScalar(0.5);
-    const dir12 = new THREE.Vector3().crossVectors(a, normal).normalize();
-    const dir23 = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(v3, v2), normal).normalize();
-    // Resolver m12 + t * dir12 = m23 + s * dir23 (proyectado)
-    const w = new THREE.Vector3().subVectors(m23, m12);
-    const denom = dir12.x * dir23.y - dir12.y * dir23.x;
+    // CIRCUNCENTRO EN 3D (no proyectado a XY): funciona en cualquier plano,
+    // incluidos los VERTICALES (un arco de fachada en el plano XZ). El cálculo
+    // viejo usaba sólo x,y y degeneraba en planos verticales dando coordenadas
+    // basura. Fórmula: c = v1 + ((|a|²·b − |b|²·a) × (a×b)) / (2·|a×b|²).
+    const a = new THREE.Vector3().subVectors(v2, v1);   // a = p2 − p1
+    const b = new THREE.Vector3().subVectors(v3, v1);   // b = p3 − p1
+    const axb = new THREE.Vector3().crossVectors(a, b);
+    const denom2 = 2 * axb.lengthSq();
     let center: THREE.Vector3;
-    if (Math.abs(denom) > 1e-9) {
-      const t = (w.x * dir23.y - w.y * dir23.x) / denom;
-      center = new THREE.Vector3().addVectors(m12, dir12.clone().multiplyScalar(t));
+    if (denom2 < 1e-12) {
+      center = new THREE.Vector3().addVectors(v1, v3).multiplyScalar(0.5);   // casi colineales
     } else {
-      // Caso degenerado: usar el punto medio
-      center = m12.clone();
+      const t1 = b.clone().multiplyScalar(a.lengthSq()).sub(a.clone().multiplyScalar(b.lengthSq()));
+      const num = new THREE.Vector3().crossVectors(t1, axb);
+      center = v1.clone().add(num.divideScalar(denom2));
     }
     const radius = v1.distanceTo(center);
-    const startVec = new THREE.Vector3().subVectors(v1, center);
-    const endVec = new THREE.Vector3().subVectors(v3, center);
-    const angle = Math.acos(Math.max(-1, Math.min(1, startVec.dot(endVec) / (radius * radius))));
-    // Generar N+1 puntos a lo largo del arco
+    // Base ortonormal en el plano del arco: u hacia p1, w perpendicular.
+    const nrm = axb.lengthSq() > 1e-12 ? axb.clone().normalize() : new THREE.Vector3(0, 1, 0);
+    const u = new THREE.Vector3().subVectors(v1, center).normalize();
+    const wv = new THREE.Vector3().crossVectors(nrm, u).normalize();
+    const angDe = (p: THREE.Vector3) => { const d = new THREE.Vector3().subVectors(p, center); return Math.atan2(d.dot(wv), d.dot(u)); };
+    const norm2pi = (x: number) => { let y = x; while (y < 0) y += 2 * Math.PI; while (y >= 2 * Math.PI) y -= 2 * Math.PI; return y; };
+    const a2 = norm2pi(angDe(v2)), a3 = norm2pi(angDe(v3));
+    // Barrido de v1 (ang 0) a v3, PASANDO por v2: si v2 está antes que v3 en
+    // sentido positivo, barrido positivo; si no, negativo.
+    const sweep = (a2 <= a3) ? a3 : a3 - 2 * Math.PI;
     const baseIdx = drawingObj.points.rawVal.length;
     const newPts: [number, number, number][] = [];
-    const axis = normal.clone();
-    // Asegurar dirección correcta del arco (que pase cerca de p2)
     for (let i = 0; i <= N; i++) {
-      const t = i / N;
-      const ang = angle * t;
-      const q = new THREE.Quaternion().setFromAxisAngle(axis, ang);
-      const v = startVec.clone().applyQuaternion(q).add(center);
+      const th = sweep * (i / N);
+      const dir = u.clone().multiplyScalar(Math.cos(th)).add(wv.clone().multiplyScalar(Math.sin(th)));
+      const v = center.clone().add(dir.multiplyScalar(radius));
       newPts.push([v.x, v.y, v.z]);
     }
     drawingObj.points.val = [...drawingObj.points.rawVal, ...newPts];
