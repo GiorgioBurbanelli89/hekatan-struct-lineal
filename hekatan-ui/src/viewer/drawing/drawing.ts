@@ -621,12 +621,35 @@ export function drawing({
   const puntoBajoCursor = (ev: PointerEvent): [number, number, number] | null => {
     const cam = setPointerFromEvent(ev); if (!cam) return null;
     raycaster.setFromCamera(pointer, cam);
+    // Punto base: sobre la malla 3D (IFC) o sobre el plano de trabajo.
+    let base: [number, number, number] | null = null;
+    let hitFaceVerts: [number, number, number][] | null = null;
     const hits = raycaster.intersectObjects(scene.children, true)
-      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && (h.object as any).visible !== false);
-    if (hits.length) { const p = hits[0].point; return [p.x, p.y, p.z]; }
-    const inter = intersectWorkPlane();
-    if (inter.length) { const p = inter[0].point; return [p.x, p.y, p.z]; }
-    return null;
+      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && h.object !== fillPreview && (h.object as any).visible !== false);
+    if (hits.length) {
+      const h = hits[0]; const p = h.point; base = [p.x, p.y, p.z];
+      // Vértices de la CARA impactada (para OSNAP a esquina de la malla IFC).
+      const g: any = (h.object as any).geometry; const pos = g?.attributes?.position;
+      if (pos && h.face) hitFaceVerts = [h.face.a, h.face.b, h.face.c].map((i: number) => {
+        const v = new THREE.Vector3().fromBufferAttribute(pos, i); (h.object as THREE.Mesh).localToWorld(v); return [v.x, v.y, v.z] as [number, number, number];
+      });
+    } else {
+      const inter = intersectWorkPlane(); if (inter.length) { const p = inter[0].point; base = [p.x, p.y, p.z]; }
+    }
+    if (!base) return null;
+    // ── OSNAP: engancha a la ESQUINA/NUDO más cercano dentro de una mirilla en
+    // pantalla (~14 px). Así la medida es EXACTA sobre nudos del modelo o
+    // esquinas de la malla IFC, no un punto cualquiera de la superficie. ──
+    const rect = rendererElm.getBoundingClientRect();
+    const px = (w: [number, number, number]) => { const v = new THREE.Vector3(w[0], w[1], w[2]).project(cam);
+      return [rect.left + (v.x*0.5+0.5)*rect.width, rect.top + (-v.y*0.5+0.5)*rect.height]; };
+    const cur = [ev.clientX, ev.clientY];
+    const TOL = 14;
+    let best = base, bestD = TOL;
+    const consid = (w: [number, number, number]) => { const q = px(w); const d = Math.hypot(q[0]-cur[0], q[1]-cur[1]); if (d < bestD) { bestD = d; best = w; } };
+    for (const w of (hitFaceVerts ?? [])) consid(w);
+    for (const n of drawingObj.points.rawVal) consid(n as [number, number, number]);
+    return best;
   };
   const actualizarLabelMedida = () => {
     if (measurePts.length < 1) { measureLabel.style.display = "none"; return; }

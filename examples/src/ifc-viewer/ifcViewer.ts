@@ -100,12 +100,21 @@ export const ifcViewer: ExampleDef = {
   computedLabels() {
     const M = (window as any).__hekatanIfcMesh;
     if (!M) return { "IFC": "ninguno — usa 📥 Importar IFC" };
-    return {
+    const e = M.estructura;
+    const out: Record<string, string> = {
       "Archivo": String(M.archivo ?? "ifc"),
       "Objetos (colores)": String(M.grupos?.length ?? 0),
       "Triángulos": String(M.nTri ?? 0),
       "Tamaño (m)": M.bbox ? M.bbox[1].map((v: number, i: number) => (v - M.bbox[0][i]).toFixed(1)).join(" × ") : "—",
     };
+    if (e) {
+      const nEst = e.columnas + e.vigas + e.miembros + e.losas + e.muros + e.zapatas;
+      out["Elementos estructurales"] = nEst > 0
+        ? `col ${e.columnas} · vig ${e.vigas} · losa ${e.losas} · muro ${e.muros}`
+        : `0 (solo mallas${e.proxies ? ` — ${e.proxies} objetos SketchUp` : ""})`;
+      out["Convertible a estructura"] = nEst > 0 ? "sí" : "no (IFC de arquitectura)";
+    }
+    return out;
   },
   build(p, states) {
     const M = (window as any).__hekatanIfcMesh as { grupos: Grupo[]; bbox: [number[], number[]] } | undefined;

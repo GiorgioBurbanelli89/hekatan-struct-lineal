@@ -17,7 +17,23 @@
  * metros si hace falta (IFC suele venir en mm).
  */
 export interface IfcGrupo { positions: number[]; color: [number, number, number]; }
-export interface IfcMalla { grupos: IfcGrupo[]; nTri: number; bbox: [number[], number[]]; unidad: number; }
+export interface IfcEstructura { columnas: number; vigas: number; miembros: number; losas: number; muros: number; zapatas: number; proxies: number; }
+export interface IfcMalla { grupos: IfcGrupo[]; nTri: number; bbox: [number[], number[]]; unidad: number; estructura: IfcEstructura; }
+
+/** Cuenta los elementos ESTRUCTURALES que trae el IFC (para saber si es
+ * convertible a barras/áreas o si es solo arquitectura/mallas de SketchUp). */
+function contarEstructura(data: string): IfcEstructura {
+  const n = (re: RegExp) => (data.match(re) || []).length;
+  return {
+    columnas: n(/=\s*IFCCOLUMN\b/gi),
+    vigas: n(/=\s*IFCBEAM\b/gi),
+    miembros: n(/=\s*IFCMEMBER\b/gi),
+    losas: n(/=\s*IFCSLAB\b/gi),
+    muros: n(/=\s*IFCWALL(STANDARDCASE)?\b/gi),
+    zapatas: n(/=\s*IFCFOOTING\b/gi),
+    proxies: n(/=\s*IFCBUILDINGELEMENTPROXY\b/gi),
+  };
+}
 
 export function parseIfc(txt: string, escala = 0.001): IfcMalla {
   const data = txt.slice(Math.max(0, txt.indexOf("DATA;")));
@@ -78,5 +94,5 @@ export function parseIfc(txt: string, escala = 0.001): IfcMalla {
       }
     }
   }
-  return { grupos: [...porColor.values()], nTri, bbox: bb, unidad: escala };
+  return { grupos: [...porColor.values()], nTri, bbox: bb, unidad: escala, estructura: contarEstructura(data) };
 }
