@@ -4350,9 +4350,29 @@ solve`;
     });
   }
 
-  // ── 📥 Importar CSI (solo para el ejemplo csi-importer) ──
-  if (currentExample && currentExample.id === "csi-importer") {
+  // ── 📥 Importar CSI / IFC ──
+  if (currentExample && (currentExample.id === "csi-importer" || currentExample.id === "ifc-viewer")) {
     const fImp = pane.addFolder({ title: "📥 Importar archivo", expanded: true });
+    // ── IFC (arquitectura, mallas de SketchUp) ──
+    fImp.addButton({ title: "📥 Importar IFC (ver modelo)" }).on("click", () => {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = ".ifc,.txt";
+      input.onchange = async (ev: any) => {
+        const file = ev.target.files?.[0]; if (!file) return;
+        try {
+          const { parseIfc } = await import("../shared/ifcParser");
+          const text = await file.text();
+          const M: any = parseIfc(text, 0.001);
+          M.archivo = file.name;
+          (window as any).__hekatanIfcMesh = M;
+          const ex = examplesRegistry.find((e) => e.id === "ifc-viewer");
+          if (ex && currentExample?.id !== "ifc-viewer") { loadExample(ex); }
+          else { try { rebuild(); } catch {} try { autoFitCamera(); } catch {} }
+          console.log(`✅ IFC: ${file.name} — ${M.grupos.length} objetos, ${M.nTri} triángulos.`);
+        } catch (e: any) { alert(`Error importando IFC: ${e?.message ?? e}`); console.error(e); }
+      };
+      input.click();
+    });
     // Helper: forzar rebuild + autoFitCamera tras setear los datos.
     // El bug previo era que scheduleRebuild() debounce 120ms a veces
     // perdía el set, o el viewer no reencuadraba al cargar geometría

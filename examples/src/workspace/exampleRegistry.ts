@@ -273,6 +273,7 @@ export interface ExampleDef {
 
 // ── Import de ejemplos (cada uno en su propia carpeta estilo awatif) ──
 import { csiImporter } from "../csi-importer/csiImporter";
+import { ifcViewer } from "../ifc-viewer/ifcViewer";
 import { cliModeler } from "../cli-modeler/cliModeler";
 import { cadDraw } from "../cad-draw/cadDraw";
 import { vigaMedioElastico } from "../viga-medio-elastico/vigaMedioElastico";
@@ -404,6 +405,7 @@ export const examplesRegistry: ExampleDef[] = [
   newBlank,
   // Importador CSI (F2K/E2K/S2K) — al inicio para acceso rápido
   csiImporter,
+  ifcViewer,
   // CLI Modeler — modelar con comandos tipo SAP (sin importar ningun archivo)
   cliModeler,
   // CAD Drawer — dibujar con mouse + Tweakpane (sincronizado con CLI)
