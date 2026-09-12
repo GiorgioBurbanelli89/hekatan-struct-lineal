@@ -461,7 +461,34 @@ function captureFolderExpandedState() {
   }
 }
 
+// Historial de navegación entre ejemplos (para «← Volver»). No existía en
+// Hekatan Struct: cambiar de ejemplo no dejaba forma de regresar al anterior.
+const exampleHistory: string[] = [];
+let _navegandoAtras = false;
+
+function volverAlAnterior(): void {
+  const prev = exampleHistory.pop();
+  if (!prev) { try { (window as any).__hekatanActualizarBotonVolver?.(false); } catch {} return; }
+  const ex = examplesRegistry.find((e) => e.id === prev);
+  if (!ex) return;
+  _navegandoAtras = true;   // no re-apilar al volver
+  loadExample(ex);
+  try { (window as any).__hekatanActualizarBotonVolver?.(exampleHistory.length > 0); } catch {}
+}
+(window as any).__hekatanVolver = volverAlAnterior;
+(window as any).__hekatanLoadExampleById = (id: string) => {
+  const ex = examplesRegistry.find((e) => e.id === id);
+  if (ex) loadExample(ex);
+};
+
 function loadExample(ex: ExampleDef) {
+  // Apilar el ejemplo ANTERIOR antes de cambiar (salvo si es una vuelta atrás).
+  if (!_navegandoAtras && currentExample && currentExample.id !== ex.id) {
+    exampleHistory.push(currentExample.id);
+    if (exampleHistory.length > 50) exampleHistory.shift();
+  }
+  _navegandoAtras = false;
+  try { (window as any).__hekatanActualizarBotonVolver?.(exampleHistory.length > 0); } catch {}
   currentExample = ex;
   // La barra de dibujo se pliega o se abre segun QUE se acaba de cargar. Va
   // aqui y no en el montaje porque el selector cambia de ejemplo sin tocar la
@@ -2316,6 +2343,21 @@ if (window.innerWidth > 600) {
   paneToggle.addEventListener("click", () => setPaneHidden(!paneHidden));
   try { if (localStorage.getItem(PANE_HID_KEY) === "1") setPaneHidden(true); } catch {}
   (window as any).__hekatanTogglePane = () => setPaneHidden(!paneHidden);
+}
+
+// ── Botón «← Volver» al ejemplo anterior (navegación que no existía) ──
+{
+  const backBtn = document.createElement("button");
+  backBtn.id = "hk-back-btn";
+  backBtn.textContent = "← Volver";
+  backBtn.title = "Volver al ejemplo/ventana anterior";
+  backBtn.style.cssText =
+    "position:fixed;top:6px;left:calc(50% - 240px);z-index:102;padding:5px 12px;" +
+    "border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;" +
+    "cursor:pointer;font:12px system-ui;display:none;box-shadow:0 2px 8px rgba(0,0,0,.4);";
+  backBtn.addEventListener("click", () => { try { (window as any).__hekatanVolver?.(); } catch {} });
+  document.body.appendChild(backBtn);
+  (window as any).__hekatanActualizarBotonVolver = (hay: boolean) => { backBtn.style.display = hay ? "block" : "none"; };
 }
 
 // ── Mobile UX: bottom-drawer pattern + 2 FAB toggles ─────────────────

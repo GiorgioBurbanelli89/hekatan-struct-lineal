@@ -1749,6 +1749,48 @@ export function drawing({
     viewerRender();
   };
 
+  // ── RELLENAR TODAS las celdas cerradas (topológico, sirve en 3D) ──────────
+  // Escanea TODAS las barras y marca como área cada celda CERRADA (cuadrilátero
+  // sin diagonal o triángulo) que aún no tenga área. Funciona en cualquier plano
+  // (una caja 3D → sus 6 caras). Devuelve cuántas creó. Jorge: "seleccionar todo
+  // y que se repinten las áreas de las que cumplen la regla".
+  (window as any).__hekatanFillClosedAreas = (): number => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const adj = new Map<number, Set<number>>();
+    const addE = (a: number, b: number) => { if (a === b) return;
+      (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b);
+      (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a); };
+    for (const poly of polys) for (let i = 0; i + 1 < poly.length; i++) addE(poly[i], poly[i + 1]);
+    const has = (a: number, b: number) => !!adj.get(a)?.has(b);
+    const seen = new Set<string>(); const cells: number[][] = [];
+    const ids = [...adj.keys()];
+    for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+      for (const c of adj.get(b)!) { if (c === a) continue;
+        for (const d of adj.get(c)!) { if (d === a || d === b || !has(d, a)) continue;
+          if (has(a, c) || has(b, d)) continue;
+          const k = [a, b, c, d].slice().sort((x, y) => x - y).join("-");
+          if (!seen.has(k)) { seen.add(k); cells.push([a, b, c, d]); } } } }
+    for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+      for (const c of adj.get(b)!) { if (c === a || !has(c, a)) continue;
+        const k = [a, b, c].slice().sort((x, y) => x - y).join("-");
+        if (!seen.has(k)) { seen.add(k); cells.push([a, b, c]); } } }
+    if (!cells.length) return 0;
+    const areasNow = [...(drawingObj.areas?.rawVal ?? [])];
+    const yaArea = new Set(areasNow.map((ai) => [...new Set(polys[ai] ?? [])].sort((x, y) => x - y).join("-")));
+    const nuevas = [...polys]; let creadas = 0;
+    for (const c of cells) { const k = c.slice().sort((x, y) => x - y).join("-");
+      if (yaArea.has(k)) continue; yaArea.add(k);
+      nuevas.push([...c, c[0]]); areasNow.push(nuevas.length - 1); creadas++; }
+    if (creadas) {
+      if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+      drawingObj.polylines!.val = nuevas;
+      if (drawingObj.areas) drawingObj.areas.val = areasNow;
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      viewerRender();
+    }
+    return creadas;
+  };
+
   // ── ÁREA LIBRE: polígono arbitrario (N vértices, incluso cóncavo tipo
   // escalera/L) → MALLA de shells Q4. El FEM solo soporta Q4, así que
   // dividimos el polígono en una grilla de cuadritos en SU PROPIO plano y
