@@ -106,7 +106,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "5 · Panel corredizo (puerta): ocultar y mostrar",
+    rotulo: "5 · Puerta corrediza DERECHA: ocultar y mostrar el panel",
     hacer: async (a) => {
       const r = await rectDe(a, "#hk-pane-toggle");
       if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
@@ -114,7 +114,15 @@ export const pasos = [
     },
   },
   {
-    rotulo: "6 · Volver al menú principal",
+    rotulo: "6 · Puerta corrediza IZQUIERDA: los ajustes también",
+    hacer: async (a) => {
+      const r = await rectDe(a, "#hk-settings-toggle");
+      if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
+               await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(3, 320); }
+    },
+  },
+  {
+    rotulo: "7 · Volver al menú principal",
     hacer: async (a) => {
       const r = await rectDe(a, "#hk-home-btn");
       if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(5, 350); }

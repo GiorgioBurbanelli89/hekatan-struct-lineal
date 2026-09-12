@@ -1,0 +1,8 @@
+Estas son las novedades de Hekatan Struct.
+Dibujamos barras que forman celdas cerradas, sin necesidad de rejilla.
+Con la herramienta rellenar área, al pasar el ratón la celda se resalta, y al hacer clic se crea el área.
+Un solo botón llena de golpe todas las celdas cerradas.
+La regla mide y acota; engancha a las esquinas, por eso marca cuatro metros exactos.
+Todos los menús son corredizos: esta puerta oculta y muestra el panel de la derecha.
+Y esta otra desliza el panel de ajustes de la izquierda, para dejar toda la vista libre.
+Y con este botón volvemos al menú principal.

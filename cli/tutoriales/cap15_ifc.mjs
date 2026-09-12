@@ -56,7 +56,23 @@ export const pasos = [
     },
   },
   {
-    rotulo: "3 · Medir con la regla (engancha a las esquinas)",
+    rotulo: "3 · El panel también es corredizo: minimizar y puerta",
+    hacer: async (a) => {
+      // Botón minimizar (▁): encoge el panel para no tapar los otros menús.
+      const bm = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-min"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
+      if (bm) { await clicRojoPx(a, bm.x, bm.y); await a.quieto(4, 340);
+                await clicRojoPx(a, bm.x, bm.y); await a.quieto(2, 300); }  // restaurar
+      // Botón puerta corrediza (⟨): esconde el panel del todo, deja una pestaña.
+      const bs = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-slide"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
+      if (bs) { await clicRojoPx(a, bs.x, bs.y); await a.quieto(4, 340);
+        // reaparece con la pestaña
+        const tab = await a.pag.evaluate(() => { const t = document.getElementById("hk-ifc-tab"); if (!t) return null; const rc = t.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
+        if (tab) { await clicRojoPx(a, tab.x, tab.y); await a.quieto(3, 320); }
+      }
+    },
+  },
+  {
+    rotulo: "4 · Medir con la regla (engancha a las esquinas)",
     hacer: async (a) => {
       // ver todos otra vez
       await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-all"); if (b) b.click(); });
@@ -69,7 +85,7 @@ export const pasos = [
     },
   },
   {
-    rotulo: "4 · Recortar para ver por dentro (corte)",
+    rotulo: "5 · Recortar para ver por dentro (corte)",
     hacer: async (a) => {
       await a.pag.evaluate(() => {
         const bb = window.__hekatanIfcMesh?.bbox;

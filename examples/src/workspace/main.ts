@@ -2344,6 +2344,28 @@ if (window.innerWidth > 600) {
   paneToggle.addEventListener("click", () => setPaneHidden(!paneHidden));
   try { if (localStorage.getItem(PANE_HID_KEY) === "1") setPaneHidden(true); } catch {}
   (window as any).__hekatanTogglePane = () => setPaneHidden(!paneHidden);
+
+  // ── Panel IZQUIERDO (#settings del visor) también CORREDIZO (todos los menús) ──
+  const leftToggle = document.createElement("button");
+  leftToggle.id = "hk-settings-toggle";
+  leftToggle.textContent = "⟨"; leftToggle.title = "Ocultar el panel izquierdo (corredizo)";
+  leftToggle.style.cssText =
+    "position:fixed;top:50%;left:0;transform:translateY(-50%);z-index:101;width:24px;height:60px;" +
+    "border:none;border-radius:0 8px 8px 0;background:rgba(30,40,55,0.96);color:#8fe;cursor:pointer;" +
+    "font-size:15px;box-shadow:2px 0 10px rgba(0,0,0,.45);";
+  document.body.appendChild(leftToggle);
+  const LSET_KEY = "hk_settingsHidden";
+  let leftHidden = false;
+  const setLeftHidden = (hid: boolean) => {
+    leftHidden = hid;
+    const s = document.getElementById("settings");
+    if (s) { s.style.transition = "transform .25s ease, opacity .25s ease"; s.style.transform = hid ? "translateX(-115%)" : ""; s.style.opacity = hid ? "0" : ""; s.style.pointerEvents = hid ? "none" : ""; }
+    leftToggle.textContent = hid ? "⟩" : "⟨";
+    try { localStorage.setItem(LSET_KEY, hid ? "1" : "0"); } catch {}
+  };
+  leftToggle.addEventListener("click", () => setLeftHidden(!leftHidden));
+  try { if (localStorage.getItem(LSET_KEY) === "1") setTimeout(() => setLeftHidden(true), 400); } catch {}
+  (window as any).__hekatanToggleSettings = () => setLeftHidden(!leftHidden);
 }
 
 // ── Botón «← Volver» al ejemplo anterior (navegación que no existía) ──

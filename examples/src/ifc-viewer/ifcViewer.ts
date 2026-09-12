@@ -16,9 +16,25 @@ interface Grupo { positions: number[]; color: [number, number, number]; }
 // Estado de visibilidad por objeto (grupo de color del IFC).
 const ifcHidden = new Set<number>();
 let ifcSolo = -1;   // -1 = ninguno aislado
+let ifcPanelHidden = false;   // panel corredizo (puerta) deslizado fuera
+let ifcMin = false;           // panel minimizado (solo cabecera)
+
+/** Desliza el panel de objetos fuera/dentro (puerta corrediza) + tab para reabrir. */
+function slidePanelObjetos(hide: boolean): void {
+  ifcPanelHidden = hide;
+  const panel = document.getElementById("hk-ifc-objs");
+  const tab = document.getElementById("hk-ifc-tab");
+  if (panel) {
+    panel.style.transition = "transform .25s ease, opacity .25s ease";
+    panel.style.transform = hide ? "translateX(-115%)" : "";
+    panel.style.opacity = hide ? "0" : "";
+    panel.style.pointerEvents = hide ? "none" : "";
+  }
+  if (tab) tab.style.display = hide ? "block" : "none";
+}
 
 /** Panel flotante con la LISTA de objetos del IFC: color, nº de triángulos y
- * casillas para ocultar / aislar cada uno. Es "dónde ver la información". */
+ * casillas para ocultar / aislar cada uno. Minimizable y corredizo (puerta). */
 function refrescarPanelObjetos(grupos: Grupo[]): void {
   let panel = document.getElementById("hk-ifc-objs");
   if (!panel) {
@@ -30,7 +46,16 @@ function refrescarPanelObjetos(grupos: Grupo[]): void {
       "font:11px system-ui,sans-serif;max-height:44vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:200px;";
     document.body.appendChild(panel);
   }
-  const rows = grupos.map((g, i) => {
+  // Tab para reabrir cuando está deslizado (puerta corrediza).
+  if (!document.getElementById("hk-ifc-tab")) {
+    const tab = document.createElement("button");
+    tab.id = "hk-ifc-tab"; tab.textContent = "🏛 Objetos ⟩"; tab.title = "Mostrar objetos IFC";
+    tab.style.cssText = "position:fixed;left:0;bottom:16px;z-index:121;display:none;padding:6px 10px;" +
+      "border:1px solid #3a4a5f;border-radius:0 8px 8px 0;background:rgba(30,40,55,0.96);color:#9ce;cursor:pointer;font:11px system-ui;box-shadow:2px 0 8px rgba(0,0,0,.4)";
+    tab.onclick = () => slidePanelObjetos(false);
+    document.body.appendChild(tab);
+  }
+  const rows = ifcMin ? "" : grupos.map((g, i) => {
     const c = g.color.map((v) => Math.round(v * 255));
     const tri = Math.round(g.positions.length / 9);
     const vis = !ifcHidden.has(i) && (ifcSolo < 0 || ifcSolo === i);
@@ -42,22 +67,27 @@ function refrescarPanelObjetos(grupos: Grupo[]): void {
       <button data-ifc-solo="${i}" title="Aislar" style="background:#243;color:#9fd;border:1px solid #365;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 5px">solo</button>
     </div>`;
   }).join("");
+  const btn = (id: string, txt: string, t: string) => `<button id="${id}" title="${t}" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;font-size:11px;padding:1px 6px;margin-left:3px">${txt}</button>`;
   panel.innerHTML =
-    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;${ifcMin ? "" : "margin-bottom:4px"}">
        <b style="color:#9ce">🏛 Objetos IFC (${grupos.length})</b>
-       <button id="hk-ifc-all" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 6px">ver todos</button>
+       <span style="white-space:nowrap">${ifcMin ? "" : `<button id="hk-ifc-all" style="background:#333;color:#ccc;border:1px solid #555;border-radius:3px;cursor:pointer;font-size:10px;padding:1px 6px">ver todos</button>`}${btn("hk-ifc-min", ifcMin ? "▢" : "▁", "Minimizar")}${btn("hk-ifc-slide", "⟨", "Ocultar (corredizo)")}</span>
      </div>${rows}`;
   const rebuild = () => { try { (window as any).__hekatanRebuild?.(); } catch {} };
+  (panel.querySelector("#hk-ifc-min") as HTMLButtonElement).onclick = () => { ifcMin = !ifcMin; refrescarPanelObjetos(grupos); };
+  (panel.querySelector("#hk-ifc-slide") as HTMLButtonElement).onclick = () => slidePanelObjetos(true);
   panel.querySelectorAll<HTMLInputElement>("[data-ifc-vis]").forEach((cb) => {
     cb.onchange = () => { const i = +cb.dataset.ifcVis!; ifcSolo = -1; if (cb.checked) ifcHidden.delete(i); else ifcHidden.add(i); rebuild(); };
   });
   panel.querySelectorAll<HTMLButtonElement>("[data-ifc-solo]").forEach((b) => {
     b.onclick = () => { const i = +b.dataset.ifcSolo!; ifcSolo = (ifcSolo === i) ? -1 : i; ifcHidden.clear(); rebuild(); };
   });
-  (panel.querySelector("#hk-ifc-all") as HTMLButtonElement).onclick = () => { ifcHidden.clear(); ifcSolo = -1; rebuild(); };
+  const allBtn = panel.querySelector("#hk-ifc-all") as HTMLButtonElement | null;
+  if (allBtn) allBtn.onclick = () => { ifcHidden.clear(); ifcSolo = -1; rebuild(); };
+  slidePanelObjetos(ifcPanelHidden);   // conservar el estado corredizo tras redibujar
 }
-/** Quita el panel (al salir del visor IFC). */
-function quitarPanelObjetos(): void { document.getElementById("hk-ifc-objs")?.remove(); }
+/** Quita el panel y su tab (al salir del visor IFC). */
+function quitarPanelObjetos(): void { document.getElementById("hk-ifc-objs")?.remove(); document.getElementById("hk-ifc-tab")?.remove(); }
 
 /** Caja del cluster más denso: parte por el hueco mayor del eje más largo. */
 function cajaPrincipal(grupos: Grupo[], bboxTotal: [number[], number[]]): [number[], number[]] {

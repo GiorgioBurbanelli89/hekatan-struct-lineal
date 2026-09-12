@@ -1,0 +1,6 @@
+El visor de archivos IFC en Hekatan Struct.
+Importamos el IFC y vemos el modelo completo en tres dimensiones.
+El panel lista los objetos del modelo: podemos ocultar o aislar cada uno.
+El panel también es corredizo: se minimiza o se esconde del todo, para no tapar los otros menús.
+La regla mide sobre el modelo y engancha a las esquinas.
+Y un corte nos deja ver el edificio por dentro.
