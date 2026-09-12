@@ -101,8 +101,9 @@ export const pasos = [
   {
     rotulo: "4 · Medir con la regla (engancha a las esquinas)",
     hacer: async (a) => {
-      // ver todos otra vez
-      await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-all"); if (b) b.click(); });
+      // ver todos otra vez — CON EL CURSOR (botón «ver todos» del panel IFC).
+      const vt = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-all"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
+      if (vt) await clicRojoPx(a, vt.x, vt.y);
       await a.quieto(2, 320);
       await a.pag.evaluate(() => window.__hekatanCadState.setTool("medir"));
       const r = await host(a); if (!r) return;
@@ -112,15 +113,67 @@ export const pasos = [
     },
   },
   {
-    rotulo: "5 · Recortar para ver por dentro (corte)",
+    rotulo: "5 · DÓNDE se activa el corte: panel ✂ Cortes X/Y/Z, casilla Cortar Z",
     hacer: async (a) => {
+      // Limpiar la regla de paso 4: soltar herramienta y borrar la cota (label
+      // DOM + línea de la escena) para que no quede flotando sobre el modelo.
+      await a.pag.keyboard.press("Escape");
       await a.pag.evaluate(() => {
-        const bb = window.__hekatanIfcMesh?.bbox;
-        const zmid = bb ? (bb[0][2] + bb[1][2]) / 2 : 5;
-        window.__hekatanClip = { enableX: false, enableY: false, enableZ: true, posX: 0, posY: 0, posZ: zmid, invertX: false, invertY: false, invertZ: false };
-        try { window.__hekatanClipApply && window.__hekatanClipApply(); } catch (e) {}
+        try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
+        try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){}
       });
-      await a.quieto(3, 340);
+      await a.quieto(2, 320);
+      // 1. Abrir el folder «✂️ Cortes X/Y/Z» del panel Settings (izquierda) CON EL CURSOR.
+      const fold = await a.pag.evaluate(() => {
+        const f = [...document.querySelectorAll(".tp-fldv_b")].find((x) => /Cortes/i.test(x.textContent || ""));
+        if (!f) return null; f.scrollIntoView({ block: "center" });
+        const rc = f.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2, rx: rc.left, ry: rc.top, rw: rc.width, rh: rc.height };
+      });
+      if (fold) {
+        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "AQUÍ se activa el corte: panel ✂ Cortes X/Y/Z.", { x: 0, y: 0, w: 1280, h: 720 }), fold);
+        await a.quieto(4, 340);
+        await a.pag.evaluate(() => window.__tutSinCaja());
+        await clicRojoPx(a, fold.x, fold.y);   // abre el folder
+        await a.quieto(2, 320);
+      }
+      // 2. Fijar la altura del corte ARRASTRANDO el slider «pos Z» CON EL CURSOR.
+      const sld = await a.pag.evaluate(() => {
+        const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /pos Z/i.test(x.textContent || ""));
+        if (!row) return null; row.scrollIntoView({ block: "center" });
+        const s = row.querySelector(".tp-sldv") || row.querySelector("input[type=range]") || row.querySelector(".tp-lblv_v");
+        const rc = s.getBoundingClientRect();
+        const bb = window.__hekatanIfcMesh?.bbox; const zmid = bb ? (bb[0][2] + bb[1][2]) / 2 : 5;
+        const frac = Math.max(0.02, Math.min(0.98, (zmid + 50) / 100));  // rango -50..50
+        return { x0: rc.left + rc.width * 0.5, y: rc.top + rc.height / 2, xt: rc.left + rc.width * frac };
+      });
+      if (sld) {
+        // Arrastre visible del knob de 0 (centro) a la altura media.
+        await mover(a, sld.x0, sld.y, 18);
+        await a.pag.mouse.down();
+        const K = 14;
+        for (let i = 1; i <= K; i++) {
+          const x = sld.x0 + (sld.xt - sld.x0) * (i / K);
+          await a.pag.mouse.move(x, sld.y);
+          await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x, y: sld.y });
+        }
+        await a.pag.mouse.up();
+        await a.quieto(2, 320);
+      }
+      // 3. Activar «Cortar Z» con el cursor: se abre el modelo en el corte fijado.
+      const cz = await a.pag.evaluate(() => {
+        const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /Cortar Z/i.test(x.textContent || ""));
+        if (!row) return null; row.scrollIntoView({ block: "center" });
+        const ctl = row.querySelector(".tp-ckbv_w") || row.querySelector("input[type=checkbox]") || row.querySelector(".tp-lblv_v") || row;
+        const rc = ctl.getBoundingClientRect(); const rr = row.getBoundingClientRect();
+        return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2, rx: rr.left, ry: rr.top, rw: rr.width, rh: rr.height };
+      });
+      if (cz) {
+        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "Marco «Cortar Z» y el modelo se abre para ver el interior.", { x: 0, y: 0, w: 1280, h: 720 }), cz);
+        await a.quieto(4, 340);
+        await a.pag.evaluate(() => window.__tutSinCaja());
+        await clicRojoPx(a, cz.x, cz.y);
+      }
+      await a.quieto(3, 340);   // ya se ve el corte a media altura
       await orbit(a, 120, -30, 5);
       await orbit(a, -90, 20, 5);
     },

@@ -3,4 +3,4 @@ We import the IFC and see the whole model in three dimensions.
 The panel lists the model objects: we can hide or isolate each one.
 The panel also slides: it minimizes or hides completely, so it never covers the other menus.
 The ruler measures on the model and snaps to corners.
-And a section cut lets us see the building from inside.
+The section cut is activated in the Cuts X, Y, Z panel: I check Cut Z and the building opens to reveal the levels inside.

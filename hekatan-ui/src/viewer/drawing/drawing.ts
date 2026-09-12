@@ -663,6 +663,15 @@ export function drawing({
     measureLabel.style.display = "block";
   };
   (window as any).__hekatanMeasureRefresh = actualizarLabelMedida;
+  // Borra la cota actual (puntos + línea + label). Sin esto, la última medida
+  // se queda flotando y reaparece al orbitar (el 'change' de controls la
+  // vuelve a pintar). Lo usa el visor IFC al pasar de medir a cortar.
+  (window as any).__hekatanClearMeasure = () => {
+    measurePts = [];
+    measureLine.visible = false;
+    measureLabel.style.display = "none";
+    try { viewerRender(); } catch {}
+  };
   try { (controls as any).addEventListener?.("change", actualizarLabelMedida); } catch {}
 
   // ── HOVER de «Rellenar área»: malla transparente en la celda bajo el cursor ──
