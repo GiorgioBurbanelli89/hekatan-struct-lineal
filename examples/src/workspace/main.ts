@@ -480,6 +480,7 @@ function volverAlAnterior(): void {
   const ex = examplesRegistry.find((e) => e.id === id);
   if (ex) loadExample(ex);
 };
+(window as any).__hekatanShowMenu = () => { try { showMenu(); } catch {} };
 
 function loadExample(ex: ExampleDef) {
   // Apilar el ejemplo ANTERIOR antes de cambiar (salvo si es una vuelta atrás).
@@ -2358,6 +2359,21 @@ if (window.innerWidth > 600) {
   backBtn.addEventListener("click", () => { try { (window as any).__hekatanVolver?.(); } catch {} });
   document.body.appendChild(backBtn);
   (window as any).__hekatanActualizarBotonVolver = (hay: boolean) => { backBtn.style.display = hay ? "block" : "none"; };
+
+  // 🏠 Menú principal — siempre visible; vuelve al hub "¿Con qué vas a trabajar?".
+  const homeBtn = document.createElement("button");
+  homeBtn.id = "hk-home-btn";
+  homeBtn.textContent = "🏠 Menú";
+  homeBtn.title = "Volver al menú principal";
+  homeBtn.style.cssText =
+    "position:fixed;top:6px;left:calc(50% - 330px);z-index:102;padding:5px 12px;" +
+    "border:1px solid #3a4a5f;border-radius:6px;background:rgba(30,40,55,0.96);color:#9ce;" +
+    "cursor:pointer;font:12px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.4);";
+  homeBtn.addEventListener("click", () => {
+    try { exampleHistory.length = 0; (window as any).__hekatanActualizarBotonVolver?.(false); } catch {}
+    try { (window as any).__hekatanShowMenu?.(); } catch {}
+  });
+  document.body.appendChild(homeBtn);
 }
 
 // ── Mobile UX: bottom-drawer pattern + 2 FAB toggles ─────────────────
