@@ -5,7 +5,7 @@
  */
 import * as THREE from "three";
 import {
-  getState, addNodeAt, addLine, addArea,
+  getState, addNodeAt, addLine, addArea, fillCellAt,
 } from "./cadDrawState";
 import { findNodeAt, snapVec3, type Vec3 } from "./cadDrawTypes";
 
@@ -83,6 +83,12 @@ export function handleClick(world: Vec3): { action: string; nodeId?: number; lin
         return { action: "area-created", areaId: a.id };
       }
       return { action: "area-pending", nodeId };
+    }
+    case "fillarea": {
+      // Click en el VACÍO encerrado por barras → crea el área de esa celda.
+      // Se usa el punto CRUDO (no snapped): interesa dónde clickeó, no un nudo.
+      const a = fillCellAt(world);
+      return a ? { action: "area-filled", areaId: a.id } : { action: "fillarea-no-cell" };
     }
     case "select":
       return { action: "select", nodeId: existing?.id };

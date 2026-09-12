@@ -123,6 +123,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fArea.addButton({ title: "▦ Área 4-clics (shell Q4)" }).on("click", () => setActiveTool("area"));
   fArea.addButton({ title: "▭ Área rectangular (2 clics)" }).on("click", () => setActiveTool("rectarea"));
   fArea.addButton({ title: "⬡ Área libre (polígono → malla)" }).on("click", () => setActiveTool("polyarea"));
+  fArea.addButton({ title: "▦ Rellenar área (clic dentro de 4 barras)" }).on("click", () => setActiveTool("fillarea"));
   fArea.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
 
   const f3D = fCad.addFolder({ title: "🧊 En 3D", expanded: false });

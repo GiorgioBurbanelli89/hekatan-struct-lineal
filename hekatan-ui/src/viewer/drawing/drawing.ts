@@ -4436,6 +4436,7 @@ export function drawing({
       case "area": return P(`LOSA Precise vértice ${Math.min(last.length + 1, 4)} de 4 (en orden, antihorario):`);
       case "rectarea": return n ? P("LOSA RECTANGULAR Precise otra esquina:") : P("LOSA RECTANGULAR Precise primera esquina:");
       case "polyarea": return P(`ÁREA LIBRE Precise vértice ${polyAreaPts.length + 1} (Enter o clic derecho cierra y malla):`);
+      case "fillarea": return P("RELLENAR ÁREA Haga clic DENTRO de una celda cerrada por barras (4 lados) y se crea el área:");
       case "rect": return n ? P("RECTÁNGULO Precise otra esquina:") : P("RECTÁNGULO Precise primera esquina:");
       case "circle": return n ? P("CÍRCULO Precise radio (clic o teclee la cifra):") : P("CÍRCULO Precise centro:");
       case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
@@ -5416,6 +5417,51 @@ export function drawing({
       (window as any).__hekatanDrawRect?.(a, b);
       updateStatus(`✓ Rectángulo dibujado — (${a[0].toFixed(1)},${a[1].toFixed(1)}) → (${b[0].toFixed(1)},${b[1].toFixed(1)})`);
       pendingClicks = [];
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "fillarea") {
+      // RELLENAR ÁREA: click en el VACÍO encerrado por barras → crea el área de
+      // esa celda cerrada (4 lados sin diagonal, o triángulo). Como el "draw
+      // floor" de ETABS pero sobre barras sueltas que cierran un lazo, sin grilla.
+      const ptsF = drawingObj.points.rawVal;
+      const polysF = drawingObj.polylines?.rawVal ?? [];
+      const adjF = new Map<number, Set<number>>();
+      const addEF = (a: number, b: number) => { if (a === b) return;
+        (adjF.get(a) ?? adjF.set(a, new Set()).get(a)!).add(b);
+        (adjF.get(b) ?? adjF.set(b, new Set()).get(b)!).add(a); };
+      for (const poly of polysF) for (let i = 0; i + 1 < poly.length; i++) addEF(poly[i], poly[i + 1]);
+      const hasF = (a: number, b: number) => !!adjF.get(a)?.has(b);
+      const seenF = new Set<string>(); const cellsF: number[][] = [];
+      const idsF = [...adjF.keys()];
+      for (const a of idsF) for (const b of adjF.get(a)!) { if (b < a) continue;
+        for (const c of adjF.get(b)!) { if (c === a) continue;
+          for (const d of adjF.get(c)!) { if (d === a || d === b || !hasF(d, a)) continue;
+            if (hasF(a, c) || hasF(b, d)) continue;
+            const k = [a, b, c, d].slice().sort((x, y) => x - y).join("-");
+            if (!seenF.has(k)) { seenF.add(k); cellsF.push([a, b, c, d]); } } } }
+      for (const a of idsF) for (const b of adjF.get(a)!) { if (b < a) continue;
+        for (const c of adjF.get(b)!) { if (c === a || !hasF(c, a)) continue;
+          const k = [a, b, c].slice().sort((x, y) => x - y).join("-");
+          if (!seenF.has(k)) { seenF.add(k); cellsF.push([a, b, c]); } } }
+      const planeF = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+      const to2 = (q: number[]): [number, number] => planeF === "xy" ? [q[0], q[1]] : planeF === "xz" ? [q[0], q[2]] : [q[1], q[2]];
+      const Pf = to2([point.x, point.y, point.z]);
+      const pin = (pp: [number, number], poly: [number, number][]) => { let ins = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+          if (((yi > pp[1]) !== (yj > pp[1])) && (pp[0] < (xj - xi) * (pp[1] - yi) / (yj - yi) + xi)) ins = !ins; } return ins; };
+      const parea = (poly: [number, number][]) => { let a = 0; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) a += (poly[j][0] + poly[i][0]) * (poly[j][1] - poly[i][1]); return Math.abs(a) / 2; };
+      let bestF: number[] | null = null, bestAF = Infinity;
+      for (const c of cellsF) { const poly = c.map((id) => to2(ptsF[id])) as [number, number][];
+        if (!pin(Pf, poly)) continue; const A = parea(poly); if (A < bestAF) { bestAF = A; bestF = c; } }
+      if (!bestF) { updateStatus("▦ Rellenar área — no hay una celda CERRADA de barras bajo el cursor. Cierra los 4 lados primero."); return; }
+      const keyF = bestF.slice().sort((x, y) => x - y).join("-");
+      const areasNow = drawingObj.areas?.rawVal ?? [];
+      const dup = areasNow.some((ai) => { const pl = polysF[ai] ?? []; return [...new Set(pl)].sort((x, y) => x - y).join("-") === keyF; });
+      if (dup) { updateStatus("▦ Esa celda ya tiene área."); return; }
+      drawingObj.polylines!.val = [...polysF, [...bestF, bestF[0]]];
+      drawingObj.areas!.val = [...areasNow, polysF.length];
+      updateStatus(`✓ Área creada por relleno (${bestF.length} lados).`);
       try { (window as any).__hekatanRebuild?.(); } catch {}
       return;
     }

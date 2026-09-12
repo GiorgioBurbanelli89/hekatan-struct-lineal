@@ -99,6 +99,77 @@ export function removeNode(id: number): boolean {
   return ok;
 }
 
+// ── Rellenar áreas encerradas por barras (como el "draw floor" de ETABS, pero
+// sobre barras sueltas que cierran una celda de 3 o 4 lados) ──────────────────
+type Vec3b = [number, number, number];
+
+/** Celdas CERRADAS (cuadriláteros sin diagonal + triángulos) del grafo de barras. */
+export function detectClosedCells(): number[][] {
+  const adj = new Map<number, Set<number>>();
+  for (const l of state.model.lines.values()) {
+    if (!adj.has(l.nI)) adj.set(l.nI, new Set());
+    if (!adj.has(l.nJ)) adj.set(l.nJ, new Set());
+    adj.get(l.nI)!.add(l.nJ); adj.get(l.nJ)!.add(l.nI);
+  }
+  const has = (a: number, b: number) => !!adj.get(a)?.has(b);
+  const ids = [...adj.keys()];
+  const seen = new Set<string>(); const cells: number[][] = [];
+  // Cuadriláteros a-b-c-d SIN cuerda (las 2 diagonales NO existen)
+  for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+    for (const c of adj.get(b)!) { if (c === a) continue;
+      for (const d of adj.get(c)!) { if (d === a || d === b || !has(d, a)) continue;
+        if (has(a, c) || has(b, d)) continue;
+        const k = [a, b, c, d].slice().sort((x, y) => x - y).join("-");
+        if (!seen.has(k)) { seen.add(k); cells.push([a, b, c, d]); } } } }
+  // Triángulos a-b-c
+  for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+    for (const c of adj.get(b)!) { if (c === a || !has(c, a)) continue;
+      const k = [a, b, c].slice().sort((x, y) => x - y).join("-");
+      if (!seen.has(k)) { seen.add(k); cells.push([a, b, c]); } } }
+  return cells;
+}
+
+const _areaKey = (pts: number[]) => pts.slice().sort((x, y) => x - y).join("-");
+function _to2(p: Vec3b): [number, number] {
+  return state.workPlane === "xy" ? [p[0], p[1]] : state.workPlane === "xz" ? [p[0], p[2]] : [p[1], p[2]];
+}
+function _pointInPoly(p: [number, number], poly: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if (((yi > p[1]) !== (yj > p[1])) && (p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function _polyArea(poly: [number, number][]): number {
+  let a = 0; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) a += (poly[j][0] + poly[i][0]) * (poly[j][1] - poly[i][1]);
+  return Math.abs(a) / 2;
+}
+
+/** Rellena TODAS las celdas cerradas que aún no tengan área. Devuelve cuántas creó. */
+export function fillClosedCells(): number {
+  const existentes = new Set([...state.model.areas.values()].map((a) => _areaKey(a.pts)));
+  let n = 0;
+  for (const c of detectClosedCells()) { const k = _areaKey(c); if (existentes.has(k)) continue; addArea(c, "shell"); existentes.add(k); n++; }
+  return n;
+}
+
+/** Click en el VACÍO entre barras: crea el área de la celda cerrada MÁS PEQUEÑA que contiene el punto. */
+export function fillCellAt(pt: Vec3b): CadArea | null {
+  const P = _to2(pt);
+  let best: number[] | null = null, bestA = Infinity;
+  for (const c of detectClosedCells()) {
+    const poly = c.map((id) => _to2(state.model.nodes.get(id)!.pos)) as [number, number][];
+    if (!_pointInPoly(P, poly)) continue;
+    const A = _polyArea(poly);
+    if (A < bestA) { bestA = A; best = c; }
+  }
+  if (!best) return null;
+  const k = _areaKey(best);
+  if ([...state.model.areas.values()].some((a) => _areaKey(a.pts) === k)) return null;   // ya existe
+  return addArea(best, "shell");
+}
+
 export function setTool(t: CadDrawState["tool"]): void {
   state.tool = t;
   state.pendingNodes = [];  // Reset buffer al cambiar tool
@@ -141,4 +212,7 @@ export function getStats() {
   addArea,
   setTool,
   getStats,
+  detectClosedCells,
+  fillClosedCells,
+  fillCellAt,
 };
