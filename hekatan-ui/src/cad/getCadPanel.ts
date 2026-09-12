@@ -118,6 +118,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fDib.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
   fDib.addButton({ title: "┊ Línea auxiliar" }).on("click", () => setActiveTool("aux"));
   fDib.addButton({ title: "✦ Punto auxiliar" }).on("click", () => setActiveTool("auxp"));
+  fDib.addButton({ title: "📏 Medir / acotar (regla)" }).on("click", () => setActiveTool("medir"));
 
   const fArea = fCad.addFolder({ title: "▦ Áreas (shells)", expanded: false });
   fArea.addButton({ title: "▦ Área 4-clics (shell Q4)" }).on("click", () => setActiveTool("area"));

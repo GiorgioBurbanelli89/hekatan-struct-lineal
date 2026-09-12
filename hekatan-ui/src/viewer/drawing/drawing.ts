@@ -602,6 +602,79 @@ export function drawing({
   // hasta cerrar — así evitamos nodos huérfanos si se cancela).
   let polyAreaPts: [number, number, number][] = [];
 
+  // ── REGLA / MEDIR (estilo SketchUp): 2 puntos → cota con la distancia ──
+  const measureLine = new THREE.Line(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: 0xffcc00, transparent: true, opacity: 0.95 }),
+  );
+  measureLine.frustumCulled = false; measureLine.visible = false; measureLine.renderOrder = 999;
+  scene.add(measureLine);
+  let measurePts: [number, number, number][] = [];
+  const measureLabel = document.createElement("div");
+  measureLabel.id = "hk-measure-label";
+  measureLabel.style.cssText =
+    "position:fixed;z-index:130;display:none;background:rgba(20,20,10,0.92);color:#ffd24d;" +
+    "border:1px solid #ffcc00;border-radius:4px;padding:2px 7px;font:600 12px monospace;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5)";
+  document.body.appendChild(measureLabel);
+  // Raycast al PRIMER objeto sólido de la escena (mallas IFC, etc.); si no hay,
+  // cae al plano de trabajo. Así se puede medir sobre el modelo 3D importado.
+  const puntoBajoCursor = (ev: PointerEvent): [number, number, number] | null => {
+    const cam = setPointerFromEvent(ev); if (!cam) return null;
+    raycaster.setFromCamera(pointer, cam);
+    const hits = raycaster.intersectObjects(scene.children, true)
+      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && (h.object as any).visible !== false);
+    if (hits.length) { const p = hits[0].point; return [p.x, p.y, p.z]; }
+    const inter = intersectWorkPlane();
+    if (inter.length) { const p = inter[0].point; return [p.x, p.y, p.z]; }
+    return null;
+  };
+  const actualizarLabelMedida = () => {
+    if (measurePts.length < 1) { measureLabel.style.display = "none"; return; }
+    const cam = getActiveCamera();
+    const a = measurePts[0], b = measurePts[1] ?? measurePts[0];
+    const mid = new THREE.Vector3((a[0]+b[0])/2, (a[1]+b[1])/2, (a[2]+b[2])/2);
+    const v = mid.clone().project(cam);
+    const rect = rendererElm.getBoundingClientRect();
+    measureLabel.style.left = (rect.left + (v.x*0.5+0.5)*rect.width) + "px";
+    measureLabel.style.top = (rect.top + (-v.y*0.5+0.5)*rect.height - 14) + "px";
+    measureLabel.style.display = "block";
+  };
+  (window as any).__hekatanMeasureRefresh = actualizarLabelMedida;
+  try { (controls as any).addEventListener?.("change", actualizarLabelMedida); } catch {}
+
+  // ── HOVER de «Rellenar área»: malla transparente en la celda bajo el cursor ──
+  const fillPreview = new THREE.Mesh(
+    new THREE.BufferGeometry(),
+    new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  fillPreview.frustumCulled = false; fillPreview.visible = false; fillPreview.renderOrder = 998;
+  fillPreview.name = "hk-fill-preview";
+  scene.add(fillPreview);
+  rendererElm.addEventListener("pointerleave", () => { if (fillPreview.visible) { fillPreview.visible = false; viewerRender(); } });
+  /** Celda cerrada (4 sin diagonal o triángulo) que contiene el punto P (en el plano). */
+  const celdaCerradaBajoPunto = (P3: [number, number, number]): number[] | null => {
+    const pts = drawingObj.points.rawVal, polys = drawingObj.polylines?.rawVal ?? [];
+    const adj = new Map<number, Set<number>>();
+    const addE = (a: number, b: number) => { if (a === b) return; (adj.get(a) ?? adj.set(a, new Set()).get(a)!).add(b); (adj.get(b) ?? adj.set(b, new Set()).get(b)!).add(a); };
+    for (const poly of polys) for (let i = 0; i + 1 < poly.length; i++) addE(poly[i], poly[i + 1]);
+    const has = (a: number, b: number) => !!adj.get(a)?.has(b);
+    const cells: number[][] = []; const seen = new Set<string>(); const ids = [...adj.keys()];
+    for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+      for (const c of adj.get(b)!) { if (c === a) continue;
+        for (const d of adj.get(c)!) { if (d === a || d === b || !has(d, a)) continue; if (has(a, c) || has(b, d)) continue;
+          const k = [a, b, c, d].slice().sort((x, y) => x - y).join("-"); if (!seen.has(k)) { seen.add(k); cells.push([a, b, c, d]); } } } }
+    for (const a of ids) for (const b of adj.get(a)!) { if (b < a) continue;
+      for (const c of adj.get(b)!) { if (c === a || !has(c, a)) continue; const k = [a, b, c].slice().sort((x, y) => x - y).join("-"); if (!seen.has(k)) { seen.add(k); cells.push([a, b, c]); } } }
+    const plane = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+    const to2 = (q: number[]): [number, number] => plane === "xy" ? [q[0], q[1]] : plane === "xz" ? [q[0], q[2]] : [q[1], q[2]];
+    const P = to2(P3);
+    const pin = (pp: [number, number], poly: [number, number][]) => { let ins = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1]; if (((yi > pp[1]) !== (yj > pp[1])) && (pp[0] < (xj - xi) * (pp[1] - yi) / (yj - yi) + xi)) ins = !ins; } return ins; };
+    const parea = (poly: [number, number][]) => { let a = 0; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) a += (poly[j][0] + poly[i][0]) * (poly[j][1] - poly[i][1]); return Math.abs(a) / 2; };
+    let best: number[] | null = null, bestA = Infinity;
+    for (const c of cells) { const poly = c.map((id) => to2(pts[id])) as [number, number][]; if (!pin(P, poly)) continue; const A = parea(poly); if (A < bestA) { bestA = A; best = c; } }
+    return best;
+  };
+
   // ── PLANO DE TRABAJO INCLINADO — guía visible (GRILLA de referencia) ──
   // Relleno semitransparente + borde + LÍNEAS DE GRILLA cada 1 m, orientado al
   // plano inclinado (UCS por 3 puntos). Sirve de REFERENCIA para dibujar
@@ -2350,8 +2423,25 @@ export function drawing({
     if (!_camForRay) return;
     raycaster.setFromCamera(pointer, _camForRay);
     const hit = intersectWorkPlane();
+    // Ocultar el preview de relleno si el rayo no toca el plano o cambió de tool.
+    if ((!hit.length || (window as any).__hekatanCadState?.get?.()?.tool !== "fillarea") && fillPreview.visible) fillPreview.visible = false;
     if (hit.length) {
       const p = hit[0].point;
+      // ── HOVER «Rellenar área»: resaltar la celda cerrada bajo el cursor ──
+      {
+        const toolNow = (window as any).__hekatanCadState?.get?.()?.tool;
+        if (toolNow === "fillarea") {
+          const cell = celdaCerradaBajoPunto([p.x, p.y, p.z]);
+          if (cell) {
+            const V = cell.map((id) => drawingObj.points.rawVal[id]);
+            const pos: number[] = [];
+            for (let i = 1; i < V.length - 1; i++) pos.push(V[0][0], V[0][1], V[0][2], V[i][0], V[i][1], V[i][2], V[i+1][0], V[i+1][1], V[i+1][2]);
+            const g = fillPreview.geometry as THREE.BufferGeometry;
+            g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals();
+            fillPreview.visible = true;
+          } else fillPreview.visible = false;
+        } else if (fillPreview.visible) fillPreview.visible = false;
+      }
       // ── ALT: «ahora no me enganches» ────────────────────────────────────
       // Idea tomada del cuaderno Napkin (picobloc), y es la que faltaba: ahora que
       // la mirilla va en píxeles y engancha bien, hace falta poder decirle que no.
@@ -4479,6 +4569,7 @@ export function drawing({
       case "rectarea": return n ? P("LOSA RECTANGULAR Precise otra esquina:") : P("LOSA RECTANGULAR Precise primera esquina:");
       case "polyarea": return P(`ÁREA LIBRE Precise vértice ${polyAreaPts.length + 1} (Enter o clic derecho cierra y malla):`);
       case "fillarea": return P("RELLENAR ÁREA Haga clic DENTRO de una celda cerrada por barras (4 lados) y se crea el área:");
+      case "medir": return P(`REGLA ${measurePts.length === 1 ? "Marque el 2º punto (distancia en vivo):" : "Marque el 1er punto a medir (sobre el modelo o la grilla):"}`);
       case "rect": return n ? P("RECTÁNGULO Precise otra esquina:") : P("RECTÁNGULO Precise primera esquina:");
       case "circle": return n ? P("CÍRCULO Precise radio (clic o teclee la cifra):") : P("CÍRCULO Precise centro:");
       case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
@@ -5460,6 +5551,27 @@ export function drawing({
       updateStatus(`✓ Rectángulo dibujado — (${a[0].toFixed(1)},${a[1].toFixed(1)}) → (${b[0].toFixed(1)},${b[1].toFixed(1)})`);
       pendingClicks = [];
       try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "medir") {
+      // REGLA: 2 puntos (sobre el modelo 3D o la grilla) → cota con la distancia.
+      const pt = puntoBajoCursor(event); if (!pt) return;
+      if (measurePts.length >= 2) measurePts = [];   // reiniciar tras medida completa
+      measurePts.push(pt);
+      if (measurePts.length === 1) {
+        measureLine.visible = false; actualizarLabelMedida();
+        updateStatus("📏 Regla — 1er punto puesto. Marca el 2º.");
+      } else {
+        const [a, b] = measurePts;
+        measureLine.geometry.setFromPoints([new THREE.Vector3(a[0], a[1], a[2]), new THREE.Vector3(b[0], b[1], b[2])]);
+        measureLine.visible = true;
+        const d = Math.hypot(b[0]-a[0], b[1]-a[1], b[2]-a[2]);
+        const dxy = Math.hypot(b[0]-a[0], b[1]-a[1]);
+        measureLabel.textContent = `${d.toFixed(3)} m`;
+        actualizarLabelMedida();
+        updateStatus(`📏 Distancia ${d.toFixed(3)} m  ·  Δx ${(b[0]-a[0]).toFixed(3)}  Δy ${(b[1]-a[1]).toFixed(3)}  Δz ${(b[2]-a[2]).toFixed(3)}  ·  en planta ${dxy.toFixed(3)} m`);
+      }
+      viewerRender();
       return;
     }
     if (tool === "fillarea") {
