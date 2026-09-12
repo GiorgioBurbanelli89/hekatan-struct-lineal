@@ -1,10 +1,9 @@
 /**
- * Capítulo 12 — El reto de la CAPILLA. Se importa el modelo real de ETABS
- * (Capilla Analítico.EDB → e2k). Llega como PÓRTICOS: la cubierta de ETABS es
- * una losa `MODELINGTYPE "Membrane"` que el export OAPI no trajo como área, así
- * que los nudos altos del techo quedan SUELTOS. Se demuestra DÓNDE, en Hekatan
- * Struct, se le pone la cubierta como slab membrana y se elige su formulación,
- * y cómo esa membrana ATA el techo. Todo con el cursor + flecha.
+ * Capítulo 12 — El reto de la CAPILLA, importada BIEN. El modelo real de ETABS
+ * (Capilla Analítico.EDB) se trae con `etabs-cli geom` (OAPI): geometría 3D
+ * exacta, nudo a nudo. Antes, reparseando el texto e2k, salían 306 nudos con
+ * 116 sueltos; ahora son los 152 nudos / 187 barras de ETABS, todo conectado a
+ * los 26 apoyos. Se enseña con el cursor, que se pone ROJO al hacer clic.
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -13,7 +12,7 @@ import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CAPILLA = JSON.parse(readFileSync(join(__dirname, "capilla_model.json"), "utf8"));
 
-export const titulo = "Hekatan Struct · el reto de la capilla";
+export const titulo = "Hekatan Struct · la capilla, importada bien";
 export const ruta = "workspace/?t=csi-importer";
 
 const proj = async (a, wx, wy, wz = 0) => a.pag.evaluate(({ wx, wy, wz }) => {
@@ -27,14 +26,13 @@ const proj = async (a, wx, wy, wz = 0) => a.pag.evaluate(({ wx, wy, wz }) => {
   return { x: rect.left + (v[0]/v[3]*0.5+0.5)*rect.width, y: rect.top + (-v[1]/v[3]*0.5+0.5)*rect.height };
 }, { wx, wy, wz });
 
-const mover = async (a, x, y, steps = 26) => {
+const mover = async (a, x, y, steps = 24) => {
   await a.pag.mouse.move(x, y, { steps });
   await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x, y });
 };
 const setP = async (a, c, v) => { await a.pag.evaluate((q) => { try { window.__hekatanSetParam && window.__hekatanSetParam(q.c, q.v); } catch(e){} }, { c, v }); };
 
-// Abre una carpeta del panel (Tweakpane) si está plegada. Sin abrirla, sus
-// filas miden 0×0 y no se puede apuntar a ellas.
+// Abre una carpeta del panel (Tweakpane) si está plegada.
 const abrirCarpeta = async (a, titulo) => {
   await a.pag.evaluate((f) => {
     const btn = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent || "").includes(f));
@@ -42,35 +40,37 @@ const abrirCarpeta = async (a, titulo) => {
     const cont = btn.closest(".tp-fldv");
     const body = cont && cont.querySelector(".tp-fldv_c");
     const h = body ? body.getBoundingClientRect().height : 0;
-    if (h < 5) btn.click();          // solo si está plegada (no la volvemos a cerrar)
+    if (h < 5) btn.click();
     btn.scrollIntoView({ block: "center" });
   }, titulo);
 };
 
-// Resalta con cursor + flecha + recuadro una FILA del panel de parámetros
-// buscándola por su etiqueta. Es el «dónde se cambia» del vídeo.
-const resaltarParam = async (a, texto, nota) => {
+// CLIC visible sobre una FILA del panel: lleva el cursor, lo pone ROJO con el
+// aro (se ve el clic), y recién ahí cambia el parámetro. Es lo que pidió Jorge.
+const clicFila = async (a, texto, clave, valor, nota) => {
   const r = await a.pag.evaluate((t) => {
-    const lab = [...document.querySelectorAll(".tp-lblv_l, .tp-ckbv_l, .tp-rotv_t, label")]
-      .find((x) => (x.textContent || "").includes(t));
-    const row = lab ? (lab.closest(".tp-lblv, .tp-ckbv, .tp-rotv") || lab.parentElement) : null;
+    const lab = [...document.querySelectorAll(".tp-lblv_l, .tp-ckbv_l, label")].find((x) => (x.textContent || "").includes(t));
+    const row = lab ? (lab.closest(".tp-lblv, .tp-ckbv") || lab.parentElement) : null;
     if (!row) return null;
     row.scrollIntoView({ block: "center" });
     const rc = row.getBoundingClientRect();
     return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
   }, texto);
   if (!r || r.w < 5) return false;
-  await mover(a, r.x + r.w - 22, r.y + r.h / 2, 24);
-  await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }), { r, n: nota });
-  await a.quieto(7, 340);
+  const cx = r.x + r.w - 16, cy = r.y + r.h / 2;
+  await mover(a, cx, cy, 22);
+  if (nota) { await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }), { r, n: nota }); await a.quieto(4, 320); }
+  await a.pag.evaluate((q) => window.__tutClick(q.x, q.y), { x: cx, y: cy });  // cursor ROJO + aro
+  await a.quieto(3, 320);
+  await setP(a, clave, valor);
   await a.pag.evaluate(() => window.__tutSinCaja());
+  await a.quieto(3, 320);
   return true;
 };
 
-// Da una vuelta suave a la cámara para leer el modelo en 3D.
 const orbitar = async (a, dx, dy, n = 6) => {
-  const s = await proj(a, 0, 0, 0);
-  const cx = s ? s.x : 640, cy = s ? s.y : 360;
+  const s = await proj(a, -8, 14, 3);
+  const cx = s ? s.x : 900, cy = s ? s.y : 470;
   await a.pag.mouse.move(cx, cy);
   await a.pag.mouse.down();
   await a.pag.mouse.move(cx + dx, cy + dy, { steps: 24 });
@@ -79,9 +79,9 @@ const orbitar = async (a, dx, dy, n = 6) => {
 };
 
 export const pasos = [
-  { rotulo: "Portada", hacer: async (a) => { await a.portada("El reto de la capilla", "Capítulo 12", 16); } },
+  { rotulo: "Portada", hacer: async (a) => { await a.portada("La capilla, importada bien", "Capítulo 12", 16); } },
   {
-    rotulo: "1 · Importamos la capilla real de ETABS",
+    rotulo: "1 · La traemos de ETABS con etabs-cli (geometría exacta)",
     hacer: async (a) => {
       await a.pag.evaluate((model) => {
         window.__hekatanImportedModel = model;
@@ -93,45 +93,35 @@ export const pasos = [
     },
   },
   {
-    rotulo: "2 · Llega como pórticos: la cubierta no viajó",
+    rotulo: "2 · Es la capilla de verdad: 152 nudos, 187 barras",
     hacer: async (a) => {
-      await orbitar(a, 180, 40, 4);
-      await orbitar(a, -120, -30, 4);
+      await orbitar(a, 170, 30, 5);
+      await orbitar(a, -120, -20, 5);
     },
   },
   {
-    rotulo: "3 · Aquí se pone la cubierta: slab membrana",
+    rotulo: "3 · Un clic (cursor ROJO) apaga las vigas: se ve la cubierta",
     hacer: async (a) => {
-      await abrirCarpeta(a, "Cubierta");
+      await abrirCarpeta(a, "Ver por tipo");
       await a.quieto(1, 260);
-      await resaltarParam(a, "Poner cubierta",
-        "Aquí: «Poner cubierta (slab membrana)». La losa que ata el techo.");
-      await setP(a, "cubierta", 1);
-      await a.quieto(5, 350);
+      await clicFila(a, "Vigas", "verVigas", 0,
+        "Clic: el cursor se pone ROJO. Apagamos las «Vigas» para ver la cubierta de perfiles.");
     },
   },
   {
-    rotulo: "4 · La membrana ata los nudos altos del techo",
+    rotulo: "4 · La cubierta son diagonales tubulares (72 barras)",
     hacer: async (a) => {
       await a.general();
-      await orbitar(a, 150, -20, 6);
+      await orbitar(a, 150, -25, 6);
     },
   },
   {
-    rotulo: "5 · Y aquí eliges la formulación: Membrana",
+    rotulo: "5 · Vigas de vuelta, todo conectado a los 26 apoyos",
     hacer: async (a) => {
-      await abrirCarpeta(a, "Cubierta");
-      await a.quieto(1, 260);
-      await resaltarParam(a, "Formulación de la placa",
-        "Membrana = solo trabaja en su plano (como la cubierta de ETABS).");
-      await a.quieto(4, 340);
-    },
-  },
-  {
-    rotulo: "6 · La capilla con su cubierta acoplada",
-    hacer: async (a) => {
+      await clicFila(a, "Vigas", "verVigas", 1,
+        "Otro clic: vuelven las vigas. Todo llega a apoyo — nada suelto, resuelve.");
       await a.general();
-      await orbitar(a, -200, 30, 8);
+      await orbitar(a, -180, 25, 7);
     },
   },
 ];

@@ -129,6 +129,13 @@ await pag.evaluate(() => {
     '<path d="M4 2 L4 19 L9 14.5 L12 21.5 L15 20 L12 13.5 L18.5 13.5 Z" fill="#fff" ' +
     'stroke="#0b1220" stroke-width="1.6" stroke-linejoin="round"/></svg>';
   capa.appendChild(cur);
+  // Anillo de CLIC: cuando se pulsa, el cursor se pone ROJO y sale un aro, para
+  // que en el vídeo se vea CUÁNDO se está haciendo clic (Jorge, 11-sep-2026).
+  const aro = document.createElement("div");
+  aro.style.cssText = "position:fixed;display:none;border:3px solid #ff2d55;border-radius:50%;" +
+    "box-shadow:0 0 10px rgba(255,45,85,.8);pointer-events:none;transform:translate(-50%,-50%)";
+  capa.appendChild(aro);
+  const curPath = cur.querySelector("path");
   const caja = document.createElement("div");
   caja.style.cssText = "position:fixed;display:none;border:3px solid #22d3ee;border-radius:6px;" +
     "box-shadow:0 0 0 4px rgba(34,211,238,.18),0 0 22px rgba(34,211,238,.55)";
@@ -147,7 +154,22 @@ await pag.evaluate(() => {
   flecha.textContent = "➤";   // ➤
   capa.appendChild(flecha);
   window.__tutFlecha = (x, y) => { flecha.style.display = "block"; flecha.style.left = (x - 60) + "px"; flecha.style.top = y + "px"; };
-  window.__tutCursor = (x, y) => { cur.style.left = x + "px"; cur.style.top = y + "px"; };
+  // Mover el cursor = estado NORMAL (blanco, sin aro).
+  window.__tutCursor = (x, y) => {
+    cur.style.left = x + "px"; cur.style.top = y + "px";
+    curPath.setAttribute("fill", "#fff"); aro.style.display = "none";
+  };
+  // Estado PULSADO: cursor ROJO + aro sobre el punto de clic. Es de ESTADO (no
+  // temporizado) para que SIEMPRE lo pillen los fotogramas del vídeo; el
+  // siguiente `__tutCursor` (mover) lo devuelve a blanco.
+  window.__tutClick = (x, y) => {
+    if (x != null) { cur.style.left = x + "px"; cur.style.top = y + "px"; }
+    else { x = parseFloat(cur.style.left) || 0; y = parseFloat(cur.style.top) || 0; }
+    curPath.setAttribute("fill", "#ff2d55");
+    aro.style.display = "block";
+    aro.style.left = x + "px"; aro.style.top = y + "px";
+    aro.style.width = "34px"; aro.style.height = "34px";
+  };
   window.__tutSinCaja = () => { caja.style.display = "none"; nota.style.display = "none"; flecha.style.display = "none"; };
   /** Cuadro sobre el rectángulo `r` y, si hay texto, una nota al lado que no lo tape. */
   window.__tutCaja = (r, txt, lim) => {
@@ -216,6 +238,18 @@ const raton = async (x, y, pasos = 12) => {
   }
   await pag.evaluate((q) => { window.__tutXY = q; }, { x, y });
   await foto(2);
+};
+/**
+ * Clic CON aviso visual: el cursor se pone ROJO y sale el aro (se ve en el
+ * vídeo CUÁNDO se pulsa), se captura ese fotograma, y recién ahí se hace el clic
+ * de verdad. (Jorge, 11-sep-2026: «que se cambie de color mi cursor así sabremos
+ * si estás dando click».)
+ */
+const clic = async (x, y) => {
+  await pag.evaluate((q) => window.__tutClick(q.x, q.y), { x, y });
+  await foto(2);
+  await pag.mouse.click(x, y);
+  await foto(1);
 };
 /**
  * Rectángulo (CSS) de un control.
@@ -361,7 +395,7 @@ const api = {
       await raton(r.x + r.w / 2, r.y + r.h / 2);
       await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
       await foto(2);
-      await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+      await clic(r.x + r.w / 2, r.y + r.h / 2);
       await espera(ms);
     }
     await pag.evaluate(() => {
@@ -387,7 +421,7 @@ const api = {
     await raton(r.x + r.w / 2, r.y + r.h / 2);
     await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
     await foto(2);
-    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await clic(r.x + r.w / 2, r.y + r.h / 2);
     await espera(ms);
     await pag.evaluate(() => window.__tutSinCaja());
     await foto(2);
@@ -409,7 +443,7 @@ const api = {
     await raton(r.x + r.w / 2, r.y + r.h / 2);
     await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
     await foto(3);
-    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await clic(r.x + r.w / 2, r.y + r.h / 2);
     await espera(250); await foto(3);
     await pag.evaluate(() => window.__tutSinCaja());
     await espera(ms);
@@ -432,7 +466,7 @@ const api = {
     await raton(r.x + r.w / 2, r.y + r.h / 2);
     await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
     await foto(3);
-    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await clic(r.x + r.w / 2, r.y + r.h / 2);
     await espera(250); await foto(3);
     await pag.evaluate(() => window.__tutSinCaja());
     await espera(ms);
@@ -588,7 +622,7 @@ const api = {
     await raton(r.x + r.w / 2, r.y + r.h / 2);
     await pag.evaluate((q) => window.__tutCaja(q.r, "", q.l), { r, l: limite() });
     await foto(2);
-    await pag.mouse.click(r.x + r.w / 2, r.y + r.h / 2);
+    await clic(r.x + r.w / 2, r.y + r.h / 2);
     await espera(ms);
     await pag.evaluate(() => window.__tutSinCaja());
     await foto(2);
