@@ -213,9 +213,14 @@ export const pasos = [
     rotulo: "6 · La capilla del EDB replicada — giramos para verla",
     hacer: async (a) => {
       await limpiar(a);
-      const c = await a.pag.evaluate(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); const r = h.getBoundingClientRect(); return { x: r.left + r.width/2, y: r.top + r.height/2 }; });
-      await a.pag.mouse.move(c.x, c.y); await a.pag.mouse.down();
-      for (let i = 1; i <= 20; i++) { await a.pag.mouse.move(c.x + i*7, c.y - i*1.2); await a.pag.evaluate((q)=>window.__tutCursor&&window.__tutCursor(q.x,q.y),{x:c.x+i*7,y:c.y-i*1.2}); await a.quieto(1, 55); }
+      await setPlano(a, "xy");                  // plano de trabajo de vuelta a la planta (se dice en la voz)
+      await vista(a, ...camA(centro, 34));      // más cerca que la ISO de trabajo
+      // El arrastre va por la FRANJA BAJA del lienzo, lejos de los nudos: si el
+      // cursor pasa por encima de uno, sale su rótulo (Nodo 87…) y ensucia el giro.
+      const c = await a.pag.evaluate(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); const r = h.getBoundingClientRect(); return { x: r.left + r.width * 0.18, y: r.top + r.height * 0.86 }; });
+      await mover(a, c.x, c.y, 4); await a.quieto(3, 300);
+      await a.pag.mouse.down();
+      for (let i = 1; i <= 20; i++) { await a.pag.mouse.move(c.x + i*7, c.y - i*0.6); await a.pag.evaluate((q)=>window.__tutCursor&&window.__tutCursor(q.x,q.y),{x:c.x+i*7,y:c.y-i*0.6}); await a.quieto(1, 55); }
       await a.pag.mouse.up(); await a.quieto(4, 340);
     },
   },
