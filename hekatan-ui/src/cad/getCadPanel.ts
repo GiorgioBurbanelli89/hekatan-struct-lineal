@@ -74,6 +74,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     wall:     "▥ Pared Q4 3D — tipeá altura + Enter, después 2 clicks. Crea shell Q4 vertical.",
     circle:   "○ Círculo — click 1=centro, click 2=radio. Tipear radio: 5 + Enter (en vez del 2do click).",
     arc:      "⌒ Arco (3 ptos) — click 1=inicio, 2=medio, 3=fin.",
+    parabola: "∪ Parábola — 3 clics en el plano de la vista; pasa por los tres (eje vertical). Tramos: «Segmentos arc/círc».",
+    cubica:   "∿ Cúbica — 4 clics en el plano de la vista; el polinomio de 3er grado que pasa por los cuatro.",
     rect:     "▭ Rectángulo — click 2 esquinas. Tipear @5,3 para esquina opuesta relativa.",
     aux:      "┊ Línea auxiliar — referencia visual (no genera FEM). Mismo input que línea.",
     auxp:     "✦ Punto auxiliar — 1 click crea un punto cyan (no genera nodo FEM, sirve para OSnap).",
@@ -118,6 +120,10 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fDib.addButton({ title: "▭ Rectángulo" }).on("click", () => setActiveTool("rect"));
   fDib.addButton({ title: "○ Círculo" }).on("click", () => setActiveTool("circle"));
   fDib.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
+  // Curvas por puntos (Jorge, 13-sep-2026: «una parábola, una parábola de 3er grado,
+  // todo con el mouse»): el polinomio que pasa por los clics, en N tramos rectos.
+  fDib.addButton({ title: "∪ Parábola (3 ptos)" }).on("click", () => setActiveTool("parabola"));
+  fDib.addButton({ title: "∿ Cúbica (4 ptos)" }).on("click", () => setActiveTool("cubica"));
   // «Elegir líneas» de Revit: la línea del IFC (borde o perfil del corte) se
   // ilumina al pasar el cursor y un clic la copia como barras discretizadas.
   fDib.addButton({ title: "⟋ Copiar línea del IFC (elegir líneas)" }).on("click", () => setActiveTool("ifcline"));

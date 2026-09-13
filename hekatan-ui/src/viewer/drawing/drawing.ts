@@ -2202,6 +2202,59 @@ export function drawing({
       drawingObj.polylines.val = [...polys.slice(0, -1), arcPoly, []];
     }
   };
+  // ── Curva POLINÓMICA por k puntos (parábola: 3, cúbica: 4) ──
+  // Desafío 2D de Jorge (13-sep-2026): «un círculo, un arco, una parábola, una
+  // parábola de 3er grado, todo con el mouse». Los k puntos van en el plano de
+  // la vista (el eje que no varía entre los clics, como en el círculo); la
+  // abscisa es el eje horizontal de ese plano (X en XZ/XY, Y en YZ) y la
+  // ordenada el otro. Por k puntos con abscisas distintas pasa UN polinomio de
+  // grado k−1 (Lagrange), y se discretiza en N tramos a saltos IGUALES de
+  // abscisa: es como ETABS lo puede recibir (barras rectas) y como divide
+  // Dynamo con «Curve.PointsAtEqualParameter».
+  (window as any).__hekatanDrawPolinomio = (
+    pts: [number, number, number][],
+    segs: number = (window as any).__hekatanArcSegs ?? 12,
+  ): { ok: boolean; plano?: string; coef?: number[]; msg?: string } => {
+    const k = pts.length; if (k < 2) return { ok: false, msg: "faltan puntos" };
+    const N = Math.max(k - 1, Math.round(segs));
+    const rango = (j: number) => Math.max(...pts.map((q) => q[j])) - Math.min(...pts.map((q) => q[j]));
+    const r = [rango(0), rango(1), rango(2)];
+    // plano = el eje de MENOR variación queda fijo
+    // el plano de TRABAJO manda si los puntos están en él; si no, el de menor variación
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "");
+    const nWp = wp === "xy" ? 2 : wp === "xz" ? 1 : wp === "yz" ? 0 : -1;
+    const fijo = nWp >= 0 && r[nWp] < 1e-6 ? nWp : r[2] <= r[0] && r[2] <= r[1] ? 2 : r[1] <= r[0] ? 1 : 0;
+    const plano = fijo === 2 ? "xy" : fijo === 1 ? "xz" : "yz";
+    const ia = fijo === 0 ? 1 : 0;              // abscisa: X (o Y si el plano es YZ)
+    const io = fijo === 2 ? 1 : 2;              // ordenada: Z (o Y si el plano es XY)
+    const xs = pts.map((q) => q[ia]), ys = pts.map((q) => q[io]);
+    for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++)
+      if (Math.abs(xs[i] - xs[j]) < 1e-9) return { ok: false, msg: `dos puntos con la misma abscisa (${plano.toUpperCase()}): no hay polinomio y = f(x) que pase por los dos` };
+    // Lagrange: y(x) = Σ y_i · Π_{j≠i} (x − x_j)/(x_i − x_j)
+    const y = (x: number) => { let s = 0; for (let i = 0; i < k; i++) { let L = 1; for (let j = 0; j < k; j++) if (j !== i) L *= (x - xs[j]) / (xs[i] - xs[j]); s += ys[i] * L; } return s; };
+    // coeficientes a0 + a1·x + … (por Vandermonde, sólo para informar)
+    const coef = (() => { const n = k; const A = xs.map((x) => Array.from({ length: n }, (_, j) => x ** j)); const b = ys.slice();
+      for (let c = 0; c < n; c++) { let p = c; for (let rr = c + 1; rr < n; rr++) if (Math.abs(A[rr][c]) > Math.abs(A[p][c])) p = rr; [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+        for (let rr = c + 1; rr < n; rr++) { const f = A[rr][c] / A[c][c]; for (let cc = c; cc < n; cc++) A[rr][cc] -= f * A[c][cc]; b[rr] -= f * b[c]; } }
+      const a = new Array(n).fill(0); for (let rr = n - 1; rr >= 0; rr--) { let s = b[rr]; for (let cc = rr + 1; cc < n; cc++) s -= A[rr][cc] * a[cc]; a[rr] = s / A[rr][rr]; } return a; })();
+    const x0 = xs[0], x1 = xs[k - 1];
+    const baseIdx = drawingObj.points.rawVal.length;
+    const newPts: [number, number, number][] = [];
+    for (let i = 0; i <= N; i++) {
+      const x = x0 + (x1 - x0) * i / N;
+      const q: [number, number, number] = [pts[0][0], pts[0][1], pts[0][2]];
+      q[ia] = x; q[io] = y(x); q[fijo] = pts[0][fijo];
+      newPts.push(q);
+    }
+    newPts[0] = [pts[0][0], pts[0][1], pts[0][2]]; newPts[N] = [pts[k - 1][0], pts[k - 1][1], pts[k - 1][2]];
+    drawingObj.points.val = [...drawingObj.points.rawVal, ...newPts];
+    if (drawingObj.polylines) {
+      const poly = newPts.map((_, i) => baseIdx + i);
+      const polys = drawingObj.polylines.rawVal;
+      drawingObj.polylines.val = polys[polys.length - 1]?.length > 0 ? [...polys, poly, []] : [...polys.slice(0, -1), poly, []];
+    }
+    return { ok: true, plano, coef };
+  };
   // ── Losa rectangular con chaflanes (esquinas redondeadas) ──
   // 2 clicks: esquinas opuestas de la bounding box. Genera 4 lados rectos
   // + 4 cuartos de círculo en las esquinas. Pensado para volados curvos
@@ -5151,6 +5204,8 @@ export function drawing({
       case "rect": return n ? P("RECTÁNGULO Precise otra esquina:") : P("RECTÁNGULO Precise primera esquina:");
       case "circle": return n ? P("CÍRCULO Precise radio (clic o teclee la cifra):") : P("CÍRCULO Precise centro:");
       case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
+      case "parabola": return P(`PARÁBOLA Precise punto ${n + 1} de 3 (pasa por los tres):`);
+      case "cubica": return P(`CÚBICA Precise punto ${n + 1} de 4 (pasa por los cuatro):`);
       case "col": return P(`COLUMNA Precise punto de inserción (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter antes del clic):`);
       case "wall": return n ? P("MURO Precise segundo punto de la base:")
                             : P(`MURO Precise primer punto de la base (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter):`);
@@ -6181,7 +6236,12 @@ export function drawing({
       const dx = Math.abs(p2[0] - c[0]);
       const dy = Math.abs(p2[1] - c[1]);
       const dz = Math.abs(p2[2] - c[2]);
-      const planeKind: "xy" | "xz" | "yz" = dz < 1e-3 ? "xy" : (dy < 1e-3 ? "xz" : "yz");
+      // El plano es el de TRABAJO si los dos clics están en él (radio horizontal en
+      // un alzado XZ: dy = dz = 0 y antes salía "xy" — el círculo se iba de canto,
+      // medido en el desafío 2D del 13-sep-2026); si no, el eje que no varía.
+      const wpC = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "");
+      const enWp = wpC === "xy" ? dz < 1e-3 : wpC === "xz" ? dy < 1e-3 : wpC === "yz" ? dx < 1e-3 : false;
+      const planeKind: "xy" | "xz" | "yz" = enWp ? (wpC as "xy" | "xz" | "yz") : dz < 1e-3 ? "xy" : (dy < 1e-3 ? "xz" : "yz");
       const segs = (window as any).__hekatanArcSegs ?? 12;
       (window as any).__hekatanDrawCircle?.(c[0], c[1], c[2], r, segs, planeKind);
       updateStatus(`✓ Círculo dibujado en ${planeKind.toUpperCase()} — r=${r.toFixed(2)}m, ${segs} segmentos`);
@@ -6258,6 +6318,20 @@ export function drawing({
       const segs = (window as any).__hekatanArcSegs ?? 12;
       (window as any).__hekatanDrawArc?.(p1, pm, pe, segs);
       updateStatus(`✓ Arco dibujado — ${segs} segmentos`);
+      pendingClicks = [];
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "parabola" || tool === "cubica") {
+      // parábola: 3 clics; cúbica: 4 clics — polinomio de grado k−1 por los k puntos
+      const K = tool === "parabola" ? 3 : 4; const nombre = tool === "parabola" ? "Parábola" : "Cúbica";
+      pendingClicks.push([point.x, point.y, point.z]);
+      if (pendingClicks.length < K) { updateStatus(`∿ ${nombre} — punto ${pendingClicks.length}/${K} OK. Marcá el ${pendingClicks.length + 1}º.`); return; }
+      const segs = (window as any).__hekatanArcSegs ?? 12;
+      const r = (window as any).__hekatanDrawPolinomio?.(pendingClicks.slice(), segs);
+      if (!r?.ok) { updateStatus(`⚠ ${nombre}: ${r?.msg ?? "no se pudo"}. Volvé a marcar los puntos.`); pendingClicks = []; return; }
+      const ecu = (r.coef ?? []).map((c: number, i: number) => `${c >= 0 && i ? "+" : ""}${c.toFixed(3)}${i ? "·x" + (i > 1 ? "^" + i : "") : ""}`).join(" ");
+      updateStatus(`✓ ${nombre} dibujada en ${String(r.plano ?? "").toUpperCase()} — ${segs} tramos a Δ igual de abscisa · y = ${ecu}`);
       pendingClicks = [];
       try { (window as any).__hekatanRebuild?.(); } catch {}
       return;
