@@ -145,7 +145,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // center) comparten nudo en el nivel. Defecto aquí: SUPERIOR = la cara tocada.
   const proxyCara = { pos: "auto" };
   (window as any).__hekatanIfcCaraPos = "auto";
-  fArea.addBinding(proxyCara, "pos", { label: "Punto de inserción (ETABS)", options: { "Automático: losa TOP, muro MIDDLE": "auto", "Superior: cara tocada (TOP)": "exterior", "Medio: plano medio (t/2)": "media", "Inferior: cara de atrás": "interior" } }).on("change", (ev: any) => { (window as any).__hekatanIfcCaraPos = ev.value; });
+  fArea.addBinding(proxyCara, "pos", { label: "Punto de inserción (ETABS)", options: { "Automático: hormigón TOP / acero BOTTOM / muro MIDDLE": "auto", "Superior: cara tocada (TOP)": "exterior", "Medio: plano medio (t/2)": "media", "Inferior: cara de atrás": "interior" } }).on("change", (ev: any) => { (window as any).__hekatanIfcCaraPos = ev.value; });
 
   const f3D = fCad.addFolder({ title: "🧊 En 3D", expanded: false });
   f3D.addButton({ title: "▌ Columna 3D (1 click + altura)" }).on("click", () => setActiveTool("col"));

@@ -55,8 +55,29 @@ const nPoly = await ev(() => (window.__hekatanDrawingPolylines?.rawVal || []).fi
 const idsNave = [0, ...Array.from({ length: nPoly - 2 }, (_, i) => i + 2)].map((i) => "poly:" + i);   // todo menos la ala (poly 1)
 const ext = async (ids, dx, n) => ev(({ ids, dx, n }) => { window.__hekatanCadState.setTool("select"); window.__hekatanSelectIds(ids); const r = window.__hekatanExtrudeSelection(dx, 0, 0, n); window.__hekatanClearSelection(); window.__hekatanCadState.setTool(null); return r; }, { ids, dx, n });
 const rA = await ext(idsNave, -1.65, 2), rB = await ext(idsNave, 1.6, 6);
-const rC = await ext(["poly:1"], -2.05, 1), rD = await ext(["poly:1"], 1.68, 5);
-console.log("extruido nave:", JSON.stringify(rA), JSON.stringify(rB), "ala:", JSON.stringify(rC), JSON.stringify(rD), "áreas:", await ev(() => (window.__hekatanDrawingAreas?.rawVal || []).length));
+// el ala va a las MISMAS estaciones x que la nave (14.85 … 24.5) para que el muro del escalón comparta nudos con las dos;
+// y sus 0.4 m de más a cada lado (extensión real 14.45 … 24.9) se extruyen desde el borde, segmento a segmento
+const rC = await ext(["poly:1"], -1.65, 1), rD = await ext(["poly:1"], 1.6, 5);
+// segmentos (de paños) cuyos dos extremos cumplen `f`: "seg:P:S"
+const segsDonde = (f) => ev((fSrc) => { const f = eval(fSrc); const P = window.__hekatanDrawingPoints.rawVal, PL = window.__hekatanDrawingPolylines.rawVal, A = new Set(window.__hekatanDrawingAreas.rawVal); const out = []; PL.forEach((pl, k) => { if (!A.has(k)) return; for (let s = 0; s + 1 < pl.length; s++) if (f(P[pl[s]]) && f(P[pl[s + 1]])) out.push("seg:" + k + ":" + s); }); return out; }, f.toString());
+const extV = async (ids, dx, dy, dz, n) => ev(({ ids, dx, dy, dz, n }) => { window.__hekatanCadState.setTool("select"); window.__hekatanSelectIds(ids); const r = window.__hekatanExtrudeSelection(dx, dy, dz, n); window.__hekatanClearSelection(); window.__hekatanCadState.setTool(null); return r; }, { ids, dx, dy, dz, n });
+const esAla = (p) => p[1] > 127.05 && p[2] < 6.2;   // el ala: y > 127.1, por debajo del escalón
+const rE = await extV(await segsDonde((p) => Math.abs(p[0] - 14.85) < 1e-3 && p[1] > 127.05 && p[2] < 6.2), -0.4, 0, 0, 1);
+const rF = await extV(await segsDonde((p) => Math.abs(p[0] - 24.5) < 1e-3 && p[1] > 127.05 && p[2] < 6.2), 0.4, 0, 0, 1);
+console.log("extruido nave:", JSON.stringify(rA), JSON.stringify(rB), "ala:", JSON.stringify(rC), JSON.stringify(rD), "bordes ala ±0.4:", JSON.stringify(rE), JSON.stringify(rF), "áreas:", await ev(() => (window.__hekatanDrawingAreas?.rawVal || []).length));
+// ── 2b. el ESCALÓN nave → ala (y ≈ 127.1): en el IFC no hay cara entre z 7.07 (pie del salto de la nave) y z 5.98
+//   (arranque del ala). Sin ella la nave es un voladizo de 12 m apoyado solo en y = 115 (medido: 0.68 m de flecha en
+//   Hekatan Y en ETABS). Se cierra con un muro: el borde inferior de la nave se extruye hasta el borde superior del ala.
+{
+  const v = await ev(() => { const P = window.__hekatanDrawingPoints.rawVal; const en = (f) => P.find(f); const a = en((p) => Math.abs(p[0] - 16.5) < 1e-3 && p[1] > 127.05 && p[2] > 6.5 && p[2] < 7.3); const b = en((p) => Math.abs(p[0] - 16.5) < 1e-3 && p[1] > 127.05 && p[2] > 5.5 && p[2] < 6.2); return a && b ? [b[0] - a[0], b[1] - a[1], b[2] - a[2], a, b] : null; });
+  console.log("escalón: de", JSON.stringify(v?.[3]), "a", JSON.stringify(v?.[4]), "vector", JSON.stringify(v?.slice(0, 3)));
+  const segs = await segsDonde((p) => p[1] > 127.05 && p[2] > 6.5 && p[2] < 7.3 && p[0] > 14.8 && p[0] < 24.55);
+  const rG = await extV(segs, v[0], v[1], v[2], 1);
+  console.log("muro del escalón:", segs.length, "segmentos →", JSON.stringify(rG));
+  // fotograma: el escalón visto de lado (elevación YZ, corte X = 16.5) y en iso
+  await corte("X", 16.5, true); await espera(300); await foto("muro_escalon_elevacion");
+  await corte(null); await ev(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); const c = h.__ctx; c.setActiveCamera(c.perspCamera); c.camera.position.set(34, 138, 14); c.camera.up.set(0, 0, 1); c.controls.target.set(20, 127, 5); c.camera.lookAt(20, 127, 5); c.controls.update(); c.render(); }); await espera(300); await foto("muro_escalon_iso");
+}
 await pag.keyboard.press("Escape"); await corte(null); await ev(() => window.__hekatanSetView?.("iso")); await foto("boveda_extruida_iso");
 // ── 3. entrepiso desde su cara superior: corte Z ≤ 5.6 (quita la bóveda) y cámara desde arriba ──
 // (sonda `cli/_sonda_entrepiso.mjs`: la cara superior del entrepiso está a z = 4.6, y ≈ 126.7, x 17–23)
@@ -87,6 +108,32 @@ await pag.mouse.click(px[0].x, px[0].y); await espera(800); console.log(await es
     return { nudosPanos: nudosPanos.size, medidos: n, sinHit, peor_cm: +(peor * 100).toFixed(1), media_cm: +(suma / Math.max(1, n) * 100).toFixed(2), peores: lista.slice(0, 6), techoEnX: ext };
   });
   console.log("nudos vs superficie IFC:", JSON.stringify(m));
+}
+// ── 3c. exportar el dibujo a .heks (solo la bóveda: arcos + paños; el entrepiso queda fuera porque
+//        sus muros no están modelados) → para compararlo con ETABS por OAPI ──
+{
+  const M = await ev(() => { const P = window.__hekatanDrawingPoints.rawVal, PL = window.__hekatanDrawingPolylines.rawVal, A = new Set(window.__hekatanDrawingAreas.rawVal); return { P, PL, A: [...A] }; });
+  // nudos coincidentes (≤ 1 mm) → un solo id (por si quedara alguno duplicado)
+  // (por distancia, no por clave redondeada: un nudo extruido que cae a 1e-12 m de otro puede redondear al otro lado del milímetro)
+  const usados = new Map(); const idPorNudo = new Map();
+  const idDe = (i) => { if (idPorNudo.has(i)) return idPorNudo.get(i); const p = M.P[i]; for (const [id, j] of usados) { const q = M.P[j]; if (Math.abs(p[0] - q[0]) < 1.5e-3 && Math.abs(p[1] - q[1]) < 1.5e-3 && Math.abs(p[2] - q[2]) < 1.5e-3) { idPorNudo.set(i, id); return id; } } const id = usados.size + 1; usados.set(id, i); idPorNudo.set(i, id); return id; };
+  const L = ["selfweight 1"];
+  const barras = [], panos = [];
+  M.PL.forEach((pl, k) => { if (pl.length < 2) return; if (M.A.includes(k)) { if (pl.length >= 5 && pl[0] === pl[4] || pl.length === 4) panos.push(pl.slice(0, 4)); } else for (let i = 0; i + 1 < pl.length; i++) barras.push([pl[i], pl[i + 1]]); });
+  // entrepiso fuera: paños con z ≈ 4.6 (horizontal a esa cota)
+  const esEntrepiso = (q) => q.every((n) => Math.abs(M.P[n][2] - 4.6) < 0.05);
+  const panosBoveda = panos.filter((q) => !esEntrepiso(q));
+  for (const [a, b] of barras) { idDe(a); idDe(b); } for (const q of panosBoveda) q.forEach(idDe);
+  for (const [id, i] of usados) L.push(`node ${id} ${M.P[i].map((v) => +v.toFixed(4)).join(" ")}`);
+  // vigas de hormigón 0.30 × 0.50 (E 25e6 kN/m², ν 0.2, ρ 2.4 t/m³ — en el .heks rho es MASA, como en tests/datos): A, I22, I33, J
+  const b = 0.30, h = 0.50, A = b * h, I22 = h * b ** 3 / 12, I33 = b * h ** 3 / 12, J = 0.141 * b ** 3 * h;
+  barras.forEach(([a, c], k) => L.push(`frame ${k + 1} ${idDe(a)} ${idDe(c)} 25e6 ${A} ${I22.toExponential(4)} ${I33.toExponential(4)} ${J.toExponential(4)} 0.2 2.4`));
+  panosBoveda.forEach((q, k) => L.push(`shell ${k + 1} ${q.map(idDe).join(" ")} 0.20 25e6 0 2.4`));   // shell id n1..n4 t E q rho — el 8º token es CARGA (+z), no ν
+  // apoyos: arranque de la nave (z ≈ 4.02, sobre los muros) y pie del ala (z ≈ 0.4): articulados
+  let nAp = 0; for (const [id, i] of usados) { const z = M.P[i][2]; if (Math.abs(z - 4.02) < 0.05 || z < 0.5) { L.push(`support ${id} 1 1 1 1 1 1`); nAp++; } }
+  L.push("solve");   // sin esta línea cliModeler arma el modelo pero NO resuelve (deformaciones vacías)
+  const fs = await import("node:fs"); fs.writeFileSync("cli/shots/boveda_capilla.heks", L.join("\n") + "\n");
+  console.log("heks: nudos", usados.size, "barras", barras.length, "paños", panosBoveda.length, "(entrepiso fuera:", panos.length - panosBoveda.length, ") apoyos", nAp);
 }
 // ── 4. final: sin corte, iso, extruido ──
 await pag.keyboard.press("Escape"); await corte(null); await ev(() => { window.__hekatanClearSelection?.(); window.__hekatanCadState.setTool(null); window.__hekatanSetView?.("iso"); const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; }); await espera(1200); await foto("final_extruido");

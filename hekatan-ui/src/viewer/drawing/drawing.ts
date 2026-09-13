@@ -5816,7 +5816,15 @@ export function drawing({
     const cop = (n: number, i: number) => {
       if (i === 0) return n;
       const key = n + ":" + i; let j = copia.get(key);
-      if (j == null) { j = newPts.length; newPts.push([pts[n][0] + dx * i, pts[n][1] + dy * i, pts[n][2] + dz * i]); copia.set(key, j); }
+      if (j == null) {
+        const q: [number, number, number] = [pts[n][0] + dx * i, pts[n][1] + dy * i, pts[n][2] + dz * i];
+        // Si ya hay un nudo ahí (≤ 1 mm) se REUSA: es lo que cose el muro del escalón de la
+        // bóveda al borde del ala (ETABS lo haría al mallar por contacto). Sin esto salían
+        // dos nudos superpuestos y los paños no se tocaban.
+        j = newPts.findIndex((p) => Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3 && Math.abs(p[2] - q[2]) < 1e-3);
+        if (j < 0) { j = newPts.length; newPts.push(q); }
+        copia.set(key, j);
+      }
       return j;
     };
     let lineas = 0, areas = 0;
@@ -6191,7 +6199,11 @@ export function drawing({
       let pos = String((window as any).__hekatanIfcCaraPos ?? "auto");
       // ETABS: losa (cara con normal vertical) CARDINALPOINT "TOP" = la cara
       // tocada; muro (cara vertical) "MIDDLE" = plano medio.
-      if (pos === "auto") pos = Math.abs(n.z) > 0.5 ? "exterior" : "media";
+      // Jorge (13-sep): en HORMIGÓN la losa se inserta por arriba (TOP); en
+      // ACERO (deck/zinc sobre correas) por ABAJO: la chapa apoya sobre la viga,
+      // así que el plano de análisis es la cara inferior (BOTTOM = la de atrás).
+      let acero = false; try { const P = (window as any).__hekatanParams?.(); acero = Math.round(P?.matShell ?? 0) === 1; } catch {}
+      if (pos === "auto") pos = Math.abs(n.z) > 0.5 ? (acero ? "interior" : "exterior") : "media";
       const tEf = t ?? 0.2;
       const d = pos === "exterior" ? 0 : pos === "interior" ? tEf : tEf / 2;
       const pts = poly.map((q) => q.clone().addScaledVector(n, -d));
@@ -6201,7 +6213,7 @@ export function drawing({
       try { const P = (window as any).__hekatanParams?.(); if (P && t) { P.tShell = Math.round(t * 100) / 100; } } catch {}
       const formas = ["Shell-Thick (Mindlin)", "Shell-Thin (Kirchhoff)", "Membrana"];
       let forma = "la de «Sección shells»"; try { const P = (window as any).__hekatanParams?.(); if (P && P.formaPlaca != null) forma = formas[Math.round(P.formaPlaca)] ?? forma; } catch {}
-      const donde = pos === "exterior" ? "la cara TOCADA (punto de inserción SUPERIOR, como ETABS: CARDINALPOINT TOP, el espesor cuelga hacia dentro y la malla de análisis se queda en el plano dibujado)" : pos === "interior" ? "la cara de ATRÁS (inserción INFERIOR, desfase " + tEf.toFixed(2) + " m)" : "el PLANO MEDIO (desfase " + (tEf / 2).toFixed(2) + " m hacia dentro)";
+      const donde = pos === "exterior" ? "la cara TOCADA (punto de inserción SUPERIOR, como ETABS: CARDINALPOINT TOP, el espesor cuelga hacia dentro y la malla de análisis se queda en el plano dibujado)" : pos === "interior" ? "la cara de ATRÁS (inserción INFERIOR, desfase " + tEf.toFixed(2) + " m: en acero la chapa apoya por abajo sobre la viga)" : "el PLANO MEDIO (desfase " + (tEf / 2).toFixed(2) + " m hacia dentro)";
       updateStatus(`▦ Área desde la cara del IFC: ${poly.length} vértices, ${cnt} shell(s). Espesor medido ${t ? t.toFixed(2) + " m" : "no medido (0.20 m supuesto)"}; malla en ${donde}; formulación ${forma}, t = ${tEf.toFixed(2)} m.`);
       mostrarCara(null, -1, null);
       try { (window as any).__hekatanRebuild?.(); } catch {}
@@ -6213,12 +6225,22 @@ export function drawing({
       if (!_cadenaActual || _cadenaActual.length < 2) { updateStatus("⟋ Acercá el cursor a un borde o al perfil del corte del IFC: se ilumina en azul y el clic lo copia."); return; }
       const nuevos = cadenaABarras(_cadenaActual);
       pushUndo();
-      const baseIdx = drawingObj.points.rawVal.length;
-      drawingObj.points.val = [...drawingObj.points.rawVal, ...nuevos];
+      // Un nudo que ya existe en esa coordenada (≤ 1 mm) se REUSA: si no, la
+      // cumbre copiada después de la nave nacía con su propio nudo encima del
+      // de la nave y la bóveda quedaba en tiras sueltas (mecanismo; medido en
+      // cli/_boveda_completa.mjs: deformaciones vacías).
+      const P0 = drawingObj.points.rawVal;
+      const idx: number[] = []; const agregados: [number, number, number][] = [];
+      for (const q of nuevos) {
+        let k = P0.findIndex((p) => Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3 && Math.abs(p[2] - q[2]) < 1e-3);
+        if (k < 0) { k = P0.length + agregados.length; agregados.push(q); }
+        idx.push(k);
+      }
+      drawingObj.points.val = [...P0, ...agregados];
       if (drawingObj.polylines) {
         const polys = drawingObj.polylines.rawVal;
         const cola = polys.length && polys[polys.length - 1].length === 0 ? polys.slice(0, -1) : polys;
-        drawingObj.polylines.val = [...cola, nuevos.map((_, i) => baseIdx + i), []];
+        drawingObj.polylines.val = [...cola, idx, []];
       }
       const Ltot = _cadenaActual.reduce((s, p, i) => i ? s + p.distanceTo(_cadenaActual![i - 1]) : 0, 0);
       updateStatus(`⟋ Línea del IFC copiada: ${nuevos.length - 1} tramo(s), ${Ltot.toFixed(2)} m de desarrollo.`);

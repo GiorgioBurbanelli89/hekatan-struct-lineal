@@ -1895,8 +1895,11 @@ function exportFromScratch(input: ExportE2kInput): string {
       // Ojo con el signo: en Hekatan (Z arriba) la carga hacia abajo es
       // NEGATIVA, pero DIR "GRAV" de ETABS YA apunta hacia abajo. Pasarle el
       // -0.0093 tal cual la levantaria. Medido en re_carga_inclinada_etabs.py.
+      // Y no `Math.abs`: una carga POSITIVA en Hekatan (succion de viento, +z)
+      // salia tambien hacia abajo. Medido en la boveda de la capilla (13-sep-2026):
+      // +0.2 kN/m2 colado en el .heks subia 51 kN en Hekatan y bajaba 42 en ETABS.
       const dir = q.dir ?? "GRAV";
-      const fval = dir === "GRAV" ? Math.abs(q.value) : q.value;
+      const fval = dir === "GRAV" ? -q.value : q.value;
       // ⚠️ FVAL es una PRESION: N/mm², no N/m². Con cF a secas (kN → N) el
       // 6.85 kN/m² del mezanine salia como 6850 y ETABS lo leia como 6850 N/mm²
       // = 6.85e9 N/m²: ΣRz 2.25e9 kN y la losa a −21 km (medido 2-sep-2026,

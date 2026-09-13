@@ -962,7 +962,7 @@ SAP2000 y Hekatan solo conectan los 4 nudos y pesan en las 4 esquinas.
   `SetLoadUniformToFrame` (tributaria). Medido en `validation/modelos/deck-edge/mez_undeck` (5 viguetas
   por el lado corto, un paño de 4 nudos, 60 kN): two-way = ETABS = Hekatan `deck etabs` (1.8/0.9/0.5
   kN/m, flechas 1.2e-3 %); one-way (2.0/1.0/0) = `deck etabs oneway`. Sin `--sapdeck`, SAP manda los
-  60 kN a las 4 esquinas = Hekatan sin directiva. Sintaxis `.heks`: `shell id n1..n4 t E nu rho` (t primero).
+  60 kN a las 4 esquinas = Hekatan sin directiva. Sintaxis `.heks`: `shell id n1..n4 t E [q] [rho]` (t primero; el 8º token es CARGA de superficie +z, kN/m², NO ν — un `0.2` ahí es 0.2 kN/m² hacia ARRIBA; ρ en t/m³).
 - `csi_desde_dump.py … --watchdog N`: relanza el driver si SAP2000 se cuelga (15 min, mata el
   proceso y reintenta N veces). `--arealoads Live=sinDir.json:conDir.json`: CSI recibe la carga
   de ÁREA (SetLoadUniform) y hace su transferencia; se compara con Hekatan `deck etabs`.
