@@ -338,6 +338,10 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     hooks.splitState.enabled = !hooks.splitState.enabled;
     if (hooks.splitState.enabled) {
       hooks.splitState.secondary = 0;
+      // ⚠️ refreshSplit GUARDA la cámara que hay para devolverla al apagar: tiene
+      // que ir ANTES de setPlane("xy"), que ya la cambia a planta (si no, lo que
+      // se guardaba era la planta y al apagar se quedaba en planta).
+      hooks.refreshSplit();
       setPlane("xy");
     }
     hooks.refreshSplit();

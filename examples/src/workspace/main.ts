@@ -2986,7 +2986,18 @@ function runCadDemo(): void {
   document.getElementById("hk-demo-status")?.remove();
 };
 
+// La vista que hay puesta, para poder VOLVER a ella (la vista doble la cambia a
+// planta al activarse y tiene que devolver la de antes al apagarse).
+// (`var` y `function`: se izan; setView puede llamarse antes de llegar aquí)
+var vistaActual: "iso" | "plan" | "elevX" | "elevY" = "iso";
+// Tamaño que encuadra un lienzo VACÍO: la rejilla (antes 10 m fijos, y una
+// rejilla de 20 m salía cortada en planta y la iso pegada al suelo).
+function diagLienzo(): number {
+  const gs = Number((window as any).__hekatanGridConfig?.gridSize) || 20;
+  return gs * Math.SQRT2;
+}
 function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
+  vistaActual = preset;
   // Sincroniza plano CAD + drawing plane con la vista
   const cadSt = (window as any).__hekatanCadState?.get?.();
   if (cadSt) {
@@ -3034,7 +3045,7 @@ function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
 
   // BBox con fallback robusto (lienzo vacío → centrado en origen, diag=10)
   const nodesArr = states.nodes.rawVal ?? [];
-  let cx = 0, cy = 0, cz = 0, diag = 10;
+  let cx = 0, cy = 0, cz = 0, diag = diagLienzo();
   if (nodesArr.length > 0) {
     let xMin=Infinity,yMin=Infinity,zMin=Infinity,xMax=-Infinity,yMax=-Infinity,zMax=-Infinity;
     for (const n of nodesArr) {
@@ -3622,7 +3633,7 @@ function buildParamsPane() {
     const h = (viewerElm as HTMLElement).clientHeight || window.innerHeight;
     const aspect = (w / 2) / h;  // panel derecho = media-pantalla
     const nodesArr = states.nodes.rawVal ?? [];
-    let cx=0,cy=0,cz=0,diag=10;
+    let cx=0,cy=0,cz=0,diag=diagLienzo();
     if (nodesArr.length) {
       let xMin=Infinity,yMin=Infinity,zMin=Infinity,xMax=-Infinity,yMax=-Infinity,zMax=-Infinity;
       for (const n of nodesArr) {
@@ -3652,13 +3663,44 @@ function buildParamsPane() {
     oc.lookAt(cx, cy, cz); oc.updateProjectionMatrix();
     return oc;
   };
+  // ⚠️ Al apagar la vista doble se quedaba en PLANTA ortográfica (la que pone
+  // al encenderse) en vez de volver a lo que se veía: aquí se guarda la CÁMARA
+  // tal cual (cuál, posición, objetivo, zoom/frustum, plano de trabajo) al
+  // encender y se restaura al apagar. Vale para los dos botones (el del panel
+  // CAD y el de la carpeta Vista), porque los dos pasan por aquí.
+  let splitCamGuardada: any = null;
+  let splitEstabaActiva = false;
   const refreshSplit = () => {
     const ctx: any = (viewerElm as any).__ctx;
     if (!ctx?.setSplitMode) return;
     if (splitState.enabled) {
+      if (!splitEstabaActiva) {
+        const cam = ctx.camera;
+        splitCamGuardada = cam ? {
+          cam, pos: cam.position.clone(), up: cam.up.clone(), target: ctx.controls.target.clone(),
+          zoom: cam.zoom, t: cam.top, b: cam.bottom,
+          plano: (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy",
+        } : null;
+      }
+      splitEstabaActiva = true;
       ctx.setSplitMode(true, buildSecondaryCamera(splitState.secondary));
     } else {
       ctx.setSplitMode(false);
+      const s = splitCamGuardada;
+      if (splitEstabaActiva && s) {
+        const cam = s.cam;
+        cam.position.copy(s.pos); cam.up.copy(s.up); ctx.controls.target.copy(s.target);
+        if (cam.isOrthographicCamera) {
+          const w = (viewerElm as HTMLElement).clientWidth || 1, h = (viewerElm as HTMLElement).clientHeight || 1;
+          cam.top = s.t; cam.bottom = s.b; cam.left = -s.t * (w / h); cam.right = s.t * (w / h);
+        }
+        cam.zoom = s.zoom; cam.updateProjectionMatrix(); cam.lookAt(s.target);
+        ctx.setActiveCamera(cam); ctx.controls.update();
+        const st = (window as any).__hekatanCadState?.get?.();
+        if (st && s.plano && st.workPlane !== s.plano) st.workPlane = s.plano;
+        ctx.render?.();
+      }
+      splitEstabaActiva = false;
     }
   };
   fSplit.addBinding(splitState, "enabled", { label: "Activar" }).on("change", refreshSplit);
@@ -3980,16 +4022,44 @@ function buildParamsPane() {
     // Vista doble: planta dibujable a la izquierda + iso preview a la derecha.
     // Toggle: 1er click activa, 2do click desactiva. El folder "🔀 Vista doble
     // (split)" en Vista expone configuración avanzada (otra cámara secundaria).
+    // ⚠️ Al apagarla se quedaba en PLANTA ortográfica (la que puso al
+    // encenderse) en vez de volver a la vista que había: se guarda y se
+    // restaura. Y el encuadre de un lienzo vacío va por la rejilla (diagLienzo).
+    // Se guarda la CÁMARA tal cual (cuál, posición, objetivo, zoom/frustum), no
+    // un nombre de vista: el nombre podía ser «plan» por el plano de trabajo
+    // inicial aunque lo que se veía fuera la iso, y al apagar caía en planta.
+    let camaraAntesDeDoble: any = null;
     fPlane.addButton({ title: "🔀 Vista doble (planta + iso)" }).on("click", () => {
+      const ctx: any = (viewerElm as any).__ctx;
       splitState.enabled = !splitState.enabled;
       if (splitState.enabled) {
+        const cam = ctx?.camera;
+        camaraAntesDeDoble = cam ? {
+          cam, pos: cam.position.clone(), up: cam.up.clone(), target: ctx.controls.target.clone(),
+          zoom: cam.zoom, l: cam.left, r: cam.right, t: cam.top, b: cam.bottom, plano: (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy",
+        } : null;
         splitState.secondary = 0;  // 0 = iso a la derecha
         setPlane("xy");            // planta a la izquierda (vista activa, dibujable)
         console.log("[CAD] Vista doble ACTIVADA — planta (izq, dibujable) + iso (der, preview)");
+        refreshSplit();
       } else {
-        console.log("[CAD] Vista doble DESACTIVADA");
+        refreshSplit();            // a pantalla completa (aspect entero)
+        const s = camaraAntesDeDoble;
+        if (s && ctx) {
+          const cam = s.cam;
+          cam.position.copy(s.pos); cam.up.copy(s.up); ctx.controls.target.copy(s.target);
+          if (cam.isOrthographicCamera) {
+            // el frustum vertical de antes, con el ancho de la pantalla entera
+            const w = (viewerElm as HTMLElement).clientWidth || 1, h = (viewerElm as HTMLElement).clientHeight || 1;
+            cam.top = s.t; cam.bottom = s.b; cam.left = -s.t * (w / h); cam.right = s.t * (w / h);
+          }
+          cam.zoom = s.zoom; cam.updateProjectionMatrix(); cam.lookAt(s.target);
+          ctx.setActiveCamera(cam); ctx.controls.update();
+          if (s.plano !== "xy") setPlane(s.plano);
+          ctx.render?.();
+        }
+        console.log("[CAD] Vista doble DESACTIVADA — vuelve a la cámara de antes");
       }
-      refreshSplit();
     });
     // Planos de referencia visibles — guías horizontales a Z=0,3,6,9,12 m
     // (niveles típicos de pisos). Útil para orientarse en iso 3D.
