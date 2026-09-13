@@ -48,7 +48,10 @@ const PE = (folder: string, label: string, def: number, options: Record<string, 
  *  fijos a ±50 m y una iglesia a Y = 125 no se podía cortar). */
 const referenciaIfc = (p: Record<string, number>) => {
   if (Math.round(p.refIfc ?? 1) !== 1) return [];
-  const objs = mallasIfc((p.refOpac ?? 35) / 100, true);
+  const modo = Math.round(p.refModo ?? 0);
+  const op = modo === 1 ? 0.12 : modo === 2 ? 0.04 : (p.refOpac ?? 35) / 100;
+  const objs = mallasIfc(op, true);
+  if (modo === 2) { (window as any).__hekatanRefIfcBordes = true; try { (window as any).__hekatanRefIfcBordesRefrescar?.(); } catch {} }
   const M = (window as any).__hekatanIfcMesh;
   if (objs.length && M?.bbox) try { (window as any).__hekatanClipRango?.(M.bbox[0], M.bbox[1]); } catch {}
   return objs;
@@ -121,6 +124,7 @@ export const newBlank: ExampleDef = {
     // el nudo. Los cortes (✂ Cortes X/Y/Z) dejan una elevación limpia.
     refIfc:  PE("🏛 Referencia IFC", "Mostrar IFC de fondo", 1, { "Sí": 1, "No": 0 }),
     refOpac: P("🏛 Referencia IFC", "Opacidad (%)", 35, 10, 100, 5),
+    refModo: PE("🏛 Referencia IFC", "Ver como", 0, { "Sólido tenue": 0, "Transparente (ver por dentro)": 1, "Solo bordes (líneas)": 2 }),
   },
 
   build(p, states) {

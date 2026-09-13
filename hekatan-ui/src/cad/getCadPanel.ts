@@ -80,6 +80,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     extend:   "↦ Alargar — clic en el contorno, luego en la línea a alargar (cerca del extremo).",
     chaflan:  "▱ Losa con chaflanes — click 2 esquinas. Radio en slider 'Chaflán r'.",
     "delete": "🗑 Borrar — hover sobre línea/área (se resalta en rojo) + click para eliminar.",
+    ifcface: "▦ Área desde cara del IFC — pasá el cursor por una cara (se ilumina en cian; naranja = curva) y hacé clic. La malla va donde diga «Malla del área IFC».",
+    ifcline: "⟋ Copiar línea del IFC — acercá el cursor a un borde o al perfil del corte (se ilumina en azul) y hacé clic.",
     select:   "🖱 Seleccionar — click sobre un elemento. Sin tool activo no se crean nodos.",
   };
   const setActiveTool = (tool: string) => {
@@ -133,6 +135,10 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     try { (window as any).__hekatanCadUpdateStatus?.(`✓ ${n} área(s) creada(s) en celdas cerradas.`); } catch {}
   });
   fArea.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
+  // Cara del IFC de fondo → área (la cara se ilumina al pasar el cursor).
+  fArea.addButton({ title: "▦ Área desde cara del IFC (se ilumina)" }).on("click", () => setActiveTool("ifcface"));
+  const proxyCara = { pos: "media" };
+  fArea.addBinding(proxyCara, "pos", { label: "Malla del área IFC", options: { "Plano medio (t/2)": "media", "Cara exterior (la tocada)": "exterior", "Cara interior": "interior" } }).on("change", (ev: any) => { (window as any).__hekatanIfcCaraPos = ev.value; });
 
   const f3D = fCad.addFolder({ title: "🧊 En 3D", expanded: false });
   f3D.addButton({ title: "▌ Columna 3D (1 click + altura)" }).on("click", () => setActiveTool("col"));

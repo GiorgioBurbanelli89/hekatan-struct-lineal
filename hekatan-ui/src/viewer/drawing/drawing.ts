@@ -254,6 +254,114 @@ export function drawing({
     return out;
   };
   (window as any).__hekatanCadenaIfc = () => (_cadenaActual || []).map((p) => [p.x, p.y, p.z]);
+  // ── CARAS de la referencia IFC («Área desde cara») ─────────────────────────
+  // Jorge (13-sep-2026): «pase con el cursor por el IFC donde es una cara, se
+  // seleccione esa cara… agregar área». Con la herramienta ifcface, la cara
+  // bajo el cursor (triángulos vecinos con la misma normal, ±12°) se ilumina en
+  // cian; el clic la convierte en área: contorno de la región, y la malla se
+  // pone donde diga «Malla del área IFC»: PLANO MEDIO (defecto), cara exterior
+  // (la tocada) o cara interior (la otra cara del espesor). El espesor se MIDE
+  // con un rayo hacia dentro del objeto. Cara curva → no: arco + Extruir.
+  type Topo = { V: Float64Array; N: Float64Array; vec: Int32Array; n: number };
+  const _topo = new Map<number, Topo>();
+  const topoDe = (m: THREE.Mesh): Topo => {
+    const c = _topo.get(m.id); if (c) return c;
+    const pos = (m.geometry as THREE.BufferGeometry).getAttribute("position");
+    const n = pos ? Math.floor(pos.count / 3) : 0;
+    const V = new Float64Array(n * 9), N = new Float64Array(n * 3), vec = new Int32Array(n * 3).fill(-1);
+    if (pos) {
+      m.updateMatrixWorld();
+      const v = new THREE.Vector3();
+      for (let i = 0; i < n * 3; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); V[3 * i] = v.x; V[3 * i + 1] = v.y; V[3 * i + 2] = v.z; }
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), nn = new THREE.Vector3();
+      const key = (i: number) => Math.round(V[3 * i] * 1e3) + "," + Math.round(V[3 * i + 1] * 1e3) + "," + Math.round(V[3 * i + 2] * 1e3);
+      const ar = new Map<string, number[]>();
+      for (let t = 0; t < n; t++) {
+        const i0 = 3 * t;
+        a.set(V[3 * (i0 + 1)] - V[3 * i0], V[3 * (i0 + 1) + 1] - V[3 * i0 + 1], V[3 * (i0 + 1) + 2] - V[3 * i0 + 2]);
+        b.set(V[3 * (i0 + 2)] - V[3 * i0], V[3 * (i0 + 2) + 1] - V[3 * i0 + 1], V[3 * (i0 + 2) + 2] - V[3 * i0 + 2]);
+        nn.crossVectors(a, b).normalize(); N[3 * t] = nn.x; N[3 * t + 1] = nn.y; N[3 * t + 2] = nn.z;
+        for (let e = 0; e < 3; e++) {
+          const ki = key(i0 + e), kj = key(i0 + ((e + 1) % 3)); const k = ki < kj ? ki + "|" + kj : kj + "|" + ki;
+          const r = ar.get(k); if (r) r.push(t, e); else ar.set(k, [t, e]);
+        }
+      }
+      for (const r of ar.values()) if (r.length === 4) { vec[3 * r[0] + r[1]] = r[2]; vec[3 * r[2] + r[3]] = r[0]; }
+    }
+    const res = { V, N, vec, n }; _topo.set(m.id, res); return res;
+  };
+  const caraMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, depthTest: false, side: THREE.DoubleSide }));
+  caraMesh.name = "ref-ifc-cara"; caraMesh.renderOrder = 999; caraMesh.frustumCulled = false; caraMesh.visible = false;
+  scene.add(caraMesh);
+  let _cara: { m: THREE.Mesh; t0: number; tris: number[]; normal: THREE.Vector3; plana: boolean; punto: THREE.Vector3 } | null = null;
+  const regionCara = (T: Topo, t0: number): number[] => {
+    const COS12 = Math.cos(12 * Math.PI / 180), COS80 = Math.cos(80 * Math.PI / 180);
+    const n0 = [T.N[3 * t0], T.N[3 * t0 + 1], T.N[3 * t0 + 2]];
+    const vis = new Uint8Array(T.n); const out: number[] = []; const cola = [t0]; vis[t0] = 1;
+    while (cola.length && out.length < 40000) {
+      const t = cola.pop()!; out.push(t);
+      for (let e = 0; e < 3; e++) {
+        const u = T.vec[3 * t + e]; if (u < 0 || vis[u]) continue;
+        const cAdj = T.N[3 * t] * T.N[3 * u] + T.N[3 * t + 1] * T.N[3 * u + 1] + T.N[3 * t + 2] * T.N[3 * u + 2];
+        const cSem = n0[0] * T.N[3 * u] + n0[1] * T.N[3 * u + 1] + n0[2] * T.N[3 * u + 2];
+        if (cAdj >= COS12 && cSem >= COS80) { vis[u] = 1; cola.push(u); }
+      }
+    }
+    return out;
+  };
+  const mostrarCara = (m: THREE.Mesh | null, t0: number, punto: THREE.Vector3 | null) => {
+    if (!m || t0 < 0 || !punto) { if (_cara) { _cara = null; caraMesh.visible = false; } return; }
+    if (_cara && _cara.m === m && _cara.tris.indexOf(t0) >= 0) { _cara.punto = punto.clone(); return; }
+    const T = topoDe(m); const tris = regionCara(T, t0);
+    const pos = new Float32Array(tris.length * 9);
+    const nm = new THREE.Vector3(); let plana = true;
+    tris.forEach((t, k) => { for (let j = 0; j < 9; j++) pos[9 * k + j] = T.V[9 * t + j]; nm.x += T.N[3 * t]; nm.y += T.N[3 * t + 1]; nm.z += T.N[3 * t + 2]; });
+    nm.normalize();
+    for (const t of tris) if (nm.x * T.N[3 * t] + nm.y * T.N[3 * t + 1] + nm.z * T.N[3 * t + 2] < Math.cos(5 * Math.PI / 180)) { plana = false; break; }
+    caraMesh.geometry.dispose(); caraMesh.geometry = new THREE.BufferGeometry(); caraMesh.geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    (caraMesh.material as THREE.MeshBasicMaterial).color.set(plana ? 0x38bdf8 : 0xf59e0b);
+    caraMesh.visible = true;
+    _cara = { m, t0, tris, normal: nm, plana, punto: punto.clone() };
+  };
+  /** Contorno (bucle más largo) de la región, simplificado (vértices colineales fuera). */
+  const contornoCara = (T: Topo, tris: number[]): THREE.Vector3[] => {
+    const enR = new Uint8Array(T.n); for (const t of tris) enR[t] = 1;
+    const key = (i: number) => Math.round(T.V[3 * i] * 1e3) + "," + Math.round(T.V[3 * i + 1] * 1e3) + "," + Math.round(T.V[3 * i + 2] * 1e3);
+    const adj = new Map<string, string[]>(); const pt = new Map<string, THREE.Vector3>();
+    for (const t of tris) for (let e = 0; e < 3; e++) {
+      const u = T.vec[3 * t + e]; if (u >= 0 && enR[u]) continue;   // arista interior
+      const i = 3 * t + e, j = 3 * t + ((e + 1) % 3); const ki = key(i), kj = key(j);
+      pt.set(ki, new THREE.Vector3(T.V[3 * i], T.V[3 * i + 1], T.V[3 * i + 2])); pt.set(kj, new THREE.Vector3(T.V[3 * j], T.V[3 * j + 1], T.V[3 * j + 2]));
+      (adj.get(ki) || adj.set(ki, []).get(ki)!).push(kj); (adj.get(kj) || adj.set(kj, []).get(kj)!).push(ki);
+    }
+    const usado = new Set<string>(); let mejor: string[] = [];
+    for (const k0 of adj.keys()) {
+      if (usado.has(k0)) continue;
+      const loop = [k0]; usado.add(k0); let prev = "", cur = k0;
+      for (let paso = 0; paso < 100000; paso++) {
+        const nx = (adj.get(cur) || []).find((k) => k !== prev && !usado.has(k)); if (!nx) break;
+        loop.push(nx); usado.add(nx); prev = cur; cur = nx;
+      }
+      if (loop.length > mejor.length) mejor = loop;
+    }
+    const P = mejor.map((k) => pt.get(k)!);
+    // quitar colineales y repetidos
+    const out: THREE.Vector3[] = [];
+    for (let i = 0; i < P.length; i++) {
+      const a = P[(i + P.length - 1) % P.length], b = P[i], c = P[(i + 1) % P.length];
+      if (b.distanceTo(a) < 1e-3) continue;
+      const d0 = b.clone().sub(a).normalize(), d1 = c.clone().sub(b).normalize();
+      if (d0.dot(d1) > Math.cos(3 * Math.PI / 180)) continue;
+      out.push(b);
+    }
+    return out;
+  };
+  /** Espesor del objeto bajo la cara: rayo hacia dentro desde el punto tocado. */
+  const espesorEn = (m: THREE.Mesh, p: THREE.Vector3, n: THREE.Vector3): number | null => {
+    const rc = new THREE.Raycaster(p.clone().addScaledVector(n, -0.002), n.clone().negate(), 0, 3);
+    const h = rc.intersectObject(m, false); return h.length ? h[0].distance + 0.002 : null;
+  };
+  (window as any).__hekatanCaraIfc = () => _cara ? { tris: _cara.tris.length, plana: _cara.plana, normal: _cara.normal.toArray() } : null;
   type Bordes = { segs: Float32Array; celdas: Map<string, number[]>; adj?: Map<string, number[]> };
   const _bordes = new Map<number, Bordes>();
   const bordesLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, depthTest: true }));
@@ -364,6 +472,9 @@ export function drawing({
     });
     if (!hits.length) return null;
     const h0 = hits[0], h1 = hits[1];
+    // Herramienta «Área desde cara»: la cara bajo el cursor se ilumina.
+    if ((window as any).__hekatanCadState?.get?.()?.tool === "ifcface") mostrarCara(h0.object as THREE.Mesh, h0.faceIndex ?? -1, h0.point);
+    else if (_cara) mostrarCara(null, -1, null);
     // Vértice o borde de la malla cerca del cursor: manda sobre cara y eje.
     const be = snapBordeIfc(h0.object as THREE.Mesh, h0.point);
     if (be) { _refHit = { tipo: be.tipo }; return [{ ...h0, point: be.punto } as THREE.Intersection]; }
@@ -6053,6 +6164,30 @@ export function drawing({
       updateStatus(`✓ Círculo dibujado en ${planeKind.toUpperCase()} — r=${r.toFixed(2)}m, ${segs} segmentos`);
       pendingClicks = [];
       try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "ifcface") {
+      if (!_cara) { updateStatus("▦ Acercá el cursor a una cara del IFC: se ilumina en cian y el clic la convierte en área."); return; }
+      if (!_cara.plana) { updateStatus("▦ Esa cara es CURVA (naranja): ETABS no admite áreas curvas. Copiá el arco con «Copiar línea del IFC» y extruílo (Editar › Extruir) para tener paños planos."); return; }
+      const T = topoDe(_cara.m); const poly = contornoCara(T, _cara.tris);
+      if (poly.length < 3) { updateStatus("▦ No se pudo cerrar el contorno de la cara."); return; }
+      const n = _cara.normal.clone();
+      const t = espesorEn(_cara.m, _cara.punto, n);
+      const pos = String((window as any).__hekatanIfcCaraPos ?? "media");
+      const tEf = t ?? 0.2;
+      const d = pos === "exterior" ? 0 : pos === "interior" ? tEf : tEf / 2;
+      const pts = poly.map((q) => q.clone().addScaledVector(n, -d));
+      pushUndo();
+      polyAreaPts = pts.map((q) => [q.x, q.y, q.z] as [number, number, number]);
+      const cnt = finalizePolyArea();
+      try { const P = (window as any).__hekatanParams?.(); if (P && t) { P.tShell = Math.round(t * 100) / 100; } } catch {}
+      const formas = ["Shell-Thick (Mindlin)", "Shell-Thin (Kirchhoff)", "Membrana"];
+      let forma = "la de «Sección shells»"; try { const P = (window as any).__hekatanParams?.(); if (P && P.formaPlaca != null) forma = formas[Math.round(P.formaPlaca)] ?? forma; } catch {}
+      const donde = pos === "exterior" ? "la CARA EXTERIOR (la tocada)" : pos === "interior" ? "la CARA INTERIOR (desfase " + tEf.toFixed(2) + " m hacia dentro)" : "el PLANO MEDIO (desfase " + (tEf / 2).toFixed(2) + " m hacia dentro)";
+      updateStatus(`▦ Área desde la cara del IFC: ${poly.length} vértices, ${cnt} shell(s). Espesor medido ${t ? t.toFixed(2) + " m" : "no medido (0.20 m supuesto)"}; malla en ${donde}; formulación ${forma}, t = ${tEf.toFixed(2)} m.`);
+      mostrarCara(null, -1, null);
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      viewerRender();
       return;
     }
     if (tool === "ifcline") {
