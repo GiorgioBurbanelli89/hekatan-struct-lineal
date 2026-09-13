@@ -2795,6 +2795,26 @@ function showMenu() {
     const ex = examplesRegistry.find((e) => e.id === "csi-importer");
     if (ex) loadExample(ex);
   });
+  // Jorge (13-sep-2026), al abrir la app: «¿dónde está el IFC?». Estaba a tres
+  // clics (Lienzo › Importar archivo). Desde aquí: se elige el .ifc y se abre el
+  // lienzo con el IFC de fondo como referencia para dibujar encima.
+  fMenu.addButton({ title: "🏛 Dibujar sobre un IFC (referencia)" }).on("click", () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = ".ifc,.txt";
+    input.onchange = async (ev: any) => {
+      const file = ev.target.files?.[0]; if (!file) return;
+      try {
+        const { parseIfc } = await import("../shared/ifcParser");
+        const M: any = parseIfc(await file.text(), 0.001);
+        M.archivo = file.name;
+        (window as any).__hekatanIfcMesh = M;
+        const ex = examplesRegistry.find((e) => e.id === "new-blank");
+        if (ex) loadExample(ex);
+        console.log(`✅ IFC de referencia: ${file.name} — ${M.grupos.length} objetos, ${M.nTri} triángulos.`);
+      } catch (e: any) { alert(`Error importando IFC: ${e?.message ?? e}`); console.error(e); }
+    };
+    input.click();
+  });
   fMenu.addButton({ title: "🧪 Ejemplos" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "test-m-dual");
     if (ex) loadExample(ex);
