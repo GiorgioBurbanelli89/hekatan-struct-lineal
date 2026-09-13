@@ -1,6 +1,6 @@
 A Warren truss in Hekatan Struct, start to finish and only with the quick-access ribbon: draw, support, load and see the analysis. No menus to open.
 The ribbon has two rows. Top: draw, structure, analyze and view; bottom: modify, grid, level and load. I press Front, the X Z elevation, and turn on SNAP in the bottom bar so every click lands exactly on the grid.
-Bottom chord: I press Polyline and click seven times, from zero to twelve metres every two metres. Next to the cursor you see the length and angle of each segment. Right click to finish.
+Bottom chord: I press Polyline and click seven times, from zero to twelve metres every two metres. Next to the cursor you see the length and angle of each segment. Enter to finish.
 Top chord: another polyline, six clicks at two metres height, one over the centre of each panel.
 Diagonals: a single zigzag polyline, thirteen clicks alternating bottom and top. When a click lands on an existing node it is reused, not duplicated, like ETABS joints. Thirteen nodes and twenty-three members.
 Supports: I press Support on the ribbon and click once on each end of the bottom chord. They are fixed.

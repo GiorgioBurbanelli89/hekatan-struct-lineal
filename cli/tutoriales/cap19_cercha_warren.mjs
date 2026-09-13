@@ -63,7 +63,10 @@ const L = 12, H = 2, n = 6, d = L / n;
 const inf = Array.from({ length: n + 1 }, (_, i) => [i * d, 0, 0]);
 const sup = Array.from({ length: n }, (_, i) => [(i + 0.5) * d, 0, H]);
 const zig = []; for (let i = 0; i < n; i++) { zig.push(inf[i]); zig.push(sup[i]); } zig.push(inf[n]);
-const terminar = async (a, p) => { const [q] = await proj(a, [p]); await clicRojo(a, q.x + 40, q.y - 40, false, "right"); };
+// Enter termina la polilínea (el clic derecho abre el menú contextual y ensucia el vídeo)
+const terminar = async (a, p) => { const [q] = await proj(a, [p]); await mover(a, q.x + 40, q.y - 40, 6); await a.pag.keyboard.press("Enter"); await a.quieto(2, 260); };
+// acercar con la rueda sobre un punto del mundo (la cercha de 12 × 2 m salía diminuta en la rejilla de 20 m)
+const acercar = async (a, p, n) => { const [q] = await proj(a, [p]); await mover(a, q.x, q.y, 10); for (let i = 0; i < n; i++) { await a.pag.mouse.wheel({ deltaY: -120 }); await a.quieto(1, 120); } await a.quieto(2, 260); };
 const modelo = (a) => a.pag.evaluate(() => { const S = window.__hekatanStates; const D = S.deformOutputs.rawVal; const A = S.analyzeOutputs.rawVal; const u = D?.deformations ? Math.max(...[...D.deformations.values()].map((v) => Math.abs(v[2]))) : 0; const N = A?.normals ? Math.max(...[...A.normals.values()].map((v) => Math.max(...v.map(Math.abs)))) : 0; return { nudos: S.nodes.rawVal.length, barras: S.elements.rawVal.length, apoyos: S.nodeInputs.rawVal.supports?.size ?? 0, cargas: S.nodeInputs.rawVal.loads?.size ?? 0, uz_mm: +(u * 1000).toFixed(3), N_kN: +N.toFixed(2) }; });
 
 export const pasos = [
@@ -78,13 +81,14 @@ export const pasos = [
       if (r) { await caja(a, { x: r.rx, y: r.ry, w: r.rw, h: r.rh / 2 }, "Fila 1: Dibujar · Estructura · Analizar · Vista.", 6); await caja(a, { x: r.rx, y: r.ry + r.rh / 2, w: r.rw, h: r.rh / 2 }, "Fila 2: Modificar · Rejilla · Cota Z · Carga.", 6); }
       await cinta(a, "Frente", "Frente: alzado X-Z, el clic cae en Y = 0.");
       await barraEstado(a, "^SNAP", "SNAP (F9): el clic cae en la rejilla, coordenadas exactas.");
+      await acercar(a, [6, 0, 1], 6);
       await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "2 · Cordón inferior: Polilínea, 7 clics de 0 a 12 m cada 2 m, clic derecho para terminar",
+    rotulo: "2 · Cordón inferior: Polilínea, 7 clics de 0 a 12 m cada 2 m, Enter para terminar",
     hacer: async (a) => {
-      await cinta(a, "Polilínea", "Polilínea: clics seguidos, clic derecho termina.");
+      await cinta(a, "Polilínea", "Polilínea: clics seguidos, Enter termina.");
       for (let i = 0; i <= n; i++) await clicMundo(a, inf[i], i === 0 ? "(0, 0)" : i === n ? "(12, 0)" : "");
       await terminar(a, inf[n]); await a.quieto(3, 320);
     },
