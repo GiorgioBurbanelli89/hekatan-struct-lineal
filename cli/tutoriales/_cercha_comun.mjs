@@ -78,7 +78,7 @@ const modelo = (a) => a.pag.evaluate(() => { const S = window.__hekatanStates; c
 const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada(`Cercha ${NOMBRE[tipo]}: dibujar, apoyar, cargar y calcular`, `Tutorial ${NUM[tipo]}`, 16); } },
   {
-    rotulo: "1 · La cinta de acceso rápido (dos filas): Frente XZ y SNAP",
+    rotulo: "1 · La cinta de acceso rápido (dos filas): Frente XZ y SNAP (en la cinta)",
     hacer: async (a) => {
       await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo", "0"); } catch (e) {} try { window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = [[]]; window.__hekatanDrawingAreas.val = []; } catch (e) {} });
       await a.general(); await a.quieto(2, 320);
@@ -86,7 +86,7 @@ const pasos = [
       const r = await rect(a, () => document.getElementById("hk-ribbon"));
       if (r) { await caja(a, { x: r.rx, y: r.ry, w: r.rw, h: r.rh / 2 }, "Fila 1: Dibujar · Estructura · Analizar · Vista.", 6); await caja(a, { x: r.rx, y: r.ry + r.rh / 2, w: r.rw, h: r.rh / 2 }, "Fila 2: Modificar · Rejilla · Cota Z · Carga.", 6); }
       await cinta(a, "Frente", "Frente: alzado X-Z, el clic cae en Y = 0.");
-      await barraEstado(a, "^SNAP", "SNAP (F9): el clic cae en la rejilla, coordenadas exactas.");
+      await cinta(a, "SNAP", "SNAP (F9): el clic cae en la rejilla, coordenadas exactas.");
       await acercar(a, [0, 0, 1], 24);   // ~5 % por muesca: 24 muescas ≈ ×3
       await a.quieto(3, 320);
     },
@@ -129,9 +129,16 @@ const pasos = [
     rotulo: "5 · Apoyos: «Apoyo» de la cinta y un clic en cada extremo",
     hacer: async (a) => {
       await cinta(a, "Apoyo", "Apoyo: clic sobre un nudo, lo empotra.");
-      await clicMundo(a, inf[0], "Apoyo izquierdo.", true);
+      await clicMundo(a, inf[0], "Apoyo izquierdo: EMPOTRADO por defecto (Ux Uy Uz Rx Ry Rz).", true);
       await clicMundo(a, inf[n], "Apoyo derecho.", true);
-      await a.quieto(3, 320);
+      await a.quieto(2, 320);
+      // ¿qué se puso y cómo se cambia? Un clic en el nudo con Selec. abre su panel: Restraints
+      await cinta(a, "Selec\\.", "Seleccionar: un clic en el apoyo enseña lo que tiene.");
+      await clicMundo(a, inf[0], "", true);
+      await a.quieto(2, 320);
+      const fr = await rect(a, () => [...document.querySelectorAll(".tp-fldv_b")].find((b) => /Restraints/.test(b.textContent || "")));
+      if (fr) { await mover(a, fr.x, fr.y, 12); await caja(a, { x: fr.rx, y: fr.ry, w: fr.rw, h: fr.rh + 190 }, "Restraints: las seis casillas marcadas = empotrado. «△ Articular» lo cambia; con clic derecho: Assign ▸ Joint ▸ Restraints.", 8); }
+      await a.pag.keyboard.press("Escape"); await a.quieto(2, 320);
     },
   },
   {
@@ -158,16 +165,30 @@ const pasos = [
     },
   },
   {
-    rotulo: "7 · Resultados: deformada y diagrama de axiles (Settings › Frame results)",
+    rotulo: "7 · Resultados: se pliega la cinta, Settings a la vista: deformada, Frame results (axiles) y Node results (desplazamientos)",
     hacer: async (a) => {
+      // la cinta plegada: el panel de Settings (sliders) queda a la vista, sin tapar
+      const pl = await rect(a, () => document.getElementById("hk-ribbon-plegar"));
+      if (pl) { await mover(a, pl.x, pl.y, 12); await caja(a, { x: pl.rx - 6, y: pl.ry - 6, w: pl.rw + 12, h: pl.rh + 12 }, "Pliego la cinta: ya está dibujado, ahora toca mirar resultados.", 5); await clicRojo(a, pl.x, pl.y, false); }
       await panel(a, "izq", true);
       await a.abrir("Analyze").catch(() => {});
       const ok = await a.marcar("fila", "Deformed shape", "La deformada, amplificada.").catch(() => false);
       if (!ok) await a.ajuste("deformedShape", true);
-      const sel = await rect(a, () => { const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /Frame results/i.test(x.textContent || "")); const s = row?.querySelector("select"); if (s) s.id = "hk-tmp-frame-results"; return s || row; });
-      if (sel) { await mover(a, sel.x, sel.y, 12); await caja(a, { x: sel.rx - 160, y: sel.ry - 4, w: sel.rw + 170, h: sel.rh + 8 }, "Frame results: Axial Force (diagram).", 5); await clicRojo(a, sel.x, sel.y, false); await a.pag.select("#hk-tmp-frame-results", "contour:normals").catch(() => {}); }
-      await a.ajuste("frameResults", "contour:normals");
-      await panel(a, "izq", false); await a.quieto(6, 360);
+      await a.elegir("Frame results", "Axial Force (diagram)");
+      await a.quieto(5, 360);
+      await a.elegir("Node results", "U (deformations)");
+      await a.quieto(5, 360);
+      await a.elegir("Node results", "R (reactions)");
+      await a.quieto(5, 360);
+      await a.elegir("Frame results", "Moment 3-3 (diagram)");
+      await a.quieto(4, 360);
+      await a.elegir("Frame results", "Axial Force (diagram)");
+      await a.quieto(2, 300);
+      await panel(a, "izq", false);
+      // la cinta otra vez, para medir
+      const ab = await rect(a, () => [...document.querySelectorAll("button")].find((b) => /✏ Dibujar/.test(b.textContent || "")));
+      if (ab) await clicRojo(a, ab.x, ab.y, false);
+      await a.quieto(3, 360);
     },
   },
   {
@@ -185,6 +206,19 @@ const pasos = [
       await a.quieto(3, 360);
       await orbita(a, [0, 0], 16, 6, [0, 0, 1], 24);
       await vista(a, [0, -18, 7], [0, 0, 1]); await a.quieto(8, 360);
+    },
+  },
+  {
+    rotulo: "10 · Guardar en formato Hekatan Struct (.heks): texto, para guardar y compartir",
+    hacer: async (a) => {
+      await panel(a, "der", true);
+      await a.abrir("CLI Comandos").catch(() => {});
+      await a.pulsar("💾 Guardar .heks").catch(() => {});
+      await a.archivo("El modelo en .heks: nudos, barras, apoyos y cargas en texto. Se guarda y se comparte.", { lineas: 16, marcas: ["frame", "support", "load", "frameload"] }).catch(() => null);
+      await a.quieto(8, 360);
+      await a.sinArchivo().catch(() => {});
+      await panel(a, "der", false);
+      await a.quieto(2, 300);
     },
   },
 ];

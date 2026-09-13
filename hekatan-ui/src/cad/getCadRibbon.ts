@@ -518,8 +518,26 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
     filaV.appendChild(b);
   }
+  // ── SNAP · ORTO · OSNAP también aquí (13-sep-2026): viven en la barra de abajo, que
+  // en el vídeo queda fuera del cuadro y a la vista se le escapa; en la cinta se ven y
+  // se pulsan. Llaman a los MISMOS conmutadores (F9 / F8 / F3) y se repintan solos.
+  const W2: any = window as any;
+  const conmutadores: Array<{ el: HTMLButtonElement; on: () => boolean }> = [];
+  const mkConm = (txt: string, tecla: string, tip: string, on: () => boolean, toggle: () => void) => {
+    const b = document.createElement("button"); b.type = "button"; b.title = tip;
+    b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:44px;height:44px;cursor:pointer;" +
+      "background:transparent;border:1px solid transparent;border-radius:7px;color:#cbd5e1;font-family:inherit;";
+    b.innerHTML = `<span style="font-size:10px;line-height:1.1;font-weight:700;letter-spacing:.3px">${txt}</span><span style="font-size:8px;opacity:.55;line-height:1">${tecla}</span>`;
+    b.addEventListener("click", () => { try { toggle(); } catch {} pintarConm(); decir(`${txt} ${on() ? "ON" : "OFF"} — ${tip}`); });
+    conmutadores.push({ el: b, on }); filaV.appendChild(b);
+  };
+  const pintarConm = () => { for (const c of conmutadores) { const v = c.on(); c.el.style.background = v ? "rgba(34,211,238,.22)" : "transparent"; c.el.style.borderColor = v ? "#22d3ee" : "transparent"; c.el.style.color = v ? "#e0fbff" : "#64748b"; } };
+  mkConm("SNAP", "F9", "Engancha a los cruces de la rejilla", () => W2.__hekatanSnapEnabled === true, () => W2.__hekatanToggleSnap?.());
+  mkConm("ORTO", "F8", "Solo horizontales y verticales", () => !!W2.__hekatanOrthoMode, () => W2.__hekatanToggleOrtho?.());
+  mkConm("OSNAP", "F3", "Referencias a objetos: extremo, medio, nudo, intersección…", () => W2.__hekatanOsnapOn !== false, () => W2.__hekatanToggleOsnap?.());
+  setInterval(pintarConm, 600); setTimeout(pintarConm, 300);
   const rotV = document.createElement("div");
-  rotV.textContent = "Vista · plano de trabajo";
+  rotV.textContent = "Vista · plano de trabajo · precisión";
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
   filaA.appendChild(cajaV);

@@ -130,14 +130,17 @@ export function elements(
   // Wireframe lines (delimitación visual entre sólidos H8 / áreas Q4)
   const lines = new THREE.LineSegments(
     new THREE.BufferGeometry(),
-    new THREE.LineBasicMaterial({ color: t.elementLine, vertexColors: false })
+    // depthTest:false + renderOrder 3: la barra se pinta ENCIMA de la rejilla y de sus ejes.
+    // Sin esto, un cordón dibujado en z = 0 caía justo sobre el eje X rojo y no se veía
+    // (Jorge, Tutorial 9: «la línea inferior no se ve nada de nada»).
+    new THREE.LineBasicMaterial({ color: t.elementLine, vertexColors: false, depthTest: false, transparent: true, opacity: 1 })
   );
   onThemeChange((_n, c) => { lines.material.color.setHex(c.elementLine); });
   lines.frustumCulled = false;
   // Render order alto + sin polygon offset → líneas siempre encima de cualquier
   // fill (incluyendo colormap) sin Z-fighting (las líneas son 1D, no compiten
   // por píxeles con triángulos rellenos).
-  lines.renderOrder = 2;
+  lines.renderOrder = 3;
   group.add(lines);
 
   // Solid faces for shell elements (Q4 = 4 nodes, CST = 3 nodes)
