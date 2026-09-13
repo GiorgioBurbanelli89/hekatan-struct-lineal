@@ -361,7 +361,14 @@ export function drawing({
     const rc = new THREE.Raycaster(p.clone().addScaledVector(n, -0.002), n.clone().negate(), 0, 3);
     const h = rc.intersectObject(m, false); return h.length ? h[0].distance + 0.002 : null;
   };
-  (window as any).__hekatanCaraIfc = () => _cara ? { tris: _cara.tris.length, plana: _cara.plana, normal: _cara.normal.toArray(), punto: _cara.punto.toArray() } : null;
+  // Medida: distancia de un punto a las mallas dadas a lo largo de ±dir (o null).
+  (window as any).__hekatanRaycast = (o: number[], d: number[], objs: THREE.Object3D[], far = 2) => {
+    const O = new THREE.Vector3(o[0], o[1], o[2]), D = new THREE.Vector3(d[0], d[1], d[2]).normalize();
+    let mejor: number | null = null;
+    for (const sg of [1, -1]) { const rc = new THREE.Raycaster(O, D.clone().multiplyScalar(sg), 0, far); const h = rc.intersectObjects(objs, false); if (h.length && (mejor == null || h[0].distance < mejor)) mejor = h[0].distance; }
+    return mejor;
+  };
+  (window as any).__hekatanCaraIfc = () => _cara ? { tris: _cara.tris.length, plana: _cara.plana, normal: _cara.normal.toArray(), punto: _cara.punto.toArray(), contorno: contornoCara(topoDe(_cara.m), _cara.tris).map((q) => [q.x, q.y, q.z]) } : null;
   type Bordes = { segs: Float32Array; celdas: Map<string, number[]>; adj?: Map<string, number[]> };
   const _bordes = new Map<number, Bordes>();
   const bordesLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, depthTest: true }));
@@ -1797,6 +1804,8 @@ export function drawing({
     viewerRender();
   };
   (window as any).__hekatanRefreshSelection = refreshSelectionGroup;
+  // Designar por ids («poly:3», «seg:1:2», «pt:7») — para automatizar y para el CLI.
+  (window as any).__hekatanSelectIds = (ids: string[]) => { selection.clear(); for (const id of ids) selection.add(id); try { (window as any).__hekatanRefreshSelection?.(); } catch {} viewerRender(); return selection.size; };
   (window as any).__hekatanClearSelection = () => {
     selection.clear();
     refreshSelectionGroup();
