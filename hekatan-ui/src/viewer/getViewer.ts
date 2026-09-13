@@ -751,6 +751,11 @@ export function getViewer({
         scene.add(...nextObjs);
         addedObjs.push(...nextObjs);
         applyVisibility();
+        // Los objetos NUEVOS no traen los planos de corte en su material (three
+        // no propaga renderer.clippingPlanes): con un corte activo, la referencia
+        // IFC reconstruida tras cada clic volvía a verse entera y la mirilla
+        // tocaba la pared del fondo (x = 12.7 con el corte en 16.5).
+        if (renderer.clippingPlanes.length) applyClipping();
       }
       viewerRender();
     });

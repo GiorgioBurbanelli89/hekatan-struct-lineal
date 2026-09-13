@@ -1,0 +1,8 @@
+We are going to draw the structure over the IFC, as in Revit with a background drawing: the IFC is the reference, and the arches are drawn with the Arc tool, discretized, not bar by bar.
+I open a new file, fold the ribbon with the cursor and in the right panel I press Import IFC: I choose the church file and it stays in the background, faint, as a reference.
+Now the elevation cut: in the left panel I open Cuts, type the X position sixteen point five, which is a clean frame without the tower, tick invert and tick Cut X. The IFC is cut and the section profile appears in orange: that is where the snap will grab.
+Before drawing, in Precision I set six segments and the arc spacing to Equal Y: that is how the arch is split in the ETABS model, in equal steps, and how Dynamo divides. ETABS does not allow curves, that is why the arch comes out as straight segments.
+Nave arch: I press Arc and make three clicks on the orange profile, the springing over the column, a point halfway up and the crown. Look at the label: IFC Section, the point lands exactly on the cut plane. The arch comes out discretized in six segments.
+Wing arch: five segments, and three more clicks, from the crown, halfway down, to the ground. The two arches of the frame are done, taken from the IFC and not from the ETABS model.
+And the mezzanine, which in the EDB was hanging up next to the ridge: I cut at Y one hundred twenty-four, front view, and with Line I join the two edges of the mezzanine slab in the profile. It stays at its real level, about five metres, the one the IFC says.
+I remove the cut and orbit with the mouse: the two arches and the mezzanine drawn over the church. With this we can go on to the second part.

@@ -1,0 +1,8 @@
+Vamos a dibujar la estructura sobre el IFC, como se hace en Revit con un plano de fondo: el IFC es la referencia, y los arcos se dibujan con la herramienta Arco, discretizados, no barra por barra.
+Abro un archivo nuevo, pliego la cinta con el cursor y en el panel de la derecha pulso Importar IFC: elijo el archivo de la iglesia y queda de fondo, tenue, como referencia.
+Ahora el corte en elevación: en el panel de la izquierda abro Cortes, escribo la posición equis dieciséis y medio, que es un pórtico limpio sin la torre, marco invertir y marco Cortar equis. El IFC se corta y aparece en naranja el perfil de la sección: ahí es donde la mirilla va a enganchar.
+Antes de dibujar, en Precisión pongo seis tramos y el reparto del arco en Y igual: así está partido el arco en el modelo de ETABS, a saltos iguales, y así divide Dynamo. ETABS no admite curvas, por eso el arco sale como tramos rectos.
+Arco de la nave: pulso Arco y hago tres clics sobre el perfil naranja, el arranque sobre la columna, un punto a media subida y la cumbre. Fíjense en la etiqueta: Sección IFC, el punto cae exactamente en el plano del corte. El arco sale discretizado en seis tramos.
+Arco del ala: cinco tramos, y otros tres clics, desde la cumbre, por la mitad de la bajada, hasta el suelo. Ya están los dos arcos del pórtico, sacados del IFC y no del modelo de ETABS.
+Y el entrepiso, que en el EDB estaba colgado arriba junto a la cumbrera: corto en Y ciento veinticuatro, vista de frente, y con Línea uno los dos bordes del canto del entrepiso en el perfil. Queda a su cota real, unos cinco metros, la que dice el IFC.
+Quito el corte y giro con el ratón: los dos arcos y el entrepiso dibujados sobre la iglesia. Con esto ya podemos seguir con la segunda parte.

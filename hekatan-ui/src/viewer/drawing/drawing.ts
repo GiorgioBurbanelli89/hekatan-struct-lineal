@@ -133,7 +133,119 @@ export function drawing({
   // CRÍTICO para que ORTO detecte el eje correcto según el plano hover:
   // si el cursor está sobre el plano XZ del último punto, el `point` tendrá
   // variación en X y Z (no solo en X como con el plane global XY).
+  // ── REFERENCIA IFC (el «DWG de fondo» de Revit) ────────────────────────────
+  // Las mallas del IFC que el lienzo pone de fondo (userData.refIfc) se pueden
+  // TOCAR con la mirilla: el rayo del cursor las intersecta antes que el plano
+  // de trabajo y el punto cae sobre el objeto real. Dos referencias:
+  //   · «cara»: el punto de la superficie bajo el cursor;
+  //   · «eje»: si el rayo ENTRA y SALE del mismo objeto a menos de 1.2 m (una
+  //     viga, un arco, un tubo), el punto medio de entrada y salida ≈ su eje —
+  //     que es donde va el nudo del modelo analítico, no en la cara.
+  // Respeta los cortes (✂ Cortes X/Y/Z): lo que el corte esconde no engancha,
+  // así un corte en elevación deja la referencia limpia, como en Revit.
+  // Jorge, 12-sep-2026: «uno pueda acercarse al arco y hacer clic y se haga una
+  // división para discretizar… la referencia es el IFC».
+  let _refHit: { tipo: "ifc" | "ifcAxis" } | null = null;
+  const intersectReferenciaIfc = (): THREE.Intersection[] | null => {
+    if ((window as any).__hekatanRefIfcSnap === false) return null;
+    const mallas: THREE.Object3D[] = [];
+    scene.traverse((o) => { if ((o as any).userData?.refIfc && (o as THREE.Mesh).isMesh) mallas.push(o); });
+    if (!mallas.length) return null;
+    const hits = raycaster.intersectObjects(mallas, false).filter((h) => {
+      const m = (h.object as THREE.Mesh).material as THREE.Material;
+      const planos: THREE.Plane[] = (m && (m as any).clippingPlanes) || [];
+      return planos.every((pl) => pl.distanceToPoint(h.point) >= 0);
+    });
+    if (!hits.length) return null;
+    const h0 = hits[0], h1 = hits[1];
+    if (h1 && h1.object === h0.object && h1.distance - h0.distance <= 1.2) {
+      const mid = h0.point.clone().add(h1.point).multiplyScalar(0.5);
+      _refHit = { tipo: "ifcAxis" };
+      return [{ ...h0, point: mid } as THREE.Intersection];
+    }
+    _refHit = { tipo: "ifc" };
+    return [h0];
+  };
+  // ── SECCIÓN de la referencia IFC (el corte en elevación de Revit) ─────────
+  // Con un corte activo (✂ Cortes X/Y/Z) el rayo del cursor ya no sirve: en una
+  // bóveda mirada de frente el rayo entra por cualquier punto del túnel. Lo que
+  // se quiere es la CURVA DE SECCIÓN: cada triángulo de la referencia cortado
+  // por el plano da un segmento; todos juntos son el perfil (el arco de la
+  // bóveda, el canto del entrepiso, las columnas) y la mirilla engancha al punto
+  // más cercano de ese perfil, medido en píxeles como las demás referencias.
+  // Se recalcula solo cuando cambia el corte o las mallas.
+  let _secClave = ""; let _secSegs: Float32Array = new Float32Array(0);
+  const secLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.95, depthTest: false }));
+  secLineas.name = "ref-ifc-seccion"; secLineas.renderOrder = 998; secLineas.frustumCulled = false; secLineas.visible = false;
+  scene.add(secLineas);
+  const seccionIfc = (): Float32Array => {
+    const clip = (window as any).__hekatanClip;
+    if (!clip || (window as any).__hekatanRefIfcSnap === false) { secLineas.visible = false; return (_secSegs = new Float32Array(0)); }
+    const planos: Array<[number, number]> = [];   // [eje, posición]
+    if (clip.enableX) planos.push([0, +clip.posX]);
+    if (clip.enableY) planos.push([1, +clip.posY]);
+    if (clip.enableZ) planos.push([2, +clip.posZ]);
+    const mallas: THREE.Mesh[] = [];
+    scene.traverse((o) => { if ((o as any).userData?.refIfc && (o as THREE.Mesh).isMesh) mallas.push(o as THREE.Mesh); });
+    const clave = JSON.stringify(planos) + "|" + mallas.map((m) => m.id).join(",");
+    if (clave === _secClave) return _secSegs;
+    _secClave = clave;
+    const out: number[] = [];
+    if (planos.length && mallas.length) {
+      const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      for (const m of mallas) {
+        const pos = (m.geometry as THREE.BufferGeometry).getAttribute("position");
+        if (!pos) continue;
+        m.updateMatrixWorld();
+        for (let t = 0; t + 2 < pos.count; t += 3) {
+          for (let k = 0; k < 3; k++) v[k].fromBufferAttribute(pos, t + k).applyMatrix4(m.matrixWorld);
+          for (const [eje, c] of planos) {
+            const d = [v[0].getComponent(eje) - c, v[1].getComponent(eje) - c, v[2].getComponent(eje) - c];
+            const cruces: THREE.Vector3[] = [];
+            for (let k = 0; k < 3; k++) {
+              const a = v[k], b = v[(k + 1) % 3], da = d[k], db = d[(k + 1) % 3];
+              if ((da < 0 && db >= 0) || (da >= 0 && db < 0)) cruces.push(a.clone().lerp(b, da / (da - db)));
+            }
+            if (cruces.length === 2) out.push(cruces[0].x, cruces[0].y, cruces[0].z, cruces[1].x, cruces[1].y, cruces[1].z);
+          }
+        }
+      }
+    }
+    _secSegs = new Float32Array(out);
+    secLineas.geometry.dispose();
+    secLineas.geometry = new THREE.BufferGeometry();
+    secLineas.geometry.setAttribute("position", new THREE.BufferAttribute(_secSegs, 3));
+    secLineas.visible = _secSegs.length > 0;
+    return _secSegs;
+  };
+  /** Punto del perfil de sección más cercano al cursor (en píxeles), o null. */
+  const snapSeccionIfc = (px: number, py: number): THREE.Vector3 | null => {
+    const S = seccionIfc(); if (!S.length) return null;
+    let mejor = _aperturaPx * 2, best: THREE.Vector3 | null = null;
+    const A = new THREE.Vector3(), B = new THREE.Vector3();
+    for (let i = 0; i + 5 < S.length; i += 6) {
+      A.set(S[i], S[i + 1], S[i + 2]); B.set(S[i + 3], S[i + 4], S[i + 5]);
+      const a = aPixeles(A.x, A.y, A.z), b = aPixeles(B.x, B.y, B.z); if (!a || !b) continue;
+      const vx = b.x - a.x, vy = b.y - a.y, L2 = vx * vx + vy * vy || 1e-9;
+      let t = ((px - a.x) * vx + (py - a.y) * vy) / L2; t = Math.max(0, Math.min(1, t));
+      const dpx = Math.hypot(px - (a.x + t * vx), py - (a.y + t * vy));
+      if (dpx < mejor) { mejor = dpx; best = A.clone().lerp(B, t); }
+    }
+    return best;
+  };
+  let _secPt: THREE.Vector3 | null = null;
+  (window as any).__hekatanSeccionIfc = () => seccionIfc().length / 6;
+  // Muestra de puntos del perfil (para pruebas y para «Ver sección»).
+  (window as any).__hekatanSeccionIfcPuntos = (n = 200) => {
+    const S = seccionIfc(); const out: number[][] = []; const paso = Math.max(1, Math.floor(S.length / 6 / n));
+    for (let i = 0; i + 2 < S.length; i += 6 * paso) out.push([S[i], S[i + 1], S[i + 2]]);
+    return out;
+  };
   const intersectWorkPlane = () => {
+    _refHit = null;
+    // PRIORIDAD 0: la referencia IFC bajo el cursor.
+    const ref = intersectReferenciaIfc();
+    if (ref) return ref;
     // PLANO INCLINADO activo → raycast SOLO el plano de trabajo (que ya está
     // inclinado vía gridTarget). Ignoramos planos de referencia/grid para que
     // el click caiga sobre la inclinación y el área salga inclinada de verdad.
@@ -1704,10 +1816,51 @@ export function drawing({
     const sweep = (a2 <= a3) ? a3 : a3 - 2 * Math.PI;
     const baseIdx = drawingObj.points.rawVal.length;
     const newPts: [number, number, number][] = [];
-    for (let i = 0; i <= N; i++) {
-      const th = sweep * (i / N);
+    const enArco = (th: number) => {
       const dir = u.clone().multiplyScalar(Math.cos(th)).add(wv.clone().multiplyScalar(Math.sin(th)));
-      const v = center.clone().add(dir.multiplyScalar(radius));
+      return center.clone().add(dir.multiplyScalar(radius));
+    };
+    // ── REPARTO de los tramos (`__hekatanArcModo`) ──────────────────────────
+    //   "angulo" (defecto): ángulos iguales = cuerdas iguales.
+    //   "x" | "y" | "z":    la coordenada elegida avanza a saltos IGUALES —
+    //                       así están partidos los arcos del EDB de la capilla
+    //                       (7 nudos a Δx = 1.525 m sobre un círculo de 15.3 m),
+    //                       y así divide Dynamo con «Curve.PointsAtEqual…».
+    // Con reparto por eje el ángulo se busca por bisección: la coordenada es
+    // monótona a lo largo del arco mientras no pase por su punto más alto/bajo;
+    // si pasa (no es monótona), se cae al reparto por ángulo y se avisa.
+    const modo = String((window as any).__hekatanArcModo ?? "angulo");
+    const k = modo === "x" ? 0 : modo === "y" ? 1 : modo === "z" ? 2 : -1;
+    let porEje = false;
+    if (k >= 0) {
+      const c0 = p1[k], c1 = p3[k];
+      const M = 512; let mono = Math.abs(c1 - c0) > 1e-9;
+      let prev = c0;
+      for (let i = 1; i <= M && mono; i++) {
+        const v = enArco(sweep * i / M).getComponent(k);
+        if ((v - prev) * (c1 - c0) < -1e-9) mono = false;
+        prev = v;
+      }
+      if (mono) {
+        porEje = true;
+        for (let i = 0; i <= N; i++) {
+          const objetivo = c0 + (c1 - c0) * i / N;
+          let lo = 0, hi = sweep;
+          for (let it = 0; it < 60; it++) {
+            const mid = (lo + hi) / 2;
+            const v = enArco(mid).getComponent(k);
+            if ((v - objetivo) * (c1 - c0) < 0) lo = mid; else hi = mid;
+          }
+          const v = enArco((lo + hi) / 2);
+          newPts.push([v.x, v.y, v.z]);
+        }
+        newPts[0] = [p1[0], p1[1], p1[2]]; newPts[N] = [p3[0], p3[1], p3[2]];
+      } else {
+        try { (window as any).__hekatanCadUpdateStatus?.(`⚠ El arco no es monótono en ${modo.toUpperCase()}: reparto por ángulo.`); } catch {}
+      }
+    }
+    if (!porEje) for (let i = 0; i <= N; i++) {
+      const v = enArco(sweep * (i / N));
       newPts.push([v.x, v.y, v.z]);
     }
     drawingObj.points.val = [...drawingObj.points.rawVal, ...newPts];
@@ -2489,6 +2642,7 @@ export function drawing({
       // Con ALT pulsado no hay referencia ni rejilla: el punto cae donde está el
       // cursor, en crudo. Es lo mismo que hace AutoCAD.
       const sinEnganche = event.altKey;
+      let refEnganchado = false;   // la mirilla tomó la referencia IFC (sección, eje o cara)
       const osnapTol = toleranciaOsnap(p);
       const osnap = sinEnganche
         ? null
@@ -2502,6 +2656,23 @@ export function drawing({
         // El nombre de la referencia, junto al cursor: en AutoCAD sale «Punto
         // final», «Intersección»… y es lo que te dice a QUÉ te estás enganchando.
         mostrarEtiquetaOsnap(osnap.type, event.clientX, event.clientY);
+      } else if (!sinEnganche && (_secPt = snapSeccionIfc(event.clientX, event.clientY))) {
+        // Sobre el PERFIL DE SECCIÓN de la referencia (corte activo): el punto
+        // está exactamente en el plano del corte, sobre la curva cortada.
+        refEnganchado = true;
+        p.copy(_secPt);
+        showOsnap("ifcSec", p.x, p.y, p.z);
+        mostrarEtiquetaOsnap("ifcSec", event.clientX, event.clientY);
+        snapMarker.position.copy(p);
+        snapMarker.visible = true;
+      } else if (_refHit && !sinEnganche) {
+        // Sobre la REFERENCIA IFC: el punto es el de la malla (cara o eje), sin
+        // rejilla. Se rotula como una referencia más («Referencia IFC · eje»).
+        refEnganchado = true;
+        showOsnap(_refHit.tipo, p.x, p.y, p.z);
+        mostrarEtiquetaOsnap(_refHit.tipo, event.clientX, event.clientY);
+        snapMarker.position.copy(p);
+        snapMarker.visible = true;
       } else {
         ocultarEtiquetaOsnap();
         hideOsnap();
@@ -2518,6 +2689,14 @@ export function drawing({
         snapMarker.visible = true;
       }
       updateSnapMarkerScale();  // tamaño constante en pantalla
+      // ⚠️ El punto PREVISTO (el que el clic commitea sin recalcular) solo se
+      // guardaba con una polilínea en curso (rama del elástico) o con «select».
+      // El PRIMER clic de Nodo, Arco o Círculo no tenía previsto y el clic
+      // volvía a lanzar el rayo en crudo: con la referencia IFC caía en la cara
+      // del objeto, 0.9 m por detrás del perfil que la mirilla enseñaba (medido
+      // en cli/_cap17_dbg.mjs). Se guarda SIEMPRE aquí; las ramas de abajo lo
+      // sobrescriben con ORTO/polar/rastreo aplicados cuando toca.
+      _puntoPrevisto = { p: p.clone(), x: event.clientX, y: event.clientY };
       // ── SELECT TOOL: hover highlight + click para seleccionar ──
       // Cuando el cursor está cerca de un nodo / segmento / aux line, lo
       // resalta en AMARILLO. Click selecciona en CYAN. Ctrl+Click multi.
@@ -2688,7 +2867,7 @@ export function drawing({
         // prioridad sobre el rastreo polar). Sin esto, una cumbrera con 0.6° de
         // pendiente que acaba en un nudo existente salía horizontal: el polar
         // (±6°) la aplanaba DESPUÉS de que el osnap hubiera dado el nudo exacto.
-        const enganchadoAObjeto = !!osnap;
+        const enganchadoAObjeto = !!osnap || refEnganchado;
         // ── SNAP a EJES auxiliares en 3D (X/Y/Z desde el último punto) ──
         // Si el mouse pasa CERCA (en pantalla) de la LÍNEA de un eje, engancha
         // el punto al punto de ESE eje 3D más cercano al rayo de cámara. Permite
@@ -3631,6 +3810,12 @@ export function drawing({
         const n = (window as any).__hekatanReplicateSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
         updateStatus(n ? `⧉ Replicado ×${n} (Δ ${editState.dx},${editState.dy},${editState.dz} m)` : "⚠ Nada que replicar — seleccioná nodos/frames/áreas");
       });
+      fEdit.addButton({ title: "⇗ Extruir: nudo → línea, línea → área" }).on("click", () => {
+        const r = (window as any).__hekatanExtrudeSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
+        updateStatus(r && (r.lineas || r.areas)
+          ? `⇗ Extruido: ${r.lineas} barra(s), ${r.areas} paño(s) (Δ ${editState.dx},${editState.dy},${editState.dz} m × ${editState.copias})`
+          : "⚠ Nada que extruir — designá nudos (→ líneas) o barras (→ áreas)");
+      });
       // ── Volado sobre la viga designada ──
       // Una viga de 5 m + «vuelo 1.5» = un voladizo de 1.5 m de vuelo por 5 m de ancho.
       // No alarga la viga: la replica en perpendicular y cose las dos.
@@ -4111,6 +4296,7 @@ export function drawing({
     end: 0xff3344, mid: 0xfbbf24, node: 0x60a5fa, cen: 0x34d399,
     per: 0xc084fc, nea: 0xff7eb6, int: 0xff8800,
     ori: 0xffffff, grid: 0x22d3ee, track: 0xffc400,
+    ifc: 0xf59e0b, ifcAxis: 0xfde68a, ifcSec: 0xfb923c,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
     while (osnapMarker.children.length) {
@@ -4158,6 +4344,7 @@ export function drawing({
     track: "Alineado con un nudo",
     node: "Nudo", mid: "Punto medio", cen: "Centro", int: "Intersección",
     per: "Perpendicular", nea: "Cercano",
+    ifc: "Referencia IFC · cara", ifcAxis: "Referencia IFC · eje", ifcSec: "Sección IFC (corte)",
   };
   const etiqOsnap = document.createElement("div");
   etiqOsnap.id = "hk-osnap-etiqueta";
@@ -4187,6 +4374,12 @@ export function drawing({
     const r = rendererElm.getBoundingClientRect();
     _vProy.set(x, y, z).project(cam);
     if (!isFinite(_vProy.x) || !isFinite(_vProy.y)) return null;
+    // ⚠️ Un punto DETRÁS de la cámara (o fuera del cono) se proyecta espejado a
+    // cualquier sitio de la pantalla: en un alzado mirando +Y desde y = 108, el
+    // origen (0,0,0) quedaba detrás y la mirilla daba «Origen» sobre el canto
+    // del entrepiso (el clic ponía el nudo en 0,0,0). Fuera del cono no hay
+    // referencia.
+    if (_vProy.z < -1 || _vProy.z > 1) return null;
     return {
       x: r.left + (_vProy.x * 0.5 + 0.5) * r.width,
       y: r.top + (-_vProy.y * 0.5 + 0.5) * r.height,
@@ -5242,6 +5435,68 @@ export function drawing({
   };
 
   /**
+   * EXTRUIR la designación (Edit › Extrude de ETABS): cada NUDO designado se
+   * alarga a una cadena de barras (nudo → línea) y cada BARRA designada barre
+   * un paño Q4 por copia (línea → área). Δ es el paso y `count` cuántos pasos.
+   * Jorge, 12-sep-2026: «falta que de un nudo se pueda extruir a línea y de
+   * línea a área».
+   */
+  (window as any).__hekatanExtrudeSelection = (
+    dx: number, dy: number, dz: number, count: number,
+  ): { lineas: number; areas: number } => {
+    count = Math.max(1, Math.round(count || 1));
+    const ids = [...selection];
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const nodosSueltos = new Set<number>();
+    const segPairs: [number, number][] = [];
+    const enSeg = new Set<number>();
+    ids.forEach((id) => {
+      if (id.startsWith("poly:")) {
+        const p = +id.slice(5); const poly = polys[p] || [];
+        for (let s = 0; s + 1 < poly.length; s++) { segPairs.push([poly[s], poly[s + 1]]); enSeg.add(poly[s]); enSeg.add(poly[s + 1]); }
+      } else if (id.startsWith("seg:")) {
+        const parts = id.split(":"); const P = +parts[1], S = +parts[2];
+        const poly = polys[P] || []; const a = poly[S], b = poly[S + 1];
+        if (a != null && b != null) { segPairs.push([a, b]); enSeg.add(a); enSeg.add(b); }
+      }
+    });
+    ids.forEach((id) => { if (id.startsWith("pt:")) { const n = +id.slice(3); if (pts[n] && !enSeg.has(n)) nodosSueltos.add(n); } });
+    if (!nodosSueltos.size && !segPairs.length) return { lineas: 0, areas: 0 };
+    pushUndo();
+    const newPts = [...pts];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    // copia i del nudo n (misma copia para todos los paños que lo comparten)
+    const copia = new Map<string, number>();
+    const cop = (n: number, i: number) => {
+      if (i === 0) return n;
+      const key = n + ":" + i; let j = copia.get(key);
+      if (j == null) { j = newPts.length; newPts.push([pts[n][0] + dx * i, pts[n][1] + dy * i, pts[n][2] + dz * i]); copia.set(key, j); }
+      return j;
+    };
+    let lineas = 0, areas = 0;
+    nodosSueltos.forEach((n) => {
+      const cadena = [n]; for (let i = 1; i <= count; i++) cadena.push(cop(n, i));
+      newPolys.push(cadena); lineas += count;
+    });
+    segPairs.forEach(([a, b]) => {
+      for (let i = 1; i <= count; i++) {
+        const q = [cop(a, i - 1), cop(b, i - 1), cop(b, i), cop(a, i)];
+        newAreas.push(newPolys.length); newPolys.push([...q, q[0]]); areas++;
+      }
+    });
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { lineas, areas };
+  };
+
+  /**
    * VOLADO sobre las vigas designadas.
    *
    * No alarga la viga: la REPLICA a `largo` metros, en perpendicular, y cose las dos
@@ -5345,7 +5600,16 @@ export function drawing({
     const _camForRay = setPointerFromEvent(event);
     if (!_camForRay) return;
     raycaster.setFromCamera(pointer, _camForRay);
-    const intersect = intersectWorkPlane();
+    // ⚠️ Si la mirilla YA tenía un punto previsto en este mismo píxel (nudo,
+    // sección IFC, referencia…), el clic va ahí aunque el rayo en crudo no
+    // toque nada: en un alzado el rayo es rasante al plano XY y el clic sobre
+    // el canto del perfil se perdía (medido: 2 de 3 clics del arco del ala).
+    const previstoOk = !!(_puntoPrevisto
+        && Math.abs(event.clientX - _puntoPrevisto.x) <= 3
+        && Math.abs(event.clientY - _puntoPrevisto.y) <= 3);
+    const intersect = previstoOk
+      ? [{ point: _puntoPrevisto!.p.clone(), distance: _camForRay.position.distanceTo(_puntoPrevisto!.p) } as THREE.Intersection]
+      : intersectWorkPlane();
     if (!intersect.length) return;
 
     // GUARD anti-click RASANTE: el plano de trabajo es gigante (10000 m), así
@@ -5353,7 +5617,7 @@ export function drawing({
     // basura (ej. 2847 m) que disparaban la cámara lejísimos y dejaban TODOS
     // los ejemplos invisibles. Si el impacto cae mucho más lejos que la
     // distancia cámara→objetivo, lo descartamos.
-    {
+    if (!previstoOk) {
       const camTgtDist = _camForRay.position.distanceTo(controls.target) || 1;
       const hitDist = intersect[0].distance ?? _camForRay.position.distanceTo(intersect[0].point);
       const p0 = intersect[0].point;
@@ -5908,7 +6172,10 @@ export function drawing({
     rubberUserEditing = false;  // reset al hacer click — el siguiente rubber band parte limpio
     pushUndo();  // snapshot ANTES de modificar — Ctrl+Z restaura
     drawingObj.points.val = [...drawingObj.points.rawVal, point.toArray()];
-    if (drawingObj.polylines) {
+    // ⚠️ «● Nodo» ponía el punto Y lo encadenaba a la polilínea abierta: diez
+    // nudos sueltos salían unidos en zigzag por barras que nadie pidió (medido
+    // en cli/_ref_ifc_test.mjs). Un nudo es un nudo: no toca la polilínea.
+    if (drawingObj.polylines && tool !== "node") {
       drawingObj.polylines.val = [
         ...drawingObj.polylines.rawVal.slice(0, -1),
         [

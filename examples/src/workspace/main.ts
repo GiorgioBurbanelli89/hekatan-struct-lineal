@@ -4468,8 +4468,10 @@ solve`;
   }
 
   // ── 📥 Importar CSI / IFC ──
-  if (currentExample && (currentExample.id === "csi-importer" || currentExample.id === "ifc-viewer")) {
-    const fImp = pane.addFolder({ title: "📥 Importar archivo", expanded: true });
+  // También en 📄 Archivo nuevo: el IFC entra como REFERENCIA de fondo del lienzo
+  // (newBlank › 🏛 Referencia IFC) y se dibuja encima con la mirilla.
+  if (currentExample && (currentExample.id === "csi-importer" || currentExample.id === "ifc-viewer" || currentExample.id === "new-blank")) {
+    const fImp = pane.addFolder({ title: "📥 Importar archivo", expanded: currentExample.id !== "new-blank" });
     // ── IFC (arquitectura, mallas de SketchUp) ──
     fImp.addButton({ title: "📥 Importar IFC (ver modelo)" }).on("click", () => {
       const input = document.createElement("input");
@@ -4483,7 +4485,8 @@ solve`;
           M.archivo = file.name;
           (window as any).__hekatanIfcMesh = M;
           const ex = examplesRegistry.find((e) => e.id === "ifc-viewer");
-          if (ex && currentExample?.id !== "ifc-viewer") { loadExample(ex); }
+          const quedarse = currentExample?.id === "ifc-viewer" || currentExample?.id === "new-blank";
+          if (ex && !quedarse) { loadExample(ex); }
           else { try { rebuild(); } catch {} try { autoFitCamera(); } catch {} }
           console.log(`✅ IFC: ${file.name} — ${M.grupos.length} objetos, ${M.nTri} triángulos.`);
         } catch (e: any) { alert(`Error importando IFC: ${e?.message ?? e}`); console.error(e); }

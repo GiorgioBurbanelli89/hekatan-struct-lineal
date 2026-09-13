@@ -514,15 +514,31 @@ export function getSettings(
     const f = (window as any).__hekatanClipApply;
     if (typeof f === "function") f();
   };
-  clip.addBinding(clipState, "enableX", { label: "Cortar X" }).on("change", triggerApply);
-  clip.addBinding(clipState, "posX", { min: -50, max: 50, step: 0.1, label: "  pos X (m)" }).on("change", triggerApply);
-  clip.addBinding(clipState, "invertX", { label: "  invertir X" }).on("change", triggerApply);
-  clip.addBinding(clipState, "enableY", { label: "Cortar Y" }).on("change", triggerApply);
-  clip.addBinding(clipState, "posY", { min: -50, max: 50, step: 0.1, label: "  pos Y (m)" }).on("change", triggerApply);
-  clip.addBinding(clipState, "invertY", { label: "  invertir Y" }).on("change", triggerApply);
-  clip.addBinding(clipState, "enableZ", { label: "Cortar Z" }).on("change", triggerApply);
-  clip.addBinding(clipState, "posZ", { min: -50, max: 50, step: 0.1, label: "  pos Z (m)" }).on("change", triggerApply);
-  clip.addBinding(clipState, "invertZ", { label: "  invertir Z" }).on("change", triggerApply);
+  // ⚠️ El deslizador iba fijo a ±50 m y Tweakpane RECORTA al refrescar: un IFC
+  // que está en Y = 115…137 no se podía cortar (pos Y volvía a 50 sola). El
+  // rango se arma en una función y `window.__hekatanClipRango(mn, mx)` lo
+  // rehace con la caja del modelo (lo llama el lienzo al poner un IFC de fondo).
+  let mandosCorte: any[] = [];
+  const armarCortes = (mn: number[], mx: number[]) => {
+    for (const b of mandosCorte) { try { b.dispose(); } catch {} }
+    mandosCorte = [];
+    const pos = (k: "X" | "Y" | "Z", i: number) => {
+      const lo = Math.floor(Math.min(mn[i], -50)), hi = Math.ceil(Math.max(mx[i], 50));
+      const paso = hi - lo > 400 ? 0.5 : 0.1;
+      clipState["pos" + k] = Math.max(lo, Math.min(hi, clipState["pos" + k]));
+      return clip.addBinding(clipState, "pos" + k, { min: lo, max: hi, step: paso, label: `  pos ${k} (m)` }).on("change", triggerApply);
+    };
+    mandosCorte.push(
+      clip.addBinding(clipState, "enableX", { label: "Cortar X" }).on("change", triggerApply), pos("X", 0),
+      clip.addBinding(clipState, "invertX", { label: "  invertir X" }).on("change", triggerApply),
+      clip.addBinding(clipState, "enableY", { label: "Cortar Y" }).on("change", triggerApply), pos("Y", 1),
+      clip.addBinding(clipState, "invertY", { label: "  invertir Y" }).on("change", triggerApply),
+      clip.addBinding(clipState, "enableZ", { label: "Cortar Z" }).on("change", triggerApply), pos("Z", 2),
+      clip.addBinding(clipState, "invertZ", { label: "  invertir Z" }).on("change", triggerApply),
+    );
+  };
+  armarCortes([-50, -50, -50], [50, 50, 50]);
+  (window as any).__hekatanClipRango = (mn: number[], mx: number[]) => { armarCortes(mn, mx); };
 
   return container;
 }

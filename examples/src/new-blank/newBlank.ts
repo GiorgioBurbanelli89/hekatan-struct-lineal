@@ -22,6 +22,7 @@
  */
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { mallasIfc, cajaIfc } from "../ifc-viewer/ifcViewer";
 
 const Ec = 25e6, nu_c = 0.2, Gc = Ec / (2 * (1 + nu_c)), rho_c = 24;
 const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 78;
@@ -41,6 +42,17 @@ function quadArea(nodes: number[][], q: number[]): number {
 
 const PE = (folder: string, label: string, def: number, options: Record<string, number>) =>
   ({ default: def, label, folder, options });
+
+/** Mallas del IFC de fondo (marcadas para la mirilla), o [] si no toca. Con el
+ *  IFC puesto, los deslizadores de ✂ Cortes se rehacen a la caja del IFC (iban
+ *  fijos a ±50 m y una iglesia a Y = 125 no se podía cortar). */
+const referenciaIfc = (p: Record<string, number>) => {
+  if (Math.round(p.refIfc ?? 1) !== 1) return [];
+  const objs = mallasIfc((p.refOpac ?? 35) / 100, true);
+  const M = (window as any).__hekatanIfcMesh;
+  if (objs.length && M?.bbox) try { (window as any).__hekatanClipRango?.(M.bbox[0], M.bbox[1]); } catch {}
+  return objs;
+};
 
 export const newBlank: ExampleDef = {
   id: "new-blank",
@@ -102,6 +114,13 @@ export const newBlank: ExampleDef = {
 
     // ── Solver ──
     autoSolve: PE("Solver", "Auto-resolver", 1, { "Sí": 1, "No": 0 }),
+
+    // ── Referencia IFC de fondo (el DWG de fondo de Revit) ──
+    // Con un IFC importado (📥 Importar IFC), sus mallas se pintan tenues y la
+    // mirilla del CAD las toca: te acercas al arco del IFC, hace clic y ahí va
+    // el nudo. Los cortes (✂ Cortes X/Y/Z) dejan una elevación limpia.
+    refIfc:  PE("🏛 Referencia IFC", "Mostrar IFC de fondo", 1, { "Sí": 1, "No": 0 }),
+    refOpac: P("🏛 Referencia IFC", "Opacidad (%)", 35, 10, 100, 5),
   },
 
   build(p, states) {
@@ -128,11 +147,14 @@ export const newBlank: ExampleDef = {
 
     // ── Si no hay nada dibujado, mostrar viewer vacío ──
     if (!drawPoints.length) {
-      states.nodes.val = [];
+      // Con el IFC de fondo y nada dibujado, los dos nudos de su caja sirven
+      // para que el encuadre automático lo enfoque (igual que en Ver IFC).
+      const caja = Math.round(p.refIfc ?? 1) === 1 ? cajaIfc() : null;
+      states.nodes.val = (caja ? [caja[0], caja[1]] : []) as any;
       states.elements.val = [];
       states.nodeInputs.val = { supports: new Map(), loads: new Map() };
       states.elementInputs.val = {} as any;
-      states.objects3D.val = [];
+      states.objects3D.val = referenciaIfc(p);
       console.log("[NewBlank] Lienzo vacío — usá el folder 📐 Herramientas CAD para dibujar.");
       return;
     }
@@ -450,7 +472,7 @@ export const newBlank: ExampleDef = {
       torsionalConstants: J, densities, poissonsRatios: poissons,
       thicknesses, plateFormulations,
     } as any;
-    states.objects3D.val = [];
+    states.objects3D.val = referenciaIfc(p);
 
     // ── Auto-solve si hay apoyos + cargas + elementos ──
     // ── Springs joint (prop:"springs") → springsList Array<{node, dof, k}> ──

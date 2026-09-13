@@ -163,6 +163,21 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fModes.addBinding(proxyModes, "segs", { min: 4, max: 64, step: 1, label: "Segmentos arc/círc" }).on("change", (ev: any) => {
     (window as any).__hekatanArcSegs = ev.value;
   });
+  // Cómo se reparten los tramos del arco: a ángulo igual (cuerdas iguales) o a
+  // saltos iguales de X, Y o Z — como parte los arcos el EDB de la capilla
+  // (Δx constante) y como divide Dynamo. ETABS no admite curvas: el arco SIEMPRE
+  // sale como tramos rectos, y aquí se elige la regla.
+  const proxyArco = { reparto: "angulo" };
+  fModes.addBinding(proxyArco, "reparto", {
+    label: "Reparto del arco",
+    options: { "Ángulo igual (cuerdas)": "angulo", "X igual": "x", "Y igual": "y", "Z igual": "z" },
+  }).on("change", (ev: any) => { (window as any).__hekatanArcModo = ev.value; });
+  // La referencia IFC de fondo (📄 Archivo nuevo › 🏛 Referencia IFC) se puede
+  // tocar con la mirilla: cara del objeto o su eje (entrada/salida del rayo).
+  const proxyRef = { ifc: true };
+  fModes.addBinding(proxyRef, "ifc", { label: "Enganchar a la referencia IFC" }).on("change", (ev: any) => {
+    (window as any).__hekatanRefIfcSnap = !!ev.value;
+  });
   const proxyChaflan = { r: 1.0 };
   fModes.addBinding(proxyChaflan, "r", { min: 0.1, max: 5, step: 0.1, label: "Chaflán r (m)" }).on("change", (ev: any) => {
     (window as any).__hekatanChaflanR = ev.value;

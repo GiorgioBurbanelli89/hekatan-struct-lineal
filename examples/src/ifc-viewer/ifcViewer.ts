@@ -123,6 +123,44 @@ function cajaPrincipal(grupos: Grupo[], bboxTotal: [number[], number[]]): [numbe
   return [mn, mx];
 }
 
+/** Las mallas del IFC cargado (`window.__hekatanIfcMesh`) como objetos de escena,
+ *  con luces. `referencia = true` las marca (`userData.refIfc`) para que la
+ *  mirilla del CAD las toque: es el «DWG de fondo» sobre el que se dibuja el
+ *  modelo analítico en 📄 Archivo nuevo. Sin IFC cargado devuelve []. */
+export function mallasIfc(opacidad: number, referencia = false): THREE.Object3D[] {
+  const M = (window as any).__hekatanIfcMesh as { grupos: Grupo[] } | undefined;
+  if (!M || !M.grupos?.length) return [];
+  const op = Math.max(0.1, Math.min(1, opacidad));
+  const objs: THREE.Object3D[] = [];
+  objs.push(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl1 = new THREE.DirectionalLight(0xffffff, 0.7); dl1.position.set(1, 1, 2);
+  const dl2 = new THREE.DirectionalLight(0xffffff, 0.4); dl2.position.set(-1, -0.5, 1);
+  objs.push(dl1, dl2);
+  M.grupos.forEach((g, i) => {
+    if (!g.positions.length) return;
+    if (!referencia && ifcHidden.has(i)) return;
+    if (!referencia && ifcSolo >= 0 && i !== ifcSolo) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(g.positions, 3));
+    geo.computeVertexNormals();
+    const col = new THREE.Color(g.color[0], g.color[1], g.color[2]);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: col, emissive: col.clone().multiplyScalar(0.25), roughness: 0.9, metalness: 0.0,
+      transparent: op < 1, opacity: op, side: THREE.DoubleSide,
+    }));
+    if (referencia) { mesh.userData.refIfc = true; mesh.name = "ref-ifc-" + i; }
+    objs.push(mesh);
+  });
+  return objs;
+}
+
+/** Caja del cluster principal del IFC cargado (para encuadrar), o null. */
+export function cajaIfc(): [number[], number[]] | null {
+  const M = (window as any).__hekatanIfcMesh as { grupos: Grupo[]; bbox: [number[], number[]] } | undefined;
+  if (!M || !M.grupos?.length || !M.bbox) return null;
+  return cajaPrincipal(M.grupos, M.bbox);
+}
+
 export const ifcViewer: ExampleDef = {
   id: "ifc-viewer",
   name: "Ver IFC (arquitectura)",
@@ -165,28 +203,11 @@ export const ifcViewer: ExampleDef = {
       console.log("[IFC] Sin modelo. Usa '📥 Importar IFC'.");
       return;
     }
-    const op = Math.max(0.1, Math.min(1, (p.opacidad ?? 100) / 100));
-    const objs: THREE.Object3D[] = [];
-    // Luces: el visor arma la escena sin luz propia para las mallas IFC; sin esto
-    // un MeshLambert/Standard sale NEGRO. Se meten como objects3D.
-    objs.push(new THREE.AmbientLight(0xffffff, 0.75));
-    const dl1 = new THREE.DirectionalLight(0xffffff, 0.7); dl1.position.set(1, 1, 2);
-    const dl2 = new THREE.DirectionalLight(0xffffff, 0.4); dl2.position.set(-1, -0.5, 1);
-    objs.push(dl1, dl2);
-    if (p.caras) M.grupos.forEach((g, i) => {
-      if (!g.positions.length) return;
-      if (ifcHidden.has(i)) return;                       // objeto oculto
-      if (ifcSolo >= 0 && i !== ifcSolo) return;          // modo aislar
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(g.positions, 3));
-      geo.computeVertexNormals();
-      const col = new THREE.Color(g.color[0], g.color[1], g.color[2]);
-      objs.push(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-        color: col, emissive: col.clone().multiplyScalar(0.25), roughness: 0.9, metalness: 0.0,
-        transparent: op < 1, opacity: op, side: THREE.DoubleSide,
-      })));
-    });
-    states.objects3D.val = objs;
+    // Luces + mallas (el visor arma la escena sin luz propia: sin luz un
+    // MeshStandard sale NEGRO). Sin «caras», solo las luces.
+    const objs = mallasIfc((p.opacidad ?? 100) / 100);
+    states.objects3D.val = p.caras ? objs : objs.filter((o) => !(o as THREE.Mesh).isMesh);
+    try { (window as any).__hekatanClipRango?.(M.bbox[0], M.bbox[1]); } catch {}
     refrescarPanelObjetos(M.grupos);
     // Encuadre: un IFC de SketchUp puede traer VARIAS edificaciones lejos entre
     // sí (aquí la iglesia y otra construcción a ~120 m). Se encuadra el CLUSTER
