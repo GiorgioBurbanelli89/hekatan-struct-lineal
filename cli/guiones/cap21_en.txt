@@ -1,0 +1,11 @@
+A Pratt truss in Hekatan Struct, start to finish and only with the quick-access ribbon: draw, support, load and see the analysis. No menus to open.
+The ribbon has two rows. Top: draw, structure, analyze and view; bottom: modify, grid, level and load. I press Front, the X Z elevation, and turn on SNAP in the bottom bar so every click lands exactly on the grid.
+Bottom chord: I press Polyline and click seven times, from minus six to six metres every two metres. Next to the cursor you see the length and angle of each segment. Enter to finish.
+Top chord: another polyline, seven clicks at two metres height, one over each node of the bottom chord.
+Verticals and diagonals with Line: two clicks and Escape each. Five verticals over the nodes, and the six diagonals rise from the bottom chord towards the supports: that is the Pratt, diagonals in tension and verticals in compression, the usual one in steel. Fourteen nodes and twenty-three members.
+Supports: I press Support on the ribbon and click once on each end of the bottom chord. They are fixed.
+Loads: the ribbon box holds minus ten kilonewtons, negative means downward. I press Load and click on each interior top node, five of them. As soon as there are supports and loads, the app solves by itself: there is no analyze button.
+And the distributed load, as in ETABS: the second box holds minus five kilonewtons per metre, I press Load q and click once on each of the six segments of the top chord. Sixty more kilonewtons, spread along; the app solves again by itself.
+In the left panel I tick the deformed shape and choose the axial force diagram under Frame results: top chord in compression, bottom chord in tension, and each diagonal with its sign. Maximum deflection at midspan, zero point nine five nine millimetres; maximum axial force, fifty-six kilonewtons.
+With Measure, two clicks from support to support: twelve metres, and the dimension is small, not covering the drawing.
+In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point nine five nine millimetres, at all fourteen nodes. This closes the three trusses.

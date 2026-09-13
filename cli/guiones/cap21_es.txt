@@ -1,0 +1,11 @@
+Una cercha Pratt en Hekatan Struct, de principio a fin y solo con la cinta de acceso rápido: dibujar, apoyar, cargar y ver el cálculo. Sin abrir menús.
+La cinta tiene dos filas. Arriba: dibujar, estructura, analizar y vista; abajo: modificar, rejilla, cota y carga. Pulso Frente, que es el alzado X Z, y enciendo SNAP en la barra de abajo para que cada clic caiga exacto en la rejilla.
+Cordón inferior: pulso Polilínea y hago siete clics, de menos seis a seis metros cada dos metros. Junto al cursor va la longitud y el ángulo de cada tramo. Enter para terminar.
+Cordón superior: otra polilínea, siete clics a dos metros de altura, uno sobre cada nudo del cordón inferior.
+Verticales y diagonales con Línea: dos clics y Escape cada una. Cinco verticales sobre los nudos, y las seis diagonales suben desde el cordón inferior hacia los apoyos: es la Pratt, con las diagonales a tracción y las verticales a compresión, la más usada en acero. Catorce nudos y veintitrés barras.
+Apoyos: pulso Apoyo en la cinta y hago un clic en cada extremo del cordón inferior. Quedan empotrados.
+Cargas: en la casilla de la cinta va menos diez kilonewton, negativo es hacia abajo. Pulso Carga y un clic en cada nudo superior interior, cinco. En cuanto hay apoyos y cargas, la aplicación calcula sola: no hay botón de analizar.
+Y la carga distribuida, como en ETABS: en la segunda casilla va menos cinco kilonewton por metro, pulso Carga q y un clic en cada uno de los seis tramos del cordón superior. Sesenta kilonewton más, repartidos; la app vuelve a calcular sola.
+En el panel de la izquierda marco la deformada y elijo el diagrama de axiles en Frame results: el cordón superior a compresión, el inferior a tracción, y cada diagonal con su signo. Flecha máxima en el centro, cero coma novecientos cincuenta y nueve milímetros; axil máximo, cincuenta y seis kilonewton.
+Con Medir, dos clics de apoyo a apoyo: doce metros, y la cota sale pequeña, sin tapar el dibujo.
+En tres D se ve la deformada con los axiles. El mismo modelo en ETABS veintidós por su interfaz de comandos da la misma flecha, cero coma novecientos cincuenta y nueve milímetros, en los catorce nudos. Con esta cierran las tres cerchas.
