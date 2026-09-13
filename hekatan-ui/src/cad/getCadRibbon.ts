@@ -838,7 +838,10 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // ejemplo que estaba perfecto (`guerra-ej1`: el PNG salia vacio y era la guia
   // tapando el visor).
   try {
-    if (!plegado && !localStorage.getItem("hk_guia_vista")) {
+    // Un modelo que llega por ENLACE (?heks= / ?m=) es para MIRARLO, no para
+    // dibujar: la guía de «cuatro pasos» tapaba la bóveda en el enlace compartido.
+    const porEnlace = /[?&](heks|m)=/.test(window.location.search);
+    if (!plegado && !porEnlace && !localStorage.getItem("hk_guia_vista")) {
       verGuia(true);
       localStorage.setItem("hk_guia_vista", "1");
     }

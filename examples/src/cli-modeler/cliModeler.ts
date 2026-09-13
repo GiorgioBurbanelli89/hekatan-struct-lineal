@@ -55,7 +55,7 @@
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc } from "../shared/cadSections";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
-import { deform, analyze, type Node, type Element } from "hekatan-fem";
+import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 interface ParsedModel {
@@ -1055,6 +1055,30 @@ export const cliModeler: ExampleDef = {
   // el mapa de presión se puede ver aquí también, no solo en los ejemplos param.
   availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY", "membraneXX"],
   params: {},
+  // ── MODAL de un .heks ──
+  // Masa 3D de los elementos, sin «solo lateral» ni agrupar por pisos: es la de
+  // SAP2000, el juez. Medido en la bóveda de la capilla (13-sep-2026): SAP2000
+  // T1 0.24784 s · Hekatan 0.24781 s, 12 modos ≤ 0.16 %, masa 130.384 en los dos.
+  // (Con la fuente de ETABS — lateral + LUMPATSTORIES — ETABS cuelga la masa en
+  // las cotas de SUS pisos del e2k y el .heks no tiene pisos: otro reparto.)
+  // Modos: `&modal=N` en el enlace, o 12.
+  hasModal: true,
+  runModal(_p, states, modalPanel) {
+    const n = states.nodes.val, el = states.elements.val;
+    if (!n.length || !el.length) return;
+    try {
+      const nModos = Math.max(1, parseInt((window as any).__hekatanCliModalModes ?? "12", 10) || 12);
+      const ni = states.nodeInputs.val as any;
+      const muelles = (window as any).__hekatanCliSprings as Array<{ node: number; dof: number; k: number }> | undefined;
+      const out = modalAnalysis(n, el, ni, states.elementInputs.val, nModos, 0, 0, 1,
+        ni?.diaphragms instanceof Map && ni.diaphragms.size ? ni.diaphragms : undefined,
+        muelles && muelles.length ? muelles : undefined);
+      console.log(`[CLI Modeler] Modal OK — ${out.frequencies.length} modos, T1 = ${out.frequencies[0] ? (1 / out.frequencies[0]).toFixed(5) : "—"} s`);
+      modalPanel?.render?.(out, { title: "Modal del .heks (masa 3D, como SAP2000)" });
+    } catch (e: any) {
+      console.error("[CLI Modeler] modal:", e?.message ?? e);
+    }
+  },
   build(_p, states) {
     // Lee el script de window (lo escribe el folder Tweakpane).
     const script = (window as any).__hekatanCliScript ?? DEFAULT_SCRIPT;
@@ -1574,6 +1598,9 @@ export const cliModeler: ExampleDef = {
       }
     } else if (m.doSolve && nodes.length && elements.length) {
       try {
+        // los mismos muelles que el estatico, para el modal (runModal): sin ellos
+        // un modelo sobre balasto flota y da periodos absurdos
+        (window as any).__hekatanCliSprings = springsList;
         states.deformOutputs.val = deform(
           nodes, elements, states.nodeInputs.val, states.elementInputs.val,
           springsList.length ? springsList : undefined,

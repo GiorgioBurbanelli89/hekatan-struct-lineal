@@ -316,6 +316,7 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     '<button title="Nuevo">\u2795</button>' +
     '<button title="Abrir">\u{1F5C1}</button>' +
     '<button title="Guardar">\u{1F4BE}</button>' +
+    '<button title="Guardar como">\u{1F4BE}…</button>' +
     '<button title="Deshacer">\u21A9</button>' +
     '<button title="Rehacer">\u21AA</button>' +
     "</span>" +

@@ -421,8 +421,19 @@ export function parseE2k(text: string): E2kModel {
 
     // ── POINT OBJECT LOADS ──
     if (currentSection === "POINT OBJECT LOADS") {
-      const pl = line.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"\s+FX\s+([-\d.eE+]+)\s+FY\s+([-\d.eE+]+)\s+FZ\s+([-\d.eE+]+)\s+MX\s+([-\d.eE+]+)\s+MY\s+([-\d.eE+]+)\s+MZ\s+([-\d.eE+]+)/);
-      if (pl) pointLoads.push({ pt: pl[1], story: pl[2], lc: pl[3], v: pl.slice(4, 10).map(Number) });
+      // Las componentes van POR NOMBRE: ETABS solo escribe las que no son cero
+      // (`FZ -10793.023  MX -884914.3`). Con las seis obligatorias en su orden,
+      // el e2k que exporta ETABS entraba a Hekatan sin UNA sola carga puntual
+      // (bóveda, 13-sep-2026: 135 de 135 perdidas).
+      const pl = line.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"(.*)$/);
+      if (pl) {
+        const comp = (k: string) => {
+          const m = pl[4].match(new RegExp(`\\b${k}\\s+([-\\d.eE+]+)`));
+          return m ? parseFloat(m[1]) : 0;
+        };
+        pointLoads.push({ pt: pl[1], story: pl[2], lc: pl[3],
+                          v: ["FX", "FY", "FZ", "MX", "MY", "MZ"].map(comp) });
+      }
     }
 
     // ── SHELL OBJECT LOADS ──
@@ -1357,7 +1368,13 @@ export function parseE2k(text: string): E2kModel {
       momentReleases,
       localAngles,
       endOffsets,
-      densities,
+      // El e2k trae PESO por volumen (WEIGHTPERVOLUME, kN/m³ tras escalar) y el
+      // resto de Hekatan lee `densities` como MASA (t/m³): el solver arma M con
+      // ella, e2kExporter escribe WEIGHTPERVOLUME = ρ·9.80665 y csiImporter pone
+      // ρ = 2.4. Entregar el peso metía 9.81 veces la masa y el e2k re-exportado
+      // pesaba 9.81 veces más (bóveda, 13-sep-2026: 23.536 en vez de 2.4).
+      // El peso propio de arriba (conPesoPropio) sí va con el peso.
+      densities: new Map([...densities].map(([k, w]) => [k, w / 9.80665] as [number, number])),
       sectionShapes,
       thicknesses,
       poissonsRatios,

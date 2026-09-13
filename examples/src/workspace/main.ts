@@ -499,7 +499,9 @@ function loadExample(ex: ExampleDef) {
   // Un ARCHIVO NUEVO abre la ventana «Cómo usar», igual que un ejemplo trae
   // su explicación: quien entra a un lienzo vacío no sabe ni por dónde
   // empezar. Se puede apagar desde la propia ventana («no volver a mostrar»).
-  if (ex.id === "new-blank") {
+  // (NO si el modelo llega por enlace ?heks= / ?m=: eso es para mirarlo, y la guía
+  // tapaba la bóveda del enlace compartido — medido en el PNG, 13-sep-2026.)
+  if (ex.id === "new-blank" && !_qs.get("heks") && !_qs.get("m")) {
     let mostrar = true;
     try { mostrar = localStorage.getItem("hk_guia_nuevo") !== "0"; } catch {}
     if (mostrar) setTimeout(() => { try { (window as any).__hekatanRibbon?.guia?.(true); } catch {} }, 700);
@@ -752,6 +754,12 @@ function loadExample(ex: ExampleDef) {
  * loadExample (las opciones de caso cambian por ejemplo).
  */
 let __caseResultsBinding: any = null;
+// Casilla «🎞 Animar» (Settings ▸ Analyze, FUERA del modal): anima lo que diga «Case
+// results» — la forma modal si es un modo, los desplazamientos del caso si es un caso de
+// carga o un combo. Jorge, 13-sep-2026: «animar debe ser una casilla aparte del modal;
+// la animación es para cualquier desplazamiento».
+let __casoMostrado = "";
+const __animar = { on: false };
 let __modalSettingsFolder: any = null;   // folder "⚡ Modal + Animación" dentro de Settings (Analysis Outputs)
 let __lastModalResults: any = null;      // resultados modales (para listar los modos en "Case results")
 let __modalTableShown = false;           // el panel/tabla modal solo se muestra si el usuario lo activa
@@ -870,7 +878,12 @@ function mountCaseResultsInSettings() {
       const T = f > 0 ? 1 / f : 0;
       caseOptions[`◈ Modo ${i + 1} (T=${T.toFixed(3)}s)`] = `__mode_${i}`;
     });
-    const obj = { case: activeLoadCase.val };
+    // Con el modal corriendo, «Case results» dice MODAL (el modo que anima), no el
+    // caso estático de antes: mostrar «Dead» mientras la bóveda vibra en el modo 1
+    // confunde (Jorge, 13-sep-2026: «al animar modal debe cambiarse case a modal siempre»).
+    const modoActivo = __modalActivo && freqs.length
+      ? `__mode_${Math.min(freqs.length - 1, Math.max(0, modalAnimator?.currentMode?.() ?? 0))}` : null;
+    const obj = { case: modoActivo ?? activeLoadCase.val };
     __caseResultsBinding = folder.addBinding(obj, "case", { label: "Case results", options: caseOptions, index: 0 });
     __caseResultsBinding.on("change", (e: any) => {
       const v = String(e.value);
@@ -901,6 +914,42 @@ function mountCaseResultsInSettings() {
         try { __loadPanel?.rebuildCases(); } catch {}
       }
     });
+    // 🎞 Animar: cualquier desplazamiento, no solo el modal.
+    __casoMostrado = String(obj.case);
+    const animarCaso = () => {
+      if (!modalAnimator) return;
+      if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
+      const v = __casoMostrado;
+      if (v.startsWith("__mode_") && __lastModalResults?.modeShapes?.length) {
+        // forma modal del modo elegido
+        modalAnimator.stop();
+        modalAnimator.setResults(__lastModalResults);
+        modalAnimator.setMode(parseInt(v.slice(7), 10) || 0);
+        modalAnimator.play();
+        return;
+      }
+      // caso de carga / combo: sus desplazamientos reales, como un «modo» de 6 GDL por nudo
+      const U = deformOutputs.val?.deformations as Map<number, number[]> | undefined;
+      const n = nodes.val.length;
+      if (!U || !n) return;
+      const forma = new Array(n * 6).fill(0);
+      U.forEach((d, i) => { if (i >= 0 && i < n) for (let k = 0; k < 6; k++) forma[i * 6 + k] = d?.[k] ?? 0; });
+      modalAnimator.stop();
+      // sin frecuencia: un caso de carga no tiene periodo, y con [1] el panel del modal
+      // mostraba «Modo 1/1 · 1.0000 Hz» mientras animaba Dead (visto en el PNG, 13-sep-2026)
+      modalAnimator.setResults({ frequencies: [], modeShapes: [forma], massParticipation: [] } as any);
+      modalAnimator.setMode(0);
+      modalAnimator.play();
+    };
+    (window as any).__hekatanAnimarCaso = animarCaso;
+    __caseResultsBinding.on("change", (e: any) => {
+      __casoMostrado = String(e.value);
+      if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
+    });
+    const hayAnimar = (folder.children || []).some((c: any) => { try { return c.label === "🎞 Animar"; } catch { return false; } });
+    if (!hayAnimar) {
+      folder.addBinding(__animar, "on", { label: "🎞 Animar", index: 1 }).on("change", () => animarCaso());
+    }
     // 📋 Tablas de resultados (estilo ETABS Analysis Results) — agregar una sola vez por folder.
     const hasTables = (folder.children || []).some((c: any) => { try { return c.title === "📋 Tablas"; } catch { return false; } });
     if (!hasTables) {
@@ -4415,10 +4464,61 @@ function buildParamsPane() {
       const reader = new FileReader();
       reader.onload = () => { ta.value = String(reader.result ?? ""); applyCliScript(); };
       reader.readAsText(file);
+      // el nombre del archivo abierto: Guardar lo reescribe con ESE nombre y la barra lo muestra
+      (window as any).__hekatanHeksNombre = file.name;
+      const doc = document.querySelector("#hk-cad-tit .doc");
+      if (doc) doc.textContent = file.name;
       heksInput.value = "";
     });
     taContainer.appendChild(heksInput);
     fCli.addButton({ title: "📂 Abrir .heks" }).on("click", () => heksInput.click());
+
+    // ── Guardar / Guardar como… un .heks, y la barra de arriba ──
+    // Los botones Nuevo · Abrir · Guardar de la barra superior eran DIBUJO: no tenían
+    // acción. Y no había «Guardar como» (Jorge, 13-sep-2026). Guardar reescribe con el
+    // nombre del archivo abierto; Guardar como pide el nombre (diálogo del sistema en
+    // Chrome/Edge, o un cuadro con el nombre donde no lo hay).
+    const guardarHeks = async (pedirNombre: boolean) => {
+      const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
+      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
+      let nombre: string = (window as any).__hekatanHeksNombre || "modelo.heks";
+      const ponerNombre = (n: string) => {
+        (window as any).__hekatanHeksNombre = n;
+        const doc = document.querySelector("#hk-cad-tit .doc");
+        if (doc) doc.textContent = n;
+      };
+      const w = window as any;
+      if (pedirNombre && typeof w.showSaveFilePicker === "function") {
+        try {
+          const h = await w.showSaveFilePicker({ suggestedName: nombre,
+            types: [{ description: "Modelo de Hekatan Struct", accept: { "text/plain": [".heks"] } }] });
+          const s = await h.createWritable(); await s.write(texto); await s.close();
+          ponerNombre(h.name);
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;   // el usuario canceló
+        }
+      }
+      if (pedirNombre) {
+        const r = window.prompt("Guardar como (.heks):", nombre);
+        if (!r) return;
+        nombre = /\.heks$/i.test(r.trim()) ? r.trim() : r.trim() + ".heks";
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([texto], { type: "text/plain" }));
+      a.download = nombre;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      ponerNombre(nombre);
+    };
+    fCli.addButton({ title: "💾 Guardar como… .heks" }).on("click", () => guardarHeks(true));
+    {
+      const barra = (t: string) => document.querySelector<HTMLButtonElement>(`#hk-cad-tit button[title="${t}"]`);
+      const bA = barra("Abrir"), bG = barra("Guardar"), bGc = barra("Guardar como");
+      if (bA) { bA.onclick = () => heksInput.click(); bA.title = "Abrir .heks"; }
+      if (bG) { bG.onclick = () => guardarHeks(false); }
+      if (bGc) { bGc.onclick = () => guardarHeks(true); }
+    }
 
     // ── ?heks=<url> — abrir un modelo por ENLACE ──
     // El botón de arriba abre un diálogo del sistema: sirve para trabajar, pero
@@ -4452,7 +4552,14 @@ function buildParamsPane() {
             if (nModal) {
               (window as any).__hekatanCliModalModes = nModal;
               __modalTableShown = true;
-              setTimeout(() => (window as any).__hekatanRunModalAnimate?.(), 800);
+              setTimeout(() => {
+                (window as any).__hekatanRunModalAnimate?.();
+                // la tabla abajo a la IZQUIERDA y angosta, encima del panel Settings: con
+                // 760 px × 60vh (y a la derecha con 660 px) tapaba la bóveda, que el visor
+                // centra en la pantalla (medido en el PNG del enlace, 13-sep-2026)
+                const t = document.getElementById("modal-results");
+                if (t) Object.assign(t.style, { left: "10px", right: "auto", bottom: "10px", width: "540px", height: "40vh" });
+              }, 800);
             }
           }, 0);
           // y se apagan los planos de trabajo del CAD, que son ayuda para
