@@ -81,7 +81,7 @@ export const pasos = [
       if (r) { await caja(a, { x: r.rx, y: r.ry, w: r.rw, h: r.rh / 2 }, "Fila 1: Dibujar · Estructura · Analizar · Vista.", 6); await caja(a, { x: r.rx, y: r.ry + r.rh / 2, w: r.rw, h: r.rh / 2 }, "Fila 2: Modificar · Rejilla · Cota Z · Carga.", 6); }
       await cinta(a, "Frente", "Frente: alzado X-Z, el clic cae en Y = 0.");
       await barraEstado(a, "^SNAP", "SNAP (F9): el clic cae en la rejilla, coordenadas exactas.");
-      await acercar(a, [6, 0, 1], 6);
+      await acercar(a, [6, 0, 1], 24);   // ~5 % por muesca: 24 muescas ≈ ×3
       await a.quieto(3, 320);
     },
   },
@@ -128,6 +128,17 @@ export const pasos = [
       await cinta(a, "Carga", "Carga: clic sobre un nudo, le pone la carga de la casilla.");
       for (let i = 0; i < n; i++) await clicMundo(a, sup[i], i === 0 ? "−10 kN" : "");
       await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.supports) s.supports.val = true; if (s?.loads) s.loads.val = true; });
+      const m = await modelo(a); console.log("   modelo:", JSON.stringify(m));
+      await a.quieto(5, 360);
+    },
+  },
+  {
+    rotulo: "6b · Carga distribuida: casilla −5 kN/m, «Carga q» y un clic en cada tramo del cordón superior",
+    hacer: async (a) => {
+      const c = await rect(a, () => [...document.querySelectorAll("#hk-ribbon input")].find((i) => i.value === "-5"));
+      if (c) { await mover(a, c.x, c.y, 12); await caja(a, { x: c.rx, y: c.ry, w: c.rw, h: c.rh }, "−5 kN/m por barra: la carga distribuida, como Frame Distributed Load de ETABS.", 6); }
+      await cinta(a, "Carga q", "Carga q: clic sobre una barra, le pone la distribuida de la casilla.");
+      for (let i = 0; i + 1 < sup.length; i++) await clicMundo(a, [(sup[i][0] + sup[i + 1][0]) / 2, 0, H], i === 0 ? "En medio del tramo." : "");
       const m = await modelo(a); console.log("   modelo:", JSON.stringify(m));
       await a.quieto(5, 360);
     },

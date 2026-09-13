@@ -5,6 +5,7 @@ Top chord: another polyline, six clicks at two metres height, one over the centr
 Diagonals: a single zigzag polyline, thirteen clicks alternating bottom and top. When a click lands on an existing node it is reused, not duplicated, like ETABS joints. Thirteen nodes and twenty-three members.
 Supports: I press Support on the ribbon and click once on each end of the bottom chord. They are fixed.
 Loads: the ribbon box holds minus ten kilonewtons, negative means downward. I press Load and click on each top node. As soon as there are supports and loads, the app solves by itself: there is no analyze button.
-In the left panel I tick the deformed shape and choose the axial force diagram under Frame results: chords in compression and tension, diagonals alternating. Maximum deflection at midspan, zero point one five one millimetres; maximum axial force, forty kilonewtons.
+And the distributed load, as in ETABS: the second box holds minus five kilonewtons per metre, I press Load q and click once on each segment of the top chord. Fifty more kilonewtons, spread along; the app solves again by itself.
+In the left panel I tick the deformed shape and choose the axial force diagram under Frame results: chords in compression and tension, diagonals alternating. Maximum deflection at midspan, zero point two nine eight millimetres; maximum axial force, eighty kilonewtons.
 With Measure, two clicks from support to support: twelve metres, and the dimension is small, not covering the drawing.
-In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point one five one millimetres, at all thirteen nodes. Howe and Pratt come next.
+In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point two nine eight millimetres, at all thirteen nodes. Howe and Pratt come next.

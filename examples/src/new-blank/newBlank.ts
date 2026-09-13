@@ -454,6 +454,31 @@ export const newBlank: ExampleDef = {
       }
     }
 
+    // ── Cargas DISTRIBUIDAS por barra (kind:"segs" prop:"distLoad", kN/m globales) ──
+    // Vector de empotramiento perfecto, como `frameload` en cliModeler: q·L/2 en cada
+    // extremo y momentos ±(L²/12)·(t × q) (t = versor de la barra). Se SUMAN a las
+    // cargas nodales que hubiera.
+    const manualDist: Map<string, [number, number, number]> | undefined =
+      (window as any).__hekatanManualDistLoads;
+    if (cargasActivas && manualDist && manualDist.size > 0) {
+      const acum = (idx: number, v: number[]) => {
+        const a = loads.get(idx) ?? [0, 0, 0, 0, 0, 0];
+        loads.set(idx, [a[0] + v[0], a[1] + v[1], a[2] + v[2], a[3] + v[3], a[4] + v[4], a[5] + v[5]]);
+      };
+      for (const [segKey, w] of manualDist.entries()) {
+        const eIdx = segIdToElemIdx.get(segKey);
+        if (eIdx === undefined || shellIdx.has(eIdx)) continue;
+        const e = elements[eIdx] as number[];
+        const a = nodes[e[0]], b = nodes[e[1]];
+        const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const L = Math.hypot(d[0], d[1], d[2]); if (L < 1e-9) continue;
+        const t = [d[0] / L, d[1] / L, d[2] / L], c = L * L / 12;
+        const txw = [t[1] * w[2] - t[2] * w[1], t[2] * w[0] - t[0] * w[2], t[0] * w[1] - t[1] * w[0]];
+        acum(sold(e[0]), [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, c * txw[0], c * txw[1], c * txw[2]]);
+        acum(sold(e[1]), [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, -c * txw[0], -c * txw[1], -c * txw[2]]);
+      }
+    }
+
     // Con modelo por ENLACE (?heks= / ?m=) el lienzo tiene que quedarse VACIO.
     // `new-blank` dibuja un modelo de demostracion (4 nodos, 2 columnas, 1
     // viga) y se veia aparecer ese primero y despues el de verdad: parecian

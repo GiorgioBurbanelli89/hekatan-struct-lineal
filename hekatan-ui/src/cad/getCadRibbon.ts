@@ -104,6 +104,8 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
         ayuda: "clic sobre un nudo: lo empotra. Sin apoyos no hay solucion." },
       { id: "carga", icono: "↓", nombre: "Carga", tecla: "CG",
         ayuda: "clic sobre un nudo: le pone la carga vertical de la casilla." },
+      { id: "cargaq", icono: "⇊", nombre: "Carga q", tecla: "CQ",
+        ayuda: "clic sobre una barra: carga distribuida vertical (kN/m) de la casilla, como Frame Distributed Load de ETABS." },
     ],
   },
   {
@@ -152,7 +154,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     for (const [id, b] of botones) {
       // Apoyo y carga no son un tool del motor (van por seleccion), asi que su
       // boton se enciende con el modo, no con `getTool()`.
-      const on = (id === "apoyo" || id === "carga") ? modoAplicar === id
+      const on = (id === "apoyo" || id === "carga" || id === "cargaq") ? modoAplicar === id
                : (modoAplicar === null && id === t);
       b.style.background = on ? "#0e7490" : "transparent";
       b.style.borderColor = on ? "#22d3ee" : "transparent";
@@ -214,12 +216,23 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // `hk:property-applied` que usa el panel de propiedades. Reusar ese camino
   // evita una segunda forma de poner apoyos que despues no coincida con la
   // primera.
-  let modoAplicar: "apoyo" | "carga" | null = null;
-  const cargaVert = { kN: -10 };
+  let modoAplicar: "apoyo" | "carga" | "cargaq" | null = null;
+  const cargaVert = { kN: -10, kNm: -5 };
   const aplicarASeleccion = () => {
     if (!modoAplicar) return;
     const sel = (window as any).__hekatanSelection as Set<string> | undefined;
     if (!sel || sel.size === 0) return;
+    if (modoAplicar === "cargaq") {
+      // carga distribuida: va a los SEGMENTOS clicados (seg:P:S → clave "P:S")
+      const segs = [...sel].filter((s) => s.startsWith("seg:"));   // el handler de main.ts quita él mismo el prefijo «seg:»
+      if (!segs.length) return;
+      window.dispatchEvent(new CustomEvent("hk:property-applied", { detail: { kind: "segs", ids: segs, prop: "distLoad", value: [0, 0, cargaVert.kNm] } }));
+      decir(`Carga distribuida de ${cargaVert.kNm} kN/m en ${segs.length} barra${segs.length === 1 ? "" : "s"}. Segui clicando.`);
+      sel.clear();
+      try { (window as any).__hekatanRefreshSelection?.(); } catch {}
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
     const pts = [...sel].filter((s) => s.startsWith("pt:"));
     if (!pts.length) return;
     const detail = modoAplicar === "apoyo"
@@ -253,8 +266,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir("REPLICAR — contestá el desplazamiento y cuántas copias en el cuadro de comandos.");
       return;
     }
-    if (h.id === "apoyo" || h.id === "carga") {
-      modoAplicar = h.id as "apoyo" | "carga";
+    if (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq") {
+      modoAplicar = h.id as "apoyo" | "carga" | "cargaq";
       hooks.setTool("select");
       // En apoyo/carga el arrastre NO debe abrir una ventana de seleccion: se
       // va nudo a nudo. Es el unico caso que la bloquea, y se marca con su
@@ -449,9 +462,16 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     if (isFinite(v)) cargaVert.kN = v; else inC.value = String(cargaVert.kN);
   });
   const rotC = document.createElement("div");
-  rotC.textContent = "Carga (kN)";
   rotC.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
-  cajaC.append(inC, rotC);
+  const inQ = document.createElement("input");
+  inQ.type = "text"; inQ.value = "-5";
+  inQ.title = "Carga distribuida vertical por barra, en kN/m (botón «Carga q»). Negativa = hacia abajo.";
+  inQ.style.cssText = inC.style.cssText;
+  inQ.addEventListener("change", () => { const v = parseFloat(inQ.value); if (isFinite(v)) cargaVert.kNm = v; else inQ.value = String(cargaVert.kNm); });
+  const filaC = document.createElement("div"); filaC.style.cssText = "display:flex;gap:4px;align-items:center;";
+  filaC.append(inC, inQ);
+  rotC.textContent = "Carga  kN · kN/m";
+  cajaC.append(filaC, rotC);
   filaB.appendChild(cajaC);
 
   const sep2 = document.createElement("div");

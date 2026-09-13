@@ -5,6 +5,7 @@ Cordón superior: otra polilínea, seis clics a dos metros de altura, uno sobre 
 Diagonales: una sola polilínea en zigzag, trece clics alternando abajo y arriba. Cuando el clic cae sobre un nudo que ya existe, se reusa: no se duplica, como los joints de ETABS. Trece nudos y veintitrés barras.
 Apoyos: pulso Apoyo en la cinta y hago un clic en cada extremo del cordón inferior. Quedan empotrados.
 Cargas: en la casilla de la cinta va menos diez kilonewton, negativo es hacia abajo. Pulso Carga y un clic en cada nudo superior. En cuanto hay apoyos y cargas, la aplicación calcula sola: no hay botón de analizar.
-En el panel de la izquierda marco la deformada y elijo el diagrama de axiles en Frame results: los cordones a compresión y tracción y las diagonales alternando. Flecha máxima en el centro, cero coma ciento cincuenta y un milímetros; axil máximo, cuarenta kilonewton.
+Y la carga distribuida, como en ETABS: en la segunda casilla va menos cinco kilonewton por metro, pulso Carga q y un clic en cada tramo del cordón superior. Cincuenta kilonewton más, repartidos; la app vuelve a calcular sola.
+En el panel de la izquierda marco la deformada y elijo el diagrama de axiles en Frame results: los cordones a compresión y tracción y las diagonales alternando. Flecha máxima en el centro, cero coma doscientos noventa y ocho milímetros; axil máximo, ochenta kilonewton.
 Con Medir, dos clics de apoyo a apoyo: doce metros, y la cota sale pequeña, sin tapar el dibujo.
-En tres D se ve la deformada con los axiles. El mismo modelo en ETABS veintidós por su interfaz de comandos da la misma flecha, cero coma ciento cincuenta y un milímetros, en los trece nudos. Siguen la Howe y la Pratt.
+En tres D se ve la deformada con los axiles. El mismo modelo en ETABS veintidós por su interfaz de comandos da la misma flecha, cero coma doscientos noventa y ocho milímetros, en los trece nudos. Siguen la Howe y la Pratt.

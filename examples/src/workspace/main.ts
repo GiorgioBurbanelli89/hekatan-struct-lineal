@@ -1433,6 +1433,9 @@ type FrameReleases = { i: [boolean, boolean, boolean]; j: [boolean, boolean, boo
 // Line springs (kN/m por m) Winkler distribuido por segmento.
 (window as any).__hekatanManualLineSprings = (window as any).__hekatanManualLineSprings
   ?? new Map<string, [number, number, number]>();
+// Carga distribuida por barra (kN/m, ejes globales), por clave de segmento "P:S".
+(window as any).__hekatanManualDistLoads = (window as any).__hekatanManualDistLoads
+  ?? new Map<string, [number, number, number]>();
 // ── Material database completo — estilo ETABS Material Property Data ──
 // Cada material tiene todos los campos del ETABS dialog: General, Weight/Mass,
 // Mechanical (E, ν, α, G), Design (Fy/Fu/fc según tipo), región/standard/grado.
@@ -2223,8 +2226,12 @@ window.addEventListener("hk:property-applied", (ev: any) => {
       const m = (window as any).__hekatanManualLineSprings as Map<string, any>;
       for (const k of segKeys) m.set(k, [...(value as number[])]);
     } else if (prop === "distLoad") {
-      // TODO: distLoad necesita lift al solver — por ahora sólo log
-      console.log(`[Props] distLoad ${segKeys.length} seg(s):`, value);
+      // Carga distribuida (kN/m, ejes globales): la lee newBlank.build y la
+      // convierte en fuerzas de empotramiento (q·L/2 y ±q·L²/12), las mismas
+      // fórmulas que `frameload` en cliModeler (SAP2000 = Hekatan 0.0000 %).
+      const m = (window as any).__hekatanManualDistLoads as Map<string, [number, number, number]>;
+      const v = value as number[];
+      for (const k of segKeys) { if (v.some((x) => x !== 0)) m.set(k, [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0]); else m.delete(k); }
     }
   }
   // ── Cartel de confirmación visible (muchas props NO cambian el dibujo:
@@ -2341,6 +2348,9 @@ if (window.innerWidth > 600) {
     paneHost.style.opacity = hid ? "0" : "";
     paneHost.style.pointerEvents = hid ? "none" : "";
     paneToggle.textContent = hid ? "⟨" : "⟩";
+    // La barra de colores (#legend) se aparta 308 px por el panel; con el panel
+    // recogido se quedaba en medio del lienzo, encima del modelo (Tutorial 9).
+    document.body.classList.toggle("hk-pane-oculto", hid);
     paneToggle.title = hid ? "Mostrar el panel" : "Ocultar el panel (corredizo)";
     try { localStorage.setItem(PANE_HID_KEY, hid ? "1" : "0"); } catch {}
   };

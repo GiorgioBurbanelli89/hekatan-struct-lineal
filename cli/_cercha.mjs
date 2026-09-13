@@ -67,6 +67,10 @@ await foto("diagonales");
 await cinta("Apoyo"); await clicMundo([inf[0], inf[n]]); await foto("apoyos");
 await cinta("Carga"); await clicMundo(TIPO === "warren" ? sup : sup.slice(1, n)); await espera(800); await foto("cargas");
 console.log("  ", await estado());
+// 3b. carga DISTRIBUIDA: «Carga q» de la cinta (−5 kN/m) con un clic en cada tramo del cordón superior
+await cinta("Carga q"); { const tramos = []; for (let i = 0; i + 1 < sup.length; i++) tramos.push([(sup[i][0] + sup[i + 1][0]) / 2, 0, H]); await clicMundo(tramos); } await espera(800); await foto("carga_q"); console.log("  ", await estado());
+const distQ = await ev(() => [...((window.__hekatanManualDistLoads ?? new Map()).entries())]);
+ok("carga distribuida en el modelo", distQ.length + " tramos", "= " + (sup.length - 1), distQ.length === sup.length - 1, JSON.stringify(distQ[0]));
 // 4. la app calcula sola: flecha y axiles
 let m = await modelo();
 ok("apoyos en el modelo", m.supports.length, "= 2", m.supports.length === 2); ok("cargas en el modelo", m.loads.length, "= " + (TIPO === "warren" ? n : n - 1), m.loads.length === (TIPO === "warren" ? n : n - 1));
@@ -80,8 +84,14 @@ await ev(() => { const s = window.__hekatanSettings?.(); if (s?.deformedShape) s
 { const Lh = []; m.nodes.forEach((p, i) => Lh.push(`node ${i + 1} ${p.map((v) => +v.toFixed(6)).join(" ")}`));
   m.elements.forEach((e, i) => { const [E, A, I22, I33, J, nu, rho] = m.props[i]; Lh.push(`frame ${i + 1} ${e[0] + 1} ${e[1] + 1} ${E} ${A} ${I22} ${I33} ${J} ${nu} ${rho}`); });
   for (const [nd, dofs] of m.supports) Lh.push(`support ${nd + 1} ${dofs.map((v) => (v ? 1 : 0)).join(" ")}`);
-  for (const [nd, f] of m.loads) Lh.push(`load ${nd + 1} ${f.join(" ")}`);
+  // las cargas nodales del modelo YA llevan sumado el empotramiento de las distribuidas: al .heks
+  // van las nodales puras (−10 kN) + `frameload` por barra, y el solver rehace la suma
+  const nodalesPuras = await ev(() => [...((window.__hekatanManualLoads ?? new Map()).entries())]);
+  for (const [nd, f] of nodalesPuras) Lh.push(`load ${nd + 1} ${f.join(" ")}`);
+  const segMap = await ev(() => { const S = window.__hekatanStates; const PL = window.__hekatanDrawingPolylines.rawVal; const P = window.__hekatanDrawingPoints.rawVal; const out = []; for (const [k, q] of (window.__hekatanManualDistLoads ?? new Map()).entries()) { const [pi, si] = k.split(":").map(Number); const a = P[PL[pi][si]], b = P[PL[pi][si + 1]]; const e = S.elements.rawVal.findIndex((el) => el.length === 2 && ((S.nodes.rawVal[el[0]].every((v, j) => Math.abs(v - a[j]) < 1e-6) && S.nodes.rawVal[el[1]].every((v, j) => Math.abs(v - b[j]) < 1e-6)) || (S.nodes.rawVal[el[0]].every((v, j) => Math.abs(v - b[j]) < 1e-6) && S.nodes.rawVal[el[1]].every((v, j) => Math.abs(v - a[j]) < 1e-6)))); out.push([e, q]); } return out; });
+  for (const [e, q] of segMap) if (e >= 0) Lh.push(`frameload ${e + 1} ${q.join(" ")}`);
   Lh.push("solve"); fs.writeFileSync(`cli/shots/cercha_${TIPO}.heks`, Lh.join("\n") + "\n"); console.log("heks:", m.nodes.length, "nudos", m.elements.length, "barras"); }
+{ const lg = await rect(() => document.getElementById("legend") || document.getElementById("frame-legend")); if (lg) { await mover(lg.x, lg.y + 60); await espera(500); await foto("hover_leyenda"); const grandes = await ev(() => [...document.querySelectorAll("body *")].filter((e) => { const r = e.getBoundingClientRect(); const bg = getComputedStyle(e).backgroundColor; return r.width > 60 && r.height > 300 && r.width < 400 && bg && bg !== "rgba(0, 0, 0, 0)" && !/rgba\(15, 23, 42/.test(bg) && !e.closest("#hk-pane-host") && !e.closest("#settings"); }).map((e) => (e.id || e.className || e.tagName) + " " + getComputedStyle(e).backgroundColor + " " + Math.round(e.getBoundingClientRect().width) + "x" + Math.round(e.getBoundingClientRect().height))); console.log("  elementos grandes con fondo:", JSON.stringify(grandes)); } }
 await ev(() => document.getElementById("hk-test-cursor")?.remove()); await cinta("3D"); await espera(800); await foto("iso");
 console.log("errores de página:", errs.length ? errs : "ninguno"); ok("sin errores de página", errs.length, "0", errs.length === 0);
 const malas = filas.filter((f) => !f.ok); console.log(`\n${filas.length - malas.length}/${filas.length} comprobaciones OK`);

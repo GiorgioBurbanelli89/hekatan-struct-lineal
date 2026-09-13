@@ -904,6 +904,11 @@ export function drawing({
   rubberLabelInput.addEventListener("keydown", (ev: KeyboardEvent) => {
     if (ev.key === "Enter") {
       ev.preventDefault();
+      // ⚠️ Enter SIN haber tecleado nada = terminar, como en AutoCAD. La cota viva
+      // («1.41») se tomaba como distancia tecleada (DDE) y ponía un punto más en la
+      // dirección del cursor: dos barras sobrantes en la esquina de la cercha
+      // (medido en el Tutorial 9, 13-sep-2026).
+      if (!rubberUserEditing) { (window as any).__hekatanFinalizeDraw?.(); try { (window as any).__hekatanCadState?.setTool?.("select"); } catch {} return; }
       const parsed = parseAutoCadInput(rubberLabelInput.value);
       if (!parsed) return;
       rubberUserEditing = false;

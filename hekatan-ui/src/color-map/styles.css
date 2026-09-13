@@ -138,3 +138,9 @@
     top: -6px;
   }
 }
+
+/* Panel derecho recogido (body.hk-pane-oculto, main.ts): la barra vuelve al borde. */
+body.hk-pane-oculto #legend,
+body.hk-pane-oculto #frame-legend {
+  right: calc(12px + var(--legend-num-w));
+}
