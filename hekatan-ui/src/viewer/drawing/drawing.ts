@@ -6931,9 +6931,11 @@ export function drawing({
     if (drawingObj.polylines && tool !== "node") {
       const polysAhora = drawingObj.polylines.rawVal;
       const ultimaPoly = polysAhora.length ? polysAhora[polysAhora.length - 1] : [];
-      // el mismo nudo dos veces seguidas no es un tramo
-      const cadena = ultimaPoly[ultimaPoly.length - 1] === idxClic ? ultimaPoly : [...ultimaPoly, idxClic];
-      drawingObj.polylines.val = [...polysAhora.slice(0, -1), cadena];
+      // El mismo nudo que cierra la polilínea anterior NO es un tramo de largo cero:
+      // es el ARRANQUE de una polilínea nueva (una diagonal que sale de donde acabó la
+      // vertical). Descartarlo se comía 3 diagonales de la Howe (medido, 13-sep-2026).
+      if (ultimaPoly.length && ultimaPoly[ultimaPoly.length - 1] === idxClic) drawingObj.polylines.val = [...polysAhora, [idxClic]];
+      else drawingObj.polylines.val = [...polysAhora.slice(0, -1), [...ultimaPoly, idxClic]];
     }
 
     // ── Auto-cierre semántico por tool ──

@@ -7413,7 +7413,12 @@ try {
   // pulsarlas. Es lo que hace AutoCAD con su menú de opciones.
   const dynOps = document.createElement("div");
   dynOps.id = "hk-dyn-ops";
-  dynOps.style.cssText = "display:none;gap:6px;pointer-events:auto;font:11px Consolas,monospace;padding-top:1px;";
+  // ⚠️ `pointer-events:none` (13-sep-2026): con la fila de opciones clicable y el panel
+  // anclado abajo-derecha del cursor, el SIGUIENTE clic de dibujo (una diagonal hacia
+  // abajo-derecha) caía sobre «desHacer» y borraba el punto recién puesto: 3 diagonales
+  // perdidas en la cercha Howe. Como en AutoCAD, el rótulo dinámico NO intercepta picks;
+  // las opciones se teclean (C, U) o se pulsan en la barra de órdenes de abajo.
+  dynOps.style.cssText = "display:none;gap:6px;pointer-events:none;font:11px Consolas,monospace;padding-top:1px;";
   dyn.append(dynFila, dynOps);
   document.body.appendChild(dyn);
 
@@ -7553,7 +7558,8 @@ try {
     dynFila.style.display = dibujando ? "none" : "flex";
     // con opciones a la vista el panel se queda quieto: si siguiera al ratón,
     // el botón se apartaría justo cuando se va a pulsar
-    if (anclarPendiente || (dynInput.value.length === 0 && !opcionesActuales.length)) {
+    // (ya no se ancla: el panel no intercepta el ratón, así que puede seguir al cursor siempre)
+    {
       anclarPendiente = false;
       let x = e.clientX + 16, y = e.clientY + 14;
       const w = dyn.offsetWidth || 175, h = dyn.offsetHeight || 24;

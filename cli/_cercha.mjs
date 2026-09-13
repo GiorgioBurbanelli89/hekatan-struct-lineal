@@ -43,7 +43,9 @@ await cinta("Frente"); await barraEstado("^SNAP"); console.log("grid snap:", awa
 const L = 12, H = 2, n = 6, d = L / n;
 const inf = Array.from({ length: n + 1 }, (_, i) => [i * d, 0, 0]);
 const sup = TIPO === "warren" ? Array.from({ length: n }, (_, i) => [(i + 0.5) * d, 0, H]) : Array.from({ length: n + 1 }, (_, i) => [i * d, 0, H]);
-const poli = async (pts) => { await cinta("Polilínea"); await clicMundo(pts); const [q] = await proj([pts[pts.length - 1]]); await clic(q.x + 40, q.y - 40, "right"); await espera(300); };
+// Enter termina la polilínea: el clic derecho abre el menú contextual, que tapaba los nudos de la
+// derecha y se tragaba los clics siguientes (3 diagonales perdidas en Howe/Pratt, 13-sep-2026)
+const poli = async (pts) => { await cinta("Polilínea"); await clicMundo(pts); await pag.keyboard.press("Enter"); await espera(300); };
 await poli(inf); await foto("cordon_inferior");
 await poli(sup); await foto("cordon_superior");
 if (TIPO === "warren") {
