@@ -371,7 +371,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fPlane.addButton({ title: "Plano XY (planta)" }).on("click", () => setPlane("xy"));
   fPlane.addButton({ title: "Plano XZ (elevación frontal)" }).on("click", () => setPlane("xz"));
   fPlane.addButton({ title: "Plano YZ (elevación lateral)" }).on("click", () => setPlane("yz"));
-  fPlane.addButton({ title: "🧊 Vista isométrica (3D)" }).on("click", () => hooks.setView("iso"));
+  // En isométrica el marcador del plano de trabajo («ALZADO X-Z Y = …») se esconde:
+  // se quedaba flotando sobre la cúpula en el vídeo (Jorge, 13-sep-2026).
+  fPlane.addButton({ title: "🧊 Vista isométrica (3D)" }).on("click", () => { refGroup.visible = false; hooks.setView("iso"); try { (viewerElm as any).__ctx?.render?.(); } catch {} });
   fPlane.addButton({ title: "🔀 Vista doble (planta + iso)" }).on("click", () => {
     hooks.splitState.enabled = !hooks.splitState.enabled;
     if (hooks.splitState.enabled) {

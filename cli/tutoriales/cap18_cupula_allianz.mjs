@@ -161,7 +161,8 @@ export const pasos = [
       await abrirCarpeta(a, "Modos de dibujo");
       await escribir(a, "Segmentos arc", 4, "Cuatro tramos por esquina redondeada.");
       await escribir(a, "Chaflán r", 5, "Radio de las esquinas: 5 m (escala 1 a 10).");
-      await marcar(a, "Curvas como gu", "Sigue en guía auxiliar: contorno y perfil se borrarán al barrer.");
+      // (la casilla YA está marcada desde el paso 1: solo se señala, no se vuelve a pulsar — pulsarla la apagaba)
+      { const c = await control(a, "Curvas como gu", "check"); if (c) { await mover(a, c.x, c.y, 10); await caja(a, { x: c.rx - 200, y: c.ry - 4, w: c.rw + 210, h: c.rh + 8 }, "Sigue en guía auxiliar: contorno y perfil se borrarán al barrer.", 5); } }
       await abrirCarpeta(a, "Áreas \\(shells\\)");
       await pulsar(a, "Losa con chaflanes", "Losa con chaflanes: el contorno de planta.");
       await clicMundo(a, [-13, -12, 0], "Esquina (−13, −12).");
