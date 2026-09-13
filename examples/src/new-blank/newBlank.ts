@@ -20,6 +20,7 @@
  * en Tweakpane (secciones/cargas/apoyos) y permite alternar 2D/3D con
  * un toggle. Es el "nuevo proyecto en blanco" de Hekatan.
  */
+import * as THREE from "three";
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { mallasIfc, cajaIfc } from "../ifc-viewer/ifcViewer";
@@ -460,10 +461,17 @@ export const newBlank: ExampleDef = {
     // cargas nodales que hubiera.
     const manualDist: Map<string, [number, number, number]> | undefined =
       (window as any).__hekatanManualDistLoads;
+    // `loadsSolver` = nodales + empotramiento de las distribuidas: es lo que resuelve deform().
+    // `loads` (lo que pinta el visor con su etiqueta) se queda con las nodales PURAS: si no, un
+    // nudo con −10 kN y dos tramos de −5 kN/m enseñaba «−20» y parecía otra carga (Tutorial 9).
+    const loadsSolver = new Map<number, [number, number, number, number, number, number]>();
+    for (const [k, v] of loads) loadsSolver.set(k, [...v] as any);
+    const frameLoadsElem = new Map<number, [number, number, number]>();   // → e2k FRAMELOAD
+    const flechasDist: THREE.Object3D[] = [];
     if (cargasActivas && manualDist && manualDist.size > 0) {
       const acum = (idx: number, v: number[]) => {
-        const a = loads.get(idx) ?? [0, 0, 0, 0, 0, 0];
-        loads.set(idx, [a[0] + v[0], a[1] + v[1], a[2] + v[2], a[3] + v[3], a[4] + v[4], a[5] + v[5]]);
+        const a = loadsSolver.get(idx) ?? [0, 0, 0, 0, 0, 0];
+        loadsSolver.set(idx, [a[0] + v[0], a[1] + v[1], a[2] + v[2], a[3] + v[3], a[4] + v[4], a[5] + v[5]]);
       };
       for (const [segKey, w] of manualDist.entries()) {
         const eIdx = segIdToElemIdx.get(segKey);
@@ -476,6 +484,31 @@ export const newBlank: ExampleDef = {
         const txw = [t[1] * w[2] - t[2] * w[1], t[2] * w[0] - t[0] * w[2], t[0] * w[1] - t[1] * w[0]];
         acum(sold(e[0]), [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, c * txw[0], c * txw[1], c * txw[2]]);
         acum(sold(e[1]), [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, -c * txw[0], -c * txw[1], -c * txw[2]]);
+        frameLoadsElem.set(eIdx, [w[0], w[1], w[2]]);
+        // ── Las flechas, como ETABS: una cada ~0.5 m, del largo de la carga, y una línea que
+        //    une las colas. Apuntan EN el sentido de la carga y acaban en la barra. ──
+        const q = Math.hypot(w[0], w[1], w[2]); if (q < 1e-9) continue;
+        const u = [w[0] / q, w[1] / q, w[2] / q];
+        const hFl = Math.min(1.2, Math.max(0.25, 0.08 * q)) * ((p.escalaCargaQ ?? 1) as number);   // alto de la flecha (m)
+        const nFl = Math.max(2, Math.round(L / 0.5)) + 1;
+        const color = 0xf97316;
+        const mat = new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+        const pts: THREE.Vector3[] = []; const colas: THREE.Vector3[] = [];
+        for (let k = 0; k < nFl; k++) {
+          const s0 = k / (nFl - 1);
+          const P = new THREE.Vector3(a[0] + d[0] * s0, a[1] + d[1] * s0, a[2] + d[2] * s0);          // punta, en la barra
+          const C = new THREE.Vector3(P.x - u[0] * hFl, P.y - u[1] * hFl, P.z - u[2] * hFl);          // cola
+          pts.push(C, P); colas.push(C);
+          // cabeza: dos trazos a 25°
+          const lat = new THREE.Vector3(t[0], t[1], t[2]).multiplyScalar(hFl * 0.18);
+          const back = new THREE.Vector3(u[0], u[1], u[2]).multiplyScalar(-hFl * 0.3);
+          pts.push(P.clone(), P.clone().add(back).add(lat), P.clone(), P.clone().add(back).sub(lat));
+        }
+        const g1 = new THREE.BufferGeometry().setFromPoints(pts);
+        const flechas = new THREE.LineSegments(g1, mat); flechas.renderOrder = 998; flechas.frustumCulled = false;
+        const g2 = new THREE.BufferGeometry().setFromPoints(colas);
+        const linea = new THREE.Line(g2, mat); linea.renderOrder = 998; linea.frustumCulled = false;
+        flechasDist.push(flechas, linea);
       }
     }
 
@@ -500,8 +533,9 @@ export const newBlank: ExampleDef = {
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy,
       torsionalConstants: J, densities, poissonsRatios: poissons,
       thicknesses, plateFormulations,
+      frameLoads: frameLoadsElem,   // cargas distribuidas por elemento (kN/m, globales) → e2k FRAMELOAD
     } as any;
-    states.objects3D.val = referenciaIfc(p);
+    states.objects3D.val = [...referenciaIfc(p), ...flechasDist];
 
     // ── Auto-solve si hay apoyos + cargas + elementos ──
     // ── Springs joint (prop:"springs") → springsList Array<{node, dof, k}> ──
@@ -540,12 +574,12 @@ export const newBlank: ExampleDef = {
       nodes.length > 0 &&
       elements.length > 0 &&
       (supports.size > 0 || springsList.length > 0) &&   // una zapata se sostiene por sus resortes, sin apoyo rígido
-      loads.size > 0
+      loadsSolver.size > 0
     ) {
       try {
         states.deformOutputs.val = deform(
           nodes, elements,
-          { supports, loads },
+          { supports, loads: loadsSolver },
           states.elementInputs.val,
           springsList.length > 0 ? springsList : undefined,
         );
