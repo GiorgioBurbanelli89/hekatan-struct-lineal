@@ -475,7 +475,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     // pasaba por «Frente» o «Lado» se quedaba con la rejilla de pie y los clics
     // cayendo en un plano vertical para siempre: no habia forma de volver desde
     // el ribbon, y lo que se veia era una rejilla vertical flotando.
-    ["🧊", "3D",     "XY", "4", () => { hooks.setPlane("xy"); hooks.setView("iso"); }],
+    ["🧊", "3D",     "XY", "4", () => { hooks.setPlane("xy"); hooks.setView("iso"); try { (window as any).__hekatanOcultarRef?.(); } catch {} }],
   ];
   const DONDE_CAE: Record<string, string> = {
     XY: "el clic cae en la planta, a la cota Z de la casilla",

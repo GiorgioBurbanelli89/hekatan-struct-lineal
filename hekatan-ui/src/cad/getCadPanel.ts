@@ -327,6 +327,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     ctx?.render?.();
   };
   (window as any).__hekatanMarcarRef = marcarRef;
+  // Ocultar el marcador del plano («ALZADO X-Z Y = …»): lo llama la cinta al ir a 3D.
+  (window as any).__hekatanOcultarRef = () => { refGroup.visible = false; try { (viewerElm as any).__ctx?.render?.(); } catch {} };
 
   /**
    * El PUNTO DE REFERENCIA: el último punto dibujado, o el origen si no hay
