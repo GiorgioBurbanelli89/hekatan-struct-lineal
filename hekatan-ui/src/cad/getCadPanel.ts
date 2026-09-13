@@ -321,7 +321,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     pintarRotulo(txt);
     // Justo encima del punto, en unidades del grupo (que va escalado).
     rotulo.position.set(0, 0, 1.35);
-    refGroup.visible = true;
+    // En perspectiva (iso) el marcador del plano sobra: se quedaba flotando sobre la
+    // cercha en el 3D del Tutorial 9 aunque la cinta lo escondía (setView es asíncrono).
+    refGroup.visible = !(ctx?.camera as any)?.isPerspectiveCamera;
     (window as any).__hekatanPuntoRef = p;
     (window as any).__hekatanPlanoRef = kind;
     ctx?.render?.();

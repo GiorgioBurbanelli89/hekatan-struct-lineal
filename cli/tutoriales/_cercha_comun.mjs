@@ -197,6 +197,7 @@ const pasos = [
       await cinta(a, "Medir", "Medir / acotar: dos clics.");
       await clicMundo(a, inf[0], "Del apoyo…", true); await clicMundo(a, inf[n], "…al apoyo: 12.000 m.", true);
       await a.quieto(4, 360);
+      await a.pag.keyboard.press("Escape"); await a.quieto(1, 200);   // suelta la regla y el nudo seleccionado
     },
   },
   {
@@ -212,6 +213,7 @@ const pasos = [
     rotulo: "10 · Guardar en formato Hekatan Struct (.heks): texto, para guardar y compartir",
     hacer: async (a) => {
       // el botón vive en el panel, abajo del todo: se trae a la CINTA con la flecha «▾»
+      { const ab = await rect(a, () => [...document.querySelectorAll("button")].find((b) => /✏ Dibujar/.test(b.textContent || ""))); if (ab) { await clicRojo(a, ab.x, ab.y, false); await a.quieto(2, 300); } }
       const mas = await rect(a, () => document.getElementById("hk-ribbon-mas"));
       if (mas) { await mover(a, mas.x, mas.y, 12); await caja(a, { x: mas.rx - 4, y: mas.ry - 4, w: mas.rw + 8, h: mas.rh + 8 }, "▾ Añadir a la cinta: cualquier botón o mando de los paneles.", 5); await clicRojo(a, mas.x, mas.y, false); }
       const bus = await rect(a, () => document.querySelector("#hk-ribbon-extras-lista input[type=text]"));
