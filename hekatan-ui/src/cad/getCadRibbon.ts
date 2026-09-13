@@ -64,23 +64,29 @@ interface Herr {
 }
 
 /** Lo que se usa todo el rato. Lo demás NO entra aquí a propósito. */
-const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
+// `fila`: 1 = arriba (dibujar / estructura / analizar / vista), 2 = abajo (modificar /
+// rejilla / cota / carga). Dos filas y no más, como las barras de ETABS (Jorge, 13-sep-2026).
+const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
   {
-    titulo: "Dibujar",
+    titulo: "Dibujar", fila: 1,
     items: [
       { id: "line",     icono: "／", nombre: "Línea",     tecla: "L",   ayuda: "clic tras clic, encadena. C cierra, U quita el último, Esc termina." },
       { id: "polyline", icono: "⌒", nombre: "Polilínea", tecla: "PL",  ayuda: "clics seguidos; Enter o clic derecho para terminar." },
       { id: "rect",     icono: "▭", nombre: "Rectáng.",  tecla: "REC", ayuda: "clic en dos esquinas opuestas." },
       { id: "circle",   icono: "○", nombre: "Círculo",   tecla: "C",   ayuda: "clic en el centro, clic en el radio (o teclea el radio)." },
       { id: "arc",      icono: "⌒", nombre: "Arco",      tecla: "A",   ayuda: "clic inicio, medio y fin." },
+      { id: "parabola", icono: "∪", nombre: "Parábola",  tecla: "PAR", ayuda: "3 clics en el plano de la vista: la parábola que pasa por los tres." },
+      { id: "cubica",   icono: "∿", nombre: "Cúbica",    tecla: "CUB", ayuda: "4 clics: el polinomio de 3er grado que pasa por los cuatro." },
     ],
   },
   {
-    titulo: "Estructura",
+    titulo: "Estructura", fila: 1,
     items: [
       { id: "col",  icono: "▌", nombre: "Columna", tecla: "COL", ayuda: "teclea la altura + Enter, luego clic en la base." },
       { id: "wall", icono: "▥", nombre: "Muro",    tecla: "MU",  ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
       { id: "area", icono: "▦", nombre: "Losa",    tecla: "LO",  ayuda: "4 clics en orden, antihorario." },
+      { id: "revolve", icono: "⟳", nombre: "Revoluc.", tecla: "REV", ayuda: "designá el meridiano (guía) y hacé 1 clic en el eje: cúpula en paños Q4." },
+      { id: "loft",    icono: "⟲", nombre: "Barrido",  tecla: "BAR", ayuda: "designá contorno de planta + perfil de alzado y 1 clic en el centro: la piel en paños Q4." },
     ],
   },
   {
@@ -90,7 +96,7 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
     // del ribbon: 145 nudos, 121 tramos y cero resultados
     // (`node cli/ctl_solo_botones.mjs`). Una estructura sin apoyos no tiene
     // solucion — la matriz es singular — y sin cargas no se mueve.
-    titulo: "Analizar",
+    titulo: "Analizar", fila: 1,
     items: [
       { id: "apoyo", icono: "▲", nombre: "Apoyo", tecla: "AP",
         ayuda: "clic sobre un nudo: lo empotra. Sin apoyos no hay solucion." },
@@ -99,7 +105,7 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
     ],
   },
   {
-    titulo: "Modificar",
+    titulo: "Modificar", fila: 2,
     items: [
       { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: clic en una esquina, mueve, clic en la otra (izq→der ventana, der→izq captura). Arrastrar orbita." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
@@ -110,6 +116,8 @@ const GRUPOS: Array<{ titulo: string; items: Herr[] }> = [
       { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
       { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
       { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
+      { id: "medir",  icono: "📏", nombre: "Medir",    tecla: "DI", ayuda: "2 clics: distancia y Δx Δy Δz (acotar)." },
+      { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
     ],
   },
 ];
@@ -120,13 +128,20 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   barra.id = "hk-ribbon";
   barra.style.cssText = [
     "position:absolute", "top:8px", "left:50%", "transform:translateX(-50%)",
-    "z-index:60", "display:flex", "align-items:stretch", "gap:0",
+    "z-index:60", "display:flex", "flex-direction:column", "align-items:stretch", "gap:2px",
     "background:rgba(15,23,42,.94)", "border:1px solid #1e3a4a",
-    "border-radius:10px", "padding:5px", "backdrop-filter:blur(6px)",
+    "border-radius:10px", "padding:4px 5px", "backdrop-filter:blur(6px)",
     "box-shadow:0 6px 20px rgba(0,0,0,.45)",
     "font-family:system-ui,-apple-system,Segoe UI,sans-serif",
-    "max-width:calc(100% - 24px)", "flex-wrap:wrap",
+    "max-width:calc(100% - 24px)",
   ].join(";") + ";";
+  // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
+  // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.
+  const mkFila = () => { const f = document.createElement("div"); f.style.cssText = "display:flex;align-items:stretch;gap:0;"; return f; };
+  const filaA = mkFila(), filaB = mkFila();
+  filaB.style.borderTop = "1px solid #1e3a4a"; filaB.style.paddingTop = "2px";
+  barra.append(filaA, filaB);
+  const enFila = (n: 1 | 2) => (n === 1 ? filaA : filaB);
 
   const botones = new Map<string, HTMLButtonElement>();
 
@@ -281,7 +296,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       b.style.cssText = [
         "display:flex", "flex-direction:column", "align-items:center",
         "justify-content:center", "gap:1px",
-        "width:52px", "height:46px", "cursor:pointer",
+        "width:48px", "height:44px", "cursor:pointer",
         "background:transparent", "border:1px solid transparent",
         "border-radius:7px", "color:#cbd5e1", "font-family:inherit",
         "transition:background .12s",
@@ -303,11 +318,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     rot.textContent = g.titulo;
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.appendChild(fila); caja.appendChild(rot);
-    barra.appendChild(caja);
+    enFila(g.fila).appendChild(caja);
 
     const sep = document.createElement("div");
     sep.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
-    barra.appendChild(sep);
+    enFila(g.fila).appendChild(sep);
   }
 
   // ── Rejilla: los tres campos y el botón, a la vista ────────────────────────
@@ -345,7 +360,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotG.textContent = "Rejilla  X × Y × pisos";
   rotG.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaG.append(filaG, rotG);
-  barra.appendChild(cajaG);
+  filaB.appendChild(cajaG);
 
   // ── EN ALTURA: lo que permite trabajar en 3D sin cambiar de vista ─────────
   //
@@ -413,10 +428,10 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotZ.textContent = "Cota Z · subir alt × nº";
   rotZ.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaZ.append(filaZ, rotZ);
-  barra.appendChild(cajaZ);
+  filaB.appendChild(cajaZ);
   const sepZ = document.createElement("div");
   sepZ.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
-  barra.appendChild(sepZ);
+  filaB.appendChild(sepZ);
 
   // Cuanta carga pone el boton Carga. Sin la casilla habria que adivinar el
   // valor o irse al panel: la carga es un NUMERO, no un gesto.
@@ -435,11 +450,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotC.textContent = "Carga (kN)";
   rotC.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaC.append(inC, rotC);
-  barra.appendChild(cajaC);
+  filaB.appendChild(cajaC);
 
   const sep2 = document.createElement("div");
   sep2.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
-  barra.appendChild(sep2);
+  filaA.appendChild(sep2);
 
   // ── Vistas ────────────────────────────────────────────────────────────────
   const cajaV = document.createElement("div");
@@ -485,7 +500,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotV.textContent = "Vista · plano de trabajo";
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
-  barra.appendChild(cajaV);
+  filaA.appendChild(cajaV);
 
   // ── GUÍA dentro del programa (botón ? y F1) ───────────────────────────────
   //
@@ -652,7 +667,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     "background:transparent;border:1px solid #22d3ee;border-radius:50%;color:#22d3ee;" +
     "font:600 13px inherit;align-self:center;";
   bAyuda.addEventListener("click", () => verGuia());
-  barra.appendChild(bAyuda);
+  filaA.appendChild(bAyuda);
 
   // ── Barra de estado: qué se espera AHORA (el Dynamic Prompt) ──────────────
   const estado = document.createElement("div");
@@ -689,7 +704,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bPlegar.style.cssText = "width:26px;height:26px;margin-left:4px;cursor:pointer;" +
     "background:transparent;border:1px solid #475569;border-radius:6px;color:#94a3b8;" +
     "font:600 13px inherit;align-self:center;";
-  barra.appendChild(bPlegar);
+  filaA.appendChild(bPlegar);
 
   // El botón que queda cuando está plegada. Va en el MISMO sitio que la barra,
   // para que abrir y cerrar no mueva nada de lo que hay debajo.

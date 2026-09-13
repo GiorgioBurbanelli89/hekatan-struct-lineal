@@ -1,0 +1,10 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });
+await pag.goto("http://localhost:4600/workspace/?t=new-blank", { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 3000));
+await pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo", "0"); } catch (e) {} });
+await new Promise((r) => setTimeout(r, 500));
+const r = await pag.evaluate(() => { const b = document.getElementById("hk-ribbon"); const rc = b.getBoundingClientRect(); return { w: rc.width, h: rc.height, top: rc.top }; });
+console.log("ribbon", JSON.stringify(r));
+await pag.screenshot({ path: "cli/shots/_ribbon_2filas.png", clip: { x: 0, y: 0, width: 1280, height: 200 } });
+await nav.close();
