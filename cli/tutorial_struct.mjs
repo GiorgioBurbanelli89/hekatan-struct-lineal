@@ -107,7 +107,9 @@ await espera(cap.ruta && !/workspace/.test(cap.ruta) ? 2500 : 7000);
 // etiqueta los tapa («Pórtico 3D» salía debajo de «X=4.50 Y=39.50»). Se ocultan.
 await pag.addStyleTag({ content:
   // (y la entrada dinámica #hk-dyn, «Designe objetos…», que también sigue al ratón)
-  "#hk-coord-readout, #hk-coord-fixed, #hk-dyn { display:none !important }" +
+  // (13-sep-2026: #hk-coord-readout ya NO se oculta: es la entrada dinámica —longitud y
+  // ángulo junto al cursor— y la app la esconde sola al salir del lienzo)
+  "#hk-coord-fixed, #hk-dyn { display:none !important }" +
   // Se graban 588 de los 720 px (abajo va la franja de dos subtítulos): las últimas
   // filas de cada panel quedaban fuera del cuadro aunque el panel bajara del todo
   // («Ex lateral» del pórtico). Un margen al final deja subirlas. No cambia nada de

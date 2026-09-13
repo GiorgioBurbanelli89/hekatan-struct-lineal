@@ -38,24 +38,29 @@ await panelDer(true);
 await abrirCarpeta("Plano de trabajo"); await pulsar("Plano XY \\(planta\\)");
 await abrirCarpeta("Precisión"); { const c = await control("Grid snap", "check"); await clic(c.x, c.y); }
 await abrirCarpeta("Modos de dibujo"); await escribir("Segmentos arc", 4); await escribir("Chaflán r", 5);
+{ const c = await control("Curvas como gu", "check"); await clic(c.x, c.y); } console.log("curvas aux:", await ev(() => window.__hekatanCurvasAux));
+const auxLineas = () => ev(() => (window.__hekatanDrawingAuxLines?.rawVal ?? []));
 console.log("grid snap:", await ev(() => window.__hekatanSnapEnabled), "| chaflán r:", await ev(() => window.__hekatanChaflanR), "| segs:", await ev(() => window.__hekatanArcSegs));
 await abrirCarpeta("Áreas \\(shells\\)"); await pulsar("Losa con chaflanes"); await clicMundo([[-13, -12, 0]]); await foto("planta_esquina1"); await clicMundo([[13, 12, 0]]); console.log("  ", await estado()); await foto("planta_contorno");
 let nC = 0;
-{ const d = await dibujo(); const pl = d.PL[d.PL.length - 1]; nC = pl.length - 1; const cerrada = pl[0] === pl[pl.length - 1]; const z0 = Math.max(...pl.map((i) => Math.abs(d.P[i][2])));
-  ok("contorno: polilínea cerrada", cerrada, "sí", cerrada); ok("contorno: lados", nC, "= 4 lados × 6 + 4 chaflanes × 4 = 40", nC === 40); ok("contorno: en z = 0", z0.toExponential(1), "0", z0 < 1e-9);
-  const xM = Math.max(...pl.map((i) => d.P[i][0])), yM = Math.max(...pl.map((i) => d.P[i][1])); ok("contorno: 26 × 24", `${2 * xM} × ${2 * yM}`, "26 × 24", Math.abs(xM - 13) < 1e-9 && Math.abs(yM - 12) < 1e-9); }
+{ const L = await auxLineas(); nC = L.length; const z0 = Math.max(...L.map((l) => Math.max(Math.abs(l[2]), Math.abs(l[5]))));
+  ok("contorno: líneas auxiliares (guía, no barras)", nC, "= 4 lados × 6 + 4 chaflanes × 4 = 40", nC === 40); ok("contorno: en z = 0", z0.toExponential(1), "0", z0 < 1e-9);
+  const xM = Math.max(...L.map((l) => Math.max(l[0], l[3]))), yM = Math.max(...L.map((l) => Math.max(l[1], l[4]))); ok("contorno: 26 × 24", `${2 * xM} × ${2 * yM}`, "26 × 24", Math.abs(xM - 13) < 1e-9 && Math.abs(yM - 12) < 1e-9); }
 // 2. ALZADO XZ: la panza, parábola por (16,0,0) (17,0,2) (16,0,4); 12 tramos. Se dibuja FUERA del contorno
 // (x 16, no 13): en el alzado todos los vértices del contorno con la misma x se proyectan en el mismo píxel y
 // el osnap engancharía a uno con y ≠ 0. El barrido mide la panza RELATIVA (r_k − r_0), así que da igual dónde esté.
 await abrirCarpeta("Plano de trabajo"); await pulsar("Plano XZ \\(elevaci"); await abrirCarpeta("Modos de dibujo"); await escribir("Segmentos arc", 12);
 await abrirCarpeta("✏ Dibujar"); await pulsar("∪ Parábola"); await clicMundo([[16, 0, 0], [17, 0, 2]]); await foto("alzado_2clics"); await clicMundo([[16, 0, 4]]); console.log("  ", await estado()); await foto("alzado_perfil");
 const SEGS = 12;
-{ const d = await dibujo(); const pl = d.PL[d.PL.length - 1]; const f = (z) => 17 - (z - 2) ** 2 / 4; const e = Math.max(...pl.map((i) => Math.abs(d.P[i][0] - f(d.P[i][2]))));
-  ok("perfil: puntos", pl.length, "= 13", pl.length === SEGS + 1); ok("perfil: |x − f(z)| máx", e.toExponential(2), "< 1e-9", e < 1e-9); }
+{ const L = (await auxLineas()).slice(nC); const f = (z) => 17 - (z - 2) ** 2 / 4; const e = Math.max(...L.flatMap((l) => [l[0] - f(l[2]), l[3] - f(l[5])]).map(Math.abs));
+  ok("perfil: líneas auxiliares", L.length, "= 12", L.length === SEGS); ok("perfil: |x − f(z)| máx", e.toExponential(2), "< 1e-9", e < 1e-9); }
+// acotar la panza con la regla: del pie del perfil al punto a media altura, en horizontal
+await pulsar("Medir / acotar"); await clicMundo([[16, 0, 2], [17, 0, 2]]); await foto("regla_panza");
+{ const t = await ev(() => document.getElementById("hk-measure-label")?.textContent); ok("regla: panza medida", t, "1.000 m", /^1\.000 m$/.test(t || "")); }
 // 3. seleccionar contorno + perfil con UNA ventana (clic-clic) en el alzado
 await abrirCarpeta("Modificar"); await pulsar("🖱 Seleccionar");
 { const [a, b] = await proj([[-14, 0, 4.6], [18, 0, -0.6]]); await clic(a.x, a.y); await mover(b.x, b.y, 10); await espera(200); await foto("ventana"); await clic(b.x, b.y); await espera(400); }
-{ const sel = await ev(() => [...(window.__hekatanSelection ?? [])]); const polysSel = new Set(sel.filter((i) => i.startsWith("poly:") || i.startsWith("seg:")).map((i) => +i.split(":")[1])); ok("selección: contorno y perfil (2 polilíneas)", polysSel.size, "= 2", polysSel.size === 2, sel.length + " ids"); }
+{ const sel = await ev(() => [...(window.__hekatanSelection ?? [])]); const nA = sel.filter((i) => i.startsWith("aux:")).length; ok("selección: contorno + perfil (auxiliares)", nA, "= 52", nA === 52); }
 // 4. Barrido en alzado: 1 clic en el centro de la planta
 await abrirCarpeta("Áreas \\(shells\\)"); await pulsar("Barrido en alzado"); await foto("boton_barrido"); await clicMundo([[0, 0, 2]]); const st = await estado(); console.log("  ", st); await foto("piel_alzado");
 // 5. iso
@@ -65,6 +70,9 @@ await ev(() => { const h = [...document.querySelectorAll("div")].find((d) => d._
   ok("piel: paños Q4", d.A.length, "= " + nC + " × " + SEGS + " = " + nC * SEGS, d.A.length === nC * SEGS);
   const degen = d.A.filter((a) => new Set(d.PL[a].slice(0, 4)).size < 4).length; ok("piel: Q4 colapsados", degen, "0", degen === 0);
   const dup = d.P.length - new Set(d.P.map((p) => p.map((v) => Math.round(v * 1e4)).join(","))).size; ok("piel: nudos duplicados", dup, "0", dup === 0);
+  const auxQuedan = (await auxLineas()).length; ok("piel: guías auxiliares borradas", auxQuedan, "0 quedan", auxQuedan === 0);
+  const barras = d.PL.filter((pl, k) => !d.A.includes(k) && pl.length >= 2).length; ok("piel: sin barras sueltas", barras, "0", barras === 0);
+  ok("piel: todos los nudos son de paño", d.P.length, "= " + nudos.size, d.P.length === nudos.size);
   // anillo a anillo: x máx = 13 + d(z), con d(z) = f(z) − 13 (la panza del perfil)
   const f = (z) => 17 - (z - 2) ** 2 / 4 - 3; /* x máx del anillo = 13 + (perfil − 16) */ const porZ = new Map(); for (const i of nudos) { const z = d.P[i][2]; porZ.set(z, Math.max(porZ.get(z) ?? -1e9, d.P[i][0])); }   // z exacta: todos los nudos del anillo la copian del perfil
   const eR = Math.max(...[...porZ].map(([z, xM]) => Math.abs(xM - f(z)))); ok("piel: anillos", porZ.size, "= 13", porZ.size === SEGS + 1); ok("piel: |x máx − f(z)| por anillo", eR.toExponential(2), "< 1e-9", eR < 1e-9);

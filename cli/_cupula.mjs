@@ -37,16 +37,22 @@ await panelDer(true);
 await abrirCarpeta("Plano de trabajo"); await pulsar("Plano XZ \\(elevaci");
 await abrirCarpeta("Precisión"); { const c = await control("Grid snap", "check"); await clic(c.x, c.y); }
 await abrirCarpeta("Modos de dibujo"); await escribir("Segmentos arc", 8); const SEGS = await ev(() => window.__hekatanArcSegs);
+// curvas como GUÍA AUXILIAR (cian): el meridiano no es estructura; la Revolución lo borra al terminar
+{ const c = await control("Curvas como gu", "check"); await clic(c.x, c.y); } console.log("curvas aux:", await ev(() => window.__hekatanCurvasAux)); await foto("guia_aux_on");
 console.log("segmentos del arco:", SEGS, "| grid snap:", await ev(() => window.__hekatanSnapEnabled)); await foto("alzado_xz");
 // 2. el meridiano: arco por (5,0,0) (3,0,4) (0,0,5) → círculo de radio 5 centrado en el origen (3²+4²=5²)
 await abrirCarpeta("✏ Dibujar"); await pulsar("⌒ Arco \\(3 ptos\\)"); await clicMundo([[5, 0, 0], [3, 0, 4]]); await foto("arco_2clics"); await clicMundo([[0, 0, 5]]); await foto("meridiano");
-{ const d = await dibujo(); const pl = d.PL[d.PL.length - 1]; const e = Math.max(...pl.map((i) => Math.abs(Math.hypot(d.P[i][0], d.P[i][2]) - 5))); ok("meridiano: puntos", pl.length, "= " + (SEGS + 1), pl.length === SEGS + 1); ok("meridiano: |r − 5| máx", e.toExponential(2), "< 1e-9", e < 1e-9); ok("meridiano: acaba en el eje (polo)", d.P[pl[pl.length - 1]].map((v) => +v.toFixed(3)).join(","), "0,0,5", Math.hypot(d.P[pl[pl.length - 1]][0], d.P[pl[pl.length - 1]][1]) < 1e-9); }
+const auxLineas = () => ev(() => (window.__hekatanDrawingAuxLines?.rawVal ?? []));
+{ const L = await auxLineas(); const e = Math.max(...L.flatMap((l) => [Math.hypot(l[0], l[2]) - 5, Math.hypot(l[3], l[5]) - 5]).map(Math.abs)); ok("meridiano: líneas auxiliares", L.length, "= " + SEGS, L.length === SEGS); ok("meridiano: |r − 5| máx", e.toExponential(2), "< 1e-9", e < 1e-9); ok("meridiano: sin barras ni nudos (es guía)", (await dibujo()).P.length, "0", (await dibujo()).P.length === 0); }
+// acotar: la regla mide el radio entre el centro y el arranque (enganche a los extremos de la auxiliar)
+await abrirCarpeta("✏ Dibujar"); await pulsar("Medir / acotar"); await clicMundo([[0, 0, 0], [5, 0, 0]]); await foto("regla_radio");
+{ const t = await ev(() => document.getElementById("hk-measure-label")?.textContent); ok("regla: radio medido", t, "5.000 m", /^5\.000 m$/.test(t || "")); }
 // 3. seleccionar el arco con una VENTANA (arrastre con el tool Seleccionar)
 await abrirCarpeta("Modificar").catch(() => {}); let bSel = await boton("Seleccionar"); if (!bSel) { await abrirCarpeta("Acciones de selecci"); bSel = await boton("Seleccionar"); }
 if (bSel) await clic(bSel.x, bSel.y); else await ev(() => window.__hekatanCadState.setTool("select"));
 // (la ventana es CLIC-CLIC como en AutoCAD: un clic marca la esquina, otro la cierra; arrastrar orbita)
 { const [a, b] = await proj([[-0.6, 0, 5.6], [5.6, 0, -0.6]]); await clic(a.x, a.y); await mover(b.x, b.y, 10); await espera(200); await foto("ventana_seleccion"); await clic(b.x, b.y); await espera(400); }
-const nSel = await ev(() => [...(window.__hekatanSelection ?? [])].filter((i) => i.startsWith("seg:")).length); ok("selección: segmentos del arco", nSel, "= " + SEGS, nSel === SEGS); await foto("arco_seleccionado");
+const nSel = await ev(() => [...(window.__hekatanSelection ?? [])].filter((i) => i.startsWith("aux:")).length); ok("selección: líneas auxiliares del arco", nSel, "= " + SEGS, nSel === SEGS); await foto("arco_seleccionado");
 // 4. Revolución: 16 sectores, 1 clic en el eje (x = 0, en el alzado)
 await abrirCarpeta("Áreas \\(shells\\)"); await escribir("Sectores \\(revoluci", 16); await pulsar("Revolución de la selecci"); await foto("boton_revolucion");
 await clicMundo([[0, 0, 2]]); console.log("  ", await estado()); await foto("cupula_alzado");
@@ -59,6 +65,9 @@ await abrirCarpeta("Plano de trabajo"); await pulsar("Vista isom"); await ev(() 
   ok("cúpula: |R − 5| máx en todos los nudos", e.toExponential(2), "< 1e-9", e < 1e-9);
   const degen = d.A.filter((a) => new Set(d.PL[a].slice(0, 4)).size < 4).length; ok("cúpula: Q4 colapsados", degen, "0", degen === 0);
   const dup = d.P.length - new Set(d.P.map((p) => p.map((v) => Math.round(v * 1e4)).join(","))).size; ok("cúpula: nudos duplicados", dup, "0", dup === 0);
+  const auxQuedan = (await auxLineas()).length; ok("cúpula: guías auxiliares borradas", auxQuedan, "0 quedan", auxQuedan === 0);
+  const barras = d.PL.filter((pl, k) => !d.A.includes(k) && pl.length >= 2).length; ok("cúpula: sin barras sueltas", barras, "0", barras === 0);
+  ok("cúpula: todos los nudos son de paño", d.P.length, "= " + nudos.size, d.P.length === nudos.size);
   // .heks para ETABS: t 0.10, E 25e6, ρ 2.4; base (z = 0) empotrada; peso propio
   const L = ["selfweight 1"]; const ids = [...nudos].sort((u, v) => u - v); const idDe = new Map(ids.map((i, j) => [i, j + 1]));
   for (const i of ids) L.push(`node ${idDe.get(i)} ${d.P[i].map((v) => +v.toFixed(6)).join(" ")}`);

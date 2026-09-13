@@ -186,12 +186,20 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
 
   // ── Modos de dibujo (ORTO/POLAR/segs) ──
   const fModes = fPrec.addFolder({ title: "Modos de dibujo", expanded: true });
-  const proxyModes = { ortho: false, polar: false, segs: 12 };
+  const proxyModes = { ortho: false, polar: false, segs: 12, aux: false };
   fModes.addBinding(proxyModes, "ortho", { label: "ORTO (90°)" }).on("change", (ev: any) => {
     (window as any).__hekatanOrtho = ev.value;
   });
   fModes.addBinding(proxyModes, "polar", { label: "POLAR (45°)" }).on("change", (ev: any) => {
     (window as any).__hekatanPolar = ev.value;
+  });
+  // Jorge, 13-sep-2026: «necesitamos crear líneas auxiliares que luego se borran».
+  // Con esto Arco/Círculo/Parábola/Cúbica/Losa con chaflanes salen como líneas
+  // auxiliares (cian): son la guía de la Revolución o el Barrido, que las borran al
+  // terminar. Apagado, salen como barras (frames), como siempre.
+  (window as any).__hekatanCurvasAux = false;
+  fModes.addBinding(proxyModes, "aux", { label: "Curvas como guía auxiliar (se borran al usarlas)" }).on("change", (ev: any) => {
+    (window as any).__hekatanCurvasAux = !!ev.value;
   });
   fModes.addBinding(proxyModes, "segs", { min: 4, max: 64, step: 1, label: "Segmentos arc/círc" }).on("change", (ev: any) => {
     (window as any).__hekatanArcSegs = ev.value;

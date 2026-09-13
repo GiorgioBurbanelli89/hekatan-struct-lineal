@@ -94,11 +94,12 @@ export const pasos = [
       await marcar(a, "Grid snap", "Grid snap: el clic cae en la rejilla, coordenadas exactas.");
       await abrirCarpeta(a, "Modos de dibujo");
       await escribir(a, "Segmentos arc", 8, "Ocho tramos rectos por arco: ETABS no admite curvas.");
+      await marcar(a, "Curvas como gu", "Curvas como guía AUXILIAR: el meridiano no es estructura, se borra al usarlo.");
       await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "2 · El meridiano: Arco por 3 puntos (5,0,0) (3,0,4) (0,0,5) — radio 5, acaba en el eje",
+    rotulo: "2 · El meridiano como guía auxiliar: Arco por 3 puntos (5,0,0) (3,0,4) (0,0,5); la regla mide el radio",
     hacer: async (a) => {
       await abrirCarpeta(a, "✏ Dibujar");
       await pulsar(a, "⌒ Arco \\(3 ptos\\)", "Arco por tres puntos.");
@@ -106,7 +107,11 @@ export const pasos = [
       await clicMundo(a, [3, 0, 4], "Punto medio (3, 4): 3² + 4² = 5².");
       await clicMundo(a, [0, 0, 5], "Cumbre en el eje: (0, 5).");
       console.log("   ", await estado(a));
-      await a.quieto(4, 360);
+      await a.quieto(3, 360);
+      await pulsar(a, "Medir / acotar", "Medir / acotar: la regla.");
+      await clicMundo(a, [0, 0, 0], "Del centro…");
+      await clicMundo(a, [5, 0, 0], "…al arranque: 5.000 m, el radio.");
+      await a.quieto(5, 360);
     },
   },
   {
@@ -156,6 +161,7 @@ export const pasos = [
       await abrirCarpeta(a, "Modos de dibujo");
       await escribir(a, "Segmentos arc", 4, "Cuatro tramos por esquina redondeada.");
       await escribir(a, "Chaflán r", 5, "Radio de las esquinas: 5 m (escala 1 a 10).");
+      await marcar(a, "Curvas como gu", "Sigue en guía auxiliar: contorno y perfil se borrarán al barrer.");
       await abrirCarpeta(a, "Áreas \\(shells\\)");
       await pulsar(a, "Losa con chaflanes", "Losa con chaflanes: el contorno de planta.");
       await clicMundo(a, [-13, -12, 0], "Esquina (−13, −12).");
@@ -176,6 +182,10 @@ export const pasos = [
       await clicMundo(a, [17, 0, 2], "A media altura sale 1 m: (17, 2).");
       await clicMundo(a, [16, 0, 4], "Arriba vuelve: (16, 4).");
       console.log("   ", await estado(a));
+      await a.quieto(3, 360);
+      await pulsar(a, "Medir / acotar", "La regla: cuánto sale la panza.");
+      await clicMundo(a, [16, 0, 2], "Del pie…");
+      await clicMundo(a, [17, 0, 2], "…a media altura: 1.000 m.");
       await a.quieto(4, 360);
     },
   },
