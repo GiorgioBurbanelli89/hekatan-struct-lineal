@@ -3,6 +3,7 @@
 // diagrama de axiles). Todo con el cursor sobre la cinta de dos filas, sin abrir menús.
 const LIM = { x: 0, y: 0, w: 1280, h: 640 };
 const NOMBRE = { warren: "Warren", howe: "Howe", pratt: "Pratt" };
+const ARCHIVO = { warren: "cercha_warren", howe: "cercha_howe", pratt: "cercha_pratt" };   // nombre para «Guardar como…»
 const NUM = { warren: 9, howe: 10, pratt: 11 };
 
 const mover = async (a, x, y, pasos = 10) => {
@@ -230,6 +231,19 @@ const pasos = [
       await a.quieto(8, 360);
       await a.sinArchivo().catch(() => {});
       await a.quieto(2, 300);
+      // «Guardar como…» de la barra de arriba: pide el NOMBRE (diálogo del sistema; aquí el
+      // cuadro del navegador, que se contesta con el nombre de la cercha)
+      const gc = await rect(a, () => document.querySelector('#hk-cad-tit button[title="Guardar como"]'));
+      if (gc) {
+        await mover(a, gc.x, gc.y, 12);
+        await caja(a, { x: gc.rx - 4, y: gc.ry - 4, w: gc.rw + 8, h: gc.rh + 8 }, "Guardar como…: pide el nombre. Aquí «" + ARCHIVO[tipo] + ".heks».", 6);
+        a.responder(ARCHIVO[tipo]);
+        await clicRojo(a, gc.x, gc.y, false);
+        await a.archivo("Con el nombre elegido: «" + ARCHIVO[tipo] + ".heks». La barra de arriba lo muestra; Guardar lo reescribe.", { lineas: 12, marcas: ["support", "load"] }).catch(() => null);
+        await a.quieto(6, 360);
+        await a.sinArchivo().catch(() => {});
+        await a.quieto(2, 300);
+      }
     },
   },
 ];

@@ -77,12 +77,19 @@ const nav = await puppeteer.launch({ headless: "new",
   args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
          "--use-angle=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] });
 const pag = await nav.newPage();
+// Sin diálogo del sistema: en headless `showSaveFilePicker` se cancela solo (AbortError) y
+// «Guardar como…» no haría nada. Sin la API, la app pregunta el nombre con prompt(), que
+// se contesta desde el capítulo (api.responder). Es lo que ve un usuario de Firefox.
+await pag.evaluateOnNewDocument(() => { try { Object.defineProperty(window, "showSaveFilePicker", { value: undefined, configurable: true }); } catch (e) {} });
 await pag.setViewport({ width: ANCHO, height: ALTO, deviceScaleFactor: 2 });
 const avisos = [];
 pag.on("pageerror", (e) => avisos.push("pageerror: " + e.message.slice(0, 160)));
 // Un alert() (p. ej. «exportado») deja la página parada hasta que alguien lo cierre.
 let ultimoDialogo = null;
-pag.on("dialog", (d) => { ultimoDialogo = d.message(); avisos.push("dialogo: " + d.message().slice(0, 120)); d.accept().catch(() => {}); });
+// Un prompt() (Guardar como… pide el nombre) se contesta con lo que el capítulo dejó en
+// `respuestaDialogo` (api.responder); sin nada, se acepta vacío como antes.
+let respuestaDialogo = null;
+pag.on("dialog", (d) => { ultimoDialogo = d.message(); avisos.push("dialogo: " + d.message().slice(0, 120)); const r = respuestaDialogo; respuestaDialogo = null; d.accept(r ?? undefined).catch(() => {}); });
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 // `cap.ruta` deja abrir cualquier página del deploy — la PORTADA, por ejemplo, que es
 // donde se elige con qué trabajar y no tiene visor 3D que esperar.
@@ -540,6 +547,7 @@ const api = {
    * y no sale en la foto; la persona sí lo ve y pulsa «Aceptar». Se dibuja como el de
    * Chrome, el cursor va al botón y lo pulsa.
    */
+  responder: (texto) => { respuestaDialogo = texto; },
   dialogo: async (quieto = 6) => {
     for (let i = 0; i < 15 && !ultimoDialogo; i++) await espera(200);
     if (!ultimoDialogo) { console.log("  x no hubo aviso"); return null; }
