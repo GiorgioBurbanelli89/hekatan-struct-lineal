@@ -4445,6 +4445,15 @@ function buildParamsPane() {
             // dibujo del CAD (planos de trabajo, triada de ejes, rejilla) y
             // parecia que la pagina cargaba algo antes del modelo.
             quitarVelo();
+            // `&modal=N`: el enlace abre con el modal YA corrido y la tabla de
+            // participacion de masa a la vista — para mandarle el modelo a
+            // alguien y que no tenga que buscar el boton.
+            const nModal = _qs.get("modal");
+            if (nModal) {
+              (window as any).__hekatanCliModalModes = nModal;
+              __modalTableShown = true;
+              setTimeout(() => (window as any).__hekatanRunModalAnimate?.(), 800);
+            }
           }, 0);
           // y se apagan los planos de trabajo del CAD, que son ayuda para
           // dibujar y aqui solo estorban al mirar un modelo ya hecho
@@ -4461,7 +4470,11 @@ function buildParamsPane() {
         });
     }
     fCli.addButton({ title: "💾 Guardar .heks" }).on("click", () => {
-      const blob = new Blob([ta.value], { type: "text/plain" });
+      // Cuadro CLI vacío = el modelo se dibujó con el mouse: se genera el .heks del dibujo
+      // (Tutorial 9: salía un archivo de 0 KB).
+      const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
+      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
+      const blob = new Blob([texto], { type: "text/plain" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = "modelo.heks";

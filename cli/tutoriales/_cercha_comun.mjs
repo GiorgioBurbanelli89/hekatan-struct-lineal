@@ -198,8 +198,7 @@ const pasos = [
       await clicMundo(a, inf[0], "Del apoyo…", true); await clicMundo(a, inf[n], "…al apoyo: 12.000 m.", true);
       await a.quieto(4, 360);
       await a.pag.keyboard.press("Escape"); await a.quieto(1, 200);   // suelta la regla
-      // el nudo del segundo clic queda designado (su panel a la derecha): un clic en vacío lo suelta
-      await cinta(a, "Selec", "Selección: clic en vacío suelta lo designado."); await clicMundo(a, [0, 0, -3.5], "", false); await a.quieto(1, 200);
+      // (un clic en vacío abre una VENTANA de selección, clic-clic: no sirve para soltar)
       await a.pag.evaluate(() => { try { window.__hekatanClearSelection?.(); } catch (e) {} });
       await a.quieto(1, 200);
     },

@@ -537,6 +537,30 @@ export const newBlank: ExampleDef = {
     } as any;
     states.objects3D.val = [...referenciaIfc(p), ...flechasDist];
 
+    // ── El modelo dibujado, en texto .heks (lo que «💾 Guardar .heks» descarga cuando el cuadro
+    //    CLI está vacío). Nudos, barras (E A I22 I33 J ν ρ), cáscaras, apoyos, cargas nodales
+    //    PURAS, cargas distribuidas por barra y muelles: lo mismo que lee cliModeler. ──
+    (window as any).__hekatanModeloAHeks = () => {
+      const n6 = (v: number) => String(+(+v).toFixed(6));
+      const g6 = (v: any) => (typeof v === "number" ? String(+v.toPrecision(6)) : String(v));
+      // ρ aquí está en kN/m³ (24); el .heks la lleva en t/m³ (2.45 por defecto): se divide por g
+      const rhoT = (i: number) => g6((densities.get(i) ?? 0) / 9.80665);
+      const L: string[] = ["# Hekatan Struct · modelo dibujado (" + new Date().toISOString().slice(0, 10) + ")", "# unidades: m, kN, kN/m"];
+      nodes.forEach((q, i) => L.push(`node ${i + 1} ${n6(q[0])} ${n6(q[1])} ${n6(q[2])}`));
+      elements.forEach((e, i) => {
+        const ns = (e as number[]).map((k) => k + 1).join(" ");
+        if (shellIdx.has(i)) L.push(`shell ${i + 1} ${ns} ${g6(thicknesses.get(i))} ${g6(elasticities.get(i))} 0 ${rhoT(i)}`);
+        else L.push(`frame ${i + 1} ${ns} ${g6(elasticities.get(i))} ${g6(areas.get(i))} ${g6(Iz.get(i))} ${g6(Iy.get(i))} ${g6(J.get(i))} ${g6(poissons.get(i))} ${rhoT(i)}`);
+      });
+      for (const [i, f] of plateFormulations) if (f === 1) L.push(`shelltype ${i + 1} thin`);
+      for (const [nd, d] of supports) L.push(`support ${nd + 1} ${d.map((v: any) => (v ? 1 : 0)).join(" ")}`);
+      for (const [nd, f] of loads) if (f.some((v: number) => v !== 0)) L.push(`load ${nd + 1} ${f.join(" ")}`);
+      for (const [i, w] of frameLoadsElem) L.push(`frameload ${i + 1} ${w.join(" ")}`);
+      for (const sp of springsList) L.push(`spring ${sp.node + 1} ${["ux", "uy", "uz", "rx", "ry", "rz"][sp.dof]} ${sp.k}`);
+      L.push("solve");
+      return L.join("\n") + "\n";
+    };
+
     // ── Auto-solve si hay apoyos + cargas + elementos ──
     // ── Springs joint (prop:"springs") → springsList Array<{node, dof, k}> ──
     // Mapeo desde drawingPtIdx → coords → fem nodeIdx (mismo método que supports)
