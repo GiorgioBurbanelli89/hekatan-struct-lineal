@@ -76,6 +76,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     arc:      "⌒ Arco (3 ptos) — click 1=inicio, 2=medio, 3=fin.",
     parabola: "∪ Parábola — 3 clics en el plano de la vista; pasa por los tres (eje vertical). Tramos: «Segmentos arc/círc».",
     cubica:   "∿ Cúbica — 4 clics en el plano de la vista; el polinomio de 3er grado que pasa por los cuatro.",
+    loft:     "⟲ Barrido en alzado — seleccioná el contorno de planta (polilínea cerrada) y el perfil de alzado; 1 clic en el centro de la planta → la piel en paños Q4 (Allianz Arena).",
+    revolve:  "⟳ Revolución — seleccioná antes el meridiano (segmentos); 1 clic en un punto del eje vertical Z y gira en «Sectores (revolución)» tramos → paños Q4 (cúpula).",
     rect:     "▭ Rectángulo — click 2 esquinas. Tipear @5,3 para esquina opuesta relativa.",
     aux:      "┊ Línea auxiliar — referencia visual (no genera FEM). Mismo input que línea.",
     auxp:     "✦ Punto auxiliar — 1 click crea un punto cyan (no genera nodo FEM, sirve para OSnap).",
@@ -136,6 +138,15 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fArea.addButton({ title: "▭ Área rectangular (2 clics)" }).on("click", () => setActiveTool("rectarea"));
   fArea.addButton({ title: "⬡ Área libre (polígono → malla)" }).on("click", () => setActiveTool("polyarea"));
   fArea.addButton({ title: "▦ Rellenar área (clic dentro de 4 barras)" }).on("click", () => setActiveTool("fillarea"));
+  // Cúpula: el meridiano seleccionado (dibujado con Arco en el alzado) girado
+  // alrededor del eje Z que pasa por el punto que se clica.
+  const proxyRev = { sectores: 16 };
+  (window as any).__hekatanRevSectores = 16;
+  fArea.addBinding(proxyRev, "sectores", { min: 4, max: 64, step: 2, label: "Sectores (revolución)" }).on("change", (ev: any) => { (window as any).__hekatanRevSectores = ev.value; });
+  fArea.addButton({ title: "⟳ Revolución de la selección (cúpula, 1 clic = eje)" }).on("click", () => setActiveTool("revolve"));
+  // Allianz Arena: contorno de planta (rectángulo redondeado) + perfil de alzado
+  // (la panza) seleccionados → la piel en paños Q4.
+  fArea.addButton({ title: "⟲ Barrido en alzado (contorno × perfil, 1 clic = eje)" }).on("click", () => setActiveTool("loft"));
   fArea.addButton({ title: "▦▦ Llenar TODAS las celdas cerradas" }).on("click", () => {
     const n = (window as any).__hekatanFillClosedAreas?.() ?? 0;
     try { (window as any).__hekatanCadUpdateStatus?.(`✓ ${n} área(s) creada(s) en celdas cerradas.`); } catch {}

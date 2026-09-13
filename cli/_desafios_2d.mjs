@@ -66,10 +66,14 @@ await pulsar("∿ Cúbica"); await clicMundo([[8, 0, 10], [10, 0, 12], [12, 0, 1
   const ext = cerca(u.pts[0], [8, 0, 10]) && cerca(u.pts[u.pts.length - 1], [14, 0, 13]); ok("cúbica: extremos exactos", ext, "sí", ext);
   // los dos puntos interiores caen en nudos sólo si N es múltiplo de 3: se comprueba sobre la curva
   const pasa = Math.abs(f(10) - 12) < 1e-9 && Math.abs(f(12) - 10) < 1e-9; ok("cúbica: pasa por (10,12) y (12,10)", pasa, "sí", pasa); }
-// 5. degenerada: dos puntos con la misma abscisa → aviso, sin dibujar
+// 5. parábola TUMBADA: dos puntos con la misma x → la abscisa pasa a ser z (x = g(z)); y una
+//    de verdad degenerada (misma x Y misma z en dos clics) → aviso, sin dibujar
+await pulsar("∪ Parábola"); await clicMundo([[17, 0, 8], [17, 0, 11], [19, 0, 9]]); const st = await estado(); await foto("parabola_tumbada"); console.log("  ", st);
+{ const u = await ultima(); const Z = [8, 11, 9], X = [17, 17, 19]; const g = (z) => Z.reduce((s, zi, i) => s + X[i] * Z.reduce((L, zj, j) => j === i ? L : L * (z - zj) / (zi - zj), 1), 0);
+  const e = Math.max(...u.pts.map((p) => Math.abs(p[0] - g(p[2])))); ok("parábola tumbada x = g(z): puntos", u.pts.length, "= " + (SEGS + 1), u.pts.length === SEGS + 1); ok("parábola tumbada: |x − g(z)| máx", e.toExponential(2), "< 1e-6", e < 1e-6); }
 const antes = (await dibujo()).PL.length;
-await pulsar("∪ Parábola"); await clicMundo([[17, 0, 8], [17, 0, 11], [19, 0, 9]]); const st = await estado(); await foto("parabola_degenerada");
-const deg = /misma abscisa/.test(st || "") && (await dibujo()).PL.length === antes; ok("parábola vertical: avisa y no dibuja", deg, "sí", deg, (st || "").slice(0, 80));
+await pulsar("∪ Parábola"); await clicMundo([[15, 0, 6], [15, 0, 6.5], [16, 0, 6]]); const st2 = await estado(); await foto("parabola_degenerada");
+const deg = /misma abscisa/.test(st2 || "") && (await dibujo()).PL.length === antes; ok("parábola degenerada (dos clics casi iguales): avisa y no dibuja", deg, "sí", deg, (st2 || "").slice(0, 80));
 await panelDer(false); await ev(() => document.getElementById("hk-test-cursor")?.remove()); await foto("final");
 console.log("errores de página:", errs.length ? errs : "ninguno"); ok("sin errores de página", errs.length, "0", errs.length === 0);
 const malas = filas.filter((f) => !f.ok); console.log(`\n${filas.length - malas.length}/${filas.length} comprobaciones OK`);

@@ -2214,7 +2214,7 @@ export function drawing({
   (window as any).__hekatanDrawPolinomio = (
     pts: [number, number, number][],
     segs: number = (window as any).__hekatanArcSegs ?? 12,
-  ): { ok: boolean; plano?: string; coef?: number[]; msg?: string } => {
+  ): { ok: boolean; plano?: string; coef?: number[]; ia?: number; io?: number; msg?: string } => {
     const k = pts.length; if (k < 2) return { ok: false, msg: "faltan puntos" };
     const N = Math.max(k - 1, Math.round(segs));
     const rango = (j: number) => Math.max(...pts.map((q) => q[j])) - Math.min(...pts.map((q) => q[j]));
@@ -2225,11 +2225,14 @@ export function drawing({
     const nWp = wp === "xy" ? 2 : wp === "xz" ? 1 : wp === "yz" ? 0 : -1;
     const fijo = nWp >= 0 && r[nWp] < 1e-6 ? nWp : r[2] <= r[0] && r[2] <= r[1] ? 2 : r[1] <= r[0] ? 1 : 0;
     const plano = fijo === 2 ? "xy" : fijo === 1 ? "xz" : "yz";
-    const ia = fijo === 0 ? 1 : 0;              // abscisa: X (o Y si el plano es YZ)
-    const io = fijo === 2 ? 1 : 2;              // ordenada: Z (o Y si el plano es XY)
+    // Los dos ejes del plano: la ABSCISA es el de MAYOR recorrido entre los clics.
+    // Así una parábola «tumbada» (la panza del Allianz: x = f(z), los dos extremos
+    // con la misma x) también sale, en vez de rechazarse por «misma abscisa».
+    const ejes = [0, 1, 2].filter((j) => j !== fijo) as [number, number];
+    const [ia, io] = r[ejes[0]] >= r[ejes[1]] ? ejes : [ejes[1], ejes[0]];
     const xs = pts.map((q) => q[ia]), ys = pts.map((q) => q[io]);
     for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++)
-      if (Math.abs(xs[i] - xs[j]) < 1e-9) return { ok: false, msg: `dos puntos con la misma abscisa (${plano.toUpperCase()}): no hay polinomio y = f(x) que pase por los dos` };
+      if (Math.abs(xs[i] - xs[j]) < 1e-9) return { ok: false, msg: `dos puntos con la misma abscisa (${"XYZ"[ia]} en ${plano.toUpperCase()}): no hay polinomio que pase por los dos` };
     // Lagrange: y(x) = Σ y_i · Π_{j≠i} (x − x_j)/(x_i − x_j)
     const y = (x: number) => { let s = 0; for (let i = 0; i < k; i++) { let L = 1; for (let j = 0; j < k; j++) if (j !== i) L *= (x - xs[j]) / (xs[i] - xs[j]); s += ys[i] * L; } return s; };
     // coeficientes a0 + a1·x + … (por Vandermonde, sólo para informar)
@@ -2253,7 +2256,165 @@ export function drawing({
       const polys = drawingObj.polylines.rawVal;
       drawingObj.polylines.val = polys[polys.length - 1]?.length > 0 ? [...polys, poly, []] : [...polys.slice(0, -1), poly, []];
     }
-    return { ok: true, plano, coef };
+    return { ok: true, plano, coef, ia, io };
+  };
+  // ── REVOLUCIÓN: la selección (segmentos = el meridiano) girada alrededor de un
+  // eje VERTICAL (Z) que pasa por (ax, ay), en `sectores` tramos → paños Q4.
+  // Es como se hace una cúpula (Jorge, 13-sep-2026: «una cúpula, cómo la hace en
+  // Hekatan Struct»): el arco meridiano dibujado en el alzado XZ y girado. Cada nudo
+  // del perfil da un ANILLO de `sectores` nudos (el propio nudo es el sector 0 y, a
+  // 360°, el último coincide con él: se reusa, no se duplica). Un nudo del perfil
+  // que caiga EN el eje es el polo: no hay anillo, y los paños que llegan a él
+  // serían triángulos (Q4 colapsado = elemento indefinido, ver CLAUDE.md); se
+  // cierran con COMETAS [polo, R_i, R_i+1, R_i+2] (sectores par → sectores/2 Q4
+  // convexos), que es como cierran el casquete los malladores de cúpulas.
+  (window as any).__hekatanRevolveSelection = (
+    ax: number, ay: number, sectores: number, anguloDeg = 360,
+  ): { anillos: number; areas: number; polo: boolean; msg?: string } => {
+    const M = Math.max(3, Math.round(sectores || 16));
+    const cerrado = Math.abs(anguloDeg - 360) < 1e-9;
+    const nSect = cerrado ? M : M;                       // paños por segmento
+    const nAn = cerrado ? M : M + 1;                    // nudos por anillo
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
+    const segPairs: [number, number][] = [];
+    [...selection].forEach((id) => {
+      if (id.startsWith("poly:")) { const p = +id.slice(5); if (areasYa.has(p)) return; const poly = polys[p] || []; for (let s = 0; s + 1 < poly.length; s++) segPairs.push([poly[s], poly[s + 1]]); }
+      else if (id.startsWith("seg:")) { const t = id.split(":"); const poly = polys[+t[1]] || []; const a = poly[+t[2]], b = poly[+t[2] + 1]; if (a != null && b != null) segPairs.push([a, b]); }
+    });
+    if (!segPairs.length) return { anillos: 0, areas: 0, polo: false, msg: "no hay segmentos seleccionados (el meridiano)" };
+    if (cerrado && M % 2) return { anillos: 0, areas: 0, polo: false, msg: "con el perfil tocando el eje, los sectores tienen que ser PARES (cometas en el polo)" };
+    pushUndo();
+    const newPts = [...pts];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    const anillo = new Map<number, number[]>();   // nudo del perfil → sus nudos por sector (o [n] si es polo)
+    const esPolo = (n: number) => Math.hypot(pts[n][0] - ax, pts[n][1] - ay) < 1e-6;
+    const ringDe = (n: number) => {
+      let r = anillo.get(n); if (r) return r;
+      if (esPolo(n)) { r = [n]; anillo.set(n, r); return r; }
+      const R = Math.hypot(pts[n][0] - ax, pts[n][1] - ay), th0 = Math.atan2(pts[n][1] - ay, pts[n][0] - ax);
+      r = [];
+      for (let i = 0; i < nAn; i++) {
+        if (i === 0) { r.push(n); continue; }
+        const th = th0 + (anguloDeg * Math.PI / 180) * i / M;
+        const q: [number, number, number] = [ax + R * Math.cos(th), ay + R * Math.sin(th), pts[n][2]];
+        let j = newPts.findIndex((p) => Math.abs(p[0] - q[0]) < 1e-3 && Math.abs(p[1] - q[1]) < 1e-3 && Math.abs(p[2] - q[2]) < 1e-3);
+        if (j < 0) { j = newPts.length; newPts.push(q); }
+        r.push(j);
+      }
+      anillo.set(n, r); return r;
+    };
+    let areas = 0, polo = false;
+    const addQ = (q: number[]) => { newAreas.push(newPolys.length); newPolys.push([...q, q[0]]); areas++; };
+    for (const [a, b] of segPairs) {
+      const A = ringDe(a), B = ringDe(b);
+      if (A.length === 1 && B.length === 1) continue;             // segmento sobre el eje: nada que girar
+      if (A.length === 1 || B.length === 1) {                      // casquete: cometas desde el polo
+        polo = true; const P0 = A.length === 1 ? A[0] : B[0]; const R = A.length === 1 ? B : A;
+        for (let i = 0; i + 2 <= nSect; i += 2) addQ([P0, R[i % nAn], R[(i + 1) % nAn], R[(i + 2) % nAn]]);
+        continue;
+      }
+      for (let i = 0; i < nSect; i++) addQ([A[i], B[i], B[(i + 1) % nAn], A[(i + 1) % nAn]]);
+    }
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { anillos: anillo.size, areas, polo };
+  };
+  // ── BARRIDO EN ALZADO (loft): un CONTORNO cerrado de planta desplazado hacia
+  // afuera según un PERFIL de alzado → paños Q4. Es la cáscara del Allianz Arena
+  // (Jorge, 13-sep-2026: «la parte de afuera, esa cáscara»): planta = rectángulo
+  // redondeado, y en alzado la piel hace panza. La revolución es el caso
+  // particular en que el contorno es un círculo. Cada nudo k del perfil está a una
+  // distancia r_k del eje (el punto clicado); el anillo k es el contorno OFFSET
+  // hacia afuera d_k = r_k − r_0 (vértices por la bisectriz, a d/cos(θ/2)) a la
+  // cota z_k. Con d_0 = 0 el primer anillo es el propio contorno (se reusan sus
+  // nudos). Entre anillos consecutivos, un Q4 por lado del contorno.
+  (window as any).__hekatanLoftSelection = (
+    ax: number, ay: number,
+  ): { contorno: number; perfil: number; areas: number; msg?: string } => {
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
+    // 1. clasificar la selección: contorno = polilínea CERRADA y HORIZONTAL; perfil = el resto
+    const esHoriz = (poly: number[]) => poly.every((n) => Math.abs(pts[n][2] - pts[poly[0]][2]) < 1e-6);
+    const esContorno = (p: number) => { const poly = polys[p] || []; return poly.length >= 4 && poly[0] === poly[poly.length - 1] && esHoriz(poly); };
+    let contorno: number[] | null = null; const segPairs: [number, number][] = [];
+    const addSeg = (a: number, b: number) => { if (a != null && b != null && !segPairs.some(([u, v]) => (u === a && v === b) || (u === b && v === a))) segPairs.push([a, b]); };
+    [...selection].forEach((id) => {
+      const t = id.split(":"); const p = (t[0] === "poly" || t[0] === "seg") ? +t[1] : -1;
+      if (p < 0 || !polys[p]) return;
+      if (esContorno(p)) { if (!contorno) contorno = polys[p].slice(0, -1); return; }
+      if (areasYa.has(p)) return;
+      const poly = polys[p];
+      if (t[0] === "poly") { for (let s2 = 0; s2 + 1 < poly.length; s2++) addSeg(poly[s2], poly[s2 + 1]); }
+      else addSeg(poly[+t[2]], poly[+t[2] + 1]);
+    });
+    if (!contorno) return { contorno: 0, perfil: 0, areas: 0, msg: "falta el CONTORNO de planta (una polilínea cerrada y horizontal) en la selección" };
+    if (!segPairs.length) return { contorno: 0, perfil: 0, areas: 0, msg: "falta el PERFIL de alzado (segmentos con distinta cota) en la selección" };
+    // 2. el perfil como cadena ordenada de nudos (de abajo hacia arriba)
+    const adj = new Map<number, number[]>();
+    segPairs.forEach(([a, b]) => { (adj.get(a) ?? adj.set(a, []).get(a)!).push(b); (adj.get(b) ?? adj.set(b, []).get(b)!).push(a); });
+    const extremos = [...adj.entries()].filter(([, v]) => v.length === 1).map(([k2]) => k2);
+    if (extremos.length !== 2) return { contorno: 0, perfil: 0, areas: 0, msg: "el perfil tiene que ser una cadena abierta (dos extremos)" };
+    let ini = extremos[0]; if (pts[extremos[1]][2] < pts[ini][2]) ini = extremos[1];
+    const perfil = [ini]; const visto = new Set([ini]);
+    for (;;) { const sig = (adj.get(perfil[perfil.length - 1]) || []).find((n) => !visto.has(n)); if (sig == null) break; visto.add(sig); perfil.push(sig); }
+    // 3. offset del contorno: orientación por área con signo; normal exterior por vértice (bisectriz)
+    const C: number[] = contorno; const nC = C.length;
+    let A2 = 0; for (let i = 0; i < nC; i++) { const p = pts[C[i]], q = pts[C[(i + 1) % nC]]; A2 += p[0] * q[1] - q[0] * p[1]; }
+    const sgn = A2 > 0 ? 1 : -1;   // antihorario → la normal exterior es (e.y, −e.x)
+    const normalEn = (i: number): [number, number] => {
+      const p0 = pts[C[(i - 1 + nC) % nC]], p1 = pts[C[i]], p2 = pts[C[(i + 1) % nC]];
+      const e1 = [p1[0] - p0[0], p1[1] - p0[1]], e2 = [p2[0] - p1[0], p2[1] - p1[1]];
+      const l1 = Math.hypot(e1[0], e1[1]) || 1, l2 = Math.hypot(e2[0], e2[1]) || 1;
+      const n1 = [sgn * e1[1] / l1, -sgn * e1[0] / l1], n2 = [sgn * e2[1] / l2, -sgn * e2[0] / l2];
+      const d = 1 + (n1[0] * n2[0] + n1[1] * n2[1]);           // = 2·cos²(θ/2)
+      return [(n1[0] + n2[0]) / Math.max(d, 1e-6), (n1[1] + n2[1]) / Math.max(d, 1e-6)];   // |.| = 1/cos(θ/2)
+    };
+    const normales = C.map((_, i) => normalEn(i));
+    // La panza d_k = (p_k − p_0)·u, con u la dirección HORIZONTAL del plano del perfil
+    // apuntando hacia afuera (lejos del eje). Medirla como r_k − r_0 (distancias al eje)
+    // dependía de que el clic del eje cayera EXACTO en el plano del perfil: 3 cm fuera
+    // daban 26 µm de error en los anillos (medido en el Allianz, 13-sep-2026).
+    const p0 = pts[perfil[0]];
+    let u: [number, number] = [0, 0], lu = 0;
+    for (const n of perfil) { const dx = pts[n][0] - p0[0], dy = pts[n][1] - p0[1]; const l = Math.hypot(dx, dy); if (l > lu) { lu = l; u = [dx / l, dy / l]; } }
+    if (lu < 1e-9) { const dx = p0[0] - ax, dy = p0[1] - ay; const l = Math.hypot(dx, dy) || 1; u = [dx / l, dy / l]; }
+    if (u[0] * (p0[0] - ax) + u[1] * (p0[1] - ay) < 0) u = [-u[0], -u[1]];
+    pushUndo();
+    const newPts = [...pts];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    const anillos: number[][] = perfil.map((n) => {
+      const d = (pts[n][0] - p0[0]) * u[0] + (pts[n][1] - p0[1]) * u[1], z = pts[n][2];
+      return C.map((c, i) => {
+        const q: [number, number, number] = [pts[c][0] + normales[i][0] * d, pts[c][1] + normales[i][1] * d, z];
+        let j = newPts.findIndex((pp) => Math.abs(pp[0] - q[0]) < 1e-3 && Math.abs(pp[1] - q[1]) < 1e-3 && Math.abs(pp[2] - q[2]) < 1e-3);
+        if (j < 0) { j = newPts.length; newPts.push(q); }
+        return j;
+      });
+    });
+    let areas = 0;
+    for (let k2 = 0; k2 + 1 < anillos.length; k2++) for (let i = 0; i < nC; i++) {
+      const q = [anillos[k2][i], anillos[k2][(i + 1) % nC], anillos[k2 + 1][(i + 1) % nC], anillos[k2 + 1][i]];
+      if (new Set(q).size < 4) continue;
+      newAreas.push(newPolys.length); newPolys.push([...q, q[0]]); areas++;
+    }
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { contorno: nC, perfil: perfil.length, areas };
   };
   // ── Losa rectangular con chaflanes (esquinas redondeadas) ──
   // 2 clicks: esquinas opuestas de la bounding box. Genera 4 lados rectos
@@ -2305,8 +2466,10 @@ export function drawing({
     }
     // Borde izquierdo
     for (let i = 1; i <= segStr; i++) addPt(xMin, yMax - r - (Ly - 2*r) * i / segStr);
-    // Chaflán BL
-    for (let i = 1; i <= segArc; i++) {
+    // Chaflán BL — hasta segArc − 1: el último punto del arco ES el primero de la
+    // polilínea (xMin+r, yMin); con <= salía un nudo DUPLICADO y un tramo de largo
+    // cero al cerrar (medido en el barrido del Allianz, 13-sep-2026).
+    for (let i = 1; i < segArc; i++) {
       const ang = Math.PI + (Math.PI/2) * i / segArc;
       addPt((xMin + r) + r * Math.cos(ang), (yMin + r) + r * Math.sin(ang));
     }
@@ -5206,6 +5369,8 @@ export function drawing({
       case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
       case "parabola": return P(`PARÁBOLA Precise punto ${n + 1} de 3 (pasa por los tres):`);
       case "cubica": return P(`CÚBICA Precise punto ${n + 1} de 4 (pasa por los cuatro):`);
+      case "revolve": return P("REVOLUCIÓN Precise un punto del eje vertical (Z) alrededor del que gira la selección:");
+      case "loft": return P("BARRIDO Precise el centro de la planta (eje Z desde el que se mide la panza del perfil):");
       case "col": return P(`COLUMNA Precise punto de inserción (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter antes del clic):`);
       case "wall": return n ? P("MURO Precise segundo punto de la base:")
                             : P(`MURO Precise primer punto de la base (altura ${pendingHeight > 0 ? pendingHeight : 3} m; teclee otra + Enter):`);
@@ -6330,10 +6495,28 @@ export function drawing({
       const segs = (window as any).__hekatanArcSegs ?? 12;
       const r = (window as any).__hekatanDrawPolinomio?.(pendingClicks.slice(), segs);
       if (!r?.ok) { updateStatus(`⚠ ${nombre}: ${r?.msg ?? "no se pudo"}. Volvé a marcar los puntos.`); pendingClicks = []; return; }
-      const ecu = (r.coef ?? []).map((c: number, i: number) => `${c >= 0 && i ? "+" : ""}${c.toFixed(3)}${i ? "·x" + (i > 1 ? "^" + i : "") : ""}`).join(" ");
-      updateStatus(`✓ ${nombre} dibujada en ${String(r.plano ?? "").toUpperCase()} — ${segs} tramos a Δ igual de abscisa · y = ${ecu}`);
+      const va = "xyz"[r.ia ?? 0], vo = "xyz"[r.io ?? 2];
+      const ecu = (r.coef ?? []).map((c: number, i: number) => `${c >= 0 && i ? "+" : ""}${c.toFixed(3)}${i ? "·" + va + (i > 1 ? "^" + i : "") : ""}`).join(" ");
+      updateStatus(`✓ ${nombre} dibujada en ${String(r.plano ?? "").toUpperCase()} — ${segs} tramos a Δ igual de ${va} · ${vo} = ${ecu}`);
       pendingClicks = [];
       try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "revolve") {
+      // 1 clic: un punto del eje vertical; gira la selección (el meridiano)
+      const sect = Math.round((window as any).__hekatanRevSectores ?? 16);
+      const r = (window as any).__hekatanRevolveSelection?.(point.x, point.y, sect, 360);
+      if (r?.msg) { updateStatus(`⚠ Revolución: ${r.msg}.`); return; }
+      updateStatus(`✓ Revolución: ${r.anillos} anillo(s) × ${sect} sectores → ${r.areas} paño(s) Q4${r.polo ? " (casquete cerrado con cometas en el polo)" : ""}. Eje Z por (${point.x.toFixed(2)}, ${point.y.toFixed(2)}).`);
+      try { (window as any).__hekatanClearSelection?.(); } catch {}
+      return;
+    }
+    if (tool === "loft") {
+      // 1 clic: el eje (centro de la planta); barre el contorno seleccionado según el perfil seleccionado
+      const r = (window as any).__hekatanLoftSelection?.(point.x, point.y);
+      if (r?.msg) { updateStatus(`⚠ Barrido: ${r.msg}.`); return; }
+      updateStatus(`✓ Barrido: contorno de ${r.contorno} lados × perfil de ${r.perfil} nudos → ${r.areas} paño(s) Q4. Eje por (${point.x.toFixed(2)}, ${point.y.toFixed(2)}).`);
+      try { (window as any).__hekatanClearSelection?.(); } catch {}
       return;
     }
     if (tool === "rect") {
