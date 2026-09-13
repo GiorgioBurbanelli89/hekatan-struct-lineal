@@ -1055,7 +1055,7 @@ export function drawing({
   measureLabel.id = "hk-measure-label";
   measureLabel.style.cssText =
     "position:fixed;z-index:130;display:none;background:rgba(20,20,10,0.92);color:#ffd24d;" +
-    "border:1px solid #ffcc00;border-radius:4px;padding:2px 7px;font:600 12px monospace;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5)";
+    "border:1px solid #ffcc00;border-radius:3px;padding:1px 5px;font:600 10px monospace;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5)";   // 10 px, no 12 (Jorge, 13-sep-2026: «el valor de la medida lo quiero de menor tamaño»)
   document.body.appendChild(measureLabel);
   // Raycast al PRIMER objeto sólido de la escena (mallas IFC, etc.); si no hay,
   // cae al plano de trabajo. Así se puede medir sobre el modelo 3D importado.
@@ -4460,6 +4460,16 @@ export function drawing({
       fApoyo.addBinding(propsState, "Rx");
       fApoyo.addBinding(propsState, "Ry");
       fApoyo.addBinding(propsState, "Rz");
+      // Un clic en vez de seis casillas + Aplicar (Jorge, 13-sep-2026: «a la cúpula
+      // abajo agrégale restricciones, aunque sea»): empotrar o articular la selección.
+      const apoyoRapido = (dofs: boolean[], nombre: string) => {
+        [propsState.Ux, propsState.Uy, propsState.Uz, propsState.Rx, propsState.Ry, propsState.Rz] = dofs as [boolean, boolean, boolean, boolean, boolean, boolean];
+        try { propsPaneInstance.refresh(); } catch {}
+        fireProp("nodes", nodeIds, "supports", dofs);
+        updateStatus(`✓ ${nombre}: ${nodeIds.length} nudo(s) apoyado(s) (${dofs.map((d, i) => d ? ["Ux", "Uy", "Uz", "Rx", "Ry", "Rz"][i] : "").filter(Boolean).join(" ")}).`);
+      };
+      fApoyo.addButton({ title: `▲ Empotrar los ${nodeIds.length} nudo(s) (6 GDL)` }).on("click", () => apoyoRapido([true, true, true, true, true, true], "Empotrado"));
+      fApoyo.addButton({ title: `△ Articular los ${nodeIds.length} nudo(s) (Ux Uy Uz)` }).on("click", () => apoyoRapido([true, true, true, false, false, false], "Articulado"));
 
       // ── Joint > Springs (Resortes elásticos) ──
       const fSprings = propsPaneInstance.addFolder({ title: "🌀 Springs (kN/m, kN·m/rad)", expanded: false });
@@ -6907,20 +6917,23 @@ export function drawing({
     // Click agrega punto + extiende polilínea actual
     rubberUserEditing = false;  // reset al hacer click — el siguiente rubber band parte limpio
     pushUndo();  // snapshot ANTES de modificar — Ctrl+Z restaura
-    drawingObj.points.val = [...drawingObj.points.rawVal, point.toArray()];
+    // Un clic SOBRE un nudo que ya existe (≤ 1 mm) lo REUSA: la cercha Warren
+    // dibujada con tres polilíneas (cordones + zigzag) daba 26 nudos por 13, con
+    // las diagonales sin tocar los cordones en el dibujo (medido en
+    // cli/_cercha.mjs, 13-sep-2026). Así lo hace ETABS: un joint por posición.
+    const qClic = point.toArray() as [number, number, number];
+    const P0 = drawingObj.points.rawVal;
+    let idxClic = P0.findIndex((pp) => Math.abs(pp[0] - qClic[0]) < 1e-3 && Math.abs(pp[1] - qClic[1]) < 1e-3 && Math.abs(pp[2] - qClic[2]) < 1e-3);
+    if (idxClic < 0) { drawingObj.points.val = [...P0, qClic]; idxClic = drawingObj.points.rawVal.length - 1; }
     // ⚠️ «● Nodo» ponía el punto Y lo encadenaba a la polilínea abierta: diez
     // nudos sueltos salían unidos en zigzag por barras que nadie pidió (medido
     // en cli/_ref_ifc_test.mjs). Un nudo es un nudo: no toca la polilínea.
     if (drawingObj.polylines && tool !== "node") {
-      drawingObj.polylines.val = [
-        ...drawingObj.polylines.rawVal.slice(0, -1),
-        [
-          ...(drawingObj.polylines.rawVal.length
-            ? drawingObj.polylines.rawVal.pop()
-            : []),
-          drawingObj.points.rawVal.length - 1,
-        ],
-      ];
+      const polysAhora = drawingObj.polylines.rawVal;
+      const ultimaPoly = polysAhora.length ? polysAhora[polysAhora.length - 1] : [];
+      // el mismo nudo dos veces seguidas no es un tramo
+      const cadena = ultimaPoly[ultimaPoly.length - 1] === idxClic ? ultimaPoly : [...ultimaPoly, idxClic];
+      drawingObj.polylines.val = [...polysAhora.slice(0, -1), cadena];
     }
 
     // ── Auto-cierre semántico por tool ──
