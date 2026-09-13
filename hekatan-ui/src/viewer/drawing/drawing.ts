@@ -145,12 +145,116 @@ export function drawing({
   // así un corte en elevación deja la referencia limpia, como en Revit.
   // Jorge, 12-sep-2026: «uno pueda acercarse al arco y hacer clic y se haga una
   // división para discretizar… la referencia es el IFC».
-  let _refHit: { tipo: "ifc" | "ifcAxis" } | null = null;
+  let _refHit: { tipo: "ifc" | "ifcAxis" | "ifcEdge" | "ifcVert" } | null = null;
+  // ── BORDES y VÉRTICES de la referencia IFC ─────────────────────────────────
+  // Jorge (12-sep-2026): «es preferible que puedas seleccionar bordes del IFC».
+  // Las aristas de la malla que son de verdad un borde: las que comparten dos
+  // triángulos con normales a más de 25° (una esquina, el canto de una losa, la
+  // arista de una viga) y las que tienen un solo triángulo (borde libre). Se
+  // calculan UNA vez por malla y se guardan en una rejilla de 1 m para mirar
+  // solo las que rodean el punto tocado por el rayo. Prioridad: vértice > borde.
+  type Bordes = { segs: Float32Array; celdas: Map<string, number[]> };
+  const _bordes = new Map<number, Bordes>();
+  const bordesLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, depthTest: true }));
+  bordesLineas.name = "ref-ifc-bordes"; bordesLineas.frustumCulled = false; bordesLineas.visible = false;
+  scene.add(bordesLineas);
+  const CELDA = 1.0;
+  const celdaDe = (x: number, y: number, z: number) => Math.floor(x / CELDA) + "," + Math.floor(y / CELDA) + "," + Math.floor(z / CELDA);
+  const bordesDe = (m: THREE.Mesh): Bordes => {
+    const c = _bordes.get(m.id); if (c) return c;
+    const pos = (m.geometry as THREE.BufferGeometry).getAttribute("position");
+    const out: number[] = []; const celdas = new Map<string, number[]>();
+    if (pos) {
+      m.updateMatrixWorld();
+      const n = Math.floor(pos.count / 3);
+      const V = new Float64Array(pos.count * 3);
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); V[3 * i] = v.x; V[3 * i + 1] = v.y; V[3 * i + 2] = v.z; }
+      const key = (i: number) => (Math.round(V[3 * i] * 1e3) + "," + Math.round(V[3 * i + 1] * 1e3) + "," + Math.round(V[3 * i + 2] * 1e3));
+      const N = new Float64Array(n * 3);
+      const a = new THREE.Vector3(), b = new THREE.Vector3(), nn = new THREE.Vector3();
+      for (let t = 0; t < n; t++) {
+        const i0 = 3 * t, i1 = 3 * t + 1, i2 = 3 * t + 2;
+        a.set(V[3 * i1] - V[3 * i0], V[3 * i1 + 1] - V[3 * i0 + 1], V[3 * i1 + 2] - V[3 * i0 + 2]);
+        b.set(V[3 * i2] - V[3 * i0], V[3 * i2 + 1] - V[3 * i0 + 1], V[3 * i2 + 2] - V[3 * i0 + 2]);
+        nn.crossVectors(a, b).normalize(); N[3 * t] = nn.x; N[3 * t + 1] = nn.y; N[3 * t + 2] = nn.z;
+      }
+      // arista → [triángulo, vértice inicial, vértice final]
+      const aristas = new Map<string, number[]>();
+      for (let t = 0; t < n; t++) for (let e = 0; e < 3; e++) {
+        const i = 3 * t + e, j = 3 * t + ((e + 1) % 3);
+        const ki = key(i), kj = key(j); const k = ki < kj ? ki + "|" + kj : kj + "|" + ki;
+        const r = aristas.get(k); if (r) r.push(t); else aristas.set(k, [t, i, j]);
+      }
+      const COS25 = Math.cos(25 * Math.PI / 180);
+      for (const r of aristas.values()) {
+        const t0 = r[0], i = r[1], j = r[2];
+        let borde = r.length === 3;                      // un solo triángulo: borde libre
+        if (!borde && r.length === 4) {                  // dos triángulos: ¿quiebro?
+          const t1 = r[3];
+          const cos = N[3 * t0] * N[3 * t1] + N[3 * t0 + 1] * N[3 * t1 + 1] + N[3 * t0 + 2] * N[3 * t1 + 2];
+          borde = Math.abs(cos) < COS25;
+        }
+        if (!borde) continue;
+        const s = out.length / 6;
+        out.push(V[3 * i], V[3 * i + 1], V[3 * i + 2], V[3 * j], V[3 * j + 1], V[3 * j + 2]);
+        // la arista entra en las celdas de sus dos extremos y del medio
+        for (const [x, y, z] of [[V[3 * i], V[3 * i + 1], V[3 * i + 2]], [V[3 * j], V[3 * j + 1], V[3 * j + 2]], [(V[3 * i] + V[3 * j]) / 2, (V[3 * i + 1] + V[3 * j + 1]) / 2, (V[3 * i + 2] + V[3 * j + 2]) / 2]]) {
+          const ck = celdaDe(x, y, z); const arr = celdas.get(ck); if (arr) { if (arr[arr.length - 1] !== s) arr.push(s); } else celdas.set(ck, [s]);
+        }
+      }
+    }
+    const res = { segs: new Float32Array(out), celdas };
+    _bordes.set(m.id, res);
+    return res;
+  };
+  // Dibujo tenue de todos los bordes (para VER a qué se puede enganchar).
+  let _bordesClave = "";
+  const refrescarBordes = (mallas: THREE.Mesh[]) => {
+    const clave = mallas.map((m) => m.id).join(",");
+    if (clave === _bordesClave) return; _bordesClave = clave;
+    const partes = mallas.map((m) => bordesDe(m).segs); let n = 0; for (const p of partes) n += p.length;
+    const todo = new Float32Array(n); let o = 0; for (const p of partes) { todo.set(p, o); o += p.length; }
+    bordesLineas.geometry.dispose(); bordesLineas.geometry = new THREE.BufferGeometry();
+    bordesLineas.geometry.setAttribute("position", new THREE.BufferAttribute(todo, 3));
+    bordesLineas.visible = n > 0 && (window as any).__hekatanRefIfcBordes !== false;
+  };
+  (window as any).__hekatanRefIfcBordesRefrescar = () => { bordesLineas.visible = _bordesClave !== "" && (window as any).__hekatanRefIfcBordes !== false; viewerRender(); };
+  (window as any).__hekatanBordesIfc = () => { let n = 0; for (const b of _bordes.values()) n += b.segs.length / 6; return n; };
+  /** Vértice o borde de la referencia cerca del punto tocado (en píxeles). */
+  const snapBordeIfc = (m: THREE.Mesh, p: THREE.Vector3): { tipo: "ifcEdge" | "ifcVert"; punto: THREE.Vector3 } | null => {
+    const cur = (window as any).__hekatanCursorPx as { x: number; y: number } | undefined; if (!cur) return null;
+    const B = bordesDe(m); const S = B.segs;
+    const cx = Math.floor(p.x / CELDA), cy = Math.floor(p.y / CELDA), cz = Math.floor(p.z / CELDA);
+    const vistos = new Set<number>();
+    let mejorV = _aperturaPx, bestV: THREE.Vector3 | null = null, mejorE = _aperturaPx, bestE: THREE.Vector3 | null = null;
+    const A = new THREE.Vector3(), Bv = new THREE.Vector3();
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+      const arr = B.celdas.get((cx + dx) + "," + (cy + dy) + "," + (cz + dz)); if (!arr) continue;
+      for (const s of arr) {
+        if (vistos.has(s)) continue; vistos.add(s);
+        const i = 6 * s;
+        A.set(S[i], S[i + 1], S[i + 2]); Bv.set(S[i + 3], S[i + 4], S[i + 5]);
+        const a = aPixeles(A.x, A.y, A.z), b = aPixeles(Bv.x, Bv.y, Bv.z); if (!a || !b) continue;
+        const da = Math.hypot(a.x - cur.x, a.y - cur.y), db = Math.hypot(b.x - cur.x, b.y - cur.y);
+        if (da < mejorV) { mejorV = da; bestV = A.clone(); }
+        if (db < mejorV) { mejorV = db; bestV = Bv.clone(); }
+        const vx = b.x - a.x, vy = b.y - a.y, L2 = vx * vx + vy * vy || 1e-9;
+        let t = ((cur.x - a.x) * vx + (cur.y - a.y) * vy) / L2; t = Math.max(0, Math.min(1, t));
+        const d = Math.hypot(cur.x - (a.x + t * vx), cur.y - (a.y + t * vy));
+        if (d < mejorE) { mejorE = d; bestE = A.clone().lerp(Bv, t); }
+      }
+    }
+    if (bestV) return { tipo: "ifcVert", punto: bestV };
+    if (bestE) return { tipo: "ifcEdge", punto: bestE };
+    return null;
+  };
   const intersectReferenciaIfc = (): THREE.Intersection[] | null => {
     if ((window as any).__hekatanRefIfcSnap === false) return null;
-    const mallas: THREE.Object3D[] = [];
-    scene.traverse((o) => { if ((o as any).userData?.refIfc && (o as THREE.Mesh).isMesh) mallas.push(o); });
-    if (!mallas.length) return null;
+    const mallas: THREE.Mesh[] = [];
+    scene.traverse((o) => { if ((o as any).userData?.refIfc && (o as THREE.Mesh).isMesh) mallas.push(o as THREE.Mesh); });
+    if (!mallas.length) { bordesLineas.visible = false; _bordesClave = ""; return null; }
+    refrescarBordes(mallas);
     const hits = raycaster.intersectObjects(mallas, false).filter((h) => {
       const m = (h.object as THREE.Mesh).material as THREE.Material;
       const planos: THREE.Plane[] = (m && (m as any).clippingPlanes) || [];
@@ -158,6 +262,9 @@ export function drawing({
     });
     if (!hits.length) return null;
     const h0 = hits[0], h1 = hits[1];
+    // Vértice o borde de la malla cerca del cursor: manda sobre cara y eje.
+    const be = snapBordeIfc(h0.object as THREE.Mesh, h0.point);
+    if (be) { _refHit = { tipo: be.tipo }; return [{ ...h0, point: be.punto } as THREE.Intersection]; }
     if (h1 && h1.object === h0.object && h1.distance - h0.distance <= 1.2) {
       const mid = h0.point.clone().add(h1.point).multiplyScalar(0.5);
       _refHit = { tipo: "ifcAxis" };
@@ -4296,7 +4403,7 @@ export function drawing({
     end: 0xff3344, mid: 0xfbbf24, node: 0x60a5fa, cen: 0x34d399,
     per: 0xc084fc, nea: 0xff7eb6, int: 0xff8800,
     ori: 0xffffff, grid: 0x22d3ee, track: 0xffc400,
-    ifc: 0xf59e0b, ifcAxis: 0xfde68a, ifcSec: 0xfb923c,
+    ifc: 0xf59e0b, ifcAxis: 0xfde68a, ifcSec: 0xfb923c, ifcEdge: 0xfbbf24, ifcVert: 0xff3344,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
     while (osnapMarker.children.length) {
@@ -4345,6 +4452,7 @@ export function drawing({
     node: "Nudo", mid: "Punto medio", cen: "Centro", int: "Intersección",
     per: "Perpendicular", nea: "Cercano",
     ifc: "Referencia IFC · cara", ifcAxis: "Referencia IFC · eje", ifcSec: "Sección IFC (corte)",
+    ifcEdge: "Borde IFC", ifcVert: "Vértice IFC",
   };
   const etiqOsnap = document.createElement("div");
   etiqOsnap.id = "hk-osnap-etiqueta";

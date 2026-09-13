@@ -83,6 +83,34 @@ const orbit = async (a, dx, dy, n = 6) => {
   for (let i = 1; i <= 18; i++) { const x = cx + dx * i / 18, y = cy + dy * i / 18; await a.pag.mouse.move(x, y); await a.pag.evaluate((q) => window.__tutCursor && window.__tutCursor(q.x, q.y), { x, y }); await a.quieto(1, 55); }
   await a.pag.mouse.up(); await a.quieto(n, 320);
 };
+// Acercar con la RUEDA del ratón sobre un punto de pantalla (n ticks)
+const rueda = async (a, x, y, n = 6, txt = null) => {
+  await mover(a, x, y, 8);
+  if (txt) await caja(a, { x: x - 60, y: y - 40, w: 120, h: 80 }, txt, 4);
+  for (let i = 0; i < n; i++) { await a.pag.mouse.wheel({ deltaY: -120 }); await a.quieto(1, 120); }
+  await a.quieto(3, 300);
+};
+// Vista de ELEVACIÓN REAL (ortográfica) del programa: botón «Plano YZ (elevación
+// lateral)» / «Plano XZ (elevación frontal)» / «Vista isométrica» pulsado con el cursor.
+const vistaBoton = async (a, re, txt) => {
+  await panel(a, "der", true);
+  await abrirCarpeta(a, "Plano de trabajo");
+  const b = await boton(a, re); if (!b) return false;
+  await mover(a, b.x, b.y, 12);
+  if (txt) await caja(a, { x: b.rx, y: b.ry, w: b.rw, h: b.rh }, txt, 5);
+  await clicRojo(a, b.x, b.y, false); await a.quieto(3, 320);
+  return true;
+};
+// CARA INTERIOR del arco (Jorge): es la que conecta con las otras barras (el
+// entrepiso llega a la cara de abajo); en la cara exterior la viga queda en el
+// aire. Para un y dado, de los puntos del perfil se toma el de z más alta que
+// esté al menos 15 cm por debajo del más alto (la cara de abajo de la cáscara).
+const puntoInterior = (P, y, zRef) => {
+  const c = P.filter((p) => Math.abs(p[1] - y) < 0.12 && Math.abs(p[2] - zRef) < 1.2).map((p) => p[2]).sort((u, v) => v - u);
+  if (!c.length) return puntoPerfil(P, y, zRef);
+  const zo = c[0]; const zi = c.find((z) => z <= zo - 0.15);
+  return puntoPerfil(P, y, zi ?? zo);
+};
 export const nudos = (a) => a.pag.evaluate(() => (window.__hekatanDrawingPoints?.rawVal || []).map((p) => p.map((v) => +v.toFixed(3))));
 
 // ── Pasos ────────────────────────────────────────────────────────────────────
@@ -111,13 +139,16 @@ export const pasos = [
       await panel(a, "izq", true);
       await abrirCarpeta(a, "Cortes", "AQUÍ va el corte: ✂ Cortes X/Y/Z.");
       await escribir(a, "pos X", X_CORTE);
-      await marcar(a, "invertir X");
       await marcar(a, "Cortar X", "Marco «Cortar X»: se corta el IFC por ese pórtico.");
       await a.quieto(3, 320);
       await panel(a, "izq", false);
-      // vista lateral (mirando +X) sobre el perfil
-      await vista(a, [X_CORTE - 30, 123.5, 4.5], [X_CORTE, 123.5, 4.5]);
-      await a.pag.mouse.move(400, 300); await a.quieto(4, 360);
+      // ELEVACIÓN REAL (ortográfica), no una perspectiva que parezca isométrica:
+      // botón del programa, pulsado con el cursor; luego acerco con la rueda.
+      await vistaBoton(a, "Plano YZ \\(elevaci", "Vista de elevación REAL: alzado lateral, cámara ortográfica.");
+      await panel(a, "der", false);
+      const c = await proj(a, [[X_CORTE, 123.5, 4.5]]);
+      await rueda(a, c[0].x, c[0].y, 7, "Acerco con la rueda del ratón.");
+      await a.quieto(4, 360);
     },
   },
   {
@@ -140,7 +171,8 @@ export const pasos = [
       if (b) await clicRojo(a, b.x, b.y);
       await a.pag.mouse.move(400, 300); await a.quieto(2, 200);
       const P = await perfil(a);
-      const pts = [puntoPerfil(P, 115.2, 4.0), puntoPerfil(P, 121, 7.1), puntoPerfil(P, 126.5, 7.6)];
+      const pts = [puntoInterior(P, 115.3, 4.0), puntoInterior(P, 121, 7.1), puntoInterior(P, 126.5, 7.6)];
+      console.log("  nave objetivos (cara interior):", JSON.stringify(pts.map((p) => p.map((v) => +v.toFixed(2)))));
       const px = await proj(a, pts);
       for (let i = 0; i < 3; i++) { await clicRojo(a, px[i].x, px[i].y); }
       await a.pag.keyboard.press("Escape");
@@ -158,7 +190,7 @@ export const pasos = [
       // arranca en el ÚLTIMO nudo del arco de la nave (la cumbre): la mirilla lo
       // engancha como «Nudo» y los dos arcos comparten el nudo, como en el EDB.
       const N0 = await nudos(a); const cumbre = N0.length ? N0[N0.length - 1] : puntoPerfil(P, 127.3, 7.5);
-      const pts = [cumbre, puntoPerfil(P, 130, 4.3), puntoPerfil(P, 132, 0.8)];
+      const pts = [cumbre, puntoInterior(P, 130, 4.3), puntoInterior(P, 131.9, 0.8)];
       const px = await proj(a, pts);
       console.log("  ala objetivos:", JSON.stringify(pts.map((p) => p.map((v) => +v.toFixed(2)))), JSON.stringify(px.map((q) => [Math.round(q.x), Math.round(q.y)])));
       for (let i = 0; i < 3; i++) { await clicRojo(a, px[i].x, px[i].y); }
@@ -178,20 +210,24 @@ export const pasos = [
       await marcar(a, "invertir Y");
       await marcar(a, "Cortar Y");
       await panel(a, "izq", false);
-      // cerca (16 m): el canto del entrepiso a x = 17 está a solo 0.5 m de los arcos
+      await vistaBoton(a, "Plano XZ \\(elevaci", "Alzado frontal real (ortográfico).");
+      await panel(a, "der", false);
+      // cerca: el canto del entrepiso a x = 17 está a solo 0.5 m de los arcos
       // (x = 16.5); de lejos el «Punto medio» de una barra del arco caía dentro de
       // la mirilla y se llevaba el clic (medido). Y primero el extremo derecho.
-      await vista(a, [20, Y_ENTREPISO - 16, 4.5], [20, Y_ENTREPISO, 4.5]);
-      await a.pag.mouse.move(400, 300); await a.quieto(3, 320);
+      const c6 = await proj(a, [[20, Y_ENTREPISO, 4.5]]);
+      await rueda(a, c6[0].x, c6[0].y, 5);
+      await a.quieto(3, 320);
       await panel(a, "der", true);
       const b = await boton(a, "Línea \\(frame");
       if (b) await clicRojo(a, b.x, b.y, false);
+      await panel(a, "der", false);   // el canto derecho del entrepiso queda debajo del panel
       await a.pag.mouse.move(400, 300); await a.quieto(2, 200);
       const P = (await perfil(a)).filter((p) => Math.abs(p[1] - Y_ENTREPISO) < 0.01);   // solo el perfil del corte Y
       // el canto del entrepiso: z ≈ 5.0, entre x ≈ 17 y 23 (medido en el IFC)
       const cerca = (x, z) => { let b = null, m = 1e9; for (const p of P) { const d = Math.hypot(p[0] - x, p[2] - z); if (d < m) { m = d; b = p; } } return b; };
       const pts = [cerca(23.0, 5.0), cerca(17.0, 5.0)];
-      if (pts[0] && pts[1]) { const px = await proj(a, pts); for (let i = 0; i < 2; i++) await clicRojo(a, px[i].x, px[i].y); }
+      if (pts[0] && pts[1]) { const px = await proj(a, pts); console.log("  entrepiso px:", JSON.stringify(px.map((q) => [Math.round(q.x), Math.round(q.y)])), "canvas:", JSON.stringify(await a.pag.evaluate(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); const r = h.querySelector("canvas").getBoundingClientRect(); return [r.left, r.top, r.width, r.height, h.__ctx.camera.type, h.__ctx.camera.zoom]; }))); for (let i = 0; i < 2; i++) await clicRojo(a, px[i].x, px[i].y); }
       await a.pag.keyboard.press("Escape");
       await a.quieto(4, 340);
       console.log("  entrepiso:", JSON.stringify(pts));
@@ -206,7 +242,8 @@ export const pasos = [
       await marcar(a, "Cortar Y");
       await panel(a, "izq", false);
       await a.pag.keyboard.press("Escape"); await setTool(a, null);
-      await vista(a, [-10, 100, 18], [19.7, 124, 4.5]);
+      await vistaBoton(a, "Vista isom");
+      await panel(a, "der", false);
       await a.quieto(3, 320);
       await orbit(a, 140, -10, 6);
     },

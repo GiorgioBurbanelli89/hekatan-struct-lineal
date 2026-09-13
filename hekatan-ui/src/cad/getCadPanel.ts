@@ -174,9 +174,13 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   }).on("change", (ev: any) => { (window as any).__hekatanArcModo = ev.value; });
   // La referencia IFC de fondo (📄 Archivo nuevo › 🏛 Referencia IFC) se puede
   // tocar con la mirilla: cara del objeto o su eje (entrada/salida del rayo).
-  const proxyRef = { ifc: true };
+  const proxyRef = { ifc: true, bordes: true };
   fModes.addBinding(proxyRef, "ifc", { label: "Enganchar a la referencia IFC" }).on("change", (ev: any) => {
     (window as any).__hekatanRefIfcSnap = !!ev.value;
+  });
+  fModes.addBinding(proxyRef, "bordes", { label: "Ver bordes del IFC" }).on("change", (ev: any) => {
+    (window as any).__hekatanRefIfcBordes = !!ev.value;
+    try { (window as any).__hekatanRefIfcBordesRefrescar?.(); } catch {}
   });
   const proxyChaflan = { r: 1.0 };
   fModes.addBinding(proxyChaflan, "r", { min: 0.1, max: 5, step: 0.1, label: "Chaflán r (m)" }).on("change", (ev: any) => {
