@@ -1,0 +1,10 @@
+A Warren truss in Hekatan Struct, start to finish and only with the quick-access ribbon: draw, support, load and see the analysis. No menus to open.
+The ribbon has two rows. Top: draw, structure, analyze and view; bottom: modify, grid, level and load. I press Front, the X Z elevation, and turn on SNAP in the bottom bar so every click lands exactly on the grid.
+Bottom chord: I press Polyline and click seven times, from zero to twelve metres every two metres. Next to the cursor you see the length and angle of each segment. Right click to finish.
+Top chord: another polyline, six clicks at two metres height, one over the centre of each panel.
+Diagonals: a single zigzag polyline, thirteen clicks alternating bottom and top. When a click lands on an existing node it is reused, not duplicated, like ETABS joints. Thirteen nodes and twenty-three members.
+Supports: I press Support on the ribbon and click once on each end of the bottom chord. They are fixed.
+Loads: the ribbon box holds minus ten kilonewtons, negative means downward. I press Load and click on each top node. As soon as there are supports and loads, the app solves by itself: there is no analyze button.
+In the left panel I tick the deformed shape and choose the axial force diagram under Frame results: chords in compression and tension, diagonals alternating. Maximum deflection at midspan, zero point one five one millimetres; maximum axial force, forty kilonewtons.
+With Measure, two clicks from support to support: twelve metres, and the dimension is small, not covering the drawing.
+In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point one five one millimetres, at all thirteen nodes. Howe and Pratt come next.

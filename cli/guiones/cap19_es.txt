@@ -1,0 +1,10 @@
+Una cercha Warren en Hekatan Struct, de principio a fin y solo con la cinta de acceso rápido: dibujar, apoyar, cargar y ver el cálculo. Sin abrir menús.
+La cinta tiene dos filas. Arriba: dibujar, estructura, analizar y vista; abajo: modificar, rejilla, cota y carga. Pulso Frente, que es el alzado X Z, y enciendo SNAP en la barra de abajo para que cada clic caiga exacto en la rejilla.
+Cordón inferior: pulso Polilínea y hago siete clics, de cero a doce metros cada dos metros. Junto al cursor va la longitud y el ángulo de cada tramo. Clic derecho para terminar.
+Cordón superior: otra polilínea, seis clics a dos metros de altura, uno sobre el centro de cada panel.
+Diagonales: una sola polilínea en zigzag, trece clics alternando abajo y arriba. Cuando el clic cae sobre un nudo que ya existe, se reusa: no se duplica, como los joints de ETABS. Trece nudos y veintitrés barras.
+Apoyos: pulso Apoyo en la cinta y hago un clic en cada extremo del cordón inferior. Quedan empotrados.
+Cargas: en la casilla de la cinta va menos diez kilonewton, negativo es hacia abajo. Pulso Carga y un clic en cada nudo superior. En cuanto hay apoyos y cargas, la aplicación calcula sola: no hay botón de analizar.
+En el panel de la izquierda marco la deformada y elijo el diagrama de axiles en Frame results: los cordones a compresión y tracción y las diagonales alternando. Flecha máxima en el centro, cero coma ciento cincuenta y un milímetros; axil máximo, cuarenta kilonewton.
+Con Medir, dos clics de apoyo a apoyo: doce metros, y la cota sale pequeña, sin tapar el dibujo.
+En tres D se ve la deformada con los axiles. El mismo modelo en ETABS veintidós por su interfaz de comandos da la misma flecha, cero coma ciento cincuenta y un milímetros, en los trece nudos. Siguen la Howe y la Pratt.

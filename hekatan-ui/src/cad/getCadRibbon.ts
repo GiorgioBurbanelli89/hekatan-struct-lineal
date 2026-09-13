@@ -59,6 +59,8 @@ export interface RibbonHooks {
   plegadoPorDefecto?: boolean;
 }
 
+import { montarExtras } from "./ribbonExtras";
+
 interface Herr {
   id: string; icono: string; nombre: string; tecla: string; ayuda: string;
 }
@@ -705,6 +707,13 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     "background:transparent;border:1px solid #475569;border-radius:6px;color:#94a3b8;" +
     "font:600 13px inherit;align-self:center;";
   filaA.appendChild(bPlegar);
+  // «▾ Añadir a la cinta»: todos los botones y mandos de los paneles, a elegir (Jorge,
+  // 13-sep-2026: «todo ese menú son acceso rápido»). Ver ribbonExtras.ts.
+  montarExtras({
+    filaBoton: filaA, filaGrupo: filaB, barra,
+    paneles: () => [["Panel", document.getElementById("hk-pane-host")], ["Settings", document.getElementById("settings")]],
+    decir,
+  });
 
   // El botón que queda cuando está plegada. Va en el MISMO sitio que la barra,
   // para que abrir y cerrar no mueva nada de lo que hay debajo.

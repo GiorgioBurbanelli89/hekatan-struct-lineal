@@ -132,7 +132,7 @@ export const pasos = [
     rotulo: "7 · Resultados: deformada y diagrama de axiles (Settings › Frame results)",
     hacer: async (a) => {
       await panel(a, "izq", true);
-      await a.abrir("Outputs").catch(() => {});
+      await a.abrir("Analyze").catch(() => {});
       const ok = await a.marcar("fila", "Deformed shape", "La deformada, amplificada.").catch(() => false);
       if (!ok) await a.ajuste("deformedShape", true);
       const sel = await rect(a, () => { const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /Frame results/i.test(x.textContent || "")); const s = row?.querySelector("select"); if (s) s.id = "hk-tmp-frame-results"; return s || row; });
