@@ -598,9 +598,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const mid = p1.clone().add(p2).multiplyScalar(0.5);
         const dir = p2.clone().sub(p1);
         const len = dir.length();
-        const camera = ctx.getActiveCamera();
-        const dist = camera.position.distanceTo(mid);
-        const radius = dist * 0.0035;  // ~3.5px aprox
+        // Radio de ~3.5 px EN PANTALLA. Antes era `dist * 0.0035` con dist = distancia
+        // de la cámara: con la cámara ORTOGRÁFICA (alzados) está a 1000 m y el tubo
+        // salía de 3.5 m de radio — el «cuadrado» cian/verde sobre la cercha que vio
+        // Jorge (13-sep-2026). metrosPorPixel ya distingue orto/perspectiva.
+        const radius = Math.max(1e-4, 3.5 * metrosPorPixel(mid));
         tubeHL.position.copy(mid);
         // Orientar el cilindro alineado con el segmento (eje Y por default)
         const up = new THREE.Vector3(0, 1, 0);
@@ -839,12 +841,12 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       const mid = p1.clone().add(p2).multiplyScalar(0.5);
       const dir = p2.clone().sub(p1);
       const len = dir.length();
-      const dist = ctx.getActiveCamera().position.distanceTo(mid);
+      const rSel = Math.max(1e-4, 4 * metrosPorPixel(mid));   // ~4 px, orto o perspectiva (ver arriba)
       const m = new THREE.Mesh(selCylGeom, selTubeMat);
       m.position.copy(mid);
       const up = new THREE.Vector3(0, 1, 0);
       m.quaternion.setFromAxisAngle(up.clone().cross(dir).normalize(), up.angleTo(dir));
-      m.scale.set(dist * 0.0035, len, dist * 0.0035);
+      m.scale.set(rSel, len, rSel);
       m.renderOrder = 101;
       selGroup.add(m);
     } else if (sel.type === "shell" && elements) {
