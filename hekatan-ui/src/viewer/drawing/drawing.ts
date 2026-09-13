@@ -153,7 +153,108 @@ export function drawing({
   // arista de una viga) y las que tienen un solo triángulo (borde libre). Se
   // calculan UNA vez por malla y se guardan en una rejilla de 1 m para mirar
   // solo las que rodean el punto tocado por el rayo. Prioridad: vértice > borde.
-  type Bordes = { segs: Float32Array; celdas: Map<string, number[]> };
+  // ── CADENA de segmentos («Elegir líneas» de Revit) ─────────────────────────
+  // Jorge (12-sep-2026): «Revit tiene una opción: si hay una línea, trazar en
+  // esa misma línea». Al pasar el cursor por un borde o por el perfil del corte
+  // se ILUMINA la línea entera (azul) — la cadena de segmentos que continúa sin
+  // quiebro— y con la herramienta «Copiar línea del IFC» un clic la copia como
+  // barras: recta → una barra; curva → N tramos (Segmentos arc/círc), con el
+  // mismo reparto que el Arco. Las medidas salen de la malla, no de tres clics.
+  type Fuente = { S: Float32Array; adj: Map<string, number[]>; s: number };
+  let _cadenaFuente: Fuente | null = null;
+  let _cadenaActual: THREE.Vector3[] | null = null;
+  const cadenaLineas = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x38bdf8, depthTest: false, transparent: true, opacity: 0.95 }));
+  cadenaLineas.name = "ref-ifc-cadena"; cadenaLineas.renderOrder = 1000; cadenaLineas.frustumCulled = false; cadenaLineas.visible = false;
+  scene.add(cadenaLineas);
+  const kMm = (x: number, y: number, z: number) => Math.round(x * 1e3) + "," + Math.round(y * 1e3) + "," + Math.round(z * 1e3);
+  const adjDe = (S: Float32Array): Map<string, number[]> => {
+    const adj = new Map<string, number[]>();
+    for (let s = 0; s + 0 < S.length / 6; s++) {
+      const i = 6 * s;
+      for (const k of [kMm(S[i], S[i + 1], S[i + 2]), kMm(S[i + 3], S[i + 4], S[i + 5])]) { const a = adj.get(k); if (a) a.push(s); else adj.set(k, [s]); }
+    }
+    return adj;
+  };
+  /** Sigue la cadena desde el segmento s0 en los dos sentidos mientras no haya
+   *  quiebro (> 35°) ni bifurcación; luego se queda con el TROZO que contiene
+   *  s0 partiendo donde la curvatura cambia de golpe (nave r = 15 → ala r = 6.6). */
+  const cadenaDesde = (F: Fuente): THREE.Vector3[] => {
+    const { S, adj } = F;
+    const P = (s: number, lado: 0 | 1) => new THREE.Vector3(S[6 * s + 3 * lado], S[6 * s + 3 * lado + 1], S[6 * s + 3 * lado + 2]);
+    const usados = new Set<number>([F.s]);
+    const andar = (desde: THREE.Vector3, hacia: THREE.Vector3): THREE.Vector3[] => {
+      const out: THREE.Vector3[] = []; let a = desde, b = hacia;
+      for (let paso = 0; paso < 3000; paso++) {
+        const cand = (adj.get(kMm(b.x, b.y, b.z)) || []).filter((s) => !usados.has(s));
+        if (cand.length !== 1) break;
+        const s = cand[0]; const p0 = P(s, 0), p1 = P(s, 1);
+        const c = p0.distanceTo(b) < p1.distanceTo(b) ? p1 : p0;
+        const d0 = b.clone().sub(a).normalize(), d1 = c.clone().sub(b).normalize();
+        if (d0.dot(d1) < Math.cos(35 * Math.PI / 180)) break;
+        usados.add(s); out.push(c); a = b; b = c;
+      }
+      return out;
+    };
+    const A = P(F.s, 0), B = P(F.s, 1);
+    const adelante = andar(A, B), atras = andar(B, A);
+    const pts = [...atras.reverse(), A, B, ...adelante];
+    const i0 = atras.length;   // índice de A en pts (el segmento tocado es i0 → i0+1)
+    if (pts.length < 6) return pts;
+    // curvatura discreta por vértice (rad/m), suavizada en ventana de 3
+    const L: number[] = [], th: number[] = [];
+    for (let i = 1; i < pts.length; i++) L.push(pts[i].distanceTo(pts[i - 1]));
+    for (let i = 1; i < pts.length - 1; i++) {
+      const d0 = pts[i].clone().sub(pts[i - 1]).normalize(), d1 = pts[i + 1].clone().sub(pts[i]).normalize();
+      th.push(Math.acos(Math.max(-1, Math.min(1, d0.dot(d1)))) / Math.max(1e-6, (L[i - 1] + L[i]) / 2));
+    }
+    const kap = th.map((_, i) => { let s = 0, n = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < th.length) { s += th[j]; n++; } return s / n; });
+    // cortes: donde la curvatura suavizada de la izquierda y la derecha difieren ×2.2
+    const cortes: number[] = [];
+    for (let i = 3; i < kap.length - 3; i++) {
+      const izq = (kap[i - 3] + kap[i - 2] + kap[i - 1]) / 3, der = (kap[i + 1] + kap[i + 2] + kap[i + 3]) / 3;
+      const mn = Math.min(izq, der), mx = Math.max(izq, der);
+      if (mx > 0.03 && mx / Math.max(mn, 1e-6) > 2.2 && Math.abs(kap[i] - (izq + der) / 2) < mx) {
+        if (!cortes.length || i - cortes[cortes.length - 1] > 3) cortes.push(i + 1);   // vértice i+1 en pts
+      }
+    }
+    let ini = 0, fin = pts.length - 1;
+    for (const c of cortes) { if (c <= i0 && c > ini) ini = c; if (c > i0 && c < fin) fin = c; }
+    return pts.slice(ini, fin + 1);
+  };
+  const mostrarCadena = (pts: THREE.Vector3[] | null) => {
+    _cadenaActual = pts;
+    if (!pts || pts.length < 2) { cadenaLineas.visible = false; return; }
+    cadenaLineas.geometry.dispose(); cadenaLineas.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+    cadenaLineas.visible = true;
+  };
+  /** La cadena como barras: recta → 2 puntos; curva → N tramos según el reparto del arco. */
+  const cadenaABarras = (pts: THREE.Vector3[]): [number, number, number][] => {
+    let giro = 0;
+    for (let i = 1; i < pts.length - 1; i++) { const d0 = pts[i].clone().sub(pts[i - 1]).normalize(), d1 = pts[i + 1].clone().sub(pts[i]).normalize(); giro += Math.acos(Math.max(-1, Math.min(1, d0.dot(d1)))); }
+    const N = Math.max(2, Math.round((window as any).__hekatanArcSegs ?? 12));
+    if (giro < 3 * Math.PI / 180) return [pts[0].toArray() as any, pts[pts.length - 1].toArray() as any];
+    const modo = String((window as any).__hekatanArcModo ?? "angulo");
+    const k = modo === "x" ? 0 : modo === "y" ? 1 : modo === "z" ? 2 : -1;
+    const acum = [0]; for (let i = 1; i < pts.length; i++) acum.push(acum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    const enParam = (f: (p: THREE.Vector3, i: number) => number, objetivo: number): THREE.Vector3 => {
+      for (let i = 1; i < pts.length; i++) {
+        const a = f(pts[i - 1], i - 1), b = f(pts[i], i);
+        if ((a <= objetivo && objetivo <= b) || (b <= objetivo && objetivo <= a)) { const t = Math.abs(b - a) < 1e-12 ? 0 : (objetivo - a) / (b - a); return pts[i - 1].clone().lerp(pts[i], t); }
+      }
+      return pts[pts.length - 1].clone();
+    };
+    const out: [number, number, number][] = [];
+    const c0 = k >= 0 ? pts[0].getComponent(k) : 0, c1 = k >= 0 ? pts[pts.length - 1].getComponent(k) : 0;
+    const monot = k >= 0 && Math.abs(c1 - c0) > 1e-6 && pts.every((p, i) => i === 0 || (p.getComponent(k) - pts[i - 1].getComponent(k)) * (c1 - c0) >= -1e-6);
+    for (let i = 0; i <= N; i++) {
+      const p = monot ? enParam((p) => p.getComponent(k), c0 + (c1 - c0) * i / N) : enParam((_, j) => acum[j], acum[acum.length - 1] * i / N);
+      out.push([p.x, p.y, p.z]);
+    }
+    out[0] = pts[0].toArray() as any; out[N] = pts[pts.length - 1].toArray() as any;
+    return out;
+  };
+  (window as any).__hekatanCadenaIfc = () => (_cadenaActual || []).map((p) => [p.x, p.y, p.z]);
+  type Bordes = { segs: Float32Array; celdas: Map<string, number[]>; adj?: Map<string, number[]> };
   const _bordes = new Map<number, Bordes>();
   const bordesLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, depthTest: true }));
   bordesLineas.name = "ref-ifc-bordes"; bordesLineas.frustumCulled = false; bordesLineas.visible = false;
@@ -227,7 +328,7 @@ export function drawing({
     const B = bordesDe(m); const S = B.segs;
     const cx = Math.floor(p.x / CELDA), cy = Math.floor(p.y / CELDA), cz = Math.floor(p.z / CELDA);
     const vistos = new Set<number>();
-    let mejorV = _aperturaPx, bestV: THREE.Vector3 | null = null, mejorE = _aperturaPx, bestE: THREE.Vector3 | null = null;
+    let mejorV = _aperturaPx, bestV: THREE.Vector3 | null = null, mejorE = _aperturaPx, bestE: THREE.Vector3 | null = null, bestS = -1;
     const A = new THREE.Vector3(), Bv = new THREE.Vector3();
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
       const arr = B.celdas.get((cx + dx) + "," + (cy + dy) + "," + (cz + dz)); if (!arr) continue;
@@ -242,9 +343,10 @@ export function drawing({
         const vx = b.x - a.x, vy = b.y - a.y, L2 = vx * vx + vy * vy || 1e-9;
         let t = ((cur.x - a.x) * vx + (cur.y - a.y) * vy) / L2; t = Math.max(0, Math.min(1, t));
         const d = Math.hypot(cur.x - (a.x + t * vx), cur.y - (a.y + t * vy));
-        if (d < mejorE) { mejorE = d; bestE = A.clone().lerp(Bv, t); }
+        if (d < mejorE) { mejorE = d; bestE = A.clone().lerp(Bv, t); bestS = s; }
       }
     }
+    if (bestS >= 0) { if (!B.adj) B.adj = adjDe(B.segs); _cadenaFuente = { S: B.segs, adj: B.adj, s: bestS }; }
     if (bestV) return { tipo: "ifcVert", punto: bestV };
     if (bestE) return { tipo: "ifcEdge", punto: bestE };
     return null;
@@ -326,9 +428,10 @@ export function drawing({
     return _secSegs;
   };
   /** Punto del perfil de sección más cercano al cursor (en píxeles), o null. */
+  let _secAdj: Map<string, number[]> | null = null; let _secAdjDe: Float32Array | null = null;
   const snapSeccionIfc = (px: number, py: number): THREE.Vector3 | null => {
     const S = seccionIfc(); if (!S.length) return null;
-    let mejor = _aperturaPx * 2, best: THREE.Vector3 | null = null;
+    let mejor = _aperturaPx * 2, best: THREE.Vector3 | null = null, bestS = -1;
     const A = new THREE.Vector3(), B = new THREE.Vector3();
     for (let i = 0; i + 5 < S.length; i += 6) {
       A.set(S[i], S[i + 1], S[i + 2]); B.set(S[i + 3], S[i + 4], S[i + 5]);
@@ -336,8 +439,9 @@ export function drawing({
       const vx = b.x - a.x, vy = b.y - a.y, L2 = vx * vx + vy * vy || 1e-9;
       let t = ((px - a.x) * vx + (py - a.y) * vy) / L2; t = Math.max(0, Math.min(1, t));
       const dpx = Math.hypot(px - (a.x + t * vx), py - (a.y + t * vy));
-      if (dpx < mejor) { mejor = dpx; best = A.clone().lerp(B, t); }
+      if (dpx < mejor) { mejor = dpx; best = A.clone().lerp(B, t); bestS = i / 6; }
     }
+    if (bestS >= 0) { if (_secAdjDe !== S) { _secAdj = adjDe(S); _secAdjDe = S; } _cadenaFuente = { S, adj: _secAdj!, s: bestS }; }
     return best;
   };
   let _secPt: THREE.Vector3 | null = null;
@@ -2723,6 +2827,7 @@ export function drawing({
     const _camForRay = setPointerFromEvent(event);
     if (!_camForRay) return;
     raycaster.setFromCamera(pointer, _camForRay);
+    _cadenaFuente = null;        // se rellena si la mirilla toca un borde o el perfil del IFC
     const hit = intersectWorkPlane();
     // Ocultar el preview de relleno si el rayo no toca el plano o cambió de tool.
     if ((!hit.length || (window as any).__hekatanCadState?.get?.()?.tool !== "fillarea") && fillPreview.visible) fillPreview.visible = false;
@@ -2796,6 +2901,10 @@ export function drawing({
         snapMarker.visible = true;
       }
       updateSnapMarkerScale();  // tamaño constante en pantalla
+      // La LÍNEA entera del IFC bajo el cursor, iluminada (Revit: «elegir líneas»).
+      // Con la herramienta ifcline el clic la copia; con las demás solo enseña.
+      if (_cadenaFuente && !osnap && (refEnganchado || _refHit)) mostrarCadena(cadenaDesde(_cadenaFuente));
+      else mostrarCadena(null);
       // ⚠️ El punto PREVISTO (el que el clic commitea sin recalcular) solo se
       // guardaba con una polilínea en curso (rama del elástico) o con «select».
       // El PRIMER clic de Nodo, Arco o Círculo no tenía previsto y el clic
@@ -5944,6 +6053,25 @@ export function drawing({
       updateStatus(`✓ Círculo dibujado en ${planeKind.toUpperCase()} — r=${r.toFixed(2)}m, ${segs} segmentos`);
       pendingClicks = [];
       try { (window as any).__hekatanRebuild?.(); } catch {}
+      return;
+    }
+    if (tool === "ifcline") {
+      // «Elegir líneas»: la cadena iluminada se copia como barras (medidas de la malla).
+      if (!_cadenaActual || _cadenaActual.length < 2) { updateStatus("⟋ Acercá el cursor a un borde o al perfil del corte del IFC: se ilumina en azul y el clic lo copia."); return; }
+      const nuevos = cadenaABarras(_cadenaActual);
+      pushUndo();
+      const baseIdx = drawingObj.points.rawVal.length;
+      drawingObj.points.val = [...drawingObj.points.rawVal, ...nuevos];
+      if (drawingObj.polylines) {
+        const polys = drawingObj.polylines.rawVal;
+        const cola = polys.length && polys[polys.length - 1].length === 0 ? polys.slice(0, -1) : polys;
+        drawingObj.polylines.val = [...cola, nuevos.map((_, i) => baseIdx + i), []];
+      }
+      const Ltot = _cadenaActual.reduce((s, p, i) => i ? s + p.distanceTo(_cadenaActual![i - 1]) : 0, 0);
+      updateStatus(`⟋ Línea del IFC copiada: ${nuevos.length - 1} tramo(s), ${Ltot.toFixed(2)} m de desarrollo.`);
+      mostrarCadena(null);
+      try { (window as any).__hekatanRebuild?.(); } catch {}
+      viewerRender();
       return;
     }
     if (tool === "arc") {

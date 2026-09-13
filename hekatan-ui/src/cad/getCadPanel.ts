@@ -116,6 +116,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fDib.addButton({ title: "▭ Rectángulo" }).on("click", () => setActiveTool("rect"));
   fDib.addButton({ title: "○ Círculo" }).on("click", () => setActiveTool("circle"));
   fDib.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
+  // «Elegir líneas» de Revit: la línea del IFC (borde o perfil del corte) se
+  // ilumina al pasar el cursor y un clic la copia como barras discretizadas.
+  fDib.addButton({ title: "⟋ Copiar línea del IFC (elegir líneas)" }).on("click", () => setActiveTool("ifcline"));
   fDib.addButton({ title: "┊ Línea auxiliar" }).on("click", () => setActiveTool("aux"));
   fDib.addButton({ title: "✦ Punto auxiliar" }).on("click", () => setActiveTool("auxp"));
   fDib.addButton({ title: "📏 Medir / acotar (regla)" }).on("click", () => setActiveTool("medir"));
