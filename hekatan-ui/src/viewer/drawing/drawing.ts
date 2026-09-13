@@ -361,7 +361,7 @@ export function drawing({
     const rc = new THREE.Raycaster(p.clone().addScaledVector(n, -0.002), n.clone().negate(), 0, 3);
     const h = rc.intersectObject(m, false); return h.length ? h[0].distance + 0.002 : null;
   };
-  (window as any).__hekatanCaraIfc = () => _cara ? { tris: _cara.tris.length, plana: _cara.plana, normal: _cara.normal.toArray() } : null;
+  (window as any).__hekatanCaraIfc = () => _cara ? { tris: _cara.tris.length, plana: _cara.plana, normal: _cara.normal.toArray(), punto: _cara.punto.toArray() } : null;
   type Bordes = { segs: Float32Array; celdas: Map<string, number[]>; adj?: Map<string, number[]> };
   const _bordes = new Map<number, Bordes>();
   const bordesLineas = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.35, depthTest: true }));
@@ -5776,12 +5776,18 @@ export function drawing({
     const ids = [...selection];
     const pts = drawingObj.points.rawVal;
     const polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
     const nodosSueltos = new Set<number>();
     const segPairs: [number, number][] = [];
     const enSeg = new Set<number>();
+    // Nudos que pertenecen a alguna polilínea (barra o área) NO son sueltos:
+    // con «seleccionar todo» tras una extrusión, los nudos de los paños ya
+    // creados se extruían a barras (medido en la bóveda de la capilla).
+    for (const poly of polys) for (const n of poly) enSeg.add(n);
     ids.forEach((id) => {
       if (id.startsWith("poly:")) {
-        const p = +id.slice(5); const poly = polys[p] || [];
+        const p = +id.slice(5); if (areasYa.has(p)) return;   // un paño no se extruye (sería un sólido)
+        const poly = polys[p] || [];
         for (let s = 0; s + 1 < poly.length; s++) { segPairs.push([poly[s], poly[s + 1]]); enSeg.add(poly[s]); enSeg.add(poly[s + 1]); }
       } else if (id.startsWith("seg:")) {
         const parts = id.split(":"); const P = +parts[1], S = +parts[2];
