@@ -211,13 +211,19 @@ const pasos = [
   {
     rotulo: "10 · Guardar en formato Hekatan Struct (.heks): texto, para guardar y compartir",
     hacer: async (a) => {
-      await panel(a, "der", true);
-      await a.abrir("CLI Comandos").catch(() => {});
-      await a.pulsar("💾 Guardar .heks").catch(() => {});
+      // el botón vive en el panel, abajo del todo: se trae a la CINTA con la flecha «▾»
+      const mas = await rect(a, () => document.getElementById("hk-ribbon-mas"));
+      if (mas) { await mover(a, mas.x, mas.y, 12); await caja(a, { x: mas.rx - 4, y: mas.ry - 4, w: mas.rw + 8, h: mas.rh + 8 }, "▾ Añadir a la cinta: cualquier botón o mando de los paneles.", 5); await clicRojo(a, mas.x, mas.y, false); }
+      const bus = await rect(a, () => document.querySelector("#hk-ribbon-extras-lista input[type=text]"));
+      if (bus) { await clicRojo(a, bus.x, bus.y, false); await a.pag.keyboard.type("heks", { delay: 80 }); await a.quieto(3, 300); }
+      const ck = await rect(a, () => [...document.querySelectorAll("#hk-ribbon-extras-lista label")].find((l) => /Guardar \.heks/.test(l.textContent || ""))?.querySelector("input"));
+      if (ck) { await mover(a, ck.x, ck.y, 10); await caja(a, { x: ck.rx - 4, y: ck.ry - 4, w: 300, h: ck.rh + 8 }, "Marco «💾 Guardar .heks»: ya está en la cinta.", 5); await clicRojo(a, ck.x, ck.y, false); }
+      await a.pag.keyboard.press("Escape"); await a.quieto(2, 300);
+      const bg = await rect(a, () => [...document.querySelectorAll("#hk-ribbon-extras button")].find((b) => /Guardar/.test(b.textContent || "")));
+      if (bg) { await mover(a, bg.x, bg.y, 12); await caja(a, { x: bg.rx, y: bg.ry, w: bg.rw, h: bg.rh }, "Guardar .heks, desde la cinta.", 4); await clicRojo(a, bg.x, bg.y, false); }
       await a.archivo("El modelo en .heks: nudos, barras, apoyos y cargas en texto. Se guarda y se comparte.", { lineas: 16, marcas: ["frame", "support", "load", "frameload"] }).catch(() => null);
       await a.quieto(8, 360);
       await a.sinArchivo().catch(() => {});
-      await panel(a, "der", false);
       await a.quieto(2, 300);
     },
   },

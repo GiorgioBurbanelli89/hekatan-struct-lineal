@@ -4262,10 +4262,12 @@ export function drawing({
   propsContainer.style.cssText = [
     "position:fixed",
     savedPos ? `left:${savedPos.left}px` : "left:14px",
-    savedPos ? `top:${savedPos.top}px` : "top:452px",
+    // top 200 (debajo de la cinta) y no 452: a 720 px de alto el panel quedaba abajo
+    // del todo con 160 px de alto, cortado (Tutorial 9, 13-sep-2026).
+    savedPos ? `top:${savedPos.top}px` : "top:200px",
     "transform:none",
     "width:min(300px, calc(100vw - 32px))",
-    "max-height:calc(100vh - 560px)",
+    "max-height:calc(100vh - 260px)",
     "overflow-y:auto",
     "z-index:201",
     "box-shadow:0 6px 24px rgba(0,0,0,0.45)",
@@ -4380,6 +4382,18 @@ export function drawing({
     // Clasificar selección
     const ids = [...selection];
     const nodeIds = ids.filter(id => id.startsWith("pt:"));
+    // Las casillas enseñan lo que el nudo YA tiene (apoyo y carga), no los valores por
+    // defecto: un apoyo recién puesto con «Apoyo» salía con las seis casillas vacías y
+    // parecía sin restringir (Tutorial 9, 13-sep-2026).
+    if (nodeIds.length === 1) {
+      const iNd = +nodeIds[0].slice(3);
+      const supM = (window as any).__hekatanManualSupports as Map<number, boolean[]> | undefined;
+      const s6 = supM?.get(iNd); if (s6) [propsState.Ux, propsState.Uy, propsState.Uz, propsState.Rx, propsState.Ry, propsState.Rz] = s6.map(Boolean) as [boolean, boolean, boolean, boolean, boolean, boolean];
+      else { propsState.Ux = propsState.Uy = propsState.Uz = propsState.Rx = propsState.Ry = propsState.Rz = false; }
+      const ldM = (window as any).__hekatanManualLoads as Map<number, number[]> | undefined;
+      const l6 = ldM?.get(iNd); if (l6) [propsState.Fx, propsState.Fy, propsState.Fz, propsState.Mx, propsState.My, propsState.Mz] = l6 as [number, number, number, number, number, number];
+      else { propsState.Fx = propsState.Fy = propsState.Fz = propsState.Mx = propsState.My = propsState.Mz = 0; }
+    }
     const segIds = ids.filter(id => id.startsWith("seg:"));
     const polyIds = ids.filter(id => id.startsWith("poly:"));
     const auxIds = ids.filter(id => id.startsWith("aux:"));
