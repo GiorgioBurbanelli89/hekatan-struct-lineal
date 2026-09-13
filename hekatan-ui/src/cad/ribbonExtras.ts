@@ -104,9 +104,11 @@ export function montarExtras(o: ExtrasOpts) {
     tit.style.cssText = "font-size:10px;color:#94a3b8;margin-bottom:6px;";
     pop.append(tit, e.el);
     const rb = o.barra.getBoundingClientRect(), ra = ancla.getBoundingClientRect();
-    pop.style.left = Math.max(0, ra.left - rb.left) + "px";
     pop.style.top = (rb.height + 6) + "px";
+    pop.style.width = "300px";
     o.barra.appendChild(pop);
+    // que no se salga por la derecha de la cinta (el grupo «Mis accesos» está al final)
+    pop.style.left = Math.max(0, Math.min(ra.left - rb.left, rb.width - pop.getBoundingClientRect().width - 4)) + "px";
     abierto = { pop, hueco, filaTp: e.el };
   };
 
