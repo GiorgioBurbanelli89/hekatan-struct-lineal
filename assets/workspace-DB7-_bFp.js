@@ -1434,14 +1434,14 @@ support 4  1 1 1 1 1 1`;
     ], 6333946);
     y.add(_, J, ne, x), y.renderOrder = 999;
     const Ie = (u, P) => {
-      var _a4, _b, _c;
+      var _a4, _b, _c, _d;
       const X = s.__ctx, j = X == null ? void 0 : X.scene;
       if (!j) return;
       y.parent || j.add(y), y.position.set(P[0], P[1], P[2]);
       const q = (((_b = (_a4 = s.__settings) == null ? void 0 : _a4.gridSize) == null ? void 0 : _b.rawVal) ?? 30) / 12;
       y.scale.set(q, q, q), _.visible = true, J.visible = true, ne.visible = true;
       const ie = u === "xy" ? `PLANTA  Z = ${P[2].toFixed(2)}` : u === "xz" ? `ALZADO X-Z  Y = ${P[1].toFixed(2)}` : `ALZADO Y-Z  X = ${P[0].toFixed(2)}`;
-      w(ie), x.position.set(0, 0, 1.35), y.visible = true, window.__hekatanPuntoRef = P, window.__hekatanPlanoRef = u, (_c = X == null ? void 0 : X.render) == null ? void 0 : _c.call(X);
+      w(ie), x.position.set(0, 0, 1.35), y.visible = !((_c = X == null ? void 0 : X.camera) == null ? void 0 : _c.isPerspectiveCamera), window.__hekatanPuntoRef = P, window.__hekatanPlanoRef = u, (_d = X == null ? void 0 : X.render) == null ? void 0 : _d.call(X);
     };
     window.__hekatanMarcarRef = Ie, window.__hekatanOcultarRef = () => {
       var _a4, _b;
