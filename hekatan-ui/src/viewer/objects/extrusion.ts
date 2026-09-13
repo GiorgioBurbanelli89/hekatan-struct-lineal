@@ -267,7 +267,17 @@ export function extrusion(
         const n = [nx / ln, ny / ln, nz / ln];
         const pos: number[] = [];
         const cara = (s: number) => p.map((q) => [q[0] + n[0] * s, q[1] + n[1] * s, q[2] + n[2] * s]);
-        const A = cara(+t / 2), B = cara(-t / 2);
+        // Punto de inserción como ETABS (e2k real: losas `CARDINALPOINT "TOP"`,
+        // muros `"MIDDLE"`): una LOSA (o bóveda, normal con componente vertical)
+        // se dibuja por su cara SUPERIOR y el espesor cuelga hacia ABAJO; un muro
+        // se dibuja por su plano medio y el espesor va mitad y mitad. Antes todo
+        // iba ±t/2 y la losa sobresalía medio canto por encima del nivel.
+        // (Jorge, 13-sep-2026: «esa es la parte superior… las losas desde la
+        // parte superior hacia abajo».)
+        const esLosa = Math.abs(n[2]) > 0.5;
+        const haciaAbajo = n[2] > 0 ? -1 : 1;           // el sentido de la normal que baja
+        const A = esLosa ? cara(0) : cara(+t / 2);
+        const B = esLosa ? cara(haciaAbajo * t) : cara(-t / 2);
         const tri = (a: number[], b: number[], c: number[]) => pos.push(...a, ...b, ...c);
         // dos tapas
         for (const f of [A, B]) {

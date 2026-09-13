@@ -6173,7 +6173,10 @@ export function drawing({
       if (poly.length < 3) { updateStatus("▦ No se pudo cerrar el contorno de la cara."); return; }
       const n = _cara.normal.clone();
       const t = espesorEn(_cara.m, _cara.punto, n);
-      const pos = String((window as any).__hekatanIfcCaraPos ?? "media");
+      let pos = String((window as any).__hekatanIfcCaraPos ?? "auto");
+      // ETABS: losa (cara con normal vertical) CARDINALPOINT "TOP" = la cara
+      // tocada; muro (cara vertical) "MIDDLE" = plano medio.
+      if (pos === "auto") pos = Math.abs(n.z) > 0.5 ? "exterior" : "media";
       const tEf = t ?? 0.2;
       const d = pos === "exterior" ? 0 : pos === "interior" ? tEf : tEf / 2;
       const pts = poly.map((q) => q.clone().addScaledVector(n, -d));
@@ -6183,7 +6186,7 @@ export function drawing({
       try { const P = (window as any).__hekatanParams?.(); if (P && t) { P.tShell = Math.round(t * 100) / 100; } } catch {}
       const formas = ["Shell-Thick (Mindlin)", "Shell-Thin (Kirchhoff)", "Membrana"];
       let forma = "la de «Sección shells»"; try { const P = (window as any).__hekatanParams?.(); if (P && P.formaPlaca != null) forma = formas[Math.round(P.formaPlaca)] ?? forma; } catch {}
-      const donde = pos === "exterior" ? "la CARA EXTERIOR (la tocada)" : pos === "interior" ? "la CARA INTERIOR (desfase " + tEf.toFixed(2) + " m hacia dentro)" : "el PLANO MEDIO (desfase " + (tEf / 2).toFixed(2) + " m hacia dentro)";
+      const donde = pos === "exterior" ? "la cara TOCADA (punto de inserción SUPERIOR, como ETABS: CARDINALPOINT TOP, el espesor cuelga hacia dentro y la malla de análisis se queda en el plano dibujado)" : pos === "interior" ? "la cara de ATRÁS (inserción INFERIOR, desfase " + tEf.toFixed(2) + " m)" : "el PLANO MEDIO (desfase " + (tEf / 2).toFixed(2) + " m hacia dentro)";
       updateStatus(`▦ Área desde la cara del IFC: ${poly.length} vértices, ${cnt} shell(s). Espesor medido ${t ? t.toFixed(2) + " m" : "no medido (0.20 m supuesto)"}; malla en ${donde}; formulación ${forma}, t = ${tEf.toFixed(2)} m.`);
       mostrarCara(null, -1, null);
       try { (window as any).__hekatanRebuild?.(); } catch {}

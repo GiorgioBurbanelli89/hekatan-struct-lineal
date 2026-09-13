@@ -137,8 +137,15 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fArea.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
   // Cara del IFC de fondo → área (la cara se ilumina al pasar el cursor).
   fArea.addButton({ title: "▦ Área desde cara del IFC (se ilumina)" }).on("click", () => setActiveTool("ifcface"));
-  const proxyCara = { pos: "media" };
-  fArea.addBinding(proxyCara, "pos", { label: "Malla del área IFC", options: { "Plano medio (t/2)": "media", "Cara exterior (la tocada)": "exterior", "Cara interior": "interior" } }).on("change", (ev: any) => { (window as any).__hekatanIfcCaraPos = ev.value; });
+  // Punto de inserción del área, como ETABS: en un e2k REAL (Mesa torsiónT.e2k)
+  // ETABS escribe `AREAASSIGN … CARDINALPOINT "TOP" TRANSFORMSTIFFNESSFOROFFSETS
+  // "No"`: la losa se dibuja por su cara SUPERIOR (el nivel de piso), el espesor
+  // cuelga hacia abajo, y la malla de ANÁLISIS se queda en el plano dibujado (no
+  // hay brazos rígidos al plano medio). Así la losa y la viga (CARDINALPT 8, top
+  // center) comparten nudo en el nivel. Defecto aquí: SUPERIOR = la cara tocada.
+  const proxyCara = { pos: "auto" };
+  (window as any).__hekatanIfcCaraPos = "auto";
+  fArea.addBinding(proxyCara, "pos", { label: "Punto de inserción (ETABS)", options: { "Automático: losa TOP, muro MIDDLE": "auto", "Superior: cara tocada (TOP)": "exterior", "Medio: plano medio (t/2)": "media", "Inferior: cara de atrás": "interior" } }).on("change", (ev: any) => { (window as any).__hekatanIfcCaraPos = ev.value; });
 
   const f3D = fCad.addFolder({ title: "🧊 En 3D", expanded: false });
   f3D.addButton({ title: "▌ Columna 3D (1 click + altura)" }).on("click", () => setActiveTool("col"));
