@@ -1,0 +1,10 @@
+# La L del video 3 (Hekatan Struct por dentro): columna 30x30 de 3 m + viga 30x50 de 4 m
+# E = 2.5e6 tonf/m2, nu = 0.2 (G = E/2.4), sin peso propio. Empotrada abajo, P = 10 tonf hacia abajo en la punta.
+node 1 0 0 0
+node 2 0 0 3
+node 3 4 0 3
+frame 1 1 2 2500000 0.09 0.000675 0.000675 0.00113886 0.2 0 0.3 0.3 # C30X30
+frame 2 2 3 2500000 0.15 0.001125 0.003125 0.0028173708 0.2 0 0.5 0.3 # V30X50
+support 1 1 1 1 1 1 1
+load 3 0 0 -10 0 0 0
+solve

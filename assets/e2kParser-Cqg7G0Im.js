@@ -57,8 +57,8 @@ function os(E, m = Pt) {
 function ns(E) {
   let m = 0, l = 0, r = 0, p = 0, h = 0, N = 0;
   for (let L = 0; L < E.length; L++) {
-    const [C, w] = E[L], [u, D] = E[(L + 1) % E.length], G = C * D - u * w;
-    m += G, l += (C + u) * G, r += (w + D) * G, p += (w * w + w * D + D * D) * G, h += (C * C + C * u + u * u) * G, N += (C * D + 2 * C * w + 2 * u * D + u * w) * G;
+    const [C, b] = E[L], [u, D] = E[(L + 1) % E.length], G = C * D - u * b;
+    m += G, l += (C + u) * G, r += (b + D) * G, p += (b * b + b * D + D * D) * G, h += (C * C + C * u + u * u) * G, N += (C * D + 2 * C * b + 2 * u * D + u * b) * G;
   }
   if (m /= 2, Math.abs(m) < 1e-18) return { A: 0, cx: 0, cy: 0, Ixx: 0, Iyy: 0, Ixy: 0 };
   const F = l / (6 * m), R = r / (6 * m);
@@ -92,8 +92,8 @@ function cs(E, m) {
   const N = r / l, F = p / l;
   let R = 0, L = 0, C = 0;
   for (const u of h) R += u.Ixx * u.n + u.A * (u.cy - F) ** 2, L += u.Iyy * u.n + u.A * (u.cx - N) ** 2, C += u.Ixy * u.n + u.A * (u.cx - N) * (u.cy - F);
-  const w = (R + L) * 0.1;
-  return { A: l, Iz: R, Iy: L, Ixy: C, J: w, cx: N, cy: F, As2: 5 / 6 * l, As3: 5 / 6 * l, nPiezas: E.length };
+  const b = (R + L) * 0.1;
+  return { A: l, Iz: R, Iy: L, Ixy: C, J: b, cx: N, cy: F, As2: 5 / 6 * l, As3: 5 / 6 * l, nPiezas: E.length };
 }
 function is(E, m, l, r, p) {
   switch ((E || "").toUpperCase()) {
@@ -131,10 +131,10 @@ function is(E, m, l, r, p) {
 }
 function ls(E) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
-  const m = E.split(/\r?\n/), l = { force: "TONF", length: "M" }, r = [], p = /* @__PURE__ */ new Map(), h = /* @__PURE__ */ new Map(), N = /* @__PURE__ */ new Map(), F = [], R = [], L = /* @__PURE__ */ new Map(), C = /* @__PURE__ */ new Map(), w = /* @__PURE__ */ new Map(), u = /* @__PURE__ */ new Map(), D = /* @__PURE__ */ new Map(), G = /* @__PURE__ */ new Map(), Z = /* @__PURE__ */ new Map(), J = /* @__PURE__ */ new Set(), X = [], ot = [], Q = /* @__PURE__ */ new Map(), nt = [];
+  const m = E.split(/\r?\n/), l = { force: "TONF", length: "M" }, r = [], p = /* @__PURE__ */ new Map(), h = /* @__PURE__ */ new Map(), N = /* @__PURE__ */ new Map(), F = [], R = [], L = /* @__PURE__ */ new Map(), C = /* @__PURE__ */ new Map(), b = /* @__PURE__ */ new Map(), u = /* @__PURE__ */ new Map(), D = /* @__PURE__ */ new Map(), G = /* @__PURE__ */ new Map(), Z = /* @__PURE__ */ new Map(), J = /* @__PURE__ */ new Set(), X = [], ot = [], Q = /* @__PURE__ */ new Map(), nt = [];
   let q = 0;
   const It = [], gt = [];
-  let bt = "", v = "";
+  let wt = "", v = "";
   const at = /* @__PURE__ */ new Map();
   for (const o of m) {
     const e = o.trim();
@@ -146,7 +146,7 @@ function ls(E) {
       const t = e.match(/UNITS\s+"([^"]+)"\s+"([^"]+)"/);
       t && (l.force = t[1], l.length = t[2]);
       const n = e.match(/TITLE2\s+"([^"]+)"/);
-      n && (bt = n[1]);
+      n && (wt = n[1]);
     }
     if (v === "STORIES - IN SEQUENCE FROM TOP") {
       const t = e.match(/STORY\s+"([^"]+)"\s+(?:HEIGHT\s+([\d.]+)|ELEV\s+([-\d.]+))/);
@@ -270,8 +270,14 @@ function ls(E) {
       t && /dead/i.test(t[2]) && (q = Math.max(q, parseFloat(t[3])));
     }
     if (v === "POINT OBJECT LOADS") {
-      const t = e.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"\s+FX\s+([-\d.eE+]+)\s+FY\s+([-\d.eE+]+)\s+FZ\s+([-\d.eE+]+)\s+MX\s+([-\d.eE+]+)\s+MY\s+([-\d.eE+]+)\s+MZ\s+([-\d.eE+]+)/);
-      t && nt.push({ pt: t[1], story: t[2], lc: t[3], v: t.slice(4, 10).map(Number) });
+      const t = e.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"(.*)$/);
+      if (t) {
+        const n = (s) => {
+          const a = t[4].match(new RegExp(`\\b${s}\\s+([-\\d.eE+]+)`));
+          return a ? parseFloat(a[1]) : 0;
+        };
+        nt.push({ pt: t[1], story: t[2], lc: t[3], v: ["FX", "FY", "FZ", "MX", "MY", "MZ"].map(n) });
+      }
     }
     if (v === "SHELL OBJECT LOADS") {
       const t = e.match(/AREALOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"UNIFF"\s+DIR\s+"([^"]+)"\s+LC\s+"([^"]+)"\s+FVAL\s+([-\d.eE+]+)/);
@@ -295,7 +301,7 @@ function ls(E) {
           const i = e.match(a);
           return i ? parseFloat(i[1]) : 0;
         };
-        w.has(t) || w.set(t, []), w.get(t).push({ shapeType: n, material: ((_e = e.match(/MATERIAL\s+"([^"]+)"/)) == null ? void 0 : _e[1]) ?? "", D: s(/\bD\s+([\d.eE+-]+)/), B: s(/\bB\s+([\d.eE+-]+)/), TF: s(/\bTF\s+([\d.eE+-]+)/), TW: s(/\bTW\s+([\d.eE+-]+)/), XC: s(/\bXC\s+(-?[\d.eE+-]+)/), YC: s(/\bYC\s+(-?[\d.eE+-]+)/) });
+        b.has(t) || b.set(t, []), b.get(t).push({ shapeType: n, material: ((_e = e.match(/MATERIAL\s+"([^"]+)"/)) == null ? void 0 : _e[1]) ?? "", D: s(/\bD\s+([\d.eE+-]+)/), B: s(/\bB\s+([\d.eE+-]+)/), TF: s(/\bTF\s+([\d.eE+-]+)/), TW: s(/\bTW\s+([\d.eE+-]+)/), XC: s(/\bXC\s+(-?[\d.eE+-]+)/), YC: s(/\bYC\s+(-?[\d.eE+-]+)/) });
       }
     }
     if (v === "AREA ASSIGNS") {
@@ -325,7 +331,7 @@ function ls(E) {
       r[e].elev = n, ct.set(r[e].name, n);
     }
   }
-  const U = [], wt = [], j = /* @__PURE__ */ new Map(), Y = (o, e) => `${o}@${e}`, H = /* @__PURE__ */ new Set(), Xt = /* @__PURE__ */ new Map();
+  const U = [], bt = [], j = /* @__PURE__ */ new Map(), Y = (o, e) => `${o}@${e}`, H = /* @__PURE__ */ new Set(), Xt = /* @__PURE__ */ new Map();
   for (const o of F) Xt.set(o.name, o);
   for (const o of F) for (const [e, t] of D) {
     if (!e.startsWith(o.name + "@")) continue;
@@ -356,7 +362,7 @@ function ls(E) {
   for (const o of H) {
     const [e, t] = o.split("@"), n = N.get(e), s = ct.get(t);
     if (n === void 0 || s === void 0) continue;
-    U.push([n[0], n[1], s - (n[2] ?? 0)]), wt.push(o), j.set(o, U.length - 1);
+    U.push([n[0], n[1], s - (n[2] ?? 0)]), bt.push(o), j.set(o, U.length - 1);
     const a = Z.get(o);
     a && At.set(U.length - 1, a);
   }
@@ -397,16 +403,16 @@ function ls(E) {
     n && (lt.set(o, n.E), ft.set(o, n.G));
     const s = t.D, a = t.B, i = t.TF, c = t.TW;
     let f = 0, d = 0, g = 0, M = 0, y = 0, S = 0, A = "rect", T = 0, P = false, W = false;
-    const ut = w.get(e);
+    const ut = b.get(e);
     if (t.shape === "SD Section" && (ut == null ? void 0 : ut.length)) {
       const O = (n == null ? void 0 : n.E) || ((_k = p.get(t.material)) == null ? void 0 : _k.E) || 0, V = [];
-      for (const b of ut) {
-        const et = is(b.shapeType, b.D, b.B, b.TF, b.TW);
-        et && V.push({ forma: et, xc: b.XC, yc: b.YC, E: ((_l = p.get(b.material)) == null ? void 0 : _l.E) || O });
+      for (const w of ut) {
+        const et = is(w.shapeType, w.D, w.B, w.TF, w.TW);
+        et && V.push({ forma: et, xc: w.XC, yc: w.YC, E: ((_l = p.get(w.material)) == null ? void 0 : _l.E) || O });
       }
       if (V.length) {
-        const b = cs(V, O);
-        b.A > 0 && (f = b.A, d = b.Iz, g = b.Iy, M = b.J, y = b.As2, S = b.As3, A = "rect", W = true, kt++);
+        const w = cs(V, O);
+        w.A > 0 && (f = w.A, d = w.Iz, g = w.Iy, M = w.J, y = w.As2, S = w.As3, A = "rect", W = true, kt++);
       }
     }
     if (!W) switch (t.shape) {
@@ -423,13 +429,13 @@ function ls(E) {
         f = s * a - (s - 2 * c) * (a - 2 * c), d = (a * s ** 3 - (a - 2 * c) * (s - 2 * c) ** 3) / 12, g = (s * a ** 3 - (s - 2 * c) * (a - 2 * c) ** 3) / 12, M = 2 * c * (s - c) * (a - c) * ((s - c) * (a - c)) / (s - c + (a - c)), y = 2 * s * c, S = 2 * a * c, A = "HSS";
         break;
       case "Filled Steel Pipe": {
-        const O = (n == null ? void 0 : n.E) || 0, V = t.fillMaterial ? p.get(t.fillMaterial) : void 0, b = (V == null ? void 0 : V.E) || O * 0.125, et = t.T || c || i, $ = ts(s, et, O || 1, (n == null ? void 0 : n.nu) ?? 0.3, b || 0.125, (V == null ? void 0 : V.nu) ?? 0.2);
-        f = $.A, d = $.Iz, g = $.Iy, M = $.J, S = $.As2, y = $.As3, T = b, P = true, A = "CFT";
+        const O = (n == null ? void 0 : n.E) || 0, V = t.fillMaterial ? p.get(t.fillMaterial) : void 0, w = (V == null ? void 0 : V.E) || O * 0.125, et = t.T || c || i, $ = ts(s, et, O || 1, (n == null ? void 0 : n.nu) ?? 0.3, w || 0.125, (V == null ? void 0 : V.nu) ?? 0.2);
+        f = $.A, d = $.Iz, g = $.Iy, M = $.J, S = $.As2, y = $.As3, T = w, P = true, A = "CFT";
         break;
       }
       case "Filled Steel Tube": {
-        const O = (n == null ? void 0 : n.E) || 0, V = t.fillMaterial ? p.get(t.fillMaterial) : void 0, b = (V == null ? void 0 : V.E) || O * 0.125, $ = _t(a, s, c || i, O || 1, (n == null ? void 0 : n.nu) ?? 0.3, b || 0.125, (V == null ? void 0 : V.nu) ?? 0.2);
-        f = $.A, d = $.Iz, g = $.Iy, M = $.J, S = $.As2, y = $.As3, T = b, A = "CFT";
+        const O = (n == null ? void 0 : n.E) || 0, V = t.fillMaterial ? p.get(t.fillMaterial) : void 0, w = (V == null ? void 0 : V.E) || O * 0.125, $ = _t(a, s, c || i, O || 1, (n == null ? void 0 : n.nu) ?? 0.3, w || 0.125, (V == null ? void 0 : V.nu) ?? 0.2);
+        f = $.A, d = $.Iz, g = $.Iy, M = $.J, S = $.As2, y = $.As3, T = w, A = "CFT";
         break;
       }
       case "Steel Angle": {
@@ -645,7 +651,7 @@ function ls(E) {
     }
     return o.length ? o : void 0;
   };
-  return { units: l, stories: r.reverse(), materials: p, frameSections: h, nodes: U, nodeNames: wt, nodeNameToIdx: j, elements: B, elementNames: K, elementTypes: Mt, elementStories: _, elementSections: it, nodeInputs: { supports: mt, loads: jt(), springNames: At, springs: Qt() }, elementInputs: { elasticities: lt, shearModuli: ft, areas: pt, momentsOfInertiaZ: Rt, momentsOfInertiaY: yt, torsionalConstants: Ft, shearAreasY: Tt, shearAreasZ: Nt, rigidOffsets: rt, momentReleases: Dt, localAngles: Gt, endOffsets: tt, densities: st, sectionShapes: dt, thicknesses: ht, poissonsRatios: Ut, plateFormulations: Yt, shellModifiers: Bt, springNames: St, mallaEnCruces: xt }, sectionShapes: dt, grids: It, planosRef: gt, springProps: G, info: { ...Jt(B, mt), nNodes: U.length, nFrames: B.length - Lt.length, nAreas: R.length, nAreasMontadas: Lt.length, nSDCompuestas: kt, nSDLeidas: w.size, title: bt }, rawSections: at };
+  return { units: l, stories: r.reverse(), materials: p, frameSections: h, nodes: U, nodeNames: bt, nodeNameToIdx: j, elements: B, elementNames: K, elementTypes: Mt, elementStories: _, elementSections: it, nodeInputs: { supports: mt, loads: jt(), springNames: At, springs: Qt() }, elementInputs: { elasticities: lt, shearModuli: ft, areas: pt, momentsOfInertiaZ: Rt, momentsOfInertiaY: yt, torsionalConstants: Ft, shearAreasY: Tt, shearAreasZ: Nt, rigidOffsets: rt, momentReleases: Dt, localAngles: Gt, endOffsets: tt, densities: new Map([...st].map(([o, e]) => [o, e / 9.80665])), sectionShapes: dt, thicknesses: ht, poissonsRatios: Ut, plateFormulations: Yt, shellModifiers: Bt, springNames: St, mallaEnCruces: xt }, sectionShapes: dt, grids: It, planosRef: gt, springProps: G, info: { ...Jt(B, mt), nNodes: U.length, nFrames: B.length - Lt.length, nAreas: R.length, nAreasMontadas: Lt.length, nSDCompuestas: kt, nSDLeidas: b.size, title: wt }, rawSections: at };
 }
 function Jt(E, m) {
   const l = /* @__PURE__ */ new Map();
@@ -658,11 +664,11 @@ function Jt(E, m) {
     if (h.has(R)) continue;
     const L = [R], C = [];
     for (h.add(R); L.length; ) {
-      const w = L.pop();
-      C.push(w);
-      for (const u of l.get(w) ?? []) h.has(u) || (h.add(u), L.push(u));
+      const b = L.pop();
+      C.push(b);
+      for (const u of l.get(b) ?? []) h.has(u) || (h.add(u), L.push(u));
     }
-    C.some((w) => p.has(w)) || (N++, F += C.length);
+    C.some((b) => p.has(b)) || (N++, F += C.length);
   }
   return { nPiezasFlotantes: N, nNudosFlotantes: F };
 }

@@ -1,8 +1,8 @@
 import { c as Je, a as We } from "./cadSections-DVtTZU6U.js";
-import { h as Be, a as Ne, __tla as __tla_0 } from "./h8-CxkkFRzA.js";
-import { a as Re } from "./analyze-DgLgRmKg.js";
-import { d as qe, __tla as __tla_1 } from "./didacticCpp-CnEP9H1T.js";
-let Ke, Xe;
+import { h as qe, a as _e, __tla as __tla_0 } from "./h8-CxkkFRzA.js";
+import { a as Be } from "./analyze-DgLgRmKg.js";
+import { m as Ne, d as Re, __tla as __tla_1 } from "./didacticCpp-CnEP9H1T.js";
+let He, Xe;
 let __tla = Promise.all([
   (() => {
     try {
@@ -57,7 +57,7 @@ let __tla = Promise.all([
       false,
       false
     ];
-    const D = [
+    const $ = [
       false,
       false,
       false,
@@ -65,12 +65,12 @@ let __tla = Promise.all([
       false,
       false
     ], l = t.split(/[\s,]+/).filter(Boolean);
-    if (l.length > 1 && l.length <= 6 && l.every((L) => L === "0" || L === "1")) return l.forEach((L, X) => {
-      D[X] = L === "1";
-    }), D;
-    for (const L of l) Ae[L] !== void 0 && (D[Ae[L]] = true);
-    if (/^[01]+$/.test(t) && t.length <= 6) for (let L = 0; L < t.length; L++) D[L] = t[L] === "1";
-    return D;
+    if (l.length > 1 && l.length <= 6 && l.every((k) => k === "0" || k === "1")) return l.forEach((k, q) => {
+      $[q] = k === "1";
+    }), $;
+    for (const k of l) Ae[k] !== void 0 && ($[Ae[k]] = true);
+    if (/^[01]+$/.test(t) && t.length <= 6) for (let k = 0; k < t.length; k++) $[k] = t[k] === "1";
+    return $;
   }
   Xe = function(r) {
     const t = {
@@ -110,40 +110,40 @@ let __tla = Promise.all([
       doSolve: false,
       errors: []
     };
-    let D = null, l = 0, L = 0, X = 0;
-    const C = r.split(/\r?\n/);
-    for (let R = 0; R < C.length; R++) {
-      let F = C[R].trim();
-      if (!F || F.startsWith("#") || F.startsWith("//")) continue;
-      F = F.replace(/[;]+$/, "");
-      const o = F.split(/\s+/), A = o[0].toLowerCase();
+    let $ = null, l = 0, k = 0, q = 0;
+    const y = r.split(/\r?\n/);
+    for (let _ = 0; _ < y.length; _++) {
+      let M = y[_].trim();
+      if (!M || M.startsWith("#") || M.startsWith("//")) continue;
+      M = M.replace(/[;]+$/, "");
+      const o = M.split(/\s+/), A = o[0].toLowerCase();
       if (A === "nodes" && o.length === 1) {
-        D = "nodes";
+        $ = "nodes";
         continue;
       }
       if ((A === "elements" || A === "frames") && o.length === 1) {
-        D = "elements";
+        $ = "elements";
         continue;
       }
       if (A === "areas" && o.length === 1) {
-        D = "areas";
+        $ = "areas";
         continue;
       }
       if (A === "supports" && o.length === 1) {
-        D = "supports";
+        $ = "supports";
         continue;
       }
       if (A === "loads" && o.length === 1) {
-        D = "loads";
+        $ = "loads";
         continue;
       }
       if (A === "springs" && o.length === 1) {
-        D = "springs";
+        $ = "springs";
         continue;
       }
-      if (D && /^[\-\d]/.test(o[0])) {
+      if ($ && /^[\-\d]/.test(o[0])) {
         const e = o.map(parseFloat);
-        if (D === "nodes" && e.length >= 3) {
+        if ($ === "nodes" && e.length >= 3) {
           l++, t.nodes.set(l, [
             e[0],
             e[1],
@@ -151,9 +151,9 @@ let __tla = Promise.all([
           ]);
           continue;
         }
-        if (D === "elements" && e.length >= 2) {
-          L++, t.frames.push({
-            id: L,
+        if ($ === "elements" && e.length >= 2) {
+          k++, t.frames.push({
+            id: k,
             nI: e[0] + 1,
             nJ: e[1] + 1,
             E: 25e6,
@@ -162,9 +162,9 @@ let __tla = Promise.all([
           });
           continue;
         }
-        if (D === "areas" && e.length >= 4) {
-          X++, t.shells.push({
-            id: X,
+        if ($ === "areas" && e.length >= 4) {
+          q++, t.shells.push({
+            id: q,
             pts: [
               e[0] + 1,
               e[1] + 1,
@@ -176,7 +176,7 @@ let __tla = Promise.all([
           });
           continue;
         }
-        if (D === "loads" && e.length >= 4) {
+        if ($ === "loads" && e.length >= 4) {
           t.loads.set(e[0], [
             e[1] ?? 0,
             e[2] ?? 0,
@@ -187,7 +187,7 @@ let __tla = Promise.all([
           ]);
           continue;
         }
-        if (D === "springs" && e.length >= 3) {
+        if ($ === "springs" && e.length >= 3) {
           t.springs.push({
             node: e[0],
             dof: e[1],
@@ -196,18 +196,18 @@ let __tla = Promise.all([
           continue;
         }
       }
-      if (D === "supports" && /^\d/.test(o[0])) {
+      if ($ === "supports" && /^\d/.test(o[0])) {
         const e = parseInt(o[0], 10), i = o.slice(1).join(" ");
         t.supports.set(e, ze(i));
         continue;
       }
-      D && !/^[\-\d]/.test(o[0]) && (D = null);
+      $ && !/^[\-\d]/.test(o[0]) && ($ = null);
       try {
         switch (A) {
           case "node":
           case "n": {
             const e = parseInt(o[1], 10), i = parseFloat(o[2]), n = parseFloat(o[3]), c = parseFloat(o[4]);
-            !isFinite(e) || !isFinite(i) || !isFinite(n) || !isFinite(c) ? t.errors.push(`L${R + 1}: node mal formado: ${F}`) : t.nodes.set(e, [
+            !isFinite(e) || !isFinite(i) || !isFinite(n) || !isFinite(c) ? t.errors.push(`L${_ + 1}: node mal formado: ${M}`) : t.nodes.set(e, [
               i,
               n,
               c
@@ -218,7 +218,7 @@ let __tla = Promise.all([
           case "beam":
           case "column":
           case "f": {
-            const e = parseInt(o[1], 10), i = parseInt(o[2], 10), n = parseInt(o[3], 10), c = parseFloat(o[4] ?? "25e6"), h = parseFloat(o[5] ?? "0.16"), S = parseFloat(o[6] ?? "0.001"), E = o[7] !== void 0 ? parseFloat(o[7]) : void 0, m = o[8] !== void 0 ? parseFloat(o[8]) : void 0, k = o[9] !== void 0 ? parseFloat(o[9]) : void 0, g = o[10] !== void 0 ? parseFloat(o[10]) : void 0, z = o[11] !== void 0 ? parseFloat(o[11]) : void 0, j = o[12] !== void 0 ? parseFloat(o[12]) : void 0, q = o.indexOf("#"), $ = q >= 0 && o[q + 1] ? o[q + 1] : void 0;
+            const e = parseInt(o[1], 10), i = parseInt(o[2], 10), n = parseInt(o[3], 10), c = parseFloat(o[4] ?? "25e6"), h = parseFloat(o[5] ?? "0.16"), S = parseFloat(o[6] ?? "0.001"), E = o[7] !== void 0 ? parseFloat(o[7]) : void 0, m = o[8] !== void 0 ? parseFloat(o[8]) : void 0, L = o[9] !== void 0 ? parseFloat(o[9]) : void 0, g = o[10] !== void 0 ? parseFloat(o[10]) : void 0, z = o[11] !== void 0 ? parseFloat(o[11]) : void 0, j = o[12] !== void 0 ? parseFloat(o[12]) : void 0, R = o.indexOf("#"), D = R >= 0 && o[R + 1] ? o[R + 1] : void 0;
             t.frames.push({
               id: e,
               nI: i,
@@ -228,11 +228,11 @@ let __tla = Promise.all([
               I: S,
               Iy: E,
               J: m,
-              nu: k,
+              nu: L,
               rho: g,
               D: z,
               B: j,
-              sec: $
+              sec: D
             });
             break;
           }
@@ -444,8 +444,8 @@ let __tla = Promise.all([
               t.errors.push('areaobj: se esperaba "areaobj ID n1 n2 n3 n4 desdeShell hastaShell"');
               break;
             }
-            const [i, n, c, h, S, E, m] = e, k = [];
-            for (let g = E; g <= m; g++) k.push(g);
+            const [i, n, c, h, S, E, m] = e, L = [];
+            for (let g = E; g <= m; g++) L.push(g);
             t.areaObjs.push({
               id: i,
               pts: [
@@ -454,7 +454,7 @@ let __tla = Promise.all([
                 h,
                 S
               ],
-              cells: k
+              cells: L
             });
             break;
           }
@@ -527,7 +527,7 @@ let __tla = Promise.all([
           }
           case "mass": {
             const e = parseInt(o[1], 10), i = parseFloat(o[2] ?? "0");
-            Number.isFinite(e) && Number.isFinite(i) ? t.masses.set(e, (t.masses.get(e) ?? 0) + i) : t.errors.push(`L${R + 1}: mass necesita <nudo> <toneladas>`);
+            Number.isFinite(e) && Number.isFinite(i) ? t.masses.set(e, (t.masses.get(e) ?? 0) + i) : t.errors.push(`L${_ + 1}: mass necesita <nudo> <toneladas>`);
             break;
           }
           case "solve":
@@ -541,10 +541,10 @@ let __tla = Promise.all([
             t.nodes.clear(), t.frames.length = 0, t.shells.length = 0, t.solids.length = 0, t.supports.clear(), t.loads.clear(), t.frameLoads.clear(), t.springs.length = 0, t.masses.clear(), t.diaphragms.clear();
             break;
           default:
-            t.errors.push(`L${R + 1}: comando desconocido "${A}"`);
+            t.errors.push(`L${_ + 1}: comando desconocido "${A}"`);
         }
       } catch (e) {
-        t.errors.push(`L${R + 1}: error "${F}" \u2014 ${e.message}`);
+        t.errors.push(`L${_ + 1}: error "${M}" \u2014 ${e.message}`);
       }
     }
     return t;
@@ -587,45 +587,45 @@ solve
     r[2] * t
   ];
   function Oe(r, t) {
-    const D = r.shellModsDir.get(t);
-    return !!D && Math.abs(D[3]) < 1e-12 && Math.abs(D[4]) < 1e-12 && Math.abs(D[5]) < 1e-12;
+    const $ = r.shellModsDir.get(t);
+    return !!$ && Math.abs($[3]) < 1e-12 && Math.abs($[4]) < 1e-12 && Math.abs($[5]) < 1e-12;
   }
-  function _e(r, t = 200, D) {
+  function Ye(r, t = 200, $) {
     const l = [
       0,
       1,
       2
     ].map((m) => (r[0][m] + r[1][m] + r[2][m] + r[3][m]) / 4);
-    let L = B(r[1], r[0]), X = pe(L, B(r[3], r[0]));
-    X = oe(X, 1 / Z(X)), L = oe(L, 1 / Z(L));
-    const C = pe(X, L), R = r.map((m) => [
-      le(B(m, l), L),
-      le(B(m, l), C)
+    let k = B(r[1], r[0]), q = pe(k, B(r[3], r[0]));
+    q = oe(q, 1 / Z(q)), k = oe(k, 1 / Z(k));
+    const y = pe(q, k), _ = r.map((m) => [
+      le(B(m, l), k),
+      le(B(m, l), y)
     ]);
-    let F = [
+    let M = [
       0,
       1,
       2,
       3
     ];
-    if (D) {
+    if ($) {
       const m = [
         0,
         1,
         2,
         3
-      ].map((k) => {
-        const g = B(r[(k + 1) % 4], r[k]);
-        return Math.abs(le(g, D)) / Z(g);
+      ].map((L) => {
+        const g = B(r[(L + 1) % 4], r[L]);
+        return Math.abs(le(g, $)) / Z(g);
       });
-      F = [
+      M = [
         0,
         1,
         2,
         3
-      ].sort((k, g) => m[k] - m[g]).slice(0, 2);
+      ].sort((L, g) => m[L] - m[g]).slice(0, 2);
     }
-    const o = R.map((m) => m[0]), A = R.map((m) => m[1]), e = Math.min(...o), i = Math.max(...o), n = Math.min(...A), c = Math.max(...A), h = [
+    const o = _.map((m) => m[0]), A = _.map((m) => m[1]), e = Math.min(...o), i = Math.max(...o), n = Math.min(...A), c = Math.max(...A), h = [
       0,
       1,
       2,
@@ -635,42 +635,42 @@ solve
       dA: 0
     }));
     let S = 0;
-    for (let m = 0; m < t; m++) for (let k = 0; k < t; k++) {
-      const g = e + (i - e) * (m + 0.5) / t, z = n + (c - n) * (k + 0.5) / t;
-      let j = 0, q = 0;
+    for (let m = 0; m < t; m++) for (let L = 0; L < t; L++) {
+      const g = e + (i - e) * (m + 0.5) / t, z = n + (c - n) * (L + 0.5) / t;
+      let j = 0, R = 0;
       for (let J = 0; J < 4; J++) {
-        const U = R[J], P = R[(J + 1) % 4];
-        (P[0] - U[0]) * (z - U[1]) - (P[1] - U[1]) * (g - U[0]) >= 0 ? j++ : q++;
+        const X = _[J], H = _[(J + 1) % 4];
+        (H[0] - X[0]) * (z - X[1]) - (H[1] - X[1]) * (g - X[0]) >= 0 ? j++ : R++;
       }
-      if (j !== 4 && q !== 4) continue;
-      let $ = F[0], O = 1 / 0;
-      for (const J of F) {
-        const U = R[J], P = R[(J + 1) % 4], _ = P[0] - U[0], Y = P[1] - U[1], de = _ * _ + Y * Y, ne = Math.max(0, Math.min(1, ((g - U[0]) * _ + (z - U[1]) * Y) / de)), H = Math.hypot(g - (U[0] + ne * _), z - (U[1] + ne * Y));
-        H < O && (O = H, $ = J);
+      if (j !== 4 && R !== 4) continue;
+      let D = M[0], O = 1 / 0;
+      for (const J of M) {
+        const X = _[J], H = _[(J + 1) % 4], U = H[0] - X[0], Y = H[1] - X[1], de = U * U + Y * Y, ne = Math.max(0, Math.min(1, ((g - X[0]) * U + (z - X[1]) * Y) / de)), P = Math.hypot(g - (X[0] + ne * U), z - (X[1] + ne * Y));
+        P < O && (O = P, D = J);
       }
-      h[$].pts.push([
-        l[0] + g * L[0] + z * C[0],
-        l[1] + g * L[1] + z * C[1],
-        l[2] + g * L[2] + z * C[2]
+      h[D].pts.push([
+        l[0] + g * k[0] + z * y[0],
+        l[1] + g * k[1] + z * y[1],
+        l[2] + g * k[2] + z * y[2]
       ]), S++;
     }
     const E = 0.5 * Z(pe(B(r[2], r[0]), B(r[3], r[1])));
     for (const m of h) m.dA = S ? E / S : 0;
     return h;
   }
-  function Ye(r, t) {
+  function Ge(r, t) {
     if (!(t > 0)) return;
-    const D = 1e-6, l = (A) => r.nodes.get(A);
-    let L = Math.max(0, ...r.nodes.keys()) + 1, X = r.shells.reduce((A, e) => Math.max(A, e.id), 0) + 1;
-    const C = (A) => {
-      for (const [i, n] of r.nodes) if (Z(B(n, A)) < D) return i;
-      const e = L++;
+    const $ = 1e-6, l = (A) => r.nodes.get(A);
+    let k = Math.max(0, ...r.nodes.keys()) + 1, q = r.shells.reduce((A, e) => Math.max(A, e.id), 0) + 1;
+    const y = (A) => {
+      for (const [i, n] of r.nodes) if (Z(B(n, A)) < $) return i;
+      const e = k++;
       return r.nodes.set(e, [
         A[0],
         A[1],
         A[2]
       ]), e;
-    }, R = (A, e) => {
+    }, _ = (A, e) => {
       const i = r.shellModsDir.get(A);
       i && r.shellModsDir.set(e, [
         ...i
@@ -685,70 +685,70 @@ solve
       h !== void 0 && r.shellTypes.set(e, h);
       const S = r.shellAngles.get(A);
       S !== void 0 && r.shellAngles.set(e, S);
-    }, F = [];
+    }, M = [];
     let o = 0;
     for (const A of r.shells) {
       if (A.pts.length !== 4) {
-        F.push(A);
+        M.push(A);
         continue;
       }
       const e = A.pts.map(l);
       if (e.some((m) => !m)) {
-        F.push(A);
+        M.push(A);
         continue;
       }
       const i = (Z(B(e[1], e[0])) + Z(B(e[2], e[3]))) / 2, n = (Z(B(e[3], e[0])) + Z(B(e[2], e[1]))) / 2, c = Math.max(1, Math.ceil(i / t - 1e-9)), h = Math.max(1, Math.ceil(n / t - 1e-9));
       if (c === 1 && h === 1) {
-        F.push(A);
+        M.push(A);
         continue;
       }
-      const S = (m, k) => [
+      const S = (m, L) => [
         0,
         1,
         2
-      ].map((g) => e[0][g] * (1 - m) * (1 - k) + e[1][g] * m * (1 - k) + e[2][g] * m * k + e[3][g] * (1 - m) * k), E = [];
+      ].map((g) => e[0][g] * (1 - m) * (1 - L) + e[1][g] * m * (1 - L) + e[2][g] * m * L + e[3][g] * (1 - m) * L), E = [];
       for (let m = 0; m <= c; m++) {
-        const k = [];
-        for (let g = 0; g <= h; g++) k.push(C(S(m / c, g / h)));
-        E.push(k);
+        const L = [];
+        for (let g = 0; g <= h; g++) L.push(y(S(m / c, g / h)));
+        E.push(L);
       }
-      for (let m = 0; m < c; m++) for (let k = 0; k < h; k++) {
-        const g = m === 0 && k === 0 ? A.id : X++;
-        F.push({
+      for (let m = 0; m < c; m++) for (let L = 0; L < h; L++) {
+        const g = m === 0 && L === 0 ? A.id : q++;
+        M.push({
           ...A,
           id: g,
           pts: [
-            E[m][k],
-            E[m + 1][k],
-            E[m + 1][k + 1],
-            E[m][k + 1]
+            E[m][L],
+            E[m + 1][L],
+            E[m + 1][L + 1],
+            E[m][L + 1]
           ]
-        }), g !== A.id && R(A.id, g);
+        }), g !== A.id && _(A.id, g);
       }
       o++;
     }
-    o && (r.shells = F, console.log(`[CLI Modeler] automesh ${t} m: ${o} pano(s) partido(s) -> ${r.shells.length} cascaras, ${r.nodes.size} nudos`));
+    o && (r.shells = M, console.log(`[CLI Modeler] automesh ${t} m: ${o} pano(s) partido(s) -> ${r.shells.length} cascaras, ${r.nodes.size} nudos`));
   }
-  function Ge(r) {
-    const D = (n) => r.nodes.get(n), l = [
+  function Ze(r) {
+    const $ = (n) => r.nodes.get(n), l = [
       ...r.nodes.keys()
-    ], L = (n, c, h) => {
-      const S = B(c, n), E = Z(S), m = oe(S, 1 / E), k = [];
+    ], k = (n, c, h) => {
+      const S = B(c, n), E = Z(S), m = oe(S, 1 / E), L = [];
       for (const g of l) {
         if (h.includes(g)) continue;
-        const z = B(D(g), n), j = le(z, m);
-        j > 1e-6 && j < E - 1e-6 && Z(B(z, oe(m, j))) < 1e-4 && k.push(j / E);
+        const z = B($(g), n), j = le(z, m);
+        j > 1e-6 && j < E - 1e-6 && Z(B(z, oe(m, j))) < 1e-4 && L.push(j / E);
       }
-      return k.sort((g, z) => g - z);
-    }, X = (n, c) => {
+      return L.sort((g, z) => g - z);
+    }, q = (n, c) => {
       const h = [];
       for (const S of n) c.some((E) => Math.abs(S - E) < 1e-5) && !h.some((E) => Math.abs(S - E) < 1e-5) && h.push(S);
       return h;
-    }, C = (n) => {
-      for (const c of l) if (Z(B(D(c), n)) < 1e-4) return c;
+    }, y = (n) => {
+      for (const c of l) if (Z(B($(c), n)) < 1e-4) return c;
     };
-    let R = r.shells.reduce((n, c) => Math.max(n, c.id), 0) + 1;
-    const F = [], o = (n, c) => {
+    let _ = r.shells.reduce((n, c) => Math.max(n, c.id), 0) + 1;
+    const M = [], o = (n, c) => {
       const h = r.shellModsDir.get(n);
       h && r.shellModsDir.set(c, [
         ...h
@@ -761,54 +761,54 @@ solve
       E !== void 0 && r.shellLoads.set(c, E);
       const m = r.shellTypes.get(n);
       m !== void 0 && r.shellTypes.set(c, m);
-      const k = r.shellAngles.get(n);
-      k !== void 0 && r.shellAngles.set(c, k);
+      const L = r.shellAngles.get(n);
+      L !== void 0 && r.shellAngles.set(c, L);
     };
     for (const n of r.shells) {
-      if (!Oe(r, n.id) || n.pts.length !== 4 || n.pts.some(($) => !r.nodes.has($))) {
-        F.push(n);
+      if (!Oe(r, n.id) || n.pts.length !== 4 || n.pts.some((D) => !r.nodes.has(D))) {
+        M.push(n);
         continue;
       }
-      const c = n.pts.map(D), h = L(c[0], c[1], n.pts), S = L(c[2], c[3], n.pts).map(($) => 1 - $), E = L(c[1], c[2], n.pts), m = L(c[3], c[0], n.pts).map(($) => 1 - $);
-      let k = [
+      const c = n.pts.map($), h = k(c[0], c[1], n.pts), S = k(c[2], c[3], n.pts).map((D) => 1 - D), E = k(c[1], c[2], n.pts), m = k(c[3], c[0], n.pts).map((D) => 1 - D);
+      let L = [
         0,
-        ...X(h, S),
+        ...q(h, S),
         1
       ], g = [
         0,
-        ...X(E, m),
+        ...q(E, m),
         1
       ];
-      if (k.length === 2 && g.length === 2) {
-        F.push(n);
+      if (L.length === 2 && g.length === 2) {
+        M.push(n);
         continue;
       }
-      const z = ($, O) => [
+      const z = (D, O) => [
         0,
         1,
         2
-      ].map((J) => (1 - $) * (1 - O) * c[0][J] + $ * (1 - O) * c[1][J] + $ * O * c[2][J] + (1 - $) * O * c[3][J]);
-      let j = g.map(($) => k.map((O) => C(z(O, $))));
-      if (j.some(($) => $.some((O) => O === void 0)) && (k.length >= g.length ? g = [
+      ].map((J) => (1 - D) * (1 - O) * c[0][J] + D * (1 - O) * c[1][J] + D * O * c[2][J] + (1 - D) * O * c[3][J]);
+      let j = g.map((D) => L.map((O) => y(z(O, D))));
+      if (j.some((D) => D.some((O) => O === void 0)) && (L.length >= g.length ? g = [
         0,
         1
-      ] : k = [
+      ] : L = [
         0,
         1
-      ], j = g.map(($) => k.map((O) => C(z(O, $)))), j.some(($) => $.some((O) => O === void 0)))) {
-        F.push(n);
+      ], j = g.map((D) => L.map((O) => y(z(O, D)))), j.some((D) => D.some((O) => O === void 0)))) {
+        M.push(n);
         continue;
       }
-      let q = true;
-      for (let $ = 0; $ < g.length - 1; $++) for (let O = 0; O < k.length - 1; O++) {
+      let R = true;
+      for (let D = 0; D < g.length - 1; D++) for (let O = 0; O < L.length - 1; O++) {
         const J = [
-          j[$][O],
-          j[$][O + 1],
-          j[$ + 1][O + 1],
-          j[$ + 1][O]
-        ], U = q ? n.id : R++;
-        q || o(n.id, U), q = false, F.push({
-          id: U,
+          j[D][O],
+          j[D][O + 1],
+          j[D + 1][O + 1],
+          j[D + 1][O]
+        ], X = R ? n.id : _++;
+        R || o(n.id, X), R = false, M.push({
+          id: X,
           pts: J,
           t: n.t,
           E: n.E,
@@ -816,7 +816,7 @@ solve
         });
       }
     }
-    r.shells = F;
+    r.shells = M;
     const A = 9.80665, e = (n, c) => {
       const h = r.loads.get(n) ?? [
         0,
@@ -839,8 +839,8 @@ solve
       return r.frames.filter((m) => [
         m.nI,
         m.nJ
-      ].every((k) => {
-        const g = r.nodes.get(k);
+      ].every((L) => {
+        const g = r.nodes.get(L);
         if (!g) return false;
         const z = B(g, n), j = le(z, E);
         return j > -1e-4 && j < S + 1e-4 && Z(B(z, oe(E, j))) < 1e-4;
@@ -850,24 +850,24 @@ solve
       if (!Oe(r, n.id) || n.pts.length !== 4) continue;
       const c = r.selfWeight ? (n.rho ?? 2.45) * n.t * A * r.selfWeight : 0, h = r.shellLoads.get(n.id) ?? 0, S = -c + h;
       if (Math.abs(S) < 1e-15) continue;
-      const E = n.pts.map(D);
+      const E = n.pts.map($);
       let m;
       if (r.deckOneWay) {
         const g = B(E[1], E[0]);
         let z = pe(g, B(E[3], E[0]));
         z = oe(z, 1 / Z(z));
-        const j = oe(g, 1 / Z(g)), q = pe(z, j), $ = (r.shellAngles.get(n.id) ?? 0) * Math.PI / 180;
+        const j = oe(g, 1 / Z(g)), R = pe(z, j), D = (r.shellAngles.get(n.id) ?? 0) * Math.PI / 180;
         m = [
           0,
           1,
           2
-        ].map((O) => Math.cos($) * j[O] + Math.sin($) * q[O]);
+        ].map((O) => Math.cos(D) * j[O] + Math.sin(D) * R[O]);
       }
-      const k = _e(E, 200, m);
+      const L = Ye(E, 200, m);
       for (let g = 0; g < 4; g++) {
-        const { pts: z, dA: j } = k[g];
+        const { pts: z, dA: j } = L[g];
         if (!z.length) continue;
-        const q = E[g], $ = E[(g + 1) % 4], O = i(q, $);
+        const R = E[g], D = E[(g + 1) % 4], O = i(R, D);
         if (!O.length) {
           const Y = S * j * z.length;
           e(n.pts[g], [
@@ -887,20 +887,20 @@ solve
           ]);
           continue;
         }
-        const J = B($, q), U = Z(J), P = oe(J, 1 / U), _ = z.map((Y) => le(B(Y, q), P));
+        const J = B(D, R), X = Z(J), H = oe(J, 1 / X), U = z.map((Y) => le(B(Y, R), H));
         for (const Y of O) {
-          const de = D(Y.nI), ne = D(Y.nJ), H = le(B(de, q), P), he = le(B(ne, q), P), se = Math.min(H, he), ee = Math.max(H, he), te = ee - se;
+          const de = $(Y.nI), ne = $(Y.nJ), P = le(B(de, R), H), he = le(B(ne, R), H), ee = Math.min(P, he), se = Math.max(P, he), te = se - ee;
           if (te < 1e-9) continue;
-          const ue = ee >= U - 1e-6, Ie = oe(B(ne, de), 1 / te), ae = pe(Ie, [
+          const ue = se >= X - 1e-6, Ie = oe(B(ne, de), 1 / te), ae = pe(Ie, [
             0,
             0,
             1
           ]);
           let ge = 0, ce = 0, me = 0, ie = 0;
-          for (const d of _) {
-            if (d < se - 1e-9 || (ue ? d > ee + 1e-9 : d >= ee - 1e-9)) continue;
-            let p = d - se;
-            H > he && (p = te - p);
+          for (const d of U) {
+            if (d < ee - 1e-9 || (ue ? d > se + 1e-9 : d >= se - 1e-9)) continue;
+            let p = d - ee;
+            P > he && (p = te - p);
             const a = p / te;
             ge += 1 - 3 * a * a + 2 * a * a * a, ce += te * (a - 2 * a * a + a * a * a), me += 3 * a * a - 2 * a * a * a, ie += te * (-a * a + a * a * a);
           }
@@ -925,7 +925,7 @@ solve
       r.deckTributario.add(n.id), r.shellLoads.delete(n.id);
     }
   }
-  Ke = {
+  He = {
     id: "cli-modeler",
     name: "CLI Modeler (comandos)",
     category: "\u{1F9EA} Utilidades",
@@ -940,39 +940,52 @@ solve
       "membraneXX"
     ],
     params: {},
+    hasModal: true,
+    runModal(r, t, $) {
+      var _a;
+      const l = t.nodes.val, k = t.elements.val;
+      if (!(!l.length || !k.length)) try {
+        const q = Math.max(1, parseInt(window.__hekatanCliModalModes ?? "12", 10) || 12), y = t.nodeInputs.val, _ = window.__hekatanCliSprings, M = Ne(l, k, y, t.elementInputs.val, q, 0, 0, 1, (y == null ? void 0 : y.diaphragms) instanceof Map && y.diaphragms.size ? y.diaphragms : void 0, _ && _.length ? _ : void 0);
+        console.log(`[CLI Modeler] Modal OK \u2014 ${M.frequencies.length} modos, T1 = ${M.frequencies[0] ? (1 / M.frequencies[0]).toFixed(5) : "\u2014"} s`), (_a = $ == null ? void 0 : $.render) == null ? void 0 : _a.call($, M, {
+          title: "Modal del .heks (masa 3D, como SAP2000)"
+        });
+      } catch (q) {
+        console.error("[CLI Modeler] modal:", (q == null ? void 0 : q.message) ?? q);
+      }
+    },
     build(r, t) {
       var _a, _b;
-      const D = window.__hekatanCliScript ?? Ue;
-      window.__hekatanCliLastScript = D;
-      const l = Xe(D);
-      l.autoMesh > 0 && Ye(l, l.autoMesh), l.deckEtabs && Ge(l);
-      const L = /* @__PURE__ */ new Map(), X = /* @__PURE__ */ new Map(), C = [], R = Array.from(l.nodes.keys()).sort((s, d) => s - d);
-      for (const s of R) L.set(s, C.length), C.push(l.nodes.get(s));
-      const F = [], o = /* @__PURE__ */ new Map(), A = /* @__PURE__ */ new Map(), e = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), c = /* @__PURE__ */ new Map(), h = /* @__PURE__ */ new Map(), S = /* @__PURE__ */ new Map(), E = /* @__PURE__ */ new Map(), m = /* @__PURE__ */ new Map(), k = /* @__PURE__ */ new Map(), g = /* @__PURE__ */ new Map(), z = /* @__PURE__ */ new Map(), j = /* @__PURE__ */ new Map(), q = /* @__PURE__ */ new Map(), $ = /* @__PURE__ */ new Map(), O = /* @__PURE__ */ new Map(), J = /* @__PURE__ */ new Map(), U = /* @__PURE__ */ new Map();
+      const $ = window.__hekatanCliScript ?? Ue;
+      window.__hekatanCliLastScript = $;
+      const l = Xe($);
+      l.autoMesh > 0 && Ge(l, l.autoMesh), l.deckEtabs && Ze(l);
+      const k = /* @__PURE__ */ new Map(), q = /* @__PURE__ */ new Map(), y = [], _ = Array.from(l.nodes.keys()).sort((s, d) => s - d);
+      for (const s of _) k.set(s, y.length), y.push(l.nodes.get(s));
+      const M = [], o = /* @__PURE__ */ new Map(), A = /* @__PURE__ */ new Map(), e = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), c = /* @__PURE__ */ new Map(), h = /* @__PURE__ */ new Map(), S = /* @__PURE__ */ new Map(), E = /* @__PURE__ */ new Map(), m = /* @__PURE__ */ new Map(), L = /* @__PURE__ */ new Map(), g = /* @__PURE__ */ new Map(), z = /* @__PURE__ */ new Map(), j = /* @__PURE__ */ new Map(), R = /* @__PURE__ */ new Map(), D = /* @__PURE__ */ new Map(), O = /* @__PURE__ */ new Map(), J = /* @__PURE__ */ new Map(), X = /* @__PURE__ */ new Map();
       for (const s of l.frames) {
-        const d = L.get(s.nI), p = L.get(s.nJ);
+        const d = k.get(s.nI), p = k.get(s.nJ);
         if (d === void 0 || p === void 0) {
-          const w = R.length ? `IDs disponibles: ${R.join(", ")}` : "ning\xFAn nodo definido", W = [];
+          const w = _.length ? `IDs disponibles: ${_.join(", ")}` : "ning\xFAn nodo definido", W = [];
           d === void 0 && W.push(s.nI), p === void 0 && W.push(s.nJ), l.errors.push(`frame ${s.id}: nodo(s) inexistente(s) [${W.join(", ")}] \u2014 ${w}`);
           continue;
         }
-        const a = F.length;
-        F.push([
+        const a = M.length;
+        M.push([
           d,
           p
         ]);
         const v = s.nu ?? 0.2;
         o.set(a, s.E), A.set(a, s.E / (2 * (1 + v))), e.set(a, s.A), i.set(a, s.I), n.set(a, s.Iy ?? s.I), c.set(a, s.J ?? 0.14 * Math.pow(Math.sqrt(s.A), 4)), h.set(a, s.rho ?? 2.45), J.set(a, v), s.D !== void 0 && isFinite(s.D) && S.set(a, s.D), s.B !== void 0 && isFinite(s.B) && E.set(a, s.B);
-        const M = l.frameAngles.get(s.id);
-        M !== void 0 && isFinite(M) && k.set(a, M);
+        const b = l.frameAngles.get(s.id);
+        b !== void 0 && isFinite(b) && L.set(a, b);
         const u = l.frameReleases.get(s.id);
         u && g.set(a, u);
         const f = l.frameEndOffsets.get(s.id);
         f && z.set(a, f);
-        const b = l.frameLoads.get(s.id);
-        b && q.set(a, b);
-        const y = l.frameShearAreas.get(s.id);
-        if (y && (O.set(a, y[0]), $.set(a, y[1])), s.sec || s.D !== void 0 && s.B !== void 0) {
+        const F = l.frameLoads.get(s.id);
+        F && R.set(a, F);
+        const C = l.frameShearAreas.get(s.id);
+        if (C && (O.set(a, C[0]), D.set(a, C[1])), s.sec || s.D !== void 0 && s.B !== void 0) {
           const w = {
             type: "general"
           };
@@ -981,7 +994,7 @@ solve
         const x = l.frameCftc.get(s.id);
         if (x) {
           const w = Je(x.D, x.t, s.E, v, x.Ec, x.nuC);
-          e.set(a, w.A), n.set(a, w.Iz), i.set(a, w.Iy), c.set(a, w.J), O.set(a, w.As2), $.set(a, w.As3), S.set(a, x.D), E.set(a, x.D), m.set(a, {
+          e.set(a, w.A), n.set(a, w.Iz), i.set(a, w.Iy), c.set(a, w.J), O.set(a, w.As2), D.set(a, w.As3), S.set(a, x.D), E.set(a, x.D), m.set(a, {
             type: "CFT",
             d: x.D,
             tw: x.t,
@@ -992,7 +1005,7 @@ solve
         const I = l.frameCft.get(s.id);
         if (I) {
           const w = We(I.b, I.h, I.t, s.E, v, I.Ec, I.nuC);
-          e.set(a, w.A), n.set(a, w.Iz), i.set(a, w.Iy), c.set(a, w.J), O.set(a, w.As2), $.set(a, w.As3), S.set(a, I.h), E.set(a, I.b), m.set(a, {
+          e.set(a, w.A), n.set(a, w.Iz), i.set(a, w.Iy), c.set(a, w.J), O.set(a, w.As2), D.set(a, w.As3), S.set(a, I.h), E.set(a, I.b), m.set(a, {
             type: "CFT",
             b: I.b,
             h: I.h,
@@ -1014,54 +1027,54 @@ solve
           J,
           S,
           E,
-          k,
-          $,
+          L,
+          D,
           O,
           m,
-          q
+          R
         ], p = (u, f) => {
-          for (const b of d) b.has(u) && b.set(f, b.get(u));
+          for (const F of d) F.has(u) && F.set(f, F.get(u));
         }, a = (u) => {
-          for (let f = 0; f < C.length; f++) if (Math.hypot(C[f][0] - u[0], C[f][1] - u[1], C[f][2] - u[2]) < 1e-6) return f;
-          return C.push([
+          for (let f = 0; f < y.length; f++) if (Math.hypot(y[f][0] - u[0], y[f][1] - u[1], y[f][2] - u[2]) < 1e-6) return f;
+          return y.push([
             u[0],
             u[1],
             u[2]
-          ]), C.length - 1;
+          ]), y.length - 1;
         }, v = (u) => {
-          const f = C[u[0]], b = C[u[1]];
+          const f = y[u[0]], F = y[u[1]];
           return [
-            Math.min(f[0], b[0]),
-            Math.min(f[1], b[1]),
-            Math.min(f[2], b[2]),
-            Math.max(f[0], b[0]),
-            Math.max(f[1], b[1]),
-            Math.max(f[2], b[2])
+            Math.min(f[0], F[0]),
+            Math.min(f[1], F[1]),
+            Math.min(f[2], F[2]),
+            Math.max(f[0], F[0]),
+            Math.max(f[1], F[1]),
+            Math.max(f[2], F[2])
           ];
         };
-        let M = 0;
-        for (let u = 0; u < F.length; u++) {
-          if (F[u].length !== 2) continue;
-          const f = v(F[u]);
-          for (let b = u + 1; b < F.length; b++) {
-            if (F[b].length !== 2) continue;
-            const [y, x] = F[u], [I, w] = F[b];
-            if (y === I || y === w || x === I || x === w) continue;
-            const W = v(F[b]);
+        let b = 0;
+        for (let u = 0; u < M.length; u++) {
+          if (M[u].length !== 2) continue;
+          const f = v(M[u]);
+          for (let F = u + 1; F < M.length; F++) {
+            if (M[F].length !== 2) continue;
+            const [C, x] = M[u], [I, w] = M[F];
+            if (C === I || C === w || x === I || x === w) continue;
+            const W = v(M[F]);
             if (f[0] > W[3] + 1e-6 || W[0] > f[3] + 1e-6 || f[1] > W[4] + 1e-6 || W[1] > f[4] + 1e-6 || f[2] > W[5] + 1e-6 || W[2] > f[5] + 1e-6) continue;
-            const T = C[y], V = C[x], N = C[I], Q = C[w], G = [
+            const T = y[C], V = y[x], N = y[I], K = y[w], G = [
               V[0] - T[0],
               V[1] - T[1],
               V[2] - T[2]
-            ], K = [
-              Q[0] - N[0],
-              Q[1] - N[1],
-              Q[2] - N[2]
+            ], Q = [
+              K[0] - N[0],
+              K[1] - N[1],
+              K[2] - N[2]
             ], re = [
               T[0] - N[0],
               T[1] - N[1],
               T[2] - N[2]
-            ], xe = s(G, G), ve = s(G, K), ke = s(K, K), Se = s(G, re), $e = s(K, re), ye = xe * ke - ve * ve;
+            ], xe = s(G, G), ve = s(G, Q), ke = s(Q, Q), Se = s(G, re), $e = s(Q, re), ye = xe * ke - ve * ve;
             if (ye < 1e-10 * xe * ke) continue;
             const Me = (ve * $e - ke * Se) / ye, be = (xe * $e - ve * Se) / ye;
             if (Me < 1e-6 || Me > 1 - 1e-6 || be < 1e-6 || be > 1 - 1e-6) continue;
@@ -1070,84 +1083,84 @@ solve
               T[1] + Me * G[1],
               T[2] + Me * G[2]
             ], Le = [
-              N[0] + be * K[0],
-              N[1] + be * K[1],
-              N[2] + be * K[2]
+              N[0] + be * Q[0],
+              N[1] + be * Q[1],
+              N[2] + be * Q[2]
             ];
             if (Math.hypot(we[0] - Le[0], we[1] - Le[1], we[2] - Le[2]) > 1e-6) continue;
             const De = a(we);
             for (const fe of [
               u,
-              b
+              F
             ]) {
-              const [Te, je] = F[fe], Ee = F.length;
-              F[fe] = [
+              const [Te, je] = M[fe], Ce = M.length;
+              M[fe] = [
                 Te,
                 De
-              ], F.push([
+              ], M.push([
                 De,
                 je
-              ]), p(fe, Ee);
-              const Ce = g.get(fe);
-              Ce && (g.set(fe, [
-                ...Ce.slice(0, 6),
+              ]), p(fe, Ce);
+              const Ee = g.get(fe);
+              Ee && (g.set(fe, [
+                ...Ee.slice(0, 6),
                 ...Array(6).fill(false)
-              ]), g.set(Ee, [
+              ]), g.set(Ce, [
                 ...Array(6).fill(false),
-                ...Ce.slice(6)
+                ...Ee.slice(6)
               ]));
               const Fe = z.get(fe);
               Fe && (z.set(fe, [
                 Fe[0],
                 0,
                 Fe[2]
-              ]), z.set(Ee, [
+              ]), z.set(Ce, [
                 0,
                 Fe[1],
                 Fe[2]
               ]));
             }
-            M++;
+            b++;
           }
         }
-        M > 0 && console.log(`[CLI Modeler] ${M} cruces de barras partidos con nudo (como ETABS; meshcross 0 lo apaga)`);
+        b > 0 && console.log(`[CLI Modeler] ${b} cruces de barras partidos con nudo (como ETABS; meshcross 0 lo apaga)`);
       }
       for (const s of l.shells) {
-        const d = s.pts.map((v) => L.get(v));
+        const d = s.pts.map((v) => k.get(v));
         if (d.some((v) => v === void 0)) {
           l.errors.push(`shell ${s.id}: algun nodo inexistente`);
           continue;
         }
-        const p = F.length;
-        X.set(s.id, p), F.push(d), o.set(p, s.E), A.set(p, s.E / (2 * 1.2)), U.set(p, s.t), h.set(p, s.rho ?? 2.45), J.set(p, 0.2);
+        const p = M.length;
+        q.set(s.id, p), M.push(d), o.set(p, s.E), A.set(p, s.E / (2 * 1.2)), X.set(p, s.t), h.set(p, s.rho ?? 2.45), J.set(p, 0.2);
         const a = l.shellTypes.get(s.id);
         a !== void 0 && j.set(p, a);
       }
-      const P = /* @__PURE__ */ new Map();
+      const H = /* @__PURE__ */ new Map();
       for (const [s, d] of l.supports.entries()) {
-        const p = L.get(s);
-        p !== void 0 && P.set(p, d);
+        const p = k.get(s);
+        p !== void 0 && H.set(p, d);
       }
-      const _ = /* @__PURE__ */ new Map();
+      const U = /* @__PURE__ */ new Map();
       for (const [s, d] of l.loads.entries()) {
-        const p = L.get(s);
-        p !== void 0 && _.set(p, [
+        const p = k.get(s);
+        p !== void 0 && U.set(p, [
           ...d
         ]);
       }
       const Y = /* @__PURE__ */ new Map();
       for (const [s, d] of l.diaphragms.entries()) {
-        const p = L.get(s);
+        const p = k.get(s);
         p !== void 0 && Y.set(p, d);
       }
       const de = /* @__PURE__ */ new Map();
       for (const [s, d] of l.masses.entries()) {
-        const p = L.get(s);
+        const p = k.get(s);
         p !== void 0 && de.set(p, d);
       }
       if (l.frameLoads.size) {
         const s = (d, p) => {
-          const a = _.get(d) ?? [
+          const a = U.get(d) ?? [
             0,
             0,
             0,
@@ -1155,7 +1168,7 @@ solve
             0,
             0
           ];
-          _.set(d, [
+          U.set(d, [
             a[0] + p[0],
             a[1] + p[1],
             a[2] + p[2],
@@ -1170,105 +1183,105 @@ solve
             l.errors.push(`frameload ${d}: no existe esa barra`);
             continue;
           }
-          const v = L.get(a.nI), M = L.get(a.nJ);
-          if (v === void 0 || M === void 0) continue;
-          const u = C[v], f = C[M], b = [
+          const v = k.get(a.nI), b = k.get(a.nJ);
+          if (v === void 0 || b === void 0) continue;
+          const u = y[v], f = y[b], F = [
             f[0] - u[0],
             f[1] - u[1],
             f[2] - u[2]
-          ], y = Math.hypot(b[0], b[1], b[2]);
-          if (y < 1e-9) continue;
+          ], C = Math.hypot(F[0], F[1], F[2]);
+          if (C < 1e-9) continue;
           const x = [
-            b[0] / y,
-            b[1] / y,
-            b[2] / y
-          ], I = y * y / 12, w = [
+            F[0] / C,
+            F[1] / C,
+            F[2] / C
+          ], I = C * C / 12, w = [
             x[1] * p[2] - x[2] * p[1],
             x[2] * p[0] - x[0] * p[2],
             x[0] * p[1] - x[1] * p[0]
           ];
           s(v, [
-            p[0] * y / 2,
-            p[1] * y / 2,
-            p[2] * y / 2,
+            p[0] * C / 2,
+            p[1] * C / 2,
+            p[2] * C / 2,
             I * w[0],
             I * w[1],
             I * w[2]
-          ]), s(M, [
-            p[0] * y / 2,
-            p[1] * y / 2,
-            p[2] * y / 2,
+          ]), s(b, [
+            p[0] * C / 2,
+            p[1] * C / 2,
+            p[2] * C / 2,
             -I * w[0],
             -I * w[1],
             -I * w[2]
           ]);
         }
       }
-      const ne = /* @__PURE__ */ new Map(), H = 1 / Math.sqrt(3), he = [
+      const ne = /* @__PURE__ */ new Map(), P = 1 / Math.sqrt(3), he = [
         [
-          -H,
-          -H
+          -P,
+          -P
         ],
         [
-          H,
-          -H
+          P,
+          -P
         ],
         [
-          H,
-          H
+          P,
+          P
         ],
         [
-          -H,
-          H
+          -P,
+          P
         ]
       ];
       for (const s of l.shells) {
         const d = l.shellLoads.get(s.id);
         if (!d || l.deckTributario.has(s.id)) continue;
-        const p = s.pts.map((M) => L.get(M));
-        if (p.some((M) => M === void 0)) {
+        const p = s.pts.map((b) => k.get(b));
+        if (p.some((b) => b === void 0)) {
           l.errors.push(`areaload ${s.id}: algun nodo inexistente`);
           continue;
         }
-        const a = p.map((M) => C[M]), v = [
+        const a = p.map((b) => y[b]), v = [
           0,
           0,
           0,
           0
         ];
-        for (const [M, u] of he) {
+        for (const [b, u] of he) {
           const f = [
-            0.25 * (1 - M) * (1 - u),
-            0.25 * (1 + M) * (1 - u),
-            0.25 * (1 + M) * (1 + u),
-            0.25 * (1 - M) * (1 + u)
-          ], b = [
+            0.25 * (1 - b) * (1 - u),
+            0.25 * (1 + b) * (1 - u),
+            0.25 * (1 + b) * (1 + u),
+            0.25 * (1 - b) * (1 + u)
+          ], F = [
             -0.25 * (1 - u),
             0.25 * (1 - u),
             0.25 * (1 + u),
             -0.25 * (1 + u)
-          ], y = [
-            -0.25 * (1 - M),
-            -0.25 * (1 + M),
-            0.25 * (1 + M),
-            0.25 * (1 - M)
+          ], C = [
+            -0.25 * (1 - b),
+            -0.25 * (1 + b),
+            0.25 * (1 + b),
+            0.25 * (1 - b)
           ], x = [
             0,
             1,
             2
-          ].map((T) => b.reduce((V, N, Q) => V + N * a[Q][T], 0)), I = [
+          ].map((T) => F.reduce((V, N, K) => V + N * a[K][T], 0)), I = [
             0,
             1,
             2
-          ].map((T) => y.reduce((V, N, Q) => V + N * a[Q][T], 0)), w = [
+          ].map((T) => C.reduce((V, N, K) => V + N * a[K][T], 0)), w = [
             x[1] * I[2] - x[2] * I[1],
             x[2] * I[0] - x[0] * I[2],
             x[0] * I[1] - x[1] * I[0]
           ], W = Math.hypot(w[0], w[1], w[2]);
           for (let T = 0; T < 4; T++) v[T] += f[T] * d * W;
         }
-        for (let M = 0; M < 4; M++) {
-          const u = p[M], f = _.get(u) ?? [
+        for (let b = 0; b < 4; b++) {
+          const u = p[b], f = U.get(u) ?? [
             0,
             0,
             0,
@@ -1276,14 +1289,14 @@ solve
             0,
             0
           ];
-          f[2] += v[M], _.set(u, f), ne.set(u, (ne.get(u) ?? 0) + v[M]);
+          f[2] += v[b], U.set(u, f), ne.set(u, (ne.get(u) ?? 0) + v[b]);
         }
       }
       if (l.selfWeight) {
         const d = /* @__PURE__ */ new Set();
-        for (const [a, v] of X) l.deckTributario.has(a) && d.add(v);
+        for (const [a, v] of q) l.deckTributario.has(a) && d.add(v);
         const p = (a, v) => {
-          const M = _.get(a) ?? [
+          const b = U.get(a) ?? [
             0,
             0,
             0,
@@ -1291,33 +1304,33 @@ solve
             0,
             0
           ];
-          M[2] += v, _.set(a, M);
+          b[2] += v, U.set(a, b);
         };
-        F.forEach((a, v) => {
-          const M = h.get(v) ?? 0;
-          if (M && !d.has(v)) {
+        M.forEach((a, v) => {
+          const b = h.get(v) ?? 0;
+          if (b && !d.has(v)) {
             if (a.length === 2) {
-              const u = e.get(v) ?? 0, f = C[a[0]], b = C[a[1]], y = [
-                b[0] - f[0],
-                b[1] - f[1],
-                b[2] - f[2]
+              const u = e.get(v) ?? 0, f = y[a[0]], F = y[a[1]], C = [
+                F[0] - f[0],
+                F[1] - f[1],
+                F[2] - f[2]
               ];
-              let x = Math.hypot(y[0], y[1], y[2]);
+              let x = Math.hypot(C[0], C[1], C[2]);
               const I = z.get(v);
               if (I) {
-                const G = Math.hypot(y[0], y[1]);
-                G > 1e-9 && Math.abs(Math.atan2(Math.abs(y[2]), G)) * 180 / Math.PI < 20 && (x = Math.max(x - I[0] - I[1], 0));
+                const G = Math.hypot(C[0], C[1]);
+                G > 1e-9 && Math.abs(Math.atan2(Math.abs(C[2]), G)) * 180 / Math.PI < 20 && (x = Math.max(x - I[0] - I[1], 0));
               }
-              const w = Math.hypot(y[0], y[1], y[2]), W = -u * M * 9.80665 * l.selfWeight, T = [
-                y[0] / w,
-                y[1] / w,
-                y[2] / w
+              const w = Math.hypot(C[0], C[1], C[2]), W = -u * b * 9.80665 * l.selfWeight, T = [
+                C[0] / w,
+                C[1] / w,
+                C[2] / w
               ], V = x * x / 12, N = [
                 T[1] * W,
                 -T[0] * W,
                 0
-              ], Q = (G, K) => {
-                const re = _.get(G) ?? [
+              ], K = (G, Q) => {
+                const re = U.get(G) ?? [
                   0,
                   0,
                   0,
@@ -1325,23 +1338,23 @@ solve
                   0,
                   0
                 ];
-                _.set(G, [
-                  re[0] + K[0],
-                  re[1] + K[1],
-                  re[2] + K[2],
-                  re[3] + K[3],
-                  re[4] + K[4],
-                  re[5] + K[5]
+                U.set(G, [
+                  re[0] + Q[0],
+                  re[1] + Q[1],
+                  re[2] + Q[2],
+                  re[3] + Q[3],
+                  re[4] + Q[4],
+                  re[5] + Q[5]
                 ]);
               };
-              Q(a[0], [
+              K(a[0], [
                 0,
                 0,
                 W * x / 2,
                 V * N[0],
                 V * N[1],
                 0
-              ]), Q(a[1], [
+              ]), K(a[1], [
                 0,
                 0,
                 W * x / 2,
@@ -1350,8 +1363,8 @@ solve
                 0
               ]);
             } else if (a.length === 4) {
-              const u = U.get(v) ?? 0, f = a.map((x) => C[x]);
-              let b = 0;
+              const u = X.get(v) ?? 0, f = a.map((x) => y[x]);
+              let F = 0;
               for (let x = 1; x < 3; x++) {
                 const I = [
                   f[x][0] - f[0][0],
@@ -1366,30 +1379,30 @@ solve
                   I[2] * w[0] - I[0] * w[2],
                   I[0] * w[1] - I[1] * w[0]
                 ];
-                b += Math.hypot(W[0], W[1], W[2]) / 2;
+                F += Math.hypot(W[0], W[1], W[2]) / 2;
               }
-              const y = b * u * M * 9.80665 * l.selfWeight;
-              for (const x of a) p(x, -y / 4);
+              const C = F * u * b * 9.80665 * l.selfWeight;
+              for (const x of a) p(x, -C / 4);
             }
           }
         });
       }
-      const se = [];
+      const ee = [];
       for (const s of l.springs) {
-        const d = L.get(s.node);
-        d !== void 0 && se.push({
+        const d = k.get(s.node);
+        d !== void 0 && ee.push({
           node: d,
           dof: s.dof,
           k: s.k
         });
       }
       for (const s of l.areaSprings) {
-        const d = X.get(s.id);
+        const d = q.get(s.id);
         if (d === void 0) {
           l.errors.push(`areaspring ${s.id}: no existe esa cascara`);
           continue;
         }
-        se.push({
+        ee.push({
           node: -(d + 1),
           dof: s.nodal ? -3 : -1,
           k: s.ks
@@ -1397,48 +1410,48 @@ solve
       }
       if (l.edgeEtabs) {
         const s = /* @__PURE__ */ new Set(), d = [];
-        F.forEach((a, v) => {
+        M.forEach((a, v) => {
           if (a.length === 3 || a.length === 4) {
             d.push(v);
-            for (const M of a) s.add(M);
+            for (const b of a) s.add(b);
           }
         });
         let p = 0;
         for (const a of d) {
-          const v = F[a], M = v.map((f) => C[f]), u = [
+          const v = M[a], b = v.map((f) => y[f]), u = [
             0,
             1,
             2
           ].map((f) => [
-            Math.min(...M.map((b) => b[f])),
-            Math.max(...M.map((b) => b[f]))
+            Math.min(...b.map((F) => F[f])),
+            Math.max(...b.map((F) => F[f]))
           ]);
-          for (let f = 0; f < C.length; f++) {
+          for (let f = 0; f < y.length; f++) {
             if (v.includes(f)) continue;
-            const b = C[f];
-            if (b[0] < u[0][0] - 1e-6 || b[0] > u[0][1] + 1e-6 || b[1] < u[1][0] - 1e-6 || b[1] > u[1][1] + 1e-6 || b[2] < u[2][0] - 1e-6 || b[2] > u[2][1] + 1e-6) continue;
-            let y = false;
-            for (let I = 0; I < v.length && !y; I++) {
-              const w = M[I], W = M[(I + 1) % v.length], T = [
+            const F = y[f];
+            if (F[0] < u[0][0] - 1e-6 || F[0] > u[0][1] + 1e-6 || F[1] < u[1][0] - 1e-6 || F[1] > u[1][1] + 1e-6 || F[2] < u[2][0] - 1e-6 || F[2] > u[2][1] + 1e-6) continue;
+            let C = false;
+            for (let I = 0; I < v.length && !C; I++) {
+              const w = b[I], W = b[(I + 1) % v.length], T = [
                 W[0] - w[0],
                 W[1] - w[1],
                 W[2] - w[2]
               ], V = T[0] * T[0] + T[1] * T[1] + T[2] * T[2];
               if (V < 1e-24) continue;
               const N = [
-                b[0] - w[0],
-                b[1] - w[1],
-                b[2] - w[2]
-              ], Q = (N[0] * T[0] + N[1] * T[1] + N[2] * T[2]) / V;
-              if (Q <= 1e-6 || Q >= 1 - 1e-6) continue;
+                F[0] - w[0],
+                F[1] - w[1],
+                F[2] - w[2]
+              ], K = (N[0] * T[0] + N[1] * T[1] + N[2] * T[2]) / V;
+              if (K <= 1e-6 || K >= 1 - 1e-6) continue;
               const G = [
-                N[0] - Q * T[0],
-                N[1] - Q * T[1],
-                N[2] - Q * T[2]
+                N[0] - K * T[0],
+                N[1] - K * T[1],
+                N[2] - K * T[2]
               ];
-              Math.hypot(G[0], G[1], G[2]) <= 1e-6 * Math.sqrt(V) && (y = true);
+              Math.hypot(G[0], G[1], G[2]) <= 1e-6 * Math.sqrt(V) && (C = true);
             }
-            !y || !F.some((I, w) => w !== a && I.includes(f)) || (se.push({
+            !C || !M.some((I, w) => w !== a && I.includes(f)) || (ee.push({
               node: -(a + 1),
               dof: -2,
               k: f
@@ -1447,26 +1460,26 @@ solve
         }
         p && console.log(`[CLI Modeler] edge etabs: ${p} nudo(s) colgado(s) atado(s) a su arista (Hermite)`);
       }
-      const ee = [];
+      const se = [];
       for (const s of l.solids) {
-        const d = s.pts.map((a) => L.get(a));
+        const d = s.pts.map((a) => k.get(a));
         if (d.some((a) => a === void 0)) {
           l.errors.push(`hex ${s.id}: algun nodo inexistente`);
           continue;
         }
-        const p = F.length;
-        F.push(d), o.set(p, s.E), J.set(p, s.nu), A.set(p, s.E / (2 * (1 + s.nu))), h.set(p, s.rho), ee.push(p);
+        const p = M.length;
+        M.push(d), o.set(p, s.E), J.set(p, s.nu), A.set(p, s.E / (2 * (1 + s.nu))), h.set(p, s.rho), se.push(p);
       }
-      t.nodes.val = C, t.elements.val = F, t.nodeInputs.val = {
-        supports: P,
-        loads: _,
+      t.nodes.val = y, t.elements.val = M, t.nodeInputs.val = {
+        supports: H,
+        loads: U,
         masses: de,
         diaphragms: Y,
-        springs: se
-      }, t.springs && (t.springs.val = se);
+        springs: ee
+      }, t.springs && (t.springs.val = ee);
       const te = /* @__PURE__ */ new Map(), ue = /* @__PURE__ */ new Map(), Ie = /* @__PURE__ */ new Map(), ae = /* @__PURE__ */ new Map(), ge = /* @__PURE__ */ new Map();
       for (const s of l.shells) {
-        const d = X.get(s.id);
+        const d = q.get(s.id);
         if (d === void 0) continue;
         const p = l.shellLoads.get(s.id);
         p !== void 0 && ae.set(d, p);
@@ -1477,8 +1490,8 @@ solve
           Ie.set(d, v), te.set(d, (v[0] + v[1]) / 2), ue.set(d, (v[3] + v[4]) / 2);
           continue;
         }
-        const M = l.shellMods.get(s.id);
-        M && (te.set(d, M[0]), ue.set(d, M[1]));
+        const b = l.shellMods.get(s.id);
+        b && (te.set(d, b[0]), ue.set(d, b[1]));
       }
       if (t.elementInputs.val = {
         elasticities: o,
@@ -1494,7 +1507,7 @@ solve
         ])) : c,
         densities: h,
         poissonsRatios: J,
-        thicknesses: U,
+        thicknesses: X,
         membraneModifiers: te,
         bendingModifiers: ue,
         shellModifiers: Ie,
@@ -1504,26 +1517,26 @@ solve
         cantos: S,
         anchos: E,
         sectionShapes: m,
-        localAngles: k,
-        shearAreasY: $,
+        localAngles: L,
+        shearAreasY: D,
         shearAreasZ: O,
         momentReleases: g,
         endOffsets: z,
         plateFormulations: j,
-        frameLoads: q,
+        frameLoads: R,
         meshAtIntersections: l.meshCross,
         solidIncompatible: l.solidIncompatible,
         selfWeight: l.selfWeight,
         etabsWallJoint: l.etabsWallJoint,
         areaObjects: l.areaObjs.map((s) => ({
-          nodes: s.pts.map((d) => L.get(d)).filter((d) => d !== void 0),
-          cells: s.cells.map((d) => X.get(d)).filter((d) => d !== void 0),
+          nodes: s.pts.map((d) => k.get(d)).filter((d) => d !== void 0),
+          cells: s.cells.map((d) => q.get(d)).filter((d) => d !== void 0),
           q: s.cells.map((d) => l.shellLoads.get(d)).find((d) => d !== void 0),
           ang: s.cells.map((d) => l.shellAngles.get(d)).find((d) => d !== void 0)
         })).filter((s) => s.nodes.length === 4 && s.cells.length > 0)
-      }, l.doSolve && ee.length > 0 && ee.length === F.length) try {
-        const s = o.get(ee[0]) ?? 25e6, d = J.get(ee[0]) ?? 0.2;
-        ee.some((u) => Math.abs((o.get(u) ?? s) - s) > 1e-9 * s || Math.abs((J.get(u) ?? d) - d) > 1e-12) && l.errors.push("hex: hex8Solve lleva UN material; los solidos tienen E o nu distintos y se usa el del primero");
+      }, l.doSolve && se.length > 0 && se.length === M.length) try {
+        const s = o.get(se[0]) ?? 25e6, d = J.get(se[0]) ?? 0.2;
+        se.some((u) => Math.abs((o.get(u) ?? s) - s) > 1e-9 * s || Math.abs((J.get(u) ?? d) - d) > 1e-12) && l.errors.push("hex: hex8Solve lleva UN material; los solidos tienen E o nu distintos y se usa el del primero");
         const p = /* @__PURE__ */ new Map();
         for (const [u, f] of t.nodeInputs.val.supports ?? []) p.set(u, [
           !!f[0],
@@ -1536,51 +1549,51 @@ solve
           f[1] ?? 0,
           f[2] ?? 0
         ]);
-        const v = Be({
-          nodes: C,
-          elements: F,
+        const v = qe({
+          nodes: y,
+          elements: M,
           E: s,
           nu: d,
           supports: p,
           loads: a,
           incompatible: l.solidIncompatible
-        }), M = /* @__PURE__ */ new Map();
-        v.displacements.forEach(([u, f, b], y) => M.set(y, [
+        }), b = /* @__PURE__ */ new Map();
+        v.displacements.forEach(([u, f, F], C) => b.set(C, [
           u,
           f,
-          b,
+          F,
           0,
           0,
           0
         ])), t.deformOutputs.val = {
-          deformations: M,
+          deformations: b,
           reactions: /* @__PURE__ */ new Map()
         }, t.analyzeOutputs.val = {
           solidStress: v.stressPerElement,
           solidVonMises: v.vonMisesPerElement
-        }, console.log(`[CLI Modeler] Solve OK \u2014 ${F.length} solidos H8, ${C.length} nodos (${v.elapsedMs.toFixed(0)} ms)`);
+        }, console.log(`[CLI Modeler] Solve OK \u2014 ${M.length} solidos H8, ${y.length} nodos (${v.elapsedMs.toFixed(0)} ms)`);
       } catch (s) {
         l.errors.push(`hex8Solve: ${(s == null ? void 0 : s.message) ?? s}`);
       }
-      else if (l.doSolve && C.length && F.length) try {
-        t.deformOutputs.val = qe(C, F, t.nodeInputs.val, t.elementInputs.val, se.length ? se : void 0);
+      else if (l.doSolve && y.length && M.length) try {
+        window.__hekatanCliSprings = ee, t.deformOutputs.val = Re(y, M, t.nodeInputs.val, t.elementInputs.val, ee.length ? ee : void 0);
         try {
-          t.analyzeOutputs.val = Re(C, F, t.elementInputs.val, t.deformOutputs.val);
+          t.analyzeOutputs.val = Be(y, M, t.elementInputs.val, t.deformOutputs.val);
         } catch (s) {
           console.warn("[CLI Modeler] analyze:", (s == null ? void 0 : s.message) ?? s);
         }
         if (l.areaSprings.length > 0) try {
           const s = t.deformOutputs.val.deformations, d = t.analyzeOutputs.val ?? {}, p = d.pressure instanceof Map ? d.pressure : /* @__PURE__ */ new Map();
           let a = 0, v = 0;
-          for (const M of l.areaSprings) {
-            const u = X.get(M.id);
+          for (const b of l.areaSprings) {
+            const u = q.get(b.id);
             if (u === void 0) continue;
-            const b = F[u].map((y) => {
+            const F = M[u].map((C) => {
               var _a2;
-              const x = ((_a2 = s.get(y)) == null ? void 0 : _a2[2]) ?? 0, I = M.ks * x;
+              const x = ((_a2 = s.get(C)) == null ? void 0 : _a2[2]) ?? 0, I = b.ks * x;
               return I < a && (a = I), I > v && (v = I), I;
             });
-            p.set(u, b);
+            p.set(u, F);
           }
           p.size > 0 && (d.pressure = p, d.colorMapRanges = {
             ...d.colorMapRanges ?? {},
@@ -1592,21 +1605,21 @@ solve
         } catch (s) {
           console.warn("[CLI Modeler] presi\xF3n:", (s == null ? void 0 : s.message) ?? s);
         }
-        if (ee.length > 0) try {
+        if (se.length > 0) try {
           const s = t.deformOutputs.val.deformations, d = /* @__PURE__ */ new Map(), p = /* @__PURE__ */ new Map();
-          for (const a of ee) {
-            const v = F[a], M = v.map((b) => C[b]), u = v.flatMap((b) => {
-              const y = s.get(b) ?? [
+          for (const a of se) {
+            const v = M[a], b = v.map((F) => y[F]), u = v.flatMap((F) => {
+              const C = s.get(F) ?? [
                 0,
                 0,
                 0
               ];
               return [
-                y[0],
-                y[1],
-                y[2]
+                C[0],
+                C[1],
+                C[2]
               ];
-            }), f = Ne(M, o.get(a) ?? 25e6, J.get(a) ?? 0.2, u, l.solidIncompatible);
+            }), f = _e(b, o.get(a) ?? 25e6, J.get(a) ?? 0.2, u, l.solidIncompatible);
             d.set(a, f.stress), p.set(a, f.vonMises);
           }
           t.analyzeOutputs.val = {
@@ -1617,7 +1630,7 @@ solve
         } catch (s) {
           console.warn("[CLI Modeler] tensiones de solidos:", (s == null ? void 0 : s.message) ?? s);
         }
-        console.log("[CLI Modeler] Solve OK \u2014", F.length, "elementos,", C.length, "nodos");
+        console.log("[CLI Modeler] Solve OK \u2014", M.length, "elementos,", y.length, "nodos");
       } catch (s) {
         l.errors.push(`solve fall\xF3: ${s.message}`);
       }
@@ -1631,12 +1644,12 @@ solve
       if ((_a = ie == null ? void 0 : ie.deformations) == null ? void 0 : _a.size) for (const [, s] of ie.deformations) Math.abs(s[2]) > Math.abs(ce) && (ce = s[2]);
       if ((_b = ie == null ? void 0 : ie.reactions) == null ? void 0 : _b.size) for (const [, s] of ie.reactions) me += s[2] || 0;
       window.__hekatanCliStats = {
-        nodes: C.length,
+        nodes: y.length,
         frames: l.frames.length,
         shells: l.shells.length,
-        supports: P.size,
-        loads: _.size,
-        springs: se.length,
+        supports: H.size,
+        loads: U.size,
+        springs: ee.length,
         solved: l.doSolve,
         errors: l.errors.length,
         maxUzMm: +(ce * 1e3).toFixed(3),
@@ -1647,6 +1660,6 @@ solve
 });
 export {
   __tla,
-  Ke as c,
+  He as c,
   Xe as p
 };

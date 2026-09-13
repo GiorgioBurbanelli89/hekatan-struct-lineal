@@ -1,5 +1,5 @@
 import "./modulepreload-polyfill-B5Qt9EMX.js";
-import { n as r, __tla as __tla_0 } from "./newBlank-B3RtCeL2.js";
+import { n as r, __tla as __tla_0 } from "./newBlank-Civ1is2-.js";
 import { r as m, __tla as __tla_1 } from "./runExampleStandalone-CH2XmDJ1.js";
 import "./theme-C-zoknmI.js";
 import "./analyze-DgLgRmKg.js";
