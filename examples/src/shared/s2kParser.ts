@@ -605,11 +605,18 @@ function buildModel(
       // Sin esto todo entraba como Thick y el mezanine thin salia 1.1 % distinto.
       (ei as any).plateFormulations ??= new Map();
       (ei as any).plateFormulations.set(i, /thin/i.test(ssec.type) ? 1 : 0);
-      const am = areaMods.get(elementNames[i]);
+      // `Type=Membrane`: sin flexion (el motor no arma la placa con flexion 0). Antes se leia el tipo y
+      // no se usaba: el muro membrana volvia de SAP2000 con la flexion entera.
+      const membrana = /membrane/i.test(ssec.type);
+      const am0 = areaMods.get(elementNames[i]);
+      const am = am0 && membrana ? [am0[0], am0[1], am0[2], 0, 0, 0, 0, 0] : am0;
       if (am) {
         (ei as any).shellModifiers ??= new Map(); (ei as any).shellModifiers.set(i, am);
         (ei as any).membraneModifiers ??= new Map(); (ei as any).membraneModifiers.set(i, am[0]);
         (ei as any).bendingModifiers ??= new Map(); (ei as any).bendingModifiers.set(i, am[3]);
+      } else if (membrana) {
+        (ei as any).membraneModifiers ??= new Map(); (ei as any).membraneModifiers.set(i, 1);
+        (ei as any).bendingModifiers ??= new Map(); (ei as any).bendingModifiers.set(i, 0);
       }
       ei.densities!.set(i, mat.density || 0);
     }

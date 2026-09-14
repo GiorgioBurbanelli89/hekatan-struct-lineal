@@ -404,12 +404,20 @@ export function exportS2k(input: S2kExportInput): string {
   // membrana y otro cáscara son DOS secciones distintas para SAP, no una.
   const shellSecs = new Map<string, { t: number; matKey: string; formulacion: number }>();
   const elemToShellSec = new Map<number, string>();
+  // Modificadores: los DIRECCIONALES (shellmod ID f11 … v23) y los ESCALARES (shellmod ID mem flex).
+  const smods = (elementInputs as any).shellModifiers as Map<number, number[]> | undefined;
+  const memMods = (elementInputs as any).membraneModifiers as Map<number, number> | undefined;
+  const flexMods = (elementInputs as any).bendingModifiers as Map<number, number> | undefined;
+  // `shellmod ID 1 0` (flexion 0 escalar): el motor NO arma la placa (shellQ4.cpp, `sinFlexion`), es
+  // una membrana pura → en SAP2000 va `Type=Membrane`. Antes salia Shell-Thick SIN modificadores
+  // (los escalares no llegaban a la tabla): SAP2000 recibia el muro con flexion entera.
+  const esMembrana = (i: number) => !smods?.has(i) && Math.abs(flexMods?.get(i) ?? 1) < 1e-9;
   if (!isLayered) {
     for (const i of shellIdx) {
       const t = elementInputs.thicknesses?.get(i) || 0.1;
       const E = elementInputs.elasticities?.get(i) || 0;
       const matKey = matDe(i).key;
-      const formulacion = (elementInputs as any).plateFormulations?.get(i) ?? 0;
+      const formulacion = esMembrana(i) ? 2 : ((elementInputs as any).plateFormulations?.get(i) ?? 0);
       const key = `t${t.toPrecision(6)}_f${formulacion}`;
       if (!shellSecs.has(key)) shellSecs.set(key, { t, matKey, formulacion });
       const secIdx = [...shellSecs.keys()].indexOf(key) + 1;
@@ -430,12 +438,18 @@ export function exportS2k(input: S2kExportInput): string {
     // escribe al analizar: f11 f22 f12 m11 m22 m12 v13 v23 MassMod WeightMod).
     // Sin esto el deck del galpon (shellmod 1 1 1 0 0 0 1 1, membrana sin flexion)
     // entraba a SAP con la flexion entera: el ciclo salia 0.38 % mas rigido.
-    const smods = (elementInputs as any).shellModifiers as Map<number, number[]> | undefined;
-    const conMods = shellIdx.filter(i => { const m = smods?.get(i); return m && m.some(v => Math.abs(v - 1) > 1e-12); });
+    // Escalar → 8 valores: f11 f22 f12 = membrana; m11 m22 m12 v13 v23 = flexion (el motor escala la
+    // placa entera, `Kb *= bFactor`, cortante incluido). En una Membrane la flexion no existe: va 1.
+    const modsDe = (i: number): number[] | undefined => {
+      const d = smods?.get(i); if (d) return d;
+      const mm = memMods?.get(i) ?? 1, bb = esMembrana(i) ? 1 : (flexMods?.get(i) ?? 1);
+      return [mm, mm, mm, bb, bb, bb, bb, bb];
+    };
+    const conMods = shellIdx.filter(i => { const m = modsDe(i); return m && m.some(v => Math.abs(v - 1) > 1e-12); });
     if (conMods.length > 0) {
       push(`TABLE:  "AREA STIFFNESS MODIFIERS"`);
       for (const i of conMods) {
-        const m = smods!.get(i)!;
+        const m = modsDe(i)!;
         push(`   Area=${i + 1}   f11=${fmt(m[0])}   f22=${fmt(m[1])}   f12=${fmt(m[2])}   m11=${fmt(m[3])}   m22=${fmt(m[4])}   m12=${fmt(m[5])}   v13=${fmt(m[6])}   v23=${fmt(m[7])}   MassMod=1   WeightMod=1`);
       }
       blank();
