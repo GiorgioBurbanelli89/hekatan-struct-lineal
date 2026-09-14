@@ -1,7 +1,7 @@
 import "./modulepreload-polyfill-B5Qt9EMX.js";
 import { c as d } from "./csiImporter-DVoJw2yd.js";
 import { c as p, __tla as __tla_0 } from "./cliModeler-BoswY2Fe.js";
-import { p as k } from "./e2kParser-Dt5QCbCL.js";
+import { p as k } from "./e2kParser-RQuksR2f.js";
 import { r as w, __tla as __tla_1 } from "./runExampleStandalone-CZoUZYXl.js";
 import "./theme-C-zoknmI.js";
 import "./cadSections-DVtTZU6U.js";

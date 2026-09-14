@@ -318,8 +318,8 @@ function bt(M, l, N, L, I, x, H, Q, f, w, K, V, Z = /* @__PURE__ */ new Map(), e
   for (let A = 0; A < Y.length; A++) {
     const O = d.get(A), $ = O ? L.get(O) : null, B = O ? I.get(O) : null;
     if ($ || Y[A].length === 2) {
-      const F = $ || { material: "", A: 0, Iz: 0, Iy: 0, J: 0, D: 0.3, B: 0.3, shape: "Rectangular" }, j = N.get(F.material) || G, _ = j.E || G.E, q = j.nu || 0.3, W = j.G || _ / (2 * (1 + q));
-      i.elasticities.set(A, _), i.shearModuli.set(A, W), i.areas.set(A, F.A || F.D * F.B), i.momentsOfInertiaZ.set(A, F.Iz || F.B * F.D ** 3 / 12), i.momentsOfInertiaY.set(A, F.Iy || F.D * F.B ** 3 / 12), i.torsionalConstants.set(A, F.J || 0), i.densities.set(A, j.density || 0), F.As2 && (i.shearAreasZ ?? (i.shearAreasZ = /* @__PURE__ */ new Map()), i.shearAreasZ.set(A, F.As2)), F.As3 && (i.shearAreasY ?? (i.shearAreasY = /* @__PURE__ */ new Map()), i.shearAreasY.set(A, F.As3));
+      const F = $ || { material: "", A: 0, Iz: 0, Iy: 0, J: 0, D: 0.3, B: 0.3, shape: "Rectangular" }, j = N.get(F.material) || G, _ = j.E || G.E, q = j.nu || 0.3, v = j.G || _ / (2 * (1 + q));
+      i.elasticities.set(A, _), i.shearModuli.set(A, v), i.areas.set(A, F.A || F.D * F.B), i.momentsOfInertiaZ.set(A, F.Iz || F.B * F.D ** 3 / 12), i.momentsOfInertiaY.set(A, F.Iy || F.D * F.B ** 3 / 12), i.torsionalConstants.set(A, F.J || 0), i.densities.set(A, j.density || 0), F.As2 && (i.shearAreasZ ?? (i.shearAreasZ = /* @__PURE__ */ new Map()), i.shearAreasZ.set(A, F.As2)), F.As3 && (i.shearAreasY ?? (i.shearAreasY = /* @__PURE__ */ new Map()), i.shearAreasY.set(A, F.As3));
       const U = Z.get(C[A]);
       U && (i.endOffsets ?? (i.endOffsets = /* @__PURE__ */ new Map()), i.endOffsets.set(A, U));
       const ne = ee.get(C[A]);
@@ -332,8 +332,8 @@ function bt(M, l, N, L, I, x, H, Q, f, w, K, V, Z = /* @__PURE__ */ new Map(), e
     } else if (B) {
       const F = N.get(B.material) || G, j = F.E || G.E, _ = F.nu || 0.2, q = F.G || j / (2 * (1 + _));
       i.elasticities.set(A, j), i.shearModuli.set(A, q), i.thicknesses.set(A, B.thickness), i.poissonsRatios.set(A, _), i.plateFormulations ?? (i.plateFormulations = /* @__PURE__ */ new Map()), i.plateFormulations.set(A, /thin/i.test(B.type) ? 1 : 0);
-      const W = te.get(C[A]);
-      W && (i.shellModifiers ?? (i.shellModifiers = /* @__PURE__ */ new Map()), i.shellModifiers.set(A, W), i.membraneModifiers ?? (i.membraneModifiers = /* @__PURE__ */ new Map()), i.membraneModifiers.set(A, W[0]), i.bendingModifiers ?? (i.bendingModifiers = /* @__PURE__ */ new Map()), i.bendingModifiers.set(A, W[3])), i.densities.set(A, F.density || 0);
+      const v = te.get(C[A]);
+      v && (i.shellModifiers ?? (i.shellModifiers = /* @__PURE__ */ new Map()), i.shellModifiers.set(A, v), i.membraneModifiers ?? (i.membraneModifiers = /* @__PURE__ */ new Map()), i.membraneModifiers.set(A, v[0]), i.bendingModifiers ?? (i.bendingModifiers = /* @__PURE__ */ new Map()), i.bendingModifiers.set(A, v[3])), i.densities.set(A, F.density || 0);
     }
   }
   if (a.length) {
@@ -365,12 +365,12 @@ function bt(M, l, N, L, I, x, H, Q, f, w, K, V, Z = /* @__PURE__ */ new Map(), e
     i.frameLoads ?? (i.frameLoads = /* @__PURE__ */ new Map()), i.frameLoads.set($, O);
     const B = R[Y[$][0]], F = R[Y[$][1]], j = [F[0] - B[0], F[1] - B[1], F[2] - B[2]], _ = Math.hypot(j[0], j[1], j[2]);
     if (_ < 1e-9) continue;
-    const q = [j[0] / _, j[1] / _, j[2] / _], W = _ * _ / 12, U = [q[1] * O[2] - q[2] * O[1], q[2] * O[0] - q[0] * O[2], q[0] * O[1] - q[1] * O[0]], ne = (X, Ie) => {
+    const q = [j[0] / _, j[1] / _, j[2] / _], v = _ * _ / 12, U = [q[1] * O[2] - q[2] * O[1], q[2] * O[0] - q[0] * O[2], q[0] * O[1] - q[1] * O[0]], ne = (X, Ie) => {
       const re = J.loads.get(X) || [0, 0, 0, 0, 0, 0];
       for (let Se = 0; Se < 6; Se++) re[Se] += Ie[Se];
       J.loads.set(X, re);
     };
-    ne(Y[$][0], [O[0] * _ / 2, O[1] * _ / 2, O[2] * _ / 2, W * U[0], W * U[1], W * U[2]]), ne(Y[$][1], [O[0] * _ / 2, O[1] * _ / 2, O[2] * _ / 2, -W * U[0], -W * U[1], -W * U[2]]);
+    ne(Y[$][0], [O[0] * _ / 2, O[1] * _ / 2, O[2] * _ / 2, v * U[0], v * U[1], v * U[2]]), ne(Y[$][1], [O[0] * _ / 2, O[1] * _ / 2, O[2] * _ / 2, -v * U[0], -v * U[1], -v * U[2]]);
   }
   for (const A of V) {
     const O = T.get(A.joint);
@@ -425,13 +425,13 @@ function ns(M) {
     let B;
     const F = ($ == null ? void 0 : $.type) === "CFT" && $.d > 0 && $.tw > 0 && $.tw < $.d / 2 && !($.b > 0 && $.h > 0);
     if (M.cftAs !== "general" && ($ == null ? void 0 : $.type) === "CFT" && G > 0 && (F || $.b > 0 && $.h > 0 && $.tw > 0 && $.tw < Math.min($.b, $.h) / 2)) {
-      const q = F ? $.d - 2 * $.tw : 0, W = F ? 0 : $.b - 2 * $.tw, U = F ? 0 : $.h - 2 * $.tw, ne = F ? Math.PI * ($.d * $.d - q * q) / 4 : $.b * $.h - W * U, X = F ? Math.PI * q * q / 4 : W * U, Ie = $.fillE > 0 ? $.fillE / G : Math.max(0.01, Math.min(1, (s - ne) / X)), re = Ie * G, Se = 0.2, $e = `MAT_${Math.round(re)}_n${Se.toFixed(4)}`, we = V(o).rho;
+      const q = F ? $.d - 2 * $.tw : 0, v = F ? 0 : $.b - 2 * $.tw, U = F ? 0 : $.h - 2 * $.tw, ne = F ? Math.PI * ($.d * $.d - q * q) / 4 : $.b * $.h - v * U, X = F ? Math.PI * q * q / 4 : v * U, Ie = $.fillE > 0 ? $.fillE / G : Math.max(0.01, Math.min(1, (s - ne) / X)), re = Ie * G, Se = 0.2, $e = `MAT_${Math.round(re)}_n${Se.toFixed(4)}`, we = V(o).rho;
       ie.has($e) || ie.set($e, { E: re, nu: Se, G: re / (2 * (1 + Se)), rho: we * Ie }), B = F ? { b: $.d, h: $.d, t: $.tw, Ec: re, nuC: Se, matFill: $e, D: $.d } : { b: $.b, h: $.h, t: $.tw, Ec: re, nuC: Se, matFill: $e };
     }
     const j = `A${s.toPrecision(6)}_Iz${a.toPrecision(6)}_s${A.toPrecision(6)}_${O.toPrecision(6)}${B ? B.D ? `_SDC${B.D}x${B.t}` : `_SD${B.b}x${B.h}x${B.t}` : ""}`;
     if (!te.has(j)) {
-      let q = 0.3, W = 0.3;
-      s > 0 && a > 0 && (q = Math.sqrt(12 * a / s), W = s / q), te.set(j, { A: s, Iz: a, Iy: i, J: u, b: W, h: q, matKey: J, As2: A > 0 ? A : s * 5 / 6, As3: O > 0 ? O : s * 5 / 6, sd: B });
+      let q = 0.3, v = 0.3;
+      s > 0 && a > 0 && (q = Math.sqrt(12 * a / s), v = s / q), te.set(j, { A: s, Iz: a, Iy: i, J: u, b: v, h: q, matKey: J, As2: A > 0 ? A : s * 5 / 6, As3: O > 0 ? O : s * 5 / 6, sd: B });
     }
     const _ = [...te.keys()].indexOf(j) + 1;
     ce.set(o, `SEC${_}`);
@@ -783,8 +783,8 @@ function ts(M) {
             const S = ((_c2 = I.thicknesses) == null ? void 0 : _c2.get(c)) ?? 0, h = n.map((P) => l[P]);
             let p = 0, m = 0, k = 0;
             for (let P = 0; P < 4; P++) {
-              const v = h[P], z = h[(P + 1) % 4];
-              p += v[1] * z[2] - v[2] * z[1], m += v[2] * z[0] - v[0] * z[2], k += v[0] * z[1] - v[1] * z[0];
+              const W = h[P], z = h[(P + 1) % 4];
+              p += W[1] * z[2] - W[2] * z[1], m += W[2] * z[0] - W[0] * z[2], k += W[0] * z[1] - W[1] * z[0];
             }
             const g = Math.hypot(p, m, k) / 2, y = S * g * E * 9.80665 * Z;
             for (const P of n) ce(P, [0, 0, -y / 4, 0, 0, 0]);
@@ -819,14 +819,14 @@ function ts(M) {
   });
   const q = /* @__PURE__ */ new Set();
   l.forEach((e) => q.add(T(e[2])));
-  const W = [...q].sort((e, t) => e - t);
-  let U = W.filter((e) => (_.get(e) ?? 0) >= F);
+  const v = [...q].sort((e, t) => e - t);
+  let U = v.filter((e) => (_.get(e) ?? 0) >= F);
   if (U.length > 1) {
     const e = [U[0]];
     for (const t of U.slice(1)) t - e[e.length - 1] < j ? e[e.length - 1] = t : e.push(t);
     U = e;
   }
-  U.length || (U = [W[0], W[W.length - 1]]), U[0] !== W[0] && U.unshift(W[0]), U[U.length - 1] !== W[W.length - 1] && U.push(W[W.length - 1]);
+  v.length || v.push(0, 3), U.length || (U = [v[0], v[v.length - 1]]), U[0] !== v[0] && U.unshift(v[0]), U[U.length - 1] !== v[v.length - 1] && U.push(v[v.length - 1]);
   const ne = [], X = /* @__PURE__ */ new Map();
   ne.push("Base"), X.set(U[0], "Base");
   for (let e = 1; e < U.length; e++) {
@@ -867,7 +867,7 @@ function ts(M) {
     const S = n !== "-" ? parseFloat(n) : c ? 76.97 : 24, h = i(t), p = u(S), m = (() => {
       const y = M.elementInputs.poissonsRatios;
       if (y) {
-        for (const [P, v] of y) if ($e(P) === e) return v;
+        for (const [P, W] of y) if ($e(P) === e) return W;
       }
     })(), k = m !== void 0 ? m : c ? 0.3 : 0.2, g = c ? 117e-7 : 1e-5;
     if (c) {
@@ -895,25 +895,25 @@ function ts(M) {
     var _a2, _b2, _c2, _d2, _e3, _f2, _g2, _h, _i, _j;
     if (e.length !== 2) return;
     const n = (_a2 = I.sectionShapes) == null ? void 0 : _a2.get(t), c = ((_b2 = I.elasticities) == null ? void 0 : _b2.get(t)) ?? 0, E = Le.get($e(t)) || "Conc_1", S = Ge.get($e(t)) ?? c >= 1e8, h = ((_c2 = I.areas) == null ? void 0 : _c2.get(t)) ?? 0, p = ((_d2 = I.momentsOfInertiaZ) == null ? void 0 : _d2.get(t)) ?? 0, m = ((_e3 = I.momentsOfInertiaY) == null ? void 0 : _e3.get(t)) ?? 0, k = ((_f2 = I.torsionalConstants) == null ? void 0 : _f2.get(t)) ?? 0;
-    let g = (n == null ? void 0 : n.type) || "rect", y = (n == null ? void 0 : n.h) ?? 0, P = (n == null ? void 0 : n.b) ?? 0, v = (n == null ? void 0 : n.d) ?? 0;
+    let g = (n == null ? void 0 : n.type) || "rect", y = (n == null ? void 0 : n.h) ?? 0, P = (n == null ? void 0 : n.b) ?? 0, W = (n == null ? void 0 : n.d) ?? 0;
     const z = (n == null ? void 0 : n.tf) ?? 0, ae = (n == null ? void 0 : n.tw) ?? 0;
-    if (!n && y <= 0 && P <= 0 && v <= 0 && h > 0 && p > 0 && m > 0) {
+    if (!n && y <= 0 && P <= 0 && W <= 0 && h > 0 && p > 0 && m > 0) {
       const Te = (_g2 = I.cantos) == null ? void 0 : _g2.get(t), be = (_h = I.anchos) == null ? void 0 : _h.get(t);
       y = Te && Te > 0 ? Te : Math.sqrt(12 * p / h), P = be && be > 0 ? be : h / y, (!isFinite(y) || y < me) && (y = me), (!isFinite(P) || P < me) && (P = me), g = "general";
-    } else y <= 0 && P <= 0 && v <= 0 && h > 0 && (p > 0 ? (y = Math.sqrt(12 * p / h), P = h / y) : y = P = Math.sqrt(h), (!isFinite(y) || y < me) && (y = me), (!isFinite(P) || P < me) && (P = me), g = "rect");
-    y <= 0 && P <= 0 && v <= 0 && (y = 0.3, P = 0.3, g = "rect");
-    const ze = (n == null ? void 0 : n.name) ? `NAME_${n.name}` : `${g}_${T(y)}_${T(P)}_${T(v)}_${T(z)}_${T(ae)}_${E}`;
+    } else y <= 0 && P <= 0 && W <= 0 && h > 0 && (p > 0 ? (y = Math.sqrt(12 * p / h), P = h / y) : y = P = Math.sqrt(h), (!isFinite(y) || y < me) && (y = me), (!isFinite(P) || P < me) && (P = me), g = "rect");
+    y <= 0 && P <= 0 && W <= 0 && (y = 0.3, P = 0.3, g = "rect");
+    const ze = (n == null ? void 0 : n.name) ? `NAME_${n.name}` : `${g}_${T(y)}_${T(P)}_${T(W)}_${T(z)}_${T(ae)}_${E}`;
     (n == null ? void 0 : n.name) && !Ye.has(ze) && Ye.set(ze, n.name);
     let fe = Ye.get(ze);
     if (!fe) {
       const Te = S ? "S" : "C";
-      g === "general" ? fe = `${Te}_G${Be.size + 1}` : g === "rect" ? fe = `${Te}_R${Math.round(P * 100)}x${Math.round(y * 100)}` : g === "circ" ? fe = `${Te}_C_D${Math.round(v * 100)}` : g === "I" ? fe = `${Te}_I${Math.round(y * 100)}x${Math.round(P * 100)}` : g === "HSS" ? fe = `${Te}_HSS${Math.round(P * 100)}x${Math.round(y * 100)}x${Math.round(ae * 1e3)}` : fe = `${Te}_Sec${Be.size + 1}`, Ye.set(ze, fe);
+      g === "general" ? fe = `${Te}_G${Be.size + 1}` : g === "rect" ? fe = `${Te}_R${Math.round(P * 100)}x${Math.round(y * 100)}` : g === "circ" ? fe = `${Te}_C_D${Math.round(W * 100)}` : g === "I" ? fe = `${Te}_I${Math.round(y * 100)}x${Math.round(P * 100)}` : g === "HSS" ? fe = `${Te}_HSS${Math.round(P * 100)}x${Math.round(y * 100)}x${Math.round(ae * 1e3)}` : fe = `${Te}_Sec${Be.size + 1}`, Ye.set(ze, fe);
     }
     if (Je.set(t, fe), Be.has(fe)) return;
     Be.add(fe);
     const je = ct.get(t);
-    if (g === "CFT" && je && v > 0 && ae > 0 && !(y > 0 && P > 0)) {
-      r.push(`  FRAMESECTION  "${fe}"  MATERIAL "${E}"  SHAPE "Filled Steel Pipe"  D ${T(d(v))} T ${T(d(ae))} FILLMATERIAL "${je}"`);
+    if (g === "CFT" && je && W > 0 && ae > 0 && !(y > 0 && P > 0)) {
+      r.push(`  FRAMESECTION  "${fe}"  MATERIAL "${E}"  SHAPE "Filled Steel Pipe"  D ${T(d(W))} T ${T(d(ae))} FILLMATERIAL "${je}"`);
       return;
     }
     if (g === "CFT" && je && y > 0 && P > 0 && ae > 0) {
@@ -929,7 +929,7 @@ function ts(M) {
       ge += `  D ${T(d(y))} B ${T(d(P))} AREA ${R(h * 1e6)} AS2 ${R(Te * 1e6)} AS3 ${R(be * 1e6)} I33 ${R(p * 1e12)} I22 ${R(m * 1e12)} TORSION ${R((k || p + m) * 1e12)} S33POS ${R(2 * p / y * 1e9)} S33NEG ${R(2 * p / y * 1e9)} S22POS ${R(2 * m / P * 1e9)} S22NEG ${R(2 * m / P * 1e9)} Z33 ${R(2 * p / y * 1e9)} Z22 ${R(2 * m / P * 1e9)} R33 ${R(Math.sqrt(p / h) * 1e3)} R22 ${R(Math.sqrt(m / h) * 1e3)} `, r.push(ge);
       return;
     }
-    y && (ge += `  D ${T(d(y))}`), P && (ge += `  B ${T(d(P))}`), v && !y && (ge += `  D ${T(d(v))}`), z && (ge += `  TF ${T(d(z))}`), ae && (ge += `  TW ${T(d(ae))}`), r.push(ge);
+    y && (ge += `  D ${T(d(y))}`), P && (ge += `  B ${T(d(P))}`), W && !y && (ge += `  D ${T(d(W))}`), z && (ge += `  TF ${T(d(z))}`), ae && (ge += `  TW ${T(d(ae))}`), r.push(ge);
   }), r.push("");
   const ke = /* @__PURE__ */ new Map();
   let Bt = 0;
@@ -1016,7 +1016,7 @@ function ts(M) {
       const [h, p] = N[S[0]], m = l[h][2] <= l[p][2] ? h : p, [k, g] = N[S[S.length - 1]], y = l[k][2] >= l[g][2] ? k : g;
       He(Ae(y).story) - He(Ae(m).story);
       let P = `C${t + 1}`;
-      for (let v = 1; ; v++) {
+      for (let W = 1; ; W++) {
         const z = r.length;
         ft(P, e.type, m, y, e.secName, n, S.length);
         const ae = r[z], it = St.get(P);
@@ -1025,7 +1025,7 @@ function ts(M) {
           break;
         }
         if (r.splice(z, r.length - z), it === ae) break;
-        Xe.pop(), P = `C${t + 1}_${v}`;
+        Xe.pop(), P = `C${t + 1}_${W}`;
       }
     });
   }), N.forEach((e, t) => {
@@ -1170,10 +1170,10 @@ function ts(M) {
     le.forEach((t, n) => {
       const { el: c, isWall: E } = t, S = E ? `W${n + 1}` : `F${n + 1}`, h = E ? "PANEL" : "FLOOR", p = c.map((m) => Ae(m));
       if (E) {
-        const m = (v) => ne.indexOf(v);
-        if (new Set(p.map((v) => v.pt)).size === 4) {
-          const v = Math.max(...p.map((ae) => m(ae.story))), z = p.map((ae) => v - m(ae.story));
-          r.push(`  AREA "${S}"  ${h}  4  "${p[0].pt}"  "${p[1].pt}"  "${p[2].pt}"  "${p[3].pt}"  ${z.join("  ")}  `), e.push(`  AREAASSIGN  "${S}"  "${ne[v]}"  SECTION "${We(t)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        const m = (W) => ne.indexOf(W);
+        if (new Set(p.map((W) => W.pt)).size === 4) {
+          const W = Math.max(...p.map((ae) => m(ae.story))), z = p.map((ae) => W - m(ae.story));
+          r.push(`  AREA "${S}"  ${h}  4  "${p[0].pt}"  "${p[1].pt}"  "${p[2].pt}"  "${p[3].pt}"  ${z.join("  ")}  `), e.push(`  AREAASSIGN  "${S}"  "${ne[W]}"  SECTION "${We(t)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           return;
         }
         const g = l[c[0]][2] <= l[c[2]][2] ? 0 : 2, y = l[c[1]][2] <= l[c[3]][2] ? 1 : 3;
@@ -1183,8 +1183,8 @@ function ts(M) {
       } else {
         const m = p.length, k = (z) => ne.indexOf(z), g = Math.max(...p.map((z) => k(z.story))), y = p.map((z) => g - k(z.story)), P = ne[g] ?? p[0].story;
         r.push(`  AREA "${S}"  ${h}  ${m}  ` + p.map((z) => `"${z.pt}"`).join("  ") + "  " + y.join("  ") + "  ");
-        const v = Mt.get(t.idx) ?? (w == null ? void 0 : w.get(t.idx));
-        e.push(Qe(t.idx) ? `  AREAASSIGN  "${S}"  "${P}"  SECTION "${We(t)}"  ANG ${T(v ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  ` : `  AREAASSIGN  "${S}"  "${P}"  SECTION "${We(t)}" ${Ke && (!Ce.size || (N[t.idx] ?? []).every((z) => Ce.has(z))) ? ' DIAPH  "D1" ' : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `), qe.push({ name: S, story: P, idx: t.idx });
+        const W = Mt.get(t.idx) ?? (w == null ? void 0 : w.get(t.idx));
+        e.push(Qe(t.idx) ? `  AREAASSIGN  "${S}"  "${P}"  SECTION "${We(t)}"  ANG ${T(W ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  ` : `  AREAASSIGN  "${S}"  "${P}"  SECTION "${We(t)}" ${Ke && (!Ce.size || (N[t.idx] ?? []).every((z) => Ce.has(z))) ? ' DIAPH  "D1" ' : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `), qe.push({ name: S, story: P, idx: t.idx });
       }
     }), r.push(""), r.push("$ AREA ASSIGNS"), e.forEach((t) => r.push(t)), r.push("");
   }
