@@ -147,7 +147,8 @@ export function createModalPanel() {
     // (si faltan modos hay que enterarse acá). El resumen de modos principales, las líneas
     // de NEC/cortante/derivas/combos (config.properties) y el espectro NO se renderizan —
     // viven en el menú "📋 Tablas" de Analysis Outputs y en el panel de espectro.
-    html += `<div style="padding:2px 0 4px 0; font-weight:bold; font-size:11px; line-height:1.4">${dictamen}</div>`;
+    // width:0 + min-width:100%: el aviso se acomoda al ancho de la tabla en vez de estirar la ventana
+    html += `<div style="padding:2px 0 4px 0; font-weight:bold; font-size:11px; line-height:1.4; width:0; min-width:100%">${dictamen}</div>`;
 
     // nowrap: el «✓» de ΣUx partía la celda y cada fila salía del doble de alto
     html += `<table style="border-collapse:collapse; color:#0f0; font-size:10px; margin-top:2px; white-space:nowrap">
@@ -226,17 +227,12 @@ export function createModalPanel() {
     div.innerHTML = html;
 
     // Tamaño inicial = el de la TABLA (hasta ΣRz y Tipo), no 760 px fijos que la cortaban en Rz.
-    // Solo la primera vez: si el usuario ya arrastró la esquina o pulsó «Ancho», se respeta.
+    // Por CSS (max-content), no midiendo con JS: el panel suele estar OCULTO al renderizar y ahí
+    // mide 0 (salía de 542 px). Solo la primera vez: después manda la esquina o «Ancho».
     if (!ajustadoATabla && !anchoPrev) {
       ajustadoATabla = true;
-      requestAnimationFrame(() => {
-        const tabla = div.querySelector("#modal-body table") as HTMLElement | null;
-        if (!tabla) return;
-        const w = Math.min(tabla.scrollWidth + 36, Math.round(window.innerWidth * 0.96));
-        div.style.width = `${Math.max(w, 360)}px`;
-        const hTot = div.scrollHeight + 4;
-        div.style.height = `${Math.min(hTot, Math.round(window.innerHeight * 0.6))}px`;
-      });
+      div.style.width = "max-content";
+      div.style.height = "auto";
     }
 
     if (minimized) {
