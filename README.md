@@ -2,6 +2,8 @@
 
 **Structural FEM analysis platform that runs entirely in the browser.** No installation, no server — C++/Eigen solver compiled to WebAssembly, Three.js 3D visualization, reactive UI with VanJS + Tweakpane.
 
+**How it started.** [awatif](https://github.com/madil4/awatif) by Mohamed Adil compiled a C++ FEM solver to WebAssembly and ran it in the browser. That was the reason this project began: if a C++ solver could run in a web page, a complete structural analysis program could too. All the credit for that starting point belongs to awatif.
+
 Hekatan Struct Lineal started as a fork of [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) by Mohamed Adil (thanks for the original UI framework and viewer, ~10% of the current codebase). Everything else — modal analysis, Winkler springs, native Q4 plane-stress solver, unified Tweakpane workspace, 25+ parametric examples, reactive unit system, modal animation, foundation workflows, CSI membrane, draggable panes, and more — was added for this project.
 
 🌐 **Live:** [https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/](https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/)
