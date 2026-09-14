@@ -37,9 +37,14 @@ import { autoMeshShells } from "../shared/e2kAutoMesh";
 // /m/, pero cualquiera que TENGA el enlace ve el modelo. Para privacidad de
 // verdad haria falta autenticacion en el hosting.
 const _qs = new URLSearchParams(window.location.search);
+// #h=<datos> — ENLACE CON EL MODELO DENTRO (14-sep-2026, Jorge eligió esta opción para compartir sin
+// servidor): el .heks comprimido (deflate-raw) en base64url va en el HASH, que el navegador NO manda al
+// servidor → GitHub Pages no guarda nada y no aplica su tope de URL. Se captura aquí, al cargar, porque el
+// workspace reescribe la URL al arrancar.
+const _hashModelo = window.location.hash.startsWith("#h=") ? window.location.hash.slice(3) : "";
 // Un modelo por ENLACE es para MIRARLO: en el celular la vista se reordena (ver el CSS
 // `html.hk-enlace` junto al layout móvil). Va en <html> porque <body> aún no existe aquí.
-if (_qs.get("heks") || _qs.get("m")) document.documentElement.classList.add("hk-enlace");
+if (_qs.get("heks") || _qs.get("m") || _hashModelo) document.documentElement.classList.add("hk-enlace");
 
 // Velo de carga. Se crea AQUI, al cargar el modulo, porque creandolo mas
 // tarde (dentro del panel CLI) llegaba despues de que el CAD ya hubiera
@@ -50,7 +55,7 @@ function quitarVelo() {
   try { _velo?.remove(); } catch { /* no-op */ }
   _velo = null;
 }
-if (_qs.get("heks") || _qs.get("m")) {
+if (_qs.get("heks") || _qs.get("m") || _hashModelo) {
   _velo = document.createElement("div");
   _velo.textContent = "Cargando modelo…";
   _velo.style.cssText = [
@@ -66,10 +71,29 @@ if (_qs.get("heks") || _qs.get("m")) {
   setTimeout(quitarVelo, 15000);
 }
 const _codigo = _qs.get("m");
+// marcador: el modelo no se trae por fetch, se descomprime del hash (ver _hashModelo)
+const HASH_HEKS = "hash:modelo";
 const URL_HEKS = _codigo
   ? `${import.meta.env.BASE_URL}m/${encodeURIComponent(_codigo)}/modelo.heks`
       .replace(/([^:])\/\//g, "$1/")
-  : _qs.get("heks");
+  : (_qs.get("heks") || (_hashModelo ? HASH_HEKS : null));
+
+/** .heks → deflate-raw → base64url (sin «=»), para el hash del enlace de compartir. */
+async function comprimirHeks(txt: string): Promise<string> {
+  const flujo = new Blob([txt]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  const buf = new Uint8Array(await new Response(flujo).arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+/** Inverso de comprimirHeks. */
+async function descomprimirHeks(b64: string): Promise<string> {
+  const std = decodeURIComponent(b64).replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(std + "===".slice((std.length + 3) % 4));
+  const buf = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  const flujo = new Blob([buf]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return await new Response(flujo).text();
+}
 
 const AUTO_MESH_KEY = "hekatan.workspace.autoMeshShells";
 const autoMeshShellsEnabled = van.state<boolean>(
@@ -4647,6 +4671,38 @@ function buildParamsPane() {
       ponerNombre(nombre);
     };
     fCli.addButton({ title: "💾 Guardar como… .heks" }).on("click", () => guardarHeks(true));
+
+    // ── 🔗 Compartir: enlace con el MODELO DENTRO (#h=) ──
+    // Desde el deploy público, sin servidor: cualquiera que abra el enlace ve el modelo y el cálculo
+    // se hace en SU navegador. Si ya se corrió el modal, el enlace lo pide también (&modal=N).
+    const crearEnlaceModelo = async (): Promise<string> => {
+      const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
+      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
+      if (!texto.trim()) throw new Error("no hay modelo que compartir");
+      const u = new URL(window.location.href);
+      u.search = "";
+      const nModal = (window as any).__hekatanCliModalModes;
+      if (nModal) u.searchParams.set("modal", String(nModal));
+      u.hash = "h=" + (await comprimirHeks(texto));
+      return u.toString();
+    };
+    (window as any).__hekatanEnlaceModelo = crearEnlaceModelo;   // para las pruebas headless
+    fCli.addButton({ title: "🔗 Compartir enlace" }).on("click", async () => {
+      try {
+        const enlace = await crearEnlaceModelo();
+        const largo = enlace.length > 8000
+          ? `\n\n⚠ Mide ${enlace.length} caracteres: en WhatsApp y correo funciona, pero algunas redes cortan los enlaces tan largos.`
+          : "";
+        try {
+          await navigator.clipboard.writeText(enlace);
+          alert(`✓ Enlace copiado (${enlace.length} caracteres).\nQuien lo abra ve el modelo y lo calcula en su navegador.` + largo);
+        } catch {
+          window.prompt("Copia el enlace:" + largo, enlace);
+        }
+      } catch (e: any) {
+        alert("No se pudo crear el enlace: " + (e?.message ?? e));
+      }
+    });
     {
       const barra = (t: string) => document.querySelector<HTMLButtonElement>(`#hk-cad-tit button[title="${t}"]`);
       const bA = barra("Abrir"), bG = barra("Guardar"), bGc = barra("Guardar como");
@@ -4662,11 +4718,12 @@ function buildParamsPane() {
     // se trae el .heks y lo aplica solo.
     const urlHeks = URL_HEKS;
     if (urlHeks) {
-      fetch(urlHeks)
-        .then((r) => {
-          if (!r.ok) throw new Error(r.status + " " + r.statusText);
-          return r.text();
-        })
+      (urlHeks === HASH_HEKS
+        ? descomprimirHeks(_hashModelo)          // enlace con el modelo dentro (#h=)
+        : fetch(urlHeks).then((r) => {
+            if (!r.ok) throw new Error(r.status + " " + r.statusText);
+            return r.text();
+          }))
         .then((txt) => {
           // Se aplica CUANTO ANTES. El retraso de 1500 ms era para que el
           // ejemplo por defecto no pisara el modelo; ya no hace falta porque
