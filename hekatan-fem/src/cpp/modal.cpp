@@ -980,16 +980,18 @@ extern "C"
         // tiene seis GDL por nudo y `coeff(i*6, i*6)` se sale de la matriz
         // (assertion en Eigen).
         const Eigen::SparseMatrix<double> &M_nod = hayDiafragma ? M_completa : M_global;
-        double sum_m = 0.0, sum_mx = 0.0, sum_my = 0.0;
+        double sum_m = 0.0, sum_mx = 0.0, sum_my = 0.0, sum_mz = 0.0;
         for (int i = 0; i < num_nodes; ++i)
         {
             double mi = M_nod.coeff(i * 6, i * 6);
             sum_m  += mi;
             sum_mx += mi * nodes[i][0];
             sum_my += mi * nodes[i][1];
+            sum_mz += mi * nodes[i][2];
         }
         double x_cm = (sum_m > 1e-30) ? sum_mx / sum_m : 0.0;
         double y_cm = (sum_m > 1e-30) ? sum_my / sum_m : 0.0;
+        double z_cm = (sum_m > 1e-30) ? sum_mz / sum_m : 0.0;
 
         // 6 vectores de influencia. Se arman SIEMPRE en GDL completos y, si hay
         // diafragma, se traducen a los reducidos quedandose con el valor de cada
@@ -1001,7 +1003,15 @@ extern "C"
             r_full[0](i * 6 + 0) = 1.0;  // Ux
             r_full[1](i * 6 + 1) = 1.0;  // Uy
             r_full[2](i * 6 + 2) = 1.0;  // Uz
+            // Rx y Ry con el BRAZO de las masas traslacionales, como Rz. Solo con el GDL de giro
+            // (masa rotacional ~1e-9·m) salian 0 en todos los modos, y SAP2000 / ETABS dan
+            // RX 0.1501 en el modo 1 de la boveda (13-sep-2026). Giro rigido θ × r:
+            //   Rx: uy = -(z - z_cm), uz = +(y - y_cm)      Ry: ux = +(z - z_cm), uz = -(x - x_cm)
+            r_full[3](i * 6 + 1) = -(nodes[i][2] - z_cm);
+            r_full[3](i * 6 + 2) = +(nodes[i][1] - y_cm);
             r_full[3](i * 6 + 3) = 1.0;  // Rx
+            r_full[4](i * 6 + 0) = +(nodes[i][2] - z_cm);
+            r_full[4](i * 6 + 2) = -(nodes[i][0] - x_cm);
             r_full[4](i * 6 + 4) = 1.0;  // Ry
             r_full[5](i * 6 + 0) = -(nodes[i][1] - y_cm);  // Rz (torsión CM): Ux = -(y-y_cm)
             r_full[5](i * 6 + 1) = +(nodes[i][0] - x_cm);  //                  Uy = +(x-x_cm)
@@ -1021,8 +1031,14 @@ extern "C"
             for (const auto &g : colMaestro) {
                 const int cm = g.second;
                 const double xc = centro[g.first][0], yc = centro[g.first][1];
+                // cota del maestro: la media de z de sus nudos (un diafragma es una planta)
+                double zs = 0.0; int nz = 0;
+                for (int i = 0; i < num_nodes; ++i) if (diaDe[i] == g.first) { zs += nodes[i][2]; ++nz; }
+                const double zc = nz ? zs / nz : z_cm;
                 r_red[0](cm + 0) = 1.0;                       // Ux
                 r_red[1](cm + 1) = 1.0;                       // Uy
+                r_red[3](cm + 1) = -(zc - z_cm);              // Rx: uy = -(z - z_cm)
+                r_red[4](cm + 0) = +(zc - z_cm);              // Ry: ux = +(z - z_cm)
                 r_red[5](cm + 0) = -(yc - y_cm);              // Rz: ux = -(y - y_cm)
                 r_red[5](cm + 1) = +(xc - x_cm);              //     uy = +(x - x_cm)
                 r_red[5](cm + 2) = 1.0;

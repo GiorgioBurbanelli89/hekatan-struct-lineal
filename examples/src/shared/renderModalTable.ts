@@ -155,6 +155,8 @@ export function createModalPanel() {
     for (const d of dirs) html += `<th style="padding:2px 5px">${d}</th>`;
     html += `<th style="padding:2px 5px; color:#0ff">ΣUx</th>
   <th style="padding:2px 5px; color:#0ff">ΣUy</th>
+  <th style="padding:2px 5px; color:#0ff">ΣRx</th>
+  <th style="padding:2px 5px; color:#0ff">ΣRy</th>
   <th style="padding:2px 5px; color:#0ff">ΣRz</th>
   <th style="padding:2px 5px; color:#fff">Tipo</th></tr>`;
 
@@ -206,6 +208,8 @@ export function createModalPanel() {
       const syColor = sumP[1] >= ASCE_THRESHOLD ? "#0f0" : "#0ff";
       html += `<td style="padding:2px 5px; text-align:right; color:${sxColor}">${(sumP[0] * 100).toFixed(1)}%${isAt90X ? " ✓" : ""}</td>
   <td style="padding:2px 5px; text-align:right; color:${syColor}">${(sumP[1] * 100).toFixed(1)}%${isAt90Y ? " ✓" : ""}</td>
+  <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[3] * 100).toFixed(1)}%</td>
+  <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[4] * 100).toFixed(1)}%</td>
   <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[5] * 100).toFixed(1)}%</td>
   <td style="padding:2px 5px; color:${tipoColor}">${tipoLabel}</td></tr>`;
     });
@@ -275,7 +279,7 @@ export function createModalPanel() {
       tsv.push(dictamen.replace(/<[^>]+>/g, "").trim());
       tsv.push("");
       tsv.push(["Modo", "Freq (Hz)", "Periodo (s)", "w (rad/s)",
-                ...dirs, "SUx", "SUy", "SRz", "Tipo"].join("\t"));
+                ...dirs, "SUx", "SUy", "SRx", "SRy", "SRz", "Tipo"].join("\t"));
       const sp2 = [0, 0, 0, 0, 0, 0];
       const filasHtml: string[] = [];
       m.frequencies.forEach((freq, i) => {
@@ -289,6 +293,7 @@ export function createModalPanel() {
         const celdas = [String(i + 1), freq.toFixed(4), T.toFixed(4), omega.toFixed(2),
                         ...mp.map(v => (v * 100).toFixed(1)),
                         (sp2[0] * 100).toFixed(1), (sp2[1] * 100).toFixed(1),
+                        (sp2[3] * 100).toFixed(1), (sp2[4] * 100).toFixed(1),
                         (sp2[5] * 100).toFixed(1), tipoLabel];
         tsv.push(celdas.join("\t"));
         filasHtml.push("<tr>" + celdas.map(c => `<td>${c}</td>`).join("") + "</tr>");
@@ -298,7 +303,7 @@ export function createModalPanel() {
       // Word o en un correo sale con bordes en vez de un bloque de texto.
       const html2 = `<table border="1" cellspacing="0" cellpadding="3">
 <caption>Modal Analysis — ${config.title}</caption>
-<tr>${["Modo", "Freq (Hz)", "Periodo (s)", "w (rad/s)", ...dirs, "SUx", "SUy", "SRz", "Tipo"]
+<tr>${["Modo", "Freq (Hz)", "Periodo (s)", "w (rad/s)", ...dirs, "SUx", "SUy", "SRx", "SRy", "SRz", "Tipo"]
   .map(h => `<th>${h}</th>`).join("")}</tr>
 ${filasHtml.join("\n")}</table>`;
       const btn = div.querySelector("#modal-copy") as HTMLElement;
