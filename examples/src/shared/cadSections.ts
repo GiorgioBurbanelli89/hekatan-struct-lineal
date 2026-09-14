@@ -91,6 +91,48 @@ export function tubeSectionCsi(b: number, h: number, tf: number, tw: number): Se
   return { A, Iz, Iy, J, As2: 2 * tw * h, As3: 2 * tf * b };
 }
 
+/** CANAL C PARAMÉTRICO como SAP2000 «Channel» (SetChannel), medido el 14-sep-2026 por OAPI (C 200x75x8.5x5.6 y
+ *  C 150x60x6x4, cli/_csi_secciones_c2l.py): A, I33, I22 (sobre el centroide, alas enteras + alma entre alas) exactos;
+ *  J = Σ (b·t³/3)(1 − 0.63·t/b) con alas bf y alma d − 2·tf (la regla del I); As2 = tw·d; As3 = 2·bf·tf (sin 5/6).
+ *  d = canto (eje 2), bf = ala, tf, tw. Iz = I33 (fuerte), Iy = I22. */
+export function channelSectionCsi(d: number, bf: number, tf: number, tw: number):
+  SectionProps & { As2: number; As3: number; xc: number } {
+  const hw = d - 2 * tf;
+  const Af = bf * tf, Aw = hw * tw;
+  const A = 2 * Af + Aw;
+  const xc = (2 * Af * bf / 2 + Aw * tw / 2) / A;          // centroide desde la espalda del alma
+  const Iz = (bf * d ** 3 - (bf - tw) * hw ** 3) / 12;
+  const Iy = 2 * (tf * bf ** 3 / 12 + Af * (bf / 2 - xc) ** 2) + hw * tw ** 3 / 12 + Aw * (tw / 2 - xc) ** 2;
+  const rect = (b: number, t: number) => (b * t ** 3 / 3) * (1 - 0.63 * t / b);
+  const J = 2 * rect(bf, tf) + rect(hw, tw);
+  return { A, Iz, Iy, J, As2: tw * d, As3: 2 * bf * tf, xc };
+}
+
+/** Torsión de UN ángulo como la calcula SAP2000 (ver dblAngleSectionCsi). w = ala horizontal (con el espesor del
+ *  ala vertical dentro), d = ala vertical (con el espesor del ala horizontal dentro). */
+export function anguloJCsi(d: number, w: number, tf: number, tw: number): number {
+  // Roark (sección L) sin los términos pequeños, sacado del barrido _csi_2l_barrido.py (11 geometrías cambiando una
+  // cota cada vez + L50x50x5): ala horizontal ENTERA w×tf con −0.21·tf⁴, ala vertical SIN la esquina (d − tf)×tw con
+  // −0.105·tw⁴, y la esquina +0.07·tmin·tmax³. J es lineal en w y en d (pendientes tf³/3 y tw³/3, medido).
+  const tmin = Math.min(tf, tw), tmax = Math.max(tf, tw);
+  return w * tf ** 3 / 3 - 0.21 * tf ** 4 + (d - tf) * tw ** 3 / 3 - 0.105 * tw ** 4 + 0.07 * tmin * tmax ** 3;
+}
+
+/** DOBLE ÁNGULO 2L PARAMÉTRICO como SAP2000 «Double Angle» (SetDblAngle), medido el 14-sep-2026 (2L 50x50x5 s10 y
+ *  2L 75x50x8x6 s12). t3 = d (ala vertical), t2 = ancho TOTAL (los dos ángulos + la separación), tf = espesor del
+ *  ala horizontal, tw = del ala vertical, dis = separación. Cada ángulo mide w = (t2 − dis)/2 (SAP lo escribe como
+ *  SngAngWid). A, I33 (centroide), I22 (eje de simetría, alas hacia afuera) exactos; As2 = 2·tw·d; As3 = 2·w·tf. */
+export function dblAngleSectionCsi(d: number, t2: number, tf: number, tw: number, dis: number):
+  SectionProps & { As2: number; As3: number; yc: number; w: number } {
+  const w = (t2 - dis) / 2;
+  const a1 = w * tf, a2 = (d - tf) * tw, A1 = a1 + a2;
+  const yc = (a1 * tf / 2 + a2 * (tf + (d - tf) / 2)) / A1;   // desde el borde del ala horizontal
+  const Iz = 2 * (w * tf ** 3 / 12 + a1 * (tf / 2 - yc) ** 2 + tw * (d - tf) ** 3 / 12 + a2 * (tf + (d - tf) / 2 - yc) ** 2);
+  const s = dis / 2;
+  const Iy = 2 * (tf * w ** 3 / 12 + a1 * (s + w / 2) ** 2 + (d - tf) * tw ** 3 / 12 + a2 * (s + tw / 2) ** 2);
+  return { A: 2 * A1, Iz, Iy, J: 2 * anguloJCsi(d, w, tf, tw), As2: 2 * tw * d, As3: 2 * w * tf, yc, w };
+}
+
 /** Tubular hueca rectangular. b=ancho, h=canto, t=espesor de pared. */
 export function hollowRectSection(b: number, h: number, t: number): SectionProps {
   const bi = b - 2 * t, hi = h - 2 * t;

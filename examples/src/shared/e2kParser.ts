@@ -9,7 +9,7 @@
  *   FRAME OBJECT LOADS
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
-import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi } from "./cadSections";
+import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "./cadSections";
 import { propiedadesSD, formaDesdeE2k, type PiezaSD } from "./sectionDesigner";
 
 export interface E2kGrid {
@@ -314,6 +314,9 @@ export function parseE2k(text: string): E2kModel {
         if (tM && !sec.TF && !sec.TW) { sec.TF = parseFloat(tM[1]); sec.TW = parseFloat(tM[1]); }
         const lipM = line.match(/\bLIP\s+([\d.eE+-]+)/);
         if (lipM) (sec as any).LIP = parseFloat(lipM[1]);
+        // separación del «Steel Double Angle» (B es el ancho TOTAL)
+        const disM = line.match(/\bDIS\s+([\d.eE+-]+)/);
+        if (disM) (sec as any).DIS = parseFloat(disM[1]);
       }
     }
 
@@ -935,7 +938,21 @@ export function parseE2k(text: string): E2kModel {
         shapeType = "L";
         break;
       }
-      case "Steel Channel":
+      case "Steel Channel": {
+        // (14-sep-2026) fórmulas de SAP2000 «Channel» medidas por OAPI (channelSectionCsi). ETABS usa otras para
+        // As2/As3/J (C200: As2 −1.1 %, As3 −11 %, J +2.4 %); el juez es SAP2000, como en el I.
+        const c = channelSectionCsi(D, B, tf, tw);
+        A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
+        shapeType = "C";
+        break;
+      }
+      case "Steel Double Angle": {
+        // B = ancho TOTAL, DIS = separación. SAP2000 «Double Angle» (dblAngleSectionCsi); ETABS pone As3 = A.
+        const c = dblAngleSectionCsi(D, B, tf, tw, (sec as any).DIS || 0);
+        A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
+        shapeType = "2L";
+        break;
+      }
       case "Cold Formed C":
         A = 2 * B * tf + (D - 2 * tf) * tw;
         Iz = (tw * D ** 3 + 2 * B * tf * (D - tf) ** 2) / 12;

@@ -951,6 +951,19 @@ cft  <frameID> <b> <h> <tf> <tw> <Ec> [nuC] [rhoC]   # relleno, también con dos
 - App (`edificioAporticado` y herederas): `matViga` «Acero perfil I (cotas)» (vigaTf, vigaTw; las
   secundarias con su propio perfil vigSecB/vigSecH/vigSecTf/vigSecTw) y `matCol` «Acero tubo (cotas)»
   (colTf, colTw). «Acero W» sigue siendo un rectángulo macizo de acero (compatibilidad).
+- **Canal C y doble ángulo 2L paramétricos** (14-sep-2026, para cordones y diagonales de cercha):
+  ```
+  canal <frameID> <d> <bf> <tf> <tw>              # SAP2000 «Channel» / ETABS «Steel Channel» D B TF TW
+  dosl  <frameID> <d> <t2> <tf> <tw> <dis>        # SAP2000 «Double Angle» / ETABS «Steel Double Angle» D B TF TW DIS
+  ```
+  Medido en SAP2000 por OAPI (`cli/_csi_secciones_c2l.py`, `cli/_csi_2l_barrido.py`), `channelSectionCsi` /
+  `dblAngleSectionCsi` en `cadSections.ts` y en `heks.py`, **0.00000 %** en las seis propiedades (2 canales, 13 dobles
+  ángulos): canal As2 = tw·d, **As3 = 2·bf·tf (sin 5/6)**, J = regla 0.63 con alas bf y alma d − 2tf. Doble ángulo:
+  **t2 = ancho TOTAL**, cada ángulo w = (t2 − dis)/2 (SAP lo escribe `SngAngWid`), As2 = 2·tw·d, As3 = 2·w·tf, y J = 2·J_L
+  con J_L = w·tf³/3 − 0.21·tf⁴ + (d − tf)·tw³/3 − 0.105·tw⁴ + 0.07·tmin·tmax³ (Roark sin términos pequeños; J lineal en
+  w y en d, medido). ETABS da las mismas A e I pero **otras As y J** (C200: As2 −1.1 %, As3 −11 %; 2L: **As3 = A**).
+- Generador de galpones con estas secciones: `node cli/_gen_galpon_acero.mjs tipo=curvo|agua1|mezanine` (columnas CFT,
+  vigas I, cordones canal, diagonales y montantes UN solo 2L, cubierta de zinc membrana).
 - ⚠️ La masa del relleno de CFT es la REAL (ρs·As + ρc·Ac) desde el 14-sep-2026; antes ρs·A_tr (−37 %).
   Y la clave de material del `.s2k` lleva ρ (`MAT_<E>_n<ν>_r<ρ>`): sin eso un muro y una viga del mismo
   hormigón compartían material y SAP2000 recibía la densidad de uno para los dos.

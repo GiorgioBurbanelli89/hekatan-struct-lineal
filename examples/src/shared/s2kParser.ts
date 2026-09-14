@@ -162,6 +162,8 @@ function parseTableFormat(rawLines: string[]): S2kModel {
             // ala inferior del «I/Wide Flange» (SAP2000 la escribe siempre, igual a la superior si no difiere)
             T2B: parseNum(kv.get("t2b")),
             TFB: parseNum(kv.get("tfb")),
+            // separación del «Double Angle» (t2 es el ancho TOTAL)
+            DIS: parseNum(kv.get("dis")),
             A: parseNum(kv.get("Area")),
             Iz: parseNum(kv.get("I33")),
             Iy: parseNum(kv.get("I22")),
@@ -589,6 +591,11 @@ function buildModel(
         sectionShapes.set(i, { type: "I", b: sec.B, h: sec.D, ...(sx.TF > 0 && sx.TW > 0 ? { tf: sx.TF, tw: sx.TW, t2b: sx.T2B > 0 ? sx.T2B : sec.B, tfb: sx.TFB > 0 ? sx.TFB : sx.TF } : {}), name: secName || "I-section" } as any);
       } else if (/box|tube/i.test(sec.shape ?? "") && sx.TF > 0 && sx.TW > 0) {
         sectionShapes.set(i, { type: "HSS", b: sec.B, h: sec.D, tf: sx.TF, tw: sx.TW, name: secName } as any);
+      } else if (/^channel$/i.test(sec.shape ?? "") && sx.TF > 0 && sx.TW > 0) {
+        // (14-sep-2026) canal C paramétrico: vuelve a salir «Channel» editable al re-exportar
+        sectionShapes.set(i, { type: "C", b: sec.B, h: sec.D, tf: sx.TF, tw: sx.TW, name: secName } as any);
+      } else if (/double angle/i.test(sec.shape ?? "") && sx.TF > 0 && sx.TW > 0) {
+        sectionShapes.set(i, { type: "2L", b: sec.B, h: sec.D, tf: sx.TF, tw: sx.TW, dis: sx.DIS || 0, name: secName } as any);
       } else {
         sectionShapes.set(i, { type: "rect", b: sec.B, h: sec.D });
       }

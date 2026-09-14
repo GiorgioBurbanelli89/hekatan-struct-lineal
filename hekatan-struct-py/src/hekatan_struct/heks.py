@@ -121,6 +121,8 @@ def leer_heks(ruta: str) -> ModeloHeks:
     cftc_de: dict[int, tuple[float, float, float, float]] = {}     # `cftc ID D t Ec [nuC]`: tubo REDONDO relleno
     isec_de: dict[int, tuple] = {}    # `isec ID d bf tf tw [t2b tfb]`: perfil I paramétrico (SAP2000 I/Wide Flange)
     tubo_de: dict[int, tuple] = {}    # `tubo ID b h tf tw`: tubo rectangular paramétrico (SAP2000 Box/Tube)
+    canal_de: dict[int, tuple] = {}   # `canal ID d bf tf tw`: canal C paramétrico (SAP2000 Channel)
+    dosl_de: dict[int, tuple] = {}    # `dosl ID d t2 tf tw dis`: doble ángulo paramétrico (SAP2000 Double Angle)
     rels: dict[int, list[bool]] = {}
     endoffs: dict[int, tuple[float, float, float]] = {}   # (offI, offJ, rz)
     sw_mult = [0.0]                        # multiplicador de peso propio
@@ -224,6 +226,14 @@ def leer_heks(ruta: str) -> ModeloHeks:
                     # tubo ID b h tf tw  — tubo rectangular paramétrico
                     v = [float(x) for x in t[2:6]]
                     tubo_de[int(t[1])] = (v[0], v[1], v[2], v[3])
+                elif cmd in ("canal", "channel"):
+                    # canal ID d bf tf tw  — canal C paramétrico (SAP2000 Channel, como cliModeler.ts)
+                    v = [float(x) for x in t[2:6]]
+                    canal_de[int(t[1])] = (v[0], v[1], v[2], v[3])
+                elif cmd in ("dosl", "2l"):
+                    # dosl ID d t2 tf tw dis  — doble ángulo paramétrico; t2 = ancho TOTAL (SAP2000 Double Angle)
+                    v = [float(x) for x in t[2:7]]
+                    dosl_de[int(t[1])] = (v[0], v[1], v[2], v[3], v[4] if len(v) > 4 else 0.0)
                 elif cmd == "cft":
                     # cft ID b h t Ec [nuC] [rhoC]   o   cft ID b h tf tw Ec [nuC] [rhoC]  (como cliModeler.ts)
                     v = [float(x) for x in t[2:]]
@@ -413,6 +423,40 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.torsional_constants[k] = 4 * Am * Am / (2 * (b_ - tw_) / tf_ + 2 * (h_ - tf_) / tw_) * tf[0]
             ei.shear_areas_z[k] = 2 * tw_ * h_
             ei.shear_areas_y[k] = 2 * tf_ * b_
+        if f["id"] in canal_de:
+            # SAP2000 Channel (cadSections.ts channelSectionCsi, medido por OAPI 14-sep-2026)
+            d_, bf, tf_, tw_ = canal_de[f["id"]]
+            hw = d_ - 2 * tf_
+            Af, Aw = bf * tf_, hw * tw_
+            A_ = 2 * Af + Aw
+            xc = (2 * Af * bf / 2 + Aw * tw_ / 2) / A_
+            rect = lambda b_, t_: (b_ * t_ ** 3 / 3) * (1 - 0.63 * t_ / b_)
+            ei.areas[k] = A_
+            ei.moments_of_inertia_z[k] = (bf * d_ ** 3 - (bf - tw_) * hw ** 3) / 12
+            ei.moments_of_inertia_y[k] = (2 * (tf_ * bf ** 3 / 12 + Af * (bf / 2 - xc) ** 2)
+                                          + hw * tw_ ** 3 / 12 + Aw * (tw_ / 2 - xc) ** 2)
+            ei.torsional_constants[k] = (2 * rect(bf, tf_) + rect(hw, tw_)) * tf[0]
+            ei.shear_areas_z[k] = tw_ * d_
+            ei.shear_areas_y[k] = 2 * bf * tf_
+        if f["id"] in dosl_de:
+            # SAP2000 Double Angle (cadSections.ts dblAngleSectionCsi): w = (t2 − dis)/2 por ángulo,
+            # J de Roark para la L (barrido _csi_2l_barrido.py, 13 geometrías a 0.0000 %)
+            d_, t2, tf_, tw_, dis = dosl_de[f["id"]]
+            w = (t2 - dis) / 2
+            a1, a2 = w * tf_, (d_ - tf_) * tw_
+            A1 = a1 + a2
+            yc = (a1 * tf_ / 2 + a2 * (tf_ + (d_ - tf_) / 2)) / A1
+            s_ = dis / 2
+            ei.areas[k] = 2 * A1
+            ei.moments_of_inertia_z[k] = 2 * (w * tf_ ** 3 / 12 + a1 * (tf_ / 2 - yc) ** 2
+                                              + tw_ * (d_ - tf_) ** 3 / 12 + a2 * (tf_ + (d_ - tf_) / 2 - yc) ** 2)
+            ei.moments_of_inertia_y[k] = 2 * (tf_ * w ** 3 / 12 + a1 * (s_ + w / 2) ** 2
+                                              + (d_ - tf_) * tw_ ** 3 / 12 + a2 * (s_ + tw_ / 2) ** 2)
+            JL = (w * tf_ ** 3 / 3 - 0.21 * tf_ ** 4 + (d_ - tf_) * tw_ ** 3 / 3 - 0.105 * tw_ ** 4
+                  + 0.07 * min(tf_, tw_) * max(tf_, tw_) ** 3)
+            ei.torsional_constants[k] = 2 * JL * tf[0]
+            ei.shear_areas_z[k] = 2 * tw_ * d_
+            ei.shear_areas_y[k] = 2 * w * tf_
         if f["id"] in cftc_de:
             from .cft import cftc_props
             cD, ct, Ec, nuC, rhoC = cftc_de[f["id"]]

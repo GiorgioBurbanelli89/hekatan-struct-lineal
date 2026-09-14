@@ -53,7 +53,7 @@
  *   solve
  */
 import * as THREE from "three";
-import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi } from "../shared/cadSections";
+import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
@@ -112,6 +112,10 @@ interface ParsedModel {
   frameISec: Map<number, { d: number; bf: number; tf: number; tw: number; t2b: number; tfb: number }>;
   /** `tubo ID b h tf tw`: tubo rectangular PARAMÉTRICO (SAP2000 «Box/Tube», ETABS «Steel Tube»). */
   frameTube: Map<number, { b: number; h: number; tf: number; tw: number }>;
+  /** `canal ID d bf tf tw`: canal C PARAMÉTRICO (SAP2000 «Channel», ETABS «Steel Channel»). */
+  frameCanal: Map<number, { d: number; bf: number; tf: number; tw: number }>;
+  /** `dosl ID d t2 tf tw dis`: doble ángulo 2L PARAMÉTRICO (SAP2000 «Double Angle»); t2 = ancho total. */
+  frameDosL: Map<number, { d: number; t2: number; tf: number; tw: number; dis: number }>;
   frameEndOffsets: Map<number, [number, number, number]>;   // [offI, offJ, rigidZone]
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
@@ -251,6 +255,8 @@ export function parseCliCommands(text: string): ParsedModel {
     frameCftc: new Map(),
     frameISec: new Map(),
     frameTube: new Map(),
+    frameCanal: new Map(),
+    frameDosL: new Map(),
     frameEndOffsets: new Map(),
     selfWeight: 0,
     meshCross: true,
@@ -450,6 +456,27 @@ export function parseCliCommands(text: string): ParsedModel {
           if (isFinite(fid) && b > 0 && h > 0 && tf > 0 && tw > 0 && tw < b / 2 && tf < h / 2)
             m.frameTube.set(fid, { b, h, tf, tw });
           else m.errors.push(`tubo ${tokens[1]}: hace falta b h tf tw (m), con tw < b/2 y tf < h/2`);
+          break;
+        }
+        case "canal":
+        case "channel": {
+          // canal <frameID> <d> <bf> <tf> <tw>   (m) — canal C de cotas libres (SAP2000 Channel)
+          const fid = parseInt(tokens[1], 10);
+          const [d, bf, tf, tw] = tokens.slice(2, 6).map((x) => parseFloat(x));
+          if (isFinite(fid) && d > 0 && bf > 0 && tf > 0 && tw > 0 && 2 * tf < d && tw < bf)
+            m.frameCanal.set(fid, { d, bf, tf, tw });
+          else m.errors.push(`canal ${tokens[1]}: hace falta d bf tf tw (m), con 2·tf < d y tw < bf`);
+          break;
+        }
+        case "dosl":
+        case "2l": {
+          // dosl <frameID> <d> <t2> <tf> <tw> <dis>   (m) — doble ángulo; t2 = ancho TOTAL, dis = separación
+          const fid = parseInt(tokens[1], 10);
+          const [d, t2, tf, tw, dis] = tokens.slice(2, 7).map((x) => parseFloat(x));
+          const w = (t2 - (dis || 0)) / 2;
+          if (isFinite(fid) && d > 0 && t2 > 0 && tf > 0 && tw > 0 && dis >= 0 && w > tw && tf < d)
+            m.frameDosL.set(fid, { d, t2, tf, tw, dis });
+          else m.errors.push(`dosl ${tokens[1]}: hace falta d t2 tf tw dis (m), con (t2 − dis)/2 > tw`);
           break;
         }
         case "cft": {
@@ -1266,6 +1293,26 @@ export const cliModeler: ExampleDef = {
         const mm = (x: number) => Math.round(x * 10000) / 10;
         sectionShapes.set(eIdx, { type: "HSS", h: tuF.h, b: tuF.b, tf: tuF.tf, tw: tuF.tw,
           name: f.sec ?? `TUBO${mm(tuF.h)}X${mm(tuF.b)}X${mm(tuF.tf)}X${mm(tuF.tw)}` } as any);
+      }
+      const caF = m.frameCanal.get(f.id);
+      if (caF) {
+        const c = channelSectionCsi(caF.d, caF.bf, caF.tf, caF.tw);
+        areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
+        shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
+        cantos.set(eIdx, caF.d); anchos.set(eIdx, caF.bf);
+        const mm = (x: number) => Math.round(x * 10000) / 10;
+        sectionShapes.set(eIdx, { type: "C", h: caF.d, b: caF.bf, tf: caF.tf, tw: caF.tw,
+          name: f.sec ?? `C${mm(caF.d)}X${mm(caF.bf)}X${mm(caF.tf)}X${mm(caF.tw)}` } as any);
+      }
+      const dlF = m.frameDosL.get(f.id);
+      if (dlF) {
+        const c = dblAngleSectionCsi(dlF.d, dlF.t2, dlF.tf, dlF.tw, dlF.dis);
+        areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
+        shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
+        cantos.set(eIdx, dlF.d); anchos.set(eIdx, dlF.t2);
+        const mm = (x: number) => Math.round(x * 10000) / 10;
+        sectionShapes.set(eIdx, { type: "2L", h: dlF.d, b: dlF.t2, tf: dlF.tf, tw: dlF.tw, dis: dlF.dis,
+          name: f.sec ?? `2L${mm(dlF.d)}X${mm(dlF.t2)}X${mm(dlF.tf)}X${mm(dlF.tw)}S${mm(dlF.dis)}` } as any);
       }
       const cftcF = m.frameCftc.get(f.id);
       if (cftcF) {

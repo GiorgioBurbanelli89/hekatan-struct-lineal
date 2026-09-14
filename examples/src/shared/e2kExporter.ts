@@ -885,6 +885,17 @@ function exportFromScratch(input: ExportE2kInput): string {
       lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel Tube"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} `);
       return;
     }
+    // CANAL C y DOBLE ÁNGULO paramétricos (14-sep-2026). Sintaxis leída del $et de ETABS 22
+    // (cli/_csi_secciones_c2l.py): `SHAPE "Steel Channel" D B TF TW` y `SHAPE "Steel Double Angle" D B TF TW DIS`,
+    // con B = ancho TOTAL del 2L. ⚠️ ETABS recalcula As2, As3 y J con SUS fórmulas (≠ SAP2000: en el 2L pone As3 = A).
+    if (stype === "C" && h > 0 && b > 0 && tfw > 0 && tww > 0) {
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel Channel"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} `);
+      return;
+    }
+    if (stype === "2L" && h > 0 && b > 0 && tfw > 0 && tww > 0) {
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel Double Angle"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} DIS ${rd(cL(shp?.dis ?? 0))} `);
+      return;
+    }
     const tieneProps = A > 0 && I33 > 0 && I22 > 0;
     let etabsShape: string;
     if (stype === "general" || tieneProps) etabsShape = "General";
