@@ -607,6 +607,11 @@ function exportFromScratch(input: ExportE2kInput): string {
   // (medido 2-sep-2026, modo auto). La clave es `${E}|${w kN/m3}`.
   const G_KN_PER_KG = 9.80665e-3;  // kg/m3 -> kN/m3
   const wpvDe = (elemIdx: number): number | undefined => {
+    // CFT: la densidad del elemento es la EQUIVALENTE (ρs·As + ρc·Ac)/A_tr; el MATERIAL de la
+    // "Filled Steel Tube" es el ACERO y el relleno va aparte (ConcFill). Con la equivalente el
+    // acero salía a 12.5 t/m³ y ETABS contaba el hormigón dos veces (14-sep-2026).
+    const shp = (elementInputs as any).sectionShapes?.get(elemIdx);
+    if (shp?.type === "CFT" && shp.steelRho > 0) return shp.steelRho * 9.80665;
     const rho = elementInputs.densities?.get(elemIdx);
     if (rho === undefined) return undefined;
     // Heuristica de unidad: > 100 -> kg/m3 (acero 7850); si no, t/m3
@@ -680,8 +685,8 @@ function exportFromScratch(input: ExportE2kInput): string {
   }
   // El HORMIGON DE RELLENO de las columnas CFT: en ETABS la "Filled Steel Tube"
   // lleva MATERIAL (el acero) y FILLMATERIAL. Su peso: ETABS suma acero·wpv_s +
-  // relleno·wpv_c; Hekatan pone wpv sobre el area TRANSFORMADA. Con
-  // wpv_c = n·wpv_s la carga muerta por metro sale identica.
+  // relleno·wpv_c. (14-sep-2026) Va el peso REAL del hormigón (ρc·g): Hekatan pone la
+  // masa real ρs·As + ρc·Ac desde entonces. Antes wpv_c = n·wpv_s (el relleno pesaba ρs/n).
   const fillMatOf = new Map<number, string>();
   {
     const fillNames = new Map<string, string>();
@@ -689,13 +694,12 @@ function exportFromScratch(input: ExportE2kInput): string {
     shapes?.forEach((sh, idx) => {
       if (sh?.type !== "CFT" || !(sh.fillE > 0)) return;
       const Es = elementInputs.elasticities?.get(idx) ?? 0; if (!(Es > 0)) return;
-      const n = sh.fillE / Es;
-      const wS = wpvDe(idx) ?? 76.97;
-      const key = `${sh.fillE}|${(n * wS).toFixed(4)}`;
+      const wC = (sh.fillRho ?? 2.4) * 9.80665;
+      const key = `${sh.fillE}|${wC.toFixed(4)}`;
       let name = fillNames.get(key);
       if (!name) {
         name = `ConcFill_${fillNames.size + 1}`; fillNames.set(key, name);
-        lines.push(`  MATERIAL  "${name}"    TYPE "Concrete"    WEIGHTPERVOLUME ${rp(cWV(n * wS))}`);
+        lines.push(`  MATERIAL  "${name}"    TYPE "Concrete"    WEIGHTPERVOLUME ${rp(cWV(wC))}`);
         lines.push(`  MATERIAL  "${name}"    SYMTYPE "Isotropic"  E ${rd(cE(sh.fillE))}  U 0.2  A 1.0e-5`);
         lines.push(`  MATERIAL  "${name}"    FC ${rd(cE(24e3))}`);
       }

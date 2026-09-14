@@ -932,10 +932,14 @@ export const edificioAporticado: ExampleDef = {
         if (esCft) {
           // As2 va con I33 (= momentsOfInertiaZ = nuestro Iy del mapeo), As3 con I22
           shearAreasZ.set(i, cp.As2); shearAreasY.set(i, cp.As3);
-          sectionShapes.set(i, { type: "CFT", b: cp.b, h: cp.h, tw: cp.t, tf: cp.t, fillE: Ec, d: 0 });
+          sectionShapes.set(i, { type: "CFT", b: cp.b, h: cp.h, tw: cp.t, tf: cp.t, fillE: Ec, fillRho: rho_c, steelRho: rho_s, d: 0 });
         }
         // Si Mass Source = Loads, density de cols = 0 (la masa va solo en losa)
-        densities.set(i, useMassFromLoads ? 0 : matColRho);
+        // CFT: masa REAL ρs·As + ρc·Ac sobre la A transformada (14-sep-2026; antes ρs·A_tr, −37 %).
+        const rhoCol = esCft
+          ? (rho_s * (cp.b * cp.h - (cp.b - 2 * cp.t) * (cp.h - 2 * cp.t)) + rho_c * (cp.b - 2 * cp.t) * (cp.h - 2 * cp.t)) / cp.A
+          : matColRho;
+        densities.set(i, useMassFromLoads ? 0 : rhoCol);
       } else {
         const vp = vigaPropsAt(Math.min(floor, 7));
         elasticities.set(i, matVigaE); shearModuli.set(i, matVigaG); poissons.set(i, matVigaNu);

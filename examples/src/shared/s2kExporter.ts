@@ -122,7 +122,11 @@ export function exportS2k(input: S2kExportInput): string {
     const nu = nuDecl !== undefined ? nuDecl
              : (E > 0 && Gdecl > 0 ? Math.max(0, Math.min(0.5, E / (2 * Gdecl) - 1)) : 0.2);
     const G = Gdecl > 0 ? Gdecl : (E > 0 ? E / (2 * (1 + nu)) : 0);
-    const rho = elementInputs.densities?.get(i) || 0;
+    // CFT: el material del tubo es el ACERO real (el relleno es FILL_ aparte). La densidad del
+    // elemento es la equivalente (ρs·As + ρc·Ac)/A_tr y, con la misma clave MAT_ que las vigas,
+    // TODAS las barras de acero salían a 12.5 t/m³ en SAP2000 (14-sep-2026).
+    const shp = (elementInputs as any).sectionShapes?.get(i);
+    const rho = shp?.type === "CFT" && shp.steelRho > 0 ? shp.steelRho : (elementInputs.densities?.get(i) || 0);
     return { E, nu, G, rho, key: `MAT_${Math.round(E)}_n${nu.toFixed(4)}` };
   };
 
@@ -216,11 +220,13 @@ export function exportS2k(input: S2kExportInput): string {
       const Ac = esCftc ? Math.PI * di * di / 4 : bi * hi;
       const n = shp.fillE > 0 ? shp.fillE / E : Math.max(0.01, Math.min(1, (A - AsAcero) / Ac));
       const Ec = n * E, nuC = 0.2;
-      const matFill = `MAT_${Math.round(Ec)}_n${nuC.toFixed(4)}`;
-      // la masa: Hekatan pone rho sobre el area TRANSFORMADA; SAP suma rho_i*A_i de
-      // cada forma. Con rho_relleno = n*rho la masa por metro sale identica.
-      const rho = matDe(i).rho;
-      if (!matExtra.has(matFill)) matExtra.set(matFill, { E: Ec, nu: nuC, G: Ec / (2 * (1 + nuC)), rho: rho * n });
+      // (14-sep-2026) El relleno lleva su densidad REAL (SAP suma ρ_i·A_i de cada forma = ρs·As + ρc·Ac,
+      // lo mismo que Hekatan desde que `cft` usa la masa real) y un nombre PROPIO: con
+      // `MAT_<Ec>_n<nu>` chocaba con el hormigón del deck/losa (mismo E y ν) y SAP2000 le daba
+      // la densidad equivalente del deck (3.80 t/m³): el mezanine CFT salía +4–6 % en periodo.
+      const rhoFill = shp.fillRho ?? 2.4;
+      const matFill = `FILL_${Math.round(Ec)}_r${rhoFill}`;
+      if (!matExtra.has(matFill)) matExtra.set(matFill, { E: Ec, nu: nuC, G: Ec / (2 * (1 + nuC)), rho: rhoFill });
       sd = esCftc ? { b: shp.d, h: shp.d, t: shp.tw, Ec, nuC, matFill, D: shp.d } : { b: shp.b, h: shp.h, t: shp.tw, Ec, nuC, matFill };
     }
     const key = `A${A.toPrecision(6)}_Iz${Iz.toPrecision(6)}_s${As2r.toPrecision(6)}_${As3r.toPrecision(6)}${sd ? (sd.D ? `_SDC${sd.D}x${sd.t}` : `_SD${sd.b}x${sd.h}x${sd.t}`) : ""}`;

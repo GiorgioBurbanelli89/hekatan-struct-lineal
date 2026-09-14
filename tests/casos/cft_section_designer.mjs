@@ -58,10 +58,10 @@ export async function correr() {
   const dir = join(AQUI, "..", "..", "..", "galpon-bodega-electoral", "sap_cft"); try { mkdirSync(dir, { recursive: true }); } catch {}
   writeFileSync(join(dir, "hekatan_cft.s2k"), s2k, "utf-8");
   const tieneSD = /Shape="SD Section"/.test(s2k), tubo = /SHAPE BOX\/TUBE[\s\S]*?Height=0\.3\s+Width=0\.3\s+FlngThick=0\.01\s+WebThick=0\.01/.test(s2k), rell = /SHAPE SOLID RECTANGLE[\s\S]*?Height=0\.28\s+Width=0\.28/.test(s2k);
-  const matRell = /Material=MAT_25000000_n0\.2000\s+UnitWeight=\S+\s+UnitMass=(\S+)\s+E1=(\S+)/.exec(s2k);
+  const matRell = /Material=FILL_25000000_r2\.4\s+UnitWeight=\S+\s+UnitMass=(\S+)\s+E1=(\S+)/.exec(s2k);
   filas.push({ que: "el s2k lleva la CFT como SD Section (no General)", crudo: true, medido: tieneSD ? "SD Section" : "General", limite: "SD Section", ok: tieneSD && !/SectionName=SEC1\s+Material=\S+\s+Shape=General/.test(s2k), detalle: "FRAME SECTION PROPERTIES 01" });
   filas.push({ que: "tablas SD: tubo 0.3x0.3x0.01 y relleno 0.28x0.28", crudo: true, medido: `${tubo ? "tubo" : "-"}/${rell ? "relleno" : "-"}`, limite: "tubo/relleno", ok: tubo && rell, detalle: "SECTION DESIGNER PROPERTIES 09 y 12" });
-  filas.push({ que: "material del relleno E = 2.5e7 con rho = n·rho_acero", crudo: true, medido: matRell ? `UnitMass=${matRell[1]}` : "no esta", limite: `UnitMass=${(7.85 * 0.125).toPrecision(4)}`, ok: !!matRell && Math.abs(parseFloat(matRell[1]) - 7.85 * 0.125) < 1e-6 && Math.abs(parseFloat(matRell[2]) - 2.5e7) < 1, detalle: "la masa por metro de SAP (Σ rho_i·A_i) = la de Hekatan (rho·A_transformada)" });
+  filas.push({ que: "material del relleno PROPIO (FILL_) E = 2.5e7 con rho REAL del hormigón", crudo: true, medido: matRell ? `UnitMass=${matRell[1]}` : "no esta", limite: "UnitMass=2.4", ok: !!matRell && Math.abs(parseFloat(matRell[1]) - 2.4) < 1e-6 && Math.abs(parseFloat(matRell[2]) - 2.5e7) < 1, detalle: "masa por metro de SAP (Σ rho_i·A_i) = ρs·As + ρc·Ac = la de Hekatan desde el 14-sep-2026 (antes ρ = n·ρs y nombre MAT_ que chocaba con el deck)" });
   const q = mod.parseS2k(s2k);
   const sh = q.sectionShapes?.get(0);
   filas.push({ que: "parseS2k devuelve la forma CFT con fillE", crudo: true, medido: sh ? `${sh.type} ${sh.b}x${sh.h}x${sh.tw} fillE=${sh.fillE}` : "sin forma", limite: "CFT 0.3x0.3x0.01 fillE=25000000", ok: !!sh && sh.type === "CFT" && sh.b === 0.3 && sh.h === 0.3 && sh.tw === 0.01 && sh.fillE === 25000000, detalle: "SECTION DESIGNER PROPERTIES 09/12 + MATERIAL 02" });

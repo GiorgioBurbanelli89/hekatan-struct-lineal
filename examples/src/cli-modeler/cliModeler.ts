@@ -104,9 +104,9 @@ interface ParsedModel {
   /** `cft ID b h t Ec [nuC]`: tubo de acero relleno de hormigon. Pisa A, I22, I33,
    *  J y las areas de cortante con lo que usan SAP2000 (Section Designer) y ETABS
    *  (Filled Steel Tube), y marca la forma para que el s2k salga como SD. */
-  frameCft: Map<number, { b: number; h: number; t: number; Ec: number; nuC: number }>;
-  /** `cftc ID D t Ec [nuC]`: tubo REDONDO relleno (Filled Steel Pipe de ETABS; Pipe + Solid Circle en el SD de SAP2000) */
-  frameCftc: Map<number, { D: number; t: number; Ec: number; nuC: number }>;
+  frameCft: Map<number, { b: number; h: number; t: number; Ec: number; nuC: number; rhoC: number }>;
+  /** `cftc ID D t Ec [nuC] [rhoC]`: tubo REDONDO relleno (Filled Steel Pipe de ETABS; Pipe + Solid Circle en el SD de SAP2000) */
+  frameCftc: Map<number, { D: number; t: number; Ec: number; nuC: number; rhoC: number }>;
   frameEndOffsets: Map<number, [number, number, number]>;   // [offI, offJ, rigidZone]
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
@@ -415,22 +415,22 @@ export function parseCliCommands(text: string): ParsedModel {
         // As2 resiste V2 (plano 1-2, el de I33) y As3 resiste V3 (plano 1-3,
         // el de I22), como en CSI. En m2. Un valor negativo = Bernoulli puro.
         case "cftc": {
-          // cftc <frameID> <D> <t> <Ec> [nuC]   (m, kN/m2) — tubo redondo relleno
+          // cftc <frameID> <D> <t> <Ec> [nuC] [rhoC]   (m, kN/m2, t/m3) — tubo redondo relleno
           const fid = parseInt(tokens[1], 10);
           const D = parseFloat(tokens[2] ?? ""), t = parseFloat(tokens[3] ?? "");
-          const Ec = parseFloat(tokens[4] ?? "25e6"), nuC = parseFloat(tokens[5] ?? "0.2");
+          const Ec = parseFloat(tokens[4] ?? "25e6"), nuC = parseFloat(tokens[5] ?? "0.2"), rhoC = parseFloat(tokens[6] ?? "2.4");
           if (isFinite(fid) && D > 0 && t > 0 && t < D / 2 && Ec > 0)
-            m.frameCftc.set(fid, { D, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2 });
+            m.frameCftc.set(fid, { D, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2, rhoC: isFinite(rhoC) && rhoC >= 0 ? rhoC : 2.4 });
           else m.errors.push(`cftc ${tokens[1]}: hace falta D t (m) y Ec (kN/m2), con t < D/2`);
           break;
         }
         case "cft": {
-          // cft <frameID> <b> <h> <t> <Ec> [nuC]   (m, kN/m2)
+          // cft <frameID> <b> <h> <t> <Ec> [nuC] [rhoC]   (m, kN/m2, t/m3)
           const fid = parseInt(tokens[1], 10);
           const b = parseFloat(tokens[2] ?? ""), h = parseFloat(tokens[3] ?? ""), t = parseFloat(tokens[4] ?? "");
-          const Ec = parseFloat(tokens[5] ?? "25e6"), nuC = parseFloat(tokens[6] ?? "0.2");
+          const Ec = parseFloat(tokens[5] ?? "25e6"), nuC = parseFloat(tokens[6] ?? "0.2"), rhoC = parseFloat(tokens[7] ?? "2.4");
           if (isFinite(fid) && b > 0 && h > 0 && t > 0 && t < Math.min(b, h) / 2 && Ec > 0)
-            m.frameCft.set(fid, { b, h, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2 });
+            m.frameCft.set(fid, { b, h, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2, rhoC: isFinite(rhoC) && rhoC >= 0 ? rhoC : 2.4 });
           else m.errors.push(`cft ${tokens[1]}: hace falta b h t (m) y Ec (kN/m2), con t < min(b,h)/2`);
           break;
         }
@@ -1222,7 +1222,10 @@ export const cliModeler: ExampleDef = {
         areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
         shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
         cantos.set(eIdx, cftcF.D); anchos.set(eIdx, cftcF.D);
-        sectionShapes.set(eIdx, { type: "CFT", d: cftcF.D, tw: cftcF.t, fillE: cftcF.Ec,
+        // MASA REAL (14-sep-2026): ρs·As + ρc·Ac repartida sobre la A transformada (ver `cft` abajo).
+        const di = cftcF.D - 2 * cftcF.t, AcC = Math.PI * di * di / 4, AsC = Math.PI * cftcF.D * cftcF.D / 4 - AcC;
+        densities.set(eIdx, ((f.rho ?? 7.85) * AsC + cftcF.rhoC * AcC) / c.A);
+        sectionShapes.set(eIdx, { type: "CFT", d: cftcF.D, tw: cftcF.t, fillE: cftcF.Ec, fillRho: cftcF.rhoC, steelRho: f.rho ?? 7.85,
           name: f.sec ?? `CFTC ${Math.round(cftcF.D * 1000)}X${Math.round(cftcF.t * 1000)}` });
       }
       const cftF = m.frameCft.get(f.id);
@@ -1234,7 +1237,12 @@ export const cliModeler: ExampleDef = {
         areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
         shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
         cantos.set(eIdx, cftF.h); anchos.set(eIdx, cftF.b);
-        sectionShapes.set(eIdx, { type: "CFT", b: cftF.b, h: cftF.h, tw: cftF.t, fillE: cftF.Ec,
+        // MASA y PESO REALES (14-sep-2026): ρs·As + ρc·Ac, repartidos sobre la A transformada.
+        // Antes era ρs·A_transformada: el relleno pesaba ρs/n (0.98 t/m³ con n = 8) en vez de
+        // 2.4 t/m³ — en un tubo 250x10, 0.127 t/m contra 0.202 t/m reales (−37 %).
+        const AcR = (cftF.b - 2 * cftF.t) * (cftF.h - 2 * cftF.t), AsR = cftF.b * cftF.h - AcR;
+        densities.set(eIdx, ((f.rho ?? 7.85) * AsR + cftF.rhoC * AcR) / c.A);
+        sectionShapes.set(eIdx, { type: "CFT", b: cftF.b, h: cftF.h, tw: cftF.t, fillE: cftF.Ec, fillRho: cftF.rhoC, steelRho: f.rho ?? 7.85,
           name: f.sec ?? `CFT ${Math.round(cftF.h * 1000)}X${Math.round(cftF.b * 1000)}X${Math.round(cftF.t * 1000)}` });
       }
     }

@@ -208,13 +208,17 @@ def leer_heks(ruta: str) -> ModeloHeks:
                 elif cmd == "as":
                     ashear[int(t[1])] = (float(t[2]), float(t[3]))
                 elif cmd == "cftc":
+                    # cftc ID D t Ec [nuC] [rhoC]  (rhoC t/m3, defecto 2.4: masa REAL del relleno)
                     cftc_de[int(t[1])] = (float(t[2]), float(t[3]),
                                           float(t[4]) if len(t) > 4 else 25e6,
-                                          float(t[5]) if len(t) > 5 else 0.2)
+                                          float(t[5]) if len(t) > 5 else 0.2,
+                                          float(t[6]) if len(t) > 6 else 2.4)
                 elif cmd == "cft":
+                    # cft ID b h t Ec [nuC] [rhoC]
                     cft_de[int(t[1])] = (float(t[2]), float(t[3]), float(t[4]),
                                          float(t[5]) if len(t) > 5 else 25e6,
-                                         float(t[6]) if len(t) > 6 else 0.2)
+                                         float(t[6]) if len(t) > 6 else 0.2,
+                                         float(t[7]) if len(t) > 7 else 2.4)
                 elif cmd in ("selfweight", "peso", "sw"):
                     # selfweight [mult]  — el PESO PROPIO, como el patrón `Dead`
                     # de ETABS (selfweight x 1). Hekatan no lo aplicaba nunca en
@@ -368,7 +372,7 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.shear_areas_y[k] = As3   # As3 -> V3, va con I22 (=moments_y)
         if f["id"] in cftc_de:
             from .cft import cftc_props
-            cD, ct, Ec, nuC = cftc_de[f["id"]]
+            cD, ct, Ec, nuC, rhoC = cftc_de[f["id"]]
             c = cftc_props(cD, ct, f["E"], nu, Ec, nuC)
             ei.areas[k] = c["A"]
             ei.moments_of_inertia_y[k] = c["I22"]
@@ -376,9 +380,14 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.torsional_constants[k] = c["J"] * tf[0]
             ei.shear_areas_z[k] = c["As2"]
             ei.shear_areas_y[k] = c["As3"]
+            # masa REAL ρs·As + ρc·Ac sobre la A transformada (como cliModeler.ts, 14-sep-2026)
+            di = cD - 2 * ct
+            Ac = math.pi * di * di / 4
+            As_ = math.pi * cD * cD / 4 - Ac
+            ei.densities[k] = (f["rho"] * As_ + rhoC * Ac) / c["A"]
         if f["id"] in cft_de:
             from .cft import cft_props
-            cb, ch, ct, Ec, nuC = cft_de[f["id"]]
+            cb, ch, ct, Ec, nuC, rhoC = cft_de[f["id"]]
             c = cft_props(cb, ch, ct, f["E"], nu, Ec, nuC)
             ei.areas[k] = c["A"]
             ei.moments_of_inertia_y[k] = c["I22"]
@@ -386,6 +395,9 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.torsional_constants[k] = c["J"] * tf[0]
             ei.shear_areas_z[k] = c["As2"]
             ei.shear_areas_y[k] = c["As3"]
+            # masa REAL ρs·As + ρc·Ac sobre la A transformada (como cliModeler.ts, 14-sep-2026)
+            Ac = (cb - 2 * ct) * (ch - 2 * ct)
+            ei.densities[k] = (f["rho"] * (cb * ch - Ac) + rhoC * Ac) / c["A"]
         if f["id"] in rels:
             ei.moment_releases[k] = rels[f["id"]]
         if f["id"] in endoffs:
