@@ -202,12 +202,23 @@ export function parseE2k(text: string): E2kModel {
     "FUNCTIONS", "LOAD CASES", "LOAD COMBINATIONS",
   ];
 
+  // ETABS con Windows en ESPAÑOL escribe los decimales con COMA: `WEIGHTPERVOLUME 2,40277`,
+  // `D 0,6 B 0,3`, `SLABTHICKNESS 0,2` («Analisis modal 1 piso concreto.e2k», 13-sep-2026).
+  // parseFloat("0,6") = 0 → secciones de canto 0 y peso 0, sin avisar. Se pasa a punto FUERA
+  // de las comillas (los nombres llevan comas legítimas) y solo si el fichero es de ese locale.
+  const comaDecimal = /(?:WEIGHTPERVOLUME|SLABTHICKNESS|WALLTHICKNESS|HEIGHT|ELEV|SPACING)\s+-?\d+,\d/.test(text);
+  const aPunto = (s: string) => s.split(/("[^"]*")/).map((seg, i) =>
+    i % 2 ? seg : seg.replace(/(^|[\s=])(-?\d+),(\d+)(?=[\s]|$)/g, "$1$2.$3")).join("");
+
   for (const rawLine of lines) {
-    const line = rawLine.trim();
+    const line = comaDecimal ? aPunto(rawLine.trim()) : rawLine.trim();
     if (!line || line.startsWith("$")) {
-      // `$ AREA OBJECT CONNECTIVITIES` (lo escriben algunos generadores, p. ej. slab_plate6x4.e2k)
-      // es el mismo bloque que `$ AREA CONNECTIVITIES`: sin el alias entraban 0 áreas.
-      if (line.startsWith("$ ")) currentSection = line.substring(2).trim().replace(/^AREA OBJECT CONNECTIVITIES$/, "AREA CONNECTIVITIES");
+      // `$ AREA OBJECT CONNECTIVITIES` / `$ AREA OBJECT LOADS` (lo escriben algunos generadores,
+      // p. ej. slab_plate6x4.e2k) son los bloques `$ AREA CONNECTIVITIES` / `$ SHELL OBJECT LOADS`:
+      // sin el alias entraban 0 áreas y 0 cargas de área.
+      if (line.startsWith("$ ")) currentSection = line.substring(2).trim()
+        .replace(/^AREA OBJECT CONNECTIVITIES$/, "AREA CONNECTIVITIES")
+        .replace(/^AREA OBJECT LOADS$/, "SHELL OBJECT LOADS");
       continue;
     }
     // Capture raw line for current section
@@ -429,7 +440,11 @@ export function parseE2k(text: string): E2kModel {
       // (`FZ -10793.023  MX -884914.3`). Con las seis obligatorias en su orden,
       // el e2k que exporta ETABS entraba a Hekatan sin UNA sola carga puntual
       // (bóveda, 13-sep-2026: 135 de 135 perdidas).
-      const pl = line.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"(.*)$/);
+      // Dos formas: `… TYPE "FORCE" LC "Dead" FX…` (ETABS) y `… "Dead" TYPE "FORCE" FZ…` (el caso
+      // en posición, como lo escribían exportadores viejos de Hekatan: benchmark-*-cantilever.e2k
+      // entraba con sus 11 cargas perdidas).
+      const pl = line.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"\s+LC\s+"([^"]+)"(.*)$/)
+        ?? (() => { const q = line.match(/POINTLOAD\s+"([^"]+)"\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"FORCE"(.*)$/); return q; })();
       if (pl) {
         const comp = (k: string) => {
           const m = pl[4].match(new RegExp(`\\b${k}\\s+([-\\d.eE+]+)`));
@@ -1076,10 +1091,6 @@ export function parseE2k(text: string): E2kModel {
   for (const ac of areaConns) {
     const aa = areaAssigns.get(ac.name);
     if (!aa) { perdidas.sinAssign++; continue; }
-    // Poligonos de mas de 4 lados: ETABS los admite, el motor no. Habria que
-    // triangularlos, y triangular a ciegas un poligono no convexo da elementos
-    // volteados — mejor decirlo que inventarlo.
-    if (ac.pts.length > 4) { perdidas.poligono++; continue; }
     const idx = ac.pts.map((pt, k) => {
       const st = storyDe(aa.story, ac.dz[k] ?? 0);
       return st === undefined ? undefined : nodeNameToIdx.get(nodeKey(pt, st));
@@ -1089,9 +1100,18 @@ export function parseE2k(text: string): E2kModel {
     // Un PANEL de muro se escribe con el punto repetido (pt1 pt2 pt2 pt1) y el
     // salto de planta 1 1 0 0: al resolverlo salen 4 nudos DISTINTOS. Si aun
     // asi quedan repetidos, el Q4 esta colapsado y no es un elemento definido.
-    const unicos = [...new Set(idx as number[])];
+    const unicosOrden = (idx as number[]).filter((v, k, a) => a.indexOf(v) === k);
+    const unicos = unicosOrden;
     if (unicos.length < 3) { perdidas.colapsada++; continue; }
-    const nodosArea = (unicos.length === 3 ? unicos : (idx as number[]).slice(0, 4));
+    // Poligonos de MAS de 4 lados (ETABS los admite; el motor tiene Q4 y T3): se TRIANGULAN
+    // por orejas en el plano del poligono (Newell), que vale tambien para no convexos — un
+    // abanico desde un vertice da triangulos volteados en una L. Antes se perdian enteros
+    // (CIMENTACION: 10 losas de 136; PEDESTAL: 7 de 44) y los trozos quedaban sueltos.
+    const trozos: number[][] = unicos.length <= 4
+      ? [unicos.length === 3 ? unicos : (idx as number[]).slice(0, 4)]
+      : triangularPoligono(unicos, nodes as unknown as number[][]);
+    if (!trozos.length) { perdidas.poligono++; continue; }
+    for (const nodosArea of trozos) {
     const ei = elements.length;
     elements.push(nodosArea as unknown as Element);
     elementNames.push(ac.name);
@@ -1123,6 +1143,7 @@ export function parseE2k(text: string): E2kModel {
       if (esMembrana) { m[3] = 0; m[4] = 0; m[5] = 0; m[6] = 0; m[7] = 0; }
       if (sp.mods || esMembrana) shellModifiers.set(ei, m);
     }
+    }   // for (trozos del polígono)
   }
   // ⚠️ ESTE BLOQUE VA AQUI Y NO ARRIBA. Las areas se montan mas abajo que
   // las cargas de barra, asi que puesto junto a ellas el `areaLookup` sale
@@ -1139,10 +1160,14 @@ export function parseE2k(text: string): E2kModel {
   // ⚠️ Se suman TODOS los patrones de gravedad (SCP + CV + ...), que es la
   // carga de SERVICIO. Es lo mismo que ya hacia con las cargas de barra, y hay
   // que saberlo: no es una combinacion mayorada.
-  const areaLookup = new Map<string, number>();
+  // Un área puede ser VARIOS elementos (un polígono triangulado): la carga va a todos.
+  const areaLookup = new Map<string, number[]>();
   for (let k = 0; k < elementNames.length; k++)
-    if ((elements[k] as unknown as number[]).length > 2)
-      areaLookup.set(`${elementNames[k]}@${elementStoriesArr[k]}`, k);
+    if ((elements[k] as unknown as number[]).length > 2) {
+      const clave = `${elementNames[k]}@${elementStoriesArr[k]}`;
+      if (!areaLookup.has(clave)) areaLookup.set(clave, []);
+      areaLookup.get(clave)!.push(k);
+    }
 
   // Cargas PUNTUALES: al nudo (punto@planta), en unidades del fichero; la
   // conversion a kN / kN·m la hace el bloque de unidades de mas abajo junto
@@ -1161,8 +1186,10 @@ export function parseE2k(text: string): E2kModel {
   let cargaAreaTotal = 0, sinArea = 0, sinValor = 0, aplicadas = 0;
   for (const al of areaLoads) {
     const ei2 = areaLookup.get(`${al.area}@${al.story}`) ?? areaLookup.get(`${al.area}@`);
-    const idx = ei2 !== undefined ? ei2 : [...areaLookup].find(([k]) => k.startsWith(al.area + "@"))?.[1];
-    if (idx === undefined) { sinArea++; continue; }
+    const lista = ei2 !== undefined ? ei2 : [...areaLookup].find(([k]) => k.startsWith(al.area + "@"))?.[1];
+    if (lista === undefined) { sinArea++; continue; }
+    let contada = false;
+    for (const idx of lista) {
     const el = elements[idx] as unknown as number[];
     const p = el.map((n) => nodes[n]).filter(Boolean) as number[][];
     if (p.length < 3) continue;
@@ -1183,8 +1210,9 @@ export function parseE2k(text: string): E2kModel {
       : [{ lc: al.lc, val: al.val }];
     let q = 0;
     for (const t of trozos) q += t.val;
-    if (!q) { sinValor++; continue; }
-    aplicadas++;
+    if (!q) { if (!contada) sinValor++; contada = true; break; }
+    if (!contada) aplicadas++;
+    contada = true;
 
     const F = q * A / p.length;
     cargaAreaTotal += q * A;
@@ -1197,6 +1225,7 @@ export function parseE2k(text: string): E2kModel {
       prev[0] += fx; prev[1] += fy; prev[2] += fz;
       loads.set(n, prev);
     }
+    }   // for (trozos del área)
   }
   if (areaLoads.length)
     console.info(`[e2kParser] cargas de losa: ${aplicadas} aplicadas · ${sinArea} sin area que las lleve · ` +
@@ -1444,6 +1473,60 @@ export function parseE2k(text: string): E2kModel {
  * diafragmas). Contarlos es lo que convierte «no resuelve» en «faltan estos
  * 110 nudos por sujetar», que ya es un problema con nombre.
  */
+/**
+ * Triangula un polígono 3D plano (o casi) por ORejas. Se proyecta al plano de mayor
+ * componente de la normal de Newell, se orienta CCW y se cortan orejas convexas sin otro
+ * vértice dentro. Devuelve [] si no puede (polígono degenerado o que se cruza).
+ */
+export function triangularPoligono(ids: number[], nodes: number[][]): number[][] {
+  const n = ids.length;
+  if (n < 3) return [];
+  const N = [0, 0, 0];
+  for (let i = 0; i < n; i++) {
+    const a = nodes[ids[i]], b = nodes[ids[(i + 1) % n]];
+    N[0] += (a[1] - b[1]) * (a[2] + b[2]);
+    N[1] += (a[2] - b[2]) * (a[0] + b[0]);
+    N[2] += (a[0] - b[0]) * (a[1] + b[1]);
+  }
+  const ax = [Math.abs(N[0]), Math.abs(N[1]), Math.abs(N[2])];
+  const k = ax[2] >= ax[0] && ax[2] >= ax[1] ? 2 : ax[1] >= ax[0] ? 1 : 0;
+  const [u, v] = k === 2 ? [0, 1] : k === 1 ? [2, 0] : [1, 2];
+  const P = ids.map(i => [nodes[i][u], nodes[i][v]]);
+  let area2 = 0;
+  for (let i = 0; i < n; i++) area2 += P[i][0] * P[(i + 1) % n][1] - P[(i + 1) % n][0] * P[i][1];
+  if (Math.abs(area2) < 1e-12) return [];
+  const orden = [...Array(n).keys()];
+  if (area2 < 0) orden.reverse();
+  const cruz = (a: number[], b: number[], c: number[]) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  // INCLUSIVO: un vértice sobre el borde de la oreja también la invalida (si no, en una L la
+  // oreja se come el vértice reflejo y salen triángulos solapados: área 4 en vez de 3).
+  const igual = (p: number[], q: number[]) => Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9;
+  const dentro = (p: number[], a: number[], b: number[], c: number[]) =>
+    !igual(p, a) && !igual(p, b) && !igual(p, c) &&
+    cruz(a, b, p) >= -1e-12 && cruz(b, c, p) >= -1e-12 && cruz(c, a, p) >= -1e-12;
+  const tris: number[][] = [];
+  let guard = 0;
+  while (orden.length > 3 && guard++ < 10 * n) {
+    let cortada = false;
+    for (let i = 0; i < orden.length; i++) {
+      const ia = orden[(i + orden.length - 1) % orden.length], ib = orden[i], ic = orden[(i + 1) % orden.length];
+      const A = P[ia], B = P[ib], C = P[ic];
+      if (cruz(A, B, C) <= 1e-12) continue;                         // reflejo o colineal
+      if (orden.some(j => j !== ia && j !== ib && j !== ic && dentro(P[j], A, B, C))) continue;
+      tris.push(area2 < 0 ? [ids[ic], ids[ib], ids[ia]] : [ids[ia], ids[ib], ids[ic]]);   // sentido original
+      orden.splice(i, 1);
+      cortada = true;
+      break;
+    }
+    if (!cortada) return [];
+  }
+  if (orden.length === 3) {
+    const [ia, ib, ic] = orden;
+    tris.push(area2 < 0 ? [ids[ic], ids[ib], ids[ia]] : [ids[ia], ids[ib], ids[ic]]);
+  }
+  return tris;
+}
+
 export function piezasFlotantes(
   elements: number[][],
   supports?: Map<number, boolean[]>,

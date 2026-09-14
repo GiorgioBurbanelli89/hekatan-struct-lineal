@@ -1,0 +1,10 @@
+import { empaquetar, R } from "../tests/lib/bundle.mjs";
+import { readFileSync } from "node:fs";
+const m = await empaquetar(`export * from "${R}/examples/src/shared/e2kParser";\n`, "c2");
+const ol = console.log; console.log = () => {};
+const r = m.parseE2k(readFileSync("C:/Users/j-b-j/Downloads/benchmark-cft-cantilever_1778266884989.e2k", "utf-8"));
+console.log = ol;
+const ei = r.elementInputs; const g = (k, i) => ei[k]?.get?.(i);
+for (const i of [0, 9]) console.log(i, r.elements[i], JSON.stringify({ E: g("elasticities", i), A: g("areas", i), Iy: g("momentsOfInertiaY", i), Iz: g("momentsOfInertiaZ", i), J: g("torsionalConstants", i), G: g("shearModuli", i) }));
+console.log("apoyos", JSON.stringify([...r.nodeInputs.supports]), "cargas", JSON.stringify([...r.nodeInputs.loads].slice(0, 3)));
+console.log("nodos", JSON.stringify(r.nodes.slice(0, 3)));
