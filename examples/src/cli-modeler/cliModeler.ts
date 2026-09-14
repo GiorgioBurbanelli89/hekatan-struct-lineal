@@ -53,7 +53,7 @@
  *   solve
  */
 import * as THREE from "three";
-import { cftSectionEc, cftPipeSectionEc } from "../shared/cadSections";
+import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
@@ -107,6 +107,11 @@ interface ParsedModel {
   frameCft: Map<number, { b: number; h: number; t: number; tw: number; Ec: number; nuC: number; rhoC: number }>;
   /** `cftc ID D t Ec [nuC] [rhoC]`: tubo REDONDO relleno (Filled Steel Pipe de ETABS; Pipe + Solid Circle en el SD de SAP2000) */
   frameCftc: Map<number, { D: number; t: number; Ec: number; nuC: number; rhoC: number }>;
+  /** `isec ID d bf tf tw [t2b tfb]`: perfil I PARAMÉTRICO (cotas libres, no catálogo). Propiedades como
+   *  SAP2000 «I/Wide Flange»; sale al s2k/e2k como sección paramétrica editable. */
+  frameISec: Map<number, { d: number; bf: number; tf: number; tw: number; t2b: number; tfb: number }>;
+  /** `tubo ID b h tf tw`: tubo rectangular PARAMÉTRICO (SAP2000 «Box/Tube», ETABS «Steel Tube»). */
+  frameTube: Map<number, { b: number; h: number; tf: number; tw: number }>;
   frameEndOffsets: Map<number, [number, number, number]>;   // [offI, offJ, rigidZone]
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
@@ -244,6 +249,8 @@ export function parseCliCommands(text: string): ParsedModel {
     frameShearAreas: new Map(),
     frameCft: new Map(),
     frameCftc: new Map(),
+    frameISec: new Map(),
+    frameTube: new Map(),
     frameEndOffsets: new Map(),
     selfWeight: 0,
     meshCross: true,
@@ -422,6 +429,27 @@ export function parseCliCommands(text: string): ParsedModel {
           if (isFinite(fid) && D > 0 && t > 0 && t < D / 2 && Ec > 0)
             m.frameCftc.set(fid, { D, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2, rhoC: isFinite(rhoC) && rhoC >= 0 ? rhoC : 2.4 });
           else m.errors.push(`cftc ${tokens[1]}: hace falta D t (m) y Ec (kN/m2), con t < D/2`);
+          break;
+        }
+        case "isec":
+        case "perfili": {
+          // isec <frameID> <d> <bf> <tf> <tw> [t2b] [tfb]   (m) — perfil I de cotas libres
+          const fid = parseInt(tokens[1], 10);
+          const v = tokens.slice(2, 8).map((x) => parseFloat(x));
+          const [d, bf, tf, tw] = v; const t2b = isFinite(v[4]) ? v[4] : bf, tfb = isFinite(v[5]) ? v[5] : tf;
+          if (isFinite(fid) && d > 0 && bf > 0 && tf > 0 && tw > 0 && t2b > 0 && tfb > 0 && tf + tfb < d && tw < Math.min(bf, t2b))
+            m.frameISec.set(fid, { d, bf, tf, tw, t2b, tfb });
+          else m.errors.push(`isec ${tokens[1]}: hace falta d bf tf tw [t2b tfb] (m), con tf+tfb < d y tw < bf`);
+          break;
+        }
+        case "tubo":
+        case "tube": {
+          // tubo <frameID> <b> <h> <tf> <tw>   (m) — tubo rectangular hueco de cotas libres
+          const fid = parseInt(tokens[1], 10);
+          const [b, h, tf, tw] = tokens.slice(2, 6).map((x) => parseFloat(x));
+          if (isFinite(fid) && b > 0 && h > 0 && tf > 0 && tw > 0 && tw < b / 2 && tf < h / 2)
+            m.frameTube.set(fid, { b, h, tf, tw });
+          else m.errors.push(`tubo ${tokens[1]}: hace falta b h tf tw (m), con tw < b/2 y tf < h/2`);
           break;
         }
         case "cft": {
@@ -1215,6 +1243,29 @@ export const cliModeler: ExampleDef = {
         if (f.D !== undefined && isFinite(f.D)) sh.h = f.D;
         if (f.B !== undefined && isFinite(f.B)) sh.b = f.B;
         sectionShapes.set(eIdx, sh);
+      }
+      // Perfil I / tubo PARAMÉTRICOS (14-sep-2026, Jorge: «cotas modificables, nada de catálogo»):
+      // pisan A, I33, I22, J y As con las fórmulas de SAP2000 (medidas por OAPI) y dejan la FORMA con sus
+      // cotas para que el s2k/e2k los escriban como «I/Wide Flange» / «Box/Tube» editables.
+      const iF = m.frameISec.get(f.id);
+      if (iF) {
+        const c = iSectionCsi(iF.d, iF.bf, iF.tf, iF.tw, iF.t2b, iF.tfb);
+        areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
+        shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
+        cantos.set(eIdx, iF.d); anchos.set(eIdx, Math.max(iF.bf, iF.t2b));
+        const mm = (x: number) => Math.round(x * 10000) / 10;
+        sectionShapes.set(eIdx, { type: "I", h: iF.d, b: iF.bf, tf: iF.tf, tw: iF.tw, t2b: iF.t2b, tfb: iF.tfb,
+          name: f.sec ?? `I${mm(iF.d)}X${mm(iF.bf)}X${mm(iF.tf)}X${mm(iF.tw)}` } as any);
+      }
+      const tuF = m.frameTube.get(f.id);
+      if (tuF) {
+        const c = tubeSectionCsi(tuF.b, tuF.h, tuF.tf, tuF.tw);
+        areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
+        shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
+        cantos.set(eIdx, tuF.h); anchos.set(eIdx, tuF.b);
+        const mm = (x: number) => Math.round(x * 10000) / 10;
+        sectionShapes.set(eIdx, { type: "HSS", h: tuF.h, b: tuF.b, tf: tuF.tf, tw: tuF.tw,
+          name: f.sec ?? `TUBO${mm(tuF.h)}X${mm(tuF.b)}X${mm(tuF.tf)}X${mm(tuF.tw)}` } as any);
       }
       const cftcF = m.frameCftc.get(f.id);
       if (cftcF) {

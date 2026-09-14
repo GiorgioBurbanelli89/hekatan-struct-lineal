@@ -191,7 +191,8 @@ export function exportS2k(input: S2kExportInput): string {
 
   // ── Collect unique frame sections ──
   type SdCft = { b: number; h: number; t: number; tf?: number; Ec: number; nuC: number; matFill: string; D?: number };   // D: tubo REDONDO · t = WebThick, tf = FlngThick
-  const frameSecs = new Map<string, { A: number; Iz: number; Iy: number; J: number; b: number; h: number; matKey: string; As2: number; As3: number; sd?: SdCft }>();
+  const frameSecs = new Map<string, { A: number; Iz: number; Iy: number; J: number; b: number; h: number; matKey: string; As2: number; As3: number; sd?: SdCft;
+    param?: { kind: "I" | "Box"; t3: number; t2: number; tf: number; tw: number; t2b?: number; tfb?: number } }>();
   // materiales que solo existen por las secciones SD (el relleno de hormigon del CFT)
   const matExtra = new Map<string, { E: number; nu: number; G: number; rho: number }>();
   const elemToFrameSec = new Map<number, string>();
@@ -233,13 +234,21 @@ export function exportS2k(input: S2kExportInput): string {
       if (!matExtra.has(matFill)) matExtra.set(matFill, { E: Ec, nu: nuC, G: Ec / (2 * (1 + nuC)), rho: rhoFill });
       sd = esCftc ? { b: shp.d, h: shp.d, t: shp.tw, Ec, nuC, matFill, D: shp.d } : { b: shp.b, h: shp.h, t: shp.tw, tf: shp.tf ?? shp.tw, Ec, nuC, matFill };
     }
-    const key = `A${A.toPrecision(6)}_Iz${Iz.toPrecision(6)}_s${As2r.toPrecision(6)}_${As3r.toPrecision(6)}${sd ? (sd.D ? `_SDC${sd.D}x${sd.t}` : `_SD${sd.b}x${sd.h}x${sd.t}`) : ""}`;
+    // PERFIL I / TUBO PARAMÉTRICOS (14-sep-2026): con la forma y sus cotas van como «I/Wide Flange» y
+    // «Box/Tube» de SAP2000 (editables; SAP recalcula las propiedades de las cotas con las mismas fórmulas
+    // que iSectionCsi/tubeSectionCsi, medido por OAPI). Filas copiadas del .$2k que escribe SAP2000 24.
+    let param: { kind: "I" | "Box"; t3: number; t2: number; tf: number; tw: number; t2b?: number; tfb?: number } | undefined;
+    if (!sd && shp?.type === "I" && shp.h > 0 && shp.b > 0 && shp.tf > 0 && shp.tw > 0)
+      param = { kind: "I", t3: shp.h, t2: shp.b, tf: shp.tf, tw: shp.tw, t2b: shp.t2b ?? shp.b, tfb: shp.tfb ?? shp.tf };
+    else if (!sd && shp?.type === "HSS" && shp.h > 0 && shp.b > 0 && shp.tf > 0 && shp.tw > 0)
+      param = { kind: "Box", t3: shp.h, t2: shp.b, tf: shp.tf, tw: shp.tw };
+    const key = `A${A.toPrecision(6)}_Iz${Iz.toPrecision(6)}_s${As2r.toPrecision(6)}_${As3r.toPrecision(6)}${sd ? (sd.D ? `_SDC${sd.D}x${sd.t}` : `_SD${sd.b}x${sd.h}x${sd.t}`) : ""}${param ? `_P${param.kind}${param.t3}x${param.t2}x${param.tf}x${param.tw}x${param.t2b ?? ""}x${param.tfb ?? ""}` : ""}`;
     if (!frameSecs.has(key)) {
       let h = 0.3, b = 0.3;
       if (A > 0 && Iz > 0) { h = Math.sqrt(12 * Iz / A); b = A / h; }
       frameSecs.set(key, { A, Iz, Iy, J, b, h, matKey,
                            As2: As2r > 0 ? As2r : A * 5 / 6,
-                           As3: As3r > 0 ? As3r : A * 5 / 6, sd });
+                           As3: As3r > 0 ? As3r : A * 5 / 6, sd, param });
     }
     const secIdx = [...frameSecs.keys()].indexOf(key) + 1;
     elemToFrameSec.set(i, `SEC${secIdx}`);
@@ -286,6 +295,15 @@ export function exportS2k(input: S2kExportInput): string {
         // fichero sea legible; SAP los pisa (medido en cft_sd_hekatan.s2k).
         push(`   SectionName=SEC${idx}   Material=${sec.matKey}   Shape="SD Section"   Area=${fmt(sec.A)}   TorsConst=${fmt(sec.J)}   I33=${fmt(sec.Iz)}   I22=${fmt(sec.Iy)}   I23=0   AS2=${fmt(sec.As2)}   AS3=${fmt(sec.As3)} _`);
         push(`        Color=Cyan   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1`);
+        continue;
+      }
+      if (sec.param) {
+        const p = sec.param;
+        const cotas = p.kind === "I"
+          ? `Shape="I/Wide Flange"   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}   t2b=${fmt(p.t2b!)}   tfb=${fmt(p.tfb!)}`
+          : `Shape=Box/Tube   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}`;
+        push(`   SectionName=SEC${idx}   Material=${sec.matKey}   ${cotas}   FilletRadius=0   Area=${fmt(sec.A)}   TorsConst=${fmt(sec.J)}   I33=${fmt(sec.Iz)}   I22=${fmt(sec.Iy)}   I23=0   AS2=${fmt(sec.As2)}   AS3=${fmt(sec.As3)} _`);
+        push(`        Color=Red   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1`);
         continue;
       }
       push(`   SectionName=SEC${idx}   Material=${sec.matKey}   Shape=General   t3=${fmt(sec.h)}   t2=${fmt(sec.b)}   Area=${fmt(sec.A)}   TorsConst=${fmt(sec.J)}   I33=${fmt(sec.Iz)}   I22=${fmt(sec.Iy)}   I23=0   AS2=${fmt(sec.As2)}   AS3=${fmt(sec.As3)} _`);

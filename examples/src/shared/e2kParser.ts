@@ -9,7 +9,7 @@
  *   FRAME OBJECT LOADS
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
-import { cftSectionEc, cftPipeSectionEc } from "./cadSections";
+import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi } from "./cadSections";
 import { propiedadesSD, formaDesdeE2k, type PiezaSD } from "./sectionDesigner";
 
 export interface E2kGrid {
@@ -878,24 +878,23 @@ export function parseE2k(text: string): E2kModel {
         AsY = AsZ = 0.9 * A; // circular shear area factor ~0.9
         shapeType = "circ";
         break;
-      case "Steel I/Wide Flange":
-        A = 2 * B * tf + (D - 2 * tf) * tw;
-        Iz = (B * D ** 3 - (B - tw) * (D - 2 * tf) ** 3) / 12;
-        Iy = (2 * tf * B ** 3 + (D - 2 * tf) * tw ** 3) / 12;
-        J = (2 * B * tf ** 3 + (D - 2 * tf) * tw ** 3) / 3;
-        AsY = (D - 2 * tf) * tw; // web area (shear in Y = strong axis bending)
-        AsZ = 2 * B * tf * 5/6; // flange area (shear in Z = weak axis bending)
+      case "Steel I/Wide Flange": {
+        // (14-sep-2026) Fórmulas de SAP2000 «I/Wide Flange» medidas por OAPI (iSectionCsi): J con la
+        // corrección 0.63 (el reparto de pared delgada daba +4.9 %) y As2 = tw·D en AsZ (va con I33), As3 =
+        // 5/6·2·B·tf en AsY — antes estaban CRUZADAS respecto al resto del lector (AsZ = AS2).
+        const c = iSectionCsi(D, B, tf, tw);
+        A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         shapeType = "I";
         break;
-      case "Steel Tube":
-        A = D * B - (D - 2 * tw) * (B - 2 * tw);
-        Iz = (B * D ** 3 - (B - 2 * tw) * (D - 2 * tw) ** 3) / 12;
-        Iy = (D * B ** 3 - (D - 2 * tw) * (B - 2 * tw) ** 3) / 12;
-        J = 2 * tw * (D - tw) * (B - tw) * ((D - tw) * (B - tw)) / ((D - tw) + (B - tw));
-        AsY = 2 * D * tw; // two webs
-        AsZ = 2 * B * tw; // two flanges
+      }
+      case "Steel Tube": {
+        // TF = paredes paralelas a B, TW = paralelas a D (antes se usaba TW para las cuatro). SAP2000 Box/Tube:
+        // Bredt con dos espesores, As2 = 2·TW·D (AsZ), As3 = 2·TF·B (AsY).
+        const c = tubeSectionCsi(B, D, tf || tw, tw || tf);
+        A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         shapeType = "HSS";
         break;
+      }
       case "Filled Steel Pipe": {
         // tubo redondo relleno: A e I exactas del circulo transformado, As Timoshenko,
         // J = Js + g·Jc. ETABS poligoniza el circulo (32 lados): su A sale 0.6 % menor.

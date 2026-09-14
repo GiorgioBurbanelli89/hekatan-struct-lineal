@@ -56,6 +56,41 @@ export function iParamSection(bf: number, h: number, tf: number, tw: number): Se
   return { A, Iz, Iy, J };
 }
 
+/** Perfil I PARAMÉTRICO como lo calcula SAP2000 (el juez) con «I/Wide Flange» (SetISection), MEDIDO por
+ *  OAPI el 14-sep-2026 (cli/_csi_secciones_param.py, I 300x150x10.7x7.1): A, I33, I22, As2, As3 exactos y
+ *  J = Σ (b·t³/3)(1 − 0.63·t/b) sobre las dos alas (bf×tf, t2b×tfb) y el alma (d − tf − tfb)×tw → 0.00000 %.
+ *  (El reparto de pared delgada (2·bf·tf³ + hw·tw³)/3 daba +4.9 % en J.)  d = canto, bf/tf = ala superior,
+ *  tw = alma, t2b/tfb = ala inferior (por defecto igual a la superior). Sin radios de acuerdo.
+ *  Devuelve Iz = fuerte (I33, canto) e Iy = débil (I22), As2 (con I33) y As3 (con I22). */
+export function iSectionCsi(d: number, bf: number, tf: number, tw: number, t2b = bf, tfb = tf):
+  SectionProps & { As2: number; As3: number; yc: number } {
+  const hw = d - tf - tfb;
+  const Af = bf * tf, Ab = t2b * tfb, Aw = hw * tw;
+  const A = Af + Ab + Aw;
+  // centroide desde la cara inferior (ala inferior en y = 0)
+  const yc = (Ab * tfb / 2 + Aw * (tfb + hw / 2) + Af * (d - tf / 2)) / A;
+  const Iz = t2b * tfb ** 3 / 12 + Ab * (tfb / 2 - yc) ** 2
+           + tw * hw ** 3 / 12 + Aw * (tfb + hw / 2 - yc) ** 2
+           + bf * tf ** 3 / 12 + Af * (d - tf / 2 - yc) ** 2;
+  const Iy = (tf * bf ** 3 + tfb * t2b ** 3 + hw * tw ** 3) / 12;
+  const rect = (b: number, t: number) => (b * t ** 3 / 3) * (1 - 0.63 * t / b);
+  const J = rect(bf, tf) + rect(t2b, tfb) + rect(hw, tw);
+  return { A, Iz, Iy, J, As2: tw * d, As3: (5 / 6) * (Af + Ab), yc };
+}
+
+/** Tubo rectangular PARAMÉTRICO como SAP2000 «Box/Tube» (SetTube), medido el 14-sep-2026 (tubo 300x200,
+ *  tf 12, tw 8): A, I33, I22 exactos; J Bredt con dos espesores 4·Am²/Σ(s/t); As2 = 2·tw·h; As3 = 2·tf·b.
+ *  b = ancho (eje 2), h = canto (eje 3... eje fuerte con h), tf = paredes paralelas a b, tw = paralelas a h. */
+export function tubeSectionCsi(b: number, h: number, tf: number, tw: number): SectionProps & { As2: number; As3: number } {
+  const bi = b - 2 * tw, hi = h - 2 * tf;
+  const A = b * h - bi * hi;
+  const Iz = (b * h ** 3 - bi * hi ** 3) / 12;
+  const Iy = (h * b ** 3 - hi * bi ** 3) / 12;
+  const Am = (b - tw) * (h - tf);
+  const J = 4 * Am * Am / (2 * (b - tw) / tf + 2 * (h - tf) / tw);
+  return { A, Iz, Iy, J, As2: 2 * tw * h, As3: 2 * tf * b };
+}
+
 /** Tubular hueca rectangular. b=ancho, h=canto, t=espesor de pared. */
 export function hollowRectSection(b: number, h: number, t: number): SectionProps {
   const bi = b - 2 * t, hi = h - 2 * t;

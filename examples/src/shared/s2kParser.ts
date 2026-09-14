@@ -159,6 +159,9 @@ function parseTableFormat(rawLines: string[]): S2kModel {
             B: parseNum(kv.get("t2")),
             TF: parseNum(kv.get("tf")),
             TW: parseNum(kv.get("tw")),
+            // ala inferior del «I/Wide Flange» (SAP2000 la escribe siempre, igual a la superior si no difiere)
+            T2B: parseNum(kv.get("t2b")),
+            TFB: parseNum(kv.get("tfb")),
             A: parseNum(kv.get("Area")),
             Iz: parseNum(kv.get("I33")),
             Iy: parseNum(kv.get("I22")),
@@ -580,8 +583,12 @@ function buildModel(
       if (off) (ei as any).endOffsets ??= new Map(), (ei as any).endOffsets.set(i, off);
       const ang = angles.get(elementNames[i]);
       if (ang) (ei as any).localAngles ??= new Map(), (ei as any).localAngles.set(i, ang);
+      const sx: any = sec;
       if (sec.shape?.includes("Wide Flange") || sec.shape === "I") {
-        sectionShapes.set(i, { type: "I", b: sec.B, h: sec.D, name: secName || "I-section" });
+        // (14-sep-2026) con sus cotas, para que al re-exportar vuelva a salir «I/Wide Flange» editable
+        sectionShapes.set(i, { type: "I", b: sec.B, h: sec.D, ...(sx.TF > 0 && sx.TW > 0 ? { tf: sx.TF, tw: sx.TW, t2b: sx.T2B > 0 ? sx.T2B : sec.B, tfb: sx.TFB > 0 ? sx.TFB : sx.TF } : {}), name: secName || "I-section" } as any);
+      } else if (/box|tube/i.test(sec.shape ?? "") && sx.TF > 0 && sx.TW > 0) {
+        sectionShapes.set(i, { type: "HSS", b: sec.B, h: sec.D, tf: sx.TF, tw: sx.TW, name: secName } as any);
       } else {
         sectionShapes.set(i, { type: "rect", b: sec.B, h: sec.D });
       }

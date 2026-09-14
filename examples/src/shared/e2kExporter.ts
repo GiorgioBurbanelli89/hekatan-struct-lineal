@@ -871,6 +871,20 @@ function exportFromScratch(input: ExportE2kInput): string {
       lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Filled Steel Tube"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw > 0 ? tfw : tww))} TW ${rd(cL(tww))} FILLMATERIAL "${fillName}"`);
       return;
     }
+    // PERFIL I / TUBO PARAMÉTRICOS (14-sep-2026, Jorge: «cotas modificables en ETABS, nada de catálogo»):
+    // con la forma y sus cotas se escribe la sección paramétrica de ETABS, editable, aunque haya
+    // propiedades. Sintaxis leída del $et que escribe ETABS 22: `SHAPE "Steel I/Wide Flange" D B TF TW`.
+    // Con alas distintas (t2b/tfb) ETABS no la escribe en esa forma → queda General.
+    const shp: any = shape;
+    const alasIguales = !(shp?.t2b > 0) || (Math.abs(shp.t2b - b) < 1e-9 && Math.abs((shp.tfb ?? tfw) - tfw) < 1e-9);
+    if (stype === "I" && h > 0 && b > 0 && tfw > 0 && tww > 0 && alasIguales) {
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel I/Wide Flange"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} `);
+      return;
+    }
+    if (stype === "HSS" && h > 0 && b > 0 && tfw > 0 && tww > 0) {
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel Tube"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} `);
+      return;
+    }
     const tieneProps = A > 0 && I33 > 0 && I22 > 0;
     let etabsShape: string;
     if (stype === "general" || tieneProps) etabsShape = "General";

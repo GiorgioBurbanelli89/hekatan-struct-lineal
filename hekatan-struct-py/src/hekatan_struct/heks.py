@@ -119,6 +119,8 @@ def leer_heks(ruta: str) -> ModeloHeks:
     # propiedades de CSI (ver cft.py)
     cft_de: dict[int, tuple[float, float, float, float, float]] = {}
     cftc_de: dict[int, tuple[float, float, float, float]] = {}     # `cftc ID D t Ec [nuC]`: tubo REDONDO relleno
+    isec_de: dict[int, tuple] = {}    # `isec ID d bf tf tw [t2b tfb]`: perfil I paramétrico (SAP2000 I/Wide Flange)
+    tubo_de: dict[int, tuple] = {}    # `tubo ID b h tf tw`: tubo rectangular paramétrico (SAP2000 Box/Tube)
     rels: dict[int, list[bool]] = {}
     endoffs: dict[int, tuple[float, float, float]] = {}   # (offI, offJ, rz)
     sw_mult = [0.0]                        # multiplicador de peso propio
@@ -213,6 +215,15 @@ def leer_heks(ruta: str) -> ModeloHeks:
                                           float(t[4]) if len(t) > 4 else 25e6,
                                           float(t[5]) if len(t) > 5 else 0.2,
                                           float(t[6]) if len(t) > 6 else 2.4)
+                elif cmd in ("isec", "perfili"):
+                    # isec ID d bf tf tw [t2b tfb]  — perfil I paramétrico (como cliModeler.ts, 14-sep-2026)
+                    v = [float(x) for x in t[2:8]]
+                    isec_de[int(t[1])] = (v[0], v[1], v[2], v[3],
+                                          v[4] if len(v) > 4 else v[1], v[5] if len(v) > 5 else v[2])
+                elif cmd in ("tubo", "tube"):
+                    # tubo ID b h tf tw  — tubo rectangular paramétrico
+                    v = [float(x) for x in t[2:6]]
+                    tubo_de[int(t[1])] = (v[0], v[1], v[2], v[3])
                 elif cmd == "cft":
                     # cft ID b h t Ec [nuC] [rhoC]   o   cft ID b h tf tw Ec [nuC] [rhoC]  (como cliModeler.ts)
                     v = [float(x) for x in t[2:]]
@@ -374,6 +385,34 @@ def leer_heks(ruta: str) -> ModeloHeks:
             As2, As3 = ashear[f["id"]]
             ei.shear_areas_z[k] = As2   # As2 -> V2, va con I33 (=moments_z)
             ei.shear_areas_y[k] = As3   # As3 -> V3, va con I22 (=moments_y)
+        if f["id"] in isec_de:
+            # fórmulas de SAP2000 medidas por OAPI (cadSections.ts iSectionCsi): J = Σ(b·t³/3)(1 − 0.63·t/b)
+            d_, bf, tf_, tw_, t2b, tfb = isec_de[f["id"]]
+            hw = d_ - tf_ - tfb
+            Af, Ab, Aw = bf * tf_, t2b * tfb, hw * tw_
+            A_ = Af + Ab + Aw
+            yc = (Ab * tfb / 2 + Aw * (tfb + hw / 2) + Af * (d_ - tf_ / 2)) / A_
+            I33_ = (t2b * tfb ** 3 / 12 + Ab * (tfb / 2 - yc) ** 2 + tw_ * hw ** 3 / 12
+                    + Aw * (tfb + hw / 2 - yc) ** 2 + bf * tf_ ** 3 / 12 + Af * (d_ - tf_ / 2 - yc) ** 2)
+            I22_ = (tf_ * bf ** 3 + tfb * t2b ** 3 + hw * tw_ ** 3) / 12
+            rect = lambda b_, t_: (b_ * t_ ** 3 / 3) * (1 - 0.63 * t_ / b_)
+            ei.areas[k] = A_
+            ei.moments_of_inertia_z[k] = I33_
+            ei.moments_of_inertia_y[k] = I22_
+            ei.torsional_constants[k] = (rect(bf, tf_) + rect(t2b, tfb) + rect(hw, tw_)) * tf[0]
+            ei.shear_areas_z[k] = tw_ * d_
+            ei.shear_areas_y[k] = 5 / 6 * (Af + Ab)
+        if f["id"] in tubo_de:
+            # SAP2000 Box/Tube (cadSections.ts tubeSectionCsi): Bredt con dos espesores
+            b_, h_, tf_, tw_ = tubo_de[f["id"]]
+            bi, hi = b_ - 2 * tw_, h_ - 2 * tf_
+            Am = (b_ - tw_) * (h_ - tf_)
+            ei.areas[k] = b_ * h_ - bi * hi
+            ei.moments_of_inertia_z[k] = (b_ * h_ ** 3 - bi * hi ** 3) / 12
+            ei.moments_of_inertia_y[k] = (h_ * b_ ** 3 - hi * bi ** 3) / 12
+            ei.torsional_constants[k] = 4 * Am * Am / (2 * (b_ - tw_) / tf_ + 2 * (h_ - tf_) / tw_) * tf[0]
+            ei.shear_areas_z[k] = 2 * tw_ * h_
+            ei.shear_areas_y[k] = 2 * tf_ * b_
         if f["id"] in cftc_de:
             from .cft import cftc_props
             cD, ct, Ec, nuC, rhoC = cftc_de[f["id"]]

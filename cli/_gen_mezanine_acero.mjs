@@ -39,7 +39,10 @@ function tuboRect(b, h, tf, tw) {
   const J = 4 * Am * Am / (2 * (b - tw) / tf + 2 * (h - tf) / tw);    // Bredt con dos espesores
   return { A, I33, I22, J, As2: 2 * tw * h, As3: 2 * tf * b, D: h, B: b };
 }
-const SP = perfilI(P.dP, P.bfP, P.tfP, P.twP), SS = perfilI(P.dS, P.bfS, P.tfS, P.twS), SC = tuboRect(P.bC, P.hC, P.tfC, P.twC);
+const SP = { ...perfilI(P.dP, P.bfP, P.tfP, P.twP), cmd: `isec %ID ${P.dP} ${P.bfP} ${P.tfP} ${P.twP}` };
+const SS = { ...perfilI(P.dS, P.bfS, P.tfS, P.twS), cmd: `isec %ID ${P.dS} ${P.bfS} ${P.tfS} ${P.twS}` };
+// columna: hueca → `tubo`; rellena → `cft` (que ya lleva b h tf tw) y sin `tubo`
+const SC = { ...tuboRect(P.bC, P.hC, P.tfC, P.twC), cmd: P.tubo === "cft" ? "" : `tubo %ID ${P.bC} ${P.hC} ${P.tfC} ${P.twC}` };
 const mm = (x) => Math.round(x * 1000);
 const nomI = (d, bf, tf, tw) => `I${mm(d)}x${mm(bf)}x${mm(tf)}x${mm(tw)}`;
 const NP = nomI(P.dP, P.bfP, P.tfP, P.twP), NS = nomI(P.dS, P.bfS, P.tfS, P.twS);
@@ -49,9 +52,13 @@ const L = [`# Mezanine de acero ${P.nx}x${P.ny} vanos ${P.Lx}x${P.Ly} m, h ${P.h
   "selfweight 1"];
 const ids = new Map(); let n = 0, f = 0, s = 0;
 const nodo = (x, y, z) => { const k = `${x.toFixed(4)},${y.toFixed(4)},${z.toFixed(4)}`; if (!ids.has(k)) { ids.set(k, ++n); L.push(`node ${n} ${+x.toFixed(6)} ${+y.toFixed(6)} ${+z.toFixed(6)}`); } return ids.get(k); };
+// (14-sep-2026, Jorge: «cotas modificables, nada de catálogo») Cada barra va con su sección PARAMÉTRICA:
+// `isec ID d bf tf tw` o `tubo ID b h tf tw` — Hekatan calcula A, I, J y As como SAP2000 y el s2k/e2k
+// las escriben como «I/Wide Flange»/«Box/Tube» y «Steel I/Wide Flange»/«Steel Tube» editables.
+// Las propiedades de la línea `frame` quedan como respaldo; el comando de sección las pisa.
 const barra = (a, b, S, nom, extra = []) => {
   f++; L.push(`frame ${f} ${a} ${b} ${Es} ${S.A.toPrecision(8)} ${S.I22.toPrecision(8)} ${S.I33.toPrecision(8)} ${S.J.toPrecision(8)} ${nuS} ${rhoS} ${S.D} ${S.B} # ${nom}`);
-  L.push(`as ${f} ${S.As2.toPrecision(8)} ${S.As3.toPrecision(8)}`);
+  if (S.cmd) L.push(S.cmd.replace("%ID", f));
   for (const e of extra) L.push(e.replace("%ID", f));
 };
 // ── columnas ──
