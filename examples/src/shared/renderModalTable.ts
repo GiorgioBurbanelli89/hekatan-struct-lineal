@@ -29,7 +29,7 @@ export function createModalPanel() {
   div.style.cssText = `
     position: fixed; bottom: 10px; left: 10px; z-index: 9999;
     background: rgba(0,0,0,0.92); color: #0f0; font-family: monospace;
-    font-size: 12px; border-radius: 6px;
+    font-size: 11px; border-radius: 6px;
     width: 760px; height: 60vh;
     max-width: 96vw; max-height: 92vh;
     overflow-x: auto; overflow-y: auto;
@@ -66,6 +66,7 @@ export function createModalPanel() {
   }
 
   let minimized = false;
+  let ajustadoATabla = false;
   // Tamaño guardado antes de "⤢ Ancho", para poder volver.
   let anchoPrev: { w: string; h: string; l: string; t: string; bo: string; r: string } | null = null;
   const ASCE_THRESHOLD = 0.90; // 90 % per ASCE 7-22 §12.9.1.1
@@ -112,8 +113,10 @@ export function createModalPanel() {
     // Es el ÚNICO texto que queda en el panel: dice si faltan modos y cuántos faltan.
     const dictamen = (() => {
       const falta = (tot: number) => `${((ASCE_THRESHOLD - tot) * 100).toFixed(1)} %`;
+      // Corto y en UNA línea: el aviso largo ocupaba dos renglones y tapaba los modos (Jorge,
+      // 14-sep-2026: «que se vean los 3 primeros modos y hasta ΣRz»). La norma queda en el title.
       if (modeAt90Both > 0)
-        return `<span style="color:#0f0">✓ Masa participativa ≥ 90 % en X e Y al modo ${modeAt90Both} de ${N} · ΣUx=${(totalX * 100).toFixed(1)} % ΣUy=${(totalY * 100).toFixed(1)} % (NEC-15 §6.2.2 / ASCE 7-22 §12.9.1.1)</span>`;
+        return `<span style="color:#0f0" title="Masa participativa ≥ 90 % en X e Y (NEC-15 §6.2.2 / ASCE 7-22 §12.9.1.1)">✓ ≥ 90 % en X e Y al modo ${modeAt90Both} de ${N} · ΣUx ${(totalX * 100).toFixed(1)} % · ΣUy ${(totalY * 100).toFixed(1)} %</span>`;
       if (modeAt90X > 0 && modeAt90Y < 0)
         return `<span style="color:#fa0">⚠ FALTAN MODOS EN Y — ΣUy=${(totalY * 100).toFixed(1)} % en ${N} modos (faltan ${falta(totalY)} para el 90 % que exige NEC-15 §6.2.2). X cumple en el modo ${modeAt90X}. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
       if (modeAt90Y > 0 && modeAt90X < 0)
@@ -129,8 +132,8 @@ export function createModalPanel() {
         cursor:pointer; background:${bg}; color:#fff; border:1px solid ${bd};
         border-radius:3px; font-family:monospace; white-space:nowrap;">${txt}</button>`;
     let html = `<div id="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; cursor:move; user-select:none;" title="Arrastrá desde acá para mover la ventana">
-  <b style="color:#ff0">✥ ⚡ MODAL ANALYSIS — ${config.title}</b>
-  <div style="display:flex; gap:4px; margin-left:12px;">
+  <b style="color:#ff0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0" title="${config.title}">✥ ⚡ MODAL — ${config.title}</b>
+  <div style="display:flex; gap:4px; margin-left:12px; flex-shrink:0;">
     ${btn("modal-copy", "📋 Copiar", "Copiar la tabla al portapapeles — se pega en Excel en columnas", "#2d6a4f", "#40916c")}
     ${btn("modal-wide", "⤢ Ancho", "Agrandar la ventana a casi toda la pantalla", "#33507a", "#4a6fa5")}
     ${btn("modal-minimize", "▬", "Minimizar", "#555", "#777")}
@@ -144,21 +147,22 @@ export function createModalPanel() {
     // (si faltan modos hay que enterarse acá). El resumen de modos principales, las líneas
     // de NEC/cortante/derivas/combos (config.properties) y el espectro NO se renderizan —
     // viven en el menú "📋 Tablas" de Analysis Outputs y en el panel de espectro.
-    html += `<div style="padding:6px 0; font-weight:bold; font-size:12px; line-height:1.4">${dictamen}</div>`;
+    html += `<div style="padding:2px 0 4px 0; font-weight:bold; font-size:11px; line-height:1.4">${dictamen}</div>`;
 
-    html += `<table style="border-collapse:collapse; color:#0f0; font-size:11px; margin-top:4px">
+    // nowrap: el «✓» de ΣUx partía la celda y cada fila salía del doble de alto
+    html += `<table style="border-collapse:collapse; color:#0f0; font-size:10px; margin-top:2px; white-space:nowrap">
 <tr style="color:#ff0; border-bottom:1px solid #ff03">
-  <th style="padding:2px 6px">Mode</th>
-  <th style="padding:2px 6px">Freq (Hz)</th>
-  <th style="padding:2px 6px">Period (s)</th>
-  <th style="padding:2px 6px">ω (rad/s)</th>`;
-    for (const d of dirs) html += `<th style="padding:2px 5px">${d}</th>`;
-    html += `<th style="padding:2px 5px; color:#0ff">ΣUx</th>
-  <th style="padding:2px 5px; color:#0ff">ΣUy</th>
-  <th style="padding:2px 5px; color:#0ff">ΣRx</th>
-  <th style="padding:2px 5px; color:#0ff">ΣRy</th>
-  <th style="padding:2px 5px; color:#0ff">ΣRz</th>
-  <th style="padding:2px 5px; color:#fff">Tipo</th></tr>`;
+  <th style="padding:1px 4px">Mode</th>
+  <th style="padding:1px 4px">Freq (Hz)</th>
+  <th style="padding:1px 4px">Period (s)</th>
+  <th style="padding:1px 4px">ω (rad/s)</th>`;
+    for (const d of dirs) html += `<th style="padding:1px 4px">${d}</th>`;
+    html += `<th style="padding:1px 4px; color:#0ff">ΣUx</th>
+  <th style="padding:1px 4px; color:#0ff">ΣUy</th>
+  <th style="padding:1px 4px; color:#0ff">ΣRx</th>
+  <th style="padding:1px 4px; color:#0ff">ΣRy</th>
+  <th style="padding:1px 4px; color:#0ff">ΣRz</th>
+  <th style="padding:1px 4px; color:#fff">Tipo</th></tr>`;
 
     // Reset y armar filas
     for (let d = 0; d < 6; d++) sumP[d] = 0;
@@ -193,25 +197,25 @@ export function createModalPanel() {
         : "";
 
       html += `<tr style="border-bottom:1px solid #fff1; ${isMF ? "background:rgba(0,180,255,0.12);" : rowBg}">
-  <td style="padding:2px 6px; text-align:center">${isMF ? "MF" : (i + 1) + (isAt90Both ? " ★" : "")}</td>
-  <td style="padding:2px 6px; text-align:right">${isMF ? "rígido" : freq.toFixed(4)}</td>
-  <td style="padding:2px 6px; text-align:right">${isMF ? "≈0" : T.toFixed(4)}</td>
-  <td style="padding:2px 6px; text-align:right">${isMF ? "—" : omega.toFixed(2)}</td>`;
+  <td style="padding:1px 4px; text-align:center">${isMF ? "MF" : (i + 1) + (isAt90Both ? " ★" : "")}</td>
+  <td style="padding:1px 4px; text-align:right">${isMF ? "rígido" : freq.toFixed(4)}</td>
+  <td style="padding:1px 4px; text-align:right">${isMF ? "≈0" : T.toFixed(4)}</td>
+  <td style="padding:1px 4px; text-align:right">${isMF ? "—" : omega.toFixed(2)}</td>`;
 
       for (let d = 0; d < 6; d++) {
         const pct = (mp[d] * 100).toFixed(1);
         const color = mp[d] > 0.5 ? "#f00" : mp[d] > 0.1 ? "#ff0" : "#0f0";
-        html += `<td style="padding:2px 5px; text-align:right; color:${color}">${pct}%</td>`;
+        html += `<td style="padding:1px 4px; text-align:right; color:${color}">${pct}%</td>`;
       }
 
       const sxColor = sumP[0] >= ASCE_THRESHOLD ? "#0f0" : "#0ff";
       const syColor = sumP[1] >= ASCE_THRESHOLD ? "#0f0" : "#0ff";
-      html += `<td style="padding:2px 5px; text-align:right; color:${sxColor}">${(sumP[0] * 100).toFixed(1)}%${isAt90X ? " ✓" : ""}</td>
-  <td style="padding:2px 5px; text-align:right; color:${syColor}">${(sumP[1] * 100).toFixed(1)}%${isAt90Y ? " ✓" : ""}</td>
-  <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[3] * 100).toFixed(1)}%</td>
-  <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[4] * 100).toFixed(1)}%</td>
-  <td style="padding:2px 5px; text-align:right; color:#0ff">${(sumP[5] * 100).toFixed(1)}%</td>
-  <td style="padding:2px 5px; color:${tipoColor}">${tipoLabel}</td></tr>`;
+      html += `<td style="padding:1px 4px; text-align:right; color:${sxColor}">${(sumP[0] * 100).toFixed(1)}%${isAt90X ? " ✓" : ""}</td>
+  <td style="padding:1px 4px; text-align:right; color:${syColor}">${(sumP[1] * 100).toFixed(1)}%${isAt90Y ? " ✓" : ""}</td>
+  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[3] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[4] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[5] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; color:${tipoColor}">${tipoLabel}</td></tr>`;
     });
 
     html += `</table>
@@ -220,6 +224,20 @@ export function createModalPanel() {
 </div>`;
     html += "</div>";
     div.innerHTML = html;
+
+    // Tamaño inicial = el de la TABLA (hasta ΣRz y Tipo), no 760 px fijos que la cortaban en Rz.
+    // Solo la primera vez: si el usuario ya arrastró la esquina o pulsó «Ancho», se respeta.
+    if (!ajustadoATabla && !anchoPrev) {
+      ajustadoATabla = true;
+      requestAnimationFrame(() => {
+        const tabla = div.querySelector("#modal-body table") as HTMLElement | null;
+        if (!tabla) return;
+        const w = Math.min(tabla.scrollWidth + 36, Math.round(window.innerWidth * 0.96));
+        div.style.width = `${Math.max(w, 360)}px`;
+        const hTot = div.scrollHeight + 4;
+        div.style.height = `${Math.min(hTot, Math.round(window.innerHeight * 0.6))}px`;
+      });
+    }
 
     if (minimized) {
       const body = div.querySelector("#modal-body") as HTMLElement;
