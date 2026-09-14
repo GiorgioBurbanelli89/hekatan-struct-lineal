@@ -292,13 +292,21 @@ def _assemble_M_lumped(
         elif _is_shell(conn):
             # área REAL (no la proyección en planta): un techo inclinado tiene
             # la masa de su chapa, no la de su sombra.
-            from .extensions import _area_q4
-            area = _area_q4([nodes[n_idx] for n_idx in conn])
+            # Masa TRIBUTARIA m_i = ρ·t·∫N_i dA (Gauss 2x2, jacobiano 3D), como getGlobalMassMatrix.cpp desde
+            # el 14-sep-2026: SAP2000 reparte así (trapecio medido: 0.80/0.80/0.64/0.64 t, no 0.72 × 4).
             t = element_inputs.thicknesses[idx]
-            m_total = area * t * rho
-            for n_idx in conn:
+            P = np.asarray([nodes[n_idx] for n_idx in conn], dtype=float)
+            g = 0.5773502691896258
+            mi = np.zeros(4)
+            for xi, eta in ((-g, -g), (g, -g), (g, g), (-g, g)):
+                N = 0.25 * np.array([(1-xi)*(1-eta), (1+xi)*(1-eta), (1+xi)*(1+eta), (1-xi)*(1+eta)])
+                dNx = 0.25 * np.array([-(1-eta), (1-eta), (1+eta), -(1+eta)])
+                dNe = 0.25 * np.array([-(1-xi), -(1+xi), (1+xi), (1-xi)])
+                dA = float(np.linalg.norm(np.cross(dNx @ P, dNe @ P)))
+                mi += N * dA * rho * t
+            for k, n_idx in enumerate(conn):
                 for dof in [6*n_idx, 6*n_idx+1, 6*n_idx+2]:
-                    M[dof] += m_total / 4
+                    M[dof] += mi[k]
         elif _is_solid(conn):
             # H8: rho * V (V por Gauss 2x2x2), a partes iguales en los 8 nudos —
             # lo mismo que getGlobalMassMatrix.cpp desde el 3-sep-2026.

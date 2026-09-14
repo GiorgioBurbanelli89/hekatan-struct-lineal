@@ -13,6 +13,9 @@ Hace, por este orden:
 ETABS y SAP2000 quedan ABIERTOS con el modelo (no ApplicationExit).
 """
 import os, sys, json, math, shutil, subprocess
+# Con la salida redirigida (tarea en segundo plano, `| tail`) Windows usa cp1252 y el «Σ» de la
+# comparación reventaba el script DESPUÉS de correr SAP2000 y ETABS, sin escribir COMPARACION.txt.
+sys.stdout.reconfigure(encoding="utf-8")
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.dirname(AQUI)
@@ -31,60 +34,63 @@ def node(*a):
     if r.returncode: print(r.stdout[-800:], r.stderr[-800:])
     return r.stdout
 
-# ── 1. Hekatan ──
-shutil.copy2(heks, os.path.join(D, base + ".heks"))
-node("tests/lib/dump_heks.mjs", heks, os.path.join(D, "hekatan_estatico.json"))
-node("cli/_modal_wasm_entrega.mjs", heks, os.path.join(D, "hekatan_modal.json"), str(NM))
+# HK_SOLO_COMPARAR=1: salta los pasos 1-4 y rehace solo la comparación con los volcados que ya hay en la
+# carpeta (sin volver a abrir SAP2000 y ETABS, que es lo caro).
+if os.environ.get("HK_SOLO_COMPARAR", "0") != "1":
+    # ── 1. Hekatan ──
+    shutil.copy2(heks, os.path.join(D, base + ".heks"))
+    node("tests/lib/dump_heks.mjs", heks, os.path.join(D, "hekatan_estatico.json"))
+    node("cli/_modal_wasm_entrega.mjs", heks, os.path.join(D, "hekatan_modal.json"), str(NM))
 
-# ── 2. e2k / s2k ──
-node("cli/heks_a_csi.mjs", heks, os.path.join(D, base))
-e2k = os.path.join(D, base + ".e2k"); s2k = os.path.join(D, base + ".s2k")
-txt = open(e2k, encoding="utf-8").read()
-txt3 = txt.replace('INCLUDEVERTICALMASS "No"', 'INCLUDEVERTICALMASS "Yes"').replace('LUMPATSTORIES "Yes"', 'LUMPATSTORIES "No"')
-e2k3 = os.path.join(D, base + "_masa3d.e2k"); open(e2k3, "w", encoding="utf-8").write(txt3)
+    # ── 2. e2k / s2k ──
+    node("cli/heks_a_csi.mjs", heks, os.path.join(D, base))
+    e2k = os.path.join(D, base + ".e2k"); s2k = os.path.join(D, base + ".s2k")
+    txt = open(e2k, encoding="utf-8").read()
+    txt3 = txt.replace('INCLUDEVERTICALMASS "No"', 'INCLUDEVERTICALMASS "Yes"').replace('LUMPATSTORIES "Yes"', 'LUMPATSTORIES "No"')
+    e2k3 = os.path.join(D, base + "_masa3d.e2k"); open(e2k3, "w", encoding="utf-8").write(txt3)
 
-def modal(S, caso):
-    S.Results.Setup.DeselectAllCasesAndCombosForOutput(); S.Results.Setup.SetCaseSelectedForOutput(caso)
-    m = S.Results.ModalParticipatingMassRatios()
-    return [dict(modo=i + 1, T=m[4][i], UX=m[5][i], UY=m[6][i], UZ=m[7][i]) for i in range(m[0])]
+    def modal(S, caso):
+        S.Results.Setup.DeselectAllCasesAndCombosForOutput(); S.Results.Setup.SetCaseSelectedForOutput(caso)
+        m = S.Results.ModalParticipatingMassRatios()
+        return [dict(modo=i + 1, T=m[4][i], UX=m[5][i], UY=m[6][i], UZ=m[7][i]) for i in range(m[0])]
 
-# ── 3. SAP2000 ──
-_, P, _ = c.start_engine("sap", 6, True)
-c.load_model_from_file(P, s2k, 6)
-P.LoadCases.ModalEigen.SetCase("MODAL"); P.LoadCases.ModalEigen.SetNumberModes("MODAL", NM, 1)
-P.File.Save(os.path.join(D, base + "_SAP2000.sdb"))
-rs = P.Analyze.RunAnalysis(); P.SetPresentUnits(6)
-p("SAP2000: RunAnalysis %s · estado %s" % (rs, P.Analyze.GetCaseStatus()))
-json.dump(modal(P, "MODAL"), open(os.path.join(D, "sap_modal.json"), "w"), indent=1)
-open(os.path.join(D, "sap_estatico.txt"), "w", encoding="utf-8").write(c.dump_results(P, c.select_output_cases(P, ["DEAD"])))
-try: P.View.RefreshView(0, False)
-except Exception: pass
+    # ── 3. SAP2000 ──
+    _, P, _ = c.start_engine("sap", 6, True)
+    c.load_model_from_file(P, s2k, 6)
+    P.LoadCases.ModalEigen.SetCase("MODAL"); P.LoadCases.ModalEigen.SetNumberModes("MODAL", NM, 1)
+    P.File.Save(os.path.join(D, base + "_SAP2000.sdb"))
+    rs = P.Analyze.RunAnalysis(); P.SetPresentUnits(6)
+    p("SAP2000: RunAnalysis %s · estado %s" % (rs, P.Analyze.GetCaseStatus()))
+    json.dump(modal(P, "MODAL"), open(os.path.join(D, "sap_modal.json"), "w"), indent=1)
+    open(os.path.join(D, "sap_estatico.txt"), "w", encoding="utf-8").write(c.dump_results(P, c.select_output_cases(P, ["DEAD"])))
+    try: P.View.RefreshView(0, False)
+    except Exception: pass
 
-# ── 4. ETABS ──
-_, S, _ = c.start_engine("etabs", 6, True)
-c.load_model_from_file(S, e2k3, 6)
-S.LoadCases.ModalEigen.SetNumberModes("Modal", NM, 1)
-# ETABS pone BRAZOS RÍGIDOS automáticos al importar (invisibles en el e2k) y no pesa el
-# tramo de viga dentro de la columna: SAP2000 (juez) y Hekatan no los tienen. Se anulan,
-# como en plantillas_etabs.py. HK_ETABS_OFFSETS=1 los deja (el ETABS de fábrica).
-if os.environ.get("HK_ETABS_OFFSETS", "0") != "1":
-    nf, nombres, _r = S.FrameObj.GetNameList()
-    for nm in nombres:
-        S.FrameObj.SetEndLengthOffset(nm, False, 0.0, 0.0, 0.0)
-    p("ETABS: brazos rígidos automáticos anulados en %d barras" % nf)
-if os.environ.get("HK_ETABS_MESH", "") == "NONE":
-    na, areas, _r = S.AreaObj.GetNameList()
-    for nm in areas:
-        try: S.AreaObj.SetAutoMesh(nm, 0, 1, 1, False, False, False, 0.0, 0.0, False, False, False, 0.0, True, "ALL")
-        except Exception: pass
-    p("ETABS: sin automallado en %d áreas" % na)
-S.File.Save(os.path.join(D, base + "_ETABS.EDB"))
-re_ = S.Analyze.RunAnalysis(); S.SetPresentUnits(6)
-p("ETABS: RunAnalysis %s · estado %s" % (re_, S.Analyze.GetCaseStatus()))
-json.dump(modal(S, "Modal"), open(os.path.join(D, "etabs_modal.json"), "w"), indent=1)
-open(os.path.join(D, "etabs_estatico.txt"), "w", encoding="utf-8").write(c.dump_results(S, c.select_output_cases(S, ["Dead"])))
-try: S.View.RefreshView(0, False)
-except Exception: pass
+    # ── 4. ETABS ──
+    _, S, _ = c.start_engine("etabs", 6, True)
+    c.load_model_from_file(S, e2k3, 6)
+    S.LoadCases.ModalEigen.SetNumberModes("Modal", NM, 1)
+    # ETABS pone BRAZOS RÍGIDOS automáticos al importar (invisibles en el e2k) y no pesa el
+    # tramo de viga dentro de la columna: SAP2000 (juez) y Hekatan no los tienen. Se anulan,
+    # como en plantillas_etabs.py. HK_ETABS_OFFSETS=1 los deja (el ETABS de fábrica).
+    if os.environ.get("HK_ETABS_OFFSETS", "0") != "1":
+        nf, nombres, _r = S.FrameObj.GetNameList()
+        for nm in nombres:
+            S.FrameObj.SetEndLengthOffset(nm, False, 0.0, 0.0, 0.0)
+        p("ETABS: brazos rígidos automáticos anulados en %d barras" % nf)
+    if os.environ.get("HK_ETABS_MESH", "") == "NONE":
+        na, areas, _r = S.AreaObj.GetNameList()
+        for nm in areas:
+            try: S.AreaObj.SetAutoMesh(nm, 0, 1, 1, False, False, False, 0.0, 0.0, False, False, False, 0.0, True, "ALL")
+            except Exception: pass
+        p("ETABS: sin automallado en %d áreas" % na)
+    S.File.Save(os.path.join(D, base + "_ETABS.EDB"))
+    re_ = S.Analyze.RunAnalysis(); S.SetPresentUnits(6)
+    p("ETABS: RunAnalysis %s · estado %s" % (re_, S.Analyze.GetCaseStatus()))
+    json.dump(modal(S, "Modal"), open(os.path.join(D, "etabs_modal.json"), "w"), indent=1)
+    open(os.path.join(D, "etabs_estatico.txt"), "w", encoding="utf-8").write(c.dump_results(S, c.select_output_cases(S, ["Dead"])))
+    try: S.View.RefreshView(0, False)
+    except Exception: pass
 
 # ── 5. Comparación ──
 def leer_txt(f, caso):

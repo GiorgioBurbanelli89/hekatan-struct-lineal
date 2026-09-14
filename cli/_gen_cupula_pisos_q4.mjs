@@ -18,7 +18,11 @@ const shell = (a, b, c, d, t) => L.push(`shell ${++s} ${a} ${b} ${c} ${d} ${t} $
 const rad = d => d * Math.PI / 180;
 const anillo = (r, z) => Array.from({ length: NM }, (_, j) => [r * Math.cos(rad(j * 22.5)), r * Math.sin(rad(j * 22.5)), z]);
 // parche 4×4 Q4 dentro de un anillo de 16 puntos (esquinas en j = 2, 6, 10, 14)
-function parche(P, t, proyectar) {
+// `columnas`: nudos (1,1) (3,1) (1,3) (3,3) del parche llevados EXACTO a (±2, ±2), donde la losa la cruzan las
+// columnas del entrepiso. ETABS parte la columna en el piso y la ata a la losa (medido: crea nudos de análisis en
+// (±2,±2,3.8268)); sin ese nudo aquí la columna atravesaba la losa suelta en Hekatan y SAP2000 y ETABS resolvía otra
+// estructura (18.8 mm contra 55.3).
+function parche(P, t, proyectar, columnas = false) {
   const borde = (a, b) => b === 0 ? P[10 + a] : b === 4 ? P[2 + (4 - a)] : a === 4 ? P[(14 + b) % 16] : P[6 + (4 - b)];
   const G = [];
   for (let a = 0; a <= 4; a++) { G.push([]); for (let b = 0; b <= 4; b++) {
@@ -29,6 +33,7 @@ function parche(P, t, proyectar) {
       p = [0, 1, 2].map(k => (1 - v) * borde(a, 0)[k] + v * borde(a, 4)[k] + (1 - u) * borde(0, b)[k] + u * borde(4, b)[k]
         - ((1 - u) * (1 - v) * borde(0, 0)[k] + u * (1 - v) * borde(4, 0)[k] + (1 - u) * v * borde(0, 4)[k] + u * v * borde(4, 4)[k]));
       if (proyectar) p[2] = Math.sqrt(R * R - p[0] ** 2 - p[1] ** 2);
+      if (columnas && (a === 1 || a === 3) && (b === 1 || b === 3)) p = [a === 1 ? -2 : 2, b === 1 ? -2 : 2, p[2]];
     }
     G[a].push(nodo(p));
   } }
@@ -45,15 +50,17 @@ for (const i of [2, 4]) {
   const ri = R * Math.cos(rad(i * dPhi)) / 2, z = R * Math.sin(rad(i * dPhi));
   const In = anillo(ri, z), IN = In.map(nodo);
   for (let j = 0; j < NM; j++) shell(IN[j], AN[i][j], AN[i][(j + 1) % NM], IN[(j + 1) % NM], 0.2);
-  parche(In, 0.2, false);
+  parche(In, 0.2, false, i === 2);          // la losa del anillo 2 (z 3.83) la cruzan las columnas del entrepiso
 }
+const zCruce = R * Math.sin(rad(2 * dPhi));
 // entrepiso 4×4 m a z=5 (2×2 celdas) sobre 4 columnas 30×30
 const ez = (x, y) => nodo([x, y, 5]);
 for (const [x0, y0] of [[-2, -2], [-2, 0], [0, -2], [0, 0]]) shell(ez(x0, y0), ez(x0 + 2, y0), ez(x0 + 2, y0 + 2), ez(x0, y0 + 2), 0.15);
 let f = 0;
 for (const [x, y] of [[-2, -2], [2, -2], [2, 2], [-2, 2]]) {
-  const b = nodo([x, y, 0]);
-  L.push(`frame ${++f} ${b} ${ez(x, y)} ${E} 0.09 0.000675 0.000675 0.001 0.2 2.4`);
+  const b = nodo([x, y, 0]), c = nodo([x, y, zCruce]);     // columna partida en la losa que cruza
+  L.push(`frame ${++f} ${b} ${c} ${E} 0.09 0.000675 0.000675 0.001 0.2 2.4`);
+  L.push(`frame ${++f} ${c} ${ez(x, y)} ${E} 0.09 0.000675 0.000675 0.001 0.2 2.4`);
   L.push(`support ${b} 1 1 1 1 1 1`);
 }
 L.push(`load ${ez(0, 0)} 0 0 -10 0 0 0 Live`, "solve");

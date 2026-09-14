@@ -123,6 +123,44 @@ Eigen::SparseMatrix<double> getGlobalMassMatrix(
         }
 
         double m_total = 0.0;
+        // Shell Q4: masa TRIBUTARIA por nudo, m_i = ρ·t·∫N_i dA (Gauss 2×2, jacobiano real 3D).
+        // MEDIDO en SAP2000 24 (cli/_sap_masa_trapecio.py, 14-sep-2026): un trapecio (0,0)(4,0)(3,2)(1,2)
+        // t 0.2 ρ 2.4 da «Assembled Joint Masses» 0.80/0.80/0.64/0.64 t = ∫N dA exacto; el reparto
+        // área/4 de antes daba 0.72 en los cuatro. En rectángulos y paralelogramos coinciden (jacobiano
+        // constante) y por eso los modelos rectangulares daban 0.0000 %; en la cúpula metálica (coronas y
+        // parches trapeciales) los periodos salían hasta +1.4 % contra SAP2000.
+        if (numElementNodes == 4) {
+            double t = 0.0;
+            auto itT = elementInputs.thicknesses.find((unsigned int)i);
+            if (itT != elementInputs.thicknesses.end()) t = itT->second;
+            const double g = 1.0 / std::sqrt(3.0);
+            const double GP[4][2] = {{-g, -g}, {g, -g}, {g, g}, {-g, g}};
+            double mi[4] = {0, 0, 0, 0};
+            for (const auto &q : GP) {
+                const double xi = q[0], eta = q[1];
+                const double N[4] = {0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
+                                     0.25 * (1 + xi) * (1 + eta), 0.25 * (1 - xi) * (1 + eta)};
+                const double dNx[4] = {-0.25 * (1 - eta), 0.25 * (1 - eta), 0.25 * (1 + eta), -0.25 * (1 + eta)};
+                const double dNe[4] = {-0.25 * (1 - xi), -0.25 * (1 + xi), 0.25 * (1 + xi), 0.25 * (1 - xi)};
+                double a[3] = {0, 0, 0}, b[3] = {0, 0, 0};
+                for (int k = 0; k < 4; k++)
+                    for (int d = 0; d < 3; d++) { a[d] += dNx[k] * elmNodes[k][d]; b[d] += dNe[k] * elmNodes[k][d]; }
+                const double cx = a[1] * b[2] - a[2] * b[1], cy = a[2] * b[0] - a[0] * b[2], cz = a[0] * b[1] - a[1] * b[0];
+                const double dA = std::sqrt(cx * cx + cy * cy + cz * cz);
+                for (int k = 0; k < 4; k++) mi[k] += N[k] * dA * rho * t;
+            }
+            for (int n = 0; n < 4; ++n) {
+                int gdof_base = (int)currentElementIndices[n] * 6;
+                tripletList.emplace_back(gdof_base + 0, gdof_base + 0, mi[n]);
+                tripletList.emplace_back(gdof_base + 1, gdof_base + 1, mi[n]);
+                tripletList.emplace_back(gdof_base + 2, gdof_base + 2, mi[n]);
+                tripletList.emplace_back(gdof_base + 3, gdof_base + 3, mi[n] * ROT_MASS_EPSILON);
+                tripletList.emplace_back(gdof_base + 4, gdof_base + 4, mi[n] * ROT_MASS_EPSILON);
+                tripletList.emplace_back(gdof_base + 5, gdof_base + 5, mi[n] * ROT_MASS_EPSILON);
+            }
+            current_element_node_idx += numElementNodes;
+            continue;
+        }
         if (numElementNodes == 2) {
             // Frame: V = A · L
             double A = 0.0;
