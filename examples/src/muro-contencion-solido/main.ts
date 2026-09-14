@@ -27,7 +27,8 @@ import {
 const D = MURO_SOLIDO_DEFAULT;
 const parameters: Parameters = {
   H:     { value: van.state(D.H),     min: 1,   max: 10,  step: 0.2,  label: "H alzado (m)" },
-  t:     { value: van.state(D.t),     min: 0.2, max: 1.0, step: 0.1,  label: "t alzado (m)" },
+  t:     { value: van.state(D.t),     min: 0.2, max: 1.0, step: 0.1,  label: "t alzado en la base (m)" },
+  tTop:  { value: van.state(D.t),     min: 0.1, max: 1.0, step: 0.05, label: "t coronación (m) — menor = pantalla inclinada" },
   toe:   { value: van.state(D.toe),   min: 0.2, max: 3,   step: 0.1,  label: "puntera (m)" },
   heel:  { value: van.state(D.heel),  min: 0.2, max: 5,   step: 0.1,  label: "talón (m)" },
   tf:    { value: van.state(D.tf),    min: 0.2, max: 1.0, step: 0.1,  label: "canto zapata (m)" },
@@ -55,7 +56,7 @@ const benchValues: State<{ N: number; nElems: number; nDOF: number; empuje: numb
 
 van.derive(() => {
   const p = {
-    H: parameters.H.value.val, t: parameters.t.value.val, toe: parameters.toe.value.val, heel: parameters.heel.value.val,
+    H: parameters.H.value.val, t: parameters.t.value.val, tTop: parameters.tTop.value.val, toe: parameters.toe.value.val, heel: parameters.heel.value.val,
     tf: parameters.tf.value.val, L: parameters.L.value.val, ms: parameters.ms.value.val, E: parameters.E.value.val,
     nu: parameters.nu.value.val, Ka: parameters.Ka.value.val, gamma: parameters.gamma.value.val, q0: parameters.q0.value.val,
     gammaC: parameters.gammaC.value.val, relleno: parameters.relleno.value.val,

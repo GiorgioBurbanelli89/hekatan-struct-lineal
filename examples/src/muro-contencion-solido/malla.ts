@@ -45,6 +45,11 @@ export interface MuroSolidoParams {
   gammaC?: number;
   /** 1 = el relleno pesa sobre el TALON: presion gamma·H + q0 en la cara superior de la zapata detras del alzado */
   relleno?: number;
+  /** canto del alzado en la CORONACIÓN (m). Sin él (o = t) la pantalla es vertical. Con tTop < t la
+   *  pantalla es INCLINADA: cara delantera vertical (x = toe) y cara TRASERA inclinada, de toe+t en la
+   *  base a toe+tTop arriba. Los nudos del alzado se reparten entre las dos caras, así que la malla sigue
+   *  conforme con la zapata (en z = tf el canto es t) y los H8 quedan como prismas trapeciales. */
+  tTop?: number;
 }
 
 export interface MuroSolidoMalla {
@@ -69,9 +74,16 @@ export function mallaMuroSolido(p: MuroSolidoParams): MuroSolidoMalla {
   const i0 = Math.round(p.toe / dx), i1 = Math.round((p.toe + p.t) / dx), kf = Math.round(p.tf / dz);
   const dentro = (i: number, k: number) => k < kf || (i >= i0 && i < i1);   // elemento (i,k) es material
   const ids = new Map<string, number>(); const nodes: Vec3[] = [];
+  // pantalla inclinada: canto t(z) lineal de t (z = tf) a tTop (z = Ztop)
+  const tTop = p.tTop !== undefined && p.tTop > 0 && p.tTop < p.t ? p.tTop : p.t;
+  const xDe = (i: number, k: number) => {
+    if (tTop === p.t || k < kf || i < i0 || i > i1) return i * dx;
+    const z = k * dz, tz = p.t - (p.t - tTop) * (z - p.tf) / p.H;
+    return p.toe + (i - i0) / (i1 - i0) * tz;          // cara delantera fija en x = toe
+  };
   const nodo = (i: number, j: number, k: number) => {
     const key = `${i},${j},${k}`; let id = ids.get(key);
-    if (id === undefined) { id = nodes.length; ids.set(key, id); nodes.push([rd(i * dx), rd(j * dy), rd(k * dz)]); }
+    if (id === undefined) { id = nodes.length; ids.set(key, id); nodes.push([rd(xDe(i, k)), rd(j * dy), rd(k * dz)]); }
     return id;
   };
   const elements: Hex8[] = [];

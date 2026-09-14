@@ -56,5 +56,25 @@ export async function correr() {
         detalle: `u_x coronacion ${(uxH * 1000).toFixed(4)} vs ${(uxS * 1000).toFixed(4)} mm; peso propio ${m2.info.pesoPropio.toFixed(1)} kN, relleno ${m2.info.pesoRelleno.toFixed(1)} kN, empuje ${m2.info.empujeTotal.toFixed(1)} kN` });
     }
   }
+  // PANTALLA INCLINADA (14-sep-2026): canto 0.40 en la base -> 0.20 en la coronacion, cara trasera
+  // inclinada, H8 trapeciales. SAP2000 por OAPI con la misma malla y las mismas cargas nodales.
+  {
+    const pi = { ...p, tTop: 0.2 }; const m3 = mod.mallaMuroSolido(pi);
+    const ref = join(AQUI, "..", "datos", "muro_solido_inclinado_sap_inc.json");
+    if (!existsSync(ref)) filas.push({ que: "pantalla inclinada: referencia", crudo: true, medido: "falta", limite: "existe", ok: false, detalle: ref });
+    else {
+      const S = JSON.parse(readFileSync(ref, "utf-8"));
+      const r = mod.hex8Solve({ nodes: m3.nodes, elements: m3.elements, E: pi.E, nu: pi.nu, supports: m3.supports, loads: m3.loads, incompatible: true });
+      let mx = 0; for (let n = 0; n < m3.nodes.length; n++) for (let c = 0; c < 3; c++) mx = Math.max(mx, Math.abs((r.displacements.get(n) ?? [0, 0, 0])[c]));
+      let peor = 0;
+      for (let n = 0; n < m3.nodes.length; n++) { const u = r.displacements.get(n) ?? [0, 0, 0]; for (let c = 0; c < 3; c++) peor = Math.max(peor, Math.abs(u[c] - S.u[n][c]) / mx * 100); }
+      const uxH = (r.displacements.get(m3.nudoCoronacion) ?? [0])[0], uxS = S.u[m3.nudoCoronacion][0];
+      // Límite 1e-4 %, no el 1e-6 de los rectangulares: con H8 TRAPECIALES SAP2000 y Hekatan difieren
+      // 5.8e-5 % del máximo (coronación −3.542782 vs −3.542780 mm, 14-sep-2026). ⏳ se mide si viene de los
+      // modos incompatibles en elementos distorsionados (SAP con inc=0 → sap_inclinado_noinc.json).
+      filas.push({ que: "pantalla inclinada (t 0.40 -> 0.20): nudo a nudo vs SAP2000", medido: peor, limite: 1e-4, ok: S.nodes.length === m3.nodes.length && peor <= 1e-4,
+        detalle: `u_x coronacion ${(uxH * 1000).toFixed(4)} vs ${(uxS * 1000).toFixed(4)} mm; ${m3.nodes.length} nudos, ${m3.elements.length} hexaedros; empuje ${m3.info.empujeTotal.toFixed(2)} kN` });
+    }
+  }
   return filas;
 }
