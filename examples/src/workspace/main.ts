@@ -4687,8 +4687,23 @@ function buildParamsPane() {
                 // la tabla abajo a la IZQUIERDA y angosta, encima del panel Settings: con
                 // 760 px × 60vh (y a la derecha con 660 px) tapaba la bóveda, que el visor
                 // centra en la pantalla (medido en el PNG del enlace, 13-sep-2026)
+                // 14-sep-2026 (Jorge: «que se vean al menos los 3 primeros modos y hasta ΣRz, con letra
+                // menor»): ancho = el de la tabla (max-content, letra 10 px) y alto = el contenido hasta
+                // 45vh; y ENCIMA de la ventana de comandos, que tapaba las últimas filas. La barra se mide
+                // mirando qué hay pegado al borde inferior de la pantalla (no tiene id fijo).
                 const t = document.getElementById("modal-results");
-                if (t) Object.assign(t.style, { left: "10px", right: "auto", bottom: "10px", width: "540px", height: "40vh" });
+                if (t) {
+                  let abajo = 10;
+                  try {
+                    for (const el of document.elementsFromPoint(20, window.innerHeight - 4)) {
+                      if (el === t || t.contains(el) || el === document.body || el === document.documentElement) continue;
+                      const r = el.getBoundingClientRect();
+                      if (r.top > window.innerHeight * 0.5) abajo = Math.max(abajo, Math.round(window.innerHeight - r.top) + 6);
+                    }
+                  } catch { /* sin elementsFromPoint: queda en 10 px */ }
+                  Object.assign(t.style, { left: "10px", right: "auto", top: "auto", bottom: `${abajo}px`,
+                                           width: "max-content", height: "auto", maxHeight: "45vh" });
+                }
               }, 800);
             }
           }, 0);
