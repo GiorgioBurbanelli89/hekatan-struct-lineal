@@ -877,29 +877,28 @@ function mountCaseResultsInSettings() {
     const folder = (window as any).__hekatanOutputsFolder;
     if (!folder) return;
     if (__caseResultsBinding) { try { __caseResultsBinding.dispose(); } catch {} __caseResultsBinding = null; }
-    // ── Como el diálogo «Deformed Shape» de ETABS: Case / Combo / Mode ──
-    // «Resultado» elige QUÉ se mira; la lista de abajo cambia con él:
-    //   Case  → solo casos de carga (Dead, Live…), sin combinaciones
-    //   Combo → solo combinaciones
-    //   Mode  → el caso modal, y aparte «Modo» (el Mode Number de ETABS / SAP2000)
-    // (Jorge, 13-sep-2026: «hagámoslo como ETABS: case solo los casos de carga, combo las
-    // combinaciones, modes los modos»). Visto en la ventana de ETABS 22: _gui/etabs_07_f6.png.
+    // ── Como SAP2000 («Case/Combo Name» + «Mode Number»): SOLO DOS tipos ──
+    // «Resultado» = Case | Combo, y SOLO UNO está activo (el que se analiza y se dibuja):
+    //   Case  → Modal, Dead, Live… (casos). Si el caso es Modal, debajo aparece «Modo».
+    //   Combo → las combinaciones (Dead + Live…), cada caso por su factor.
+    // (Jorge, 14-sep-2026: «case: modal, dead, live; combo: live más dead; se activa solo el que
+    // activo». Antes había un tercer tipo «Mode» que repetía al caso Modal.)
     if (!loadCases.val.length) return;
     if (!loadCases.val.find((c) => c.name === activeLoadCase.val)) activeLoadCase.val = loadCases.val[0].name;
     const freqs: number[] = __lastModalResults?.frequencies ?? [];
-    const casosCarga = loadCases.val.filter((c) => !c.type?.startsWith("Modal"));
     const casosModal = loadCases.val.filter((c) => c.type?.startsWith("Modal"));
     const casoModal = casosModal[0]?.name;
     const esModal = (v: string) => casosModal.some((c) => c.name === v);
-    if (__modalActivo && freqs.length && casoModal) __tipoRes = "mode";
+    if ((__tipoRes as string) === "mode") __tipoRes = "case";
+    // el modal recién corrido: Case = Modal (se ve el modo animando)
+    if (__modalActivo && freqs.length && casoModal) { __tipoRes = "case"; __selRes.case = casoModal; }
     if (__modoSel >= freqs.length) __modoSel = 0;
 
     const caseOptions: Record<string, string> = {};
     if (__tipoRes === "combo") loadCombinations.val.forEach((cm: any) => { caseOptions[cm.name] = `__combo_${cm.name}`; });
-    else if (__tipoRes === "mode") casosModal.forEach((c) => { caseOptions[c.name] = c.name; });
-    else casosCarga.forEach((c) => { caseOptions[c.name] = c.name; });
+    else loadCases.val.forEach((c) => { caseOptions[c.name] = c.name; });   // Modal, Dead, Live…
     const vacio = !Object.keys(caseOptions).length;
-    if (vacio) caseOptions[__tipoRes === "combo" ? "(sin combinaciones)" : __tipoRes === "mode" ? "(corré el modal)" : "(sin casos)"] = "__nada";
+    if (vacio) caseOptions[__tipoRes === "combo" ? "(sin combinaciones)" : "(sin casos)"] = "__nada";
     const valores = Object.values(caseOptions);
     const previo = __selRes[__tipoRes];
     const inicial = previo && valores.includes(previo) ? previo
@@ -908,25 +907,18 @@ function mountCaseResultsInSettings() {
 
     if (__tipoBinding) { try { __tipoBinding.dispose(); } catch {} __tipoBinding = null; }
     const objTipo = { tipo: __tipoRes };
-    __tipoBinding = folder.addBinding(objTipo, "tipo", { label: "Resultado", options: { Case: "case", Combo: "combo", Mode: "mode" }, index: 0 });
+    __tipoBinding = folder.addBinding(objTipo, "tipo", { label: "Resultado", options: { Case: "case", Combo: "combo" }, index: 0 });
 
     const obj = { case: inicial };
-    const etiqueta = __tipoRes === "combo" ? "Combo" : __tipoRes === "mode" ? "Caso modal" : "Case";
-    // En Mode con UN solo caso modal la lista «Caso modal = Modal» no elige nada: repetía lo de
-    // «Resultado = Mode». Solo aparece si hay más de un caso modal (p. ej. Eigen y Ritz).
-    const listaInutil = __tipoRes === "mode" && casosModal.length <= 1 && freqs.length > 0;
-    if (!listaInutil)
-      __caseResultsBinding = folder.addBinding(obj, "case", { label: etiqueta, options: caseOptions, index: 1 });
+    __caseResultsBinding = folder.addBinding(obj, "case", { label: __tipoRes === "combo" ? "Combo" : "Case", options: caseOptions, index: 1 });
 
-    // el control «Modo»: la lista de modos con su periodo (solo en Mode)
+    // «Modo»: SOLO si el caso elegido es Modal y el modal está corrido (el Mode Number de SAP2000)
     if (__modeBinding) { try { __modeBinding.dispose(); } catch {} __modeBinding = null; }
     const modoOptions: Record<string, number> = {};
     freqs.forEach((f: number, i: number) => { modoOptions[`${i + 1}  (T = ${(f > 0 ? 1 / f : 0).toFixed(4)} s)`] = i; });
     const objModo = { modo: __modoSel };
-    if (__tipoRes === "mode" && freqs.length) {
-      // index 1: justo DEBAJO de «Resultado» (antes quedaba bajo la carpeta del modal y parecía
-      // otro control distinto). Resultado → Case | Combo | Modo, siempre en la fila siguiente.
-      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 1 });
+    if (__tipoRes === "case" && esModal(inicial) && freqs.length) {
+      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 2 });
     }
 
     // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo
@@ -984,11 +976,19 @@ function mountCaseResultsInSettings() {
       }
       if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
     };
-    __caseResultsBinding?.on("change", (e: any) => aplicar(String(e.value)));
+    __caseResultsBinding?.on("change", (e: any) => {
+      const v = String(e.value);
+      // ⚠️ NO `obj.case`: Tweakpane ya lo cambió al valor NUEVO cuando llega el evento, y así
+      // «Case = Dead» dejaba la fila «Modo» puesta (sonda 14-sep-2026). Se mira si la fila existe.
+      const antesModal = !!__modeBinding;
+      aplicar(v);
+      // la fila «Modo» aparece o se va según el caso sea Modal o no
+      if (esModal(v) !== antesModal) setTimeout(() => mountCaseResultsInSettings(), 0);
+    });
     __modeBinding?.on("change", (e: any) => { __modoSel = Number(e.value) || 0; mostrarModo(); });
     __tipoBinding.on("change", (e: any) => {
       __tipoRes = String(e.value) as "case" | "combo" | "mode";
-      if (__tipoRes !== "mode") __modalActivo = false;
+      __modalActivo = false;
       setTimeout(() => {
         mountCaseResultsInSettings();                 // la lista de abajo cambia con el tipo
         const v = __selRes[__tipoRes];

@@ -29,7 +29,7 @@ const v = await p.evaluate(() => document.querySelector("#viewer").getBoundingCl
 const clip = { x: v.x + 40, y: v.y + 40, width: Math.min(700, v.width - 80), height: Math.min(420, v.height - 80) };
 const settingsClip = await p.evaluate(() => document.querySelector("#settings").getBoundingClientRect().toJSON());
 const mueve = async () => { const a = await p.screenshot({ clip }); await new Promise(r => setTimeout(r, 400)); const b = await p.screenshot({ clip }); return Buffer.compare(a, b) !== 0; };
-const pasos = [["inicio (Mode)", null, null], ["Modo 2", "Modo", "2 (T"], ["Modo 3", "Modo", "3 (T"], ["Combo", "Resultado", "Combo"], ["Case", "Resultado", "Case"], ["Mode otra vez", "Resultado", "Mode"], ["Modo 1", "Modo", "1 (T"]];
+const pasos = [["inicio (Case = Modal)", null, null], ["Modo 2", "Modo", "2 (T"], ["Modo 3", "Modo", "3 (T"], ["Case Dead", "Case", "Dead"], ["Combo", "Resultado", "Combo"], ["Combo 1.4D", "Combo", "1.4D"], ["Case otra vez", "Resultado", "Case"], ["Case Modal", "Case", "Modal"], ["Modo 1", "Modo", "1 (T"]];
 for (const [n, lab, txt] of pasos) {
   const r = lab ? await poner(lab, txt) : "—";
   await new Promise(r => setTimeout(r, 2500));
