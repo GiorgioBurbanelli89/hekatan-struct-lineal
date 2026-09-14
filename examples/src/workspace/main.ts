@@ -760,6 +760,7 @@ let __caseResultsBinding: any = null;
 // la animación es para cualquier desplazamiento».
 let __casoMostrado = "";
 const __animar = { on: false };
+let __animarBinding: any = null;
 let __modalSettingsFolder: any = null;   // folder "⚡ Modal + Animación" dentro de Settings (Analysis Outputs)
 let __lastModalResults: any = null;      // resultados modales (para listar los modos en "Case results")
 let __modalTableShown = false;           // el panel/tabla modal solo se muestra si el usuario lo activa
@@ -890,7 +891,17 @@ function mountCaseResultsInSettings() {
       if (v.startsWith("__mode_")) {
         // MODE: mostrar la deformada estática de ese modo (sin rebuild) — como ETABS.
         const idx = parseInt(v.slice(7), 10) || 0;
-        try { modalAnimator?.showStatic(idx); } catch (err) { console.warn("showStatic", err); }
+        // Con «Animar» marcado, el modo ANIMA (lo hace animarCaso, abajo); congelarlo aquí era
+        // lo que hacía que al cambiar de modo la bóveda dejara de moverse (Jorge, 13-sep-2026).
+        // Sin marcar: quieto, pero con los resultados MODALES (Animar sobre un caso de carga
+        // deja cargada en el animador la forma de ese caso, no los modos).
+        if (!__animar.on) {
+          try {
+            modalAnimator?.stop();
+            if (__lastModalResults?.modeShapes?.length) modalAnimator?.setResults(__lastModalResults);
+            modalAnimator?.showStatic(idx);
+          } catch (err) { console.warn("showStatic", err); }
+        }
       } else if (v.startsWith("__combo_")) {
         // COMBO: rebuild() detecta el combo desde activeLoadCase y aplica Σ factores.
         // Es un caso estático → detener la animación modal si estaba corriendo.
@@ -948,7 +959,8 @@ function mountCaseResultsInSettings() {
     });
     const hayAnimar = (folder.children || []).some((c: any) => { try { return c.label === "🎞 Animar"; } catch { return false; } });
     if (!hayAnimar) {
-      folder.addBinding(__animar, "on", { label: "🎞 Animar", index: 1 }).on("change", () => animarCaso());
+      __animarBinding = folder.addBinding(__animar, "on", { label: "🎞 Animar", index: 1 });
+      __animarBinding.on("change", () => animarCaso());
     }
     // 📋 Tablas de resultados (estilo ETABS Analysis Results) — agregar una sola vez por folder.
     const hasTables = (folder.children || []).some((c: any) => { try { return c.title === "📋 Tablas"; } catch { return false; } });
@@ -6445,6 +6457,10 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
           modalAnimator.setResults(out);
           modalAnimator.setMode(0);
           modalAnimator.play();
+          // la casilla «Animar» dice la verdad: el modal arranca animando, así que va marcada
+          // (antes salía desmarcada con la bóveda moviéndose, y al cambiar de modo se congelaba)
+          __animar.on = true;
+          try { __animarBinding?.refresh?.(); } catch {}
           animCtrl.modeIdx = 1;
           try { fModal.refresh(); } catch {}
           // Re-montar "Case results" para que liste los modos (como Case/Mode de ETABS).
