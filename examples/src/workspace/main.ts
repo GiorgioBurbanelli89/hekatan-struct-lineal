@@ -37,6 +37,9 @@ import { autoMeshShells } from "../shared/e2kAutoMesh";
 // /m/, pero cualquiera que TENGA el enlace ve el modelo. Para privacidad de
 // verdad haria falta autenticacion en el hosting.
 const _qs = new URLSearchParams(window.location.search);
+// Un modelo por ENLACE es para MIRARLO: en el celular la vista se reordena (ver el CSS
+// `html.hk-enlace` junto al layout móvil). Va en <html> porque <body> aún no existe aquí.
+if (_qs.get("heks") || _qs.get("m")) document.documentElement.classList.add("hk-enlace");
 
 // Velo de carga. Se crea AQUI, al cargar el modulo, porque creandolo mas
 // tarde (dentro del panel CLI) llegaba despues de que el CAD ya hubiera
@@ -761,6 +764,9 @@ let __caseResultsBinding: any = null;
 let __casoMostrado = "";
 const __animar = { on: false };
 let __animarBinding: any = null;
+// «Modo» aparte de «Case results» (como Mode Number de ETABS): el modo elegido y su control
+let __modoSel = 0;
+let __modeBinding: any = null;
 let __modalSettingsFolder: any = null;   // folder "⚡ Modal + Animación" dentro de Settings (Analysis Outputs)
 let __lastModalResults: any = null;      // resultados modales (para listar los modos en "Case results")
 let __modalTableShown = false;           // el panel/tabla modal solo se muestra si el usuario lo activa
@@ -873,72 +879,42 @@ function mountCaseResultsInSettings() {
     if (!loadCases.val.find((c) => c.name === activeLoadCase.val)) activeLoadCase.val = loadCases.val[0].name;
     // Combinaciones (como ETABS Case/COMBO/Mode): Σ factores × cargas de caso (1.4D, 1.2D+1.6L…).
     loadCombinations.val.forEach((cm: any) => { caseOptions[`Σ ${cm.name}`] = `__combo_${cm.name}`; });
-    // Modos de vibración (como ETABS Case/Combo/MODE): al elegir un modo se ve su deformada.
+    // ── Case y MODO por separado, como ETABS / SAP2000 ──
+    // «Case results» lista CASOS (Modal, Dead, Live, combos). El número de modo es OTRO
+    // control, «Modo», que solo aparece con el caso modal. Antes los modos iban mezclados
+    // dentro de la lista de casos (Jorge, 13-sep-2026: «Case es solo para Modal, Dead…;
+    // para cada modo existe Mode»), y al cambiar de modo la animación se congelaba.
     const freqs: number[] = __lastModalResults?.frequencies ?? [];
-    freqs.forEach((f: number, i: number) => {
-      const T = f > 0 ? 1 / f : 0;
-      caseOptions[`◈ Modo ${i + 1} (T=${T.toFixed(3)}s)`] = `__mode_${i}`;
-    });
-    // Con el modal corriendo, «Case results» dice MODAL (el modo que anima), no el
-    // caso estático de antes: mostrar «Dead» mientras la bóveda vibra en el modo 1
-    // confunde (Jorge, 13-sep-2026: «al animar modal debe cambiarse case a modal siempre»).
-    const modoActivo = __modalActivo && freqs.length
-      ? `__mode_${Math.min(freqs.length - 1, Math.max(0, modalAnimator?.currentMode?.() ?? 0))}` : null;
-    const obj = { case: modoActivo ?? activeLoadCase.val };
+    const casoModal = loadCases.val.find((c) => c.type?.startsWith("Modal"))?.name;
+    const esModal = (v: string) => !!casoModal && v === casoModal;
+    if (__modoSel >= freqs.length) __modoSel = 0;
+    const obj = { case: (__modalActivo && freqs.length && casoModal) ? casoModal : activeLoadCase.val };
     __caseResultsBinding = folder.addBinding(obj, "case", { label: "Case results", options: caseOptions, index: 0 });
-    __caseResultsBinding.on("change", (e: any) => {
-      const v = String(e.value);
-      if (v.startsWith("__mode_")) {
-        // MODE: mostrar la deformada estática de ese modo (sin rebuild) — como ETABS.
-        const idx = parseInt(v.slice(7), 10) || 0;
-        // Con «Animar» marcado, el modo ANIMA (lo hace animarCaso, abajo); congelarlo aquí era
-        // lo que hacía que al cambiar de modo la bóveda dejara de moverse (Jorge, 13-sep-2026).
-        // Sin marcar: quieto, pero con los resultados MODALES (Animar sobre un caso de carga
-        // deja cargada en el animador la forma de ese caso, no los modos).
-        if (!__animar.on) {
-          try {
-            modalAnimator?.stop();
-            if (__lastModalResults?.modeShapes?.length) modalAnimator?.setResults(__lastModalResults);
-            modalAnimator?.showStatic(idx);
-          } catch (err) { console.warn("showStatic", err); }
-        }
-      } else if (v.startsWith("__combo_")) {
-        // COMBO: rebuild() detecta el combo desde activeLoadCase y aplica Σ factores.
-        // Es un caso estático → detener la animación modal si estaba corriendo.
-        try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
-        __modalActivo = false;   // el usuario pidió un combo estático → salir del modo modal
-        activeLoadCase.val = v.slice(8); rebuild();
-        // cada caso con SU escala de deformada, como ETABS: con la del caso anterior (Dead,
-        // que casi no desplaza) el sismo salía con el edificio tumbado
-        try { autoScaleDeformedShape(); } catch {}
-      } else {
-        // Si el caso elegido NO es modal, detener la animación para ver el resultado
-        // estático (sin esto, rebuild() la re-animaría por el disparador isPlaying()).
-        const selCase = loadCases.val.find((c) => c.name === e.value);
-        if (!selCase?.type?.startsWith("Modal")) {
-          try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
-          __modalActivo = false;   // caso estático elegido → salir del modo modal
-        } else __modalActivo = true;
-        activeLoadCase.val = e.value; rebuild();
-        try { autoScaleDeformedShape(); } catch {}   // su escala, no la del caso anterior
-        // Sincronizar el "Caso activo" del pane derecho (Load Cases) con esta selección.
-        try { __loadPanel?.rebuildCases(); } catch {}
-      }
-    });
-    // 🎞 Animar: cualquier desplazamiento, no solo el modal.
-    __casoMostrado = String(obj.case);
-    const animarCaso = () => {
-      if (!modalAnimator) return;
-      if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
-      const v = __casoMostrado;
-      if (v.startsWith("__mode_") && __lastModalResults?.modeShapes?.length) {
-        // forma modal del modo elegido
+
+    // el control «Modo»: la lista de modos con su periodo
+    if (__modeBinding) { try { __modeBinding.dispose(); } catch {} __modeBinding = null; }
+    const modoOptions: Record<string, number> = {};
+    freqs.forEach((f: number, i: number) => { modoOptions[`${i + 1}  (T = ${(f > 0 ? 1 / f : 0).toFixed(4)} s)`] = i; });
+    const objModo = { modo: __modoSel };
+    if (freqs.length) {
+      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 1 });
+      __modeBinding.hidden = !esModal(String(obj.case));
+    }
+
+    // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo
+    const mostrarModo = () => {
+      if (!modalAnimator || !__lastModalResults?.modeShapes?.length) return;
+      try {
         modalAnimator.stop();
         modalAnimator.setResults(__lastModalResults);
-        modalAnimator.setMode(parseInt(v.slice(7), 10) || 0);
-        modalAnimator.play();
-        return;
-      }
+        modalAnimator.setMode(__modoSel);
+        if (__animar.on) modalAnimator.play(); else modalAnimator.showStatic(__modoSel);
+      } catch (err) { console.warn("modo", err); }
+    };
+    const animarCaso = () => {
+      if (!modalAnimator) return;
+      if (esModal(__casoMostrado)) { mostrarModo(); return; }
+      if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
       // caso de carga / combo: sus desplazamientos reales, como un «modo» de 6 GDL por nudo
       const U = deformOutputs.val?.deformations as Map<number, number[]> | undefined;
       const n = nodes.val.length;
@@ -946,17 +922,43 @@ function mountCaseResultsInSettings() {
       const forma = new Array(n * 6).fill(0);
       U.forEach((d, i) => { if (i >= 0 && i < n) for (let k = 0; k < 6; k++) forma[i * 6 + k] = d?.[k] ?? 0; });
       modalAnimator.stop();
-      // sin frecuencia: un caso de carga no tiene periodo, y con [1] el panel del modal
-      // mostraba «Modo 1/1 · 1.0000 Hz» mientras animaba Dead (visto en el PNG, 13-sep-2026)
-      modalAnimator.setResults({ frequencies: [], modeShapes: [forma], massParticipation: [] } as any);
+      modalAnimator.setResults({ frequencies: [1], modeShapes: [forma], massParticipation: [[0, 0, 0, 0, 0, 0]] } as any);
       modalAnimator.setMode(0);
       modalAnimator.play();
     };
     (window as any).__hekatanAnimarCaso = animarCaso;
+    __casoMostrado = String(obj.case);
+
     __caseResultsBinding.on("change", (e: any) => {
-      __casoMostrado = String(e.value);
+      const v = String(e.value);
+      __casoMostrado = v;
+      if (__modeBinding) __modeBinding.hidden = !esModal(v);
+      if (esModal(v) && __lastModalResults?.modeShapes?.length) {
+        // el modal YA está corrido: no se rehace el modelo (rebuild volvía a correrlo entero)
+        __modalActivo = true;
+        mostrarModo();
+        return;
+      }
+      if (v.startsWith("__combo_")) {
+        // COMBO: rebuild() detecta el combo desde activeLoadCase y aplica Σ factores.
+        try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
+        __modalActivo = false;
+        activeLoadCase.val = v.slice(8); rebuild();
+        // cada caso con SU escala de deformada, como ETABS
+        try { autoScaleDeformedShape(); } catch {}
+      } else {
+        const selCase = loadCases.val.find((c) => c.name === v);
+        if (!selCase?.type?.startsWith("Modal")) {
+          try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
+          __modalActivo = false;
+        } else __modalActivo = true;
+        activeLoadCase.val = v; rebuild();
+        try { autoScaleDeformedShape(); } catch {}
+        try { __loadPanel?.rebuildCases(); } catch {}
+      }
       if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
     });
+    __modeBinding?.on("change", (e: any) => { __modoSel = Number(e.value) || 0; mostrarModo(); });
     const hayAnimar = (folder.children || []).some((c: any) => { try { return c.label === "🎞 Animar"; } catch { return false; } });
     if (!hayAnimar) {
       __animarBinding = folder.addBinding(__animar, "on", { label: "🎞 Animar", index: 1 });
@@ -2667,6 +2669,68 @@ if (window.innerWidth > 600) {
     }
   `;
   document.head.appendChild(styleEl);
+
+  // ── Celular + modelo por ENLACE: el modelo a pantalla completa ──
+  // Medido en un Pixel (390×844) con la bóveda compartida (13-sep-2026): CLI Modeler y
+  // Settings se comían la mitad de arriba, la tabla modal la de abajo, y la línea de
+  // comandos y la barra de estado cortadas. Quien abre un enlace quiere VER el modelo.
+  const enlaceMovil = document.createElement("style");
+  enlaceMovil.id = "hk-enlace-movil";
+  enlaceMovil.textContent = `
+    @media (max-width: 600px) {
+      html.hk-enlace #viewer {
+        position: fixed !important; top: 31px !important; left: 0 !important;
+        width: 100vw !important; height: calc(66vh - 31px) !important;
+      }
+      html.hk-enlace #hk3-cmdline, html.hk-enlace #hk-statusbar, html.hk-enlace #toolbar,
+      html.hk-enlace #hk-mobile-help, html.hk-enlace #hk-ribbon-abrir,
+      html.hk-enlace #hk-back-btn, html.hk-enlace #hk-home-btn,
+      html.hk-enlace #hk-cad-tit .doc, html.hk-enlace #hk-cad-tit .marca {
+        display: none !important;
+      }
+      html.hk-enlace #settings, html.hk-enlace #hk-pane-host {
+        position: fixed !important; top: 88px !important; left: 0 !important; right: 0 !important;
+        width: 100vw !important; max-width: 100vw !important;
+        height: 56vh !important; max-height: 56vh !important;
+        transform: translateY(-120%) !important; transition: transform .2s ease;
+        z-index: 10001 !important; background: rgba(18, 20, 26, 0.97) !important;
+      }
+      html.hk-enlace #settings.hk-mobile-open, html.hk-enlace #hk-pane-host.hk-mobile-open {
+        transform: none !important;
+      }
+      html.hk-enlace .hk-mobile-fab-row {
+        display: flex !important; position: fixed !important; top: 38px !important; right: 8px !important;
+        left: auto !important; bottom: auto !important; gap: 8px; z-index: 10002 !important; flex-direction: row !important;
+      }
+      html.hk-enlace .hk-mobile-fab {
+        width: 42px !important; height: 42px !important; border-radius: 21px !important; font-size: 20px !important;
+        background: rgba(30, 36, 48, 0.92) !important; color: #e6edf5 !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+      }
+      html.hk-enlace .hk-mobile-fab.hk-active { background: #22d3ee !important; color: #0a0a0a !important; }
+      html.hk-enlace #modal-results {
+        left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
+        width: 100vw !important; max-width: 100vw !important;
+        height: 34vh !important; min-width: 0 !important; border-radius: 10px 10px 0 0 !important;
+        font-size: 10px !important; resize: none !important;
+      }
+      /* las celdas traen su propio font-size en línea (11-12 px): se fuerza en todo */
+      html.hk-enlace #modal-results * { font-size: 9.5px !important; }
+      html.hk-enlace #hk-nav-camara {
+        left: auto !important; right: 6px !important; top: auto !important; bottom: calc(34vh + 8px) !important;
+      }
+    }
+  `;
+  document.head.appendChild(enlaceMovil);
+  // el visor 3D mide su lienzo al redimensionar: sin avisarle, se queda con la media pantalla
+  if (document.documentElement.classList.contains("hk-enlace")) {
+    // y se reencuadra: la cámara se había ajustado al lienzo viejo y la bóveda salía
+    // descentrada, medio tapada por la tabla (PNG despues_1_abrir, 13-sep-2026)
+    for (const ms of [300, 1500, 4000, 8000]) setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+      if (matchMedia("(max-width: 600px)").matches) { try { (window as any).__hekatanAutoFit?.(); } catch {} }
+    }, ms);
+  }
 
   // Backdrop
   const backdrop = document.createElement("div");
