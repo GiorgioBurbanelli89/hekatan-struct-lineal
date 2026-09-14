@@ -125,6 +125,9 @@ def leer_heks(ruta: str) -> ModeloHeks:
     ej_flag = [True]                       # etabsjoint: por DEFECTO como ETABS; `etabsjoint 0` la apaga (modo SAP2000)
     de_flag = [False]                      # `deck etabs`: panos membrana como los pisos de ETABS (ver deck_etabs.py)
     ow_flag = [False]                      # `deck etabs oneway`: reparto en un sentido (eje local 1)
+    # `decksec ID tc hr wrt wrb sr [w]` (m, kN/m2): Deck Filled de ETABS. Membrana de espesor tc y
+    # peso gamma*(tc + hr*(wrt+wrb)/2/sr) + w (MEDIDO en ETABS 22, 13-sep-2026). Igual que cliModeler.ts.
+    decks: dict[int, tuple[float, float, float, float, float, float]] = {}
     tf = [1.0]                             # `torsion safe` (=0.1) o `torsion <f>`: SAFE analiza las vigas con 0.1*J (medido 5-sep-2026)
     shells: list[dict] = []
     solidos: list[dict] = []          # `hex ID n1..n8 [E nu rho]`: hexaedros H8
@@ -283,6 +286,12 @@ def leer_heks(ruta: str) -> ModeloHeks:
                 elif cmd in ("edge", "edgeconstraint"):
                     v = (t[1] if len(t) > 1 else "etabs").lower()
                     edge_flag[0] = v in ("etabs", "1", "on", "si", "hermite")
+                elif cmd == "decksec":
+                    vals = [float(x) for x in t[2:8]]
+                    if len(vals) < 5 or vals[0] <= 0:
+                        m.errores.append("decksec %s: se esperaba ID tc hr wrt wrb sr [w]" % (t[1] if len(t) > 1 else "?"))
+                    else:
+                        decks[int(t[1])] = tuple(vals[:5] + [vals[5] if len(vals) > 5 else 0.0])
                 elif cmd in ("deck", "deckmode"):
                     v = (t[1] if len(t) > 1 else "etabs").lower()
                     de_flag[0] = v in ("etabs", "1", "on", "si")
@@ -412,6 +421,14 @@ def leer_heks(ruta: str) -> ModeloHeks:
         elif sh["id"] in smod:
             ei.membrane_modifiers[k] = smod[sh["id"]][0]
             ei.bending_modifiers[k] = smod[sh["id"]][1]
+        elif sh["id"] in decks:
+            ei.membrane_modifiers[k] = 1.0
+            ei.bending_modifiers[k] = 0.0
+        if sh["id"] in decks:
+            tc, hr, wrt, wrb, sr, w = decks[sh["id"]]
+            hormigon = tc + (hr * (wrt + wrb) / 2 / sr if sr > 0 else 0.0)
+            ei.thicknesses[k] = tc
+            ei.densities[k] = (sh["rho"] * hormigon + w / 9.80665) / tc
         if sh["id"] in sang:
             ei.shell_angles[k] = sang[sh["id"]]
         if sh["id"] in stipo:

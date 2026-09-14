@@ -85,7 +85,17 @@ export const newBlank: ExampleDef = {
     // Formulación del elemento de placa (como en ETABS/SAP): Shell-Thick (Mindlin,
     // con cortante — apto para zapatas gruesas), Shell-Thin (Kirchhoff, losas delgadas),
     // o Membrana (solo en su plano).
-    formaPlaca: PE("Sección shells", "Formulación placa", 0, { "Shell-Thick (Mindlin)": 0, "Shell-Thin (Kirchhoff)": 1, "Membrana": 2 }),
+    formaPlaca: PE("Sección shells", "Formulación placa", 0, { "Shell-Thick (Mindlin)": 0, "Shell-Thin (Kirchhoff)": 1, "Membrana": 2, "Deck (losa colaborante, como ETABS)": 3 }),
+    // ── DECK (la «Deck Section» de ETABS 22, cotas leídas del binario): Filled Deck ──
+    // Membrana de espesor tc (sin nervio) y peso γc·(tc + hr·(wrt+wrb)/2/sr) + lámina — MEDIDO
+    // en ETABS (13-sep-2026). Solo se usa con «Formulación placa = Deck».
+    deckTc:  P("🧱 Deck (ETABS)", "Slab Depth tc (m)", 0.065, 0.03, 0.25, 0.005),
+    deckHr:  P("🧱 Deck (ETABS)", "Rib Depth hr (m)", 0.055, 0.02, 0.20, 0.005),
+    deckWrt: P("🧱 Deck (ETABS)", "Rib Width Top wrt (m)", 0.15, 0.02, 0.40, 0.005),
+    deckWrb: P("🧱 Deck (ETABS)", "Rib Width Bottom wrb (m)", 0.10, 0.02, 0.40, 0.005),
+    deckSr:  P("🧱 Deck (ETABS)", "Rib Spacing sr (m)", 0.20, 0.05, 0.60, 0.005),
+    deckW:   P("🧱 Deck (ETABS)", "Peso lámina (kN/m²)", 0.11, 0, 0.5, 0.01),
+    deckDir: PE("🧱 Deck (ETABS)", "Nervios paralelos a", 0, { "X": 0, "Y": 1 }),
 
     // ── Zapata: mallar el área dibujada + suelo Winkler ──
     // Dibujas un rectángulo (área) y aquí lo conviertes en zapata: se subdivide
@@ -307,7 +317,17 @@ export const newBlank: ExampleDef = {
     const densities = new Map<number, number>();
     const poissons = new Map<number, number>();
     const thicknesses = new Map<number, number>();
-    const plateFormulations = new Map<number, number>();   // 0 Thick · 1 Thin · 2 Membrana (por shell)
+    const plateFormulations = new Map<number, number>();   // 0 Thick · 1 Thin (por shell)
+    // ⚠️ MEMBRANA = modificador de flexión 0 (como `shellmod ID 1 0`), NO plateFormulations = 2:
+    // en el WASM el 2 es la placa DKMQ (getLocalStiffnessMatrix.cpp), con flexión. La opción
+    // «Membrana» de este panel armaba una placa DKMQ sin que se notara (13-sep-2026).
+    const membraneModifiers = new Map<number, number>();
+    const bendingModifiers = new Map<number, number>();
+    const deckSections = new Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>();
+    const esDeck = Math.round(p.formaPlaca ?? 0) === 3;
+    const deck = { tc: p.deckTc ?? 0.065, hr: p.deckHr ?? 0.055, wrt: p.deckWrt ?? 0.15, wrb: p.deckWrb ?? 0.10, sr: p.deckSr ?? 0.20, w: p.deckW ?? 0.11 };
+    // peso equivalente repartido en la membrana de espesor tc (kN/m³, como rho_c)
+    const rhoDeck = (rho_c * (deck.tc + (deck.sr > 0 ? deck.hr * (deck.wrt + deck.wrb) / 2 / deck.sr : 0)) + deck.w) / deck.tc;
 
     for (let i = 0; i < elements.length; i++) {
       if (shellIdx.has(i)) {
@@ -316,8 +336,18 @@ export const newBlank: ExampleDef = {
         shearModuli.set(i, G_sh);
         densities.set(i, rho_sh);
         poissons.set(i, nu_sh);
-        thicknesses.set(i, (p.tShell ?? 0.20) as number);
-        plateFormulations.set(i, Math.round(p.formaPlaca ?? 0));   // 0 Thick · 1 Thin · 2 Membrana
+        if (esDeck) {
+          // DECK: membrana de espesor tc con el peso de loseta + nervios + lámina
+          thicknesses.set(i, deck.tc);
+          densities.set(i, rhoDeck);
+          membraneModifiers.set(i, 1); bendingModifiers.set(i, 0);
+          deckSections.set(i, { ...deck });
+        } else {
+          thicknesses.set(i, (p.tShell ?? 0.20) as number);
+          const f = Math.round(p.formaPlaca ?? 0);
+          if (f === 2) { membraneModifiers.set(i, 1); bendingModifiers.set(i, 0); }   // Membrana
+          else plateFormulations.set(i, f);                                          // 0 Thick · 1 Thin
+        }
       } else {
         // Frame 1D — propiedades de sección rectangular
         const isCol = colIdx.has(i);
@@ -532,7 +562,8 @@ export const newBlank: ExampleDef = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy,
       torsionalConstants: J, densities, poissonsRatios: poissons,
-      thicknesses, plateFormulations,
+      thicknesses, plateFormulations, membraneModifiers, bendingModifiers,
+      deckSections,                // cotas del deck (m, kN/m²) → e2k «Deck Section» de ETABS
       frameLoads: frameLoadsElem,   // cargas distribuidas por elemento (kN/m, globales) → e2k FRAMELOAD
     } as any;
     states.objects3D.val = [...referenciaIfc(p), ...flechasDist];
@@ -544,7 +575,8 @@ export const newBlank: ExampleDef = {
       const n6 = (v: number) => String(+(+v).toFixed(6));
       const g6 = (v: any) => (typeof v === "number" ? String(+v.toPrecision(6)) : String(v));
       // ρ aquí está en kN/m³ (24); el .heks la lleva en t/m³ (2.45 por defecto): se divide por g
-      const rhoT = (i: number) => g6((densities.get(i) ?? 0) / 9.80665);
+      // En un DECK va la ρ del HORMIGÓN: los nervios y la lámina los suma `decksec` al leer.
+      const rhoT = (i: number) => g6((deckSections.has(i) ? rho_sh : (densities.get(i) ?? 0)) / 9.80665);
       const L: string[] = ["# Hekatan Struct · modelo dibujado (" + new Date().toISOString().slice(0, 10) + ")", "# unidades: m, kN, kN/m"];
       nodes.forEach((q, i) => L.push(`node ${i + 1} ${n6(q[0])} ${n6(q[1])} ${n6(q[2])}`));
       elements.forEach((e, i) => {
@@ -553,6 +585,14 @@ export const newBlank: ExampleDef = {
         else L.push(`frame ${i + 1} ${ns} ${g6(elasticities.get(i))} ${g6(areas.get(i))} ${g6(Iz.get(i))} ${g6(Iy.get(i))} ${g6(J.get(i))} ${g6(poissons.get(i))} ${rhoT(i)}`);
       });
       for (const [i, f] of plateFormulations) if (f === 1) L.push(`shelltype ${i + 1} thin`);
+      // membrana = sin flexión (el .heks no tenía cómo decirlo: la membrana se perdía al guardar)
+      for (const [i, b] of bendingModifiers) if (b === 0) L.push(`shellmod ${i + 1} ${g6(membraneModifiers.get(i) ?? 1)} 0`);
+      if (deckSections.size) {
+        // DECK: reparto en un sentido (eje local 1 del paño = dirección del nervio)
+        for (const [i, d] of deckSections) L.push(`decksec ${i + 1} ${g6(d.tc)} ${g6(d.hr)} ${g6(d.wrt)} ${g6(d.wrb)} ${g6(d.sr)} ${g6(d.w)}`);
+        L.push("deck etabs oneway");
+        if (Math.round(p.deckDir ?? 0) === 1) for (const i of deckSections.keys()) L.push(`shellang ${i + 1} 90`);
+      }
       for (const [nd, d] of supports) L.push(`support ${nd + 1} ${d.map((v: any) => (v ? 1 : 0)).join(" ")}`);
       for (const [nd, f] of loads) if (f.some((v: number) => v !== 0)) L.push(`load ${nd + 1} ${f.join(" ")}`);
       for (const [i, w] of frameLoadsElem) L.push(`frameload ${i + 1} ${w.join(" ")}`);

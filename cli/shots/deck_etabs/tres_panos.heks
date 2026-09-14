@@ -1,0 +1,39 @@
+# 3 panos 4x4 m para medir el DECK de ETABS: borde x0 articulado, esquinas en Uz, 5 kN en el plano
+selfweight 1
+node 1 0 0 3
+node 2 4 0 3
+node 3 4 4 3
+node 4 0 4 3
+shell 1 1 2 3 4 0.065 24855578 0 2.4
+support 1 1 1 1 0 0 0
+support 4 1 1 1 0 0 0
+support 2 0 0 1 0 0 0
+support 3 0 0 1 0 0 0
+load 2 5 0 0 0 0 0
+load 3 5 0 0 0 0 0
+node 5 10 0 3
+node 6 14 0 3
+node 7 14 4 3
+node 8 10 4 3
+shell 2 5 6 7 8 0.065 24855578 0 2.4
+support 5 1 1 1 0 0 0
+support 8 1 1 1 0 0 0
+support 6 0 0 1 0 0 0
+support 7 0 0 1 0 0 0
+load 6 5 0 0 0 0 0
+load 7 5 0 0 0 0 0
+node 9 20 0 3
+node 10 24 0 3
+node 11 24 4 3
+node 12 20 4 3
+shell 3 9 10 11 12 0.065 24855578 0 2.4
+support 9 1 1 1 0 0 0
+support 12 1 1 1 0 0 0
+support 10 0 0 1 0 0 0
+support 11 0 0 1 0 0 0
+load 10 5 0 0 0 0 0
+load 11 5 0 0 0 0 0
+# nudo aislado en z=0: la base de los pisos (ETABS pone los paños sobre un piso encima de Base)
+node 99 -5 -5 0
+support 99 1 1 1 1 1 1
+solve

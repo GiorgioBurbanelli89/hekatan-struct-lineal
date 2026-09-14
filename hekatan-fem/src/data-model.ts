@@ -61,6 +61,14 @@ export type SectionShape = {
 };
 
 export type ElementInputs = {
+  /**
+   * DECK colaborante por cáscara (m y kN/m²), como la «Deck Section» de ETABS:
+   * tc = loseta sobre el nervio, hr = altura del nervio, wrt / wrb = ancho del nervio
+   * arriba / abajo, sr = paso de nervios, w = peso de la lámina. MEDIDO en ETABS 22
+   * (13-sep-2026): la membrana del deck tiene espesor tc (sin nervio) y el peso es
+   * γc·(tc + hr·(wrt+wrb)/2/sr) + w. La cáscara lleva t = tc y la densidad equivalente.
+   */
+  deckSections?: Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>;
   elasticities?: Map<number, number>;
   elasticitiesOrthogonal?: Map<number, number>;
   shearModuli?: Map<number, number>;

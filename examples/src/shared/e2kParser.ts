@@ -112,6 +112,8 @@ export function parseE2k(text: string): E2kModel {
   /** SHELLPROP: espesor (m), material, tipo de cascara y los 8 modificadores. */
   const shellProps = new Map<string, {
     t: number; material: string; modeling: string; mods?: number[];
+    /** cotas del DECK en unidades del fichero (tc, hr, wrt, wrb, sr en L; w en F/L²) */
+    deck?: { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number };
   }>();
   /**
    * SECTION DESIGNER: una seccion DIBUJADA, hecha de varias piezas.
@@ -505,10 +507,17 @@ export function parseE2k(text: string): E2kModel {
         };
         const esp = num(/SLABTHICKNESS\s+([\d.eE+-]+)/) ??
                     num(/WALLTHICKNESS\s+([\d.eE+-]+)/) ??
-                    // Un DECK relleno: el espesor TOTAL es la capa sobre el
-                    // nervio mas el nervio (asi lo escribe el exportador).
-                    ((num(/DECKSLABDEPTH\s+([\d.eE+-]+)/) ?? 0) +
-                     (num(/DECKRIBDEPTH\s+([\d.eE+-]+)/) ?? 0) || undefined);
+                    // Un DECK: la membrana es SOLO la loseta tc (DECKSLABDEPTH), sin el
+                    // nervio. MEDIDO en ETABS 22 (13-sep-2026): un deck Filled tc 65 /
+                    // hr 55 se desplaza en su plano igual que una membrana de 65 mm, y
+                    // GetDeck devuelve 0.065. Antes se tomaba tc + hr: más rígido.
+                    num(/DECKSLABDEPTH\s+([\d.eE+-]+)/);
+        const esDeck = /PROPTYPE\s+"Deck"/.test(line);
+        const deck = esDeck ? {
+          tc: num(/DECKSLABDEPTH\s+([\d.eE+-]+)/) ?? 0, hr: num(/DECKRIBDEPTH\s+([\d.eE+-]+)/) ?? 0,
+          wrt: num(/DECKRIBWIDTHTOP\s+([\d.eE+-]+)/) ?? 0, wrb: num(/DECKRIBWIDTHBOTTOM\s+([\d.eE+-]+)/) ?? 0,
+          sr: num(/DECKRIBSPACING\s+([\d.eE+-]+)/) ?? 0, w: num(/DECKUNITWEIGHT\s+([\d.eE+-]+)/) ?? 0,
+        } : undefined;
         const MODS = ["F11MOD", "F22MOD", "F12MOD", "M11MOD", "M22MOD",
                       "M12MOD", "V13MOD", "V23MOD"];
         const leidos = MODS.map(k => num(new RegExp(k + "\\s+([\\d.eE+-]+)")));
@@ -517,10 +526,10 @@ export function parseE2k(text: string): E2kModel {
           // Linea de modificadores: completa la propiedad ya leida.
           const mods = leidos.map(v => v ?? 1);
           shellProps.set(nm, { t: prev?.t ?? 0, material: prev?.material ?? "",
-                               modeling: prev?.modeling ?? "ShellThin", mods });
+                               modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck });
         } else if (esp !== undefined) {
           shellProps.set(nm, {
-            t: esp, mods: prev?.mods,
+            t: esp, mods: prev?.mods, deck: deck ?? prev?.deck,
             material: line.match(/MATERIAL\s+"([^"]+)"/)?.[1] ??
                       line.match(/CONCMATERIAL\s+"([^"]+)"/)?.[1] ?? "",
             modeling: line.match(/MODELINGTYPE\s+"([^"]+)"/)?.[1] ??
@@ -1035,6 +1044,7 @@ export function parseE2k(text: string): E2kModel {
 
   // ── Add material densities to element inputs ──
   const densities = new Map<number, number>();
+  const deckSections = new Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>();
   for (const [elemIdx, secName] of elementSections) {
     const sec = frameSections.get(secName);
     if (!sec) continue;
@@ -1096,6 +1106,15 @@ export function parseE2k(text: string): E2kModel {
       if (mat?.G) shearModuli.set(ei, mat.G);
       if (mat?.nu !== undefined) poissonsRatios.set(ei, mat.nu);
       if (mat?.density) densities.set(ei, mat.density);
+      if (sp.deck && sp.deck.tc > 0) {
+        // El DECK pesa loseta + hormigón de los nervios + lámina, repartido en la membrana
+        // de espesor tc: densidad equivalente = [γc·(tc + hr·(wrt+wrb)/2/sr) + w] / tc
+        // (MEDIDO en ETABS 22: 39.1842 kN en 16 m² con tc 65, hr 55, wrt 150, wrb 100, sr 200).
+        const d = sp.deck;
+        const hormigon = d.tc + (d.sr > 0 ? d.hr * (d.wrt + d.wrb) / 2 / d.sr : 0);
+        densities.set(ei, ((mat?.density ?? 0) * hormigon + d.w) / d.tc);
+        deckSections.set(ei, { ...d });
+      }
       const esMembrana = /membrane/i.test(sp.modeling);
       plateFormulations.set(ei, /thick/i.test(sp.modeling) || esMembrana ? 0 : 1);
       const m = sp.mods ? sp.mods.slice(0, 8) : [1, 1, 1, 1, 1, 1, 1, 1];
@@ -1234,6 +1253,9 @@ export function parseE2k(text: string): E2kModel {
     esc(torsionalConstants, L ** 4);
     esc(elasticities, F / (L * L)); esc(shearModuli, F / (L * L));
     esc(densities, F / (L ** 3));
+    for (const d of deckSections.values()) {
+      d.tc *= L; d.hr *= L; d.wrt *= L; d.wrb *= L; d.sr *= L; d.w *= F / (L * L);
+    }
     // ⚠️ `rigidOffsets` es un Map de PARES `[i, j]`, no de numeros. El
     // `as Map<number, number>` que habia aqui callaba al compilador y `esc`
     // hacia `[0.3, 0.3] * 1` = **NaN**. 317 barras del edificio real entraban
@@ -1375,6 +1397,8 @@ export function parseE2k(text: string): E2kModel {
       // pesaba 9.81 veces más (bóveda, 13-sep-2026: 23.536 en vez de 2.4).
       // El peso propio de arriba (conPesoPropio) sí va con el peso.
       densities: new Map([...densities].map(([k, w]) => [k, w / 9.80665] as [number, number])),
+      // cotas del deck en m y kN/m² (para volver a escribir la «Deck Section» de ETABS tal cual)
+      deckSections,
       sectionShapes,
       thicknesses,
       poissonsRatios,

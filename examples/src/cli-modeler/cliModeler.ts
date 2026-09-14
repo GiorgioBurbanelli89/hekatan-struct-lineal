@@ -122,6 +122,9 @@ interface ParsedModel {
    *  galpon 4.5 % y mezanine Dead 75 % explicados con esto). */
   deckEtabs: boolean;
   deckOneWay: boolean;                   // `deck etabs oneway`: reparto en un sentido (eje local 1 del pano)
+  /** `decksec ID tc hr wrt wrb sr [w]` (m, kN/m²): la «Deck Section» Filled de ETABS en la cáscara ID.
+   *  Membrana de espesor tc y peso γ·(tc + hr·(wrt+wrb)/2/sr) + w — MEDIDO en ETABS 22 (13-sep-2026). */
+  deckSecs: Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>;
   /** `automesh <tam_m>` (0 = apagado): parte los panos Q4 mas grandes que `tam` en una rejilla,
    *  como el AUTOMESHOPTIONS de ETABS (FLOORMESHMAXSIZE / WALLMESHMAXSIZE, 1.25 m de fabrica).
    *  Hekatan resuelve la malla que se le da: si un `.e2k` de ETABS trae la losa como UN pano,
@@ -239,6 +242,7 @@ export function parseCliCommands(text: string): ParsedModel {
     meshCross: true,
     deckEtabs: false,
     deckOneWay: false,
+    deckSecs: new Map(),
     torsionFactor: 1,
     deckTributario: new Set(),
     autoMesh: 0,
@@ -492,6 +496,17 @@ export function parseCliCommands(text: string): ParsedModel {
           const v = (tokens[1] ?? "safe").toLowerCase();
           const f = v === "safe" ? 0.1 : parseFloat(v);
           m.torsionFactor = isFinite(f) && f > 0 ? f : 1;
+          break;
+        }
+        // decksec <shellID> tc hr wrt wrb sr [w kN/m²]
+        case "decksec": {
+          const id = parseInt(tokens[1], 10);
+          const v = tokens.slice(2).map(parseFloat);
+          if (!isFinite(id) || v.length < 5 || v.slice(0, 5).some(x => !isFinite(x) || x < 0) || !(v[0] > 0)) {
+            m.errors.push(`decksec ${tokens[1]}: se esperaba ID tc hr wrt wrb sr [w]`);
+            break;
+          }
+          m.deckSecs.set(id, { tc: v[0], hr: v[1], wrt: v[2], wrb: v[3], sr: v[4], w: isFinite(v[5]) ? v[5] : 0 });
           break;
         }
         case "deck":
@@ -1118,6 +1133,7 @@ export const cliModeler: ExampleDef = {
     const endOffsets = new Map<number, [number, number, number]>();
     // 0 = Mindlin (defecto del C++), 1 = Kirchhoff Shell-Thin
     const plateFormulations = new Map<number, number>();
+    const deckSections = new Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>();
     // Carga de vano por ELEMENTO (globales). No la usa el solver —esa carga
     // entra como fuerzas nodales equivalentes— sino `analyze()`, para poder
     // sumar las fuerzas de empotramiento al recuperar los esfuerzos.
@@ -1269,6 +1285,15 @@ export const cliModeler: ExampleDef = {
       poissons.set(eIdx, 0.2);
       const tipo = m.shellTypes.get(s.id);
       if (tipo !== undefined) plateFormulations.set(eIdx, tipo);
+      const dk = m.deckSecs.get(s.id);
+      if (dk) {
+        // DECK: membrana de espesor tc; ρ equivalente con nervios y lámina (w en kN/m² → masa /g)
+        const hormigon = dk.tc + (dk.sr > 0 ? dk.hr * (dk.wrt + dk.wrb) / 2 / dk.sr : 0);
+        thicknesses.set(eIdx, dk.tc);
+        densities.set(eIdx, ((s.rho ?? 2.45) * hormigon + dk.w / 9.80665) / dk.tc);
+        // membrana = flexión 0 (abajo, con los modificadores). NO plateFormulations 2: eso es DKMQ.
+        deckSections.set(eIdx, { ...dk });
+      }
     }
 
     // Supports/loads/springs: traducir IDs a indices internos
@@ -1544,6 +1569,10 @@ export const cliModeler: ExampleDef = {
       if (mods) {
         membraneModifiers.set(eIdx, mods[0]);
         bendingModifiers.set(eIdx, mods[1]);
+      } else if (m.deckSecs.has(s.id)) {
+        // `decksec` sin shellmod: el deck de ETABS es membrana (ShellType 3 siempre)
+        membraneModifiers.set(eIdx, 1);
+        bendingModifiers.set(eIdx, 0);
       }
     }
 
@@ -1559,6 +1588,7 @@ export const cliModeler: ExampleDef = {
       membraneModifiers, bendingModifiers, shellModifiers,
       shellSurfaceLoads, shellAngles, cargaDeArea, cantos, anchos, sectionShapes, localAngles,
       shearAreasY, shearAreasZ, momentReleases, endOffsets, plateFormulations,
+      deckSections,
       frameLoads: frameLoadsElem,
       meshAtIntersections: m.meshCross,
       solidIncompatible: m.solidIncompatible,
