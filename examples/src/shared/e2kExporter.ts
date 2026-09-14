@@ -867,7 +867,8 @@ function exportFromScratch(input: ExportE2kInput): string {
       return;
     }
     if (stype === "CFT" && fillName && h > 0 && b > 0 && tww > 0) {
-      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Filled Steel Tube"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tww))} TW ${rd(cL(tww))} FILLMATERIAL "${fillName}"`);
+      // TF = paredes paralelas a B (alas), TW = paralelas a D (almas); con un solo espesor, los dos iguales
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Filled Steel Tube"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw > 0 ? tfw : tww))} TW ${rd(cL(tww))} FILLMATERIAL "${fillName}"`);
       return;
     }
     const tieneProps = A > 0 && I33 > 0 && I22 > 0;

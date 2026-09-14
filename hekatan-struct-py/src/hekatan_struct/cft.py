@@ -41,16 +41,18 @@ def area_cortante_timoshenko(tramos, n_div: int = 4000) -> float:
     return I * I / den if den > 0 else 0.0
 
 
-def _prandtl(b: float, h: float, t: float, g: float, mx: int, my: int) -> float:
-    """div((1/G) grad φ) = -2, φ = 0 en el borde, J = 2 ∫ φ dA (G_pared = 1)."""
+def _prandtl(b: float, h: float, t: float, g: float, mx: int, my: int, tw: float | None = None) -> float:
+    """div((1/G) grad φ) = -2, φ = 0 en el borde, J = 2 ∫ φ dA (G_pared = 1).
+    t = pared paralela a b (TF), tw = pared paralela a h (TW); tw None = t."""
     from scipy.sparse import coo_matrix
     from scipy.sparse.linalg import spsolve
 
+    tw = t if tw is None else tw
     hx, hy = b / mx, h / my
     xs = (np.arange(mx) + 0.5) * hx - b / 2
     ys = (np.arange(my) + 0.5) * hy - h / 2
     X, Y = np.meshgrid(xs, ys, indexing="ij")
-    nucleo = (np.abs(X) < b / 2 - t) & (np.abs(Y) < h / 2 - t)
+    nucleo = (np.abs(X) < b / 2 - tw) & (np.abs(Y) < h / 2 - t)
     inv = np.where(nucleo, 1.0 / g, 1.0)
     idx = np.arange(mx * my).reshape(mx, my)
     rows, cols, vals = [], [], []
@@ -75,31 +77,35 @@ def _prandtl(b: float, h: float, t: float, g: float, mx: int, my: int) -> float:
 
 
 @lru_cache(maxsize=64)
-def torsion_compuesta_rect(b: float, h: float, t: float, g: float) -> float:
-    """J de Saint-Venant de un rectángulo b×h con núcleo (b-2t)×(h-2t) de otro
-    material (g = G_núcleo/G_pared). Diferencias finitas con la pared en un número
-    ENTERO de celdas (t/k por celda, k = 2 y 4) y extrapolación de Richardson de
+def torsion_compuesta_rect(b: float, h: float, t: float, g: float, tw: float | None = None) -> float:
+    """J de Saint-Venant de un rectángulo b×h con núcleo (b-2tw)×(h-2t) de otro
+    material (g = G_núcleo/G_pared). Diferencias finitas con cada pared en un número
+    ENTERO de celdas (tw en x, t en y; k = 2 y 4) y extrapolación de Richardson de
     primer orden (el salto de material en las caras deja el error en O(h))."""
-    kb = max(2, round(b / t))
+    tw = t if tw is None else tw
+    kb = max(2, round(b / tw))
     kh = max(2, round(h / t))
     k1 = 2 if 4 * max(kb, kh) <= 160 else 1
-    J1 = _prandtl(b, h, t, g, k1 * kb, k1 * kh)
-    J2 = _prandtl(b, h, t, g, 2 * k1 * kb, 2 * k1 * kh)
+    J1 = _prandtl(b, h, t, g, k1 * kb, k1 * kh, tw)
+    J2 = _prandtl(b, h, t, g, 2 * k1 * kb, 2 * k1 * kh, tw)
     return 2 * J2 - J1
 
 
-def cft_props(b: float, h: float, t: float, Es: float, nuS: float, Ec: float, nuC: float) -> dict:
-    """A, I22, I33, J, As2, As3 del CFT (unidades coherentes, p. ej. m y kN/m²)."""
+def cft_props(b: float, h: float, t: float, Es: float, nuS: float, Ec: float, nuC: float,
+              tw: float | None = None) -> dict:
+    """A, I22, I33, J, As2, As3 del CFT (unidades coherentes, p. ej. m y kN/m²).
+    t = TF (paredes paralelas a b), tw = TW (paralelas a h); tw None = t."""
+    tw = t if tw is None else tw
     n = Ec / Es
-    bi, hi = b - 2 * t, h - 2 * t
+    bi, hi = b - 2 * tw, h - 2 * t
     A_s = b * h - bi * hi
     A_c = bi * hi
     I33 = (b * h ** 3 - bi * hi ** 3) / 12 + n * (bi * hi ** 3) / 12     # canto h (plano 1-2)
     I22 = (h * b ** 3 - hi * bi ** 3) / 12 + n * (hi * bi ** 3) / 12
     Gs, Gc = Es / (2 * (1 + nuS)), Ec / (2 * (1 + nuC))
-    As2 = area_cortante_timoshenko([(-h / 2, -hi / 2, b), (-hi / 2, hi / 2, 2 * t + n * bi), (hi / 2, h / 2, b)])
+    As2 = area_cortante_timoshenko([(-h / 2, -hi / 2, b), (-hi / 2, hi / 2, 2 * tw + n * bi), (hi / 2, h / 2, b)])
     As3 = area_cortante_timoshenko([(-b / 2, -bi / 2, h), (-bi / 2, bi / 2, 2 * t + n * hi), (bi / 2, b / 2, h)])
-    J = torsion_compuesta_rect(b, h, t, Gc / Gs)
+    J = torsion_compuesta_rect(b, h, t, Gc / Gs, tw)
     return {"A": A_s + n * A_c, "I33": I33, "I22": I22, "J": J, "As2": As2, "As3": As3, "n": n,
             "A_s": A_s, "A_c": A_c}
 

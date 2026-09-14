@@ -104,7 +104,7 @@ interface ParsedModel {
   /** `cft ID b h t Ec [nuC]`: tubo de acero relleno de hormigon. Pisa A, I22, I33,
    *  J y las areas de cortante con lo que usan SAP2000 (Section Designer) y ETABS
    *  (Filled Steel Tube), y marca la forma para que el s2k salga como SD. */
-  frameCft: Map<number, { b: number; h: number; t: number; Ec: number; nuC: number; rhoC: number }>;
+  frameCft: Map<number, { b: number; h: number; t: number; tw: number; Ec: number; nuC: number; rhoC: number }>;
   /** `cftc ID D t Ec [nuC] [rhoC]`: tubo REDONDO relleno (Filled Steel Pipe de ETABS; Pipe + Solid Circle en el SD de SAP2000) */
   frameCftc: Map<number, { D: number; t: number; Ec: number; nuC: number; rhoC: number }>;
   frameEndOffsets: Map<number, [number, number, number]>;   // [offI, offJ, rigidZone]
@@ -425,13 +425,17 @@ export function parseCliCommands(text: string): ParsedModel {
           break;
         }
         case "cft": {
-          // cft <frameID> <b> <h> <t> <Ec> [nuC] [rhoC]   (m, kN/m2, t/m3)
+          // cft <frameID> <b> <h> <t> <Ec> [nuC] [rhoC]            (un espesor)
+          // cft <frameID> <b> <h> <tf> <tw> <Ec> [nuC] [rhoC]      (TF paredes paralelas a b, TW paralelas a h)
+          // (m, kN/m2, t/m3). Se distingue por el 5º número: un espesor (< 1 m) o el Ec (kN/m2).
           const fid = parseInt(tokens[1], 10);
-          const b = parseFloat(tokens[2] ?? ""), h = parseFloat(tokens[3] ?? ""), t = parseFloat(tokens[4] ?? "");
-          const Ec = parseFloat(tokens[5] ?? "25e6"), nuC = parseFloat(tokens[6] ?? "0.2"), rhoC = parseFloat(tokens[7] ?? "2.4");
-          if (isFinite(fid) && b > 0 && h > 0 && t > 0 && t < Math.min(b, h) / 2 && Ec > 0)
-            m.frameCft.set(fid, { b, h, t, Ec, nuC: isFinite(nuC) ? nuC : 0.2, rhoC: isFinite(rhoC) && rhoC >= 0 ? rhoC : 2.4 });
-          else m.errors.push(`cft ${tokens[1]}: hace falta b h t (m) y Ec (kN/m2), con t < min(b,h)/2`);
+          const v = tokens.slice(2).map((x) => parseFloat(x));
+          const dosT = v.length >= 5 && v[3] < 1 && v[4] >= 1;
+          const b = v[0], h = v[1], t = v[2], tw = dosT ? v[3] : v[2], o = dosT ? 4 : 3;
+          const Ec = isFinite(v[o]) ? v[o] : 25e6, nuC = isFinite(v[o + 1]) ? v[o + 1] : 0.2, rhoC = isFinite(v[o + 2]) ? v[o + 2] : 2.4;
+          if (isFinite(fid) && b > 0 && h > 0 && t > 0 && tw > 0 && tw < b / 2 && t < h / 2 && Ec > 0)
+            m.frameCft.set(fid, { b, h, t, tw, Ec, nuC, rhoC: rhoC >= 0 ? rhoC : 2.4 });
+          else m.errors.push(`cft ${tokens[1]}: hace falta b h t [tw] (m) y Ec (kN/m2), con tw < b/2 y t < h/2`);
           break;
         }
         case "as":
@@ -1233,17 +1237,18 @@ export const cliModeler: ExampleDef = {
         // `cft`: A e I transformadas al acero, As por Timoshenko sobre la seccion
         // transformada y J de Saint-Venant del compuesto — lo que usan SAP2000
         // (Section Designer) y ETABS (Filled Steel Tube). Pisa lo que dijera `frame`.
-        const c = cftSectionEc(cftF.b, cftF.h, cftF.t, f.E, nu, cftF.Ec, cftF.nuC);
+        const c = cftSectionEc(cftF.b, cftF.h, cftF.t, f.E, nu, cftF.Ec, cftF.nuC, cftF.tw);
         areas.set(eIdx, c.A); I33.set(eIdx, c.Iz); I22.set(eIdx, c.Iy); J.set(eIdx, c.J);
         shearAreasZ.set(eIdx, c.As2); shearAreasY.set(eIdx, c.As3);
         cantos.set(eIdx, cftF.h); anchos.set(eIdx, cftF.b);
         // MASA y PESO REALES (14-sep-2026): ρs·As + ρc·Ac, repartidos sobre la A transformada.
         // Antes era ρs·A_transformada: el relleno pesaba ρs/n (0.98 t/m³ con n = 8) en vez de
         // 2.4 t/m³ — en un tubo 250x10, 0.127 t/m contra 0.202 t/m reales (−37 %).
-        const AcR = (cftF.b - 2 * cftF.t) * (cftF.h - 2 * cftF.t), AsR = cftF.b * cftF.h - AcR;
+        const AcR = (cftF.b - 2 * cftF.tw) * (cftF.h - 2 * cftF.t), AsR = cftF.b * cftF.h - AcR;
         densities.set(eIdx, ((f.rho ?? 7.85) * AsR + cftF.rhoC * AcR) / c.A);
-        sectionShapes.set(eIdx, { type: "CFT", b: cftF.b, h: cftF.h, tw: cftF.t, fillE: cftF.Ec, fillRho: cftF.rhoC, steelRho: f.rho ?? 7.85,
-          name: f.sec ?? `CFT ${Math.round(cftF.h * 1000)}X${Math.round(cftF.b * 1000)}X${Math.round(cftF.t * 1000)}` });
+        const mm = (x: number) => Math.round(x * 1000);
+        sectionShapes.set(eIdx, { type: "CFT", b: cftF.b, h: cftF.h, tw: cftF.tw, tf: cftF.t, fillE: cftF.Ec, fillRho: cftF.rhoC, steelRho: f.rho ?? 7.85,
+          name: f.sec ?? `CFT ${mm(cftF.h)}X${mm(cftF.b)}X${mm(cftF.t)}${cftF.tw !== cftF.t ? `X${mm(cftF.tw)}` : ""}` });
       }
     }
     // ── Cruces de barras SIN nudo comun (las X de arriostramiento) ─────────────

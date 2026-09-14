@@ -73,7 +73,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
   const units = { force: "KN", length: "m" };
   let dof = "UX,UY,UZ,RX,RY,RZ";
   const materials = new Map<string, { E: number; nu: number; G: number; density?: number; fy?: number }>();
-  const sdBox = new Map<string, { h: number; b: number; t: number; mat: string; D?: number }>();
+  const sdBox = new Map<string, { h: number; b: number; t: number; tf?: number; mat: string; D?: number }>();
   const sdFill = new Map<string, { mat: string }>();
   const frameSections = new Map<string, { material: string; shape: string; D: number; B: number; TF: number; TW: number; A: number; Iz: number; Iy: number; J: number }>();
   const shellSections = new Map<string, { material: string; type: string; thickness: number }>();
@@ -177,7 +177,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
         // El CFT que escribe Hekatan (y cualquier SD con un tubo): la forma vuelve
         // como CFT para que al re-exportar salga otra vez Section Designer.
         const sn = kv.get("SectionName");
-        if (sn) sdBox.set(sn, { h: parseNum(kv.get("Height")), b: parseNum(kv.get("Width")), t: parseNum(kv.get("FlngThick")) || parseNum(kv.get("WebThick")), mat: kv.get("ShapeMat") || "" });
+        if (sn) sdBox.set(sn, { h: parseNum(kv.get("Height")), b: parseNum(kv.get("Width")), t: parseNum(kv.get("WebThick")) || parseNum(kv.get("FlngThick")), tf: parseNum(kv.get("FlngThick")) || parseNum(kv.get("WebThick")), mat: kv.get("ShapeMat") || "" });
         break;
       }
       case "SECTION DESIGNER PROPERTIES 10 - SHAPE PIPE": {
@@ -491,7 +491,7 @@ function buildModel(
   solidConns: { name: string; joints: string[] }[] = [],
   solidProps: Map<string, { material: string; incomp: boolean }> = new Map(),
   solidAssign: Map<string, string> = new Map(),
-  sdBox?: Map<string, { h: number; b: number; t: number; mat: string; D?: number }>,
+  sdBox?: Map<string, { h: number; b: number; t: number; tf?: number; mat: string; D?: number }>,
   sdFill?: Map<string, { mat: string }>,
   jointSprings: Map<string, number[]> = new Map(),
 ): S2kModel {
@@ -590,7 +590,7 @@ function buildModel(
         const fill = secName ? sdFill?.get(secName) : undefined;
         const Ef = fill ? (materials.get(fill.mat)?.E || 0) : 0;
         sectionShapes.set(i, box.D ? { type: "CFT", d: box.D, tw: box.t, name: secName, ...(Ef > 0 ? { fillE: Ef } : {}) }
-                                   : { type: "CFT", b: box.b, h: box.h, tw: box.t, name: secName, ...(Ef > 0 ? { fillE: Ef } : {}) });
+                                   : { type: "CFT", b: box.b, h: box.h, tw: box.t, ...(box.tf && box.tf !== box.t ? { tf: box.tf } : {}), name: secName, ...(Ef > 0 ? { fillE: Ef } : {}) });
       }
     } else if (ssec) {
       const mat = materials.get(ssec.material) || defaultMat;

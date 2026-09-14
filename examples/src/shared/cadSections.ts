@@ -109,8 +109,9 @@ export function areaCortanteTimoshenkoW(wDe: (y: number) => number, yMin: number
  *  en el CFT 300x300x10; esto da 3.79e-4. El Bredt del tubo solo daba 2.44e-4 y
  *  Bredt + n·β·a^4 del nucleo 3.52e-4: ninguno de los dos es lo que usa CSI. */
 const _memoJ = new Map<string, number>();
-export function torsionCompuestaRect(b: number, h: number, t: number, g: number, M = 64): number {
-  const clave = `${b}|${h}|${t}|${g}|${M}`;
+export function torsionCompuestaRect(b: number, h: number, t: number, g: number, M = 64, tw = t): number {
+  // t = espesor de las paredes paralelas a b (alas, TF de CSI); tw = las paralelas a h (almas, TW).
+  const clave = `${b}|${h}|${t}|${tw}|${g}|${M}`;
   const memo = _memoJ.get(clave); if (memo !== undefined) return memo;
   // Cholesky en BANDA (la matriz es simetrica definida positiva: -div((1/G) grad)).
   // Con SOR el contraste de 7x entre acero y hormigon no convergia (salian 3.06 /
@@ -120,7 +121,7 @@ export function torsionCompuestaRect(b: number, h: number, t: number, g: number,
     const inv = new Float64Array(n);
     for (let i = 0; i < mx; i++) for (let j = 0; j < my; j++) {
       const x = (i + 0.5) * hx - b / 2, y = (j + 0.5) * hy - h / 2;
-      const nucleo = Math.abs(x) < b / 2 - t && Math.abs(y) < h / 2 - t;
+      const nucleo = Math.abs(x) < b / 2 - tw && Math.abs(y) < h / 2 - t;
       inv[i * my + j] = 1 / (nucleo ? g : 1);
     }
     const cara = (a: number, c: number) => 2 * a * c / (a + c);
@@ -167,7 +168,7 @@ export function torsionCompuestaRect(b: number, h: number, t: number, g: number,
   // La PARED tiene que ser un numero ENTERO de celdas: con t = 0.01 y b = 0.3, una
   // malla de 48 la hacia de 1.6 celdas (2 celdas = 25 % mas gruesa) y J caia un
   // 20 %. Se malla con t/k por celda, k = 2 y 4, y se extrapola.
-  const kb = Math.max(2, Math.round(b / t)), kh = Math.max(2, Math.round(h / t));
+  const kb = Math.max(2, Math.round(b / tw)), kh = Math.max(2, Math.round(h / t));   // tw entero en x, t entero en y
   const k1 = 4 * Math.max(kb, kh) <= 160 ? 2 : 1;
   const J1 = resolver(k1 * kb, k1 * kh), J2 = resolver(2 * k1 * kb, 2 * k1 * kh);
   const J = 2 * J2 - J1;
@@ -183,9 +184,12 @@ export function torsionCompuestaRect(b: number, h: number, t: number, g: number,
 export function cftSectionEc(
   b: number, h: number, t: number,
   Es: number, nuS: number, Ec: number, nuC: number,
+  tw: number = t,
 ): SectionProps & { Es: number; Gs: number; A_steel: number; A_conc: number; As2: number; As3: number; n: number; Ec: number } {
+  // t = TF (paredes paralelas a b), tw = TW (paredes paralelas a h), como el Filled Steel Tube de ETABS
+  // y el BOX/TUBE del Section Designer (FlngThick/WebThick). Con tw = t, lo de siempre.
   const n = Ec / Es;
-  const bi = b - 2 * t, hi = h - 2 * t;
+  const bi = b - 2 * tw, hi = h - 2 * t;
   const A_steel = b * h - bi * hi;
   const Iz_steel = (b * h * h * h - bi * hi * hi * hi) / 12;
   const Iy_steel = (h * b * b * b - hi * bi * bi * bi) / 12;
@@ -197,9 +201,9 @@ export function cftSectionEc(
   const Iy = Iy_steel + n * Iy_conc;
   const Gs = Es / (2 * (1 + nuS)), Gc = Ec / (2 * (1 + nuC));
   // As2 va con I33 (= Iz, el canto h): bandas a lo largo de h. As3 con I22: a lo largo de b.
-  const As2 = areaCortanteTimoshenko([{ y0: -h / 2, y1: -hi / 2, w: b }, { y0: -hi / 2, y1: hi / 2, w: 2 * t + n * bi }, { y0: hi / 2, y1: h / 2, w: b }]);
+  const As2 = areaCortanteTimoshenko([{ y0: -h / 2, y1: -hi / 2, w: b }, { y0: -hi / 2, y1: hi / 2, w: 2 * tw + n * bi }, { y0: hi / 2, y1: h / 2, w: b }]);
   const As3 = areaCortanteTimoshenko([{ y0: -b / 2, y1: -bi / 2, w: h }, { y0: -bi / 2, y1: bi / 2, w: 2 * t + n * hi }, { y0: bi / 2, y1: b / 2, w: h }]);
-  const J = torsionCompuestaRect(b, h, t, Gc / Gs);
+  const J = torsionCompuestaRect(b, h, t, Gc / Gs, 64, tw);
   return { A, Iz, Iy, J, Es, Gs, A_steel, A_conc, As2, As3, n, Ec };
 }
 

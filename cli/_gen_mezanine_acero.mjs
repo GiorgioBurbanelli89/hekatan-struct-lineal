@@ -11,8 +11,9 @@ const P = {
   dP: 0.40, bfP: 0.20, tfP: 0.012, twP: 0.008,
   // viga secundaria I (m) y cuántas por vano (corren por el lado corto de cada vano)
   dS: 0.25, bfS: 0.125, tfS: 0.008, twS: 0.006, nSec: 3,
-  // columna tubular cuadrada (m); Ec del relleno (kN/m2)
-  bC: 0.25, tC: 0.010, Ec: 25e6,
+  // columna tubular rectangular (m): bC ancho, hC canto (eje local 2), tfC paredes paralelas a bC,
+  // twC paredes paralelas a hC (TF y TW de CSI); Ec y rhoC del relleno (kN/m2, t/m3)
+  bC: 0.25, hC: 0.25, tfC: 0.010, twC: 0.010, Ec: 25e6, rhoC: 2.4,
   // deck (m): tc loseta, hr nervio, wrt/wrb anchos de nervio arriba/abajo, sr separación, w peso lámina (kN/m2)
   tc: 0.05, hr: 0.05, wrt: 0.18, wrb: 0.12, sr: 0.30, w: 0.10,
   salida: "",
@@ -30,16 +31,19 @@ function perfilI(d, bf, tf, tw) {
   const J = (2 * bf * tf ** 3 + (d - tf) * tw ** 3) / 3;          // Saint-Venant, pared delgada
   return { A, I33, I22, J, As2: tw * d, As3: (5 / 3) * bf * tf, D: d, B: bf };
 }
-function tuboCuadrado(b, t) {
-  const bi = b - 2 * t;
-  const A = b * b - bi * bi, I = (b ** 4 - bi ** 4) / 12;
-  const J = t * (b - t) ** 3;                                     // Bredt: 4·Am²·t / perímetro medio
-  return { A, I33: I, I22: I, J, As2: 2 * t * b, As3: 2 * t * b, D: b, B: b };
+function tuboRect(b, h, tf, tw) {
+  const bi = b - 2 * tw, hi = h - 2 * tf;
+  const A = b * h - bi * hi;
+  const I33 = (b * h ** 3 - bi * hi ** 3) / 12, I22 = (h * b ** 3 - hi * bi ** 3) / 12;
+  const Am = (b - tw) * (h - tf);
+  const J = 4 * Am * Am / (2 * (b - tw) / tf + 2 * (h - tf) / tw);    // Bredt con dos espesores
+  return { A, I33, I22, J, As2: 2 * tw * h, As3: 2 * tf * b, D: h, B: b };
 }
-const SP = perfilI(P.dP, P.bfP, P.tfP, P.twP), SS = perfilI(P.dS, P.bfS, P.tfS, P.twS), SC = tuboCuadrado(P.bC, P.tC);
-const nomI = (d, bf, tf, tw) => `I${Math.round(d * 1000)}x${Math.round(bf * 1000)}x${Math.round(tf * 1000)}x${Math.round(tw * 1000)}`;
+const SP = perfilI(P.dP, P.bfP, P.tfP, P.twP), SS = perfilI(P.dS, P.bfS, P.tfS, P.twS), SC = tuboRect(P.bC, P.hC, P.tfC, P.twC);
+const mm = (x) => Math.round(x * 1000);
+const nomI = (d, bf, tf, tw) => `I${mm(d)}x${mm(bf)}x${mm(tf)}x${mm(tw)}`;
 const NP = nomI(P.dP, P.bfP, P.tfP, P.twP), NS = nomI(P.dS, P.bfS, P.tfS, P.twS);
-const NC = `${P.tubo === "cft" ? "CFT" : "HSS"}${Math.round(P.bC * 1000)}x${Math.round(P.tC * 1000)}`;
+const NC = `${P.tubo === "cft" ? "CFT" : "HSS"}${mm(P.hC)}x${mm(P.bC)}x${mm(P.tfC)}${P.twC !== P.tfC ? `x${mm(P.twC)}` : ""}`;
 
 const L = [`# Mezanine de acero ${P.nx}x${P.ny} vanos ${P.Lx}x${P.Ly} m, h ${P.h} m · principales ${NP} · secundarias ${NS} (${P.nSec}/vano, lado corto) · columnas ${NC}${P.tubo === "cft" ? " rellenas de hormigón" : " huecas"} · deck tc ${P.tc} hr ${P.hr}`,
   "selfweight 1"];
@@ -53,7 +57,7 @@ const barra = (a, b, S, nom, extra = []) => {
 // ── columnas ──
 for (let i = 0; i <= P.nx; i++) for (let j = 0; j <= P.ny; j++) {
   const b0 = nodo(i * P.Lx, j * P.Ly, 0); L.push(`support ${b0} 1 1 1 1 1 1`);
-  barra(b0, nodo(i * P.Lx, j * P.Ly, P.h), SC, NC, P.tubo === "cft" ? [`cft %ID ${P.bC} ${P.bC} ${P.tC} ${P.Ec} 0.2`] : []);
+  barra(b0, nodo(i * P.Lx, j * P.Ly, P.h), SC, NC, P.tubo === "cft" ? [`cft %ID ${P.bC} ${P.hC} ${P.tfC} ${P.twC} ${P.Ec} 0.2 ${P.rhoC}`] : []);
 }
 // ── losa: por vano, las secundarias corren por el LADO CORTO (paralelas a él) y reparten el lado largo ──
 const z = P.h;
