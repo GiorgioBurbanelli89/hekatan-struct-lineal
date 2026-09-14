@@ -927,6 +927,34 @@ contra 2.009 de CSI. Con `cft` da 2.0094 (0.006 % SAP, 0.003 % ETABS).
   encima de Hekatan. Los dos leen los ficheros de Hekatan y dan exactamente lo suyo.
 - Test `node tests/run.mjs cftc` (11 filas) y `pytest tests/test_cft.py`.
 
+### Perfil I y tubo PARAMÉTRICOS: `isec` y `tubo` (14-sep-2026)
+
+Jorge: «cotas modificables, nada de catálogo (ni IPE ni HSS), en Hekatan, SAP2000 y ETABS».
+
+```
+isec <frameID> <d> <bf> <tf> <tw> [t2b] [tfb]   # perfil I de cotas libres (m)
+tubo <frameID> <b> <h> <tf> <tw>                # tubo rectangular: tf paredes ∥ b, tw paredes ∥ h
+cft  <frameID> <b> <h> <tf> <tw> <Ec> [nuC] [rhoC]   # relleno, también con dos espesores
+```
+
+- Fórmulas **medidas en SAP2000 por OAPI** (`cli/_csi_secciones_param.py`, I 300×150×10.7×7.1 y tubo
+  300×200 tf 12 tw 8), en `cadSections.ts` → `iSectionCsi` / `tubeSectionCsi` y en `heks.py`:
+  I/Wide Flange: A, I exactas; As2 = tw·d; As3 = 5/6·(bf·tf + t2b·tfb); **J = Σ (b·t³/3)(1 − 0.63·t/b)**
+  (alas y alma d − tf − tfb). Box/Tube: Bredt con dos espesores, As2 = 2·tw·h, As3 = 2·tf·b.
+  TS y Python = SAP2000 a **0.00000 %** en las seis propiedades. El reparto de pared delgada daba J +4.9 %.
+- ETABS usa otras fórmulas en el I (As2 −1.0 %, As3 +14 %, J +3.1 %): el mezanine con estas secciones
+  queda a 0.03 % de SAP2000; Hekatan a 0.002 %.
+- `.s2k`: `Shape="I/Wide Flange" t3 t2 tf tw t2b tfb FilletRadius=0` y `Shape=Box/Tube t3 t2 tf tw`
+  (SAP recalcula de las cotas). `.e2k`: `SHAPE "Steel I/Wide Flange" D B TF TW` (sintaxis del $et de
+  ETABS 22; con alas distintas queda General) y `SHAPE "Steel Tube" D B TF TW`. Los lectores las leen
+  de vuelta (el e2k tenía As2/As3 del I CRUZADOS y el tubo con un solo espesor: corregido).
+- App (`edificioAporticado` y herederas): `matViga` «Acero perfil I (cotas)» (vigaTf, vigaTw; las
+  secundarias con su propio perfil vigSecB/vigSecH/vigSecTf/vigSecTw) y `matCol` «Acero tubo (cotas)»
+  (colTf, colTw). «Acero W» sigue siendo un rectángulo macizo de acero (compatibilidad).
+- ⚠️ La masa del relleno de CFT es la REAL (ρs·As + ρc·Ac) desde el 14-sep-2026; antes ρs·A_tr (−37 %).
+  Y la clave de material del `.s2k` lleva ρ (`MAT_<E>_n<ν>_r<ρ>`): sin eso un muro y una viga del mismo
+  hormigón compartían material y SAP2000 recibía la densidad de uno para los dos.
+
 ### `deck etabs`: el deck como lo entiende ETABS (4-sep-2026)
 
 Con la MISMA malla, ETABS y SAP2000 daban distinto en el galpón (4.5 %) y en un mezanine
