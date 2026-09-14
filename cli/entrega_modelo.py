@@ -43,7 +43,8 @@ if os.environ.get("HK_SOLO_COMPARAR", "0") != "1":
     node("cli/_modal_wasm_entrega.mjs", heks, os.path.join(D, "hekatan_modal.json"), str(NM))
 
     # ── 2. e2k / s2k ──
-    node("cli/heks_a_csi.mjs", heks, os.path.join(D, base))
+    # HK_MESHTYPE=NONE: ETABS no remalla las áreas (misma malla que SAP2000 y Hekatan)
+    node("cli/heks_a_csi.mjs", heks, os.path.join(D, base), *(["meshtype=" + os.environ["HK_MESHTYPE"]] if os.environ.get("HK_MESHTYPE") else []))
     e2k = os.path.join(D, base + ".e2k"); s2k = os.path.join(D, base + ".s2k")
     txt = open(e2k, encoding="utf-8").read()
     txt3 = txt.replace('INCLUDEVERTICALMASS "No"', 'INCLUDEVERTICALMASS "Yes"').replace('LUMPATSTORIES "Yes"', 'LUMPATSTORIES "No"')

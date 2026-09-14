@@ -1193,7 +1193,11 @@ function exportFromScratch(input: ExportE2kInput): string {
     } else {
       lines.push(`  LINE  "${eName}"  ${tipo}  "${psBot.pt}"  "${psTop.pt}"  ${salto}`);
     }
-    laEntries.push(`  LINEASSIGN  "${eName}"  "${psTop.story}"  SECTION "${secName}" ${extras} MINNUMSTA ${minNumSta} AUTOMESH "YES"  MESHATINTERSECTIONS "${(elementInputs as any).meshAtIntersections === false ? "NO" : "YES"}"  `);
+    // `meshcross 0` = geometría de SAP2000: ni AUTOMESH ni MESHATINTERSECTIONS, así ETABS no parte la barra en los
+    // niveles (STORY) ni en los cruces y el modelo de análisis tiene los MISMOS nudos (Jorge, 14-sep-2026: «los niveles
+    // de ETABS no deben cortar, debe dar la misma geometría siempre»).
+    const sinMalla = (elementInputs as any).meshAtIntersections === false;
+    laEntries.push(`  LINEASSIGN  "${eName}"  "${psTop.story}"  SECTION "${secName}" ${extras} MINNUMSTA ${minNumSta} AUTOMESH "${sinMalla ? "NO" : "YES"}"  MESHATINTERSECTIONS "${sinMalla ? "NO" : "YES"}"  `);
   };
 
   // 1. Chains de columnas — UN solo LINE element por cadena

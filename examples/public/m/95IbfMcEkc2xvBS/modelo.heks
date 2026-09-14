@@ -1,5 +1,6 @@
 # Galpón curvo luz 20 m, 6 pórticos cada 6 m, alero 6 m, flecha 2.5 m · columnas CFT250x250x8 · vigas I200x100x8x5 · cordones C200x75x9x6 · diagonales 2L50x50x5s10 · cubierta zinc 0.8 mm membrana
 selfweight 1
+meshcross 0
 node 1 0 0 7
 node 2 0 2 7.9
 node 3 0 4 8.6

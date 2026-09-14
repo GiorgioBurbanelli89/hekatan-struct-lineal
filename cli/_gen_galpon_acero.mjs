@@ -84,6 +84,9 @@ if (P.tipo === "mezanine") {
 }
 Lh.push(`# ${titulo} · columnas ${SEC.col.nom} · vigas ${SEC.vI.nom} · cordones ${SEC.cord.nom} · diagonales ${SEC.diag.nom} · cubierta zinc ${P.tZ * 1000} mm membrana`);
 Lh.push("selfweight 1");
+// Misma geometría en los tres programas: nadie parte barras por su cuenta (SAP2000 no lo hace; ETABS sí por defecto
+// en los niveles y en los cruces). El e2k sale con AUTOMESH/MESHATINTERSECTIONS "NO".
+Lh.push("meshcross 0");
 const ysP = Array.from({ length: P.nPan + 1 }, (_, k) => k * L / P.nPan);
 
 for (const x of xs) {

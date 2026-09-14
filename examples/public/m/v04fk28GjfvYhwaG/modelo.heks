@@ -1,5 +1,6 @@
 # Galpón con mezanine (bodega electoral) 26.63×14.74, alero 8 m, un agua 7.5 %, mezanine a 4 m · columnas CFT250x250x8 · vigas I200x100x8x5 · cordones C200x75x9x6 · diagonales 2L50x50x5s10 · cubierta zinc 0.8 mm membrana
 selfweight 1
+meshcross 0
 node 1 0 0 9.2
 node 2 0 1.228333 9.292125
 node 3 0 2.456667 9.38425
