@@ -6,6 +6,74 @@ Hekatan Struct Lineal started as a fork of [awatif v2.0.0](https://github.com/ma
 
 🌐 **Live:** [https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/](https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/)
 
+**Linear static and dynamic (modal) analysis.** Every result is checked against another
+program with the same model and the same mesh node by node — **SAP2000 first (the judge),
+then ETABS and SAFE**.
+
+## Formulations and sources
+
+| part | formulation | source |
+|---|---|---|
+| 📐 Membrane with drilling rotation | The normal rotation enters the **displacement field** (Allman edge interpolation + condensed bubble), not a penalty added afterwards. Default variant (type 12): 2×2 Gauss, drilling projection, centre penalty γ = 0.4·μ and a θz hourglass term, measured against the ETABS 12×12 membrane cell. | Ibrahimbegović, Taylor & Wilson (1990), *IJNME* 30:445-457; Ibrahimbegović & Wilson (1991) |
+| 🔲 Thin plate (Shell-Thin) | **DKQ** — discrete Kirchhoff quadrilateral. | Batoz & Tahar (1982), *IJNME* 18 |
+| 🔳 Thick plate (Shell-Thick) | **Reissner–Mindlin** with assumed transverse shear (MITC-like, Wilson edge shears), hierarchical edge rotations and bubble, condensed. Suitable for thick footings and slabs. MITC4 remains available as the published alternative. | Wilson's edge-shear element; Bathe & Dvorkin (MITC4) — see note below |
+| 📏 Frames | **3D Timoshenko beam** with effective shear areas (As2, As3), end releases by static condensation, rigid end offsets, CSI local axes and local-axis angle; consistent fixed-end loads. | SAP IV lineage: Bathe, Wilson & Peterson (1973) |
+| 🧱 Solids | **8-node hexahedron** with incompatible modes. | Wilson, Taylor, Doherty & Ghaboussi (1973); Taylor, Beresford & Wilson (1976) |
+| 🌍 Soil | **Winkler springs** (modulus of subgrade reaction): nodal, line and area, translational and rotational. | Winkler (1867); Bowles, *Foundation Analysis and Design* |
+| 🎼 Modal | Eigenvalues with **Eigen (C++)**, subspace iteration (and dense path); lumped mass (HRZ), rigid diaphragm with master at the centre of mass; participating mass in UX, UY, UZ, RX, RY, RZ. | Bathe, *Finite Element Procedures*, ch. 11 |
+| 🧮 Static solver | Sparse LDLT; preconditioned conjugate gradient (incomplete Cholesky) above 150 000 DOF. | Eigen |
+| 🏗️ Load cases | Loads by **pattern** (Dead, Live, Ex…); a **Case** is solved with its patterns and a **Combo** with Σ factor × case — only the selected one is analysed, as in SAP2000. | — |
+
+**What is public and what is not.** The formulations are public in full **except one part**:
+the stabilisation of the thick plate (symmetrisation of the edge shear and a penalty on the
+divergence of the rotation field, factor 1000). Those two ingredients were matched against
+SAP2000/ETABS result by result; sensitivity is below 0.001 % from the factor 1000 on, and the
+element passes the patch test and converges to the exact Reissner–Mindlin series without
+locking independently of CSI (see the validation table below and
+`validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md`).
+
+**Reference books**
+- Zienkiewicz & Taylor — *The Finite Element Method*
+- Bathe — *Finite Element Procedures*
+- Cook, Malkus, Plesha & Witt — *Concepts and Applications of Finite Element Analysis*
+- Chandrupatla & Belegundu — *Introduction to Finite Elements in Engineering*
+- Bathe, Wilson & Peterson — *SAP IV: A Structural Analysis Program for Static and Dynamic Response of Linear Systems* (1973)
+- Paz & Leigh — *Structural Dynamics* (modal validation, example 6.3)
+
+## A model ready for review: the consulting workflow
+
+1. **Hekatan Struct builds the model** — geometry, sections, supports, loads by pattern,
+   combinations and modal analysis — from the CAD modeller, a parametric example or an
+   imported `.e2k`.
+2. **Share it with a link** (`workspace/?m=<code>&modal=N`): whoever opens it sees the model
+   animating, the table of periods and participating mass, with no installation or licence.
+   A QR code opens it from a phone.
+3. **Export the same model** to `.e2k` (ETABS), `.s2k` (SAP2000) and `.f2k` (SAFE), so the
+   reviewer checks it with their own program. Round trips are measured at 0.000 %.
+4. **Save it as `.heks`** (plain text) to version it and audit every line.
+
+Measured example: a chapel vault with 80 modes matches SAP2000 at **0.0008 %** node by node in
+displacement and all 80 periods below **0.01 %**.
+
+## What has been added (2026)
+
+- 3D CAD-style modeller (lines, polylines, areas, storey grid, snaps) and command line.
+- Case / Combo selection as in SAP2000 (Case: Modal, Dead, Live… — with Modal, the mode
+  number; Combo: combinations), solved with the selected loads only.
+- Animation of any case, combination or mode; participating mass with RX, RY, RZ.
+- Composite deck section with ETABS dimensions (tc, hr, wrt, wrb, sr, sheet weight, rib
+  direction, one-way load) — `.heks` `decksec`.
+- `.e2k` / `.s2k` / `.f2k` import and export, including Spanish-locale ETABS files (decimal
+  comma) and area objects with more than 4 sides (ear-clipping triangulation).
+- Foundations on Winkler (footings, tie beams, mats) checked against SAFE.
+- Mobile layout (model on top, tables and controls below) and share links with QR.
+
+## Next steps
+
+- A friendlier **graphical interface and data entry**, CAD-style: modelling should be drawing.
+- A **teaching platform** on how this kind of program is built — from the stiffness matrix to
+  the comparison against SAP2000 and ETABS.
+
 ## Validation status
 
 Every number below is measured against **another program** — same model, same
