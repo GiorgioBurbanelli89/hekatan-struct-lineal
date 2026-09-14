@@ -9,7 +9,7 @@ import { c as hi, d as Pi, g as gi } from "./getViewer-DYUyfOZ6.js";
 import { g as bi } from "./styles-CqEyA8nI.js";
 import { c as xi } from "./renderModalTable-B9PlE4gc.js";
 import { f as Ln, d as Wn, e as fo, g as ma, t as Di, r as yi, i as Un, j as Fi, s as vo, k as wo, l as Uo, m as Ho, n as wa, o as Bi, p as Yi, q as Xi, h as Os, u as vi } from "./units-DmFPJGLv.js";
-import { c as wi } from "./csiImporter-DVoJw2yd.js";
+import { c as wi } from "./csiImporter-isMp-yWV.js";
 import { n as Ui, i as Hi, __tla as __tla_1 } from "./newBlank-D4fq4yXf.js";
 import { c as _i, p as Gi, __tla as __tla_2 } from "./cliModeler-BoswY2Fe.js";
 import { c as ki } from "./cadDraw-C6PJzRpg.js";
@@ -15673,7 +15673,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
     const n = e.map((a) => `<th style="padding:2px 8px;border-bottom:1px solid #ff03;color:#ff0;text-align:right">${a}</th>`).join(""), s = t.map((a) => `<tr>${a.map((o) => `<td style="padding:1px 8px;text-align:right">${o}</td>`).join("")}</tr>`).join("");
     return `<table style="border-collapse:collapse"><tr>${n}</tr>${s}</table>`;
   }
-  const Jn = "Pon\xE9 <b>Case results = Modal</b> primero para correr el s\xEDsmico.", Ns = {
+  const Jn = "Corr\xE9 el modal primero (<b>\u26A1 Modal \u25B8 \u25B6 Correr modal</b>, luego <b>Resultado = Mode</b>) para el s\xEDsmico.", Ns = {
     "Base Reactions": () => {
       const e = Vn();
       if (!e) return jt("Base Reactions", Jn);
@@ -15855,7 +15855,7 @@ body.hk-cad .tp-mllv_i, body.hk-cad .tp-txtv_i, body.hk-cad textarea{
       gt === "mode" && t.length && (Gn = e.addBinding(m, "modo", {
         label: "Modo",
         options: N,
-        index: 2
+        index: 1
       }));
       const T = () => {
         var _a4;
