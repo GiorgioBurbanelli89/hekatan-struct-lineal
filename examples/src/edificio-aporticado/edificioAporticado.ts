@@ -3,7 +3,7 @@
  * Organizado en folders: Geometría / Luces / Alturas / Secciones / Apoyo / Cargas / Avanzado.
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
-import { cftSectionEc } from "../shared/cadSections";
+import { cftSectionEc, iSectionCsi, tubeSectionCsi } from "../shared/cadSections";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { buildEdificioCotas, makeLabel } from "../shared/cotas3D";
 import { etabsDiscretize, DISCRETIZE_OPTIONS } from "../shared/etabsDiscretization";
@@ -72,9 +72,18 @@ export const edificioAporticado: ExampleDef = {
     hP_8:     P("Alturas por piso", "Piso 8 (m)", 0, 0, 6, 0.1),
 
     // ── Secciones globales (fallback si per-piso es 0) ──
-    matCol:   PE("Secciones (global)", "Material columna", 0, { "Hormigón": 0, "Acero W": 1, "CFT (tubo relleno)": 2 }),
+    // (14-sep-2026, Jorge: «perfiles de cotas modificables, nada de catálogo»): «Acero tubo (cotas)» y
+    // «Acero perfil I (cotas)» usan las fórmulas de SAP2000 (medidas por OAPI) y salen al s2k/e2k como
+    // secciones paramétricas editables. «Acero W» (rectángulo macizo de acero) se deja por compatibilidad.
+    matCol:   PE("Secciones (global)", "Material columna", 0, { "Hormigón": 0, "Acero W": 1, "CFT (tubo relleno)": 2, "Acero tubo (cotas)": 3 }),
     tCft:     P("Secciones (global)", "t pared CFT (m)", 0.010, 0.004, 0.030, 0.001),
-    matViga:  PE("Secciones (global)", "Material viga",    0, { "Hormigón": 0, "Acero W": 1 }),
+    colTf:    P("Secciones (global)", "tubo: tf paredes ∥ b (m)", 0.010, 0.003, 0.040, 0.001),
+    colTw:    P("Secciones (global)", "tubo: tw paredes ∥ h (m)", 0.010, 0.003, 0.040, 0.001),
+    matViga:  PE("Secciones (global)", "Material viga",    0, { "Hormigón": 0, "Acero W": 1, "Acero perfil I (cotas)": 2 }),
+    vigaTf:   P("Secciones (global)", "perfil I: tf ala (m)", 0.012, 0.003, 0.050, 0.001),
+    vigaTw:   P("Secciones (global)", "perfil I: tw alma (m)", 0.008, 0.003, 0.030, 0.001),
+    vigSecTf: P("Vigas Secundarias", "perfil I sec: tf ala (m)", 0.008, 0.003, 0.040, 0.001),
+    vigSecTw: P("Vigas Secundarias", "perfil I sec: tw alma (m)", 0.006, 0.003, 0.030, 0.001),
     colShape: PE("Secciones (global)", "Forma columna", 0, { "Rectangular": 0, "Circular": 1 }),
     fcConcr:  P("Secciones (global)", "f'c hormigón (kg/cm²)", 240, 140, 420, 10),
     fyAcero:  P("Secciones (global)", "fy acero (kg/cm²)", 2530, 1800, 4200, 100),
@@ -493,6 +502,8 @@ export const edificioAporticado: ExampleDef = {
     const elements: Element[] = [];
     const colIdx = new Set<number>();
     const beamIdx = new Set<number>();
+    // vigas SECUNDARIAS (también están en beamIdx): con «Acero perfil I (cotas)» llevan su propio perfil
+    const secBeamIdx = new Set<number>();
     const slabIdx = new Set<number>();
     // Map de floor por elemento (0 = primer piso, etc.) para aplicar secciones por piso
     const elementFloor = new Map<number, number>();
@@ -553,6 +564,7 @@ export const edificioAporticado: ExampleDef = {
         elements.push([ni, b]);
         // el trozo nuevo es del mismo tipo que el que se partió
         if (beamIdx.has(e)) beamIdx.add(nuevo);
+        if (secBeamIdx.has(e)) secBeamIdx.add(nuevo);
         if (colIdx.has(e)) colIdx.add(nuevo);
         if (elementFloor.has(e)) elementFloor.set(nuevo, elementFloor.get(e)!);
       }
@@ -609,6 +621,7 @@ export const edificioAporticado: ExampleDef = {
                 ? [findOrCreateNode(x0, y0 + f * (y1 - y0), zCoords[iz]), findOrCreateNode(x1, y0 + f * (y1 - y0), zCoords[iz])]
                 : [findOrCreateNode(x0 + f * (x1 - x0), y0, zCoords[iz]), findOrCreateNode(x0 + f * (x1 - x0), y1, zCoords[iz])];
               beamIdx.add(elements.length);
+              secBeamIdx.add(elements.length);
               elements.push([a, b]);
             }
           }
@@ -826,6 +839,8 @@ export const edificioAporticado: ExampleDef = {
 
     // Helpers per-floor
     const esCft = Math.round(p.matCol) === 2;
+    const esTuboCotas = Math.round(p.matCol) === 3;
+    const esPerfilI = Math.round(p.matViga) === 2;
     const colPropsAt = (floor: number) => {
       const b = colB_piso[floor] ?? p.colSize, h = colH_piso[floor] ?? p.colSize;
       if (esCft) {
@@ -837,9 +852,26 @@ export const edificioAporticado: ExampleDef = {
         // es el mismo que el rectangulo (Iz -> b*h^3/12).
         return { A: c.A, Iz: c.Iz, Iy: c.Iy, J: c.J, As2: c.As2, As3: c.As3, b, h, t };
       }
+      if (esTuboCotas) {
+        // tubo hueco de cotas libres (SAP2000 Box/Tube): tf paredes paralelas a b, tw paralelas a h
+        const tf = Math.min(p.colTf ?? 0.01, h / 2 - 1e-3), tw = Math.min(p.colTw ?? 0.01, b / 2 - 1e-3);
+        const c = tubeSectionCsi(b, h, tf, tw);
+        return { A: c.A, Iz: c.Iz, Iy: c.Iy, J: c.J, As2: c.As2, As3: c.As3, b, h, t: tw, tf, tw } as any;
+      }
       return { A: b*h, Iz: (b*h**3)/12, Iy: (h*b**3)/12, J: 0.14 * Math.pow(Math.min(b,h), 4), b, h } as any;
     };
-    const vigaPropsAt = (floor: number) => {
+    const vigaPropsAt = (floor: number, secundaria = false) => {
+      if (esPerfilI) {
+        // perfil I de cotas libres (SAP2000 I/Wide Flange): d = canto, bf = ancho de ala. Las secundarias con
+        // su propio perfil (vigSecH, vigSecB, vigSecTf, vigSecTw). El eje FUERTE va en Iy (→ I33) como en el
+        // rectángulo de abajo; As2 = tw·d (con I33), As3 = 5/6·alas.
+        const d = secundaria ? (p.vigSecH ?? 0.30) : (vigaH_piso[floor] ?? p.vigaH);
+        const bf = secundaria ? (p.vigSecB ?? 0.20) : (vigaB_piso[floor] ?? p.vigaB);
+        const tf = Math.min(secundaria ? (p.vigSecTf ?? 0.008) : (p.vigaTf ?? 0.012), d / 2 - 1e-3);
+        const tw = Math.min(secundaria ? (p.vigSecTw ?? 0.006) : (p.vigaTw ?? 0.008), bf - 1e-3);
+        const c = iSectionCsi(d, bf, tf, tw);
+        return { A: c.A, Iy: c.Iz, Iz: c.Iy, J: c.J, As2: c.As2, As3: c.As3, d, bf, tf, tw } as any;
+      }
       const b = vigaB_piso[floor] ?? p.vigaB, h = vigaH_piso[floor] ?? p.vigaH;
       // FIX flexión viga: viga horizontal → Iy gobierna flexión VERTICAL (canto³ va en Iy).
       // Antes Iz=b·h³ → las vigas resistían gravedad/deriva con el eje débil → deriva sobrestimada.
@@ -929,6 +961,11 @@ export const edificioAporticado: ExampleDef = {
         elasticities.set(i, matColE); shearModuli.set(i, matColG); poissons.set(i, matColNu);
         areas.set(i, cp.A);
         Iz.set(i, cp.Iz * fCol_I); Iy.set(i, cp.Iy * fCol_I); J.set(i, cp.J);
+        if (esTuboCotas) {
+          shearAreasZ.set(i, cp.As2); shearAreasY.set(i, cp.As3);
+          sectionShapes.set(i, { type: "HSS", b: cp.b, h: cp.h, tf: cp.tf, tw: cp.tw,
+            name: `TUBO${Math.round(cp.h * 1000)}X${Math.round(cp.b * 1000)}X${Math.round(cp.tf * 1000)}X${Math.round(cp.tw * 1000)}` });
+        }
         if (esCft) {
           // As2 va con I33 (= momentsOfInertiaZ = nuestro Iy del mapeo), As3 con I22
           shearAreasZ.set(i, cp.As2); shearAreasY.set(i, cp.As3);
@@ -941,10 +978,17 @@ export const edificioAporticado: ExampleDef = {
           : matColRho;
         densities.set(i, useMassFromLoads ? 0 : rhoCol);
       } else {
-        const vp = vigaPropsAt(Math.min(floor, 7));
+        const vp = vigaPropsAt(Math.min(floor, 7), secBeamIdx.has(i));
         elasticities.set(i, matVigaE); shearModuli.set(i, matVigaG); poissons.set(i, matVigaNu);
         areas.set(i, vp.A);
         Iz.set(i, vp.Iz * fVig_I); Iy.set(i, vp.Iy * fVig_I); J.set(i, vp.J);
+        if (esPerfilI) {
+          // As2 = tw·d con I33 (shearAreasZ), As3 = alas con I22 (shearAreasY); forma I con sus cotas
+          shearAreasZ.set(i, vp.As2); shearAreasY.set(i, vp.As3);
+          const mm = (x: number) => Math.round(x * 10000) / 10;
+          sectionShapes.set(i, { type: "I", h: vp.d, b: vp.bf, tf: vp.tf, tw: vp.tw, t2b: vp.bf, tfb: vp.tf,
+            name: `I${mm(vp.d)}X${mm(vp.bf)}X${mm(vp.tf)}X${mm(vp.tw)}` } as any);
+        }
         // Si Mass Source = Loads, density de vigas = 0 (la masa va solo en losa)
         densities.set(i, useMassFromLoads ? 0 : matVigaRho * factorBrazos(i));
       }
@@ -1003,7 +1047,7 @@ export const edificioAporticado: ExampleDef = {
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy, torsionalConstants: J,
       densities, poissonsRatios: poissons, thicknesses,
       membraneModifiers, bendingModifiers, plateFormulations,
-      ...(esCft ? { shearAreasY, shearAreasZ, sectionShapes } : {}),
+      ...(esCft || esTuboCotas || esPerfilI ? { shearAreasY, shearAreasZ, sectionShapes } : {}),
     } as any;
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);
     states.deformOutputs.val = deformOut;

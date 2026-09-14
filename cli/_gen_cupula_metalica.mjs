@@ -16,11 +16,17 @@ const K = Math.max(1, Math.round(O.k)), NR = Math.max(1, Math.round(O.nr));
 const R = 10, NM = 16, NRING = 6, dPhi = 11.25;            // anillos a 0°, 11.25° … 67.5° (óculo r = 3.83 m)
 const tC = 0.10, Ec = 25e6, rhoC = 2.4;                    // cáscara de hormigón 10 cm
 const Es = 200e6, nuS = 0.3, rhoS = 7.85;                  // acero
-// IPE 300 (nervios y anillos): A, I22 (débil), I33 (fuerte), J, D, B
-const IPE = [5.381e-3, 6.038e-6, 8.356e-5, 2.013e-7, 0.300, 0.150];
-// HSS 200x200x8 (columnas)
-const HSS = [5.94e-3, 3.54e-5, 3.54e-5, 5.60e-5, 0.200, 0.200];
-const L = [`# Cupula metalica: R=10 m, 16 meridianos, anillos cada 11.25 deg hasta oculo 67.5 deg; cascara 10 cm + nervios IPE300 + anillos IPE300 (secundarias) + entrepisos en anillo a 11.25 y 33.75 deg sobre columnas HSS200x8 · malla k=${K} nr=${NR}`,
+// (14-sep-2026, Jorge: «nada de catálogo, cotas modificables») Secciones PARAMÉTRICAS por clave=valor:
+//   viga/nervio/anillo I: dI bfI tfI twI · columna tubo: bC hC tfC twC
+// Las propiedades de la línea `frame` son solo respaldo: `isec`/`tubo` las pisan con las fórmulas de SAP2000.
+const SEC = { dI: 0.300, bfI: 0.150, tfI: 0.0107, twI: 0.0071, bC: 0.200, hC: 0.200, tfC: 0.008, twC: 0.008 };
+for (const a of process.argv.slice(2)) { const [c, v] = a.split("="); if (c in SEC) SEC[c] = +v; }
+const mm = (x) => Math.round(x * 10000) / 10;
+const NOM_I = `I${mm(SEC.dI)}x${mm(SEC.bfI)}x${mm(SEC.tfI)}x${mm(SEC.twI)}`;
+const NOM_C = `TUBO${mm(SEC.hC)}x${mm(SEC.bC)}x${mm(SEC.tfC)}x${mm(SEC.twC)}`;
+const IPE = [5.381e-3, 6.038e-6, 8.356e-5, 2.013e-7, SEC.dI, SEC.bfI, `isec %ID ${SEC.dI} ${SEC.bfI} ${SEC.tfI} ${SEC.twI}`];
+const HSS = [5.94e-3, 3.54e-5, 3.54e-5, 5.60e-5, SEC.hC, SEC.bC, `tubo %ID ${SEC.bC} ${SEC.hC} ${SEC.tfC} ${SEC.twC}`];
+const L = [`# Cupula metalica: R=10 m, 16 meridianos, anillos cada 11.25 deg hasta oculo 67.5 deg; cascara 10 cm + nervios y anillos perfil I ${NOM_I} + entrepisos en anillo a 11.25 y 33.75 deg sobre columnas tubo ${NOM_C} (secciones parametricas) · malla k=${K} nr=${NR}`,
   "selfweight 1"];
 const ids = new Map(); let n = 0, s = 0, f = 0;
 const nodo = ([x, y, z], fijo = false) => {
@@ -30,7 +36,10 @@ const nodo = ([x, y, z], fijo = false) => {
 };
 const rad = d => d * Math.PI / 180;
 const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
-const barra = (a, b, P, nom) => { f++; L.push(`frame ${f} ${a} ${b} ${Es} ${P[0]} ${P[1]} ${P[2]} ${P[3]} ${nuS} ${rhoS} ${P[4]} ${P[5]} # ${nom}`); };
+const barra = (a, b, P) => {
+  f++; L.push(`frame ${f} ${a} ${b} ${Es} ${P[0]} ${P[1]} ${P[2]} ${P[3]} ${nuS} ${rhoS} ${P[4]} ${P[5]} # ${P === IPE ? NOM_I : NOM_C}`);
+  L.push(P[6].replace("%ID", f));                          // sección paramétrica: pisa las propiedades de arriba
+};
 const cascara = (a, b, c, d, t = tC) => { s++; L.push(`shell ${s} ${a} ${b} ${c} ${d} ${t} ${Ec} 0 ${rhoC}`); };
 // ── cúpula: punto del anillo i, meridiano j, fracción q/K sobre la cuerda hacia j+1 ──
 const P0 = (i, j) => { const ph = rad(i * dPhi), th = rad(j * 360 / NM); return [R * Math.cos(ph) * Math.cos(th), R * Math.cos(ph) * Math.sin(th), R * Math.sin(ph)]; };
