@@ -962,6 +962,9 @@ cft  <frameID> <b> <h> <tf> <tw> <Ec> [nuC] [rhoC]   # relleno, también con dos
   **t2 = ancho TOTAL**, cada ángulo w = (t2 − dis)/2 (SAP lo escribe `SngAngWid`), As2 = 2·tw·d, As3 = 2·w·tf, y J = 2·J_L
   con J_L = w·tf³/3 − 0.21·tf⁴ + (d − tf)·tw³/3 − 0.105·tw⁴ + 0.07·tmin·tmax³ (Roark sin términos pequeños; J lineal en
   w y en d, medido). ETABS da las mismas A e I pero **otras As y J** (C200: As2 −1.1 %, As3 −11 %; 2L: **As3 = A**).
+  ⚠️ En el `.s2k` el «Double Angle» **tiene que llevar `SngAngWid`**: al importar, SAP2000 rehace t2 = 2·SngAngWid + dis
+  e ignora el t2 escrito. Sin él las diagonales entraban con t2 = dis y la mitad del área, y el galpón salía 18–22 % más
+  flexible en SAP que en Hekatan y ETABS (lo delató el `.$2k` que reescribe SAP: `t2=0.01 SngAngWid=0 Area=0.00045`).
 - Generador de galpones con estas secciones: `node cli/_gen_galpon_acero.mjs tipo=curvo|agua1|mezanine` (columnas CFT,
   vigas I, cordones canal, diagonales y montantes UN solo 2L, cubierta de zinc membrana).
 - ⚠️ La masa del relleno de CFT es la REAL (ρs·As + ρc·Ac) desde el 14-sep-2026; antes ρs·A_tr (−37 %).

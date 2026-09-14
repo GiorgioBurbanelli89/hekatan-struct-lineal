@@ -52,8 +52,12 @@ export async function correr() {
   const m = await resolverHeks(heks);
   const s2k = mod.exportS2k({ nodes: m.nodes, elements: m.elements, nodeInputs: m.nodeInputs, elementInputs: m.elementInputs, title: "c2l", units: { force: "KN", length: "m" }, selfWtMult: 0 });
   const e2k = mod.exportE2k({ nodes: m.nodes, elements: m.elements, nodeInputs: m.nodeInputs, elementInputs: m.elementInputs, title: "c2l", units: { force: "KN", length: "m" }, weightMode: "manual", diaphragm: "none" });
-  const tieneS2k = /Shape=Channel/.test(s2k) && /Shape="Double Angle"[^\n]*dis=/.test(s2k);
-  filas.push({ que: "s2k escribe Channel y \"Double Angle\" (con dis)", crudo: true, medido: tieneS2k ? "sí" : "no", limite: "sí", ok: tieneS2k, detalle: "" });
+  // SngAngWid es obligatorio: SAP2000 al importar rehace t2 = 2·SngAngWid + dis (sin él, el 2L entra con la mitad del área)
+  const fila2L = (s2k.match(/Shape="Double Angle"[^\n]*/) ?? [""])[0];
+  const w2L = parseFloat((fila2L.match(/SngAngWid=([\d.eE+-]+)/) ?? [])[1]);
+  const t2L = parseFloat((fila2L.match(/\bt2=([\d.eE+-]+)/) ?? [])[1]), dis2L = parseFloat((fila2L.match(/\bdis=([\d.eE+-]+)/) ?? [])[1]);
+  const tieneS2k = /Shape=Channel/.test(s2k) && isFinite(w2L) && Math.abs(2 * w2L + dis2L - t2L) < 1e-9;
+  filas.push({ que: "s2k escribe Channel y \"Double Angle\" con SngAngWid = (t2 − dis)/2", crudo: true, medido: tieneS2k ? "sí" : "no", limite: "sí", ok: tieneS2k, detalle: fila2L.slice(0, 90) });
   const tieneE2k = /SHAPE "Steel Channel"/.test(e2k) && /SHAPE "Steel Double Angle"[^\n]*DIS/.test(e2k);
   filas.push({ que: "e2k escribe Steel Channel y Steel Double Angle (con DIS)", crudo: true, medido: tieneE2k ? "sí" : "no", limite: "sí", ok: tieneE2k, detalle: "" });
 

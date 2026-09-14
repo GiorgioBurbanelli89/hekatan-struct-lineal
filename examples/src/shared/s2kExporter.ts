@@ -310,7 +310,9 @@ export function exportS2k(input: S2kExportInput): string {
           : p.kind === "C"
           ? `Shape=Channel   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}`
           : p.kind === "2L"
-          ? `Shape="Double Angle"   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}   dis=${fmt(p.dis ?? 0)}`
+          // ⚠️ SngAngWid OBLIGATORIO: al IMPORTAR, SAP2000 rehace t2 = 2·SngAngWid + dis e ignora el t2 escrito. Sin él
+          // el 2L entraba con t2 = dis y la MITAD del área (galpón a un agua: SAP 13.39 mm contra 10.97, 14-sep-2026).
+          ? `Shape="Double Angle"   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   SngAngWid=${fmt((p.t2 - (p.dis ?? 0)) / 2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}   dis=${fmt(p.dis ?? 0)}`
           : `Shape=Box/Tube   t3=${fmt(p.t3)}   t2=${fmt(p.t2)}   tf=${fmt(p.tf)}   tw=${fmt(p.tw)}`;
         push(`   SectionName=SEC${idx}   Material=${sec.matKey}   ${cotas}   FilletRadius=0   Area=${fmt(sec.A)}   TorsConst=${fmt(sec.J)}   I33=${fmt(sec.Iz)}   I22=${fmt(sec.Iy)}   I23=0   AS2=${fmt(sec.As2)}   AS3=${fmt(sec.As3)} _`);
         push(`        Color=Red   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1`);
