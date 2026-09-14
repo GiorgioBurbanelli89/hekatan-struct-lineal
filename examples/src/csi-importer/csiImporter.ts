@@ -202,7 +202,8 @@ export const csiImporter: ExampleDef = {
     },
     tCubierta: { default: 60, min: 0.5, max: 300, step: 0.5, label: "Espesor cubierta (mm)", folder: "🏠 Cubierta" },
     modoCubierta: {
-      default: 0, label: "Modo",
+      // «Modo cubierta», no «Modo»: en Settings «Modo» es el MODO DE VIBRACIÓN (Resultado = Mode)
+      default: 0, label: "Modo cubierta",
       options: { "Membrana (arriostra)": 0, "Zinc como carga (a correas)": 1 },
       folder: "🏠 Cubierta",
     },

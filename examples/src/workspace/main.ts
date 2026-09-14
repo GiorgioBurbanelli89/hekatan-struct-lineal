@@ -863,7 +863,7 @@ function __tbl(headers: string[], rows: (string | number)[][]): string {
   const tr = rows.map((r) => `<tr>${r.map((c) => `<td style="padding:1px 8px;text-align:right">${c}</td>`).join("")}</tr>`).join("");
   return `<table style="border-collapse:collapse"><tr>${th}</tr>${tr}</table>`;
 }
-const __needModal = "Poné <b>Case results = Modal</b> primero para correr el sísmico.";
+const __needModal = "Corré el modal primero (<b>⚡ Modal ▸ ▶ Correr modal</b>, luego <b>Resultado = Mode</b>) para el sísmico.";
 const RESULT_TABLES: Record<string, () => void> = {
   "Base Reactions": () => { const d = __sd(); if (!d) return showResultsTable("Base Reactions", __needModal); showResultsTable(`Base Reactions — ${d.tag}`, __tbl(["Caso", "Fx (kN)", "Fy (kN)", "V (kN)"], [["Estático", d.base.Vest.toFixed(1), "—", d.base.Vest.toFixed(1)], ["Dinámico", d.base.Vx.toFixed(1), d.base.Vy.toFixed(1), d.base.Vdin.toFixed(1)]]) + `<div style="margin-top:5px;color:#888">Vdin/Vest = ${(d.base.ratio * 100).toFixed(0)} %  ·  E diseño = ${d.base.Edis.toFixed(1)} kN  ·  Ev = ${d.base.Ev.toFixed(1)} kN</div>`); },
   "Modal Periods & Mass": () => { const d = __sd(); if (!d) return showResultsTable("Modal", __needModal); const rows = d.modal.freqs.map((f: number, i: number) => [i + 1, f.toFixed(3), (f > 0 ? 1 / f : 0).toFixed(3), ((d.modal.massPart[i]?.[0] ?? 0) * 100).toFixed(1), ((d.modal.massPart[i]?.[1] ?? 0) * 100).toFixed(1), ((d.modal.massPart[i]?.[5] ?? 0) * 100).toFixed(1)]); showResultsTable("Modal Periods & Participating Mass", __tbl(["Modo", "f (Hz)", "T (s)", "Ux %", "Uy %", "Rz %"], rows)); },
@@ -924,7 +924,9 @@ function mountCaseResultsInSettings() {
     freqs.forEach((f: number, i: number) => { modoOptions[`${i + 1}  (T = ${(f > 0 ? 1 / f : 0).toFixed(4)} s)`] = i; });
     const objModo = { modo: __modoSel };
     if (__tipoRes === "mode" && freqs.length) {
-      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 2 });
+      // index 1: justo DEBAJO de «Resultado» (antes quedaba bajo la carpeta del modal y parecía
+      // otro control distinto). Resultado → Case | Combo | Modo, siempre en la fila siguiente.
+      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 1 });
     }
 
     // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo

@@ -1,0 +1,13 @@
+Welcome to Hekatan Struct. Today we check the vault of a chapel against SAP2000 and ETABS.
+This is the link you send to your boss: it opens the model with the eighty-mode modal analysis already run, and its table of periods and participating mass.
+In Result you choose Mode and the mode number: the vault keeps vibrating as you go from one mode to the next.
+In Case, the Dead case shows the deformed shape under self weight, and with Animate it moves too.
+Back to mode one: a period of zero point two four eight seconds. One control for each thing, as in ETABS.
+The judge is SAP2000: the same model, opened in its own window. First the deformed shape under self weight, with the vertical displacement.
+Then SAP2000's mode one: zero point two four seven eight seconds, the same as Hekatan Struct.
+And its participating mass table: the same periods and percentages, mode by mode.
+ETABS reads the same file. Here is its deformed shape under self weight.
+Its mode one, with the same period.
+And its participating mass table, equal to SAP2000's.
+Result: the displacement differs by zero point zero zero zero eight percent node by node, and the eighty periods by less than zero point zero one percent.
+To open the model from your phone: take a screenshot of the QR code and open it with Google Lens or the Photos app; or tap the link in the description.

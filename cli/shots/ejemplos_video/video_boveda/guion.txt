@@ -1,0 +1,13 @@
+Bienvenidos a Hekatan Struct. Hoy comprobamos la bóveda de una capilla contra SAP2000 y ETABS.
+Este es el enlace que le mandas a tu jefe: abre el modelo con el análisis modal de ochenta modos ya corrido, y su tabla de periodos y masa participativa.
+En Resultado eliges Mode y el número de modo: la bóveda sigue vibrando al pasar de un modo a otro.
+En Case, el caso Dead muestra la deformada del peso propio, y con Animar también se mueve.
+De vuelta al modo uno: periodo de cero coma dos cuatro ocho segundos. Un solo control por cosa, como en ETABS.
+El juez es SAP2000: el mismo modelo, abierto en su ventana. Primero la deformada del peso propio, con el desplazamiento vertical.
+Luego el modo uno de SAP2000: cero coma dos cuatro siete ocho segundos, igual que Hekatan Struct.
+Y su tabla de masa participativa: los mismos periodos y porcentajes, modo a modo.
+ETABS lee el mismo archivo. Aquí su deformada del peso propio.
+Su modo uno, con el mismo periodo.
+Y su tabla de masa participativa, igual a la de SAP2000.
+Resultado: el desplazamiento difiere cero coma cero cero cero ocho por ciento nudo a nudo, y los ochenta periodos, menos del cero coma cero uno por ciento.
+Para abrir el modelo desde tu celular: haz captura de pantalla del código QR y ábrela con Google Lens o con la app Fotos; o toca el enlace de la descripción.
