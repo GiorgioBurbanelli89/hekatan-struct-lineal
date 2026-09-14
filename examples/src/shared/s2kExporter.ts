@@ -127,7 +127,11 @@ export function exportS2k(input: S2kExportInput): string {
     // TODAS las barras de acero salían a 12.5 t/m³ en SAP2000 (14-sep-2026).
     const shp = (elementInputs as any).sectionShapes?.get(i);
     const rho = shp?.type === "CFT" && shp.steelRho > 0 ? shp.steelRho : (elementInputs.densities?.get(i) || 0);
-    return { E, nu, G, rho, key: `MAT_${Math.round(E)}_n${nu.toFixed(4)}` };
+    // (14-sep-2026) La DENSIDAD entra en la clave: con solo E y ν, un muro (ρ 2.45) y una viga (ρ 0) del
+    // mismo hormigón compartían material y SAP2000 recibía el de la primera barra — UnitMass 0 y «THE
+    // STRUCTURE HAS NO MASS» en el modal. Con ρ igual el nombre es el de siempre.
+    const rhoTag = rho > 0 ? `_r${+rho.toPrecision(6)}` : "_r0";
+    return { E, nu, G, rho, key: `MAT_${Math.round(E)}_n${nu.toFixed(4)}${rhoTag}` };
   };
 
   const shellIdx: number[] = [];

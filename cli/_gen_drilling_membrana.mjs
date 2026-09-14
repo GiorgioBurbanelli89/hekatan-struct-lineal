@@ -14,13 +14,13 @@ for (let k = 0; k <= nz; k++) for (let i = 0; i <= nx; i++) nodo(i * W / nx, k *
 let s = 0;
 for (let k = 0; k < nz; k++) for (let i = 0; i < nx; i++) {
   const x0 = i * W / nx, x1 = (i + 1) * W / nx, z0 = k * H / nz, z1 = (k + 1) * H / nz;
-  s++; L_.push(`shell ${s} ${nodo(x0, z0)} ${nodo(x1, z0)} ${nodo(x1, z1)} ${nodo(x0, z1)} ${t} ${E}`);
+  s++; L_.push(`shell ${s} ${nodo(x0, z0)} ${nodo(x1, z0)} ${nodo(x1, z1)} ${nodo(x0, z1)} ${t} ${E} 0 2.4`);   // ρ 2.4 explícito (modal)
   L_.push(`shellmod ${s} 1 0`);
 }
 let prev = nodo(W, zViga);
 for (let j = 1; j <= nb; j++) {
   const nj = nodo(W + j * L / nb, zViga);
-  L_.push(`frame ${j} ${prev} ${nj} ${E} ${A} ${I22} ${I33} ${J.toPrecision(6)} 0.2 0 ${h} ${b} # V30X50`);
+  L_.push(`frame ${j} ${prev} ${nj} ${E} ${A} ${I22} ${I33} ${J.toPrecision(6)} 0.2 2.4 ${h} ${b} # V30X50`);   // ρ 2.4 (antes 0: la viga sin masa)
   prev = nj;
 }
 L_.push(`load ${prev} 0 0 ${F} 0 0 0`);
