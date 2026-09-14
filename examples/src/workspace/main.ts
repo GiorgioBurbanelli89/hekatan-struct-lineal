@@ -767,6 +767,10 @@ let __animarBinding: any = null;
 // «Modo» aparte de «Case results» (como Mode Number de ETABS): el modo elegido y su control
 let __modoSel = 0;
 let __modeBinding: any = null;
+// «Resultado» = Case / Combo / Mode (como ETABS) y lo último elegido en cada uno
+let __tipoRes: "case" | "combo" | "mode" = "case";
+let __tipoBinding: any = null;
+const __selRes: Record<string, string> = {};
 let __modalSettingsFolder: any = null;   // folder "⚡ Modal + Animación" dentro de Settings (Analysis Outputs)
 let __lastModalResults: any = null;      // resultados modales (para listar los modos en "Case results")
 let __modalTableShown = false;           // el panel/tabla modal solo se muestra si el usuario lo activa
@@ -873,32 +877,50 @@ function mountCaseResultsInSettings() {
     const folder = (window as any).__hekatanOutputsFolder;
     if (!folder) return;
     if (__caseResultsBinding) { try { __caseResultsBinding.dispose(); } catch {} __caseResultsBinding = null; }
-    const caseOptions: Record<string, string> = {};
-    loadCases.val.forEach((c) => { caseOptions[c.name] = c.name; });
-    if (!Object.keys(caseOptions).length) return;
+    // ── Como el diálogo «Deformed Shape» de ETABS: Case / Combo / Mode ──
+    // «Resultado» elige QUÉ se mira; la lista de abajo cambia con él:
+    //   Case  → solo casos de carga (Dead, Live…), sin combinaciones
+    //   Combo → solo combinaciones
+    //   Mode  → el caso modal, y aparte «Modo» (el Mode Number de ETABS / SAP2000)
+    // (Jorge, 13-sep-2026: «hagámoslo como ETABS: case solo los casos de carga, combo las
+    // combinaciones, modes los modos»). Visto en la ventana de ETABS 22: _gui/etabs_07_f6.png.
+    if (!loadCases.val.length) return;
     if (!loadCases.val.find((c) => c.name === activeLoadCase.val)) activeLoadCase.val = loadCases.val[0].name;
-    // Combinaciones (como ETABS Case/COMBO/Mode): Σ factores × cargas de caso (1.4D, 1.2D+1.6L…).
-    loadCombinations.val.forEach((cm: any) => { caseOptions[`Σ ${cm.name}`] = `__combo_${cm.name}`; });
-    // ── Case y MODO por separado, como ETABS / SAP2000 ──
-    // «Case results» lista CASOS (Modal, Dead, Live, combos). El número de modo es OTRO
-    // control, «Modo», que solo aparece con el caso modal. Antes los modos iban mezclados
-    // dentro de la lista de casos (Jorge, 13-sep-2026: «Case es solo para Modal, Dead…;
-    // para cada modo existe Mode»), y al cambiar de modo la animación se congelaba.
     const freqs: number[] = __lastModalResults?.frequencies ?? [];
-    const casoModal = loadCases.val.find((c) => c.type?.startsWith("Modal"))?.name;
-    const esModal = (v: string) => !!casoModal && v === casoModal;
+    const casosCarga = loadCases.val.filter((c) => !c.type?.startsWith("Modal"));
+    const casosModal = loadCases.val.filter((c) => c.type?.startsWith("Modal"));
+    const casoModal = casosModal[0]?.name;
+    const esModal = (v: string) => casosModal.some((c) => c.name === v);
+    if (__modalActivo && freqs.length && casoModal) __tipoRes = "mode";
     if (__modoSel >= freqs.length) __modoSel = 0;
-    const obj = { case: (__modalActivo && freqs.length && casoModal) ? casoModal : activeLoadCase.val };
-    __caseResultsBinding = folder.addBinding(obj, "case", { label: "Case results", options: caseOptions, index: 0 });
 
-    // el control «Modo»: la lista de modos con su periodo
+    const caseOptions: Record<string, string> = {};
+    if (__tipoRes === "combo") loadCombinations.val.forEach((cm: any) => { caseOptions[cm.name] = `__combo_${cm.name}`; });
+    else if (__tipoRes === "mode") casosModal.forEach((c) => { caseOptions[c.name] = c.name; });
+    else casosCarga.forEach((c) => { caseOptions[c.name] = c.name; });
+    const vacio = !Object.keys(caseOptions).length;
+    if (vacio) caseOptions[__tipoRes === "combo" ? "(sin combinaciones)" : __tipoRes === "mode" ? "(corré el modal)" : "(sin casos)"] = "__nada";
+    const valores = Object.values(caseOptions);
+    const previo = __selRes[__tipoRes];
+    const inicial = previo && valores.includes(previo) ? previo
+      : (__tipoRes === "case" && valores.includes(activeLoadCase.val)) ? activeLoadCase.val : valores[0];
+    __selRes[__tipoRes] = inicial;
+
+    if (__tipoBinding) { try { __tipoBinding.dispose(); } catch {} __tipoBinding = null; }
+    const objTipo = { tipo: __tipoRes };
+    __tipoBinding = folder.addBinding(objTipo, "tipo", { label: "Resultado", options: { Case: "case", Combo: "combo", Mode: "mode" }, index: 0 });
+
+    const obj = { case: inicial };
+    const etiqueta = __tipoRes === "combo" ? "Combo" : __tipoRes === "mode" ? "Caso modal" : "Case";
+    __caseResultsBinding = folder.addBinding(obj, "case", { label: etiqueta, options: caseOptions, index: 1 });
+
+    // el control «Modo»: la lista de modos con su periodo (solo en Mode)
     if (__modeBinding) { try { __modeBinding.dispose(); } catch {} __modeBinding = null; }
     const modoOptions: Record<string, number> = {};
     freqs.forEach((f: number, i: number) => { modoOptions[`${i + 1}  (T = ${(f > 0 ? 1 / f : 0).toFixed(4)} s)`] = i; });
     const objModo = { modo: __modoSel };
-    if (freqs.length) {
-      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 1 });
-      __modeBinding.hidden = !esModal(String(obj.case));
+    if (__tipoRes === "mode" && freqs.length) {
+      __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 2 });
     }
 
     // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo
@@ -929,10 +951,10 @@ function mountCaseResultsInSettings() {
     (window as any).__hekatanAnimarCaso = animarCaso;
     __casoMostrado = String(obj.case);
 
-    __caseResultsBinding.on("change", (e: any) => {
-      const v = String(e.value);
+    const aplicar = (v: string) => {
       __casoMostrado = v;
-      if (__modeBinding) __modeBinding.hidden = !esModal(v);
+      if (v === "__nada") return;
+      __selRes[__tipoRes] = v;
       if (esModal(v) && __lastModalResults?.modeShapes?.length) {
         // el modal YA está corrido: no se rehace el modelo (rebuild volvía a correrlo entero)
         __modalActivo = true;
@@ -940,12 +962,10 @@ function mountCaseResultsInSettings() {
         return;
       }
       if (v.startsWith("__combo_")) {
-        // COMBO: rebuild() detecta el combo desde activeLoadCase y aplica Σ factores.
         try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
         __modalActivo = false;
         activeLoadCase.val = v.slice(8); rebuild();
-        // cada caso con SU escala de deformada, como ETABS
-        try { autoScaleDeformedShape(); } catch {}
+        try { autoScaleDeformedShape(); } catch {}   // cada caso con SU escala, como ETABS
       } else {
         const selCase = loadCases.val.find((c) => c.name === v);
         if (!selCase?.type?.startsWith("Modal")) {
@@ -957,8 +977,18 @@ function mountCaseResultsInSettings() {
         try { __loadPanel?.rebuildCases(); } catch {}
       }
       if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
-    });
+    };
+    __caseResultsBinding.on("change", (e: any) => aplicar(String(e.value)));
     __modeBinding?.on("change", (e: any) => { __modoSel = Number(e.value) || 0; mostrarModo(); });
+    __tipoBinding.on("change", (e: any) => {
+      __tipoRes = String(e.value) as "case" | "combo" | "mode";
+      if (__tipoRes !== "mode") __modalActivo = false;
+      setTimeout(() => {
+        mountCaseResultsInSettings();                 // la lista de abajo cambia con el tipo
+        const v = __selRes[__tipoRes];
+        if (v) aplicar(v);
+      }, 0);
+    });
     const hayAnimar = (folder.children || []).some((c: any) => { try { return c.label === "🎞 Animar"; } catch { return false; } });
     if (!hayAnimar) {
       __animarBinding = folder.addBinding(__animar, "on", { label: "🎞 Animar", index: 1 });
@@ -2677,51 +2707,66 @@ if (window.innerWidth > 600) {
   const enlaceMovil = document.createElement("style");
   enlaceMovil.id = "hk-enlace-movil";
   enlaceMovil.textContent = `
+    /* Celular + enlace (Jorge, 13-sep-2026): ARRIBA solo el modelo; ABAJO el panel
+       Settings (Case, Modo, Animar) y la tabla modal. Nada flotando encima del modelo. */
     @media (max-width: 600px) {
       html.hk-enlace #viewer {
         position: fixed !important; top: 31px !important; left: 0 !important;
-        width: 100vw !important; height: calc(66vh - 31px) !important;
+        width: 100vw !important; height: calc(50vh - 31px) !important;
       }
       html.hk-enlace #hk3-cmdline, html.hk-enlace #hk-statusbar, html.hk-enlace #toolbar,
       html.hk-enlace #hk-mobile-help, html.hk-enlace #hk-ribbon-abrir,
       html.hk-enlace #hk-back-btn, html.hk-enlace #hk-home-btn,
-      html.hk-enlace #hk-cad-tit .doc, html.hk-enlace #hk-cad-tit .marca {
+      html.hk-enlace #hk-cad-tit .doc, html.hk-enlace #hk-cad-tit .marca,
+      html.hk-enlace .hk-mobile-fab-row, html.hk-enlace .hk-mobile-backdrop,
+      html.hk-enlace #hk-nav-camara, html.hk-enlace #hk-pane-host,
+      html.hk-enlace #hk-settings-toggle, html.hk-enlace #hk-pane-toggle {
         display: none !important;
       }
-      html.hk-enlace #settings, html.hk-enlace #hk-pane-host {
-        position: fixed !important; top: 88px !important; left: 0 !important; right: 0 !important;
+      html.hk-enlace #settings {
+        position: fixed !important; top: 50vh !important; left: 0 !important; right: 0 !important; bottom: auto !important;
         width: 100vw !important; max-width: 100vw !important;
-        height: 56vh !important; max-height: 56vh !important;
-        transform: translateY(-120%) !important; transition: transform .2s ease;
-        z-index: 10001 !important; background: rgba(18, 20, 26, 0.97) !important;
+        height: 22vh !important; max-height: 22vh !important; overflow-y: auto !important;
+        transform: none !important; z-index: 10001 !important; border-radius: 0 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.18) !important; background: rgba(18, 20, 26, 1) !important;
       }
-      html.hk-enlace #settings.hk-mobile-open, html.hk-enlace #hk-pane-host.hk-mobile-open {
-        transform: none !important;
-      }
-      html.hk-enlace .hk-mobile-fab-row {
-        display: flex !important; position: fixed !important; top: 38px !important; right: 8px !important;
-        left: auto !important; bottom: auto !important; gap: 8px; z-index: 10002 !important; flex-direction: row !important;
-      }
-      html.hk-enlace .hk-mobile-fab {
-        width: 42px !important; height: 42px !important; border-radius: 21px !important; font-size: 20px !important;
-        background: rgba(30, 36, 48, 0.92) !important; color: #e6edf5 !important;
-        border: 1px solid rgba(255, 255, 255, 0.18) !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
-      }
-      html.hk-enlace .hk-mobile-fab.hk-active { background: #22d3ee !important; color: #0a0a0a !important; }
       html.hk-enlace #modal-results {
-        left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
-        width: 100vw !important; max-width: 100vw !important;
-        height: 34vh !important; min-width: 0 !important; border-radius: 10px 10px 0 0 !important;
-        font-size: 10px !important; resize: none !important;
+        position: fixed !important; top: 72vh !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+        width: 100vw !important; max-width: 100vw !important; height: auto !important;
+        min-width: 0 !important; min-height: 0 !important; border-radius: 0 !important; resize: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.18) !important; z-index: 10000 !important;
       }
-      /* las celdas traen su propio font-size en línea (11-12 px): se fuerza en todo */
-      html.hk-enlace #modal-results * { font-size: 9.5px !important; }
-      html.hk-enlace #hk-nav-camara {
-        left: auto !important; right: 6px !important; top: auto !important; bottom: calc(34vh + 8px) !important;
+      html.hk-enlace #modal-results * { font-size: 9px !important; }
+      /* la tabla CABE en el ancho: 10 columnas (Mode, T, Ux Uy Uz, Rx Ry Rz, ΣUx ΣUy). Freq,
+         ω, ΣRx ΣRy ΣRz y Tipo se ocultan aquí; siguen en escritorio y en «Copiar». Con las 16
+         se cortaba desde Rz (Jorge: «esa tabla no se ve ajustada al móvil»). */
+      html.hk-enlace #modal-results table { width: 100% !important; margin-top: 2px !important; }
+      html.hk-enlace #modal-results th, html.hk-enlace #modal-results td {
+        padding: 2px 1px !important; white-space: nowrap !important; text-align: right !important;
       }
+      html.hk-enlace #modal-results tr > :nth-child(2), html.hk-enlace #modal-results tr > :nth-child(4),
+      html.hk-enlace #modal-results tr > :nth-child(n+13) { display: none !important; }
+      /* «Ancho» y «Cerrar» rompen el reparto de la pantalla (o dejan la tabla sin vuelta) */
+      html.hk-enlace #modal-wide, html.hk-enlace #modal-close { display: none !important; }
+      /* ▬ minimiza la tabla a su cabecera y el panel Settings se queda con ese sitio
+         (Jorge: «un botón para minimizar la tabla y ver el tweakpane») */
+      html.hk-enlace.hk-tabla-min #modal-results { top: auto !important; height: 44px !important; overflow: hidden !important; }
+      html.hk-enlace.hk-tabla-min #settings { height: calc(50vh - 44px) !important; max-height: calc(50vh - 44px) !important; }
+      html.hk-enlace #modal-minimize { min-width: 38px !important; min-height: 28px !important; font-size: 14px !important; }
     }
   `;
   document.head.appendChild(enlaceMovil);
+  // ▬ / ▢ de la tabla modal: además de ocultar su cuerpo, le deja el sitio al panel
+  // Settings (clase en <html>; el CSS de arriba solo actúa en celular con enlace)
+  document.addEventListener("click", (ev) => {
+    const b = (ev.target as HTMLElement | null)?.closest?.("#modal-minimize");
+    if (!b) return;
+    setTimeout(() => {
+      const cuerpo = document.querySelector("#modal-results #modal-body") as HTMLElement | null;
+      const min = !!cuerpo && getComputedStyle(cuerpo).display === "none";
+      document.documentElement.classList.toggle("hk-tabla-min", min);
+    }, 0);
+  });
   // el visor 3D mide su lienzo al redimensionar: sin avisarle, se queda con la media pantalla
   if (document.documentElement.classList.contains("hk-enlace")) {
     // y se reencuadra: la cámara se había ajustado al lienzo viejo y la bóveda salía
@@ -6605,17 +6650,11 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       }
     }
 
-    // Selector dinámico de modo — el usuario gira el slider y la animación
-    // cambia al nuevo modo en tiempo real.
-    fModal.addBinding(animCtrl, "modeIdx", {
-      label: "Modo #", min: 1, max: 60, step: 1,
-    }).on("change", (e) => {
-      if (!lastModalResults) return;
-      modalAnimator.setMode(Math.round(e.value) - 1);
-    });
+    // (El deslizador «Modo #» y la fila «Modo» se quitaron el 13-sep-2026: el modo se elige
+    // en UN solo sitio, Settings ▸ Resultado = Mode ▸ Modo, como el Mode Number de ETABS /
+    // SAP2000. Tenerlo dos veces confundía: «hay duplicado modal», Jorge.)
 
     // Status LIVE (readonly) — single source of truth = Tweakpane
-    fModal.addBinding(status, "mode", { readonly: true, view: "text", interval: 0, label: "Modo" } as any);
     fModal.addBinding(status, "frequency", { readonly: true, view: "text", interval: 0, label: "Frecuencia" } as any);
     fModal.addBinding(status, "period", { readonly: true, view: "text", interval: 0, label: "Período" } as any);
     fModal.addBinding(status, "dominant", { readonly: true, view: "text", interval: 0, label: "Dominante" } as any);
