@@ -1,3 +1,5 @@
+# Unión viga-muro de SAP2000 (etabsjoint 0): la viga se ata solo al nudo, sin la unión de ETABS
+etabsjoint 0
 # Drilling aparte: muro membrana 3x3 m (t 0.20, shellmod flexion 0) + viga voladizo 30x50 L=2 m en su plano, 50 kN en la punta
 selfweight 0
 node 1 0 0 0
