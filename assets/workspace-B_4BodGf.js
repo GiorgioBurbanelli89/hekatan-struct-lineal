@@ -11,7 +11,7 @@ import { c as xi } from "./renderModalTable-B9PlE4gc.js";
 import { f as Ln, d as Wn, e as fo, g as ma, t as Di, r as yi, i as Un, j as Fi, s as vo, k as wo, l as Uo, m as Ho, n as wa, o as Bi, p as Yi, q as Xi, h as Os, u as vi } from "./units-DmFPJGLv.js";
 import { c as wi } from "./csiImporter-isMp-yWV.js";
 import { n as Ui, i as Hi, __tla as __tla_1 } from "./newBlank-D4fq4yXf.js";
-import { c as _i, p as Gi, __tla as __tla_2 } from "./cliModeler-BoswY2Fe.js";
+import { c as _i, p as Gi, __tla as __tla_2 } from "./cliModeler-CmUOkUcr.js";
 import { c as ki } from "./cadDraw-C6PJzRpg.js";
 import { v as Vi, __tla as __tla_3 } from "./vigaMedioElastico-BOCfzf6r.js";
 import { z as $i, __tla as __tla_4 } from "./zapataVigaAmarre-CVCsOKs5.js";
@@ -104,6 +104,7 @@ import "./pureFunctionsAny.generated-DeJSBP3k.js";
 import { __tla as __tla_84 } from "./deform-BVn63J8m.js";
 import "./Text-Cehu0nom.js";
 import "./cadSections-DVtTZU6U.js";
+import "./cargasPorCaso-B_GZ_-rO.js";
 import { __tla as __tla_85 } from "./h8-CE0H6FD1.js";
 import "./f2kPlateQ4-BZ9dGpgS.js";
 import "./cargaColumnaConsistente-DPcPMAlx.js";
@@ -121,7 +122,6 @@ import "./menegottoPinto-9Id4uJ7l.js";
 import { __tla as __tla_88 } from "./secantPlasticity-HNjabP9k.js";
 import "./colorMapPercentile-OnF3uP-w.js";
 import "./paramsSeccion-Bn-RQEWN.js";
-import "./cargasPorCaso-B_GZ_-rO.js";
 import "./espectroNec-CMQq_yyp.js";
 Promise.all([
   (() => {

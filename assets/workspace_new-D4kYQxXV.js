@@ -1,7 +1,8 @@
 import "./modulepreload-polyfill-B5Qt9EMX.js";
-import { c as e, __tla as __tla_0 } from "./cliModeler-BoswY2Fe.js";
+import { c as e, __tla as __tla_0 } from "./cliModeler-CmUOkUcr.js";
 import { r as a, __tla as __tla_1 } from "./runExampleStandalone-CZoUZYXl.js";
 import "./cadSections-DVtTZU6U.js";
+import "./cargasPorCaso-B_GZ_-rO.js";
 import { __tla as __tla_2 } from "./h8-CE0H6FD1.js";
 import { __tla as __tla_3 } from "./deform-BVn63J8m.js";
 import "./preload-helper-V2P8TQsQ.js";
