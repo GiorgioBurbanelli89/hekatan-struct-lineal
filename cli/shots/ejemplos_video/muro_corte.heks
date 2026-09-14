@@ -1,0 +1,499 @@
+# Muro de corte 6 x 6 m, t = 0.25 m, malla 0.5 m, base empotrada, 150 kN laterales
+selfweight 1
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 0.5 0 0.5
+node 4 0 0 0.5
+shell 1001 1 2 3 4 0.25 2.5e+07 0 2.4
+shelltype 1001 thick
+node 5 1 0 0
+node 6 1 0 0.5
+shell 1002 2 5 6 3 0.25 2.5e+07 0 2.4
+shelltype 1002 thick
+node 7 1.5 0 0
+node 8 1.5 0 0.5
+shell 1003 5 7 8 6 0.25 2.5e+07 0 2.4
+shelltype 1003 thick
+node 9 2 0 0
+node 10 2 0 0.5
+shell 1004 7 9 10 8 0.25 2.5e+07 0 2.4
+shelltype 1004 thick
+node 11 2.5 0 0
+node 12 2.5 0 0.5
+shell 1005 9 11 12 10 0.25 2.5e+07 0 2.4
+shelltype 1005 thick
+node 13 3 0 0
+node 14 3 0 0.5
+shell 1006 11 13 14 12 0.25 2.5e+07 0 2.4
+shelltype 1006 thick
+node 15 3.5 0 0
+node 16 3.5 0 0.5
+shell 1007 13 15 16 14 0.25 2.5e+07 0 2.4
+shelltype 1007 thick
+node 17 4 0 0
+node 18 4 0 0.5
+shell 1008 15 17 18 16 0.25 2.5e+07 0 2.4
+shelltype 1008 thick
+node 19 4.5 0 0
+node 20 4.5 0 0.5
+shell 1009 17 19 20 18 0.25 2.5e+07 0 2.4
+shelltype 1009 thick
+node 21 5 0 0
+node 22 5 0 0.5
+shell 1010 19 21 22 20 0.25 2.5e+07 0 2.4
+shelltype 1010 thick
+node 23 5.5 0 0
+node 24 5.5 0 0.5
+shell 1011 21 23 24 22 0.25 2.5e+07 0 2.4
+shelltype 1011 thick
+node 25 6 0 0
+node 26 6 0 0.5
+shell 1012 23 25 26 24 0.25 2.5e+07 0 2.4
+shelltype 1012 thick
+node 27 0.5 0 1
+node 28 0 0 1
+shell 1013 4 3 27 28 0.25 2.5e+07 0 2.4
+shelltype 1013 thick
+node 29 1 0 1
+shell 1014 3 6 29 27 0.25 2.5e+07 0 2.4
+shelltype 1014 thick
+node 30 1.5 0 1
+shell 1015 6 8 30 29 0.25 2.5e+07 0 2.4
+shelltype 1015 thick
+node 31 2 0 1
+shell 1016 8 10 31 30 0.25 2.5e+07 0 2.4
+shelltype 1016 thick
+node 32 2.5 0 1
+shell 1017 10 12 32 31 0.25 2.5e+07 0 2.4
+shelltype 1017 thick
+node 33 3 0 1
+shell 1018 12 14 33 32 0.25 2.5e+07 0 2.4
+shelltype 1018 thick
+node 34 3.5 0 1
+shell 1019 14 16 34 33 0.25 2.5e+07 0 2.4
+shelltype 1019 thick
+node 35 4 0 1
+shell 1020 16 18 35 34 0.25 2.5e+07 0 2.4
+shelltype 1020 thick
+node 36 4.5 0 1
+shell 1021 18 20 36 35 0.25 2.5e+07 0 2.4
+shelltype 1021 thick
+node 37 5 0 1
+shell 1022 20 22 37 36 0.25 2.5e+07 0 2.4
+shelltype 1022 thick
+node 38 5.5 0 1
+shell 1023 22 24 38 37 0.25 2.5e+07 0 2.4
+shelltype 1023 thick
+node 39 6 0 1
+shell 1024 24 26 39 38 0.25 2.5e+07 0 2.4
+shelltype 1024 thick
+node 40 0.5 0 1.5
+node 41 0 0 1.5
+shell 1025 28 27 40 41 0.25 2.5e+07 0 2.4
+shelltype 1025 thick
+node 42 1 0 1.5
+shell 1026 27 29 42 40 0.25 2.5e+07 0 2.4
+shelltype 1026 thick
+node 43 1.5 0 1.5
+shell 1027 29 30 43 42 0.25 2.5e+07 0 2.4
+shelltype 1027 thick
+node 44 2 0 1.5
+shell 1028 30 31 44 43 0.25 2.5e+07 0 2.4
+shelltype 1028 thick
+node 45 2.5 0 1.5
+shell 1029 31 32 45 44 0.25 2.5e+07 0 2.4
+shelltype 1029 thick
+node 46 3 0 1.5
+shell 1030 32 33 46 45 0.25 2.5e+07 0 2.4
+shelltype 1030 thick
+node 47 3.5 0 1.5
+shell 1031 33 34 47 46 0.25 2.5e+07 0 2.4
+shelltype 1031 thick
+node 48 4 0 1.5
+shell 1032 34 35 48 47 0.25 2.5e+07 0 2.4
+shelltype 1032 thick
+node 49 4.5 0 1.5
+shell 1033 35 36 49 48 0.25 2.5e+07 0 2.4
+shelltype 1033 thick
+node 50 5 0 1.5
+shell 1034 36 37 50 49 0.25 2.5e+07 0 2.4
+shelltype 1034 thick
+node 51 5.5 0 1.5
+shell 1035 37 38 51 50 0.25 2.5e+07 0 2.4
+shelltype 1035 thick
+node 52 6 0 1.5
+shell 1036 38 39 52 51 0.25 2.5e+07 0 2.4
+shelltype 1036 thick
+node 53 0.5 0 2
+node 54 0 0 2
+shell 1037 41 40 53 54 0.25 2.5e+07 0 2.4
+shelltype 1037 thick
+node 55 1 0 2
+shell 1038 40 42 55 53 0.25 2.5e+07 0 2.4
+shelltype 1038 thick
+node 56 1.5 0 2
+shell 1039 42 43 56 55 0.25 2.5e+07 0 2.4
+shelltype 1039 thick
+node 57 2 0 2
+shell 1040 43 44 57 56 0.25 2.5e+07 0 2.4
+shelltype 1040 thick
+node 58 2.5 0 2
+shell 1041 44 45 58 57 0.25 2.5e+07 0 2.4
+shelltype 1041 thick
+node 59 3 0 2
+shell 1042 45 46 59 58 0.25 2.5e+07 0 2.4
+shelltype 1042 thick
+node 60 3.5 0 2
+shell 1043 46 47 60 59 0.25 2.5e+07 0 2.4
+shelltype 1043 thick
+node 61 4 0 2
+shell 1044 47 48 61 60 0.25 2.5e+07 0 2.4
+shelltype 1044 thick
+node 62 4.5 0 2
+shell 1045 48 49 62 61 0.25 2.5e+07 0 2.4
+shelltype 1045 thick
+node 63 5 0 2
+shell 1046 49 50 63 62 0.25 2.5e+07 0 2.4
+shelltype 1046 thick
+node 64 5.5 0 2
+shell 1047 50 51 64 63 0.25 2.5e+07 0 2.4
+shelltype 1047 thick
+node 65 6 0 2
+shell 1048 51 52 65 64 0.25 2.5e+07 0 2.4
+shelltype 1048 thick
+node 66 0.5 0 2.5
+node 67 0 0 2.5
+shell 1049 54 53 66 67 0.25 2.5e+07 0 2.4
+shelltype 1049 thick
+node 68 1 0 2.5
+shell 1050 53 55 68 66 0.25 2.5e+07 0 2.4
+shelltype 1050 thick
+node 69 1.5 0 2.5
+shell 1051 55 56 69 68 0.25 2.5e+07 0 2.4
+shelltype 1051 thick
+node 70 2 0 2.5
+shell 1052 56 57 70 69 0.25 2.5e+07 0 2.4
+shelltype 1052 thick
+node 71 2.5 0 2.5
+shell 1053 57 58 71 70 0.25 2.5e+07 0 2.4
+shelltype 1053 thick
+node 72 3 0 2.5
+shell 1054 58 59 72 71 0.25 2.5e+07 0 2.4
+shelltype 1054 thick
+node 73 3.5 0 2.5
+shell 1055 59 60 73 72 0.25 2.5e+07 0 2.4
+shelltype 1055 thick
+node 74 4 0 2.5
+shell 1056 60 61 74 73 0.25 2.5e+07 0 2.4
+shelltype 1056 thick
+node 75 4.5 0 2.5
+shell 1057 61 62 75 74 0.25 2.5e+07 0 2.4
+shelltype 1057 thick
+node 76 5 0 2.5
+shell 1058 62 63 76 75 0.25 2.5e+07 0 2.4
+shelltype 1058 thick
+node 77 5.5 0 2.5
+shell 1059 63 64 77 76 0.25 2.5e+07 0 2.4
+shelltype 1059 thick
+node 78 6 0 2.5
+shell 1060 64 65 78 77 0.25 2.5e+07 0 2.4
+shelltype 1060 thick
+node 79 0.5 0 3
+node 80 0 0 3
+shell 1061 67 66 79 80 0.25 2.5e+07 0 2.4
+shelltype 1061 thick
+node 81 1 0 3
+shell 1062 66 68 81 79 0.25 2.5e+07 0 2.4
+shelltype 1062 thick
+node 82 1.5 0 3
+shell 1063 68 69 82 81 0.25 2.5e+07 0 2.4
+shelltype 1063 thick
+node 83 2 0 3
+shell 1064 69 70 83 82 0.25 2.5e+07 0 2.4
+shelltype 1064 thick
+node 84 2.5 0 3
+shell 1065 70 71 84 83 0.25 2.5e+07 0 2.4
+shelltype 1065 thick
+node 85 3 0 3
+shell 1066 71 72 85 84 0.25 2.5e+07 0 2.4
+shelltype 1066 thick
+node 86 3.5 0 3
+shell 1067 72 73 86 85 0.25 2.5e+07 0 2.4
+shelltype 1067 thick
+node 87 4 0 3
+shell 1068 73 74 87 86 0.25 2.5e+07 0 2.4
+shelltype 1068 thick
+node 88 4.5 0 3
+shell 1069 74 75 88 87 0.25 2.5e+07 0 2.4
+shelltype 1069 thick
+node 89 5 0 3
+shell 1070 75 76 89 88 0.25 2.5e+07 0 2.4
+shelltype 1070 thick
+node 90 5.5 0 3
+shell 1071 76 77 90 89 0.25 2.5e+07 0 2.4
+shelltype 1071 thick
+node 91 6 0 3
+shell 1072 77 78 91 90 0.25 2.5e+07 0 2.4
+shelltype 1072 thick
+node 92 0.5 0 3.5
+node 93 0 0 3.5
+shell 1073 80 79 92 93 0.25 2.5e+07 0 2.4
+shelltype 1073 thick
+node 94 1 0 3.5
+shell 1074 79 81 94 92 0.25 2.5e+07 0 2.4
+shelltype 1074 thick
+node 95 1.5 0 3.5
+shell 1075 81 82 95 94 0.25 2.5e+07 0 2.4
+shelltype 1075 thick
+node 96 2 0 3.5
+shell 1076 82 83 96 95 0.25 2.5e+07 0 2.4
+shelltype 1076 thick
+node 97 2.5 0 3.5
+shell 1077 83 84 97 96 0.25 2.5e+07 0 2.4
+shelltype 1077 thick
+node 98 3 0 3.5
+shell 1078 84 85 98 97 0.25 2.5e+07 0 2.4
+shelltype 1078 thick
+node 99 3.5 0 3.5
+shell 1079 85 86 99 98 0.25 2.5e+07 0 2.4
+shelltype 1079 thick
+node 100 4 0 3.5
+shell 1080 86 87 100 99 0.25 2.5e+07 0 2.4
+shelltype 1080 thick
+node 101 4.5 0 3.5
+shell 1081 87 88 101 100 0.25 2.5e+07 0 2.4
+shelltype 1081 thick
+node 102 5 0 3.5
+shell 1082 88 89 102 101 0.25 2.5e+07 0 2.4
+shelltype 1082 thick
+node 103 5.5 0 3.5
+shell 1083 89 90 103 102 0.25 2.5e+07 0 2.4
+shelltype 1083 thick
+node 104 6 0 3.5
+shell 1084 90 91 104 103 0.25 2.5e+07 0 2.4
+shelltype 1084 thick
+node 105 0.5 0 4
+node 106 0 0 4
+shell 1085 93 92 105 106 0.25 2.5e+07 0 2.4
+shelltype 1085 thick
+node 107 1 0 4
+shell 1086 92 94 107 105 0.25 2.5e+07 0 2.4
+shelltype 1086 thick
+node 108 1.5 0 4
+shell 1087 94 95 108 107 0.25 2.5e+07 0 2.4
+shelltype 1087 thick
+node 109 2 0 4
+shell 1088 95 96 109 108 0.25 2.5e+07 0 2.4
+shelltype 1088 thick
+node 110 2.5 0 4
+shell 1089 96 97 110 109 0.25 2.5e+07 0 2.4
+shelltype 1089 thick
+node 111 3 0 4
+shell 1090 97 98 111 110 0.25 2.5e+07 0 2.4
+shelltype 1090 thick
+node 112 3.5 0 4
+shell 1091 98 99 112 111 0.25 2.5e+07 0 2.4
+shelltype 1091 thick
+node 113 4 0 4
+shell 1092 99 100 113 112 0.25 2.5e+07 0 2.4
+shelltype 1092 thick
+node 114 4.5 0 4
+shell 1093 100 101 114 113 0.25 2.5e+07 0 2.4
+shelltype 1093 thick
+node 115 5 0 4
+shell 1094 101 102 115 114 0.25 2.5e+07 0 2.4
+shelltype 1094 thick
+node 116 5.5 0 4
+shell 1095 102 103 116 115 0.25 2.5e+07 0 2.4
+shelltype 1095 thick
+node 117 6 0 4
+shell 1096 103 104 117 116 0.25 2.5e+07 0 2.4
+shelltype 1096 thick
+node 118 0.5 0 4.5
+node 119 0 0 4.5
+shell 1097 106 105 118 119 0.25 2.5e+07 0 2.4
+shelltype 1097 thick
+node 120 1 0 4.5
+shell 1098 105 107 120 118 0.25 2.5e+07 0 2.4
+shelltype 1098 thick
+node 121 1.5 0 4.5
+shell 1099 107 108 121 120 0.25 2.5e+07 0 2.4
+shelltype 1099 thick
+node 122 2 0 4.5
+shell 1100 108 109 122 121 0.25 2.5e+07 0 2.4
+shelltype 1100 thick
+node 123 2.5 0 4.5
+shell 1101 109 110 123 122 0.25 2.5e+07 0 2.4
+shelltype 1101 thick
+node 124 3 0 4.5
+shell 1102 110 111 124 123 0.25 2.5e+07 0 2.4
+shelltype 1102 thick
+node 125 3.5 0 4.5
+shell 1103 111 112 125 124 0.25 2.5e+07 0 2.4
+shelltype 1103 thick
+node 126 4 0 4.5
+shell 1104 112 113 126 125 0.25 2.5e+07 0 2.4
+shelltype 1104 thick
+node 127 4.5 0 4.5
+shell 1105 113 114 127 126 0.25 2.5e+07 0 2.4
+shelltype 1105 thick
+node 128 5 0 4.5
+shell 1106 114 115 128 127 0.25 2.5e+07 0 2.4
+shelltype 1106 thick
+node 129 5.5 0 4.5
+shell 1107 115 116 129 128 0.25 2.5e+07 0 2.4
+shelltype 1107 thick
+node 130 6 0 4.5
+shell 1108 116 117 130 129 0.25 2.5e+07 0 2.4
+shelltype 1108 thick
+node 131 0.5 0 5
+node 132 0 0 5
+shell 1109 119 118 131 132 0.25 2.5e+07 0 2.4
+shelltype 1109 thick
+node 133 1 0 5
+shell 1110 118 120 133 131 0.25 2.5e+07 0 2.4
+shelltype 1110 thick
+node 134 1.5 0 5
+shell 1111 120 121 134 133 0.25 2.5e+07 0 2.4
+shelltype 1111 thick
+node 135 2 0 5
+shell 1112 121 122 135 134 0.25 2.5e+07 0 2.4
+shelltype 1112 thick
+node 136 2.5 0 5
+shell 1113 122 123 136 135 0.25 2.5e+07 0 2.4
+shelltype 1113 thick
+node 137 3 0 5
+shell 1114 123 124 137 136 0.25 2.5e+07 0 2.4
+shelltype 1114 thick
+node 138 3.5 0 5
+shell 1115 124 125 138 137 0.25 2.5e+07 0 2.4
+shelltype 1115 thick
+node 139 4 0 5
+shell 1116 125 126 139 138 0.25 2.5e+07 0 2.4
+shelltype 1116 thick
+node 140 4.5 0 5
+shell 1117 126 127 140 139 0.25 2.5e+07 0 2.4
+shelltype 1117 thick
+node 141 5 0 5
+shell 1118 127 128 141 140 0.25 2.5e+07 0 2.4
+shelltype 1118 thick
+node 142 5.5 0 5
+shell 1119 128 129 142 141 0.25 2.5e+07 0 2.4
+shelltype 1119 thick
+node 143 6 0 5
+shell 1120 129 130 143 142 0.25 2.5e+07 0 2.4
+shelltype 1120 thick
+node 144 0.5 0 5.5
+node 145 0 0 5.5
+shell 1121 132 131 144 145 0.25 2.5e+07 0 2.4
+shelltype 1121 thick
+node 146 1 0 5.5
+shell 1122 131 133 146 144 0.25 2.5e+07 0 2.4
+shelltype 1122 thick
+node 147 1.5 0 5.5
+shell 1123 133 134 147 146 0.25 2.5e+07 0 2.4
+shelltype 1123 thick
+node 148 2 0 5.5
+shell 1124 134 135 148 147 0.25 2.5e+07 0 2.4
+shelltype 1124 thick
+node 149 2.5 0 5.5
+shell 1125 135 136 149 148 0.25 2.5e+07 0 2.4
+shelltype 1125 thick
+node 150 3 0 5.5
+shell 1126 136 137 150 149 0.25 2.5e+07 0 2.4
+shelltype 1126 thick
+node 151 3.5 0 5.5
+shell 1127 137 138 151 150 0.25 2.5e+07 0 2.4
+shelltype 1127 thick
+node 152 4 0 5.5
+shell 1128 138 139 152 151 0.25 2.5e+07 0 2.4
+shelltype 1128 thick
+node 153 4.5 0 5.5
+shell 1129 139 140 153 152 0.25 2.5e+07 0 2.4
+shelltype 1129 thick
+node 154 5 0 5.5
+shell 1130 140 141 154 153 0.25 2.5e+07 0 2.4
+shelltype 1130 thick
+node 155 5.5 0 5.5
+shell 1131 141 142 155 154 0.25 2.5e+07 0 2.4
+shelltype 1131 thick
+node 156 6 0 5.5
+shell 1132 142 143 156 155 0.25 2.5e+07 0 2.4
+shelltype 1132 thick
+node 157 0.5 0 6
+node 158 0 0 6
+shell 1133 145 144 157 158 0.25 2.5e+07 0 2.4
+shelltype 1133 thick
+node 159 1 0 6
+shell 1134 144 146 159 157 0.25 2.5e+07 0 2.4
+shelltype 1134 thick
+node 160 1.5 0 6
+shell 1135 146 147 160 159 0.25 2.5e+07 0 2.4
+shelltype 1135 thick
+node 161 2 0 6
+shell 1136 147 148 161 160 0.25 2.5e+07 0 2.4
+shelltype 1136 thick
+node 162 2.5 0 6
+shell 1137 148 149 162 161 0.25 2.5e+07 0 2.4
+shelltype 1137 thick
+node 163 3 0 6
+shell 1138 149 150 163 162 0.25 2.5e+07 0 2.4
+shelltype 1138 thick
+node 164 3.5 0 6
+shell 1139 150 151 164 163 0.25 2.5e+07 0 2.4
+shelltype 1139 thick
+node 165 4 0 6
+shell 1140 151 152 165 164 0.25 2.5e+07 0 2.4
+shelltype 1140 thick
+node 166 4.5 0 6
+shell 1141 152 153 166 165 0.25 2.5e+07 0 2.4
+shelltype 1141 thick
+node 167 5 0 6
+shell 1142 153 154 167 166 0.25 2.5e+07 0 2.4
+shelltype 1142 thick
+node 168 5.5 0 6
+shell 1143 154 155 168 167 0.25 2.5e+07 0 2.4
+shelltype 1143 thick
+node 169 6 0 6
+shell 1144 155 156 169 168 0.25 2.5e+07 0 2.4
+shelltype 1144 thick
+support 1 1 1 1 1 1 1
+support 2 1 1 1 1 1 1
+support 5 1 1 1 1 1 1
+support 7 1 1 1 1 1 1
+support 9 1 1 1 1 1 1
+support 11 1 1 1 1 1 1
+support 13 1 1 1 1 1 1
+support 15 1 1 1 1 1 1
+support 17 1 1 1 1 1 1
+support 19 1 1 1 1 1 1
+support 21 1 1 1 1 1 1
+support 23 1 1 1 1 1 1
+support 25 1 1 1 1 1 1
+load 80 2.08333 0 0 0 0 0
+load 79 4.16667 0 0 0 0 0
+load 81 4.16667 0 0 0 0 0
+load 82 4.16667 0 0 0 0 0
+load 83 4.16667 0 0 0 0 0
+load 84 4.16667 0 0 0 0 0
+load 85 4.16667 0 0 0 0 0
+load 86 4.16667 0 0 0 0 0
+load 87 4.16667 0 0 0 0 0
+load 88 4.16667 0 0 0 0 0
+load 89 4.16667 0 0 0 0 0
+load 90 4.16667 0 0 0 0 0
+load 91 2.08333 0 0 0 0 0
+load 158 4.16667 0 0 0 0 0
+load 157 8.33333 0 0 0 0 0
+load 159 8.33333 0 0 0 0 0
+load 160 8.33333 0 0 0 0 0
+load 161 8.33333 0 0 0 0 0
+load 162 8.33333 0 0 0 0 0
+load 163 8.33333 0 0 0 0 0
+load 164 8.33333 0 0 0 0 0
+load 165 8.33333 0 0 0 0 0
+load 166 8.33333 0 0 0 0 0
+load 167 8.33333 0 0 0 0 0
+load 168 8.33333 0 0 0 0 0
+load 169 4.16667 0 0 0 0 0
+solve

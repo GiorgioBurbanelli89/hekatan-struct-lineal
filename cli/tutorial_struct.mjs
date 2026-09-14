@@ -100,7 +100,10 @@ const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
 try {
   await pag.goto("http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
 } catch (e) {
-  if (!/ERR_ABORTED/.test(String(e))) throw e;
+  // (13-sep-2026) Un modelo por ENLACE con `&modal=N` anima sin parar y la red nunca queda
+  // «idle»: `networkidle2` agotaba los 180 s y abortaba la toma sin un fotograma. No es un
+  // fallo de carga: el visor se espera abajo igual.
+  if (!/ERR_ABORTED|Navigation timeout/.test(String(e))) throw e;
   console.log("  (carga abortada y rehecha: " + String(e).slice(0, 60) + ")");
   await espera(3000);
 }

@@ -1363,6 +1363,9 @@ function rebuild() {
  * luego se elige del desplegable — que es justo como se entra normalmente.
  */
 function ribbonPlegadaPara(id?: string | null): boolean {
+  // Un modelo que llega por ENLACE (?heks= / ?m=) es para mirarlo: la barra de dibujo
+  // plegada. Abierta tapaba el tercio de arriba del modelo compartido (13-sep-2026).
+  if (_qs.get("heks") || _qs.get("m")) return true;
   const dibujar = ["new-blank", "cad-draw", "cad-editor", "inicio", "drawing"];
   return !!id && !dibujar.includes(id);
 }
