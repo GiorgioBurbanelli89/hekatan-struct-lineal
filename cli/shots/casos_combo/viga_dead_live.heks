@@ -1,0 +1,11 @@
+# viga empotrada 4 m: carga Dead en la punta y carga Live en el centro (patrones)
+node 1 0 0 0
+node 2 2 0 0
+node 3 4 0 0
+frame 1 1 2 25000000 0.09 0.000675 0.000675 0.001 0.2 0
+frame 2 2 3 25000000 0.09 0.000675 0.000675 0.001 0.2 0
+support 1 1 1 1 1 1 1
+load 3 0 0 -10 0 0 0
+load 2 0 0 -5 0 0 0 Live
+frameload 2 0 0 -2 Live
+solve

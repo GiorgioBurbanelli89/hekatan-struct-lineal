@@ -54,6 +54,7 @@
  */
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc } from "../shared/cadSections";
+import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
@@ -168,6 +169,12 @@ interface ParsedModel {
    *  medido contra ETABS, un tributario simple manda 16 % menos carga al apoyo
    *  interior del vano ancho y 23 % mas al extremo. */
   frameLoads: Map<number, [number, number, number]>;
+  /** Cargas de un PATRÓN que no es Dead: `load … [patrón]` y `frameload … [patrón]`.
+   *  Sin patrón (y el peso propio y las cargas de área) son Dead. El workspace elige
+   *  cuáles entran según «Resultado»: Case = sus patrones, Combo = Σ factor·caso
+   *  (Jorge, 14-sep-2026: «case usa dead y combo usa combinaciones»). */
+  loadsPat: Map<string, Map<number, [number, number, number, number, number, number]>>;
+  frameLoadsPat: Map<string, Map<number, [number, number, number]>>;
   springs: Array<{ node: number; dof: number; k: number }>;
   /** Masa concentrada en un nudo, en toneladas — la que NO sale del peso propio.
    *  En ETABS la fuente de masa son dos interruptores: `INCLUDEELEMENTS`
@@ -256,6 +263,8 @@ export function parseCliCommands(text: string): ParsedModel {
     supports: new Map(),
     loads: new Map(),
     frameLoads: new Map(),
+    loadsPat: new Map(),
+    frameLoadsPat: new Map(),
     springs: [],
     masses: new Map(),
     diaphragms: new Map(),
@@ -717,18 +726,27 @@ export function parseCliCommands(text: string): ParsedModel {
           const mx = parseFloat(tokens[5] ?? "0");
           const my = parseFloat(tokens[6] ?? "0");
           const mz = parseFloat(tokens[7] ?? "0");
-          m.loads.set(nodeId, [fx, fy, fz, mx, my, mz]);
+          // 8º token opcional = PATRÓN (Dead, Live, Ex…). Sin él, Dead.
+          const patL = tokens[8] && isNaN(parseFloat(tokens[8])) ? tokens[8] : "Dead";
+          if (/^dead$/i.test(patL)) m.loads.set(nodeId, [fx, fy, fz, mx, my, mz]);
+          else {
+            if (!m.loadsPat.has(patL)) m.loadsPat.set(patL, new Map());
+            m.loadsPat.get(patL)!.set(nodeId, [fx, fy, fz, mx, my, mz]);
+          }
           break;
         }
         case "frameload":
         case "fl": {
-          // frameload frameID wx wy wz   (kN/m, ejes globales)
+          // frameload frameID wx wy wz [patrón]   (kN/m, ejes globales; sin patrón = Dead)
           const fid = parseInt(tokens[1], 10);
           const wx = parseFloat(tokens[2] ?? "0");
           const wy = parseFloat(tokens[3] ?? "0");
           const wz = parseFloat(tokens[4] ?? "0");
-          const ant = m.frameLoads.get(fid) ?? [0, 0, 0];
-          m.frameLoads.set(fid, [ant[0] + wx, ant[1] + wy, ant[2] + wz]);
+          const patF = tokens[5] && isNaN(parseFloat(tokens[5])) ? tokens[5] : "Dead";
+          const destinoFL = /^dead$/i.test(patF) ? m.frameLoads
+            : (m.frameLoadsPat.get(patF) ?? (m.frameLoadsPat.set(patF, new Map()), m.frameLoadsPat.get(patF)!));
+          const ant = destinoFL.get(fid) ?? [0, 0, 0];
+          destinoFL.set(fid, [ant[0] + wx, ant[1] + wy, ant[2] + wz]);
           break;
         }
         case "spring": {
@@ -1330,14 +1348,27 @@ export const cliModeler: ExampleDef = {
     // Comprobacion del signo, viga en +x con carga hacia abajo w=(0,0,−q):
     // t×w = (0,+q,0) -> M_i = +qL²/12 alrededor de +y, que es el empotramiento
     // que da la teoria de vigas.
-    if (m.frameLoads.size) {
+    // Cargas nodales de los patrones que NO son Dead (mismo reparto que las de Dead)
+    const loadsOtros = new Map<string, Map<number, [number,number,number,number,number,number]>>();
+    for (const [pat, mp] of m.loadsPat) {
+      const dst = new Map<number, [number,number,number,number,number,number]>();
+      for (const [id, ld] of mp) { const idx = idToIdx.get(id); if (idx !== undefined) dst.set(idx, [...ld] as any); }
+      loadsOtros.set(pat, dst);
+    }
+    const tandasFL: Array<[Map<number, [number, number, number]>, Map<number, [number,number,number,number,number,number]>]> =
+      [[m.frameLoads, loads]];
+    for (const [pat, fl] of m.frameLoadsPat) {
+      if (!loadsOtros.has(pat)) loadsOtros.set(pat, new Map());
+      tandasFL.push([fl, loadsOtros.get(pat)!]);
+    }
+    for (const [frameLoadsTanda, destinoTanda] of tandasFL) if (frameLoadsTanda.size) {
       const acum = (idx: number, v: number[]) => {
-        const a = loads.get(idx) ?? [0, 0, 0, 0, 0, 0];
-        loads.set(idx, [a[0]+v[0], a[1]+v[1], a[2]+v[2],
+        const a = destinoTanda.get(idx) ?? [0, 0, 0, 0, 0, 0];
+        destinoTanda.set(idx, [a[0]+v[0], a[1]+v[1], a[2]+v[2],
                         a[3]+v[3], a[4]+v[4], a[5]+v[5]] as
                        [number,number,number,number,number,number]);
       };
-      for (const [fid, w] of m.frameLoads.entries()) {
+      for (const [fid, w] of frameLoadsTanda.entries()) {
         const f = m.frames.find(fr => fr.id === fid);
         if (!f) { m.errors.push(`frameload ${fid}: no existe esa barra`); continue; }
         const iI = idToIdx.get(f.nI), iJ = idToIdx.get(f.nJ);
@@ -1617,7 +1648,7 @@ export const cliModeler: ExampleDef = {
           const sup = new Map<number, [boolean, boolean, boolean]>();
           for (const [n, v] of states.nodeInputs.val.supports ?? []) sup.set(n, [!!v[0], !!v[1], !!v[2]]);
           const ld = new Map<number, [number, number, number]>();
-          for (const [n, v] of states.nodeInputs.val.loads ?? []) ld.set(n, [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0]);
+          for (const [n, v] of cargasDelCaso({ Dead: loads, ...Object.fromEntries(loadsOtros) })) ld.set(n, [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0]);
           const r = hex8Solve({ nodes: nodes as any, elements: elements as any, E: E0, nu: nu0, supports: sup, loads: ld, incompatible: m.solidIncompatible });
           const deformations = new Map<number, number[]>();
           r.displacements.forEach(([ux, uy, uz], n) => deformations.set(n, [ux, uy, uz, 0, 0, 0]));
@@ -1631,8 +1662,13 @@ export const cliModeler: ExampleDef = {
         // los mismos muelles que el estatico, para el modal (runModal): sin ellos
         // un modelo sobre balasto flota y da periodos absurdos
         (window as any).__hekatanCliSprings = springsList;
+        // LAS CARGAS DEL CASO / COMBO ACTIVO (Jorge, 14-sep-2026: «case usa Dead, combo usa las
+        // combinaciones»). Antes se resolvía SIEMPRE con todo: la bóveda daba −6.675 mm en Dead,
+        // en Live, en «Servicio D+L» y en «1.4D». `states.nodeInputs.loads` queda sin escalar:
+        // de ahí exportan el e2k/s2k las cargas por patrón.
+        const cargasCaso = cargasDelCaso({ Dead: loads, ...Object.fromEntries(loadsOtros) });
         states.deformOutputs.val = deform(
-          nodes, elements, states.nodeInputs.val, states.elementInputs.val,
+          nodes, elements, { ...states.nodeInputs.val, loads: cargasCaso } as any, states.elementInputs.val,
           springsList.length ? springsList : undefined,
         );
         // Y los RESULTADOS: momentos, cortantes, tensiones. El CLI solo corria
