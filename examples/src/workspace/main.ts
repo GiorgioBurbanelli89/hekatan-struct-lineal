@@ -2743,6 +2743,8 @@ if (window.innerWidth > 600) {
         border-top: 1px solid rgba(255, 255, 255, 0.18) !important; z-index: 10000 !important;
       }
       html.hk-enlace #modal-results * { font-size: 9px !important; }
+      /* 14-sep-2026 (Jorge: «en móvil no se ve la sumatoria Rz»): la tabla a 8 px para que quepa ΣRz */
+      html.hk-enlace #modal-results table, html.hk-enlace #modal-results table * { font-size: 8px !important; }
       /* la tabla CABE en el ancho: 10 columnas (Mode, T, Ux Uy Uz, Rx Ry Rz, ΣUx ΣUy). Freq,
          ω, ΣRx ΣRy ΣRz y Tipo se ocultan aquí; siguen en escritorio y en «Copiar». Con las 16
          se cortaba desde Rz (Jorge: «esa tabla no se ve ajustada al móvil»). */
@@ -2750,8 +2752,11 @@ if (window.innerWidth > 600) {
       html.hk-enlace #modal-results th, html.hk-enlace #modal-results td {
         padding: 2px 1px !important; white-space: nowrap !important; text-align: right !important;
       }
+      /* columnas: 1 Mode · 2 Freq · 3 T · 4 ω · 5-10 Ux..Rz · 11 ΣUx · 12 ΣUy · 13 ΣRx · 14 ΣRy · 15 ΣRz · 16 Tipo.
+         En móvil se ocultan Freq, ω, ΣRx, ΣRy y Tipo; ΣRz SÍ va (torsión) */
       html.hk-enlace #modal-results tr > :nth-child(2), html.hk-enlace #modal-results tr > :nth-child(4),
-      html.hk-enlace #modal-results tr > :nth-child(n+13) { display: none !important; }
+      html.hk-enlace #modal-results tr > :nth-child(13), html.hk-enlace #modal-results tr > :nth-child(14),
+      html.hk-enlace #modal-results tr > :nth-child(16) { display: none !important; }
       /* «Ancho» y «Cerrar» rompen el reparto de la pantalla (o dejan la tabla sin vuelta) */
       html.hk-enlace #modal-wide, html.hk-enlace #modal-close { display: none !important; }
       /* ▬ minimiza la tabla a su cabecera y el panel Settings se queda con ese sitio
