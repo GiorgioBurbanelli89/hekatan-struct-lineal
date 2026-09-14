@@ -1,0 +1,186 @@
+# Drilling aparte: muro membrana 3x3 m (t 0.20, shellmod flexion 0) + viga voladizo 30x50 L=2 m en su plano, 50 kN en la punta
+selfweight 0
+node 1 0 0 0
+support 1 1 1 1 1 1 1
+node 2 0.5 0 0
+support 2 1 1 1 1 1 1
+node 3 1 0 0
+support 3 1 1 1 1 1 1
+node 4 1.5 0 0
+support 4 1 1 1 1 1 1
+node 5 2 0 0
+support 5 1 1 1 1 1 1
+node 6 2.5 0 0
+support 6 1 1 1 1 1 1
+node 7 3 0 0
+support 7 1 1 1 1 1 1
+node 8 0 0 0.5
+support 8 0 1 0 1 0 1
+node 9 0.5 0 0.5
+support 9 0 1 0 1 0 1
+node 10 1 0 0.5
+support 10 0 1 0 1 0 1
+node 11 1.5 0 0.5
+support 11 0 1 0 1 0 1
+node 12 2 0 0.5
+support 12 0 1 0 1 0 1
+node 13 2.5 0 0.5
+support 13 0 1 0 1 0 1
+node 14 3 0 0.5
+support 14 0 1 0 1 0 1
+node 15 0 0 1
+support 15 0 1 0 1 0 1
+node 16 0.5 0 1
+support 16 0 1 0 1 0 1
+node 17 1 0 1
+support 17 0 1 0 1 0 1
+node 18 1.5 0 1
+support 18 0 1 0 1 0 1
+node 19 2 0 1
+support 19 0 1 0 1 0 1
+node 20 2.5 0 1
+support 20 0 1 0 1 0 1
+node 21 3 0 1
+support 21 0 1 0 1 0 1
+node 22 0 0 1.5
+support 22 0 1 0 1 0 1
+node 23 0.5 0 1.5
+support 23 0 1 0 1 0 1
+node 24 1 0 1.5
+support 24 0 1 0 1 0 1
+node 25 1.5 0 1.5
+support 25 0 1 0 1 0 1
+node 26 2 0 1.5
+support 26 0 1 0 1 0 1
+node 27 2.5 0 1.5
+support 27 0 1 0 1 0 1
+node 28 3 0 1.5
+support 28 0 1 0 1 0 1
+node 29 0 0 2
+support 29 0 1 0 1 0 1
+node 30 0.5 0 2
+support 30 0 1 0 1 0 1
+node 31 1 0 2
+support 31 0 1 0 1 0 1
+node 32 1.5 0 2
+support 32 0 1 0 1 0 1
+node 33 2 0 2
+support 33 0 1 0 1 0 1
+node 34 2.5 0 2
+support 34 0 1 0 1 0 1
+node 35 3 0 2
+support 35 0 1 0 1 0 1
+node 36 0 0 2.5
+support 36 0 1 0 1 0 1
+node 37 0.5 0 2.5
+support 37 0 1 0 1 0 1
+node 38 1 0 2.5
+support 38 0 1 0 1 0 1
+node 39 1.5 0 2.5
+support 39 0 1 0 1 0 1
+node 40 2 0 2.5
+support 40 0 1 0 1 0 1
+node 41 2.5 0 2.5
+support 41 0 1 0 1 0 1
+node 42 3 0 2.5
+support 42 0 1 0 1 0 1
+node 43 0 0 3
+support 43 0 1 0 1 0 1
+node 44 0.5 0 3
+support 44 0 1 0 1 0 1
+node 45 1 0 3
+support 45 0 1 0 1 0 1
+node 46 1.5 0 3
+support 46 0 1 0 1 0 1
+node 47 2 0 3
+support 47 0 1 0 1 0 1
+node 48 2.5 0 3
+support 48 0 1 0 1 0 1
+node 49 3 0 3
+support 49 0 1 0 1 0 1
+shell 1 1 2 9 8 0.2 25000000
+shellmod 1 1 0
+shell 2 2 3 10 9 0.2 25000000
+shellmod 2 1 0
+shell 3 3 4 11 10 0.2 25000000
+shellmod 3 1 0
+shell 4 4 5 12 11 0.2 25000000
+shellmod 4 1 0
+shell 5 5 6 13 12 0.2 25000000
+shellmod 5 1 0
+shell 6 6 7 14 13 0.2 25000000
+shellmod 6 1 0
+shell 7 8 9 16 15 0.2 25000000
+shellmod 7 1 0
+shell 8 9 10 17 16 0.2 25000000
+shellmod 8 1 0
+shell 9 10 11 18 17 0.2 25000000
+shellmod 9 1 0
+shell 10 11 12 19 18 0.2 25000000
+shellmod 10 1 0
+shell 11 12 13 20 19 0.2 25000000
+shellmod 11 1 0
+shell 12 13 14 21 20 0.2 25000000
+shellmod 12 1 0
+shell 13 15 16 23 22 0.2 25000000
+shellmod 13 1 0
+shell 14 16 17 24 23 0.2 25000000
+shellmod 14 1 0
+shell 15 17 18 25 24 0.2 25000000
+shellmod 15 1 0
+shell 16 18 19 26 25 0.2 25000000
+shellmod 16 1 0
+shell 17 19 20 27 26 0.2 25000000
+shellmod 17 1 0
+shell 18 20 21 28 27 0.2 25000000
+shellmod 18 1 0
+shell 19 22 23 30 29 0.2 25000000
+shellmod 19 1 0
+shell 20 23 24 31 30 0.2 25000000
+shellmod 20 1 0
+shell 21 24 25 32 31 0.2 25000000
+shellmod 21 1 0
+shell 22 25 26 33 32 0.2 25000000
+shellmod 22 1 0
+shell 23 26 27 34 33 0.2 25000000
+shellmod 23 1 0
+shell 24 27 28 35 34 0.2 25000000
+shellmod 24 1 0
+shell 25 29 30 37 36 0.2 25000000
+shellmod 25 1 0
+shell 26 30 31 38 37 0.2 25000000
+shellmod 26 1 0
+shell 27 31 32 39 38 0.2 25000000
+shellmod 27 1 0
+shell 28 32 33 40 39 0.2 25000000
+shellmod 28 1 0
+shell 29 33 34 41 40 0.2 25000000
+shellmod 29 1 0
+shell 30 34 35 42 41 0.2 25000000
+shellmod 30 1 0
+shell 31 36 37 44 43 0.2 25000000
+shellmod 31 1 0
+shell 32 37 38 45 44 0.2 25000000
+shellmod 32 1 0
+shell 33 38 39 46 45 0.2 25000000
+shellmod 33 1 0
+shell 34 39 40 47 46 0.2 25000000
+shellmod 34 1 0
+shell 35 40 41 48 47 0.2 25000000
+shellmod 35 1 0
+shell 36 41 42 49 48 0.2 25000000
+shellmod 36 1 0
+node 50 3.5 0 1.5
+support 50 0 1 0 1 0 1
+frame 1 28 50 25000000 0.15 0.001125 0.0031249999999999997 0.00281737 0.2 0 0.5 0.3 # V30X50
+node 51 4 0 1.5
+support 51 0 1 0 1 0 1
+frame 2 50 51 25000000 0.15 0.001125 0.0031249999999999997 0.00281737 0.2 0 0.5 0.3 # V30X50
+node 52 4.5 0 1.5
+support 52 0 1 0 1 0 1
+frame 3 51 52 25000000 0.15 0.001125 0.0031249999999999997 0.00281737 0.2 0 0.5 0.3 # V30X50
+node 53 5 0 1.5
+support 53 0 1 0 1 0 1
+frame 4 52 53 25000000 0.15 0.001125 0.0031249999999999997 0.00281737 0.2 0 0.5 0.3 # V30X50
+load 53 0 0 -50 0 0 0
+solve

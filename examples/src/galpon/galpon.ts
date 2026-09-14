@@ -22,7 +22,7 @@ const P = (folder: string, label: string, def: number, min: number, max: number,
 export const galpon: ExampleDef = {
   id: "galpon",
   name: "Galpón (nave industrial)",
-  category: "1️⃣ Frames · 🎯 n GDL Sistemas",
+  category: "4️⃣ Mixtos · 🏢 Edificios",
   defaultShellResult: "none",
   availableShellResults: ["none", "membraneXX", "membraneYY", "vonMises"],
   hasModal: true,
@@ -186,10 +186,16 @@ export const galpon: ExampleDef = {
       sectionShapes.set(i, forma);
     }
     // Paños de cubierta (nFrames .. fin): membrana delgada, peso via qCub.
+    // ⚠️ (14-sep-2026) `plateFormulations = 2` SOLO lo leen los exportadores (MODELINGTYPE/Type
+    // Membrane): el motor despacha 1 (Thin) y 3 (DKMQ) y el 2 caía en el Q4 grueso CON flexión.
+    // La membrana en el cálculo es flexión 0 (shellQ4.cpp `sinFlexion` no arma la placa).
+    const membraneModifiers = new Map<number, number>();
+    const bendingModifiers = new Map<number, number>();
     for (let i = nFrames; i < elements.length; i++) {
       elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
       thicknesses.set(i, tCub); densities.set(i, 0);
-      plateFormulations.set(i, 2);   // Membrane
+      plateFormulations.set(i, 2);   // Membrane (exportadores)
+      membraneModifiers.set(i, 1); bendingModifiers.set(i, 0);   // Membrane (motor)
     }
 
     states.nodes.val = nodes;
@@ -199,7 +205,8 @@ export const galpon: ExampleDef = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: I22, momentsOfInertiaZ: I33, torsionalConstants: J,
       densities, poissonsRatios: poissons, sectionShapes, thicknesses, plateFormulations,
-    };
+      membraneModifiers, bendingModifiers,
+    } as any;
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);
     states.deformOutputs.val = deformOut;
     states.analyzeOutputs.val = analyze(nodes, elements, states.elementInputs.val, deformOut);
