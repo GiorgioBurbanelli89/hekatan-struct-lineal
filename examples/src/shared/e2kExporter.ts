@@ -549,6 +549,8 @@ function exportFromScratch(input: ExportE2kInput): string {
   // salian 168 nudos y 36 areas en vez de 81 y 64: OTRO modelo. El fallback de
   // "si no hay plantas, que TODAS las cotas sean planta" era justo lo contrario
   // de lo que hay que hacer.
+  // Modelo SIN nudos: salía `HEIGHT NaN` / `ELEV NaN` (csi-importer_1789354845132.e2k, 13-sep-2026).
+  if (!todasZ.length) todasZ.push(0, 3);
   if (!sortedZ.length) sortedZ = [todasZ[0], todasZ[todasZ.length - 1]];
   if (sortedZ[0] !== todasZ[0]) sortedZ.unshift(todasZ[0]);
   if (sortedZ[sortedZ.length - 1] !== todasZ[todasZ.length - 1])

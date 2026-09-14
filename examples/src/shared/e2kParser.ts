@@ -205,7 +205,9 @@ export function parseE2k(text: string): E2kModel {
   for (const rawLine of lines) {
     const line = rawLine.trim();
     if (!line || line.startsWith("$")) {
-      if (line.startsWith("$ ")) currentSection = line.substring(2).trim();
+      // `$ AREA OBJECT CONNECTIVITIES` (lo escriben algunos generadores, p. ej. slab_plate6x4.e2k)
+      // es el mismo bloque que `$ AREA CONNECTIVITIES`: sin el alias entraban 0 áreas.
+      if (line.startsWith("$ ")) currentSection = line.substring(2).trim().replace(/^AREA OBJECT CONNECTIVITIES$/, "AREA CONNECTIVITIES");
       continue;
     }
     // Capture raw line for current section

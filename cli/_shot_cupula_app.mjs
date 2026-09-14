@@ -1,0 +1,17 @@
+import puppeteer from "puppeteer";
+const U = "http://localhost:4795/hekatan-struct-lineal/workspace/?m=cupulaNivelesTest&t=new-blank";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 950 });
+const log = []; p.on("pageerror", e => log.push("ERR " + e.message)); p.on("console", m => { const t = m.text(); if (/nivel|piso|story|Modal OK|CLI Modeler|corte|clip/i.test(t)) log.push(t.slice(0, 160)); });
+await p.goto(U, { waitUntil: "domcontentloaded", timeout: 120000 });
+await new Promise(r => setTimeout(r, 20000));
+await p.screenshot({ path: "cli/shots/cupula_niveles/app_1_cargada.png" });
+const info = await p.evaluate(() => { const s = window.__hekatanSettings?.(); const g = k => { try { return s?.[k]?.val; } catch { return "?"; } };
+  return { secFloor: g("secFloor"), shellResults: g("shellResults"), deformedShape: g("deformedShape"), ex: window.__hekatanExample?.() }; });
+console.log("settings", JSON.stringify(info));
+await p.evaluate(() => window.__hekatanRunModalAnimate?.()); await new Promise(r => setTimeout(r, 15000));
+await p.screenshot({ path: "cli/shots/cupula_niveles/app_2_modal.png" });
+await p.evaluate(() => window.__hekatanSetView?.("elevX")); await new Promise(r => setTimeout(r, 2500));
+await p.screenshot({ path: "cli/shots/cupula_niveles/app_3_alzado.png" });
+console.log(JSON.stringify(log.slice(0, 15)));
+await nav.close();

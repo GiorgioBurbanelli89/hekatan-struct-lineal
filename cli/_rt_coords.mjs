@@ -1,0 +1,12 @@
+import { empaquetar, R } from "../tests/lib/bundle.mjs";
+import { resolverHeks } from "../tests/lib/heks.mjs";
+import { readFileSync } from "node:fs";
+const m = await empaquetar(`export * from "${R}/examples/src/shared/e2kParser";\n`, "p");
+const H = await resolverHeks(process.argv[2]);
+const r = m.parseE2k(readFileSync(process.argv[3], "utf-8"));
+const k = p => p.map(v => (Math.round(v * 1000) / 1000).toFixed(3)).join(",");
+const orig = new Set(H.nodes.map(k)), vuelta = new Set(r.nodes.map(k));
+const faltan = [...orig].filter(x => !vuelta.has(x)), sobran = [...vuelta].filter(x => !orig.has(x));
+console.log("heks: nudos", H.nodes.length, "shells", H.elements.filter(e => e.length === 4).length);
+console.log("e2k releido: nudos", r.nodes.length, "shells", r.elements.filter(e => e.length === 4).length);
+console.log("NO_VUELVEN", faltan.length, "NUEVOS", sobran.length, "ej:", JSON.stringify(faltan.slice(0,3)), JSON.stringify(sobran.slice(0,3)));

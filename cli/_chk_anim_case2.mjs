@@ -1,0 +1,28 @@
+import puppeteer from "puppeteer";
+const URLB = "https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?m=7nF68EUiy5UVJuli&modal=80&t=new-blank";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 950 });
+const errs = []; p.on("pageerror", e => errs.push(e.message));
+await p.goto(URLB, { waitUntil: "domcontentloaded", timeout: 120000 });
+await new Promise(r => setTimeout(r, 25000));
+const clip = { clip: { x: 300, y: 60, width: 880, height: 600 } };
+const anima = async () => { const a = await p.screenshot(clip); await new Promise(r => setTimeout(r, 400)); const b = await p.screenshot(clip); return Buffer.compare(a, b) !== 0; };
+const setSel = (label, txt) => p.evaluate((label, txt) => {
+  const l = [...document.querySelectorAll("#settings .tp-lblv")].find(e => e.querySelector(".tp-lblv_l")?.textContent.trim() === label);
+  const s = l?.querySelector("select"); if (!s) return "sin " + label;
+  const o = [...s.options].find(o => o.textContent.trim().startsWith(txt)); if (!o) return "sin opcion " + txt + " en " + [...s.options].map(o => o.textContent).join("|");
+  s.value = o.value; s.dispatchEvent(new Event("change", { bubbles: true })); return "ok";
+}, label, txt);
+const estado = () => p.evaluate(() => [...document.querySelectorAll("#settings .tp-lblv")].filter(e => /Resultado|^Case|Combo|Caso modal|Modo|Animar/.test(e.querySelector(".tp-lblv_l")?.textContent ?? "")).map(e => e.querySelector(".tp-lblv_l").textContent.trim() + "=" + (e.querySelector("select")?.selectedOptions[0]?.textContent ?? e.querySelector("input")?.checked)));
+console.log("Mode:", await anima(), JSON.stringify(await estado()));
+console.log(await setSel("Resultado", "Case")); await new Promise(r => setTimeout(r, 6000));
+console.log("Case:", await anima(), JSON.stringify(await estado()));
+await p.screenshot({ path: "cli/shots/movil/chk_case_dead.png" });
+console.log(await setSel("Modo", "3") , "(no deberia existir en Case)");
+console.log(await setSel("Resultado", "Combo")); await new Promise(r => setTimeout(r, 6000));
+console.log("Combo:", await anima(), JSON.stringify(await estado()));
+console.log(await setSel("Resultado", "Mode")); await new Promise(r => setTimeout(r, 4000));
+console.log(await setSel("Modo", "3")); await new Promise(r => setTimeout(r, 2000));
+console.log("Mode 3:", await anima(), JSON.stringify(await estado()));
+console.log("ERR:", JSON.stringify(errs.slice(0, 5)));
+await nav.close();

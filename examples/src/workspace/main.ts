@@ -912,7 +912,11 @@ function mountCaseResultsInSettings() {
 
     const obj = { case: inicial };
     const etiqueta = __tipoRes === "combo" ? "Combo" : __tipoRes === "mode" ? "Caso modal" : "Case";
-    __caseResultsBinding = folder.addBinding(obj, "case", { label: etiqueta, options: caseOptions, index: 1 });
+    // En Mode con UN solo caso modal la lista «Caso modal = Modal» no elige nada: repetía lo de
+    // «Resultado = Mode». Solo aparece si hay más de un caso modal (p. ej. Eigen y Ritz).
+    const listaInutil = __tipoRes === "mode" && casosModal.length <= 1 && freqs.length > 0;
+    if (!listaInutil)
+      __caseResultsBinding = folder.addBinding(obj, "case", { label: etiqueta, options: caseOptions, index: 1 });
 
     // el control «Modo»: la lista de modos con su periodo (solo en Mode)
     if (__modeBinding) { try { __modeBinding.dispose(); } catch {} __modeBinding = null; }
@@ -978,7 +982,7 @@ function mountCaseResultsInSettings() {
       }
       if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
     };
-    __caseResultsBinding.on("change", (e: any) => aplicar(String(e.value)));
+    __caseResultsBinding?.on("change", (e: any) => aplicar(String(e.value)));
     __modeBinding?.on("change", (e: any) => { __modoSel = Number(e.value) || 0; mostrarModo(); });
     __tipoBinding.on("change", (e: any) => {
       __tipoRes = String(e.value) as "case" | "combo" | "mode";
@@ -6654,21 +6658,10 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     // en UN solo sitio, Settings ▸ Resultado = Mode ▸ Modo, como el Mode Number de ETABS /
     // SAP2000. Tenerlo dos veces confundía: «hay duplicado modal», Jorge.)
 
-    // Status LIVE (readonly) — single source of truth = Tweakpane
-    fModal.addBinding(status, "frequency", { readonly: true, view: "text", interval: 0, label: "Frecuencia" } as any);
-    fModal.addBinding(status, "period", { readonly: true, view: "text", interval: 0, label: "Período" } as any);
-    fModal.addBinding(status, "dominant", { readonly: true, view: "text", interval: 0, label: "Dominante" } as any);
-    fModal.addBinding(status, "state", { readonly: true, view: "text", interval: 0, label: "Estado" } as any);
-
-    fModal.addButton({ title: "⏹ Detener y restaurar" }).on("click", () => {
-      // stop() cancela el RAF + restaura los nodos originales + fuerza un render
-      // inmediato del viewer (el canvas se actualiza al momento, sin esperar el
-      // siguiente evento reactivo que congelaba la deformada).
-      modalAnimator.stop();
-    });
-    fModal.addButton({ title: "▶ Reanudar" }).on("click", () => {
-      if (lastModalResults) modalAnimator.play();
-    });
+    // (Frecuencia / Período / Dominante / Estado y los botones «Detener» / «Reanudar» se quitaron
+    // el 13-sep-2026: repetían lo que ya dice «Modo» (su T) y la casilla «🎞 Animar». Jorge:
+    // «case result y mode, ¿por qué es lo mismo?». Un control por cosa, como ETABS.)
+    void status; void lastModalResults;
   }
   currentPane = pane;
   // Aplicar visibilidad dinamica de bindings (hiddenIf) en el render inicial.
