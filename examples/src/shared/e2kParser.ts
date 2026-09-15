@@ -20,14 +20,7 @@ export interface E2kGrid {
 
 /**
  * Un NIVEL AUXILIAR de ETABS. En el `.e2k` es `REFERENCEPLANE ... Z <z>` y va
- * dentro de `$ GRIDS`, **no** dentro de `$ STORIES`. La gramatica esta sacada
- * del binario (`ETABS.dll`, la tabla de tokens del e2k):
- *
- *     GRIDSYSTEM  TOWER  CARTESIAN CYLINDRICAL ... TOPSTORY BOTTOMSTORY
- *     GENGRID  LABEL  X1 Y1 X2 Y2  VISIBLE  BUBBLELOC
- *     REFERENCEPLANE   Z
- *     REFERENCEPOINT   X  Y
- *     GRID  DIR  COORD
+ * dentro de `$ GRIDS`, **no** dentro de `$ STORIES`.
  *
  * Y esa es la respuesta a por que **no cortan nada**: son entidades de
  * REJILLA, ayudas de dibujo, igual que una linea de ejes. Lo unico que parte un

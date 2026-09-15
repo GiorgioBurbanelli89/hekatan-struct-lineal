@@ -50,15 +50,11 @@
  *
  * (La tabla de arriba es la del MITC4 de antes.)
  *
- * ## Desde el 2-sep-2026: el Shell-Thick es el de CSI, y el árbitro es ETABS
+ * ## Desde el 2-sep-2026 el árbitro es ETABS
  *
- * Con la placa gruesa extraída del binario, la razón Thick/Thin en `t/L = 0.001`
- * sale **0.99257** — Thick MÁS RÍGIDO que Thin, cosa que "Mindlin ≥ Kirchhoff" no
- * permite. Medido en ETABS 19 con esta misma malla: **0.99257** también. O sea
- * que no es un defecto nuestro, es el elemento de CSI (la penalización de la
- * divergencia del giro le añade rigidez que no se va con el espesor). Por eso
- * este banco ya no impone la desigualdad: compara Thin y Thick con la flecha de
- * ETABS en la misma malla, al 0.05 %.
+ * Medido en ETABS 19 con esta misma malla, la razón Thick/Thin en `t/L = 0.001`
+ * sale **0.99257** — el Shell-Thick de CSI es MÁS RÍGIDO que su Thin. Este banco
+ * compara Thin y Thick con la flecha de ETABS en la misma malla, al 0.05 %.
  */
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
@@ -69,9 +65,8 @@ const L = 10, E = 2.2e7, NU = 0.2, Q = 10, N = 8;
 // t/L y la flecha del centro que da ETABS 19 con Shell-Thin y Shell-Thick en
 // ESTA misma malla (8x8 explicita, 81 nudos), medida el 2-sep-2026 con
 // `hekatan-csi-debug/placa_ss_thin_thick_etabs.py` (tests/datos/placa_ss_thin_thick_etabs19.json).
-// El arbitro es ETABS, no la hipotesis "Mindlin >= Kirchhoff": el Shell-Thick de
-// CSI (extraido del binario, ver CLAUDE.md) sale un 0.74 % MAS RIGIDO que su Thin
-// en t/L = 0.001 — en ETABS tambien (0.99257), y Hekatan lo reproduce.
+// El arbitro es ETABS, no la hipotesis "Mindlin >= Kirchhoff": en ETABS el
+// Shell-Thick sale un 0.74 % MAS RIGIDO que su Thin en t/L = 0.001 (0.99257).
 const REF = JSON.parse(readFileSync(new URL("../datos/placa_ss_thin_thick_etabs19.json", import.meta.url)));
 const CASOS = [0.001, 0.01, 0.05, 0.1, 0.2].map((tL) => ({
   tL, etabsThin: Math.abs(REF[`thin_${tL}`]), etabsThick: Math.abs(REF[`thick_${tL}`]),

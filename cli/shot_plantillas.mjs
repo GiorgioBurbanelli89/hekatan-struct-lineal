@@ -6,9 +6,7 @@
  *
  * Por que existe: el `New Model Quick Templates` de ETABS ensena la tipologia con
  * un dibujo, y ese dibujo dice de un vistazo lo que tres lineas de texto no
- * dicen. Se intento sacar los suyos del binario (`validacion/etabs-api/
- * extraer_iconos_csi.py`) y ahi solo hay logos y splashes: las miniaturas van
- * como recursos .NET comprimidos. Y aunque estuvieran, son de CSI.
+ * dicen. Las suyas son de CSI.
  *
  * Asi que las nuestras salen de NUESTRO motor, que ademas es lo honesto: la
  * miniatura ensena lo que Hekatan construye de verdad, no lo que construye otro.

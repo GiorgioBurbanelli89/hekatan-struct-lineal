@@ -388,10 +388,8 @@ function exportFromScratch(input: ExportE2kInput): string {
     return [(load[3] ?? 0) - (r?.[3] ?? 0), (load[4] ?? 0) - (r?.[4] ?? 0), (load[5] ?? 0) - (r?.[5] ?? 0)];
   };
   // ⚠️ N y MM SIEMPRE. El lector del e2k de ETABS **no tiene token de
-  // unidades** — comprobado en el binario (ETABS.dll ~0x03490e00: sus palabras
-  // clave son LINE/COLUMN/BEAM/BRACE/$ CONTROLS/TITLE1/TITLE2/PREFERENCE, y
-  // UNITS no esta) y comprobado midiendo (con "Tonf", "KN" y "KN"/"M" el
-  // resultado es identico). Lee todo en las unidades base de SAPFire, N y mm.
+  // unidades** — comprobado midiendo (con "Tonf", "KN" y "KN"/"M" el
+  // resultado es identico). Lee todo en las unidades base, N y mm.
   // Escribir en tonf-m hacia que ETABS leyera A con factor 1e-6, E con x102 y
   // las cargas con 1e-3: de 4078.45 kN llegaban 0.42.
   const force = "N";

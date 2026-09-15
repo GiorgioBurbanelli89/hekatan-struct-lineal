@@ -6,12 +6,10 @@
  * con perfil embebido, un cajón de dos C, o cualquier cosa que no esté en el
  * catálogo.
  *
- * ## Cómo lo hace ETABS, y por qué se copia
+ * ## Por qué polígonos
  *
- * Leído del binario (`CSISectionDesigner.dll`): el método que calcula las
- * propiedades se llama **`ComputePropertiesUsingPolygons`**. O sea que ETABS no
- * tiene una fórmula por forma — **convierte cada pieza en un polígono** y
- * calcula integrando. Es lo que se hace aquí, y por el mismo motivo: una
+ * No hay una fórmula por forma: **cada pieza se convierte en un polígono** y
+ * las propiedades salen integrando (teorema de Green). Una
  * fórmula por forma es una lista que siempre se queda corta (y ya pasó: 54
  * barras de un modelo real entraban con área CERO porque su forma no estaba).
  * Con polígonos, una forma nueva es una función que devuelve puntos.

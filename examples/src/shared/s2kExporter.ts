@@ -208,8 +208,8 @@ export function exportS2k(input: S2kExportInput): string {
     // funden se pierde el dato que mas ablanda.
     const As2r = elementInputs.shearAreasZ?.get(i) ?? 0;   // As2 -> V2 (con I33)
     const As3r = elementInputs.shearAreasY?.get(i) ?? 0;   // As3 -> V3 (con I22)
-    // CFT (tubo de acero relleno): en SAP2000 NO hay seccion parametrica para eso
-    // (leido del binario, 2-sep-2026): se escribe como SECTION DESIGNER, tubo de
+    // CFT (tubo de acero relleno): en SAP2000 NO hay seccion parametrica para eso:
+    // se escribe como SECTION DESIGNER, tubo de
     // acero + rectangulo de hormigon. SAP2000 recalcula A, I, As y J de las
     // formas (ignora los que lleve la fila, medido): A e I salen iguales a la
     // transformada; As y J son los de Timoshenko/Saint-Venant, que es lo que

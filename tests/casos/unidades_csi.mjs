@@ -3,7 +3,7 @@
  *
  * En ETABS, SAP2000 y SAFE un sistema de unidades se llama literalmente
  * `<Fuerza>, <Longitud>, <Temperatura>` — `Kip, in, F` · `Kip, ft, F` ·
- * `KN, m, C` · `N, mm, C`— y esta sacado del binario (`ETABS.dll`). De ahi sale
+ * `KN, m, C` · `N, mm, C`— (los `eUnits` de la OAPI). De ahi sale
  * la regla que hay que cumplir, y es una sola:
  *
  *     el MOMENTO no es una unidad aparte: es FUERZA x LONGITUD del sistema

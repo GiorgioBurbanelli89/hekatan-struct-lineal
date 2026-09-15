@@ -331,12 +331,12 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellThin(
     //
     // Para cascara doblemente curva sigue siendo mejor el 9 (hemisferio 8x8 a
     // -0.50 %); se pide por `elementInputs.drillingTypes`.
-    int drillingType = getMapValST(elementInputs.drillingTypes, index, 12);
+    int drillingType = getMapValST(elementInputs.drillingTypes, index, 8);
     double drillScale = getMapValST(elementInputs.drillingPenaltyScales, index,
-                                    (drillingType >= 3 && drillingType <= 12) ? 0.4 : 0.05);
-    const bool usaITW = (drillingType >= 3 && drillingType <= 12);
-    const int  ngITW  = (drillingType == 4 || drillingType == 6 || drillingType == 12) ? 2 : 3;
-    const double khgITW = (drillingType == 6 || drillingType == 12) ? 2.0e-4 : 0.0;   // 12 = la membrana de CSI
+                                    (drillingType >= 3 && drillingType <= 10) ? 0.4 : 0.05);
+    const bool usaITW = (drillingType >= 3 && drillingType <= 10);
+    const int  ngITW  = (drillingType == 4 || drillingType == 6) ? 2 : 3;
+    const double khgITW = (drillingType == 6) ? 2.0e-4 : 0.0;
     const bool taylorITW = (drillingType == 5);
     //  7 = ITW **1991**: la regla de OCHO puntos de su ec. (30). Es el paper
     //      que cita el manual de CSI (el 1990 no). `wAlpha > 0` la activa y
@@ -370,7 +370,7 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellThin(
     //      curva -> 7. Losa con vigas -> 3.
     const double waITW = (drillingType == 7 || drillingType == 9) ? 0.99 : 0.0;
     //  8 = FEAP/Taylor: Gauss 3x3 + proyeccion del drilling (ver shellQ4.cpp).
-    const bool proyITW = (drillingType == 8 || drillingType == 9 || drillingType == 10 || drillingType == 12);
+    const bool proyITW = (drillingType == 8 || drillingType == 9 || drillingType == 10);
     // 10 = proyeccion + INTEGRACION SELECTIVA del volumetrico a 2x2.
     //      Baja la matriz de ETABS de 1.42 % a 0.878 % sin tocar el patch
     //      test (1.500000/0.600000) ni los 3 modos nulos.

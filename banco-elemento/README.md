@@ -59,7 +59,7 @@ python probar.py --proyeccion --cpp
 Las **matrices 12×12 de ETABS** están en
 `galpon-bodega-electoral/memb12.json` (geometría y material) y
 `galpon-bodega-electoral/K12_*.npy` (las matrices). Se reconstruyeron por
-**flexibilidad**, sin tocar el binario: se fija todo menos 9 grados de libertad,
+**flexibilidad** (caja negra): se fija todo menos 9 grados de libertad,
 se mete una carga unidad en cada uno y se leen los desplazamientos — eso es la
 flexibilidad, y su inversa es la rigidez. Las 3 filas que faltan salen de que la
 rigidez por un movimiento de sólido rígido da cero.

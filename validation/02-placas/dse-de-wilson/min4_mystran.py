@@ -17,7 +17,7 @@ mismo problema:
         N7 = (1-r^2)(1+s)/2   N8 = (1-s^2)(1-r)/2
   * el MISMO 1/8 con las diferencias de coordenadas del lado:
         NXSH(1) = (-Y41*N8 + Y12*N5)/8      con Xij = Xi - Xj
-    que es lo leido en `CsiGo2.dll 0x976a53` y la ec. (3.12) de Ibrahimbegovic.
+    que es la ec. (3.12) de Ibrahimbegovic.
 
 DONDE SE SEPARA de todos los demas, y es su truco anti-bloqueo: un FACTOR
 ESCALAR que relaja el cortante, sacado de la propia matriz (CALC_PHI_SQ.f90):

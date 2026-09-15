@@ -59,7 +59,7 @@ const T_LOSA_PLANA = 4;
 const T_LOSA_VIGAS_BORDE = 5;
 const T_DUAL = 6;              // pórtico + losa + MUROS de corte
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
-                               // [Concentric]` de SAP2000, leído del binario
+                               // [Concentric]` de SAP2000
 
 /**
  * Lee ordenadas escritas a mano (`"0, 6, 12"`). Devuelve `null` si el texto no
@@ -269,8 +269,7 @@ const PARAMS = {
   // Las tres acotan el máximo a [1.25, 1.333). Y leyendo su propia tabla
   // `Analysis Options - Automatic Mesh Settings for Floors` por la OAPI:
   //   MeshOpt = General · **MaxMeshSize = 1.25** (y lo mismo para muros).
-  // De paso: los muros RECTOS ETABS no los malla ("Default: No Meshing for
-  // Straight Walls", de las cadenas de ETABS.dll).
+  // De paso: los muros RECTOS ETABS no los malla por defecto.
   //
   // Lo que cuesta y lo que se gana (plantilla dual, 4 pisos):
   //   0.50 m  5514 nudos  1079 ms  flecha −2.9081 mm

@@ -47,9 +47,8 @@ Dos trampas de la OAPI que costaron una mañana: `eShellType` **3 = Membrane en 
 
 | capa | qué se midió | árbitro | medido | cómo repetirlo |
 |---|---|---|---|---|
-| **Membrana** (drilling) | K 12×12 de la celda, 9 geometrías | ETABS 22 (`memb12.json`) | **1e-13 %** con `drillingTypes = 12` (ITW + burbuja, 2×2, proyección, γ = 0.4μ, reloj 5e-5: lo leído del kernel) | `python -m pytest hekatan-struct-py/tests/test_itw_1991_regla8.py` |
-| **Placa gruesa** | K 22×22 antes de condensar + ~140 celdas | ETABS/SAP2000 (`.K_0` + `k_directa`) | **1e-12 %**: Shell-Thick de CSI entero (`getBendingK_CSI`, `plate_csi_thick.py`) | `pytest tests/test_csi_thick_cells.py` |
-| **Placa 8×8 thin y thick** | flecha, 5 espesores | ETABS 19 misma malla | **0.000 %** en los 10 | `node tests/run.mjs placa` |
+| **Membrana** (drilling) | K 12×12 de la celda, 10 geometrías (reconstruida por flexibilidad) | ETABS 22 | **1.42 %** media con `drillingTypes = 8` (ITW + proyección, γ = 0.4μ) | `PYTHONIOENCODING=utf-8 python banco-elemento/probar.py --proyeccion --cpp` |
+| **Placa 8×8 thin y thick** | flecha, 5 espesores | ETABS 19 misma malla | thin **0.000 %**; thick (MITC4) 0.37–1.9 % | `node tests/run.mjs placa` |
 | **Mezanine, losa maciza** (thin/thick) | Uz de 1284 nudos, misma malla y carga por OAPI | SAP2000 24 y ETABS 22 | **< 1e-6 %** los tres | `python galpon-bodega-electoral/sap_mezanine.py thin` / `etabs_mezanine.py` |
 | **Los 6 tipos de losa** | Uz nudo a nudo, misma malla por OAPI | ETABS 22 | **< 3e-7 %** los seis | `node tests/run.mjs losas-tipos` (filas «misma malla por OAPI») |
 | **Galpón** (609 nudos, 156 `ang`, 214 `frameload`, deck) | Uz nudo a nudo | SAP2000 por OAPI y leyendo el s2k | **0.000 %** (−29.0533 mm) salvo 3 nudos de membrana pura | `python sap_modelo.py galpon_lc_dump.json …` |
@@ -104,7 +103,7 @@ C  3D                 pórtico con losa
 |---|---|---|---|---|---|
 | **Thin** (Kirchhoff) | 0.72 % | 0.93 % | 0.54 % | **0.93 %** | ✅ **cerrado** |
 | **Membrane** | 0.06 % | 0.85 % | 0.00 % | **0.85 %** | ✅ **cerrado** |
-| **Thick** (Mindlin) | 1.42 % | **11.28 %** | 6.97 % | **11.28 %** | ✅ **cerrado el 2-sep** (§0: Shell-Thick de CSI entero, 1e-12 %) — el 11.28 % era el MITC4 genérico, ya no se usa |
+| **Thick** (Mindlin) | 1.42 % | **11.28 %** | 6.97 % | **11.28 %** | ⚠️ el MITC4 + Wilson vuelve a ser el defecto (15-sep-2026); placa 8×8 vs ETABS 19: 0.37–1.9 % |
 
 **Thin y Membrane cierran por debajo del 1 % en los tres escalones.** Con malla
 fina (445 elementos) bajan a 0.037 % y 0.00016 %.
@@ -296,7 +295,7 @@ giros` · `python celda_cuatro_programas.py`.
 
 | capa | qué se midió | modelo · árbitro | medido | por qué / qué falta |
 |---|---|---|---|---|
-| **Cáscara — drilling** | penalty del giro normal | 1 celda · ETABS | ~~2.03×~~ → **1e-13 %** | ✅ cerrado el 2-sep con `drillingTypes = 12` (§0). Fila conservada solo como historia. |
+| **Cáscara — drilling** | penalty del giro normal | 1 celda · ETABS | ~~2.03×~~ → **1.42 %** | tipo 8 (ITW + proyección). |
 | **Modal — galpón entero** | 4 primeros modos con masa | galpón · ETABS 22 (lateral + lump), **offsets = 0** | −1.60 / −0.58 / +0.78 / **−2.99 %** · MAC 0.970 / 0.902 / 0.929 / **0.723** | Con la masa cerrada al 0.00004 %, lo que queda es rigidez. Y el MAC dice que el −2.99 % del modo 4 **no es una frecuencia mal calculada**: Hekatan PARTE en dos el modo 4 de ETABS — sus modos 4 (4.2821) y 5 (4.6424) apuntan los dos al mismo, con MAC **0.723 + 0.271 = 0.994**. Arreglar eso es arreglar la malla (nudos colgados de un solo paño), no el solver. |
 | **Modal — galpón, modos altos** | emparejados por forma | galpón · ETABS 22, offsets = 0 | modo 11 Hek ↔ modo 7 ETABS: **MAC 0.9997**, −0.06 % | Cuando la forma es la misma, la frecuencia coincide. Lo de abajo es reordenamiento por modos locales, no error del solver. |
 | **Modal — galpón, modos bajos** | uno a uno en 4–6 Hz | galpón · ETABS 22, masa 3D | **Hekatan parte en dos** lo que ETABS da como un modo | Nudos del entrepiso colgados de un solo paño (giros casi sin rigidez). Es un defecto de la MALLA del modelo, y lo delatan los dos programas. Lo limpio es arreglar la malla. |

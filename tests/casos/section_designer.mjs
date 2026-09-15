@@ -1,8 +1,7 @@
 /**
  * El SECTION DESIGNER: secciones compuestas, contra fórmulas exactas.
  *
- * `examples/src/shared/sectionDesigner.ts` copia el método de ETABS —leído del
- * binario, `CSISectionDesigner.dll` expone `ComputePropertiesUsingPolygons`—:
+ * `examples/src/shared/sectionDesigner.ts`:
  * cada forma se convierte en POLIGONO y las propiedades salen de integrar. Una
  * fórmula por forma es una lista que siempre se queda corta, y ya se quedó: 54
  * barras de un modelo real entraban con área CERO porque su forma no estaba.

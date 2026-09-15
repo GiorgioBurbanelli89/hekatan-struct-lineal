@@ -6,7 +6,7 @@ import {
   DeformOutputs,
   ElementInputs,
 } from "./data-model";
-import { csiThickJointMoments } from "./utils/csiThickJoints";
+import { mitc4JointMoments } from "./utils/mitc4Joints";
 import { dkqJointMoments } from "./utils/dkqJoints";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -40,9 +40,9 @@ export function analyze(
     vonMises: new Map(),
   };
 
-  // Momentos en los 4 JOINTS de cada Q4 (Shell-Thick de CSI con sus 10 gdl
-  // internos recuperados, ver utils/csiThickJoints.ts). Sin promediar: es lo
-  // que ETABS lista en AreaForceShell, por elemento y por joint.
+  // Momentos en los 4 JOINTS de cada Q4 (Gauss 2x2 extrapolado: DKQ en Thin,
+  // MITC4 en Thick; ver utils/dkqJoints.ts y utils/mitc4Joints.ts). Sin
+  // promediar: es lo que ETABS lista en AreaForceShell, por elemento y por joint.
   const jointBending: Map<number, number[][]> = new Map();
   const jointMembrane: Map<number, number[][]> = new Map();   // F11 F22 F12 en los 4 joints (ITW)
   const analyzeOutputsElements: {
@@ -565,14 +565,14 @@ function computeQ4ShellStresses(
   const My = SIGNO_CSI * (Db[1][0]*kappaXX + Db[1][1]*kappaYY);
   const Mxy = SIGNO_CSI * (Db[2][2]*kappaXY);
 
-  // ── FUERZAS DE MEMBRANA EN LOS JOINTS (ITW tipo 12, la membrana de CSI) ──
+  // ── FUERZAS DE MEMBRANA EN LOS JOINTS (ITW, tipo 8 por defecto) ──
   // Allman + burbuja recuperada + proyección del drilling, Gauss 2×2 extrapolado
   // (utils/itwJoints.ts). Signo: tracción positiva, el de CSI.
   let Nj: number[][] | null = null;
   if (Math.abs(detJ) > 1e-20) {
     const u12m: number[] = [];
     for (let n = 0; n < 4; n++) u12m.push(uLocal[n*6 + 0], uLocal[n*6 + 1], uLocal[n*6 + 5]);
-    const tipoDrill = (elementInputs as any)?.drillingTypes?.get(elemIdx) ?? 12;
+    const tipoDrill = (elementInputs as any)?.drillingTypes?.get(elemIdx) ?? 8;
     const gammaFac = (elementInputs as any)?.drillingPenaltyScales?.get(elemIdx) ?? 0.4;
     const mm = (elementInputs as any)?.membraneModifiers?.get(elemIdx);
     const smod = (elementInputs as any)?.shellModifiers?.get(elemIdx);
@@ -584,14 +584,13 @@ function computeQ4ShellStresses(
     } catch { Nj = null; }
   }
 
-  // ── MOMENTOS EN LOS JOINTS (Shell-Thick de CSI, internos recuperados) ──
+  // ── MOMENTOS EN LOS JOINTS ──
   //
-  // El centroide con la B bilineal de arriba cuadra con CSI a 1e-6, pero
-  // llevar ese unico numero a los nudos promediando centroides vecinos borra
-  // el pico sobre la columna (4.2 donde ETABS lista 57.8). Con los 10 gdl
-  // internos del elemento recuperados y la curvatura evaluada en cada esquina
-  // sale 41.4 en ese nudo y 0.3 % en campo suave. Solo en la placa gruesa
-  // (formulacion 0): la delgada (DKQ) tiene otra B y sigue por centroide.
+  // Llevar el unico numero del centroide a los nudos promediando centroides
+  // vecinos borra el pico sobre la columna (4.2 donde ETABS lista 57.8). Por
+  // eso cada elemento da su momento en sus 4 esquinas.
+  // La placa GRUESA (formulacion 0, MITC4): curvatura bilineal en Gauss 2x2
+  // extrapolada (utils/mitc4Joints.ts).
   // La placa DELGADA (formulacion 1, el Shell-Thin = DKQ) tiene su propia B
   // (utils/dkqJoints.ts, espejo de plateDKQ.h) y se evalua directamente en las
   // esquinas: es el elemento de las plantillas (losa Thin por defecto).
@@ -608,7 +607,7 @@ function computeQ4ShellStresses(
       // directamente en las esquinas el M12 de los elementos de esquina se iba
       // un 26 %: CSI extrapola desde Gauss, no evalua en el nudo.
       const modoDKQ = (globalThis as any).__hekatanDkqJoints ?? "gauss";
-      Mj = (esPlacaGruesa ? csiThickJointMoments(xl, yl, u12, E, nu, t)
+      Mj = (esPlacaGruesa ? mitc4JointMoments(xl, yl, u12, E, nu, t)
                           : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
              .map((m) => m.map((v) => SIGNO_CSI * v));
       if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;

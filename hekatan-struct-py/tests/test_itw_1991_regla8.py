@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 """La regla de OCHO puntos del ITW 1991 — ec. (30).
 
-Por que importa este archivo: durante dias se leyo el `1/sqrt(3)` que carga
-`CsiGo2.dll` como «SAPFire integra a Gauss 2x2». Era falso. Es la `alpha` de la
-regla de ocho puntos de la ec. (30) del paper de **1991** (el que cita el manual
-de CSI), evaluada con `W_alpha` cerca de 1. Los dos numeros coinciden porque
+La regla de ocho puntos, evaluada con `W_alpha` cerca de 1, se parece a Gauss
+2x2 porque
 
     alpha(W_alpha = 1) = 1/(9*1)^(1/4) = 9^(-1/4) = 1/sqrt(3)
 
-y por eso la lectura equivocada encajaba con la evidencia. Estos tests fijan la
-diferencia para que no se vuelva a confundir:
+Estos tests fijan la diferencia:
 
   * la regla es una CUADRATURA de verdad (integra exacto 1, r^2 y r^2 s^2);
   * con ella el elemento tiene TRES modos nulos, y con 2x2 de verdad tiene
@@ -25,8 +22,8 @@ import pytest
 from hekatan_struct.benchmarks_itw import test_i_patch
 from hekatan_struct.elements.membrane_itw import modos_nulos, puntos_itw8
 
-# Lo que `CsiGo2.dll` carga ocho veces en la zona del shell.
-CONSTANTE_DEL_BINARIO = 0.5773502691896258
+# El punto de Gauss 2x2.
+GAUSS_2X2 = 0.5773502691896258
 
 GEOMETRIAS = [
     ("cuadrado", [(0, 0), (1, 0), (1, 1), (0, 1)]),
@@ -55,13 +52,10 @@ def test_la_regla_integra_lo_que_dice_integrar(w_alpha):
     assert sum(w * r ** 3 * s for r, s, w in P) == pytest.approx(0.0, abs=1e-12)
 
 
-def test_el_1_sobre_raiz_3_del_binario_es_la_alpha_de_la_ec_30():
-    """`alpha(W_alpha = 1)` es, al ultimo bit, la constante del binario de CSI.
-
-    Es la razon de que durante dias se creyera que SAPFire integraba a 2x2.
-    """
+def test_con_w_alpha_1_la_alpha_es_el_punto_de_gauss_2x2():
+    """`alpha(W_alpha = 1)` es, al ultimo bit, 1/sqrt(3)."""
     alpha = puntos_itw8(1.0)[0][0]
-    assert abs(alpha) == CONSTANTE_DEL_BINARIO
+    assert abs(alpha) == GAUSS_2X2
     # y `beta` desaparece: con W_beta = 0 los cuatro puntos extra no existen
     assert len(puntos_itw8(1.0)) == 4
 
@@ -69,10 +63,10 @@ def test_el_1_sobre_raiz_3_del_binario_es_la_alpha_de_la_ec_30():
 @pytest.mark.parametrize("nombre,pts", GEOMETRIAS)
 def test_ocho_puntos_da_tres_modos_nulos_y_dos_por_dos_da_cuatro(nombre, pts):
     """La promesa del paper, medida: mismo efecto que 2x2 pero sin perder rango."""
-    # 2x2 SIN el reloj de arena es un mecanismo; con el reloj de CSI (khg=2e-4,
-    # el defecto desde el 2-sep-2026) vuelve a 3 modos nulos.
+    # 2x2 SIN el reloj de arena es un mecanismo; con el reloj del tipo 6
+    # (khg=2e-4, medido por flexibilidad) vuelve a 3 modos nulos.
     assert modos_nulos(pts, n_gauss=2, khg=0.0) == 4, f"{nombre}: 2x2 sin reloj deberia ser mecanismo"
-    assert modos_nulos(pts, n_gauss=2) == 3, f"{nombre}: 2x2 con el reloj de CSI tiene 3 nulos"
+    assert modos_nulos(pts, n_gauss=2, khg=2.0e-4) == 3, f"{nombre}: 2x2 con reloj tiene 3 nulos"
     for wa in (0.999, 0.99, 0.95):
         n = modos_nulos(pts, w_alpha=wa, **ITW8)
         assert n == 3, f"{nombre}: con W_alpha={wa} salen {n} modos nulos, no 3"

@@ -2,7 +2,7 @@
 
 Medido el 29-ago-2026 con `cli/defaults_csi.py`, que **le pregunta al programa**:
 crea un modelo en blanco con una columna, una viga y un paño, y lee lo que el
-programa pone solo. No es el manual ni el binario decompilado — es lo único que
+programa pone solo. No es el manual — es lo único que
 no envejece con la versión.
 
     python cli/defaults_csi.py            # los tres

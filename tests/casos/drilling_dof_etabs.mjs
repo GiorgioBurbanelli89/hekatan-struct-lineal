@@ -1,10 +1,9 @@
 /**
  * DRILLING DOF: 2 muros + viga de acople, contra SAP2000 (arbitro) y ETABS (informativo).
  *
- * El drilling es el giro NORMAL a la cascara. Desde el 2-sep-2026 la membrana es
- * la de CSI extraida del binario (`drillingTypes = 12`: ITW + burbuja, Gauss 2x2,
- * proyeccion, P centro gamma = 0.4 mu, reloj 5e-5) y la celda 12x12 clava la de
- * ETABS a 1e-13 %.
+ * El drilling es el giro NORMAL a la cascara. La membrana por defecto es el ITW
+ * 1990 con la proyeccion del drilling de FEAP (`drillingTypes = 8`, gamma = 0.4 mu
+ * medido por flexibilidad).
  *
  * ARBITRO = SAP2000 24 con la MISMA malla (92 nudos, 64 Shell-Thick, 3 barras),
  * armado por OAPI desde el volcado de Hekatan, SIN automallado
@@ -18,7 +17,7 @@
  * nodal -8.739795e-04, identicos). Es como ETABS ata la VIGA al muro: en ETABS
  * el giro del nudo sigue la cuerda del muro (R2 -1.5e-4 vs -2.25e-4) y la viga
  * lleva 3x el cortante (20.2 vs 6.56 kN). Queda registrado como dato de ETABS,
- * no como limite: ver registros/2026-09-02_binario_drilling_shellthick.md.
+ * no como limite.
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
 

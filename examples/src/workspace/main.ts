@@ -1050,8 +1050,8 @@ function mountCaseResultsInSettings() {
  * pero el usuario puede fijar un valor manual desde el slider "Deform scale".
  */
 // Objetivo de la escala AUTOMATICA de la deformada, como fraccion de la
-// diagonal del modelo. ETABS tiene su propio «Automatic» y NO esta en las
-// cadenas del binario — el criterio vive en el codigo compilado. Se estimo
+// diagonal del modelo. ETABS tiene su propio «Automatic» y no publica su
+// criterio. Se estimo
 // comparando dos capturas del MISMO modelo y la MISMA vista, una con
 // «User Defined = 20» y otra con «Automatic»: la automatica da del orden de 5
 // a 6 para un Uz de 187 mm sobre 14.2 m de diagonal, o sea ~7 %.

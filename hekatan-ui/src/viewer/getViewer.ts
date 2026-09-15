@@ -611,8 +611,7 @@ export function getViewer({
       orientations(mesh, settings, derivedNodes, derivedDisplayScale),
       sections(mesh, settings, derivedNodes, derivedDisplayScale),
       // La vista EXTRUIDA: el contorno de la seccion barrido a lo largo de la
-      // barra, y las cascaras con su espesor. Copiado del metodo de ETABS
-      // (`CSIOpenGL.dll` usa Poly2Tri: triangula el poligono y lo barre).
+      // barra, y las cascaras con su espesor (triangula el poligono y lo barre).
       extrusion(mesh, settings, derivedNodes),
       nodeResults(mesh, settings, derivedNodes, derivedDisplayScale),
       frameResults(mesh, settings, derivedNodes, derivedDisplayScale)

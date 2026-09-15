@@ -2,7 +2,7 @@
  * La MEMBRANA de Shell-Thin y la de Shell-Thick tienen que ser LA MISMA.
  *
  * En ETABS, thin/thick cambia la FLEXION (si se tiene en cuenta el cortante
- * transversal), no el comportamiento en el plano. Medido en su binario con una
+ * transversal), no el comportamiento en el plano. Medido en ETABS con una
  * celda de 1x1 m y los tres grados del plano libres (`shell_una_celda2.py 1
  * plano` y `... 2 plano`), ETABS da EXACTAMENTE los mismos numeros para las dos:
  *

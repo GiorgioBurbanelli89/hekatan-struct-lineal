@@ -47,7 +47,7 @@ const TIPOS = [
   { id: "deck",         lim: 3.5 },
   { id: "maciza_mem",   lim: 3.5 },
   { id: "maciza_thin",  lim: 2.0 },
-  { id: "maciza_thick", lim: 2.0 },   // 1.15 % con la placa de CSI (2-sep-2026): el MISMO sesgo que el thin (1.39 %) -> es del modelo, no de la celda
+  { id: "maciza_thick", lim: 2.0 },   // 1.15 % el 2-sep-2026: el MISMO sesgo que el thin (1.39 %) -> es del modelo, no de la celda
   { id: "nervada_1d",   lim: 4.5 },
   { id: "waffle_2d",    lim: 3.5 },
 ];

@@ -105,7 +105,7 @@ function leerE2k(txt) {
   const L = txt.split(/\r?\n/);
 
   // El fichero esta escrito EN LAS UNIDADES DEL HEADER (hoy N y MM: el parser
-  // del e2k de ETABS no lee UNITS y asume N/MM, medido en el binario). Aqui se
+  // del e2k de ETABS no lee UNITS y asume N/MM, medido importando). Aqui se
   // lee el header y se pasa TODO a m y kN, que es en lo que esta el modelo. Si
   // el exportador cambia de unidades, esta lectura lo sigue sola.
   const uni = txt.match(/^\s*UNITS\s+"([^"]+)"\s+"([^"]+)"/m);
