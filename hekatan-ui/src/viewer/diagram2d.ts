@@ -22,6 +22,7 @@
  */
 import type { State } from "vanjs-core";
 import { ejesCSI, diagramaCSI, ladoPositivo } from "./objects/utils/diagramaCSI";
+import { scriptKLocalBarra } from "./klocalMatlab";
 
 type Nodo = number[];
 type Plano = "XZ" | "YZ" | "XY";
@@ -404,10 +405,12 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
         '<b style="color:#e6c463;white-space:nowrap">📈 Barra</b><span class="hk-b-tit" style="color:#9fb0c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto"></span>' +
         '<select class="hk-b-pl" style="margin-left:auto;background:#1b2230;color:#dbe6f5;border:1px solid #33415c;border-radius:4px">' +
         '<option value="12">plano 1-2 (V2 · M3)</option><option value="13">plano 1-3 (V3 · M2)</option></select>' +
+        '<button class="hk-b-k" title="Descarga un script MATLAB (Hekatan Lab / Octave) con la matriz de rigidez local 12×12 de esta barra" style="background:#1b2230;color:#e6c463;border:1px solid #33415c;border-radius:4px;cursor:pointer;padding:2px 8px;white-space:nowrap">📄 K local .m</button>' +
         '<button class="hk-b-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button>' +
         '</div><div class="hk-b-cuerpo" style="padding:6px 10px 10px"></div>';
       document.body.appendChild(hostB);
       hostB.querySelector(".hk-b-x")!.addEventListener("click", () => { hostB!.hidden = true; acomodar(); pintar(); });
+      hostB.querySelector(".hk-b-k")!.addEventListener("click", () => { if (barraActual >= 0) descargarKLocal(barraActual); });
       (hostB.querySelector(".hk-b-pl") as HTMLSelectElement).addEventListener("change", (ev) => {
         planoLocal = (ev.target as HTMLSelectElement).value as "12" | "13";
         pintarBarra();
@@ -511,6 +514,26 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     }
   }
   (window as any).__hekatanDiagramaBarra = abrirBarra;
+
+  // Script MATLAB con la matriz de rigidez local de la barra (Hekatan Lab / Octave).
+  function descargarKLocal(idx: number) {
+    const { nombre, texto } = scriptKLocalBarra(mesh as any, idx);
+    const url = URL.createObjectURL(new Blob([texto], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  }
+  // Sin argumento: la barra designada. Devuelve el texto (para pruebas) y descarga si se pide.
+  (window as any).__hekatanKLocalMatlab = (idx?: number, descargar = false) => {
+    if (idx == null) {
+      const sel = ((window as any).__hekatanModelSelection as any[] | undefined) ?? [];
+      const fr = [...sel].reverse().find((x) => x.type === "frame");
+      if (!fr) return null;
+      idx = fr.idx;
+    }
+    if (descargar) descargarKLocal(idx as number);
+    return scriptKLocalBarra(mesh as any, idx as number);
+  };
 
   (window as any).__hekatanDiagrama2D = abrir;
   return { abrir, abrirBarra };
