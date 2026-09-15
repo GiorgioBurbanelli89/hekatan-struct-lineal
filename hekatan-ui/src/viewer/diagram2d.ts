@@ -551,12 +551,19 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     let r;
     try { r = kLocalBarra(mesh as any, idx); } catch (e) { alert(String(e)); return; }
     const g = (v: number) => (Math.abs(v) < 1e-12 ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? v.toExponential(4) : v.toPrecision(6));
+    // Lo que el motor aplica DESPUÉS de la K local (getGlobalStiffnessMatrix.cpp): se avisa, no se oculta
+    const eiK = (mesh as any).elementInputs?.rawVal ?? {};
+    const rOff = eiK.rigidOffsets?.get?.(idx), angK = eiK.localAngles?.get?.(idx);
+    const avisoK = [
+      rOff && (rOff[0] > 1e-12 || rOff[1] > 1e-12) ? `brazos rígidos ${rOff[0]}·L / ${rOff[1]}·L (se aplican en K global: Rᵀ·K·R)` : "",
+      angK ? `ang ${angK}° (gira T, no esta K)` : "",
+    ].filter(Boolean).join(" · ");
     const gdl = ["u1 i", "u2 i", "u3 i", "θ1 i", "θ2 i", "θ3 i", "u1 j", "u2 j", "u3 j", "θ1 j", "θ2 j", "θ3 j"];
     const filas = r.K.map((row, i) => `<tr><th style="color:#9fb0c6;padding:2px 6px;text-align:right">${gdl[i]}</th>` +
       row.map((v) => `<td style="padding:2px 6px;text-align:right;color:${Math.abs(v) < 1e-12 ? "#4a5568" : v < 0 ? "#ff9f9a" : "#e6edf5"}">${g(v)}</td>`).join("") + "</tr>").join("");
     hostK.innerHTML =
       `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">` +
-      `<b style="color:#e6c463">K local · barra ${idx + 1}</b><span style="color:#9fb0c6">L = ${r.L.toFixed(3)} m · φ₂ = ${r.phiZ.toFixed(5)} · φ₃ = ${r.phiY.toFixed(5)} · getLocalStiffnessMatrix (motor)</span>` +
+      `<b style="color:#e6c463">K local · barra ${idx + 1}</b><span style="color:#9fb0c6">L = ${r.L.toFixed(3)} m · φ₂ = ${r.phiZ.toFixed(5)} · φ₃ = ${r.phiY.toFixed(5)} · getLocalStiffnessMatrix (motor)${avisoK ? ` · <b style="color:#f59e0b">${avisoK}</b>` : ""}</span>` +
       `<button class="hk-k-m" style="margin-left:auto;background:#1b2230;color:#e6c463;border:1px solid #33415c;border-radius:4px;cursor:pointer;padding:2px 8px">📄 Script MATLAB (.m)</button>` +
       `<button class="hk-k-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button></div>` +
       `<div style="overflow-x:auto;padding:8px"><table style="border-collapse:collapse;font-family:Consolas,monospace;font-size:11px">` +

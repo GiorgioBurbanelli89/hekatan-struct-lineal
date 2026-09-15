@@ -490,8 +490,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         if (def && el.length === 2) {
           const u1 = def.get(el[0]);
           const u2 = def.get(el[1]);
-          const n1 = nodes[el[0]];
-          const n2 = nodes[el[1]];
+          // L, ε, N y M con la geometría ORIGINAL: `nodes` son los derivados (deformada ×
+          // escala) y con «Deformed shape» la columna de 3.5 m salía L = 3.353 m.
+          const nOrig = (ctx.mesh.nodes?.rawVal ?? nodes) as number[][];
+          const n1 = nOrig[el[0]];
+          const n2 = nOrig[el[1]];
           if (u1 && u2 && n1 && n2) {
             const dx = n2[0] - n1[0];
             const dy = n2[1] - n1[1];
