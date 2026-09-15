@@ -7895,6 +7895,8 @@ try {
       return;
     }
     dynFila.style.display = dibujando ? "none" : "flex";
+    // tecleando una orden desde reposo: solo lo tecleado junto a la cruz; la indicación sigue abajo
+    dynPrompt.style.display = promptEnReposo ? "none" : "";
     // con opciones a la vista el panel se queda quieto: si siguiera al ratón,
     // el botón se apartaría justo cuando se va a pulsar
     // (ya no se ancla: el panel no intercepta el ratón, así que puede seguir al cursor siempre)
