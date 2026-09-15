@@ -7414,7 +7414,11 @@ try {
   let opcionesActuales: string[] = [];
   // al aparecer opciones hay que colocar el panel una vez junto al cursor y dejarlo quieto
   let anclarPendiente = false;
+  // En reposo (sin orden en curso) AutoCAD no pone nada junto al cursor: solo la cruz.
+  // La indicación vive abajo, en la línea de órdenes (foto de AutoCAD 2026, 14-sep-2026).
+  let promptEnReposo = true;
   const setPrompt = (txt: string, opciones: string[] = []) => {
+    promptEnReposo = !txt || /^Designe objetos \(clic-clic/.test(txt);
     label.textContent = txt || "Comando:";
     opcionesActuales = opciones;
     ops.innerHTML = "";
@@ -7879,6 +7883,17 @@ try {
     // se enseña SOLO la fila de botones.
     const dibujando = isDrawingCoords();
     if (dibujando && !opcionesActuales.length) { dyn.style.display = "none"; return; }
+    // Reposo y nada tecleado: solo la cruz, como AutoCAD. Al teclear, el panel vuelve.
+    if (promptEnReposo && !dynInput.value && !opcionesActuales.length) {
+      dyn.style.display = "none";
+      if (!stealBlocked()) {
+        const ae = document.activeElement as HTMLElement | null;
+        if (ae !== dynInput && !(ae && (ae.tagName === "INPUT" || ae.tagName === "BUTTON") && ae !== input)) {
+          try { dynInput.focus({ preventScroll: true }); } catch {}
+        }
+      }
+      return;
+    }
     dynFila.style.display = dibujando ? "none" : "flex";
     // con opciones a la vista el panel se queda quieto: si siguiera al ratón,
     // el botón se apartaría justo cuando se va a pulsar

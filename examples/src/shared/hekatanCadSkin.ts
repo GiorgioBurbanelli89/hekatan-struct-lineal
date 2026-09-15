@@ -188,6 +188,9 @@ body.hk-cad #hk-nav-camara{
    arriba tapaba el nombre del programa. En un CAD las coordenadas viven en la
    barra de estado, asi que se esconde el de arriba y su texto se refleja abajo. */
 body.hk-cad #hk-coord-fixed{ display:none !important; }
+/* Tampoco junto al cursor: AutoCAD no pone la caja X= Y= Z= al lado de la cruz
+   (se veia amontonada con la entrada dinamica). Quedan en la barra de estado. */
+body.hk-cad #hk-coord-readout{ display:none !important; }
 body.hk-cad #toolbar{ top:38px !important; }
 body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
 /* La barra de titulo mide 30 px y el ribbon iba a top:8px: la primera fila de
