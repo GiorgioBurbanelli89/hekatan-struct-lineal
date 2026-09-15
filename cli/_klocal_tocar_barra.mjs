@@ -40,8 +40,8 @@ if (mid) {
   await pag.mouse.move(mid.x - 4, mid.y - 3); await esp(200);
   await pag.mouse.move(mid.x, mid.y); await esp(400);
   await pag.mouse.click(mid.x, mid.y); await esp(800);
-  chip = await pag.evaluate(() => { const c = document.getElementById("hk-klocal-chip"); return c ? { visible: !c.hidden, txt: c.textContent } : null; });
-  console.log("chip tras tocar la barra:", JSON.stringify(chip));
+  chip = await pag.evaluate(() => { const v = document.getElementById("hk-klocal"); const t = v?.querySelector("b")?.textContent; return v ? { visible: !v.hidden, txt: t } : null; });
+  console.log("ventana tras TOCAR la barra (sin otro clic):", JSON.stringify(chip));
 }
 await pag.screenshot({ path: `${out}/tocar_1_chip.png` });
 // si el clic no cayó exacto en la barra, se designa por código para seguir comprobando la ventana
@@ -50,8 +50,7 @@ if (!chip || !chip.visible) {
   await esp(300);
   console.log("(el clic no designó la barra 1; se designa por evento para seguir)");
 }
-const chipBtn = await pag.evaluate(() => { const c = document.getElementById("hk-klocal-chip"); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, txt: c.textContent }; });
-await pag.mouse.click(chipBtn.x, chipBtn.y); await esp(800);
+await esp(500);
 await pag.screenshot({ path: `${out}/tocar_2_ventana.png` });
 const K = await pag.evaluate(() => { const i = Number(document.getElementById("hk-klocal-chip").dataset.idx); return { idx: i, K: window.__hekatanKLocal(i).K, abierta: !document.getElementById("hk-klocal")?.hidden }; });
 console.log("ventana K abierta:", K.abierta, "· barra", K.idx + 1);

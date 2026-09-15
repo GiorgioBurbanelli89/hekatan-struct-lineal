@@ -574,13 +574,11 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       document.body.appendChild(chipK);
       chipK.addEventListener("click", () => { const i = Number(chipK!.dataset.idx); if (i >= 0) abrirK(i); });
     }
+    // Jorge: «al tocar la barra me dé la matriz de rigidez local de esa barra» → se abre directo
+    chipK.hidden = true;
     if (u && u.type === "frame") {
       chipK.dataset.idx = String(u.idx);
-      chipK.textContent = `📐 Ver K local · barra ${u.idx + 1}`;
-      chipK.hidden = false;
-      if (hostK && !hostK.hidden) abrirK(u.idx);   // ventana abierta: sigue a la barra tocada
-    } else {
-      chipK.hidden = true;
+      abrirK(u.idx);
     }
   });
   (window as any).__hekatanKLocal = (idx: number) => kLocalBarra(mesh as any, idx);
