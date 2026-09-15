@@ -261,6 +261,18 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir(h.id === "deshacer" ? "Deshecho (Ctrl+Z)." : "Rehecho (Ctrl+Y).");
       return;
     }
+    // Pulsar OTRA VEZ el botón activo lo apaga (vuelve a Selec.), como un interruptor
+    const yaActivo = (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq")
+      ? modoAplicar === h.id
+      : (modoAplicar === null && hooks.getTool() === h.id);
+    if (yaActivo && h.id !== "select") {
+      modoAplicar = null;
+      (window as any).__hekatanBloquearVentana = false;
+      hooks.setTool("select");
+      pintarActivo();
+      decir(`${h.nombre} desactivado — Selec.`);
+      return;
+    }
     // REPLICAR no es una herramienta de dibujo: es la orden REP, la misma que se
     // teclea. Estaba solo en el cuadro de comandos y en una carpeta del panel de
     // propiedades — o sea, escondida. Es la que convierte un pórtico en un

@@ -33,4 +33,17 @@ await pag.mouse.click(reh.x, reh.y); await esp(600);
 const n2 = await segs(); console.log("tras Rehacer:", n2);
 await pag.screenshot({ path: `${out}/rehecho.png`, clip: { x: 550, y: 430, width: 500, height: 250 } });
 console.log(n0 > 0 && n1 < n0 && n2 === n0 ? "OK: Anterior deshace y Rehacer rehace" : "FALLA", "· pageerror:", errores.length, errores.slice(0, 2));
+// Pulsar DOS VECES un botón lo apaga (vuelve a Selec.)
+const herr = () => pag.evaluate(() => window.__hekatanCadState?.get?.()?.tool);
+const fondo = (re) => pag.evaluate((re) => { const b = [...document.querySelectorAll("#hk-ribbon button")].find((b) => new RegExp(re).test(b.textContent)); return b ? b.style.background : ""; }, re);
+for (const nombre of ["Muro", "Mover", "Apoyo"]) {
+  const b = await boton(nombre);
+  await pag.mouse.click(b.x, b.y); await esp(400);
+  const t1 = await herr(), f1 = await fondo(nombre);
+  await pag.mouse.click(b.x, b.y); await esp(400);
+  const t2 = await herr(), f2 = await fondo(nombre);
+  console.log(`${nombre}: 1er clic tool=${t1} fondo=${f1} · 2º clic tool=${t2} fondo=${f2} → ${f1 !== f2 && t2 === "select" ? "OK se apaga" : "FALLA"}`);
+}
+const m = await boton("Muro"); await pag.mouse.click(m.x, m.y); await esp(300); await pag.mouse.click(m.x, m.y); await esp(300);
+await pag.screenshot({ path: `${out}/doble_clic_apagado.png`, clip: cinta });
 await nav.close();
