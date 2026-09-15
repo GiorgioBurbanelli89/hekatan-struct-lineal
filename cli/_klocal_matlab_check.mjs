@@ -1,6 +1,6 @@
 // Comprueba el script MATLAB de la K local de barra (📄 K local .m) contra el MOTOR:
 //   1. puppeteer abre un ejemplo con barras y pide el .m de varias barras (window.__hekatanKLocalMatlab)
-//   2. Octave ejecuta cada .m y vuelca K a CSV (17 cifras)
+//   2. MATLAB R2017a (el de verdad, no Octave) ejecuta los .m en UNA sesion y vuelca K a CSV (17 cifras)
 //   3. el oráculo es el C++ del motor: didactic_solve → getLocalStiffnessMatrix con los MISMOS datos
 //      (sin liberaciones ni muelles: didactic no los recibe; esas barras se marcan aparte)
 // Uso: node cli/_klocal_matlab_check.mjs [ejemplo] [url base]  → cli/shots/klocal/*.m, *.csv
@@ -12,7 +12,7 @@ import { cargarFem } from "../tests/lib/bundle.mjs";
 const ejemplo = process.argv[2] || "plantillas";
 const base = process.argv[3] || "http://localhost:4600/workspace/";
 const out = path.resolve("cli/shots/klocal"); fs.mkdirSync(out, { recursive: true });
-const OCTAVE = "C:/Program Files/GNU Octave/Octave-10.1.0/mingw64/bin/octave-cli.exe";
+const MATLAB = "C:/Program Files/MATLAB/R2017a/bin/matlab.exe";
 
 const nav = await puppeteer.launch({ headless: "new", executablePath: "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
 const pag = await nav.newPage(); await pag.setViewport({ width: 1400, height: 900 });
@@ -52,11 +52,18 @@ for (const idx of elegir) {
 console.log("pageerror:", errores.length, errores.slice(0, 2));
 await nav.close();
 
+// MATLAB arranca lento (~20 s): todos los .m en una sola sesion
+const cmds = casos.map((c) => { const f = c.f.replace(/\\/g, "/"); return `clear K; run('${f}'); dlmwrite('${f.replace(/\.m$/, ".csv")}', K, 'precision', 17);`; }).join(" ");
+const log = path.join(out, "matlab_log.txt");
+for (const c of casos) { try { fs.unlinkSync(c.f.replace(/\.m$/, ".csv")); } catch {} }
+execFileSync(MATLAB, ["-nodesktop", "-nosplash", "-wait", "-logfile", log, "-r", `try, ${cmds} disp('MATLAB_OK'); catch e, disp(['MATLAB_ERROR: ' e.message]); end; exit`], { stdio: "ignore", timeout: 600000 });
+const txtLog = fs.readFileSync(log, "utf8");
+if (!/MATLAB_OK/.test(txtLog)) { console.log("FALLA MATLAB:", txtLog.split(String.fromCharCode(10)).filter((l) => /ERROR|Error/.test(l)).join(" | ")); process.exit(1); }
+console.log("MATLAB R2017a: los", casos.length, "scripts corrieron sin error");
 const fem = await cargarFem();
 let peor = 0, ok = true;
 for (const c of casos) {
   const csv = c.f.replace(/\.m$/, ".csv").replace(/\\/g, "/");
-  execFileSync(OCTAVE, ["--no-gui", "--quiet", "--eval", `run('${c.f.replace(/\\/g, "/")}'); dlmwrite('${csv}', K, 'precision', 17);`], { stdio: ["ignore", "pipe", "pipe"] });
   const Koct = fs.readFileSync(csv, "utf8").trim().split(/\r?\n/).map((l) => l.split(",").map(Number));
   const M = (v) => new Map([[0, v]]);
   const res = fem.didacticSolveCpp([c.xi, c.xj], [[0, 1]], { supports: new Map([[0, [true, true, true, true, true, true]]]) },
@@ -67,7 +74,7 @@ for (const c of casos) {
   for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) {
     maxK = Math.max(maxK, Math.abs(Kc[i][j]));
     const d = Math.abs(Koct[i][j] - Kc[i][j]);
-    if (d > maxD) { maxD = d; dondeD = `(${i + 1},${j + 1}) octave ${Koct[i][j]} motor ${Kc[i][j]}`; }
+    if (d > maxD) { maxD = d; dondeD = `(${i + 1},${j + 1}) matlab ${Koct[i][j]} motor ${Kc[i][j]}`; }
   }
   const rel = maxD / (maxK || 1);
   const comparable = !c.libera && !c.muelles;
@@ -76,5 +83,5 @@ for (const c of casos) {
     ` · max|K|=${maxK.toExponential(4)} · dif máx relativa=${rel.toExponential(2)} ${dondeD}` +
     (comparable ? "" : "  [con liberaciones/muelles: el oráculo didáctico no los recibe → no comparable]"));
 }
-console.log(ok ? `OK: Octave(.m) = motor C++ (peor ${peor.toExponential(2)})` : "FALLA");
+console.log(ok ? `OK: MATLAB R2017a (.m) = motor C++ (peor ${peor.toExponential(2)})` : "FALLA");
 process.exit(ok ? 0 : 1);
