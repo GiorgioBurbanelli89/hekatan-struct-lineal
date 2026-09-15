@@ -111,6 +111,9 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
   {
     titulo: "Modificar", fila: 2,
     items: [
+      // Deshacer / Rehacer a la vista, como la barra de acceso rápido de AutoCAD (Ctrl+Z / Ctrl+Y)
+      { id: "deshacer", icono: "↶", nombre: "Anterior", tecla: "Ctrl+Z", ayuda: "deshace la última acción (también U + Enter)." },
+      { id: "rehacer",  icono: "↷", nombre: "Rehacer",  tecla: "Ctrl+Y", ayuda: "rehace lo último deshecho." },
       { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: clic en una esquina, mueve, clic en la otra (izq→der ventana, der→izq captura). Arrastrar orbita." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
@@ -250,6 +253,14 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   };
 
   const usar = (h: Herr) => {
+    // Deshacer / Rehacer: acciones, no herramientas (no cambian el tool activo)
+    if (h.id === "deshacer" || h.id === "rehacer") {
+      const W = window as any;
+      if (h.id === "deshacer") { if (!W.__hekatanCadOption?.("u")) W.__hekatanUndo?.(); }
+      else W.__hekatanRedo?.();
+      decir(h.id === "deshacer" ? "Deshecho (Ctrl+Z)." : "Rehecho (Ctrl+Y).");
+      return;
+    }
     // REPLICAR no es una herramienta de dibujo: es la orden REP, la misma que se
     // teclea. Estaba solo en el cuadro de comandos y en una carpeta del panel de
     // propiedades — o sea, escondida. Es la que convierte un pórtico en un
