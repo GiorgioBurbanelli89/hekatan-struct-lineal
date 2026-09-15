@@ -127,6 +127,14 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       <svg class="hk-d2-svg" style="flex:1;width:100%;height:100%"></svg>
       <div class="hk-d2-pie" style="padding:4px 10px;color:#6f7d90;border-top:1px solid #1d2533"></div>`;
     document.body.appendChild(host);
+    // ⚠️ El estilo en línea lleva `display:flex`, que GANA al atributo `hidden` (15-sep-2026:
+    // la ✕ ponía hidden = true y la ventana no se iba). La regla con !important lo arregla.
+    if (!document.getElementById("hk-d2-hidden-css")) {
+      const css = document.createElement("style");
+      css.id = "hk-d2-hidden-css";
+      css.textContent = "#hk-diagrama-2d[hidden]{display:none !important;}";
+      document.head.appendChild(css);
+    }
     host.querySelector(".hk-d2-x")!.addEventListener("click", () => { host!.hidden = true; });
     const selP = host.querySelector(".hk-d2-plano") as HTMLSelectElement;
     const selE = host.querySelector(".hk-d2-en") as HTMLSelectElement;
