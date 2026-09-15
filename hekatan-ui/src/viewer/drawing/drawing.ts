@@ -3304,7 +3304,9 @@ export function drawing({
         // Toggle global: si __hekatanSnapEnabled es false, NO snap a grid.
         // El cursor queda en la coordenada raw del raycaster.
         const snapEnabled = !sinEnganche && (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0.5;
+        // El paso del enganche = la separación de la rejilla que se VE (AutoCAD: la rejilla sigue
+        // al snap). Con «Paso cursor» 0.5 y rejilla de 1 m el punto caía entre líneas.
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0.5);
         if (snapEnabled && snap > 0) {
           p.x = Math.round(p.x / snap) * snap;
           p.y = Math.round(p.y / snap) * snap;
@@ -6367,7 +6369,7 @@ export function drawing({
       } else {
         // Si no hay osnap, aplicar grid snap 2D — solo si toggle ON.
         const snapEnabled = (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0;
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0);   // = separación de la rejilla
         if (snapEnabled && snap > 0) {
           point = new THREE.Vector3(
             Math.round(point.x / snap) * snap,
@@ -7124,7 +7126,9 @@ export function drawing({
       } else {
         // 4) Sin osnap → grid snap 2D (igual que click handler L2952-2962)
         const snapEnabled = (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0.5;
+        // El paso del enganche = la separación de la rejilla que se VE (AutoCAD: la rejilla sigue
+        // al snap). Con «Paso cursor» 0.5 y rejilla de 1 m el punto caía entre líneas.
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0.5);
         if (snapEnabled && snap > 0) {
           point.x = Math.round(point.x / snap) * snap;
           point.y = Math.round(point.y / snap) * snap;

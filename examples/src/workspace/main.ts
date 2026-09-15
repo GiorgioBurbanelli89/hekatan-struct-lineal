@@ -7025,7 +7025,7 @@ try {
       if (hl.visible) { hl.visible = false; render(); } return;
     }
     // snap al MISMO paso que usa la app al hacer click (__hekatanSnap2D)
-    const snap = (window as any).__hekatanSnap2D ?? gridStep();
+    const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? gridStep());   // = separación de la rejilla
     const sn = (v: number) => (snap > 0 ? Math.round(v / snap) * snap : v);
     let sx = sn(hitPt.x), sy = sn(hitPt.y), sz = sn(hitPt.z);
     if (wpName === "xz") sy = coord; else if (wpName === "yz") sx = coord; else sz = coord;
