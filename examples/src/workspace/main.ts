@@ -7751,11 +7751,25 @@ try {
   document.body.appendChild(dyn);
 
   let _sync = false;
+  // última posición del ratón sobre el lienzo: al teclear en reposo, lo tecleado aparece ahí
+  // AL MOMENTO (como AutoCAD), sin esperar a que se mueva el ratón
+  let ultimoPtr: { x: number; y: number } | null = null;
   const setCmdText = (v: string) => {
     _sync = true;
     input.value = v; dynInput.value = v;
     updateGhostFor(input, ghost); updateGhostFor(dynInput, dynGhost);
     _sync = false;
+    if (promptEnReposo && ultimoPtr && !isTouch) {
+      if (v) {
+        dynFila.style.display = "flex";
+        dynPrompt.style.display = "none";
+        dyn.style.left = Math.max(4, ultimoPtr.x + 16) + "px";
+        dyn.style.top = Math.max(4, ultimoPtr.y + 14) + "px";
+        dyn.style.display = "flex";
+      } else {
+        dyn.style.display = "none";
+      }
+    }
   };
 
   // ── Teclado de las dos consolas ──────────────────────────────────────────
@@ -7876,13 +7890,16 @@ try {
   const esTactil = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
   viewerElm?.addEventListener("pointermove", (e: PointerEvent) => {
     if (esTactil(e)) { dyn.style.display = "none"; return; }
+    ultimoPtr = { x: e.clientX, y: e.clientY };
     // Mientras se estira la goma, las coordenadas ya las canta `hk-rubber-label`:
     // el panel sobra… SALVO que haya opciones que pulsar, que es justo cuando las
     // hay ([Cerrar/desHacer] aparecen con la polilínea empezada). Antes se ocultaba
     // siempre y las opciones no se veían nunca junto al cursor. Ahora, dibujando,
     // se enseña SOLO la fila de botones.
     const dibujando = isDrawingCoords();
-    if (dibujando && !opcionesActuales.length) { dyn.style.display = "none"; return; }
+    // Dibujando, AutoCAD solo pone longitud y ángulo junto a la cruz: las opciones
+    // ([Cerrar/desHacer]) quedan en la línea de órdenes de abajo, no pegadas al cursor.
+    if (dibujando) { dyn.style.display = "none"; return; }
     // Reposo y nada tecleado: solo la cruz, como AutoCAD. Al teclear, el panel vuelve.
     if (promptEnReposo && !dynInput.value && !opcionesActuales.length) {
       dyn.style.display = "none";

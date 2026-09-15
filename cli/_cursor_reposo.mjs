@@ -24,7 +24,13 @@ const { cx, cy } = await pag.evaluate(() => {
 console.log("cursor en", cx, cy);
 const visibles = () => pag.evaluate(() => {
   const v = (id) => { const e = document.getElementById(id); if (!e) return "no existe"; const s = getComputedStyle(e); return s.display !== "none" && s.visibility !== "hidden" ? "VISIBLE" : "oculto"; };
-  return { "hk-coord-readout": v("hk-coord-readout"), "hk-dyn": v("hk-dyn"), prompt: document.getElementById("hk-dyn-prompt")?.textContent || "" };
+  return { "hk-coord-readout": v("hk-coord-readout"), "hk-dyn": v("hk-dyn"), "hk-rubber-angle": v("hk-rubber-angle"),
+    angulo: document.getElementById("hk-rubber-angle")?.textContent || "", longitud: document.getElementById("hk-rubber-label")?.value || "",
+    prompt: document.getElementById("hk-dyn-prompt")?.textContent || "",
+    foco: (document.activeElement?.id || document.activeElement?.tagName || ""),
+    dynTexto: document.getElementById("hk-dyn-input")?.value || "",
+    rubberDisplay: document.getElementById("hk-rubber-label")?.style.display || "",
+    dynInline: document.getElementById("hk-dyn")?.style.display || "" };
 });
 const recorte = async (nombre) => {
   await pag.screenshot({ path: `${out}/${nombre}.png`, clip: { x: cx - 220, y: cy - 140, width: 520, height: 300 } });
@@ -38,5 +44,8 @@ await pag.keyboard.press("Enter"); await espera(500);
 await pag.mouse.click(cx - 150, cy + 40); await espera(300);
 for (let i = 0; i < 8; i++) { await pag.mouse.move(cx - 150 + i * 20, cy + 40 - i * 5); await espera(60); }
 await espera(500); await recorte("dibujando");
+// línea horizontal: en AutoCAD se ve un solo vector punteado y la caja «0°»
+await pag.mouse.move(cx + 120, cy + 40); await espera(150);
+await pag.mouse.move(cx + 150, cy + 40); await espera(600); await recorte("horizontal");
 console.log("pageerror:", errores.length, errores.slice(0, 3));
 await nav.close();

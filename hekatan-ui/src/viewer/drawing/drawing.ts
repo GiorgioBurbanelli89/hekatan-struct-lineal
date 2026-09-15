@@ -672,6 +672,17 @@ export function drawing({
     "pointer-events:none",
   ].join(";") + ";";
   document.body.appendChild(rubberLabelInput);
+  // Cuadro de ÁNGULO junto al extremo (el «0°» de la foto de AutoCAD): solo lectura.
+  const rubberAngle = document.createElement("div");
+  rubberAngle.id = "hk-rubber-angle";
+  rubberAngle.style.cssText = [
+    "position:fixed", "z-index:99996", "pointer-events:none",
+    "padding:2px 6px", "background:rgba(15,23,42,0.92)",
+    "color:#22d3ee", "border:1px solid #22d3ee", "border-radius:3px",
+    "font-family:Consolas,monospace", "font-size:12px",
+    "transform:translate(-50%,0)", "white-space:nowrap", "display:none",
+  ].join(";") + ";";
+  document.body.appendChild(rubberAngle);
   // State para "AutoCAD direct distance entry":
   //   - rubberStart: punto inicial del rubber band (último click)
   //   - rubberDir: dirección unitaria desde rubberStart al cursor
@@ -699,6 +710,17 @@ export function drawing({
     rubberLabelInput.style.left = sx + "px";
     rubberLabelInput.style.top = sy + "px";
     rubberLabelInput.style.display = "block";
+    // Ángulo en pantalla, antihorario desde la derecha (en planta y alzado = ángulo del plano)
+    const _pa = new THREE.Vector3(ax, ay, az).project(getActiveCamera());
+    const _pb = new THREE.Vector3(bx, by, bz).project(getActiveCamera());
+    const ax2 = rect.left + (_pa.x * 0.5 + 0.5) * rect.width, ay2 = rect.top + (-_pa.y * 0.5 + 0.5) * rect.height;
+    const bx2 = rect.left + (_pb.x * 0.5 + 0.5) * rect.width, by2 = rect.top + (-_pb.y * 0.5 + 0.5) * rect.height;
+    let ang = Math.atan2(-(by2 - ay2), bx2 - ax2) * 180 / Math.PI;
+    if (ang < 0) ang += 360;
+    rubberAngle.textContent = `${Math.round(ang) % 360}°`;
+    rubberAngle.style.left = bx2 + "px";
+    rubberAngle.style.top = (by2 + 34) + "px";
+    rubberAngle.style.display = "block";
     // Live update del value mientras el usuario NO esté editando manualmente.
     if (!rubberUserEditing) {
       rubberLabelInput.value = `${dL.toFixed(2)} m`;
@@ -718,6 +740,7 @@ export function drawing({
   };
   const hideRubberLabel = () => {
     rubberLabelInput.style.display = "none";
+    rubberAngle.style.display = "none";
     rubberStart = null;
     rubberDir = null;
     rubberUserEditing = false;
@@ -3078,12 +3101,14 @@ export function drawing({
   const snapMarker = new THREE.Group();
   const snapSphere = new THREE.Mesh(
     new THREE.SphereGeometry(0.010, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 0.95 }),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 }),
   );
   const snapHalo = new THREE.Mesh(
     new THREE.SphereGeometry(0.015, 12, 12),
     new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.20, depthWrite: false }),
   );
+  // Como AutoCAD: la cruz es BLANCA (registro R26.0 «XhairPickboxEtc» = 16777215) y sin halo.
+  snapHalo.visible = false;
   snapMarker.add(snapSphere, snapHalo);
   // Cruz de ejes 0.08 m — más chica
   const axisLen = 0.08;
@@ -3093,9 +3118,9 @@ export function drawing({
     ]);
     return new THREE.Line(g, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.7 }));
   };
-  snapMarker.add(mkLine([-axisLen, 0, 0], [axisLen, 0, 0], 0xff0000)); // X rojo
-  snapMarker.add(mkLine([0, -axisLen, 0], [0, axisLen, 0], 0x00ff00)); // Y verde
-  snapMarker.add(mkLine([0, 0, -axisLen], [0, 0, axisLen], 0x0088ff)); // Z azul
+  snapMarker.add(mkLine([-axisLen, 0, 0], [axisLen, 0, 0], 0xffffff)); // X (cruz blanca, como AutoCAD)
+  snapMarker.add(mkLine([0, -axisLen, 0], [0, axisLen, 0], 0xffffff)); // Y
+  snapMarker.add(mkLine([0, 0, -axisLen], [0, 0, axisLen], 0xffffff)); // Z
   snapMarker.visible = false;
   snapMarker.frustumCulled = false;
   scene.add(snapMarker);
@@ -3731,15 +3756,12 @@ export function drawing({
         const polarMatX = polarX.material as THREE.LineDashedMaterial;
         const polarMatY = polarY.material as THREE.LineDashedMaterial;
         const polarMatZ = polarZ.material as THREE.LineDashedMaterial;
-        if (effectiveLock === "x") {
-          polarMatX.opacity = 0.95; polarMatY.opacity = 0.10; polarMatZ.opacity = 0.10;
-        } else if (effectiveLock === "y") {
-          polarMatX.opacity = 0.10; polarMatY.opacity = 0.95; polarMatZ.opacity = 0.10;
-        } else if (effectiveLock === "z") {
-          polarMatX.opacity = 0.10; polarMatY.opacity = 0.10; polarMatZ.opacity = 0.95;
-        } else {
-          polarMatX.opacity = 0.5; polarMatY.opacity = 0.5; polarMatZ.opacity = 0.5;
-        }
+        // Como AutoCAD (foto 14-sep-2026): UN solo vector punteado, el del eje enganchado;
+        // sin enganche no se dibuja ninguno (antes los 3 ejes de color cruzaban el punto).
+        polarX.visible = effectiveLock === "x";
+        polarY.visible = effectiveLock === "y";
+        polarZ.visible = effectiveLock === "z";
+        polarMatX.opacity = 0.95; polarMatY.opacity = 0.95; polarMatZ.opacity = 0.95;
       } else {
         // Sin punto previo: solo mostrar coords del cursor
         const coordsNop = `X=${p.x.toFixed(2)} Y=${p.y.toFixed(2)} Z=${p.z.toFixed(2)}`;
