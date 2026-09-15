@@ -73,8 +73,10 @@ const srv = createServer((req, res) => {
 const PUERTO = Number(process.env.HK_PUERTO || 4780);
 await new Promise((r) => srv.listen(PUERTO, r));
 
-const nav = await puppeteer.launch({ headless: "new",
-  args: ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
+// HK_VISIBLE=1: ventana de navegador VISIBLE en el escritorio, para mirar la prueba en vivo
+const nav = await puppeteer.launch({ headless: process.env.HK_VISIBLE ? false : "new",
+  defaultViewport: null,
+  args: ["--no-sandbox", ...(process.env.HK_VISIBLE ? ["--window-size=1296,860", "--window-position=40,40"] : []), "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
          "--use-angle=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] });
 const pag = await nav.newPage();
 // Sin diálogo del sistema: en headless `showSaveFilePicker` se cancela solo (AbortError) y
