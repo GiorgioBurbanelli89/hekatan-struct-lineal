@@ -921,6 +921,8 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       selSet.push(item);
     }
     selected = selSet.length ? selSet[selSet.length - 1] : null;
+    // aviso para quien quiera reaccionar a la designación (p. ej. la K local de la barra)
+    window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: selected } }));
   }
 
   function limpiarSeleccion() {

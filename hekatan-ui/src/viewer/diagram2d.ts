@@ -22,7 +22,7 @@
  */
 import type { State } from "vanjs-core";
 import { ejesCSI, diagramaCSI, ladoPositivo } from "./objects/utils/diagramaCSI";
-import { scriptKLocalBarra } from "./klocalMatlab";
+import { scriptKLocalBarra, kLocalBarra } from "./klocalMatlab";
 
 type Nodo = number[];
 type Plano = "XZ" | "YZ" | "XY";
@@ -534,6 +534,57 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     if (descargar) descargarKLocal(idx as number);
     return scriptKLocalBarra(mesh as any, idx as number);
   };
+
+  // ── Al TOCAR una barra: aviso «K local» y ventana con la matriz 12×12 ─────────────
+  let chipK: HTMLButtonElement | null = null, hostK: HTMLDivElement | null = null, barraK = -1;
+  function abrirK(idx: number) {
+    barraK = idx;
+    if (!hostK) {
+      hostK = document.createElement("div");
+      hostK.id = "hk-klocal";
+      hostK.style.cssText = "position:fixed;left:50%;top:80px;transform:translateX(-50%);width:min(1100px,96vw);max-height:80vh;overflow:auto;z-index:9992;background:#0b0e14;border:1px solid #2f3b50;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6);font:12px 'Segoe UI',system-ui,sans-serif;color:#c9d3e0";
+      document.body.appendChild(hostK);
+      const css = document.createElement("style");
+      css.textContent = "#hk-klocal[hidden]{display:none!important}";
+      document.head.appendChild(css);
+    }
+    let r;
+    try { r = kLocalBarra(mesh as any, idx); } catch (e) { alert(String(e)); return; }
+    const g = (v: number) => (Math.abs(v) < 1e-12 ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? v.toExponential(4) : v.toPrecision(6));
+    const gdl = ["u1 i", "u2 i", "u3 i", "θ1 i", "θ2 i", "θ3 i", "u1 j", "u2 j", "u3 j", "θ1 j", "θ2 j", "θ3 j"];
+    const filas = r.K.map((row, i) => `<tr><th style="color:#9fb0c6;padding:2px 6px;text-align:right">${gdl[i]}</th>` +
+      row.map((v) => `<td style="padding:2px 6px;text-align:right;color:${Math.abs(v) < 1e-12 ? "#4a5568" : v < 0 ? "#ff9f9a" : "#e6edf5"}">${g(v)}</td>`).join("") + "</tr>").join("");
+    hostK.innerHTML =
+      `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">` +
+      `<b style="color:#e6c463">K local · barra ${idx + 1}</b><span style="color:#9fb0c6">L = ${r.L.toFixed(3)} m · φ₂ = ${r.phiZ.toFixed(5)} · φ₃ = ${r.phiY.toFixed(5)} · getLocalStiffnessMatrix (motor)</span>` +
+      `<button class="hk-k-m" style="margin-left:auto;background:#1b2230;color:#e6c463;border:1px solid #33415c;border-radius:4px;cursor:pointer;padding:2px 8px">📄 Script MATLAB (.m)</button>` +
+      `<button class="hk-k-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button></div>` +
+      `<div style="overflow-x:auto;padding:8px"><table style="border-collapse:collapse;font-family:Consolas,monospace;font-size:11px">` +
+      `<tr><th></th>${gdl.map((d) => `<th style="color:#9fb0c6;padding:2px 6px">${d}</th>`).join("")}</tr>${filas}</table></div>`;
+    hostK.querySelector(".hk-k-x")!.addEventListener("click", () => { hostK!.hidden = true; });
+    hostK.querySelector(".hk-k-m")!.addEventListener("click", () => descargarKLocal(barraK));
+    hostK.hidden = false;
+  }
+  window.addEventListener("hk:model-selection", (ev: any) => {
+    const u = ev.detail?.ultimo;
+    if (!chipK) {
+      chipK = document.createElement("button");
+      chipK.id = "hk-klocal-chip";
+      chipK.style.cssText = "position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:9989;background:#141a24;color:#e6c463;border:1px solid #e6c463;border-radius:16px;padding:5px 14px;font:600 12px 'Segoe UI',system-ui;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5)";
+      document.body.appendChild(chipK);
+      chipK.addEventListener("click", () => { const i = Number(chipK!.dataset.idx); if (i >= 0) abrirK(i); });
+    }
+    if (u && u.type === "frame") {
+      chipK.dataset.idx = String(u.idx);
+      chipK.textContent = `📐 Ver K local · barra ${u.idx + 1}`;
+      chipK.hidden = false;
+      if (hostK && !hostK.hidden) abrirK(u.idx);   // ventana abierta: sigue a la barra tocada
+    } else {
+      chipK.hidden = true;
+    }
+  });
+  (window as any).__hekatanKLocal = (idx: number) => kLocalBarra(mesh as any, idx);
+  (window as any).__hekatanMallaK = mesh;   // para las pruebas: proyectar una barra y tocarla con el ratón
 
   (window as any).__hekatanDiagrama2D = abrir;
   return { abrir, abrirBarra };

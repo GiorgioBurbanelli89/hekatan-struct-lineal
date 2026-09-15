@@ -28,6 +28,69 @@ const num = (v: number) => {
   return a >= 1e-3 && a < 1e7 ? String(+v.toPrecision(15)) : v.toExponential(14);
 };
 
+/** La MISMA K local que escribe el script (y que da getLocalStiffnessMatrix.cpp), en números,
+ *  para enseñarla en pantalla. Verificada contra MATLAB R2017a (cli/_klocal_matlab_check.mjs). */
+export function kLocalBarra(mesh: MallaK, idx: number): { K: number[][]; L: number; phiZ: number; phiY: number } {
+  const N = mesh.nodes?.rawVal ?? [], El = mesh.elements?.rawVal ?? [];
+  const el = El[idx];
+  if (!el || el.length !== 2) throw new Error(`El elemento ${idx} no es una barra (2 nudos).`);
+  const ei = mesh.elementInputs?.rawVal ?? {};
+  const v = (m: string) => (ei[m]?.get?.(idx) ?? 0) as number;
+  const a = N[el[0]], b = N[el[1]];
+  const E = v("elasticities"), G = v("shearModuli"), A = v("areas"), Iz = v("momentsOfInertiaZ"), Iy = v("momentsOfInertiaY"), J = v("torsionalConstants");
+  let AsY = v("shearAreasY"), AsZ = v("shearAreasZ");
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const bY = AsY < -1e-15, bZ = AsZ < -1e-15;
+  if (!bY && AsY < 1e-15 && A > 1e-15 && G > 1e-15) AsY = (5 / 6) * A;
+  if (!bZ && AsZ < 1e-15 && A > 1e-15 && G > 1e-15) AsZ = (5 / 6) * A;
+  const phiZ = !bZ && AsZ > 0 && G > 0 ? (12 * E * Iz) / (G * AsZ * L * L) : 0;
+  const phiY = !bY && AsY > 0 && G > 0 ? (12 * E * Iy) / (G * AsY * L * L) : 0;
+  const EA = (E * A) / L, GJ = (G * J) / L;
+  const tz = (12 * E * Iz / L ** 3) / (1 + phiZ), bz = (6 * E * Iz / L ** 2) / (1 + phiZ);
+  const kz = (4 * E * Iz / L) * (1 + phiZ / 4) / (1 + phiZ), az = (2 * E * Iz / L) * (1 - phiZ / 2) / (1 + phiZ);
+  const ty = (12 * E * Iy / L ** 3) / (1 + phiY), by = (6 * E * Iy / L ** 2) / (1 + phiY);
+  const ky = (4 * E * Iy / L) * (1 + phiY / 4) / (1 + phiY), ay = (2 * E * Iy / L) * (1 - phiY / 2) / (1 + phiY);
+  let K = [
+    [EA, 0, 0, 0, 0, 0, -EA, 0, 0, 0, 0, 0],
+    [0, tz, 0, 0, 0, bz, 0, -tz, 0, 0, 0, bz],
+    [0, 0, ty, 0, -by, 0, 0, 0, -ty, 0, -by, 0],
+    [0, 0, 0, GJ, 0, 0, 0, 0, 0, -GJ, 0, 0],
+    [0, 0, -by, 0, ky, 0, 0, 0, by, 0, ay, 0],
+    [0, bz, 0, 0, 0, kz, 0, -bz, 0, 0, 0, az],
+    [-EA, 0, 0, 0, 0, 0, EA, 0, 0, 0, 0, 0],
+    [0, -tz, 0, 0, 0, -bz, 0, tz, 0, 0, 0, -bz],
+    [0, 0, -ty, 0, by, 0, 0, 0, ty, 0, by, 0],
+    [0, 0, 0, -GJ, 0, 0, 0, 0, 0, GJ, 0, 0],
+    [0, 0, -by, 0, ay, 0, 0, 0, by, 0, ky, 0],
+    [0, bz, 0, 0, 0, az, 0, -bz, 0, 0, 0, kz],
+  ];
+  const spr = ei.partialFixitySprings?.get?.(idx) as number[] | undefined;
+  if (spr) for (let i = 0; i < Math.min(12, spr.length); i++) if (spr[i] > 1e-12) K[i][i] += spr[i];
+  const rel = ei.momentReleases?.get?.(idx) as boolean[] | undefined;
+  if (rel && rel.some(Boolean)) {
+    const f = rel.length >= 12 ? rel.slice(0, 12).map((r, i) => (r ? i : -1)).filter((i) => i >= 0)
+      : rel.slice(0, 6).map((r, i) => (r ? [3, 4, 5, 9, 10, 11][i] : -1)).filter((i) => i >= 0);
+    const r = [...Array(12).keys()].filter((i) => !f.includes(i));
+    // inv(Kff) por Gauss-Jordan
+    const n = f.length, M = f.map((i, p) => [...f.map((j) => K[i][j]), ...f.map((_, q) => (p === q ? 1 : 0))]);
+    for (let c = 0; c < n; c++) {
+      let piv = c; for (let k = c + 1; k < n; k++) if (Math.abs(M[k][c]) > Math.abs(M[piv][c])) piv = k;
+      [M[c], M[piv]] = [M[piv], M[c]];
+      const d = M[c][c]; for (let k = 0; k < 2 * n; k++) M[c][k] /= d;
+      for (let k = 0; k < n; k++) if (k !== c) { const m = M[k][c]; for (let q = 0; q < 2 * n; q++) M[k][q] -= m * M[c][q]; }
+    }
+    const inv = M.map((row) => row.slice(n));
+    const Kc = Array.from({ length: 12 }, () => Array(12).fill(0));
+    for (const i of r) for (const j of r) {
+      let s = 0;
+      for (let p = 0; p < n; p++) for (let q = 0; q < n; q++) s += K[i][f[p]] * inv[p][q] * K[f[q]][j];
+      Kc[i][j] = K[i][j] - s;
+    }
+    K = Kc;
+  }
+  return { K, L, phiZ, phiY };
+}
+
 export function scriptKLocalBarra(mesh: MallaK, idx: number): { nombre: string; texto: string } {
   const N = mesh.nodes?.rawVal ?? [];
   const E = mesh.elements?.rawVal ?? [];
