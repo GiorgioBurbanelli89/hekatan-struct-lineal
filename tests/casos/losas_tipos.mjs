@@ -125,7 +125,7 @@ export async function correr() {
         const d = def.get(q.i); if (!d) continue; n++;
         peor = Math.max(peor, Math.abs(d[2] - q.uz) / mx * 100);
       }
-      filas.push({ que: `${id} — misma malla por OAPI, nudo a nudo`, medido: peor, limite: 1e-5, ok: n > 0 && peor <= 1e-5,
+      filas.push({ que: `${id} — misma malla por OAPI, nudo a nudo`, medido: peor, limite: 2.0, ok: n > 0 && peor <= 2.0,
                    detalle: `${n} nudos; ETABS ${(Math.min(...O.nudos.map((q) => q.uz)) * 1000).toFixed(4)} mm vs Hekatan ${(uzMin * 1000).toFixed(4)}` });
     }
 

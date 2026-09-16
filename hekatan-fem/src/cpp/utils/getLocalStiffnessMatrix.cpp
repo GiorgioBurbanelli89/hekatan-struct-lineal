@@ -154,7 +154,11 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
             {
                 return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
             }
+#ifdef HK_THICK_DKMQ
+            return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
+#else
             return getLocalStiffnessMatrixShellQ4(elementNodes, elementInputs, elementIndex);
+#endif
         }
         return getLocalStiffnessMatrixInterface(elementNodes, elementInputs, elementIndex);
     }

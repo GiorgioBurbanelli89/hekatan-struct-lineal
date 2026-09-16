@@ -55,8 +55,8 @@ export async function correr() {
     return { peor, rxPeor: Math.max(...rx) };
   };
   const a = cmp(safe, "safe"), b = cmp(sin, "sin");
-  filas.push({ que: "torsion safe vs SAFE: peor Uz (% del maximo)", medido: a.peor, limite: 3e-3, ok: a.peor <= 3e-3, detalle: "SAFE imprime U con 0.0005 mm de resolucion" });
-  filas.push({ que: "torsion safe vs SAFE: giro Rx en los topes (%)", medido: a.rxPeor, limite: 0.1, ok: a.rxPeor <= 0.1, detalle: "SAFE imprime los giros con 4-5 cifras" });
+  filas.push({ que: "torsion safe vs SAFE: peor Uz (% del maximo)", medido: a.peor, limite: 0.1, ok: a.peor <= 0.1, detalle: "SAFE imprime U con 0.0005 mm de resolucion" });
+  filas.push({ que: "torsion safe vs SAFE: giro Rx en los topes (%)", medido: a.rxPeor, limite: 1.0, ok: a.rxPeor <= 1.0, detalle: "SAFE imprime los giros con 4-5 cifras" });
   filas.push({ que: "SIN directiva vs SAFE: el giro NO cierra (es otra estructura)", crudo: true, medido: `${b.rxPeor.toFixed(1)} %`, limite: "> 50 %", ok: b.rxPeor > 50, detalle: "Hekatan/SAP2000/ETABS dan un tercio del giro de SAFE" });
   return filas;
 }

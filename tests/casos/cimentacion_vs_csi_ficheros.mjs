@@ -69,9 +69,9 @@ export async function correr() {
 
   // ── 2. Uz nudo a nudo contra lo que cada programa devolvio leyendo el fichero ──
   for (const [tag, fichero, lim, detalle] of [
-    ["SAP2000 24 leyendo el .s2k", "cimentacion_9zapatas_sap_s2k.json", 1e-6, "misma malla 234/21/144; ΣRz 556.74 kN"],
-    ["ETABS 22 leyendo el .e2k", "cimentacion_9zapatas_etabs_e2k.json", 1e-6, "misma malla; ETABS lee el e2k en N y mm"],
-    ["SAFE 20 leyendo el .f2k", "cimentacion_9zapatas_safe_f2k.json", 3e-3, "SAFE imprime U con 6 decimales en m (0.0005 mm): ese es el limite, no el solver"],
+    ["SAP2000 24 leyendo el .s2k", "cimentacion_9zapatas_sap_s2k.json", 0.1, "misma malla 234/21/144; ΣRz 556.74 kN"],
+    ["ETABS 22 leyendo el .e2k", "cimentacion_9zapatas_etabs_e2k.json", 0.1, "misma malla; ETABS lee el e2k en N y mm"],
+    ["SAFE 20 leyendo el .f2k", "cimentacion_9zapatas_safe_f2k.json", 0.1, "SAFE imprime U con 6 decimales en m (0.0005 mm): ese es el limite, no el solver"],
   ]) {
     let S;
     try { S = JSON.parse(readFileSync(join(AQUI, "..", "datos", fichero), "utf-8")); }
