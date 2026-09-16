@@ -2020,12 +2020,20 @@ function exportFromScratch(input: ExportE2kInput): string {
   // justo lo que hace el motor: `getGlobalMassMatrix.cpp` pesa los elementos
   // por `densities` (MASA, t/m³) y no mira las cargas.
   //
-  // Lo demás sigue igual y a propósito, porque el motor lo replica paso a paso
-  // en `ensamblarMasa()` (modal.cpp): sólo masa LATERAL
-  // (`INCLUDEVERTICALMASS "No"`) y agrupada por piso (`LUMPATSTORIES "Yes"`).
+  // ⚠️ MASA VERTICAL (16-sep-2026). Esto escribía `INCLUDEVERTICALMASS "No"` y
+  // `LUMPATSTORIES "Yes"`, que es el DEFECTO DE ETABS, no lo que resuelve Hekatan.
+  // Consecuencia medida en el galpón curvo (214 nudos): ETABS se comía los modos
+  // VERTICALES — SumUZ = 0 contra el 38.4 % de Hekatan y de SAP2000, el modo 4
+  // salía a −29.7 % (su "modo 4" era en realidad el 6). Con la masa vertical
+  // encendida, ETABS = Hekatan a −0.01 % en los cinco primeros modos.
+  // SAP2000 trae la masa en las tres direcciones de fábrica y no tiene el problema.
+  // En el binario: `IncludeLateralMass` / `IncludeVerticalMass` (ETABS.dll,
+  // CSI.SAPModel.dll). Por OAPI no hay SourceMass: es la tabla
+  // "Mass Source Definition" de DatabaseTables (campos IncLateral, IncVertical,
+  // LumpMass). Ver validation/opensees/README.md.
   const masaDeElementos = weightMode === "manual";
   lines.push(`$ MASS SOURCE`);
-  lines.push(`  MASSSOURCE  "MsSrc1"    INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "No"    LUMPATSTORIES "Yes"    ISDEFAULT "Yes"  `);
+  lines.push(`  MASSSOURCE  "MsSrc1"    INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "Yes"    LUMPATSTORIES "No"    ISDEFAULT "Yes"  `);
   if (!masaDeElementos) lines.push(`  MASSSOURCELOAD  "MsSrc1"  "Dead"  1 `);
   lines.push(``);
 

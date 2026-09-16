@@ -89,17 +89,20 @@ export async function correr() {
     detalle: "con INCLUDELOADS No, un patron de masa sobra y confunde",
   });
 
-  // ── Lo que NO cambia, en los dos modos ────────────────────────────────────
-  // El motor replica estos dos pasos en ensamblarMasa() (modal.cpp): solo masa
-  // lateral y agrupada por piso. Si el e2k dejara de decirlo, el modal de ETABS
-  // dejaria de ser comparable sin que nadie se entere.
+  // ── MASA VERTICAL: el e2k tiene que decir lo que el motor RESUELVE ───────
+  // Esto exigia `vert=No lump=Yes` (el defecto de ETABS) mientras el modal de
+  // Hekatan usa la masa 3D, la de SAP2000. O sea que el e2k mandaba a ETABS otra
+  // masa y los modos verticales desaparecian: medido en el galpon curvo el
+  // 16-sep-2026, SumUZ = 0 en ETABS contra 38.4 % en Hekatan y SAP2000, y el modo
+  // 4 a -29.7 % (su "modo 4" era el 6). Con la masa vertical encendida, ETABS =
+  // Hekatan a -0.01 %. Ver validation/opensees/README.md.
   for (const [modo, e2k] of [["auto", auto], ["manual", manual]]) {
     filas.push({
-      que: `${modo}: solo masa LATERAL, agrupada por piso`, crudo: true,
+      que: `${modo}: masa en las TRES direcciones, sin agrupar por piso`, crudo: true,
       medido: `vert=${clave(e2k, "INCLUDEVERTICALMASS")} lump=${clave(e2k, "LUMPATSTORIES")}`,
-      limite: "vert=No lump=Yes",
-      ok: clave(e2k, "INCLUDEVERTICALMASS") === "No" && clave(e2k, "LUMPATSTORIES") === "Yes",
-      detalle: "los pasos 2b y 2c de ensamblarMasa()",
+      limite: "vert=Yes lump=No",
+      ok: clave(e2k, "INCLUDEVERTICALMASS") === "Yes" && clave(e2k, "LUMPATSTORIES") === "No",
+      detalle: "con vert=No, ETABS se come los modos verticales (-29.7 % en el modo 4)",
     });
   }
   return filas;

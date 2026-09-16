@@ -41,7 +41,7 @@ def _main():
     DUMP     = ""                 # <- ponle la ruta aqui si quieres una fija
     OUT      = ""                 # <- vacio = al lado del dump, con _opensees.json
     NMODOS   = 12
-    OPCIONES = ["--anim=1,2,3", "--frames=60", "--embebido"]
+    OPCIONES = ["--anim=1,2,3", "--frames=36", "--embebido"]
 
     def _es_dump(f):
         try:
@@ -207,7 +207,8 @@ def _main():
         # La camara da la vuelta ENTERA pero despacio, y la estructura oscila
         # varias veces por vuelta: si giro y oscilacion van al mismo ritmo, el
         # giro se come la vibracion y solo se ve el modelo dando vueltas.
-        ciclos = float(opt("ciclos", 6))    # oscilaciones por modo
+        ciclos = float(opt("ciclos", 4))    # oscilaciones por modo
+        dpi = int(float(opt("dpi", 80)))    # 80 = 1024x576; 100 = 1280x720 (mas lento)
         # El giro, LENTO: media vuelta repartida entre TODOS los modos, y
         # continua (la camara sigue donde la dejo el modo anterior). Con 360 por
         # modo daba seis vueltas en el GIF y no se veia vibrar nada.
@@ -227,34 +228,45 @@ def _main():
             amp = max(max(abs(c) for c in v) for v in phi) or 1.0
             f = (pc / 100.0) * diag / amp
             T = res["periodos"][modo - 1]
+            # La figura se crea UNA vez por modo y en cada fotograma solo se
+            # cambian los datos de las colecciones (set_segments / set_verts).
+            # Recrearla entera costaba 0.28 s por fotograma — con 180 son 50 s
+            # y el script parecia colgado dentro de Hekatan Py.
+            fig = plt.figure(figsize=(12.8, 7.2), dpi=dpi)
+            ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")
+            ax.set_facecolor("#10131a"); fig.patch.set_facecolor("#10131a")
+            colChapa = (Poly3DCollection([[P[n] for n in el] for el in caras0],
+                                         facecolor="#2b7fd4", alpha=0.35,
+                                         edgecolor="#4da3ff", linewidths=0.3) if caras0 else None)
+            if colChapa is not None:
+                # sin ordenar las caras por profundidad: con alpha, matplotlib
+                # las reordena en CADA fotograma y ahi se va la mitad del tiempo
+                try: colChapa.set_zsort(False)
+                except Exception: pass
+                ax.add_collection3d(colChapa)
+            ax.add_collection3d(Line3DCollection([[P[el[0]], P[el[1]]] for el in lineas],
+                                                 colors="#39404d", linewidths=0.5))
+            colBarra = Line3DCollection([[P[el[0]], P[el[1]]] for el in lineas],
+                                        colors="#ffb547", linewidths=1.2)
+            ax.add_collection3d(colBarra)
+            ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
+            ax.set_zlim(min(zs) - 1, max(zs) + 3)
+            ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2,
+                               max(zs) - min(zs) + 4), zoom=1.15)
+            ax.set_axis_off()
+            fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
+                     color="#e8edf5", fontsize=15)
+            fig.text(0.04, 0.895, "%d nudos · %d barras · %d chapas   ·   amplitud ×%.0f"
+                     % (len(P), nbar, nsh, f), color="#8b95a7", fontsize=10)
             for k in range(K):
                 a = math.sin(2 * math.pi * ciclos * k / K)
                 Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
-                fig = plt.figure(figsize=(12.8, 7.2), dpi=100)
-                ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")
-                ax.set_facecolor("#10131a"); fig.patch.set_facecolor("#10131a")
-                if caras0:
-                    ax.add_collection3d(Poly3DCollection([[Q[n] for n in el] for el in caras0],
-                                                         facecolor="#2b7fd4", alpha=0.35,
-                                                         edgecolor="#4da3ff", linewidths=0.3))
-                ax.add_collection3d(Line3DCollection([[P[el[0]], P[el[1]]] for el in lineas],
-                                                     colors="#39404d", linewidths=0.5))
-                ax.add_collection3d(Line3DCollection([[Q[el[0]], Q[el[1]]] for el in lineas],
-                                                     colors="#ffb547", linewidths=1.2))
-                ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
-                ax.set_zlim(min(zs) - 1, max(zs) + 3)
-                ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2,
-                                   max(zs) - min(zs) + 4), zoom=1.15)
-                # la camara da una VUELTA ENTERA mientras el modo vibra; al acabar
-                # el ciclo se pasa al modo siguiente en el mismo GIF
+                if colChapa is not None: colChapa.set_verts([[Q[n] for n in el] for el in caras0])
+                colBarra.set_segments([[Q[el[0]], Q[el[1]]] for el in lineas])
                 ax.view_init(elev=16, azim=-65 + giro * (imodo + k / K))
-                ax.set_axis_off()
-                fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
-                         color="#e8edf5", fontsize=15)
-                fig.text(0.04, 0.895, "%d nudos · %d barras · %d chapas   ·   amplitud ×%.0f"
-                         % (len(P), nbar, nsh, f), color="#8b95a7", fontsize=10)
-                fig.savefig(os.path.join(dirsal, "f%03d.png" % k), facecolor=fig.get_facecolor())
-                plt.close(fig)
+                fig.savefig(os.path.join(dirsal, "f%03d.png" % k),
+                            facecolor=fig.get_facecolor(), pil_kwargs={"compress_level": 1})
+            plt.close(fig)
             gif = dirsal + ".gif"
             try:
                 import imageio.v2 as iio
