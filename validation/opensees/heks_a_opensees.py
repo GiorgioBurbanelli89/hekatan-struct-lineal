@@ -15,21 +15,70 @@ import json, sys, math
 import openseespy.opensees as ops
 
 # -- ENTRADA ------------------------------------------------------------
-# Por linea de ordenes:  python heks_a_opensees.py dump.json salida.json 12 [--anim=1 --abrir]
-# Desde Hekatan Py (o cualquier editor que ejecute el fichero SIN argumentos)
-# no hay sys.argv que leer y saltaba IndexError. Ahora usa estos valores:
-# cambia las tres lineas y dale a correr. OPCIONES admite las mismas banderas.
-DUMP     = r"C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validation/opensees/dump.json"
-OUT      = r"C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validation/opensees/opensees.json"
-NMODOS   = 12
-OPCIONES = ["--anim=1", "--frames=24", "--abrir"]
+# Tres formas de correrlo, sin tocar nada:
+#   1) terminal:  python heks_a_opensees.py dump.json salida.json 12 --anim=1 --abrir
+#   2) editor (Hekatan Py, IDLE, VS Code...): lo ejecutan SIN argumentos, asi que
+#      busca el dump el solito: primero el que pongas en DUMP, luego el .json que
+#      haya junto al script, luego el de la carpeta de trabajo. Si no encuentra
+#      ninguno, lo dice y para.
+#   3) importandolo: deja DUMP escrito y llama al fichero.
+# Un "dump" es lo que saca `node tests/lib/dump_heks.mjs modelo.heks dump.json`.
+import os, glob
 
-if len(sys.argv) > 2:                    # llamado desde la terminal
+DUMP     = ""                 # <- ponle la ruta aqui si quieres una fija
+OUT      = ""                 # <- vacio = al lado del dump, con _opensees.json
+NMODOS   = 12
+OPCIONES = ["--anim=1,2,3", "--frames=24", "--embebido"]
+
+def _es_dump(f):
+    try:
+        with open(f, "r", encoding="utf-8", errors="ignore") as h: cab = h.read(4000)
+        return '"nodes"' in cab and '"elements"' in cab
+    except Exception:
+        return False
+
+# El ANCLA: la ultima ruta que se uso desde la terminal queda apuntada aqui, y
+# asi el mismo fichero corre luego dentro de Hekatan Py, que lo copia a %TEMP%
+# y lo ejecuta sin argumentos y con otra carpeta de trabajo.
+_ANCLA = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"),
+                      "hekatan_opensees_dump.txt")
+
+def _recordar(f):
+    try:
+        with open(_ANCLA, "w", encoding="utf-8") as h: h.write(f)
+    except Exception: pass
+
+def _buscar():
+    aqui = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv and sys.argv[0] else ""
+    try: aqui2 = os.path.dirname(os.path.abspath(__file__))
+    except NameError: aqui2 = ""
+    for carpeta in (aqui2, aqui, os.getcwd()):
+        if not carpeta: continue
+        for nombre in ("dump.json", "*.json"):
+            for f in sorted(glob.glob(os.path.join(carpeta, nombre))):
+                if _es_dump(f): return f
+    try:                                  # lo ultimo: el ancla
+        with open(_ANCLA, encoding="utf-8") as h: f = h.read().strip()
+        if f and os.path.exists(f) and _es_dump(f): return f
+    except Exception: pass
+    return ""
+
+if len(sys.argv) > 2:                    # terminal: dump y salida como argumentos
     DUMP, OUT = sys.argv[1], sys.argv[2]
     if len(sys.argv) > 3 and sys.argv[3].isdigit(): NMODOS = int(sys.argv[3])
-else:                                    # ejecutado sin argumentos
+    _recordar(os.path.abspath(DUMP))
+else:                                    # editor: sin argumentos
     sys.argv = (sys.argv[:1] or ["heks_a_opensees.py"]) + OPCIONES
-    print("sin argumentos: " + DUMP)
+    if not DUMP: DUMP = _buscar()
+    if not DUMP:
+        print("No encuentro ningun dump .json (el que saca dump_heks.mjs).")
+        print("Pon la ruta en la linea  DUMP = '...'  de arriba, o deja el")
+        print("dump.json en la carpeta del script o en la de trabajo.")
+        raise SystemExit(1)
+    print("dump: " + DUMP)
+if not OUT:
+    OUT = os.path.splitext(DUMP)[0] + "_opensees.json"
+
 D = json.load(open(DUMP)); ei = D["elementInputs"]; ni = D["nodeInputs"]
 g = lambda m, i, d=None: ei.get(m, {}).get(str(i), d)
 
@@ -123,70 +172,86 @@ try:
         res[k] = mp.get(k)
 except Exception as e:
     res["modalProperties_error"] = str(e)
-# ── DIBUJO Y ANIMACION DEL MODO ─────────────────────────────────────────
-#   --anim=N        anima el modo N (por defecto el 1)
-#   --frames=K      fotogramas de un ciclo completo (por defecto 24)
-#   --escala=F      amplitud del modo, en % de la diagonal del modelo (por defecto 8)
-# Deja los PNG (uno por fotograma) y un .mp4 junto al JSON de salida.
+# ── DIBUJO Y ANIMACION DE LOS MODOS ─────────────────────────────────────
+#   --anim=1,2,3    los modos que se animan (uno, o varios separados por coma)
+#   --frames=K      fotogramas de un ciclo (24)
+#   --escala=F      amplitud, en % de la diagonal del modelo (8)
+#   --abrir         abre el GIF en el visor de Windows
+#   --embebido      escupe el GIF como data-URI, para que se vea DENTRO del
+#                   Output de Hekatan Py (WebView2). Va solo cuando no hay
+#                   argumentos de terminal, que es como lo ejecuta el editor.
 if any(a.startswith("--anim") for a in sys.argv) and res["periodos"]:
-    import os
+    import base64
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
     def opt(nm, d):
         for a in sys.argv:
-            if a.startswith("--%s=" % nm): return float(a.split("=")[1])
+            if a.startswith("--%s=" % nm): return a.split("=", 1)[1]
         return d
-    modo = int(opt("anim", 1)); K = int(opt("frames", 24)); pc = opt("escala", 8.0)
-    dirsal = os.path.splitext(OUT)[0] + "_modo%d" % modo
-    os.makedirs(dirsal, exist_ok=True)
-    P = [[float(c) for c in p] for p in D["nodes"]]
-    phi = [ops.nodeEigenvector(i + 1, modo)[:3] for i in range(len(P))]
-    xs = [p[0] for p in P]; ys = [p[1] for p in P]; zs = [p[2] for p in P]
+    modos = [int(v) for v in str(opt("anim", "1")).split(",") if v.strip().isdigit()]
+    K = int(float(opt("frames", 24))); pc = float(opt("escala", 8.0))
+    P = [[float(c) for c in q] for q in D["nodes"]]
+    xs = [q[0] for q in P]; ys = [q[1] for q in P]; zs = [q[2] for q in P]
     diag = math.dist([min(xs), min(ys), min(zs)], [max(xs), max(ys), max(zs)])
-    amp = max(max(abs(c) for c in v) for v in phi) or 1.0
-    f = (pc / 100.0) * diag / amp
-    T = res["periodos"][modo - 1]
-    for k in range(K):
-        a = math.sin(2 * math.pi * k / K)
-        Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
-        fig = plt.figure(figsize=(12.8, 7.2), dpi=100)
-        ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")   # sin margenes: el modelo llena el cuadro
-        ax.set_facecolor("#10131a"); fig.patch.set_facecolor("#10131a")
-        # chapas primero (van detras)
-        caras = [[Q[n] for n in el] for el in D["elements"] if len(el) == 4]
-        if caras:
-            ax.add_collection3d(Poly3DCollection(caras, facecolor="#2b7fd4", alpha=0.35,
-                                                 edgecolor="#4da3ff", linewidths=0.3))
-        # barras: en gris la posicion original, en color la deformada
-        ax.add_collection3d(Line3DCollection([[P[el[0]], P[el[1]]] for el in D["elements"] if len(el) == 2],
-                                             colors="#39404d", linewidths=0.5))
-        ax.add_collection3d(Line3DCollection([[Q[el[0]], Q[el[1]]] for el in D["elements"] if len(el) == 2],
-                                             colors="#ffb547", linewidths=1.2))
-        ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
-        ax.set_zlim(min(zs) - 1, max(zs) + 3)
-        ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2, max(zs) - min(zs) + 4), zoom=1.15)
-        ax.view_init(elev=16, azim=-65 + 30.0 * k / K)
-        ax.set_axis_off()
-        fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
-                 color="#e8edf5", fontsize=15)
-        fig.text(0.04, 0.895, "%d nudos · %d barras · %d chapas   ·   amplitud ×%.0f" % (len(P), nbar, nsh, f),
-                 color="#8b95a7", fontsize=10)
-        fig.savefig(os.path.join(dirsal, "f%03d.png" % k), facecolor=fig.get_facecolor())
-        plt.close(fig)
-    try:
-        import imageio.v2 as iio
-        ims = [iio.imread(os.path.join(dirsal, "f%03d.png" % k)) for k in range(K)]
-        iio.mimsave(dirsal + ".mp4", ims, fps=12, macro_block_size=1)
-        # el GIF se ve en cualquier visor y se abre solo con --abrir
-        iio.mimsave(dirsal + ".gif", ims, fps=12, loop=0)
-        print("gif:", dirsal + ".gif")
-        if "--abrir" in sys.argv:
-            try: os.startfile(dirsal + ".gif")
-            except Exception: os.system('start "" "%s"' % (dirsal + ".gif"))
-    except Exception as ex:
-        print("mp4/gif:", str(ex)[:80])
-    print("modo %d (T = %.4f s): %d fotogramas en %s" % (modo, T, K, dirsal))
+    lineas = [el for el in D["elements"] if len(el) == 2]
+    caras0 = [el for el in D["elements"] if len(el) == 4]
+    res["animaciones"] = []
+    for modo in modos:
+        if modo > len(res["periodos"]): continue
+        dirsal = os.path.splitext(OUT)[0] + "_modo%d" % modo
+        os.makedirs(dirsal, exist_ok=True)
+        phi = [ops.nodeEigenvector(i + 1, modo)[:3] for i in range(len(P))]
+        amp = max(max(abs(c) for c in v) for v in phi) or 1.0
+        f = (pc / 100.0) * diag / amp
+        T = res["periodos"][modo - 1]
+        for k in range(K):
+            a = math.sin(2 * math.pi * k / K)
+            Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
+            fig = plt.figure(figsize=(12.8, 7.2), dpi=100)
+            ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")
+            ax.set_facecolor("#10131a"); fig.patch.set_facecolor("#10131a")
+            if caras0:
+                ax.add_collection3d(Poly3DCollection([[Q[n] for n in el] for el in caras0],
+                                                     facecolor="#2b7fd4", alpha=0.35,
+                                                     edgecolor="#4da3ff", linewidths=0.3))
+            ax.add_collection3d(Line3DCollection([[P[el[0]], P[el[1]]] for el in lineas],
+                                                 colors="#39404d", linewidths=0.5))
+            ax.add_collection3d(Line3DCollection([[Q[el[0]], Q[el[1]]] for el in lineas],
+                                                 colors="#ffb547", linewidths=1.2))
+            ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
+            ax.set_zlim(min(zs) - 1, max(zs) + 3)
+            ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2,
+                               max(zs) - min(zs) + 4), zoom=1.15)
+            ax.view_init(elev=16, azim=-65 + 30.0 * k / K)
+            ax.set_axis_off()
+            fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
+                     color="#e8edf5", fontsize=15)
+            fig.text(0.04, 0.895, "%d nudos · %d barras · %d chapas   ·   amplitud ×%.0f"
+                     % (len(P), nbar, nsh, f), color="#8b95a7", fontsize=10)
+            fig.savefig(os.path.join(dirsal, "f%03d.png" % k), facecolor=fig.get_facecolor())
+            plt.close(fig)
+        gif = dirsal + ".gif"
+        try:
+            import imageio.v2 as iio
+            ims = [iio.imread(os.path.join(dirsal, "f%03d.png" % k)) for k in range(K)]
+            iio.mimsave(dirsal + ".mp4", ims, fps=12, macro_block_size=1)
+            iio.mimsave(gif, ims, fps=12, loop=0)
+        except Exception as ex:
+            print("mp4/gif:", str(ex)[:80]); gif = ""
+        res["animaciones"].append({"modo": modo, "T": T, "gif": gif, "frames": dirsal})
+        print("modo %d: T = %.4f s, %d fotogramas -> %s" % (modo, T, K, dirsal))
+        if gif and "--abrir" in sys.argv:
+            try: os.startfile(gif)
+            except Exception: os.system('start "" "%s"' % gif)
+        # DENTRO del Output de Hekatan Py: sus marcadores de stdout
+        # (PythonPipeline.RenderStdoutLine): __CPSPY_HTML__ texto en crudo y
+        # __CPSPY_GIF__ una animacion en base64. Un print normal se escapa.
+        if gif and "--embebido" in sys.argv:
+            with open(gif, "rb") as h: b64 = base64.b64encode(h.read()).decode("ascii")
+            print("__CPSPY_HTML__:<p style=\"color:#c9d4e3;margin:8px 0 2px\">"
+                  "<b>modo %d</b> &nbsp;·&nbsp; T = %.4f s</p>" % (modo, T))
+            print("__CPSPY_GIF__:" + b64)
 
 json.dump(res, open(OUT, "w"), indent=1)
 print("OpenSees OK -> %d barras, %d shells%s" % (nbar, nsh,
