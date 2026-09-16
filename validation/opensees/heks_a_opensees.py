@@ -14,7 +14,22 @@ Salida: periodos, participacion de masa, desplazamientos, reacciones y fuerzas d
 import json, sys, math
 import openseespy.opensees as ops
 
-DUMP, OUT, NMODOS = sys.argv[1], sys.argv[2], int(sys.argv[3]) if len(sys.argv) > 3 else 12
+# -- ENTRADA ------------------------------------------------------------
+# Por linea de ordenes:  python heks_a_opensees.py dump.json salida.json 12 [--anim=1 --abrir]
+# Desde Hekatan Py (o cualquier editor que ejecute el fichero SIN argumentos)
+# no hay sys.argv que leer y saltaba IndexError. Ahora usa estos valores:
+# cambia las tres lineas y dale a correr. OPCIONES admite las mismas banderas.
+DUMP     = r"C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validation/opensees/dump.json"
+OUT      = r"C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/validation/opensees/opensees.json"
+NMODOS   = 12
+OPCIONES = ["--anim=1", "--frames=24", "--abrir"]
+
+if len(sys.argv) > 2:                    # llamado desde la terminal
+    DUMP, OUT = sys.argv[1], sys.argv[2]
+    if len(sys.argv) > 3 and sys.argv[3].isdigit(): NMODOS = int(sys.argv[3])
+else:                                    # ejecutado sin argumentos
+    sys.argv = (sys.argv[:1] or ["heks_a_opensees.py"]) + OPCIONES
+    print("sin argumentos: " + DUMP)
 D = json.load(open(DUMP)); ei = D["elementInputs"]; ni = D["nodeInputs"]
 g = lambda m, i, d=None: ei.get(m, {}).get(str(i), d)
 
