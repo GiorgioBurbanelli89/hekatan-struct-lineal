@@ -108,6 +108,71 @@ try:
         res[k] = mp.get(k)
 except Exception as e:
     res["modalProperties_error"] = str(e)
+# ── DIBUJO Y ANIMACION DEL MODO ─────────────────────────────────────────
+#   --anim=N        anima el modo N (por defecto el 1)
+#   --frames=K      fotogramas de un ciclo completo (por defecto 24)
+#   --escala=F      amplitud del modo, en % de la diagonal del modelo (por defecto 8)
+# Deja los PNG (uno por fotograma) y un .mp4 junto al JSON de salida.
+if any(a.startswith("--anim") for a in sys.argv) and res["periodos"]:
+    import os
+    import matplotlib; matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+    def opt(nm, d):
+        for a in sys.argv:
+            if a.startswith("--%s=" % nm): return float(a.split("=")[1])
+        return d
+    modo = int(opt("anim", 1)); K = int(opt("frames", 24)); pc = opt("escala", 8.0)
+    dirsal = os.path.splitext(OUT)[0] + "_modo%d" % modo
+    os.makedirs(dirsal, exist_ok=True)
+    P = [[float(c) for c in p] for p in D["nodes"]]
+    phi = [ops.nodeEigenvector(i + 1, modo)[:3] for i in range(len(P))]
+    xs = [p[0] for p in P]; ys = [p[1] for p in P]; zs = [p[2] for p in P]
+    diag = math.dist([min(xs), min(ys), min(zs)], [max(xs), max(ys), max(zs)])
+    amp = max(max(abs(c) for c in v) for v in phi) or 1.0
+    f = (pc / 100.0) * diag / amp
+    T = res["periodos"][modo - 1]
+    for k in range(K):
+        a = math.sin(2 * math.pi * k / K)
+        Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
+        fig = plt.figure(figsize=(12.8, 7.2), dpi=100)
+        ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")   # sin margenes: el modelo llena el cuadro
+        ax.set_facecolor("#10131a"); fig.patch.set_facecolor("#10131a")
+        # chapas primero (van detras)
+        caras = [[Q[n] for n in el] for el in D["elements"] if len(el) == 4]
+        if caras:
+            ax.add_collection3d(Poly3DCollection(caras, facecolor="#2b7fd4", alpha=0.35,
+                                                 edgecolor="#4da3ff", linewidths=0.3))
+        # barras: en gris la posicion original, en color la deformada
+        ax.add_collection3d(Line3DCollection([[P[el[0]], P[el[1]]] for el in D["elements"] if len(el) == 2],
+                                             colors="#39404d", linewidths=0.5))
+        ax.add_collection3d(Line3DCollection([[Q[el[0]], Q[el[1]]] for el in D["elements"] if len(el) == 2],
+                                             colors="#ffb547", linewidths=1.2))
+        ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
+        ax.set_zlim(min(zs) - 1, max(zs) + 3)
+        ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2, max(zs) - min(zs) + 4), zoom=1.15)
+        ax.view_init(elev=16, azim=-65 + 30.0 * k / K)
+        ax.set_axis_off()
+        fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
+                 color="#e8edf5", fontsize=15)
+        fig.text(0.04, 0.895, "%d nudos · %d barras · %d chapas   ·   amplitud ×%.0f" % (len(P), nbar, nsh, f),
+                 color="#8b95a7", fontsize=10)
+        fig.savefig(os.path.join(dirsal, "f%03d.png" % k), facecolor=fig.get_facecolor())
+        plt.close(fig)
+    try:
+        import imageio.v2 as iio
+        ims = [iio.imread(os.path.join(dirsal, "f%03d.png" % k)) for k in range(K)]
+        iio.mimsave(dirsal + ".mp4", ims, fps=12, macro_block_size=1)
+        # el GIF se ve en cualquier visor y se abre solo con --abrir
+        iio.mimsave(dirsal + ".gif", ims, fps=12, loop=0)
+        print("gif:", dirsal + ".gif")
+        if "--abrir" in sys.argv:
+            try: os.startfile(dirsal + ".gif")
+            except Exception: os.system('start "" "%s"' % (dirsal + ".gif"))
+    except Exception as ex:
+        print("mp4/gif:", str(ex)[:80])
+    print("modo %d (T = %.4f s): %d fotogramas en %s" % (modo, T, K, dirsal))
+
 json.dump(res, open(OUT, "w"), indent=1)
 print("OpenSees OK -> %d barras, %d shells%s" % (nbar, nsh,
       ", T1 = %.6f s" % res["periodos"][0] if res["periodos"] else " (sin modal)"))
