@@ -572,7 +572,7 @@ function computeQ4ShellStresses(
   if (Math.abs(detJ) > 1e-20) {
     const u12m: number[] = [];
     for (let n = 0; n < 4; n++) u12m.push(uLocal[n*6 + 0], uLocal[n*6 + 1], uLocal[n*6 + 5]);
-    const tipoDrill = (elementInputs as any)?.drillingTypes?.get(elemIdx) ?? 8;
+    const tipoDrill = (elementInputs as any)?.drillingTypes?.get(elemIdx) ?? 13;
     const gammaFac = (elementInputs as any)?.drillingPenaltyScales?.get(elemIdx) ?? 0.4;
     const mm = (elementInputs as any)?.membraneModifiers?.get(elemIdx);
     const smod = (elementInputs as any)?.shellModifiers?.get(elemIdx);
