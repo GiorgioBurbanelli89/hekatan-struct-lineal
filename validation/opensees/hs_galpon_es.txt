@@ -1,0 +1,6 @@
+Este galpón curvo tiene veinte metros de luz: doscientos catorce nudos, cuatrocientas cuarenta y tres barras y cien chapas de zinc.
+El mismo modelo entró en cuatro programas con la misma malla, los mismos nudos y las mismas cargas: así se comparan los solvers, no los repartos de carga.
+En el primer modo, Hekatan Struct da un periodo de cero coma tres tres uno uno cuatro cuatro segundos, y SAP dos mil da el mismo número hasta la sexta cifra.
+ETABS se queda a dos centésimas de por ciento, pero solo después de encenderle la masa vertical, que trae apagada de fábrica.
+OpenSees queda a un cuarto de por ciento, y esa diferencia no es el solver: es que su chapa es otro elemento.
+Cuatro programas independientes, el mismo galpón y el mismo número: eso es lo que significa validar.

@@ -209,3 +209,30 @@ SAP2000 se queda en **±7 %**, alternando signo: más rígido en flexión (−7 
 torsión (+5 %). Ya no son los duplicados ni la malla. Apunta a la losa: su Shell-Thick no es el
 MITC4 + modos de Wilson de Hekatan. Sin losas, **Hekatan = SAP2000 a 0.000 % en los 6 modos**,
 así que las barras torcidas no tienen nada que ver.
+
+## Los VÍDEOS (formato Hekatan School)
+
+Lo primero que salió fue una animación muda con una tabla al lado, y eso **no es un vídeo**.
+El formato de la casa es otro: voz en español, **subtítulo solo en inglés** en la franja de
+abajo, marca de agua y logo, y una frase por paso con su dibujo. El motor ya existe:
+
+```bash
+# 1. el máster 1280x720, con la franja de abajo LIBRE para el subtítulo
+python validation/opensees/video_4_programas.py <carpeta> 110
+# 2. los fotogramas al formato que pide el montador: f000.png... + pasos.json
+# 3. voz + subtítulo + marca
+HS_FRANJA_SUB=1 python hekatan-school/montar_tutorial.py FRAMES es.txt SALIDA.mp4 en.txt
+```
+
+`montar_tutorial.py` sintetiza cada frase (edge-tts, es-MX-JorgeNeural), **mide cuánto dura** y
+estira o aprieta los fotogramas de ese paso para que encajen: manda la voz, no el reloj.
+
+| vídeo | duración | qué cuenta |
+|---|---|---|
+| `VIDEO_galpon_v2.mp4` | 46.8 s | el galpón en los cuatro programas, y la masa vertical de ETABS |
+| `VIDEO_torre_v2.mp4` | 43.7 s | la torre retorcida, el bloqueo del ShellMITC4 en torsión y lo que queda abierto con SAP2000 |
+
+Guiones en `hs_galpon_es.txt` / `_en.txt` y `hs_torre_es.txt` / `_en.txt`, una frase por paso.
+⚠️ Con 110 fotogramas por modo la animación va a ~8 fps dentro del vídeo; con 30 salía a 1.9 fps
+y se veía a saltos. Y el máster va a 1280x720 dejando ~90 px libres abajo: sin esa franja, la
+segunda línea del subtítulo se sale del cuadro.

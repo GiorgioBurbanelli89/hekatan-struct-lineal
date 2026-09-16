@@ -1,0 +1,24 @@
+1
+00:00:00,050 --> 00:00:07,538
+This curved steel hall spans twenty meters: two hundred fourteen nodes, four hundred forty three frames and one hundred zinc panels.
+
+2
+00:00:07,790 --> 00:00:16,622
+The same model went into four programs with the same mesh, the same nodes and the same loads, so what is compared are the solvers, not the load paths.
+
+3
+00:00:16,870 --> 00:00:25,774
+In the first mode Hekatan Struct gives a period of zero point three three one one four four seconds, and SAP two thousand gives the same number to the sixth digit.
+
+4
+00:00:26,020 --> 00:00:33,244
+ETABS stays within two hundredths of a percent, but only after turning on its vertical mass, which ships disabled.
+
+5
+00:00:33,490 --> 00:00:40,090
+OpenSees lands within a quarter of a percent, and that gap is not the solver: its shell is a different element.
+
+6
+00:00:40,340 --> 00:00:46,580
+Four independent programs, the same hall and the same number: that is what validation means.
+

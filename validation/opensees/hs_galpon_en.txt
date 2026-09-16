@@ -1,0 +1,6 @@
+This curved steel hall spans twenty meters: two hundred fourteen nodes, four hundred forty three frames and one hundred zinc panels.
+The same model went into four programs with the same mesh, the same nodes and the same loads, so what is compared are the solvers, not the load paths.
+In the first mode Hekatan Struct gives a period of zero point three three one one four four seconds, and SAP two thousand gives the same number to the sixth digit.
+ETABS stays within two hundredths of a percent, but only after turning on its vertical mass, which ships disabled.
+OpenSees lands within a quarter of a percent, and that gap is not the solver: its shell is a different element.
+Four independent programs, the same hall and the same number: that is what validation means.

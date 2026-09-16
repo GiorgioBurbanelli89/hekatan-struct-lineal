@@ -84,8 +84,10 @@ for modo in (1, 2, 3):
     phi = [ops.nodeEigenvector(i + 1, modo)[:3] for i in range(len(P))]
     amp = max(max(abs(c) for c in v) for v in phi) or 1.0
     f = 0.08 * diag / amp
-    fig = plt.figure(figsize=(19.2, 10.8), dpi=60); fig.patch.set_facecolor(FONDO)
-    ax = fig.add_axes([-0.06, -0.12, 0.82, 1.08], projection="3d"); ax.set_facecolor(FONDO)
+    # Máster 1280x720 (GUIA_VIDEO: no cambia) y la franja de abajo LIBRE: ahí va
+    # el subtítulo en inglés. Sin dejarla, la segunda línea se sale del cuadro.
+    fig = plt.figure(figsize=(12.8, 7.2), dpi=100); fig.patch.set_facecolor(FONDO)
+    ax = fig.add_axes([-0.06, 0.02, 0.82, 0.98], projection="3d"); ax.set_facecolor(FONDO)
     chapa = None
     if caras0:
         chapa = Poly3DCollection([[P[q] for q in el] for el in caras0], facecolor="#2b7fd4",
@@ -102,25 +104,25 @@ for modo in (1, 2, 3):
     dx, dy, dz = (max(xs)-min(xs)+2, max(ys)-min(ys)+2, max(zs)-min(zs)+4)
     ax.set_box_aspect((dx, dy, dz), zoom=1.25 * min(1.0, 2.5 * max(dx, dy) / max(dz, 1e-9)))
     ax.set_axis_off()
-    fig.text(0.03, 0.945, TITULO, color=TINTA, fontsize=30, weight="bold")
+    fig.text(0.03, 0.945, TITULO, color=TINTA, fontsize=26, weight="bold")
     fig.text(0.03, 0.912, "%d nudos · %d barras · %d cáscaras · misma malla, mismas cargas"
-             % (len(P), len(lineas), len(caras0)), color=SUAVE, fontsize=15)
+             % (len(P), len(lineas), len(caras0)), color=SUAVE, fontsize=13)
     x0 = 0.755
-    fig.text(x0, 0.86, "PERIODOS  (s)", color=TINTA, fontsize=18, weight="bold")
+    fig.text(x0, 0.865, "PERIODOS  (s)", color=TINTA, fontsize=16, weight="bold")
     for m in (1, 2, 3, 4, 5):
-        y = 0.78 - (m - 1) * 0.135
+        y = 0.79 - (m - 1) * 0.125
         base = PER["Hekatan Struct"][m - 1]
         activo = (m == modo)
         fig.text(x0, y, "modo %d" % m, color=(ORO if activo else "#5a6474"),
-                 fontsize=16, weight=("bold" if activo else "normal"))
+                 fontsize=14, weight=("bold" if activo else "normal"))
         for j, prog in enumerate(PROGS):
             v = PER[prog][m - 1]
             txt = ("%-15s %.6f" % (prog, v) if j == 0
                    else "%-15s %.6f  %+.2f %%" % (prog, v, 100 * (v / base - 1)))
-            fig.text(x0, y - 0.025 - j * 0.021, txt, family="monospace", fontsize=11,
+            fig.text(x0, y - 0.024 - j * 0.020, txt, family="monospace", fontsize=10,
                      color=(TINTA if activo else "#454e5c"))
-    if PIE1: fig.text(x0, 0.075, PIE1, color=SUAVE, fontsize=12)
-    if PIE2: fig.text(x0, 0.045, PIE2, color=SUAVE, fontsize=12)
+    if PIE1: fig.text(x0, 0.175, PIE1, color=SUAVE, fontsize=11)
+    if PIE2: fig.text(x0, 0.150, PIE2, color=SUAVE, fontsize=11)
     for k in range(K):
         a = math.sin(2 * math.pi * 4 * k / K)
         Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
