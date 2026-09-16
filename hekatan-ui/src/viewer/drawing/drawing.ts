@@ -3913,20 +3913,65 @@ export function drawing({
         }
       }
     }
+    // ── Y LOS PLANOS AUXILIARES VERTICALES (alzados a una distancia) ────────
+    {
+      const aux = ((window as any).__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+      const wpAhora = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+      const dAhora = (window as any).__hekatanCadState?.get?.()
+        ?.[wpAhora === "xz" ? "workY" : wpAhora === "yz" ? "workX" : "workZ"] ?? 0;
+      for (const g of aux.slice(0, 24)) {
+        if (g.plano === "xy" || !isFinite(g.d)) continue;            // las de planta van arriba
+        if (g.plano === wpAhora && Math.abs(g.d - dAhora) < 1e-6) continue;  // esa es la de trabajo
+        const copia = gridObj.clone(true);
+        copia.name = `hekatan-grid-${g.plano}-${g.d}`;
+        copia.traverse((o: any) => {
+          if (!o.material) return;
+          o.material = o.material.clone();
+          o.material.transparent = true;
+          o.material.opacity = (o.material.opacity ?? 1) * 0.6;
+        });
+        // la geometría viene tumbada (pre-giro rotX π/2): para ponerla DE PIE en el
+        // plano XZ se deshace ese giro, y para el YZ se gira además sobre Z.
+        if (g.plano === "xz") {
+          copia.quaternion.identity();
+          copia.position.set(0, g.d, 0);
+        } else {
+          copia.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
+          copia.position.set(g.d, 0, 0);
+        }
+        scene.add(copia);
+        sueloGrids.push(copia);
+      }
+    }
     viewerRender();
   }
 
   // Añadir una GRILLA AUXILIAR a la cota que se pida y dejarla puesta, como un
   // nivel de referencia de ETABS/Revit: no cambia el plano de trabajo, solo pone
   // dónde referenciarse. Devuelve las cotas que quedan con grilla.
-  (window as any).__hekatanGrillaAux = (z: number, etiqueta?: string): number[] => {
-    if (!isFinite(z)) return [];
-    const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ label: string; z: number; tipo?: string }>;
-    if (!niveles.some((l) => Math.abs(l.z - z) < 1e-6))
-      niveles.push({ label: etiqueta ?? `N${z >= 0 ? "+" : ""}${z.toFixed(2)}`, z, tipo: "aux" });
-    (window as any).__hekatanLevels = niveles;
-    (window as any).__hekatanRefrescarGrillas?.();
-    return niveles.map((l) => l.z);
+  //
+  // Vale para los TRES planos, no solo para la planta: en alzado la rejilla pasaba
+  // por Y = 0 y no se podía llevar al pórtico que tocaba («cómo se coloca la grilla
+  // auxiliar a cierta distancia», Jorge 16-sep). `plano` dice de cuál es y `d` a qué
+  // distancia: xy → Z, xz → Y, yz → X. Pulsar con la misma distancia la quita.
+  (window as any).__hekatanGrillaAux = (d: number, plano: "xy" | "xz" | "yz" = "xy") => {
+    if (!isFinite(d)) return [];
+    const W = window as any;
+    const aux = (W.__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+    const i = aux.findIndex((g) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
+    if (i >= 0) aux.splice(i, 1); else aux.push({ plano, d });
+    W.__hekatanPlanosAux = aux;
+    // Las de planta siguen además en `__hekatanLevels`, que es lo que miran los ejes
+    // y niveles de Revit y el resto del programa.
+    if (plano === "xy") {
+      const niveles = (W.__hekatanLevels ?? []) as Array<{ label: string; z: number; tipo?: string }>;
+      const j = niveles.findIndex((l) => Math.abs(l.z - d) < 1e-6 && l.tipo !== "piso");
+      if (i >= 0) { if (j >= 0) niveles.splice(j, 1); }
+      else if (j < 0) niveles.push({ label: `N${d >= 0 ? "+" : ""}${d.toFixed(2)}`, z: d, tipo: "aux" });
+      W.__hekatanLevels = niveles;
+    }
+    W.__hekatanRefrescarGrillas?.();
+    return aux;
   };
   (window as any).__hekatanQuitarGrillaAux = (z: number): number[] => {
     const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number; tipo?: string }>;
@@ -5175,6 +5220,16 @@ export function drawing({
         // cruce bajo el cursor es donde el RAYO corta ese plano, redondeado al
         // paso — no vale reusar (px,py), que son del plano de trabajo y en
         // isométrico caen metros más allá. Es lo que hace ETABS con sus niveles.
+        // planos auxiliares VERTICALES: el rayo corta y = d (xz) o x = d (yz)
+        const auxV = ((window as any).__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+        for (const g of auxV.slice(0, 24)) {
+          if (g.plano === "xy" || !isFinite(g.d)) continue;
+          const n = g.plano === "xz" ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+          const pl2 = new THREE.Plane(n, -g.d), q2 = new THREE.Vector3();
+          if (!raycaster.ray.intersectPlane(pl2, q2)) continue;
+          if (g.plano === "xz") { const ax = cae(q2.x), az = cae(q2.z); if (dentro(ax, az)) consider("grid", ax, g.d, az); }
+          else { const ay = cae(q2.y), az = cae(q2.z); if (dentro(ay, az)) consider("grid", g.d, ay, az); }
+        }
         const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>;
         if (niveles.length) {
           const rayo = raycaster.ray;

@@ -4092,12 +4092,17 @@ function buildParamsPane() {
         setPlane: (k) => {
           const st = (window as any).__hekatanCadState?.get?.();
           if (st) st.workPlane = k;
-          const wz = st?.workZ ?? 0;
+          // ⚠️ Los planos VERTICALES iban siempre por el origen: en alzado, la rejilla
+          // pasaba por Y = 0 y no había manera de ponerla en el pórtico que toca
+          // (Jorge, 16-sep: «cómo se coloca la grilla auxiliar a cierta distancia»).
+          // Ahora cada plano tiene su distancia, como el «Cota Z» de la planta:
+          //   xy → Z = workZ   ·   xz → Y = workY   ·   yz → X = workX
+          const wz = st?.workZ ?? 0, wy = st?.workY ?? 0, wx = st?.workX ?? 0;
           drawingGridTarget.val = k === "xy"
             ? { position: [0, 0, wz], rotation: [Math.PI / 2, 0, 0] }
             : k === "xz"
-              ? { position: [0, 0, 0], rotation: [0, 0, 0] }
-              : { position: [0, 0, 0], rotation: [0, 0, Math.PI / 2] };
+              ? { position: [0, wy, 0], rotation: [0, 0, 0] }
+              : { position: [wx, 0, 0], rotation: [0, 0, Math.PI / 2] };
         },
         grid: (vx, vy, vz, col) => (window as any).__hekatanGenerarRejilla?.(vx, vy, vz, col),
         finish: () => { try { (window as any).__hekatanCadResetPending?.(); } catch {} },
