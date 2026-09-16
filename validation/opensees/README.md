@@ -133,3 +133,23 @@ Y en el modelo tal cual (chapa como membrana pura, que OpenSees no puede reprodu
 `ElasticMembranePlateSection` siempre lleva flexión), los modos 1-5 quedan en −0.25 a
 −0.63 % y los 6-9 se van hasta −11 %: esos son modos LOCALES de la chapa, y ahí manda la
 flexión que Hekatan anula. No es el solver: es que el modelo no es el mismo.
+
+## Correrlo dentro de Hekatan Py (16-sep-2026)
+
+`heks_a_opensees.py` se abre en Hekatan Py y se le da a correr. Tres cosas que hubo que
+resolver, todas verificadas con `--shot` (ver `hekatan_py_gif_embebido.png`):
+
+1. **`IndexError: list index out of range`.** Hekatan Py copia el código a `%TEMP%` y lo
+   ejecuta SIN argumentos, así que `sys.argv[1]` no existe. Ahora el script busca el dump
+   solo (junto al script, en la carpeta de trabajo, y en un ancla en `%APPDATA%` con la
+   última ruta usada desde la terminal).
+2. **El GIF se ve DENTRO del Output**, no en un visor aparte: Hekatan Py tiene marcadores de
+   stdout (`PythonPipeline.RenderStdoutLine`) — `__CPSPY_GIF__:<base64>` pinta una animación
+   y `__CPSPY_HTML__:` mete HTML en crudo. Un `print` normal pasa por `HtmlEncode` y sacaría
+   el base64 como texto.
+3. Corre con **Python real** (openseespy no existe en el motor nativo), que es lo que hace el
+   pipeline al ver el import.
+
+```
+HekatanPython3.exe heks_a_opensees.py --shot salida.png
+```
