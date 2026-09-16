@@ -127,7 +127,9 @@ def _main():
             n1, n2 = el
             A = g("areas", idx); Iy = g("momentsOfInertiaY", idx); Iz = g("momentsOfInertiaZ", idx)
             J = g("torsionalConstants", idx); # AS2 (cortante en el eje 2) = shearAreasZ de Hekatan; AS3 = shearAreasY.
-            Avy = g("shearAreasZ", idx); Avz = g("shearAreasY", idx)
+            # si el .heks no trae `as`, Hekatan (y ETABS) suponen 5/6 A
+            Avy = g("shearAreasZ", idx) or 5.0 / 6.0 * A
+            Avz = g("shearAreasY", idx) or 5.0 / 6.0 * A
             Gm = g("shearModuli", idx) or E / (2 * (1 + nu))
             ops.geomTransf("Linear", idx + 1, *vecxz(n1, n2))
             # ElasticTimoshenkoBeam3d: Avy es el area de cortante para el cortante en
@@ -251,8 +253,11 @@ def _main():
             ax.add_collection3d(colBarra)
             ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
             ax.set_zlim(min(zs) - 1, max(zs) + 3)
-            ax.set_box_aspect((max(xs) - min(xs) + 2, max(ys) - min(ys) + 2,
-                               max(zs) - min(zs) + 4), zoom=1.15)
+            # zoom adaptativo: el cuadro es apaisado, asi que un modelo ALTO y
+            # estrecho (una torre) se sale por arriba con el zoom de una nave.
+            dx, dy, dz = (max(xs)-min(xs)+2, max(ys)-min(ys)+2, max(zs)-min(zs)+4)
+            zoom = 1.15 * min(1.0, 3.2 * max(dx, dy) / max(dz, 1e-9))
+            ax.set_box_aspect((dx, dy, dz), zoom=zoom)
             ax.set_axis_off()
             fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
                      color="#e8edf5", fontsize=15)

@@ -153,3 +153,59 @@ resolver, todas verificadas con `--shot` (ver `hekatan_py_gif_embebido.png`):
 ```
 HekatanPython3.exe heks_a_opensees.py --shot salida.png
 ```
+
+---
+
+# VÍDEOS y edificios de geometría compleja (16-sep-2026)
+
+## 1. El galpón en los cuatro programas
+
+`video_4_programas.py` — la estructura vibrando a la izquierda y la tabla de periodos de los
+cuatro a la derecha, con el modo en curso en oro. 90 fotogramas, `video_4_programas.mp4/.gif`.
+
+```
+python validation/opensees/video_4_programas.py <carpeta> [frames_por_modo]
+```
+Variables de entorno: `HK_TITULO`, `HK_PIE1`, `HK_PIE2`, `HK_SHELL` (ShellMITC4 o ASDShellQ4).
+
+## 2. La torre retorcida (Turning Torso)
+
+`gen_torre_retorcida.py` genera la geometría más difícil que hay: la planta **gira 90° de la
+base a la cima**, así que **ninguna columna es vertical** y cada viga va torcida respecto a la
+de abajo. Los datos del edificio real de Malmö son públicos (54 plantas, 190 m, giro de 90° en
+nueve cubos de cinco plantas); aquí se reproduce el esquema, no el edificio.
+
+```
+python validation/opensees/gen_torre_retorcida.py torre.heks 27 90 2 2
+```
+27 plantas · 94 m · pentágono de R = 10 m con núcleo de r = 3.5 m · 820 nudos · 1080 barras ·
+540 cáscaras. Losa mallada 2×2 por sector y **vigas trazadas sobre los bordes de la malla**.
+
+| modo | Hekatan | SAP2000 | OpenSees (ASDShellQ4) |
+|---|---|---|---|
+| 1 y 2 (flexión) | 5.220776 | −7.25 % | **−0.77 %** |
+| 3 (torsión) | 2.487900 | +5.03 % | **−0.48 %** |
+| 4 y 5 | 1.324365 | −7.03 % | **−0.75 %** |
+| 10 | 0.540492 | +5.36 % | **+0.03 %** |
+
+### Lo que enseñó, que es más que los números
+
+1. **El ShellMITC4 clásico BLOQUEA en torsión.** Con él los modos torsionales de la torre se
+   iban **−9.4 %** y los de flexión solo −0.2 %; con el ASDShellQ4 de Petracca y Camata, +0.06 %.
+   Es el mismo bloqueo que la tira en voladizo daba a −36.8 %: en los modos de torsión la losa
+   trabaja a **cortante en su plano**, que es donde el Q4 bilineal se agarrota.
+2. **Un Q4 muy distorsionado miente.** Con la losa sin mallar (un trapecio por sector, lado
+   interior 4 m y exterior 12 m) la torre salía a T1 = 2.87 s; con la malla 2×2, 5.22 s. El
+   elemento gordo estaba bloqueado y **fingía rigidez que no existe**. Ahí cada programa daba
+   lo suyo y SAP2000 se iba un 254 %.
+3. **Los nudos duplicados no se ven y lo rompen todo.** El generador dejaba 27 nudos repetidos
+   (uno por planta, al cerrar el pentágono). **SAP2000 los fusiona por su MERGETOL y Hekatan
+   no**: dos modelos distintos sin un solo aviso. Se cazó porque SAP decía 820 nudos y el dump
+   tenía 847.
+
+### ⏳ Lo que queda abierto
+
+SAP2000 se queda en **±7 %**, alternando signo: más rígido en flexión (−7 %) y más flexible en
+torsión (+5 %). Ya no son los duplicados ni la malla. Apunta a la losa: su Shell-Thick no es el
+MITC4 + modos de Wilson de Hekatan. Sin losas, **Hekatan = SAP2000 a 0.000 % en los 6 modos**,
+así que las barras torcidas no tienen nada que ver.
