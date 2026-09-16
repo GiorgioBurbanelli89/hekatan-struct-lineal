@@ -5,7 +5,10 @@ Barras: ElasticTimoshenkoBeam3d (A, Iy, Iz, J, Avy, Avz) = lo que resuelve Hekat
 Cascaras: ShellMITC4 con ElasticMembranePlateSection. La chapa es de 0.8 mm: su
 rigidez a flexion (D ~ t^3 = 5e-10) es despreciable, asi que equivale a la
 membrana pura de Hekatan (bendingModifiers = 0), pero se anota como diferencia.
-Masa: consistente en barras (-cMass) y la que OpenSees ponga en la cascara.
+Masa: CONCENTRADA en los nudos (el defecto de OpenSees), que es lo que usan
+Hekatan y SAP2000. Con `-cMass` (consistente) los periodos bajan un 4 % y parece
+que discrepan los solvers cuando lo que discrepa es la matriz de masa: --cmass
+lo activa para verlo.
 Salida: periodos, participacion de masa, desplazamientos, reacciones y fuerzas de barra.
 """
 import json, sys, math
@@ -54,7 +57,7 @@ for idx, el in enumerate(D["elements"]):
         # la direccion del eje local y (= AS2 de CSI = shearAreasZ de Hekatan).
         ops.element("ElasticTimoshenkoBeam", idx + 1, n1 + 1, n2 + 1,
                     float(E), float(Gm), float(A), float(J), float(Iy), float(Iz),
-                    float(Avz), float(Avy), idx + 1, "-mass", float(rho) * float(A), "-cMass")
+                    float(Avz), float(Avy), idx + 1, "-mass", float(rho) * float(A), *(["-cMass"] if "--cmass" in sys.argv else []))
         barras.append(idx); nbar += 1
     elif len(el) == 4:
         t = g("thicknesses", idx); fm = g("membraneModifiers", idx, 1.0)

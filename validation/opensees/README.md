@@ -105,6 +105,31 @@ Voladizo de chapa, 4 elementos (`tira_membrana_voladizo.heks`), flecha en punta:
 | **Hekatan** | −1.6133e−3 | −3.9 % |
 | `ShellMITC4` clásico | −1.0609e−3 | **−36.8 %** (bloquea) |
 
-⏳ En el galpón, ASDShellQ4 (0.317142) y ShellMITC4 (0.316904) dan lo MISMO, así que el
-−4.3 % de OpenSees **no es la membrana**. Sin chapa los dos clavan a 0.009 %. No es la masa
-de la chapa ni su flexión. Sigue sin explicar.
+En el galpón, ASDShellQ4 (0.317142) y ShellMITC4 (0.316904) dan lo MISMO: el −4.3 % de
+OpenSees NO era la membrana. **Era la matriz de MASA, y el error era del traductor.**
+
+## El −4.3 % de OpenSees: era la masa, no el solver
+
+Cómo se encontró, descartando:
+
+| prueba | resultado | qué descarta |
+|---|---|---|
+| solo barras, sin chapa | 0.009 % | las barras |
+| chapa sin masa (densidad 0) | sigue −4.8 % | la masa de la chapa |
+| chapa con flexión en los dos | estático 0.18 %, modal −4.12 % | la flexión |
+| drilling tipos 2, 3, 8, 13 y γ ×100 | T1 entre 0.3307 y 0.3313 | la membrana |
+| **carga lateral, estático** | **0.500 %** | **la rigidez: coincide** |
+| masa CONCENTRADA en vez de `-cMass` | **−0.25 %** | ✅ era esto |
+
+El estático coincidía y el modal no: eso solo puede ser la masa. `heks_a_opensees.py`
+pedía `-cMass` (masa consistente) y **Hekatan y SAP2000 usan masa CONCENTRADA** en los
+nudos. Con la masa concentrada, los 12 modos con la misma física caen dentro del **0.43 %**:
+
+| modo | 1 | 2 | 3 | 4 | 5 | 6 | 12 |
+|---|---|---|---|---|---|---|---|
+| Hek vs OpenSees | −0.06 % | −0.04 % | −0.27 % | −0.24 % | −0.37 % | −0.43 % | −0.19 % |
+
+Y en el modelo tal cual (chapa como membrana pura, que OpenSees no puede reproducir porque
+`ElasticMembranePlateSection` siempre lleva flexión), los modos 1-5 quedan en −0.25 a
+−0.63 % y los 6-9 se van hasta −11 %: esos son modos LOCALES de la chapa, y ahí manda la
+flexión que Hekatan anula. No es el solver: es que el modelo no es el mismo.
