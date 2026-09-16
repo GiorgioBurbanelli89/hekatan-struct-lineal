@@ -234,6 +234,40 @@ try:
     NOTAS.append("modal %s: %d modos" % (MODAL, NMOD))
 except Exception as ex:
     NOTAS.append("SetNumberModes: " + str(ex)[:80])
+# ── MASA VERTICAL EN ETABS ──────────────────────────────────────────────
+# SAP2000 trae la masa en las TRES direcciones por defecto. ETABS trae solo la
+# LATERAL, asi que sus modos verticales no existen (SumUZ = 0 y los modos se
+# corren de sitio). En ETABS.dll y CSI.SAPModel.dll estan las claves
+# `IncludeLateralMass` e `IncludeVerticalMass` (y `LateralMassOnly` /
+# `VerticalMassOnly`), pero la OAPI no expone SourceMass: se toca por la tabla
+# "Mass Source Definitions" de DatabaseTables.
+if PROG == "etabs" and "--sinmasavertical" not in sys.argv:
+    try:
+        # el TableKey real se busca en la lista, que cambia entre versiones
+        ra = sm.DatabaseTables.GetAllTables(0, [], [], [], [])
+        claves = [str(v) for v in ra[1]]; nombres = [str(v) for v in ra[2]]
+        tb = None
+        for k, n in zip(claves, nombres):
+            if "mass source" in (k + " " + n).lower(): tb = k; break
+        NOTAS.append("tabla de masa: %s" % tb)
+        if tb:
+            # GetTableForEditingArray(TableKey, GroupName) -> (TableVersion,
+            # FieldsKeysIncluded, NumberRecords, TableData, ret)
+            r = sm.DatabaseTables.GetTableForEditingArray(tb, "All", 0, [], 0, [])
+            campos = [str(v) for v in r[1]]; nreg = int(r[2]); datos = [str(v) for v in r[3]]
+            NOTAS.append("campos: " + ",".join(campos))
+            icol = [i for i, c in enumerate(campos) if "vert" in c.lower()]
+            if icol and nreg:
+                nc = len(campos)
+                for f in range(nreg):
+                    for i in icol: datos[f * nc + i] = "Yes"
+                sm.DatabaseTables.SetTableForEditingArray(tb, r[0], campos, nreg, datos)
+                rr = sm.DatabaseTables.ApplyEditedTables(True)
+                NOTAS.append("masa vertical ON -> fatales %s, errores %s" % (rr[0], rr[1]))
+            else:
+                NOTAS.append("sin columna vertical (campos arriba), %d registros" % nreg)
+    except Exception as ex:
+        NOTAS.append("mass source: " + str(ex)[:150])
 sm.File.Save(os.path.abspath(os.path.splitext(OUT)[0] + (".sdb" if PROG == "sap" else ".EDB")))
 sm.Analyze.SetRunCaseFlag(MODAL, True)
 print("run ->", sm.Analyze.RunAnalysis(), flush=True)

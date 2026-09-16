@@ -46,3 +46,65 @@ kN·m** (o sea 0.054 kN·m: la torsión de este modelo es ruido).
 ## Falta
 - SAP2000 y ETABS sobre este mismo modelo (juez primero SAP, luego ETABS).
 - Esfuerzos de la chapa joint a joint y participación de masa modal en los tres.
+
+---
+
+# Los TRES jueces, 16-sep-2026 (galpón curvo, 214 nudos, 443 barras, 100 chapas)
+
+Hekatan = rama `sin-binario` (drilling tipo 13, flexión MITC4 + modos de Wilson).
+**Nada de CSI en el motor.**
+
+| modo | Hekatan | SAP2000 | ETABS | OpenSees |
+|---|---|---|---|---|
+| 1 | 0.331144 | **−0.00 %** | **−0.02 %** | −4.30 % |
+| 2 | 0.323795 | **−0.00 %** | **−0.01 %** | −4.07 % |
+| 3 | 0.279379 | **−0.00 %** | −0.13 % | −6.13 % |
+| 4 | 0.172513 | **−0.00 %** | **−0.01 %** | −0.81 % |
+| 5 | 0.159825 | **−0.00 %** | −0.02 % | −1.31 % |
+
+Desplazamientos, peor nudo: SAP2000 **0.023 %** · ETABS **0.000 %** · OpenSees 4.45 %.
+Fuerzas de barra: SAP N 0.003 % V3 0.004 % M2 0.002 % M3 0.035 % · ETABS ≤0.72 %.
+(La torsión da porcentajes altos sobre un máximo de 0.03 kN·m: es ruido, no torsión.)
+
+## MASA VERTICAL: lo que separaba a ETABS
+
+SAP2000 trae la masa en las **tres** direcciones. ETABS trae **solo la lateral**, así que
+sus modos verticales no existen: SumUZ = 0 y los modos se corren de sitio (el modo 4 salía
+−29.7 %, pero es que su "modo 4" era el 6). Al encenderla, ETABS pasa a −0.01 %.
+
+- En el binario: `IncludeLateralMass` / `IncludeVerticalMass` (y `LateralMassOnly`,
+  `VerticalMassOnly`) en `ETABS.dll` y `CSI.SAPModel.dll`.
+- Por OAPI **no hay** `SourceMass`: se toca la tabla `Mass Source Definition` de
+  `DatabaseTables`, campos `Name, IsDefault, IncLateral, IncVertical, LumpMass, …`.
+- En el `.e2k`: `MASSSOURCE … INCLUDELATERALMASS "Yes" INCLUDEVERTICALMASS "No"
+  LUMPATSTORIES "Yes"`. **`e2kExporter.ts:2028` escribe hoy `VERTICALMASS "No"`**, o sea
+  el defecto de ETABS: quien exporte a e2k y corra el modal NO verá los modos verticales.
+- Hekatan ya tiene los dos modos en `modal.cpp` (`lateral_mass`, `lump_stories`).
+
+→ **Regla: la masa del modal tiene que ir emparejada con el destino.** s2k/SAP2000 = masa
+3D. e2k/ETABS = lo que diga el MASSSOURCE del propio fichero.
+
+## Tres trampas de ETABS por OAPI (todas costaron una vuelta)
+
+1. Masa del material: `SetWeightAndMass` hay que llamarlo **dos veces** (opción 1 = peso,
+   opción 2 = masa). Con solo la 1, `ModalPeriod` devuelve código 1 y ya.
+2. Pisos: sin `Story` que cubran el modelo, la masa no se reparte y el `.LOG` dice
+   `THE STRUCTURE HAS NO (UNRESTRAINED) MASS`. Y **`SetStories_2` NO lleva elevaciones**:
+   es `(BaseElevation, NumberStories, StoryNames, StoryHeights, IsMasterStory, …)`.
+3. ETABS puede guardar la barra con los **extremos al revés**. Comparar el extremo i con
+   el j daba un M3 del 73 % que no existía (3.2289 contra 3.2254).
+
+## OpenSees: cuál elemento de chapa
+
+Voladizo de chapa, 4 elementos (`tira_membrana_voladizo.heks`), flecha en punta:
+
+| | flecha | vs viga de Timoshenko |
+|---|---|---|
+| Viga de Timoshenko | −1.6780e−3 | — |
+| **ASDShellQ4** (Petracca y Camata) | −1.6346e−3 | −2.6 % |
+| **Hekatan** | −1.6133e−3 | −3.9 % |
+| `ShellMITC4` clásico | −1.0609e−3 | **−36.8 %** (bloquea) |
+
+⏳ En el galpón, ASDShellQ4 (0.317142) y ShellMITC4 (0.316904) dan lo MISMO, así que el
+−4.3 % de OpenSees **no es la membrana**. Sin chapa los dos clavan a 0.009 %. No es la masa
+de la chapa ni su flexión. Sigue sin explicar.
