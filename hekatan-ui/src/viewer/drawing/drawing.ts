@@ -3858,36 +3858,8 @@ export function drawing({
     // de lo dibujado, el 0 siempre) y la del plano de trabajo se queda como está,
     // brillante. Es lo que enseñan ETABS y Revit: los planos de planta puestos, y
     // resaltado aquel en el que estás dibujando.
-    {
-      const wz = drawingObj.gridTarget.val.position[2];
-      const enPlanta = Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3;  // rotX = π/2
-      for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
-      sueloGrids.length = 0;
-      if (enPlanta) {
-        const P = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
-        const cotas = new Set<number>([0]);
-        for (const p of P) cotas.add(+p[2].toFixed(3));
-        for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
-          if (isFinite(l?.z)) cotas.add(+l.z.toFixed(3));
-        const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
-        for (const z of lista) {
-          if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
-          const copia = gridObj.clone(true);
-          copia.name = `hekatan-grid-nivel-${z}`;
-          copia.traverse((o: any) => {
-            if (!o.material) return;
-            o.material = o.material.clone();
-            o.material.transparent = true;
-            // el suelo (0) se ve algo más que los pisos intermedios: es la base
-            o.material.opacity = (o.material.opacity ?? 1) * (Math.abs(z) < 1e-6 ? 0.5 : 0.22);
-          });
-          copia.position.set(0, 0, z);
-          copia.quaternion.copy(qPreGeo);                  // tumbada, sin el giro del plano
-          scene.add(copia);
-          sueloGrids.push(copia);
-        }
-      }
-    }
+    redibujarGrillasNivel(drawingObj.gridTarget.val.position[2],
+                          Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3, qPreGeo);
 
     plane.position.set(...drawingObj.gridTarget.val.position);
     plane.quaternion.setFromEuler(
@@ -3902,6 +3874,75 @@ export function drawing({
     );
     inclinedPlaneActive = !(Math.abs(nrm.x) > 0.999 || Math.abs(nrm.y) > 0.999 || Math.abs(nrm.z) > 0.999);
   });
+
+  // Las copias de rejilla por cota, aparte: las llama el derive de arriba y
+  // también quien AÑADE una grilla auxiliar (`__hekatanRefrescarGrillas`), que
+  // no cambia el plano de trabajo y por tanto no dispara aquel derive.
+  function redibujarGrillasNivel(wz: number, enPlanta: boolean, qPreGeo: THREE.Quaternion) {
+    {
+      for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
+      sueloGrids.length = 0;
+      if (enPlanta) {
+        const P = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
+        const cotas = new Set<number>([0]);
+        for (const p of P) cotas.add(+p[2].toFixed(3));
+        // Las que PUSO el usuario se marcan aparte: una grilla que has pedido a mano
+        // tiene que verse (es donde vas a dibujar), y las que salen solas de las cotas
+        // del modelo son solo contexto.
+        const pedidas = new Set<number>();
+        for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
+          if (isFinite(l?.z)) { cotas.add(+l.z.toFixed(3)); pedidas.add(+l.z.toFixed(3)); }
+        const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
+        for (const z of lista) {
+          if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
+          const copia = gridObj.clone(true);
+          copia.name = `hekatan-grid-nivel-${z}`;
+          copia.traverse((o: any) => {
+            if (!o.material) return;
+            o.material = o.material.clone();
+            o.material.transparent = true;
+            // el suelo (0) se ve algo más que los pisos intermedios: es la base.
+            // Una grilla auxiliar PEDIDA a mano se ve casi como la de trabajo.
+            o.material.opacity = (o.material.opacity ?? 1) *
+              (pedidas.has(z) ? 0.65 : Math.abs(z) < 1e-6 ? 0.5 : 0.22);
+          });
+          copia.position.set(0, 0, z);
+          copia.quaternion.copy(qPreGeo);                  // tumbada, sin el giro del plano
+          scene.add(copia);
+          sueloGrids.push(copia);
+        }
+      }
+    }
+    viewerRender();
+  }
+
+  // Añadir una GRILLA AUXILIAR a la cota que se pida y dejarla puesta, como un
+  // nivel de referencia de ETABS/Revit: no cambia el plano de trabajo, solo pone
+  // dónde referenciarse. Devuelve las cotas que quedan con grilla.
+  (window as any).__hekatanGrillaAux = (z: number, etiqueta?: string): number[] => {
+    if (!isFinite(z)) return [];
+    const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ label: string; z: number; tipo?: string }>;
+    if (!niveles.some((l) => Math.abs(l.z - z) < 1e-6))
+      niveles.push({ label: etiqueta ?? `N${z >= 0 ? "+" : ""}${z.toFixed(2)}`, z, tipo: "aux" });
+    (window as any).__hekatanLevels = niveles;
+    (window as any).__hekatanRefrescarGrillas?.();
+    return niveles.map((l) => l.z);
+  };
+  (window as any).__hekatanQuitarGrillaAux = (z: number): number[] => {
+    const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number; tipo?: string }>;
+    const quedan = niveles.filter((l) => !(Math.abs(l.z - z) < 1e-6 && l.tipo !== "piso"));
+    (window as any).__hekatanLevels = quedan;
+    (window as any).__hekatanRefrescarGrillas?.();
+    return quedan.map((l) => l.z);
+  };
+  (window as any).__hekatanRefrescarGrillas = () => {
+    if (!drawingObj.gridTarget) return;
+    const rot = drawingObj.gridTarget.rawVal.rotation;
+    const qPlano = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot));
+    const qPreGeo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    redibujarGrillasNivel(drawingObj.gridTarget.rawVal.position[2],
+                          Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3, qPreGeo);
+  };
 
   // On points change, update points positions for intersections
   van.derive(() => {
@@ -4956,6 +4997,10 @@ export function drawing({
     ifc: 0xf59e0b, ifcAxis: 0xfde68a, ifcSec: 0xfb923c, ifcEdge: 0xfbbf24, ifcVert: 0xff3344,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
+    // Qué referencia está enganchada AHORA, para poder comprobarlo desde fuera
+    // (guiones de prueba): el marcador se ve en pantalla, pero un test necesita
+    // el dato, y leerlo de la escena es adivinar por el color del cuadrito.
+    (window as any).__hekatanOsnapUltimo = { type, x, y, z };
     while (osnapMarker.children.length) {
       const c = osnapMarker.children.pop()!;
       (c as any).geometry?.dispose?.();
@@ -4993,7 +5038,7 @@ export function drawing({
     if (typeof n === "number" && n > 0) { _osnapPx = n; updateOsnapScale(); viewerRender(); }
     return _osnapPx;
   };
-  const hideOsnap = () => { osnapMarker.visible = false; };
+  const hideOsnap = () => { osnapMarker.visible = false; (window as any).__hekatanOsnapUltimo = null; };
   // ── El NOMBRE de la referencia, junto al cursor (AutoCAD lo llama tooltip de
   // referencia). Sin él, el cuadradito de color no dice a qué te enganchas.
   const OSNAP_NOMBRE: Record<string, string> = {
@@ -5123,6 +5168,26 @@ export function drawing({
       } else {
         const gx = cae(px), gy = cae(py);
         if (dentro(gx, gy)) consider("grid", gx, gy, pz);
+        // ── Y LOS CRUCES DE LAS GRILLAS AUXILIARES ──────────────────────────
+        // Con una sola grilla, en cuanto subes la cota lo de abajo deja de tener
+        // referencia: por eso «ubico una altura y allí no hay con qué
+        // referenciarse». Cada grilla auxiliar es un plano z = cte, así que su
+        // cruce bajo el cursor es donde el RAYO corta ese plano, redondeado al
+        // paso — no vale reusar (px,py), que son del plano de trabajo y en
+        // isométrico caen metros más allá. Es lo que hace ETABS con sus niveles.
+        const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>;
+        if (niveles.length) {
+          const rayo = raycaster.ray;
+          const planoZ = new THREE.Plane();
+          const corte = new THREE.Vector3();
+          for (const l of niveles.slice(0, 24)) {
+            if (!isFinite(l?.z) || Math.abs(l.z - pz) < 1e-6) continue;   // esa ya es la de trabajo
+            planoZ.set(new THREE.Vector3(0, 0, 1), -l.z);
+            if (!rayo.intersectPlane(planoZ, corte)) continue;
+            const ax = cae(corte.x), ay = cae(corte.y);
+            if (dentro(ax, ay)) consider("grid", ax, ay, l.z);
+          }
+        }
       }
     }
 

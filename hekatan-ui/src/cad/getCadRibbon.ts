@@ -431,7 +431,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     const st = (window as any).__hekatanCadState?.get?.();
     if (st) st.workZ = z;
     hooks.setPlane("xy");
-    hooks.setView("plan");
+    // ⚠️ NO se toca la vista. Cambiar de cota es cambiar de NIVEL, no de punto de
+    // mira: ni ETABS ni AutoCAD te reencuadran al subir de planta. Con el
+    // `setView("plan")` que habia aqui, poner la cota en una vista 3D te saltaba a
+    // cenital (medido: cámara 30,-30,30 -> 0,0,1000) y los clics siguientes caian
+    // en otro sitio — por eso no se podia dibujar un piso alto seguido.
     decir(`Plano de planta a la cota Z = ${z.toFixed(2)} m. Lo que dibujes cae ahi.`);
     refrescar();
   };
@@ -461,9 +465,35 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     try { w.__hekatanRebuild?.(); } catch {}
     decir(`${hechas} copia${hechas === 1 ? "" : "s"} cada ${h} m. Ya hay ${n + 1} plantas.`);
   });
-  filaZ.append(inCotaZ, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  // ── GRILLA AUXILIAR: dejar puesto dónde referenciarse a esa altura ────────
+  //
+  // «Ubico una altura y allí no hay con qué referenciarse.» La rejilla del plano
+  // de trabajo sube contigo, pero es UNA: en cuanto te mueves, esa cota se queda
+  // sin nada. Este botón DEJA una grilla auxiliar a la cota escrita, como los
+  // niveles de ETABS o los planos de referencia de Revit: se quedan puestos, se
+  // ven tenues, y el OSNAP engancha a sus cruces aunque estés dibujando en otra.
+  const bGrillaAux = document.createElement("button");
+  bGrillaAux.type = "button";
+  bGrillaAux.textContent = "▦+";
+  bGrillaAux.title = "Deja una grilla auxiliar a la cota Z escrita (nivel de referencia). " +
+    "Vuelve a pulsarlo con la misma cota para quitarla.";
+  bGrillaAux.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bGrillaAux.addEventListener("click", () => {
+    const z = parseFloat(inCotaZ.value);
+    if (!isFinite(z)) { decir("Escribe primero la cota Z."); return; }
+    const w = window as any;
+    const yaEsta = ((w.__hekatanLevels ?? []) as Array<{ z: number; tipo?: string }>)
+      .some((l) => Math.abs(l.z - z) < 1e-6 && l.tipo !== "piso");
+    const cotas = yaEsta ? w.__hekatanQuitarGrillaAux?.(z) : w.__hekatanGrillaAux?.(z);
+    if (!cotas) { decir("El visor todavia no expone las grillas auxiliares."); return; }
+    decir(yaEsta
+      ? `Quitada la grilla auxiliar de Z = ${z.toFixed(2)} m. Quedan: ${cotas.length}.`
+      : `Grilla auxiliar en Z = ${z.toFixed(2)} m. Ya puedes engancharte ahi desde cualquier vista.`);
+  });
+  filaZ.append(inCotaZ, bGrillaAux, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
-  rotZ.textContent = "Cota Z · subir alt × nº";
+  rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
   rotZ.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaZ.append(filaZ, rotZ);
   filaB.appendChild(cajaZ);
