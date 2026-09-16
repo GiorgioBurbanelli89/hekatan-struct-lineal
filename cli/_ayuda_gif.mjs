@@ -11,7 +11,9 @@ import { fileURLToPath } from "url";
 import { dirname, join, extname } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const out = join(__dirname, "shots", "ayuda_gif");
+// ⚠️ Carpeta NUEVA cada vez: si el GIF anterior está abierto en el visor de Fotos,
+// Windows bloquea la carpeta y `rmSync` casca con EBUSY.
+const out = join(__dirname, "shots", "ayuda_gif_" + new Date().toISOString().slice(11, 16).replace(":", ""));
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
 const BASE = "/hekatan-struct-lineal/";
 const raiz = join(__dirname, "..", "website", "src", "examples");
@@ -73,12 +75,14 @@ const bA = await centro("#hk-ribbon button", "ejemplo animado");
 await foto("inicio");
 await clic(bA.x, bA.y, "pulsa_ayuda");
 await foto("pregunta");                                   // la barra pregunta
-for (const [filtro, nombre] of [["Rect", "rect"], ["Columna", "columna"], ["grilla auxiliar", "grilla_aux"], ["Apoyo", "apoyo"]]) {
+for (const [filtro, nombre] of [["Rect", "rect"], ["Columna", "columna"],
+     ["paralela a si misma", "mover_grilla"], ["Replicar la grilla auxiliar", "replicar_grilla"],
+     ["Origen local", "origen_local"], ["Apoyo", "apoyo"]]) {
   if (!await pag.evaluate(() => window.__hekatanAyudaModo === true)) { await clic(bA.x, bA.y); await esp(300); }
   const b = await centro("#hk-ribbon button", filtro);
   if (!b) { console.log("no está el botón", filtro); continue; }
   await clic(b.x, b.y, "toca_" + nombre);
-  for (let i = 0; i < 10; i++) { await esp(330); await foto("anim_" + nombre); }   // el ejemplo corriendo
+  for (let i = 0; i < 9; i++) { await esp(330); await foto("anim_" + nombre); }   // el ejemplo corriendo
   await pag.keyboard.press("Escape"); await esp(400);
 }
 console.log("pageerror:", err.length, err.slice(0, 2), "· fotogramas:", n);

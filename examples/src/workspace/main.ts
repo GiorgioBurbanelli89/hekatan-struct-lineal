@@ -418,6 +418,61 @@ const states: BuildStates = {
 // apoyos quedaron aplicados: solo se ve el dibujo, y el dibujo no dice si el
 // modelo se puede calcular.
 (window as any).__hekatanStates = states;
+  // ── CONVERTIR LA PLANTILLA EN ALGO EDITABLE ───────────────────────────────
+  //
+  // Jorge (16-sep-2026): «falta eliminar barras, un paño… si quisiera un pórtico
+  // IRREGULAR de una plantilla ya hecha».
+  //
+  // No se podía, y la razón no era el botón Borrar: en una plantilla el modelo lo
+  // fabrica `build()` a partir de los parámetros, y el lienzo de dibujo está VACÍO
+  // (medido: 0 nudos con `edificio-aporticado` cargado). No hay ninguna barra que
+  // tocar porque no hay nada dibujado; lo que se ve es la malla FEM.
+  //
+  // Esto vuelca esa malla al lienzo —nudos, barras y paños pasan a ser objetos
+  // dibujados, y los apoyos y cargas a los mapas manuales— y abre el lienzo. A
+  // partir de ahí se borra una barra, se mueve un nudo o se añade lo que sea, como
+  // si lo hubieras dibujado tú. El precio, y hay que decirlo: el modelo se CONGELA
+  // con los valores de ahora y deja de seguir a los sliders de la plantilla.
+  (window as any).__hekatanConvertirEditable = (): { nudos: number; barras: number; areas: number } | null => {
+    const N = (states.nodes.rawVal ?? []) as number[][];
+    const E = (states.elements.rawVal ?? []) as number[][];
+    if (!N.length || !E.length) return null;
+    const pts: [number, number, number][] = N.map((q) => [q[0], q[1], q[2]] as [number, number, number]);
+    const polys: number[][] = [];
+    const areas: number[] = [];
+    for (const e of E) {
+      if (e.length === 2) polys.push([e[0], e[1]]);
+      else if (e.length >= 3) {
+        // un paño se guarda como polilínea CERRADA y su índice va en `areas`
+        polys.push([...e, e[0]]);
+        areas.push(polys.length - 1);
+      }
+    }
+    // apoyos y cargas: el índice del nudo FEM y el del punto dibujado coinciden
+    const ni: any = states.nodeInputs.rawVal ?? {};
+    const sup = new Map<number, any>(), lds = new Map<number, any>();
+    for (const [k, v] of (ni.supports ?? new Map())) sup.set(Number(k), [...(v as any)]);
+    for (const [k, v] of (ni.loads ?? new Map())) lds.set(Number(k), [...(v as any)]);
+    (window as any).__hekatanManualSupports = sup;
+    (window as any).__hekatanManualLoads = lds;
+    drawingPoints.val = pts;
+    drawingPolylines.val = polys;
+    drawingAreas.val = areas;
+    const ex = examplesRegistry.find((e) => e.id === "new-blank");
+    if (ex) loadExample(ex);
+    // el lienzo se monta con su propio build: se le devuelve el dibujo después
+    setTimeout(() => {
+      drawingPoints.val = pts;
+      drawingPolylines.val = polys;
+      drawingAreas.val = areas;
+      (window as any).__hekatanManualSupports = sup;
+      (window as any).__hekatanManualLoads = lds;
+      (window as any).__hekatanRebuild?.();
+      (window as any).__hekatanAutoFit?.();
+    }, 60);
+    return { nudos: pts.length, barras: polys.length - areas.length, areas: areas.length };
+  };
+
 
 // ── Example runner ──
 let currentExample: ExampleDef | null = null;
@@ -3005,6 +3060,13 @@ function showMenu() {
       loadExample(exPlantilla);
     });
   }
+  fNuevo.addButton({ title: "✎ Editar este modelo (borrar barras, pórtico irregular)" }).on("click", () => {
+    const r = (window as any).__hekatanConvertirEditable?.();
+    if (!r) { alert("Carga primero una plantilla o un ejemplo con modelo."); return; }
+    alert(`Modelo pasado al lienzo: ${r.nudos} nudos, ${r.barras} barras y ${r.areas} panos.` +
+      "\n\nYa puedes borrar barras o panos (Selec. + Supr, o el boton Borrar) y dibujar encima." +
+      "\nOjo: el modelo queda congelado con los valores de ahora; los sliders de la plantilla ya no lo cambian.");
+  });
   fNuevo.addButton({ title: "📄 Lienzo en blanco (dibujar a mano)" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "new-blank");
     if (ex) loadExample(ex);

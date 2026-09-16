@@ -37,7 +37,8 @@ export type Accion =
   | ["copias", number, number, number]        // dx, dy, cuántas
   | ["resalta", number, number, number, number]  // x, y, w, h
   | ["colum", number]                            // columna que SUBE desde el último punto
-  | ["plano", number, string];                   // plano de rejilla a esa altura (rótulo)
+  | ["plano", number, string]                    // plano de rejilla a esa altura (rótulo)
+  | ["ejes", number, number];                    // trípode del origen local en (x, y)
 
 export interface Demo {
   /** Cómo se unen los puntos clicados. */
@@ -173,11 +174,12 @@ export const DEMOS: Record<string, Demo> = {
 
   // ── Los de la cinta que no son herramientas de dibujo ────────────────────
   grillaAux: { modo: "ninguno", pie: "▦+ : deja una grilla auxiliar a la cota escrita.",
-    guion: [["plano", 150, "suelo · Z = 0"], ["txt", "solo hay rejilla en el suelo"], ["esp", 900],
-            ["txt", "escribe la cota (3.00) en la casilla Cota Z"], ["esp", 800],
-            ["txt", "y pulsa ▦+"], ["esp", 500],
+    guion: [["plano", 150, "suelo · Z = 0"], ["txt", "solo hay rejilla en el suelo"],
+            ["mv", 90, 150], ["mv", 240, 150], ["esp", 250],
+            ["txt", "escribe la cota (3.00) y pulsa ▦+"], ["mv", 240, 100], ["mv", 120, 80],
             ["plano", 75, "grilla auxiliar · Z = 3.00"],
-            ["txt", "ya hay dónde engancharse a 3 m, sin bajar a planta"], ...FIN] },
+            ["mv", 90, 75], ["mv", 250, 75], ["esp", 250],
+            ["txt", "ya hay dónde engancharse a 3 m, sin bajar a planta"], ["mv", 160, 60], ...FIN] },
 
   cotaZ: { modo: "ninguno", pie: "Cota Z: a qué altura cae lo que dibujes.",
     guion: [["plano", 150, "Z = 0"], ["txt", "el clic cae SIEMPRE en el plano de trabajo"], ["esp", 850],
@@ -189,9 +191,76 @@ export const DEMOS: Record<string, Demo> = {
             ["txt", "altura de piso × nº de pisos"], ["esp", 500],
             ["copias", 0, -32, 3], ["txt", "…y ya es un edificio"], ...FIN] },
 
+  ayuda: { modo: "ninguno", pie: "? : esta misma ayuda — toca un botón y te enseño su ejemplo.",
+    guion: [["txt", "pulsa ? y toca CUALQUIER boton"], ["mv", 90, 40], ["mv", 210, 40],
+            ["resalta", 190, 26, 46, 30], ["txt", "el boton no se ejecuta: se explica"],
+            ["mv", 210, 90], ["esp", 300],
+            ["txt", "sale el ejemplo animado y «▶ Probar ahora» lo activa · Esc sale"],
+            ["mv", 160, 120], ...FIN] },
+
+  plegar: { modo: "ninguno", pie: "▴ : pliega la cinta a un solo botón (y ▾ la devuelve).",
+    guion: [["resalta", 20, 20, 280, 46], ["txt", "la cinta ocupa el tercio de arriba"],
+            ["mv", 250, 30], ["mv", 290, 30], ["esp", 250],
+            ["limpia"], ["resalta", 250, 20, 50, 22], ["txt", "plegada: queda un boton y el lienzo entero"],
+            ["mv", 160, 120], ["esp", 300], ...FIN] },
+
+  extras: { modo: "ninguno", pie: "▾ : añadir a la cinta lo que uses del panel.",
+    guion: [["txt", "▾ abre la lista de TODO lo que hay en los paneles"],
+            ["mv", 260, 40], ["esp", 250], ["resalta", 150, 55, 150, 110],
+            ["txt", "marcas lo que usas y aparece en la cinta, en «Mis accesos»"],
+            ["mv", 200, 90], ["mv", 120, 70], ["esp", 300],
+            ["txt", "se recuerda para la proxima vez"], ...FIN] },
+
+  moverGrilla: { modo: "ninguno", pie: "↕ : coge la grilla con el cursor y la desplaza.",
+    guion: [["plano", 150, "aqui esta la grilla"], ["txt", "pulsa ↕ y mueve el raton"], ["esp", 700],
+            ["mv", 200, 120], ["plano", 110, "la grilla sigue al cursor"], ["esp", 500],
+            ["mv", 200, 80], ["plano", 70, "paralela a si misma, solo en su normal"], ["esp", 700],
+            ["txt", "teclea la distancia (4.75) + Enter y queda exacta · Esc cancela"], ...FIN] },
+
+  repGrid: { modo: "ninguno", pie: "▦× : deja varias grillas NUEVAS, sin mover la tuya.",
+    guion: [["plano", 160, "tu grilla, en Z = 0"], ["txt", "pon la separacion y cuantas (3 × 3)"], ["esp", 800],
+            ["txt", "▦× deja las NUEVAS aparte"], ["esp", 400],
+            ["plano", 120, "Z = 3"], ["esp", 340], ["plano", 80, "Z = 6"], ["esp", 340],
+            ["plano", 40, "Z = 9"], ["esp", 340],
+            ["txt", "desplazar mueve la tuya · replicar deja otras aparte"], ...FIN] },
+
+  scu: { modo: "ninguno", pie: "⌖ Origen local: 0,0,0 pasa a ser el punto que toques.",
+    guion: [["txt", "pulsa ⌖ y toca un punto del modelo"], ...cl(210, 90, "clic (el osnap engancha al nudo)"),
+            ["marca", "nudo"], ["ejes", 210, 90],
+            ["txt", "ahi queda el origen: ahora «0,0,0» es ESE punto"], ["esp", 800],
+            ["txt", "«3,0,0» son 3 m desde ahi, no desde el origen del modelo"], ...FIN] },
+
+  vista: { modo: "ninguno", pie: "Las vistas cambian el PLANO DE TRABAJO, no solo la cámara.",
+    guion: [["plano", 150, "Planta XY: el clic cae en Z"], ["txt", "Planta (1) · Frente (2) · Lado (3) · 3D (4)"], ["esp", 900],
+            ["limpia"], ["resalta", 120, 40, 90, 120], ["txt", "Frente XZ: el clic cae en el plano vertical, a la Y que elijas"],
+            ["esp", 900], ...FIN] },
+
+  snap: { modo: "ninguno", pie: "SNAP (F9): el cursor cae en los cruces de la rejilla.",
+    guion: [["txt", "sin SNAP el punto cae donde este el cursor"],
+            ["mv", 93, 117], ["mv", 147, 83], ["clic"],
+            ["txt", "con SNAP (F9) salta al CRUCE mas cercano"], ["limpia"],
+            ["mv", 100, 120], ["mv", 147, 83], ["mv", 140, 80], ["clic"],
+            ["mv", 208, 122], ["mv", 200, 120], ["clic"],
+            ["txt", "el paso es la separacion de la rejilla que se ve"], ["mv", 160, 100], ...FIN] },
+
+  osnap: { modo: "ninguno", pie: "OSNAP (F3): engancha a nudo, punto final, medio, cruce…",
+    guion: [...cl(80, 140, "hay un nudo aqui"), ["marca", "nudo"],
+            ["txt", "al acercarte, el cuadrito dice a QUE te enganchas"], ["mv", 86, 134], ["esp", 800],
+            ["txt", "manda la referencia, no el pixel donde clicas"], ...FIN] },
+
+  orto: { modo: "ninguno", pie: "ORTO (F8): obliga a dibujar horizontal o vertical.",
+    guion: [...cl(60, 140, "primer punto"), ["txt", "sin ORTO la linea va a donde apuntes"],
+            ["mv", 250, 90], ["esp", 600],
+            ["txt", "con ORTO (F8) se queda recta"], ["mv", 250, 140], ["esp", 600], ["clic"], ...FIN] },
+
   rejilla: { modo: "ninguno", pie: "🏗 Rejilla: ejes, niveles y columnas de golpe.",
-    guion: [["txt", "vanos en X, en Y y pisos en las casillas"], ["esp", 800],
-            ["txt", "🏗 Rejilla replantea ejes A/B/C · 1/2/3 y los niveles"], ["esp", 900], ...FIN] },
+    guion: [["txt", "vanos en X, en Y y pisos en las casillas (4x6 · 3x5 · 4x3)"],
+            ["mv", 60, 40], ["mv", 260, 40], ["esp", 200],
+            ["txt", "🏗 Rejilla replantea los ejes…"],
+            ["plano", 150, "nivel 0"], ["mv", 60, 150], ["mv", 260, 150],
+            ["txt", "…y los niveles, con sus columnas"],
+            ["plano", 105, "nivel 1"], ["esp", 250], ["plano", 60, "nivel 2"],
+            ["mv", 160, 60], ["esp", 300], ...FIN] },
 };
 
 /** Ayuda genérica para un botón sin ejemplo propio. */
@@ -341,6 +410,22 @@ export function reproducir(host: HTMLElement, demo: Demo): () => void {
                 stroke: "#22d3ee", "stroke-width": 0.7, opacity: 0.5 }));
             }
             g.appendChild(el("text", { x: izq, y: y - 6, fill: "#7dd3fc", "font-size": 10 })).textContent = rotulo;
+            capa.appendChild(g);
+            break;
+          }
+          case "ejes": {
+            const [, ex, ey] = acc;
+            const g = el("g", {});
+            const fl = (dx: number, dy: number, col: string) => {
+              g.appendChild(el("line", { x1: ex, y1: ey, x2: ex + dx, y2: ey + dy, stroke: col, "stroke-width": 2 }));
+              g.appendChild(el("circle", { cx: ex + dx, cy: ey + dy, r: 2.4, fill: col }));
+            };
+            fl(30, 12, "#ff5b5b");     // X
+            fl(-26, 12, "#5bff8a");    // Y
+            fl(0, -32, "#6aa8ff");     // Z
+            // la línea de puntos hasta el origen del dibujo, como en el programa
+            g.appendChild(el("line", { x1: 40, y1: 150, x2: ex, y2: ey, stroke: "#22d3ee",
+              "stroke-width": 1.2, "stroke-dasharray": "5 4", opacity: 0.85 }));
             capa.appendChild(g);
             break;
           }

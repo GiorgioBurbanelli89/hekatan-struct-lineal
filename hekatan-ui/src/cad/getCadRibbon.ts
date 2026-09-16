@@ -1001,17 +1001,33 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   window.addEventListener("pointerdown", (e) => {
     if (!modoAyuda) return;
     const t = e.target as HTMLElement | null;
-    if (!t || cuadro.contains(t) || bAyuda.contains(t)) return;
+    if (!t || cuadro.contains(t)) return;
     e.preventDefault(); e.stopPropagation();
+    // tocar el propio «?» en modo ayuda explica la ayuda (y no la apaga a medias)
+    if (bAyuda.contains(t)) { abrirAyuda("ayuda", "? Ayuda — toca un botón", bAyuda.title); return; }
     const btn = t.closest("button") as HTMLElement | null;
     const ficha = btn ? porBoton().get(btn) : undefined;
     if (ficha) { abrirAyuda(ficha.id, `${ficha.icono} ${ficha.nombre} (${ficha.tecla})`, ficha.ayuda, ficha.id); return; }
     // los mandos de la cinta que no son herramientas: se reconocen por su title
     const cerca = (t.closest("input,button") as HTMLElement | null) ?? t;
     const tit = (cerca.getAttribute("title") || "").toLowerCase();
+    if (tit.includes("grilla auxiliar") && tit.includes("replicar"))
+      return void abrirAyuda("repGrid", "▦×  Replicar la grilla auxiliar", cerca.title);
     if (tit.includes("grilla auxiliar")) return void abrirAyuda("grillaAux", "▦+  Grilla auxiliar", cerca.title);
+    if (tit.includes("paralela a si misma")) return void abrirAyuda("moverGrilla", "↕  Mover la grilla con el cursor", cerca.title);
+    if (tit.includes("origen local")) return void abrirAyuda("scu", "⌖  Origen local (SCU)", cerca.title);
+    if (tit.includes("distancia del plano")) return void abrirAyuda("cotaZ", "Distancia del plano de trabajo", cerca.title);
     if (tit.includes("cota z")) return void abrirAyuda("cotaZ", "Cota Z — a qué altura dibujas", cerca.title);
     if (tit.includes("pisos de arriba")) return void abrirAyuda("subir", "⇈ Subir — replicar plantas", cerca.title);
+    // los conmutadores y las vistas, que tampoco son herramientas
+    const rot0 = (cerca.textContent || "").replace(/\s+/g, " ").trim();
+    if (/^SNAP/.test(rot0)) return void abrirAyuda("snap", "SNAP (F9) — caer en los cruces", cerca.title || "");
+    if (rot0 === "▴" || tit.includes("plegar")) return void abrirAyuda("plegar", "▴ Plegar la cinta", cerca.title || "");
+    if (rot0 === "▾" || tit.includes("añadir a la cinta")) return void abrirAyuda("extras", "▾ Añadir a la cinta", cerca.title || "");
+    if (/^ORTO/.test(rot0)) return void abrirAyuda("orto", "ORTO (F8) — recto en X o en Y", cerca.title || "");
+    if (/^OSNAP/.test(rot0)) return void abrirAyuda("osnap", "OSNAP (F3) — referencias a objetos", cerca.title || "");
+    if (/(Planta|Frente|Lado|3D)/.test(rot0) && /(XY|XZ|YZ)/.test(rot0))
+      return void abrirAyuda("vista", `${rot0} — vista y plano de trabajo`, cerca.title || "");
     if (tit.includes("rejilla") || (cerca.textContent || "").includes("Rejilla"))
       return void abrirAyuda("rejilla", "🏗 Rejilla — ejes, niveles y columnas", cerca.title || "");
     const rotulo = (cerca.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48);
@@ -1036,6 +1052,10 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   });
 
   bAyuda.addEventListener("click", () => {
+    // Si el cuadro está abierto es porque acaban de PEDIR ayuda del propio «?»
+    // (su ficha se abre en el pointerdown): apagarlo aquí la cerraría de inmediato
+    // y parecería que el botón no responde.
+    if (modoAyuda && cuadro.style.display === "block") return;
     if (modoAyuda) { cerrarAyuda(); salirModoAyuda(); return; }
     modoAyuda = true;
     (window as any).__hekatanAyudaModo = true;
