@@ -63,7 +63,13 @@ for idx, el in enumerate(D["elements"]):
             sid = 1000 + len(secs)
             ops.section("ElasticMembranePlateSection", sid, float(E) * float(fm), float(nu), float(t), float(rho))
             secs[key] = sid
-        ops.element("ShellMITC4", idx + 1, *[n + 1 for n in el], secs[key])
+        # --asdshell: el ASDShellQ4 de Petracca y Camata (ASDEA), que lleva la
+        # membrana de Allman con drilling y transformacion EICR — la familia de
+        # la membrana de Hekatan. El ShellMITC4 clasico usa membrana bilineal.
+        if "--asdshell" in sys.argv:
+            ops.element("ASDShellQ4", idx + 1, *[n + 1 for n in el], secs[key])
+        else:
+            ops.element("ShellMITC4", idx + 1, *[n + 1 for n in el], secs[key])
         shells.append(idx); nsh += 1
 
 # ── cargas: las MISMAS que Hekatan ya repartio a los nudos (peso propio incluido)
@@ -85,9 +91,13 @@ res["esfuerzos_shell"] = {i: ops.eleResponse(i + 1, "stresses") for i in shells}
 
 # ── modal: misma masa del modelo (la de las densidades), como el runModal de Hekatan
 ops.wipeAnalysis()
-lam = ops.eigen("-genBandArpack", NMODOS)
-res["periodos"] = [2 * math.pi / math.sqrt(l) for l in lam]
 try:
+    lam = ops.eigen("-genBandArpack", NMODOS)
+    res["periodos"] = [2 * math.pi / math.sqrt(l) for l in lam]
+except Exception as e:
+    res["periodos"] = []; res["eigen_error"] = str(e)[:120]
+try:
+    if not res["periodos"]: raise RuntimeError("sin modos")
     mp = ops.modalProperties("-return")
     res["masa_total"] = mp.get("totalMass")
     for k in ("partiMassRatiosMX", "partiMassRatiosMY", "partiMassRatiosMZ",
@@ -96,4 +106,5 @@ try:
 except Exception as e:
     res["modalProperties_error"] = str(e)
 json.dump(res, open(OUT, "w"), indent=1)
-print("OpenSees OK -> %d barras, %d shells, T1 = %.6f s" % (nbar, nsh, res["periodos"][0]))
+print("OpenSees OK -> %d barras, %d shells%s" % (nbar, nsh,
+      ", T1 = %.6f s" % res["periodos"][0] if res["periodos"] else " (sin modal)"))
