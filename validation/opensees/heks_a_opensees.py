@@ -208,14 +208,18 @@ def _main():
         # varias veces por vuelta: si giro y oscilacion van al mismo ritmo, el
         # giro se come la vibracion y solo se ve el modelo dando vueltas.
         ciclos = float(opt("ciclos", 6))    # oscilaciones por modo
-        giro = float(opt("giro", 360))      # grados que gira la camara por modo
+        # El giro, LENTO: media vuelta repartida entre TODOS los modos, y
+        # continua (la camara sigue donde la dejo el modo anterior). Con 360 por
+        # modo daba seis vueltas en el GIF y no se veia vibrar nada.
+        # --giro=<grados por modo> lo cambia (360 = una vuelta por modo).
+        giro = float(opt("giro", 180.0 / max(1, len(modos))))
         P = [[float(c) for c in q] for q in D["nodes"]]
         xs = [q[0] for q in P]; ys = [q[1] for q in P]; zs = [q[2] for q in P]
         diag = math.dist([min(xs), min(ys), min(zs)], [max(xs), max(ys), max(zs)])
         lineas = [el for el in D["elements"] if len(el) == 2]
         caras0 = [el for el in D["elements"] if len(el) == 4]
         res["animaciones"] = []; todos = []
-        for modo in modos:
+        for imodo, modo in enumerate(modos):
             if modo > len(res["periodos"]): continue
             dirsal = os.path.splitext(OUT)[0] + "_modo%d" % modo
             os.makedirs(dirsal, exist_ok=True)
@@ -243,7 +247,7 @@ def _main():
                                    max(zs) - min(zs) + 4), zoom=1.15)
                 # la camara da una VUELTA ENTERA mientras el modo vibra; al acabar
                 # el ciclo se pasa al modo siguiente en el mismo GIF
-                ax.view_init(elev=16, azim=-65 + giro * k / K)
+                ax.view_init(elev=16, azim=-65 + giro * (imodo + k / K))
                 ax.set_axis_off()
                 fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
                          color="#e8edf5", fontsize=15)
