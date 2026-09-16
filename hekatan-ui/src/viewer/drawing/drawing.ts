@@ -3917,7 +3917,12 @@ export function drawing({
               (pedidas.has(z) ? 0.65 : Math.abs(z) < 1e-6 ? 0.5 : 0.22);
           });
           copia.position.set(0, 0, z);
-          copia.quaternion.copy(qPreGeo);                  // tumbada, sin el giro del plano
+          // ⚠️ IDENTIDAD, no la pre-rotación. La geometría de la rejilla ya viene con sus
+          // líneas en X-Y: con giro cero está TUMBADA y con rotX(π/2) se pone DE PIE.
+          // Aquí se le aplicaba `qPreGeo` (π/2) «para dejarla tumbada» —el comentario
+          // decía una cosa y el código hacía la contraria—, así que todas las grillas
+          // auxiliares salían VERTICALES. Medido: normal (0,−1,0) en las dos copias.
+          copia.quaternion.identity();
           scene.add(copia);
           sueloGrids.push(copia);
         }
@@ -3942,11 +3947,13 @@ export function drawing({
         });
         // la geometría viene tumbada (pre-giro rotX π/2): para ponerla DE PIE en el
         // plano XZ se deshace ese giro, y para el YZ se gira además sobre Z.
+        // Partiendo de TUMBADA (identidad, normal +Z):
+        //   XZ (normal Y) → girar 90° sobre X   ·   YZ (normal X) → girar 90° sobre Y
         if (g.plano === "xz") {
-          copia.quaternion.identity();
+          copia.quaternion.setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
           copia.position.set(0, g.d, 0);
         } else {
-          copia.quaternion.setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
+          copia.quaternion.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
           copia.position.set(g.d, 0, 0);
         }
         scene.add(copia);
@@ -3967,6 +3974,7 @@ export function drawing({
   (window as any).__hekatanGrillaAux = (d: number, plano: "xy" | "xz" | "yz" = "xy") => {
     if (!isFinite(d)) return [];
     const W = window as any;
+    W.__hekatanPushUndo?.();          // poner o quitar una grilla se deshace con Ctrl+Z
     const aux = (W.__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
     const i = aux.findIndex((g) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
     if (i >= 0) aux.splice(i, 1); else aux.push({ plano, d });
@@ -4181,6 +4189,23 @@ export function drawing({
       wp === "xy" ? { position: [O[0], O[1], d], rotation: [Math.PI / 2, 0, 0] }
     : wp === "xz" ? { position: [O[0], d, O[2]], rotation: [0, 0, 0] }
                   : { position: [d, O[1], O[2]], rotation: [0, 0, Math.PI / 2] };
+  };
+
+  // Quitar TODAS las grillas auxiliares de una vez. Sin esto había que acertar la cota
+  // exacta de cada una para apagarlas una a una, y con «▦× replicar» salen tres o
+  // cuatro de golpe: era poner y no poder recoger.
+  (window as any).__hekatanLimpiarGrillasAux = (): number => {
+    const W = window as any;
+    const n = ((W.__hekatanPlanosAux ?? []) as any[]).length +
+              ((W.__hekatanLevels ?? []) as any[]).filter((l) => l?.tipo !== "piso").length;
+    if (!n) return 0;
+    W.__hekatanPushUndo?.();
+    const G = W.__hekatanPlanosAux; if (Array.isArray(G)) G.length = 0; else W.__hekatanPlanosAux = [];
+    const L = W.__hekatanLevels;
+    if (Array.isArray(L)) { const pisos = L.filter((l: any) => l?.tipo === "piso"); L.length = 0; L.push(...pisos); }
+    W.__hekatanRefrescarGrillas?.();
+    try { W.__hekatanRefreshLevels?.(); } catch {}
+    return n;
   };
 
   (window as any).__hekatanRefrescarGrillas = () => {
@@ -5897,17 +5922,35 @@ export function drawing({
   // Ctrl+Z, ojo con eso»): una guía de cúpula dibujada como auxiliar no se deshacía,
   // y al deshacer una revolución las guías borradas no volvían.
   const auxSnap = () => { const st = (window as any).__hekatanDrawingAuxLines; return JSON.parse(JSON.stringify(st?.rawVal ?? st?.val ?? [])); };
+  // Y las REJILLAS y los EJES también, por lo mismo (Jorge, 16-sep-2026: «¿qué es eso
+  // de rejilla, no se puede eliminar cuando ya se coloca?»). Medido: 🏗 Rejilla metía
+  // 100 nudos, 9 ejes y 2 niveles y Ctrl+Z no tocaba nada de eso, porque el snapshot
+  // solo guardaba el dibujo. Lo que no está en la foto no se puede deshacer.
+  const ejesSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanAxisGrids ?? []));
+  const nivSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanLevels ?? []));
+  const auxPlanosSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanPlanosAux ?? []));
   const snapshot = () => ({
     p: JSON.parse(JSON.stringify(drawingObj.points.rawVal ?? [])),
     l: JSON.parse(JSON.stringify(drawingObj.polylines?.rawVal ?? [])),
     a: JSON.parse(JSON.stringify(drawingObj.areas?.rawVal ?? [])),
     x: auxSnap(),
+    e: ejesSnap(),
+    n: nivSnap(),
+    g: auxPlanosSnap(),
   });
-  const restore = (s: { p: any; l: any; a: any; x?: any }) => {
+  const restore = (s: { p: any; l: any; a: any; x?: any; e?: any; n?: any; g?: any }) => {
     drawingObj.points.val = s.p;
     if (drawingObj.polylines) drawingObj.polylines.val = s.l;
     if (drawingObj.areas) drawingObj.areas.val = s.a;
     if (s.x) { const st = (window as any).__hekatanDrawingAuxLines; if (st && "val" in st) st.val = s.x; }
+    // ejes, niveles y grillas auxiliares: son ARRAYS compartidos por referencia con el
+    // panel, así que se vacían y se rellenan en su sitio en vez de reasignarlos.
+    if (s.e) { const A = (window as any).__hekatanAxisGrids; if (Array.isArray(A)) { A.length = 0; A.push(...s.e); } }
+    if (s.n) { const L = (window as any).__hekatanLevels; if (Array.isArray(L)) { L.length = 0; L.push(...s.n); } }
+    if (s.g) { const G = (window as any).__hekatanPlanosAux; if (Array.isArray(G)) { G.length = 0; G.push(...s.g); }
+               else (window as any).__hekatanPlanosAux = s.g; }
+    try { (window as any).__hekatanRefreshAxes?.(); (window as any).__hekatanRefreshLevels?.(); } catch {}
+    try { (window as any).__hekatanRefrescarGrillas?.(); } catch {}
     pendingClicks = [];
     rubberBand.visible = false;
     polarLines.visible = false;

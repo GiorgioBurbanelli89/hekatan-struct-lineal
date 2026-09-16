@@ -442,6 +442,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bG.style.cssText = "height:26px;padding:0 10px;cursor:pointer;background:#0e7490;border:1px solid #22d3ee;" +
     "border-radius:6px;color:#ecfeff;font:600 11px inherit;";
   const lanzarGrid = () => {
+    // ⚠️ La foto para Ctrl+Z la hace `__hekatanGenerarRejilla` ANTES de generar. Aquí
+    // había otro pushUndo DESPUÉS, o sea una foto con la rejilla ya puesta: deshacer
+    // devolvía exactamente lo que se quería quitar (medido: 100 nudos antes y después).
     hooks.grid?.(inX.value, inY.value, inZ.value, true);
     decir(`Rejilla generada: X=${inX.value} · Y=${inY.value} · pisos=${inZ.value}`);
   };
@@ -687,7 +690,62 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "Desde ahi, 0,0,0 sera ese punto.");
   });
   setInterval(pintarSCU, 700);
-  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  // Quitar TODAS las grillas auxiliares: ponerlas era fácil y recogerlas no, había que
+  // acertar la cota exacta de cada una.
+  const bLimpiar = document.createElement("button");
+  bLimpiar.type = "button";
+  bLimpiar.textContent = "▦−";
+  bLimpiar.title = "Quitar TODAS las grillas auxiliares puestas (Ctrl+Z las devuelve)";
+  bLimpiar.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bLimpiar.addEventListener("click", () => {
+    const n = (window as any).__hekatanLimpiarGrillasAux?.() ?? 0;
+    decir(n ? `Quitadas ${n} grillas auxiliares. Ctrl+Z las devuelve.` : "No hay grillas auxiliares puestas.");
+  });
+  // ── IR A LA VISTA DE ESA GRILLA ───────────────────────────────────────────
+  //
+  // Jorge (16-sep-2026): «debe haber algo para ir a la vista en esa posición de esa
+  // grilla, en el plano tanto XY, XZ o YZ». Es el doble clic sobre una planta en
+  // ETABS: te pone mirando ESE plano, de frente y centrado en él.
+  //
+  // Los botones de vista (Planta/Frente/Lado) miran desde el origen; este mira desde
+  // la DISTANCIA del plano de trabajo, que es donde está lo que acabas de dibujar.
+  const bVerPlano = document.createElement("button");
+  bVerPlano.type = "button";
+  bVerPlano.textContent = "◎";
+  bVerPlano.title = "Ir a la vista de ESTE plano: te pone mirándolo de frente y centrado " +
+    "en su distancia (planta si es XY, alzado si es XZ, lateral si es YZ)";
+  bVerPlano.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  bVerPlano.addEventListener("click", () => {
+    const plano = planoActual(), L = letraDist();
+    const st = (window as any).__hekatanCadState?.get?.();
+    const d = Number(st?.[claveDist()] ?? 0);
+    const v: any = document.querySelector("#viewer");
+    const ctx = v?.__ctx;
+    if (!ctx) { decir("El visor no responde."); return; }
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+    // centro del plano: su distancia en la normal, y el origen local en las otras dos
+    const centro = plano === "xy" ? [O[0], O[1], d]
+                 : plano === "xz" ? [O[0], d, O[2]]
+                 : [d, O[1], O[2]];
+    // a qué distancia se pone la cámara: el tamaño de la rejilla, para que se vea entera
+    const tam = Number((window as any).__hekatanGridConfig?.gridSize ?? 20);
+    const L0 = Math.max(12, tam * 1.35);
+    const cam = ctx.camera;
+    const pos = plano === "xy" ? [centro[0], centro[1] - 0.001, centro[2] + L0]
+              : plano === "xz" ? [centro[0], centro[1] - L0, centro[2]]
+              : [centro[0] + L0, centro[1], centro[2]];
+    cam.position.set(pos[0], pos[1], pos[2]);
+    cam.up.set(0, 0, 1);                       // Z arriba, como todo el programa
+    ctx.controls?.target?.set(centro[0], centro[1], centro[2]);
+    cam.lookAt(centro[0], centro[1], centro[2]);
+    if ((cam as any).isOrthographicCamera) { (cam as any).zoom = 1; cam.updateProjectionMatrix(); }
+    ctx.controls?.update?.(); ctx.render?.();
+    const nombre = plano === "xy" ? "PLANTA" : plano === "xz" ? "ALZADO FRONTAL" : "ALZADO LATERAL";
+    decir(`Vista de ${nombre} en ${L} = ${d.toFixed(2)} m — mirando el plano de frente.`);
+  });
+  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bLimpiar, bVerPlano, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
   rotZ.id = "hk-dist-rotulo";
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";

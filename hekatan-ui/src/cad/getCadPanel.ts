@@ -806,6 +806,10 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     refreshAxisRender(); refreshLevelRender();
   });
   (window as any).__hekatanGenerarRejilla = (vx: string, vy: string, vz: string, col = true) => {
+    // Foto ANTES de generar: la rejilla mete nudos, ejes y niveles de golpe y hasta
+    // ahora no se podía deshacer nada de eso (medido: 100 nudos y 9 ejes, y Ctrl+Z
+    // no los tocaba). Es lo primero que uno quiere deshacer si se equivoca de vanos.
+    (window as any).__hekatanPushUndo?.();
     proxyGrid.vanosX = vx; proxyGrid.vanosY = vy; proxyGrid.pisos = vz; proxyGrid.columnas = col;
     const b = Array.from(document.querySelectorAll<HTMLButtonElement>("button.tp-btnv_b"))
       .find((e) => (e.textContent || "").includes("Generar rejilla"));
