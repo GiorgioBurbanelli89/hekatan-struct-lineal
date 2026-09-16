@@ -41,7 +41,7 @@ def _main():
     DUMP     = ""                 # <- ponle la ruta aqui si quieres una fija
     OUT      = ""                 # <- vacio = al lado del dump, con _opensees.json
     NMODOS   = 12
-    OPCIONES = ["--anim=1,2,3", "--frames=36", "--embebido"]
+    OPCIONES = ["--anim=1,2,3", "--frames=60", "--embebido"]
 
     def _es_dump(f):
         try:
@@ -203,7 +203,12 @@ def _main():
                 if a.startswith("--%s=" % nm): return a.split("=", 1)[1]
             return d
         modos = [int(v) for v in str(opt("anim", "1")).split(",") if v.strip().isdigit()]
-        K = int(float(opt("frames", 36))); pc = float(opt("escala", 8.0))
+        K = int(float(opt("frames", 60))); pc = float(opt("escala", 8.0))
+        # La camara da la vuelta ENTERA pero despacio, y la estructura oscila
+        # varias veces por vuelta: si giro y oscilacion van al mismo ritmo, el
+        # giro se come la vibracion y solo se ve el modelo dando vueltas.
+        ciclos = float(opt("ciclos", 6))    # oscilaciones por modo
+        giro = float(opt("giro", 360))      # grados que gira la camara por modo
         P = [[float(c) for c in q] for q in D["nodes"]]
         xs = [q[0] for q in P]; ys = [q[1] for q in P]; zs = [q[2] for q in P]
         diag = math.dist([min(xs), min(ys), min(zs)], [max(xs), max(ys), max(zs)])
@@ -219,7 +224,7 @@ def _main():
             f = (pc / 100.0) * diag / amp
             T = res["periodos"][modo - 1]
             for k in range(K):
-                a = math.sin(2 * math.pi * k / K)
+                a = math.sin(2 * math.pi * ciclos * k / K)
                 Q = [[P[i][j] + a * f * phi[i][j] for j in range(3)] for i in range(len(P))]
                 fig = plt.figure(figsize=(12.8, 7.2), dpi=100)
                 ax = fig.add_axes([-0.12, -0.16, 1.24, 1.30], projection="3d")
@@ -238,7 +243,7 @@ def _main():
                                    max(zs) - min(zs) + 4), zoom=1.15)
                 # la camara da una VUELTA ENTERA mientras el modo vibra; al acabar
                 # el ciclo se pasa al modo siguiente en el mismo GIF
-                ax.view_init(elev=16, azim=-65 + 360.0 * k / K)
+                ax.view_init(elev=16, azim=-65 + giro * k / K)
                 ax.set_axis_off()
                 fig.text(0.04, 0.93, "OpenSees  ·  modo %d  ·  T = %.4f s" % (modo, T),
                          color="#e8edf5", fontsize=15)
