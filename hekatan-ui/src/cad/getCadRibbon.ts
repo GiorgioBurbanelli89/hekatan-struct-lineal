@@ -146,7 +146,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   ].join(";") + ";";
   // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
   // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.
-  const mkFila = () => { const f = document.createElement("div"); f.style.cssText = "display:flex;align-items:stretch;gap:0;"; return f; };
+  // `overflow-x:auto`: si el hueco entre paneles no da para toda la fila, la fila se
+  // DESPLAZA dentro de la cinta. Sin esto, limitar el ancho no sirve de nada —los
+  // botones tienen ancho fijo y se desbordan por debajo del panel, que es como el
+  // «?» acababa en x = 1470 con la ventana de 1400 (medido).
+  const mkFila = () => { const f = document.createElement("div");
+    f.style.cssText = "display:flex;align-items:stretch;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;"; return f; };
   const filaA = mkFila(), filaB = mkFila();
   filaB.style.borderTop = "1px solid #1e3a4a"; filaB.style.paddingTop = "2px";
   barra.append(filaA, filaB);
@@ -179,7 +184,36 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // línea de estado de AutoCAD.
   let prompt = "Elige una herramienta arriba, o teclea su comando y Enter (L, PL, REC, COL, M, CO).";
   let pistaActiva = false;   // mientras el ratón está sobre un botón, manda su pista
+  // ── QUE LA CINTA NO QUEDE DEBAJO DE LOS PANELES ──────────────────────────
+  //
+  // La barra iba centrada en TODO el ancho, así que con el panel de la derecha
+  // abierto sus últimos botones quedaban debajo: el «?» estaba pintado pero el
+  // clic se lo comía el panel (medido con elementFromPoint: devolvía el panel,
+  // «Categoría»). Se veía el botón y no respondía, que es la peor versión.
+  //
+  // Ahora la cinta se centra en el HUECO LIBRE entre los dos paneles y se limita
+  // a su ancho. Es lo que hace la cinta de AutoCAD cuando se acopla un panel.
+  const encajarEntrePaneles = () => {
+    const hostR = host.getBoundingClientRect();
+    if (!hostR.width) return;
+    let izq = hostR.left, der = hostR.right;
+    for (const sel of ["#settings", "#parameters", ".tp-dfwv"]) {
+      for (const e of [...document.querySelectorAll(sel)] as HTMLElement[]) {
+        const r = e.getBoundingClientRect();
+        if (r.width < 40 || r.height < 40) continue;            // no está desplegado
+        if (r.top > hostR.top + 220) continue;                  // no estorba a la cinta
+        if (r.right < hostR.left || r.left > hostR.right) continue;
+        if (r.left <= hostR.left + hostR.width / 2) izq = Math.max(izq, r.right);
+        else der = Math.min(der, r.left);
+      }
+    }
+    const libre = Math.max(320, der - izq - 12);
+    barra.style.left = `${izq - hostR.left + (der - izq) / 2}px`;
+    barra.style.maxWidth = `${libre}px`;
+  };
+
   const refrescar = () => {
+    encajarEntrePaneles();
     // la casilla de distancia dice a qué se refiere AHORA
     try {
       const i = document.getElementById("hk-dist-plano") as HTMLInputElement | null;
@@ -1067,7 +1101,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       '<span>— toca el botón o la ventana de la que quieres asistencia (Esc para salir)</span>';
   });
   bAyuda.title = "Ayuda: toca un botón y te enseño un ejemplo animado de cómo se usa (F1: los cuatro pasos)";
-  filaA.appendChild(bAyuda);
+  // Al PRINCIPIO, no al final: el extremo derecho de la cinta es justo lo que tapa el
+  // panel de propiedades, y la ayuda es lo último que puede permitirse no responder.
+  bAyuda.style.marginLeft = "2px"; bAyuda.style.marginRight = "6px";
+  bAyuda.style.flex = "0 0 auto";
+  filaA.insertBefore(bAyuda, filaA.firstChild);
 
   // ── Barra de estado: qué se espera AHORA (el Dynamic Prompt) ──────────────
   const estado = document.createElement("div");
