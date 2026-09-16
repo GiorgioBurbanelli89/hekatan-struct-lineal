@@ -853,14 +853,24 @@ export function drawing({
   // a la polilínea. Necesita rubberStart (último punto) para los modos rel.
   const resolveParsedInput = (p: ParsedInput): [number, number, number] | null => {
     if (!p) return null;
-    if (p.kind === "absCart") return [p.x, p.y, p.z];
+    // ── EL ORIGEN LOCAL (SCU) ────────────────────────────────────────────────
+    // Jorge (16-sep-2026, con el dibujo de los dos trípodes): «cuando hacía un
+    // vector había una posición donde dentro había otra coordenada; es lo que
+    // quiero para dibujar en 3D».
+    //
+    // Es el SCU de AutoCAD: pones el origen en un punto del modelo y a partir de
+    // ahí «0,0,0» es ESE punto. Sin esto, para dibujar un pórtico que arranca en
+    // (12, 7, 3.2) hay que sumar a mano en cada coordenada, que es justo lo que
+    // vuelve impracticable teclear en 3D.
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    if (p.kind === "absCart") return [O[0] + p.x, O[1] + p.y, O[2] + p.z];
     if (p.kind === "relCart") {
       if (!rubberStart) return null;
       return [rubberStart[0] + p.dx, rubberStart[1] + p.dy, rubberStart[2] + p.dz];
     }
     if (p.kind === "absPolar") {
       const a = p.ang * Math.PI / 180;
-      return [p.L * Math.cos(a), p.L * Math.sin(a), 0];
+      return [O[0] + p.L * Math.cos(a), O[1] + p.L * Math.sin(a), O[2]];
     }
     if (p.kind === "relPolar") {
       if (!rubberStart) return null;
@@ -4022,9 +4032,10 @@ export function drawing({
     const st = (window as any).__hekatanCadState?.get?.();
     if (st) (st as any)[claveDe(wp)] = d;
     if (!drawingObj.gridTarget) return;
-    drawingObj.gridTarget.val = wp === "xy" ? { position: [0, 0, d], rotation: [Math.PI / 2, 0, 0] }
-                             : wp === "xz" ? { position: [0, d, 0], rotation: [0, 0, 0] }
-                             : { position: [d, 0, 0], rotation: [0, 0, Math.PI / 2] };
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    drawingObj.gridTarget.val = wp === "xy" ? { position: [O[0], O[1], d], rotation: [Math.PI / 2, 0, 0] }
+                             : wp === "xz" ? { position: [O[0], d, O[2]], rotation: [0, 0, 0] }
+                             : { position: [d, O[1], O[2]], rotation: [0, 0, Math.PI / 2] };
   };
   /** Distancia sobre el eje normal del punto del eje más próximo al rayo del cursor. */
   const distanciaBajoCursor = (): number | null => {
@@ -4091,6 +4102,86 @@ export function drawing({
       pintarCaja(null, isFinite(v) ? v : distActual());
     }
   }, true);
+
+  // ── EL TRÍPODE DEL ORIGEN LOCAL ──────────────────────────────────────────
+  // Se ve como en el dibujo de Jorge: los ejes pequeños en el punto elegido y una
+  // línea de puntos hasta el origen global, para no perder de vista dónde estás.
+  const grupoSCU = new THREE.Group();
+  grupoSCU.name = "hekatan-scu";
+  grupoSCU.visible = false;
+  scene.add(grupoSCU);
+  const construirSCU = (o: [number, number, number]) => {
+    while (grupoSCU.children.length) {
+      const c: any = grupoSCU.children.pop();
+      c.geometry?.dispose?.(); c.material?.dispose?.(); c.dispose?.();
+    }
+    const L = Math.max(0.8, ((window as any).__hekatanGridConfig?.minorStep ?? 1) * 2);
+    const O = new THREE.Vector3(...o);
+    const ejes: Array<[THREE.Vector3, number]> = [
+      [new THREE.Vector3(1, 0, 0), 0xff5b5b],
+      [new THREE.Vector3(0, 1, 0), 0x5bff8a],
+      [new THREE.Vector3(0, 0, 1), 0x6aa8ff],
+    ];
+    for (const [d, col] of ejes) grupoSCU.add(new THREE.ArrowHelper(d, O, L, col, L * 0.28, L * 0.16));
+    // la línea de puntos hasta el origen global (el «dónde estoy» del dibujo)
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), O]);
+    const m = new THREE.LineDashedMaterial({ color: 0x22d3ee, dashSize: 0.35, gapSize: 0.25, transparent: true, opacity: 0.8 });
+    const ln = new THREE.Line(g, m); ln.computeLineDistances();
+    grupoSCU.add(ln);
+    grupoSCU.visible = true;
+  };
+  (window as any).__hekatanPonerSCU = (o: [number, number, number]) => {
+    (window as any).__hekatanSCU = [o[0], o[1], o[2]];
+    construirSCU(o);
+    // la rejilla se centra en el origen nuevo: es el plano de trabajo de AHÍ
+    (window as any).__hekatanRecentrarGrilla?.();
+    viewerRender();
+    return o;
+  };
+  (window as any).__hekatanQuitarSCU = () => {
+    (window as any).__hekatanSCU = [0, 0, 0];
+    grupoSCU.visible = false;
+    (window as any).__hekatanRecentrarGrilla?.();
+    viewerRender();
+    return [0, 0, 0];
+  };
+  // Colocar el origen CON EL CURSOR: el siguiente clic manda (y el osnap engancha
+  // a un nudo, a un cruce de rejilla o a un punto final, que es lo que se quiere).
+  let colocandoSCU = false;
+  (window as any).__hekatanElegirSCU = (on = true) => {
+    colocandoSCU = on;
+    (window as any).__hekatanColocandoSCU = on;
+    return on;
+  };
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!colocandoSCU) return;
+    ev.preventDefault(); ev.stopPropagation();
+    colocandoSCU = false;
+    (window as any).__hekatanColocandoSCU = false;
+    // el punto que el visor ya calcula bajo el cursor, con su osnap
+    const os = (window as any).__hekatanOsnapUltimo as { x: number; y: number; z: number } | null;
+    if (os) { (window as any).__hekatanPonerSCU([os.x, os.y, os.z]); return; }
+    setPointerFromEvent(ev);
+    const inter = intersectWorkPlane();          // devuelve un ARRAY de intersecciones
+    if (inter.length) {
+      const q = inter[0].point;
+      (window as any).__hekatanPonerSCU([q.x, q.y, q.z]);
+    }
+  }, true);
+
+  // La rejilla se centra en el origen local, manteniendo la distancia del plano:
+  // el plano de trabajo es «el suelo de AQUÍ», no el del origen global.
+  (window as any).__hekatanRecentrarGrilla = () => {
+    if (!drawingObj.gridTarget) return;
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const st = (window as any).__hekatanCadState?.get?.();
+    const d = Number(st?.[wp === "xz" ? "workY" : wp === "yz" ? "workX" : "workZ"] ?? 0);
+    drawingObj.gridTarget.val =
+      wp === "xy" ? { position: [O[0], O[1], d], rotation: [Math.PI / 2, 0, 0] }
+    : wp === "xz" ? { position: [O[0], d, O[2]], rotation: [0, 0, 0] }
+                  : { position: [d, O[1], O[2]], rotation: [0, 0, Math.PI / 2] };
+  };
 
   (window as any).__hekatanRefrescarGrillas = () => {
     if (!drawingObj.gridTarget) return;

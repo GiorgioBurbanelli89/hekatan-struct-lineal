@@ -188,7 +188,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
         const pl = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
         const L = pl === "xz" ? "Y" : pl === "yz" ? "X" : "Z";
         const v = (window as any).__hekatanCadState?.get?.()?.[pl === "xz" ? "workY" : pl === "yz" ? "workX" : "workZ"];
-        r.textContent = `${L} del plano: escribe · arrastra · ↕ con el cursor · ▦+ deja grilla`;
+        const oo = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+        const conSCU = oo.some((v) => Math.abs(v) > 1e-9);
+        r.textContent = conSCU
+          ? `${L} del plano · ⌖ origen en (${oo.map((v) => v.toFixed(2)).join(", ")})`
+          : `${L} del plano: escribe · arrastra · ↕ cursor · ▦+ deja · ▦× replica · ⌖ origen`;
         i.title = `Distancia del plano de trabajo: ${L} = ... (m). Enter lo aplica; ▦+ deja la grilla puesta ahí.`;
         if (document.activeElement !== i && typeof v === "number" && parseFloat(i.value) !== v) i.value = String(v);
         const sl = document.getElementById("hk-dist-slider") as HTMLInputElement | null;
@@ -575,7 +579,81 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     decir(`Mueve el raton: la grilla ${planoActual().toUpperCase()} se desplaza paralela. ` +
       "Teclea la distancia + Enter para dejarla exacta · clic la fija · Esc cancela.");
   });
-  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  // REPLICAR la grilla auxiliar, como se replica una planta: n grillas separadas la
+  // altura de las casillas de al lado. Jorge: «si está en XY debe replicarse en las
+  // posiciones Z; si tengo XZ se desplaza en Y, y YZ en X». Es la misma regla del
+  // plano de trabajo: la grilla solo se mueve en su normal.
+  const bRepGrid = document.createElement("button");
+  bRepGrid.type = "button";
+  bRepGrid.textContent = "▦×";
+  bRepGrid.title = "Replicar la grilla auxiliar: deja n grillas NUEVAS aparte, separadas la " +
+    "altura de las casillas de la derecha (alt x n), SIN mover la tuya. En planta van en Z, " +
+    "en alzado frontal en Y y en el lateral en X.";
+  bRepGrid.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bRepGrid.addEventListener("click", () => {
+    const d0 = parseFloat(inCotaZ.value);
+    const paso = parseFloat(inAltPiso.value);
+    const n = Math.max(1, Math.round(parseFloat(inNumPisos.value) || 1));
+    const plano = planoActual(), L = letraDist();
+    if (!isFinite(d0) || !isFinite(paso) || paso === 0) {
+      decir("Para replicar la grilla hacen falta la distancia y una separacion distinta de 0."); return;
+    }
+    const w = window as any;
+    if (!w.__hekatanGrillaAux) { decir("El visor todavia no expone las grillas auxiliares."); return; }
+    // ⚠️ DESPLAZAR y REPLICAR no son lo mismo (Jorge, 16-sep): desplazar mueve la
+    // grilla de trabajo y no crea nada; replicar deja grillas auxiliares APARTE y no
+    // toca la tuya. Por eso se empieza en k = 1: la distancia donde estás ya la
+    // ocupa el plano de trabajo, y si la duplicásemos «replicar» acabaría pareciendo
+    // un desplazamiento.
+    let ultima: any[] = [];
+    const puestas: string[] = [];
+    for (let k = 1; k <= n; k++) {
+      const d = +(d0 + paso * k).toFixed(4);
+      const yaEsta = ((w.__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>)
+        .some((g) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
+      if (yaEsta) continue;                       // no duplicar la que ya estuviera
+      ultima = w.__hekatanGrillaAux(d, plano);
+      puestas.push(d.toFixed(2));
+    }
+    decir(puestas.length
+      ? `${puestas.length} grillas ${plano.toUpperCase()} en ${L} = ${puestas.join(" · ")} m. ` +
+        `Hay ${ultima.length} grillas auxiliares puestas.`
+      : "Esas grillas ya estaban puestas.");
+  });
+  // ── ORIGEN LOCAL (SCU), lo del dibujo de los dos trípodes ─────────────────
+  // «Cuando hacía un vector había una posición donde dentro había otra coordenada;
+  // es lo que quiero para dibujar en 3D». Pones el origen en un punto del modelo y
+  // a partir de ahí «0,0,0» es ESE punto: se acabó sumar a mano en cada coordenada.
+  const bSCU = document.createElement("button");
+  bSCU.type = "button";
+  bSCU.textContent = "⌖";
+  bSCU.title = "Origen local (SCU): toca un punto y las coordenadas que teclees seran " +
+    "relativas a EL. Vuelve a pulsarlo para regresar al origen global (0,0,0).";
+  bSCU.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  const pintarSCU = () => {
+    const o = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+    const puesto = o.some((v) => Math.abs(v) > 1e-9);
+    bSCU.style.background = puesto ? "#0e7490" : "transparent";
+    bSCU.style.borderColor = puesto ? "#22d3ee" : "#1e3a4a";
+    bSCU.style.color = puesto ? "#ecfeff" : "#cdeefb";
+  };
+  bSCU.addEventListener("click", () => {
+    const w = window as any;
+    if (!w.__hekatanElegirSCU) { decir("El visor todavia no expone el origen local."); return; }
+    const o = (w.__hekatanSCU ?? [0, 0, 0]) as number[];
+    if (o.some((v: number) => Math.abs(v) > 1e-9)) {
+      w.__hekatanQuitarSCU(); pintarSCU();
+      decir("Origen local quitado: vuelves al origen global (0,0,0).");
+      return;
+    }
+    w.__hekatanElegirSCU(true);
+    decir("Toca el punto donde quieres el origen local (el OSNAP engancha a un nudo o a un cruce). " +
+      "Desde ahi, 0,0,0 sera ese punto.");
+  });
+  setInterval(pintarSCU, 700);
+  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
   rotZ.id = "hk-dist-rotulo";
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
@@ -1152,6 +1230,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       // El guardia `enCampo` no basta porque en el keydown del primer carácter el
       // cuadro todavía está vacío.
       if ((window as any).__hekatanCadEsperaRespuesta?.()) return;
+      // ⚠️ Y tampoco mientras se está COLOCANDO la grilla con el cursor: ahí los
+      // números son la distancia que se teclea, no vistas. Medido: al teclear «3»
+      // para poner la grilla a 3 m, la cinta lo leía como «vista Lado YZ» y las
+      // grillas acababan en el plano lateral.
+      if ((window as any).__hekatanMoviendoGrilla) return;
       e.preventDefault(); VISTAS[v][4](); decir(`Vista ${VISTAS[v][1]} — plano ${VISTAS[v][2]}`);
       setTimeout(limpiarCmd, 0); return;
     }
