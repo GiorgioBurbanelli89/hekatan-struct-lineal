@@ -188,9 +188,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
         const pl = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
         const L = pl === "xz" ? "Y" : pl === "yz" ? "X" : "Z";
         const v = (window as any).__hekatanCadState?.get?.()?.[pl === "xz" ? "workY" : pl === "yz" ? "workX" : "workZ"];
-        r.textContent = `${L} del plano · ▦+ grilla · subir alt × nº`;
+        r.textContent = `${L} del plano: escribe · arrastra · ↕ con el cursor · ▦+ deja grilla`;
         i.title = `Distancia del plano de trabajo: ${L} = ... (m). Enter lo aplica; ▦+ deja la grilla puesta ahí.`;
         if (document.activeElement !== i && typeof v === "number" && parseFloat(i.value) !== v) i.value = String(v);
+        const sl = document.getElementById("hk-dist-slider") as HTMLInputElement | null;
+        if (sl && document.activeElement !== sl && typeof v === "number" && parseFloat(sl.value) !== v) sl.value = String(v);
       }
     } catch {}
     const e = document.getElementById("hk-ribbon-estado");
@@ -456,6 +458,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     const plano = planoActual();
     if (st) (st as any)[claveDist()] = z;
     hooks.setPlane(plano);
+    const sl = document.getElementById("hk-dist-slider") as HTMLInputElement | null;
+    if (sl) sl.value = String(z);
     if (plano !== "xy") {
       decir(`Plano ${plano.toUpperCase()} a ${letraDist()} = ${z.toFixed(2)} m. Lo que dibujes cae ahi.`);
       refrescar();
@@ -521,7 +525,57 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       ? `Quitada la grilla auxiliar ${plano.toUpperCase()} de ${L} = ${d.toFixed(2)} m. Quedan ${lista.length}.`
       : `Grilla auxiliar ${plano.toUpperCase()} en ${L} = ${d.toFixed(2)} m. Ya puedes engancharte ahi desde cualquier vista.`);
   });
-  filaZ.append(inCotaZ, bGrillaAux, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  // ── El SLIDER: colocar la grilla arrastrando, no escribiendo ──────────────
+  //
+  // Jorge (16-sep-2026): «lo que me interesa es cómo posiciono la grilla auxiliar,
+  // o con un slider puede ser». Escribir 3.20 exige saber ya la cota; arrastrando se
+  // BUSCA: la rejilla se mueve con el dedo y se ve dónde cae respecto de lo dibujado,
+  // que es como se coloca un plano de referencia en Revit.
+  //
+  // Rango −10 … 50 m con paso 0.1, el mismo del mando «Cota Z» del panel, para que los
+  // dos digan lo mismo. La casilla y el slider van atados: mueves uno y el otro sigue.
+  const slider = document.createElement("input");
+  // Rango −5 … 25 m y paso 0.25: con −10 … 50 en 104 px cada píxel valía 0.58 m
+  // (medido: 6 px de arrastre = 4 m), o sea imposible de colocar. Con esto un píxel
+  // son 29 cm, las flechas del teclado dan el paso fino y la casilla, el valor exacto.
+  slider.type = "range"; slider.min = "-5"; slider.max = "25"; slider.step = "0.25"; slider.value = "0";
+  slider.id = "hk-dist-slider";
+  slider.title = "Arrastra para colocar el plano (y su grilla) a ojo; la casilla de al lado dice la distancia exacta";
+  slider.style.cssText = "width:104px;height:26px;cursor:ew-resize;accent-color:#22d3ee;";
+  const aplicarDist = (d: number, avisar = true) => {
+    if (!isFinite(d)) return;
+    const st = (window as any).__hekatanCadState?.get?.();
+    const plano = planoActual();
+    if (st) (st as any)[claveDist()] = d;
+    hooks.setPlane(plano);
+    inCotaZ.value = String(+d.toFixed(2));
+    slider.value = String(d);
+    if (avisar) decir(`Plano ${plano.toUpperCase()} en ${letraDist()} = ${d.toFixed(2)} m` +
+      ` — ▦+ deja la grilla puesta ahi.`);
+  };
+  // `input` = mientras se arrastra: la rejilla se mueve en vivo, que es el punto.
+  slider.addEventListener("input", () => aplicarDist(parseFloat(slider.value), false));
+  slider.addEventListener("change", () => aplicarDist(parseFloat(slider.value)));
+  (window as any).__hekatanPonerDistanciaPlano = (d: number) => aplicarDist(d);
+  // Y el tercer camino, el de AutoCAD: COGER la grilla con el cursor y moverla
+  // paralela a sí misma, con el recuadro de distancia junto al cursor. La casilla es
+  // para el valor exacto, el slider para buscar a ojo, y esto para colocarla mirando
+  // el modelo. Los tres escriben la misma distancia.
+  const bMover = document.createElement("button");
+  bMover.type = "button";
+  bMover.textContent = "↕";
+  bMover.title = "Mover la grilla con el cursor: se desplaza paralela a si misma; " +
+    "teclea la distancia y Enter para dejarla exacta, Esc cancela";
+  bMover.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  bMover.addEventListener("click", () => {
+    const w = window as any;
+    if (!w.__hekatanMoverGrilla) { decir("El visor todavia no permite mover la grilla."); return; }
+    w.__hekatanMoverGrilla(true);
+    decir(`Mueve el raton: la grilla ${planoActual().toUpperCase()} se desplaza paralela. ` +
+      "Teclea la distancia + Enter para dejarla exacta · clic la fija · Esc cancela.");
+  });
+  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
   rotZ.id = "hk-dist-rotulo";
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";

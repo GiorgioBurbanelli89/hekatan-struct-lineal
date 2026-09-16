@@ -3980,6 +3980,118 @@ export function drawing({
     (window as any).__hekatanRefrescarGrillas?.();
     return quedan.map((l) => l.z);
   };
+  // ── MOVER LA GRILLA CON EL CURSOR, COMO SE MUEVE UNA LÍNEA EN AUTOCAD ─────
+  //
+  // Jorge (16-sep-2026): «o con el teclado, así como el cursor: selecciono la grilla
+  // y me desplaza, va a hacer paralelo perpendicularmente a una distancia que elija,
+  // en un recuadro para colocar la distancia».
+  //
+  // Es el DESPLAZA de AutoCAD con entrada directa de distancia: la grilla se mueve
+  // PARALELA A SÍ MISMA (solo en su normal: Z en planta, Y en alzado frontal, X en
+  // el lateral), el recuadro junto al cursor dice cuánto llevas, y si tecleas un
+  // número + Enter va exactamente a esa distancia.
+  //
+  // El cálculo no es «dónde corta el rayo» —el plano se mueve con él y no habría
+  // solución—, sino el punto del EJE normal más cercano al rayo del cursor: la
+  // distancia mínima entre dos rectas. Si el eje apunta casi a la cámara (mirando la
+  // planta desde arriba) las dos rectas son paralelas y no hay nada que resolver: ahí
+  // se avisa en vez de dar un salto sin sentido, igual que AutoCAD no deja mover en
+  // la dirección de la vista.
+  const cajaDist = document.createElement("input");
+  cajaDist.id = "hk-grid-dist";
+  cajaDist.type = "text"; cajaDist.spellcheck = false;
+  cajaDist.title = "Distancia del plano. Teclea un número y Enter para colocarlo exacto; Esc cancela.";
+  cajaDist.style.cssText = [
+    "position:fixed", "z-index:99997", "pointer-events:none", "display:none",
+    "padding:3px 8px", "background:rgba(15,23,42,.94)", "color:#22d3ee",
+    "border:1.5px solid #22d3ee", "border-radius:4px", "width:104px", "text-align:center",
+    "font:bold 13px Consolas,monospace", "transform:translate(14px,-28px)", "outline:none",
+  ].join(";") + ";";
+  document.body.appendChild(cajaDist);
+
+  let moviendoGrilla = false;
+  let distInicial = 0;
+  let tecleado = "";
+  const normalDe = (wp: string): THREE.Vector3 =>
+    wp === "xz" ? new THREE.Vector3(0, 1, 0) : wp === "yz" ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+  const claveDe = (wp: string) => (wp === "xz" ? "workY" : wp === "yz" ? "workX" : "workZ");
+  const planoActualW = () => String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+  const distActual = () => Number((window as any).__hekatanCadState?.get?.()?.[claveDe(planoActualW())] ?? 0);
+  const colocarPlano = (d: number) => {
+    const wp = planoActualW();
+    const st = (window as any).__hekatanCadState?.get?.();
+    if (st) (st as any)[claveDe(wp)] = d;
+    if (!drawingObj.gridTarget) return;
+    drawingObj.gridTarget.val = wp === "xy" ? { position: [0, 0, d], rotation: [Math.PI / 2, 0, 0] }
+                             : wp === "xz" ? { position: [0, d, 0], rotation: [0, 0, 0] }
+                             : { position: [d, 0, 0], rotation: [0, 0, Math.PI / 2] };
+  };
+  /** Distancia sobre el eje normal del punto del eje más próximo al rayo del cursor. */
+  const distanciaBajoCursor = (): number | null => {
+    const n = normalDe(planoActualW());
+    const ro = raycaster.ray.origin, rd = raycaster.ray.direction;
+    const b = n.dot(rd);
+    const den = 1 - b * b;                       // a·c − b² con a = c = 1 (unitarios)
+    if (Math.abs(den) < 1e-4) return null;       // el eje apunta a la cámara
+    const w0 = ro.clone().negate();              // origen del eje en (0,0,0)
+    const d0 = n.dot(w0), e0 = rd.dot(w0);
+    return (b * e0 - d0) / den;
+  };
+  const pintarCaja = (ev: { clientX: number; clientY: number } | null, d: number) => {
+    if (ev) { cajaDist.style.left = ev.clientX + "px"; cajaDist.style.top = ev.clientY + "px"; }
+    const L = planoActualW() === "xz" ? "Y" : planoActualW() === "yz" ? "X" : "Z";
+    cajaDist.value = tecleado !== "" ? `${L} = ${tecleado}` : `${L} = ${d.toFixed(2)} m`;
+    cajaDist.style.display = "block";
+  };
+  const terminarMover = (aplicar: boolean, d?: number) => {
+    if (!moviendoGrilla) return;
+    moviendoGrilla = false;
+    (window as any).__hekatanMoviendoGrilla = false;
+    cajaDist.style.display = "none";
+    if (!aplicar) colocarPlano(distInicial);
+    else if (typeof d === "number" && isFinite(d)) colocarPlano(d);
+    tecleado = "";
+    (window as any).__hekatanRefrescarGrillas?.();
+    viewerRender();
+  };
+  (window as any).__hekatanMoverGrilla = (on = true) => {
+    if (!on) return terminarMover(false);
+    distInicial = distActual(); tecleado = "";
+    moviendoGrilla = true;
+    (window as any).__hekatanMoviendoGrilla = true;
+    pintarCaja(null, distInicial);
+    return true;
+  };
+  rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
+    if (!moviendoGrilla) return;
+    setPointerFromEvent(ev);
+    const d = distanciaBajoCursor();
+    if (d === null) { pintarCaja(ev, distActual()); return; }
+    if (tecleado === "") colocarPlano(d);
+    pintarCaja(ev, d);
+  }, true);
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!moviendoGrilla) return;
+    ev.preventDefault(); ev.stopPropagation();
+    terminarMover(true, tecleado !== "" ? parseFloat(tecleado) : distActual());
+  }, true);
+  window.addEventListener("keydown", (ev: KeyboardEvent) => {
+    if (!moviendoGrilla) return;
+    if (ev.key === "Escape") { ev.preventDefault(); return terminarMover(false); }
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      return terminarMover(true, tecleado !== "" ? parseFloat(tecleado) : distActual());
+    }
+    if (ev.key === "Backspace") { ev.preventDefault(); tecleado = tecleado.slice(0, -1); pintarCaja(null, distActual()); return; }
+    if (/^[0-9.\-]$/.test(ev.key)) {
+      ev.preventDefault();
+      tecleado += ev.key;
+      const v = parseFloat(tecleado);
+      if (isFinite(v)) colocarPlano(v);              // se ve ir al sitio mientras tecleas
+      pintarCaja(null, isFinite(v) ? v : distActual());
+    }
+  }, true);
+
   (window as any).__hekatanRefrescarGrillas = () => {
     if (!drawingObj.gridTarget) return;
     const rot = drawingObj.gridTarget.rawVal.rotation;
