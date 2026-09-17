@@ -56,6 +56,23 @@ function partir(v: number[], ms: number): number[] {
   return out;
 }
 
+/**
+ * Mete cortes OBLIGATORIOS en una lista de ordenadas y quita los repetidos.
+ * Sirve para que la malla pase por el CONTORNO de la columna: sin esos cortes, una
+ * columna de 0.40 m dentro de una malla de 0.50 m no tiene ni un nudo propio y su
+ * carga acaba entrando por el nudo del eje — la singularidad que se quería evitar.
+ * Es el «cookie-cut» que hace ETABS al mallar un paño con una línea encima.
+ */
+function conCortes(v: number[], cortes: number[], tol = 1e-6): number[] {
+  const out = [...v];
+  for (const c of cortes) {
+    if (c < v[0] - tol || c > v[v.length - 1] + tol) continue;      // fuera del paño
+    if (out.some((q) => Math.abs(q - c) < tol)) continue;
+    out.push(c);
+  }
+  return out.sort((a, b) => a - b);
+}
+
 export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
   const X = rejilla(p.nx, p.sx), Y = rejilla(p.ny, p.sy);
   const E = (p.Ec ?? 2.2e7) as number, nu = 0.2, rho = 2.4;
@@ -111,8 +128,11 @@ export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
     // columnas de esquina, o sea la carga en el BORDE. Eso no es un modelo, es una
     // singularidad — y en obra tampoco se hace: el cimiento siempre sobresale.
     const vol = Math.max(0.5, p.volCim ?? 1.0);
-    const xs = partir([X[0] - vol, ...X, X[X.length - 1] + vol], ms);
-    const ys = partir([Y[0] - vol, ...Y, Y[Y.length - 1] + vol], ms);
+    const bc = p.bcol ?? 0.40;
+    const xs = conCortes(partir([X[0] - vol, ...X, X[X.length - 1] + vol], ms),
+                         X.flatMap((x) => [x - bc / 2, x + bc / 2]));
+    const ys = conCortes(partir([Y[0] - vol, ...Y, Y[Y.length - 1] + vol], ms),
+                         Y.flatMap((y) => [y - bc / 2, y + bc / 2]));
     const id: number[][] = ys.map((y) => xs.map((x) => nudo(x, y, 0)));
     for (let j = 0; j < ys.length - 1; j++)
       for (let i = 0; i < xs.length - 1; i++)
@@ -121,8 +141,9 @@ export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
     for (const y of Y) for (const x of X) centros.push(nudo(x, y, 0));
   } else {
     for (const y of Y) for (const x of X) {
-      const xs = partir([x - B / 2, x, x + B / 2], ms);
-      const ys = partir([y - B / 2, y, y + B / 2], ms);
+      const bc = p.bcol ?? 0.40;
+      const xs = conCortes(partir([x - B / 2, x, x + B / 2], ms), [x - bc / 2, x + bc / 2]);
+      const ys = conCortes(partir([y - B / 2, y, y + B / 2], ms), [y - bc / 2, y + bc / 2]);
       const id: number[][] = ys.map((yy) => xs.map((xx) => nudo(xx, yy, 0)));
       for (let j = 0; j < ys.length - 1; j++)
         for (let i = 0; i < xs.length - 1; i++)
