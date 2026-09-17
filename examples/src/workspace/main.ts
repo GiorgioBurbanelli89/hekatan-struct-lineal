@@ -7819,6 +7819,57 @@ try {
         return;
       }
     }
+    // ── CERCHA CURVA de una orden ───────────────────────────────────────────
+    //
+    //   CERCHA luz 20 flecha 2.5 canto 0.6 panos 10 tipo warren
+    //          [base 6.5] [x0 0] [y0 0] [copias 4] [sep 6] [correas]
+    //
+    // Los pares van en cualquier orden. `copias` + `sep` la repiten en Y y
+    // `correas` ata los cordones de arriba: ahí deja de ser un dibujo plano y
+    // pasa a ser una cubierta espacial.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if (c0 === "cercha" || c0 === "cerchacurva" || c0 === "truss") {
+        const kv: Record<string, string> = {};
+        for (let i = 1; i < P.length; i++) {
+          const k = P[i].toLowerCase();
+          if (k === "correas" || k === "correa") { kv.correas = "1"; continue; }
+          if (i + 1 < P.length) { kv[k] = P[i + 1]; i++; }
+        }
+        const num = (k: string, d?: number) => {
+          const v = kv[k]; if (v === undefined) return d;
+          const q = Number(v.replace(",", ".")); return isFinite(q) ? q : d;
+        };
+        const luz = num("luz") ?? num("l"), flecha = num("flecha") ?? num("f");
+        const canto = num("canto") ?? num("h") ?? 0.6;
+        const panos = num("panos") ?? num("paños") ?? num("n") ?? 10;
+        if (luz === undefined || flecha === undefined) {
+          flash("✕ CERCHA: hacen falta al menos «luz» y «flecha». " +
+                "Ej: CERCHA luz 20 flecha 2.5 canto 0.6 panos 10 tipo warren", false);
+          return;
+        }
+        const tipoTxt = (kv.tipo ?? "montantes").toLowerCase();
+        const tipo = tipoTxt.startsWith("w") ? "warren" : tipoTxt.startsWith("h") ? "howe" : "montantes";
+        const r = (window as any).__hekatanDrawCercha?.({
+          luz, flecha, canto, panos, tipo,
+          x0: num("x0") ?? 0, y0: num("y0") ?? 0, base: num("base") ?? 0,
+          copias: num("copias") ?? 1, sep: num("sep") ?? 0, correas: !!kv.correas,
+        });
+        if (!r?.ok) { flash(`✕ CERCHA: ${r?.msg ?? "no se pudo trazar"}`, false); return; }
+        // Las cotas, cantadas: lo que se dibuja se tiene que poder leer.
+        echo(`⌂ CERCHA ${r.tipo} · luz ${r.luz} m · flecha ${r.flecha} m · canto ${r.canto} m · ` +
+             `${r.panos} paños${r.cerchas > 1 ? ` · ${r.cerchas} cerchas a ${r.separacion} m` : ""}`);
+        echo(`   radio ${r.radio} m · ángulo abarcado ${r.anguloAbarcado}° · clave a ${r.clave} m · ` +
+             `centro (${r.centro.join(", ")})`);
+        echo(`   desarrollo del cordón: arriba ${r.desarrolloSup} m, abajo ${r.desarrolloInf} m`);
+        echo(`   tramo arriba ${r.tramoSupMin}–${r.tramoSupMax} m · abajo ${r.tramoInfMin}–${r.tramoInfMax} m · ` +
+             `diagonales de ${r.anguloDiagMin}° a ${r.anguloDiagMax}°`);
+        echo(`   ${r.nudosNuevos} nudos · ${r.montantes} montantes · ${r.diagonales} diagonales`);
+        flash("✓ cercha dibujada", true);
+        return;
+      }
+    }
     {
       const partes = raw.trim().split(/\s+/);
       const c0 = partes[0].toLowerCase();

@@ -2270,6 +2270,113 @@ export function drawing({
       drawingObj.polylines.val = [...polys.slice(0, -1), arcPoly, []];
     }
   };
+  // ── CERCHA CURVA, de una orden ──────────────────────────────────────────
+  //
+  // Dibujar una cercha curva a mano es inviable: la que se trazó en el deploy el
+  // 17-sep-2026 costó 31 coordenadas tecleadas —11 del cordón de arriba, 11 del de
+  // abajo y 9 montantes—, y todas salieron de calcular la parábola FUERA del
+  // programa. Eso no es dibujar acotado. Aquí la cercha se da como viene en un
+  // plano de taller: luz, flecha, canto, número de paños y tipo de celosía.
+  //
+  // Los dos cordones son CONCÉNTRICOS (R y R − canto) y se parten con los MISMOS
+  // ángulos, así el canto es constante y medido perpendicular al arco, que es como
+  // se fabrica. Los montantes salen entonces radiales, no verticales.
+  //
+  //     R = (L²/4 + f²) / (2f)      θ = 2·asen((L/2)/R)      centro a R − f del arranque
+  //
+  // Devuelve las medidas para poder ACOTARLAS: no se dibuja nada cuyas cotas no se
+  // puedan leer después.
+  (window as any).__hekatanDrawCercha = (o: {
+    luz: number; flecha: number; canto: number; panos: number;
+    tipo?: "montantes" | "warren" | "howe";
+    x0?: number; y0?: number; base?: number; copias?: number; sep?: number; correas?: boolean;
+  }) => {
+    const L = o.luz, f = o.flecha, h = o.canto;
+    const n = Math.max(2, Math.round(o.panos));
+    const tipo = o.tipo ?? "montantes";
+    const x0 = o.x0 ?? 0, y0 = o.y0 ?? 0, base = o.base ?? 0;
+    const copias = Math.max(1, Math.round(o.copias ?? 1)), sep = o.sep ?? 0;
+    if (!(L > 0) || !(f > 0) || !(h > 0)) return { ok: false, msg: "luz, flecha y canto tienen que ser positivos" };
+    const R = (L * L / 4 + f * f) / (2 * f);
+    if (h >= R) return { ok: false, msg: `el canto (${h} m) no puede llegar al radio (${R.toFixed(3)} m)` };
+    const th = 2 * Math.asin(Math.min(1, (L / 2) / R));          // ángulo abarcado
+    const zc = base - (R - f);                                    // centro del arco
+    const a0 = Math.atan2(base - zc, x0 - (x0 + L / 2));          // ángulo del arranque izquierdo
+    const a1 = Math.atan2(base - zc, x0 + L - (x0 + L / 2));      // …y del derecho
+    const xc = x0 + L / 2;
+    const enArco = (ang: number, r: number, y: number): [number, number, number] =>
+      [xc + r * Math.cos(ang), y, zc + r * Math.sin(ang)];
+
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...drawingObj.points.rawVal] as [number, number, number][];
+    const polys = [...(drawingObj.polylines?.rawVal ?? [])] as number[][];
+    if (polys.length && polys[polys.length - 1].length === 0) polys.pop();
+    const meter = (p: [number, number, number]) => { pts.push(p); return pts.length - 1; };
+    const barra = (a: number, b: number) => { polys.push([a, b]); };
+
+    const supPorCercha: number[][] = [];
+    let nDiag = 0, nMont = 0;
+    for (let c = 0; c < copias; c++) {
+      const y = y0 + c * sep;
+      const sup: number[] = [], inf: number[] = [];
+      for (let i = 0; i <= n; i++) {
+        const ang = a0 + (a1 - a0) * (i / n);
+        sup.push(meter(enArco(ang, R, y)));
+        inf.push(meter(enArco(ang, R - h, y)));
+      }
+      supPorCercha.push(sup);
+      polys.push([...sup]);            // cordón superior, de una polilínea
+      polys.push([...inf]);            // cordón inferior
+      // Celosía. Los extremos SIEMPRE llevan su montante: es el cierre de la cercha.
+      barra(sup[0], inf[0]); barra(sup[n], inf[n]); nMont += 2;
+      for (let i = 1; i < n; i++) {
+        if (tipo === "montantes" || tipo === "howe") { barra(sup[i], inf[i]); nMont++; }
+        if (tipo === "warren") {                       // zigzag sin montantes intermedios
+          if (i % 2 === 1) { barra(inf[i - 1], sup[i]); barra(sup[i], inf[i + 1]); nDiag += 2; }
+        } else if (tipo === "howe") {                  // diagonales hacia la clave
+          const haciaClave = i < n / 2 ? 1 : -1;
+          barra(inf[i], sup[i + haciaClave]); nDiag++;
+        }
+      }
+    }
+    // Correas: atan los cordones superiores de cerchas consecutivas (la cercha
+    // suelta es un mecanismo fuera de su plano; esto la hace espacial de verdad).
+    if (o.correas && copias > 1) {
+      for (let c = 0; c + 1 < copias; c++)
+        for (let i = 0; i <= n; i++) barra(supPorCercha[c][i], supPorCercha[c + 1][i]);
+    }
+    polys.push([]);                    // marca de «trazo terminado»
+    drawingObj.points.val = pts;
+    if (drawingObj.polylines) drawingObj.polylines.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+
+    // ── Las cotas, para poder acotar lo dibujado ──
+    const P = (i: number, r: number) => enArco(a0 + (a1 - a0) * (i / n), r, 0);
+    const dist = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+    const lSup: number[] = [], lInf: number[] = [], angDiag: number[] = [];
+    for (let i = 0; i < n; i++) {
+      lSup.push(dist(P(i, R), P(i + 1, R)));
+      lInf.push(dist(P(i, R - h), P(i + 1, R - h)));
+      const d = [P(i + 1, R)[0] - P(i, R - h)[0], 0, P(i + 1, R)[2] - P(i, R - h)[2]];
+      angDiag.push(Math.atan2(d[2], d[0]) * 180 / Math.PI);
+    }
+    const r3 = (v: number) => +v.toFixed(3);
+    return {
+      ok: true,
+      luz: r3(L), flecha: r3(f), canto: r3(h), radio: r3(R),
+      anguloAbarcado: r3(th * 180 / Math.PI),
+      clave: r3(base + f), centro: [r3(xc), r3(y0), r3(zc)],
+      panos: n, tipo, cerchas: copias, separacion: r3(sep),
+      desarrolloSup: r3(R * th), desarrolloInf: r3((R - h) * th),
+      tramoSupMin: r3(Math.min(...lSup)), tramoSupMax: r3(Math.max(...lSup)),
+      tramoInfMin: r3(Math.min(...lInf)), tramoInfMax: r3(Math.max(...lInf)),
+      anguloDiagMin: r3(Math.min(...angDiag)), anguloDiagMax: r3(Math.max(...angDiag)),
+      montantes: nMont, diagonales: nDiag,
+      nudosNuevos: 2 * (n + 1) * copias,
+    };
+  };
+
   // ── Curva POLINÓMICA por k puntos (parábola: 3, cúbica: 4) ──
   // Desafío 2D de Jorge (13-sep-2026): «un círculo, un arco, una parábola, una
   // parábola de 3er grado, todo con el mouse». Los k puntos van en el plano de
