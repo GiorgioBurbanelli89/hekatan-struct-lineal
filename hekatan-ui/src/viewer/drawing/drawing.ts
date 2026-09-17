@@ -3791,25 +3791,65 @@ export function drawing({
         // ── ORTO mode (F8) ── auto-detecta el eje dominante si está activo.
         const orthoOn = !!(window as any).__hekatanOrthoMode;
         if (!effectiveLock && !enganchadoAObjeto && orthoOn) {
-          const dx = Math.abs(p.x - lastPt[0]);
-          const dy = Math.abs(p.y - lastPt[1]);
-          const dz = Math.abs(p.z - lastPt[2]);
-          // Detectar plano hover desde la intersección actual (igual que
-          // refPlaneBadge calcula más abajo). El plano hover restringe ORTO
-          // a solo los 2 ejes del plano.
-          const hoveredObj = hit[0]?.object;
-          let hoveredPlane: "xy" | "xz" | "yz" | null = null;
-          if (hoveredObj === refFillXY) hoveredPlane = "xy";
-          else if (hoveredObj === refFillXZ) hoveredPlane = "xz";
-          else if (hoveredObj === refFillYZ) hoveredPlane = "yz";
-          if (hoveredPlane === "xy") {
-            effectiveLock = dx >= dy ? "x" : "y";
-          } else if (hoveredPlane === "xz") {
-            effectiveLock = dx >= dz ? "x" : "z";
-          } else if (hoveredPlane === "yz") {
-            effectiveLock = dy >= dz ? "y" : "z";
-          } else {
-            effectiveLock = dx >= dy && dx >= dz ? "x" : (dy >= dz ? "y" : "z");
+          // ── ORTO EN 3D: el eje se elige POR LA PANTALLA ────────────────────
+          //
+          // ⚠️ Antes se comparaban dx, dy y dz del punto, y ese punto sale del
+          // rayo contra el PLANO DE TRABAJO: con el plano XY, dz vale siempre 0
+          // y el eje Z no podía ganar NUNCA. Medido en el deploy el 17-sep-2026
+          // en isométrica: arrastrando el ratón hacia arriba enganchaba «⊥ ORTO
+          // Y». O sea que con el ratón no se podía subir en vertical sin
+          // cambiar de plano de trabajo. Jorge: «quiero ver si se puede dibujar
+          // en 3D sin usar planos de referencia, los siguientes serían ortho F8».
+          //
+          // Ahora se mira hacia dónde va el ratón EN PÍXELES y se compara con
+          // los tres ejes del mundo proyectados a pantalla desde el último
+          // punto: gana aquel cuya dirección en pantalla se parece más. Luego
+          // el punto se calcula sobre la recta 3D de ese eje, por el punto más
+          // cercano al rayo de la cámara — la misma cuenta que ya usa el
+          // enganche a ejes de aquí arriba. Así el ORTO da X, Y **y Z** en
+          // cualquier vista, que es lo que hace AutoCAD en isométrica.
+          const rectO = rendererElm.getBoundingClientRect();
+          const P0o = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
+          const aPantalla = (v: THREE.Vector3) => {
+            const c = v.clone().project(_camForRay);
+            return { x: (c.x * 0.5 + 0.5) * rectO.width + rectO.left,
+                     y: (-c.y * 0.5 + 0.5) * rectO.height + rectO.top };
+          };
+          const oS = aPantalla(P0o);
+          const mvx = event.clientX - oS.x, mvy = event.clientY - oS.y;
+          const largo = Math.hypot(mvx, mvy);
+          const ejes3D: Array<["x" | "y" | "z", THREE.Vector3]> = [
+            ["x", new THREE.Vector3(1, 0, 0)],
+            ["y", new THREE.Vector3(0, 1, 0)],
+            ["z", new THREE.Vector3(0, 0, 1)],
+          ];
+          // Un eje casi paralelo a la vista sale como un punto en pantalla y no
+          // se puede distinguir: se descarta en vez de dar un enganche falso.
+          const esc = Math.max(1, (settings.gridSize?.rawVal ?? 10)) * 0.5;
+          if (largo > 4) {
+            let mejor: { axis: "x" | "y" | "z"; cos: number; u: THREE.Vector3 } | null = null;
+            for (const [axis, u] of ejes3D) {
+              const eS = aPantalla(P0o.clone().addScaledVector(u, esc));
+              const ex = eS.x - oS.x, ey = eS.y - oS.y;
+              const le = Math.hypot(ex, ey);
+              if (le < 6) continue;                       // eje de punta a la cámara
+              const cos = Math.abs((mvx * ex + mvy * ey) / (largo * le));
+              if (!mejor || cos > mejor.cos) mejor = { axis, cos, u };
+            }
+            if (mejor) {
+              effectiveLock = mejor.axis;
+              // Punto de la recta 3D más cercano al rayo de la cámara.
+              const ray = raycaster.ray;
+              const w0 = P0o.clone().sub(ray.origin);
+              const b = mejor.u.dot(ray.direction), d_ = mejor.u.dot(w0), e2 = ray.direction.dot(w0);
+              const den = 1 - b * b;
+              const s = Math.abs(den) < 1e-6 ? -d_ : (b * e2 - d_) / den;
+              const q = P0o.clone().addScaledVector(mejor.u, s);
+              if (isFinite(q.x) && isFinite(q.y) && isFinite(q.z)) {
+                p.copy(q);
+                _axisSnapPoint = q.clone();               // el clic confirma AQUÍ
+              }
+            }
           }
         }
         // ── POLAR TRACKING automático (estilo AutoCAD) ──
