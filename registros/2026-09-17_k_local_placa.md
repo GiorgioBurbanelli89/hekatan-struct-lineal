@@ -42,3 +42,51 @@ Jorge: «nos falta la matriz de rigidez local de placas y barras, qué sugieres�
 - Plantillas: **no hay cimentación** y **no hay parrilla 3D**; revisar una a una el
   arriostramiento.
 - Deploy público de esto.
+
+---
+
+# Plantilla de CIMENTACIÓN — 17-sep-2026
+
+Jorge: «en plantillas también falta cimentaciones» · «no hay plantilla de cimentación todavía».
+
+## ✅ Funcionó
+
+- `examples/src/plantillas/cimentacion.ts`, tipo **8** de la plantilla. Dos tipologías sobre
+  la misma rejilla de ejes: **zapatas aisladas + vigas de amarre** (con pedestal y carga de
+  columna) y **losa de cimentación** con vuelo.
+- El suelo son **muelles de Winkler, no apoyos**, con el patrón de `zapata-aislada` (validado
+  contra SAFE): `kv = ks·A_trib`, `kh = ks/2·A`, y tres muelles de giro minúsculos en un nudo
+  para quitar el último sólido rígido.
+- **El equilibrio cierra**: ΣR del terreno = ΣP aplicada = 3600.0 kN en las tres variantes.
+  Ése es el test que vale; si los muelles no recogen la carga, lo demás sobra.
+- La opción aparece sola en «📐 Nuevo modelo · Plantillas»: ese menú se construye leyendo
+  `params.tipo.options`, no con una lista aparte.
+- `node cli/_plantilla_cimentacion.mjs` — 10/10.
+
+## La pregunta de Jorge: ¿Thin o Thick en una zapata?
+
+Medido en el `.f2k` que **escribió SAFE** (`validation/04-cimentaciones-safe/zapata-aislada`):
+su propiedad de zapata de fábrica es
+
+```
+Name=Footing1   "Modeling Type"=Shell-Thin   "Property Type"=Footing
+```
+
+O sea: **SAFE pone Shell-Thin en una zapata**, igual que en `Slab1`, `Wall1` y `Stiff1`. Por eso
+el defecto de la plantilla es Thin — Hekatan copia a CSI — y Thick queda como opción (`zapForm`).
+
+Lo que cuesta, con la MISMA malla (9 zapatas, 144 paños): asiento máx **Thin −5.162 mm ·
+Thick −5.201 mm = 0.75 %**. En el ASIENTO casi da igual, porque manda el muelle del suelo, no la
+placa. Donde va a doler es en el CORTANTE (punzonamiento), que es justo lo que Kirchhoff no tiene.
+⏳ Falta medirlo: comparar V13/V23 entre las dos y contra SAFE.
+
+## ❌ No funcionó (y por qué)
+
+- **La rama no entró en el bundle**: el parche de `build()` se hizo con `\n` y el fichero tiene
+  `\r\n`, así que el `replace` no encontró nada y **no dijo nada**. El desplegable sí mostraba la
+  opción (ese parche era de una línea) y el modelo salía siendo un pórtico 3D. Lo cazó el test al
+  ver `0 paños · 0 muelles`.
+- **La malla se duplicaba sola**: el deslizador entrega `ms = 0.49999999999999994` y
+  `ceil(1.0/0.4999…) = 3` donde toca 2 — dos corridas con el mismo `ms` salían con 324 y 144
+  paños. Con eso, comparar Thin contra Thick medía la malla, no la formulación. Arreglado con
+  una tolerancia de 1e-9.

@@ -47,6 +47,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { construirCimentacion } from "./cimentacion";
 
 const G = 9.80665;
 
@@ -58,6 +59,7 @@ const T_SOLO_REJILLA = 3;
 const T_LOSA_PLANA = 4;
 const T_LOSA_VIGAS_BORDE = 5;
 const T_DUAL = 6;              // pórtico + losa + MUROS de corte
+const T_CIMENTACION = 8;       // zapatas aisladas / losa de cimentación sobre Winkler
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
                                // [Concentric]` de SAP2000, leído del binario
 
@@ -139,9 +141,34 @@ const PARAMS = {
       "▣ Losa con vigas de borde": T_LOSA_VIGAS_BORDE,
       "🧱🧱 Pórtico + losa + muros (dual)": T_DUAL,
       "⟋ Pórtico arriostrado (CBF)": T_ARRIOSTRADO,
+      "⬓ Cimentación (zapatas / losa) sobre Winkler": T_CIMENTACION,
     },
     label: "Plantilla",
   },
+
+  // ── Cimentación (solo en la plantilla ⬓ Cimentación) ─────────────────────
+  cimTipo: {
+    default: 0, min: 0, max: 1, step: 1,
+    options: { "▣ Zapatas aisladas + vigas de amarre": 0, "▬ Losa de cimentación (mat)": 1 },
+    label: "Tipo de cimiento", folder: "⬓ Cimentación",
+  },
+  // ⚠️ El DEFECTO es Shell-Thin porque es lo que pone SAFE: su propiedad de
+  // zapata de fábrica (`Footing1`) sale con «Modeling Type = Shell-Thin» en el
+  // .f2k que escribe él mismo (validation/04-cimentaciones-safe/zapata-aislada).
+  // Hekatan copia a CSI; quien quiera el cortante de Mindlin lo cambia aquí.
+  zapForm: {
+    default: 1, min: 0, max: 1, step: 1,
+    options: { "Shell-Thin (lo que pone SAFE)": 1, "Shell-Thick (Mindlin)": 0 },
+    label: "Formulación del cimiento", folder: "⬓ Cimentación",
+  },
+  zapB: { default: 2.0, min: 0.6, max: 6, step: 0.1, label: "lado de zapata B (m)", folder: "⬓ Cimentación" },
+  zapH: { default: 0.45, min: 0.15, max: 1.5, step: 0.05, label: "canto de zapata (m)", folder: "⬓ Cimentación" },
+  losaH: { default: 0.50, min: 0.2, max: 2, step: 0.05, label: "canto de la losa mat (m)", folder: "⬓ Cimentación" },
+  ks: { default: 20000, min: 1000, max: 200000, step: 1000, label: "balasto ks (kN/m³)", folder: "⬓ Cimentación" },
+  Pcol: { default: 400, min: 10, max: 5000, step: 10, label: "carga por columna P (kN)", folder: "⬓ Cimentación" },
+  hped: { default: 0.8, min: 0.2, max: 3, step: 0.1, label: "altura del pedestal (m)", folder: "⬓ Cimentación" },
+  bva: { default: 0.30, min: 0.15, max: 0.8, step: 0.05, label: "viga de amarre, base (m)", folder: "⬓ Cimentación" },
+  hva: { default: 0.40, min: 0.2, max: 1.2, step: 0.05, label: "viga de amarre, canto (m)", folder: "⬓ Cimentación" },
 
   // ── Rejilla en planta — el «Grid Dimensions (Plan)» de ETABS ──────────────
   nx: { default: 4, min: 2, max: 12, step: 1, label: "líneas en X", folder: "📐 Rejilla (planta)" },
@@ -361,6 +388,9 @@ export const plantillas: ExampleDef = {
 
   build(p, states) {
     const tipo = Math.round(p.tipo);
+    // La cimentacion no comparte nada con el edificio (ni pisos, ni diafragma, ni
+    // apoyos: el suelo son MUELLES). Se arma aparte y se sale.
+    if (tipo === T_CIMENTACION) return construirCimentacion(p, states);
     const X = ejes((p as any).ejesX, p.nx, p.sx);
     const Y = tipo === T_PORTICO_2D ? [0] : ejes((p as any).ejesY, p.ny, p.sy);
     const Z = niveles((p as any).alturas, p.pisos, p.h, p.h1);
