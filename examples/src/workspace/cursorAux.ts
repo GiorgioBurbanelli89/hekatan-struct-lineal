@@ -206,7 +206,13 @@ export function cursorAux(encender = true): void {
     await espera(40);            // que al visor le dé tiempo a recalcular el punto
   };
 
+  // El píxel del último clic: es el origen de las medidas relativas de
+  // `aMedida`. Se guarda en PÍXELES a propósito — el simulador no sabe ni tiene
+  // por qué saber en qué coordenada del modelo cayó; eso lo dice la pantalla.
+  let ultimoClic: [number, number] | null = null;
+
   const pulsar = async (boton = 0, veces = 1) => {
+    ultimoClic = [px, py];
     for (let k = 1; k <= veces; k++) {
       const com = { button: boton, buttons: boton === 2 ? 2 : 1, detail: k };
       ev("pointerdown", px, py, com);
@@ -222,7 +228,7 @@ export function cursorAux(encender = true): void {
     await espera(120);
   };
 
-  const raton = {
+  const raton: any = {
     get velocidad() { return velocidad; },
     set velocidad(v: number) { velocidad = Math.max(0, +v || 0); },
 
@@ -333,6 +339,122 @@ export function cursorAux(encender = true): void {
         await espera(o.pausa ?? 220);
       }
       return hechos;
+    },
+
+    /**
+     * Lo que la PANTALLA está diciendo ahora mismo: la cota viva, el ángulo y
+     * la referencia enganchada. Es lo único que mira `aMedida`, igual que mira
+     * una persona mientras dibuja.
+     */
+    lee() {
+      const n = (s: string | null | undefined) => {
+        const m = /(-?\d+(?:\.\d+)?)/.exec(s ?? "");
+        return m ? parseFloat(m[1]) : null;
+      };
+      const cota = document.getElementById("hk-rubber-label") as HTMLInputElement | null;
+      const ang = document.getElementById("hk-rubber-angle");
+      const osn = document.getElementById("hk-osnap-etiqueta");
+      const visible = (e: Element | null) =>
+        !!e && getComputedStyle(e).display !== "none" && (e as HTMLElement).offsetParent !== null;
+      return {
+        distancia: visible(cota) ? n(cota!.value) : null,
+        angulo: visible(ang) ? n(ang!.textContent) : null,
+        referencia: visible(osn) ? (osn!.textContent ?? "").trim() : null,
+      };
+    },
+
+    /**
+     * Llevar el cursor hasta que la pantalla cante la MEDIDA pedida.
+     *
+     * Esto es dibujar con el ratón de verdad: no se le dan coordenadas, se le
+     * da la cota y el ángulo —lo que pone el plano— y el cursor se mueve hasta
+     * que los rótulos del programa dicen eso, exactamente como haría una
+     * persona mirando la pantalla. La única coordenada de toda la cercha es la
+     * del primer punto; de ahí en adelante todo es relativo.
+     *
+     * Se autocalibra: mide cuántos píxeles vale un metro y hacia dónde crece el
+     * ángulo con dos tanteos, en vez de dar por supuesta una convención. Luego
+     * corrige el radio por proporción y el ángulo por diferencia, y repite.
+     */
+    async aMedida(o: { dist: number; ang?: number; angGeom?: number;
+                       tolD?: number; tolA?: number; pasos?: number }) {
+      const tolD = o.tolD ?? 0.01, tolA = o.tolA ?? 0.15;
+      const maxIter = o.pasos ?? 22;
+      const O = ultimoClic ?? [px, py];
+      const vAnt = velocidad; velocidad = 0;          // el tanteo, sin recorrido
+      const poner = async (r: number, t: number) => {
+        await irA(O[0] + r * Math.cos(t), O[1] + r * Math.sin(t));
+        return raton.lee();
+      };
+      // 1. calibrar: dos tanteos a radios distintos → píxeles por metro
+      let r = 120, t = 0;
+      const a = await poner(r, t);
+      const b = await poner(r * 2, t);
+      if (a.distancia == null || b.distancia == null || b.distancia === a.distancia) {
+        velocidad = vAnt;
+        return { ok: false, msg: "la pantalla no está cantando la cota: ¿hay un punto de arranque?" };
+      }
+      const pxPorMetro = r / (b.distancia - a.distancia);
+      // 2. calibrar el sentido del ángulo: girar un poco y ver qué hace el rótulo
+      const c0 = await poner(r, t);
+      const c1 = await poner(r, t + 0.20);
+      let signo = 1;
+      if (c0.angulo != null && c1.angulo != null) {
+        let d = c1.angulo - c0.angulo;
+        while (d > 180) d -= 360; while (d < -180) d += 360;
+        signo = d >= 0 ? 1 : -1;
+      }
+      // 2 bis. ¿En qué convención canta el ángulo esta pantalla? No hace falta
+      // saberlo: con el cursor puesto a la DERECHA del origen (t = 0) el rótulo
+      // dice cuánto vale esa dirección, y eso fija el cero. Así se le puede
+      // pedir un ángulo «respecto a la horizontal, positivo hacia arriba» —que
+      // es como viene acotado un plano— sin conocer nada del programa ni una
+      // sola coordenada. En píxeles la Y crece hacia ABAJO, de ahí el signo.
+      let objAng = o.ang;
+      if (objAng === undefined) {
+        if (o.angGeom === undefined || c0.angulo == null) {
+          velocidad = vAnt;
+          return { ok: false, msg: "hace falta `ang` (crudo de pantalla) o `angGeom` (del plano)" };
+        }
+        objAng = c0.angulo + signo * (-o.angGeom);
+        while (objAng > 360) objAng -= 360; while (objAng < 0) objAng += 360;
+      }
+      // 3. corregir hasta que los dos rótulos digan lo pedido
+      const traza: Array<{ dist: number | null; ang: number | null }> = [];
+      let leido = c0;
+      for (let k = 0; k < maxIter; k++) {
+        leido = await poner(r, t);
+        traza.push({ dist: leido.distancia, ang: leido.angulo });
+        if (leido.distancia == null) break;
+        const eD = o.dist - leido.distancia;
+        let eA = 0;
+        if (leido.angulo != null) {
+          eA = objAng - leido.angulo;
+          while (eA > 180) eA -= 360; while (eA < -180) eA += 360;
+        }
+        if (Math.abs(eD) <= tolD && Math.abs(eA) <= tolA) {
+          velocidad = vAnt;
+          return { ok: true, iteraciones: k + 1, distancia: leido.distancia,
+                   angulo: leido.angulo, referencia: leido.referencia,
+                   px: [Math.round(px), Math.round(py)], pxPorMetro: +pxPorMetro.toFixed(2) };
+        }
+        r = Math.max(6, r + eD * pxPorMetro);
+        t += signo * eA * Math.PI / 180;
+      }
+      velocidad = vAnt;
+      return { ok: false, msg: "no llegué a la medida pedida", ultimo: leido, traza: traza.slice(-4) };
+    },
+
+    /**
+     * Ídem, pero pulsando al llegar: un punto de la cercha dado por su cota y
+     * su ángulo respecto al anterior, sin una sola coordenada.
+     */
+    async clicAMedida(o: { dist: number; ang?: number; angGeom?: number; tolD?: number; tolA?: number }) {
+      const r = await raton.aMedida(o);
+      if (!r.ok) return r;
+      decir(`${o.dist} m  ${o.angGeom ?? o.ang}°`);
+      await pulsar(0, 1);
+      return r;
     },
 
     /** Dónde está y qué hay debajo: para comprobar antes de pulsar. */
