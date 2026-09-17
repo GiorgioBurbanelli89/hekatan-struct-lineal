@@ -224,6 +224,9 @@ import {
   stressUnit, subgradeUnit, stiffTransUnit, lengthSectionUnit,
   applyConsistentUnits, detectCurrentPreset,
 } from "./units";
+// Cursor auxiliar dibujado (?cursor=1): el del sistema no sale en las capturas
+// ni en la automatizacion, asi que al ensenar la app no se ve donde se pulsa.
+import "./cursorAux";
 
 // Propagación de unidades al viewer de hekatan-ui: cualquier cambio en
 // forceUnit/dispUnit del workspace se refleja en el colormap legend y en

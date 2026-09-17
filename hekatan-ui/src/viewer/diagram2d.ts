@@ -581,11 +581,16 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       document.body.appendChild(chipK);
       chipK.addEventListener("click", () => { const i = Number(chipK!.dataset.idx); if (i >= 0) abrirK(i); });
     }
-    // Jorge: «al tocar la barra me dé la matriz de rigidez local de esa barra» → se abre directo
+    // 17-sep-2026, Jorge: tocar una barra ya NO abre la ventana — tapaba el modelo
+    // entero. Sale un BOTÓN y la ventana se abre solo si se pulsa. Si la ventana
+    // ya estaba abierta, cambia a la barra nueva (que es lo que se espera al ir
+    // tocando barras con la ventana puesta).
     chipK.hidden = true;
     if (u && u.type === "frame") {
       chipK.dataset.idx = String(u.idx);
-      abrirK(u.idx);
+      chipK.textContent = "📐 Ver K local · barra " + (u.idx + 1);
+      if (hostK && !hostK.hidden) abrirK(u.idx);
+      else chipK.hidden = false;
     }
   });
   (window as any).__hekatanKLocal = (idx: number) => kLocalBarra(mesh as any, idx);
