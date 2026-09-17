@@ -59,7 +59,8 @@ const T_SOLO_REJILLA = 3;
 const T_LOSA_PLANA = 4;
 const T_LOSA_VIGAS_BORDE = 5;
 const T_DUAL = 6;              // pórtico + losa + MUROS de corte
-const T_CIMENTACION = 8;       // zapatas aisladas / losa de cimentación sobre Winkler
+const T_CIMENTACION = 8;       // zapatas aisladas + vigas de amarre, sobre Winkler
+const T_CIM_LOSA = 9;          // losa de cimentación (mat), sobre Winkler
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
                                // [Concentric]` de SAP2000, leído del binario
 
@@ -141,24 +142,25 @@ const PARAMS = {
       "▣ Losa con vigas de borde": T_LOSA_VIGAS_BORDE,
       "🧱🧱 Pórtico + losa + muros (dual)": T_DUAL,
       "⟋ Pórtico arriostrado (CBF)": T_ARRIOSTRADO,
-      "⬓ Cimentación (zapatas / losa) sobre Winkler": T_CIMENTACION,
+      "⬓ Cimentación · zapatas aisladas + vigas de amarre": T_CIMENTACION,
+      "▬ Cimentación · losa de cimentación (mat)": T_CIM_LOSA,
     },
     label: "Plantilla",
   },
 
   // ── Cimentación (solo en la plantilla ⬓ Cimentación) ─────────────────────
-  cimTipo: {
-    default: 0, min: 0, max: 1, step: 1,
-    options: { "▣ Zapatas aisladas + vigas de amarre": 0, "▬ Losa de cimentación (mat)": 1 },
-    label: "Tipo de cimiento", folder: "⬓ Cimentación",
-  },
-  // ⚠️ El DEFECTO es Shell-Thin porque es lo que pone SAFE: su propiedad de
-  // zapata de fábrica (`Footing1`) sale con «Modeling Type = Shell-Thin» en el
-  // .f2k que escribe él mismo (validation/04-cimentaciones-safe/zapata-aislada).
-  // Hekatan copia a CSI; quien quiera el cortante de Mindlin lo cambia aquí.
+  // ⚠️ El defecto es Shell-THICK, y las dos fuentes NO dicen lo mismo:
+  //   · SAFE trae Shell-Thin de fábrica en su `Footing1` (lo escribe él en el
+  //     .f2k: validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k);
+  //   · el manual de CSI dice que el cortante importa cuando el canto pasa de
+  //     1/10 a 1/5 de la luz, y que «it is generally recommended that you use
+  //     the thick-plate formulation».
+  // Una zapata de 2.00 m con 0.45 m de canto está en t/L = 0.22: por encima del
+  // quinto. Manda el manual; el Thin queda a un clic para reproducir SAFE tal cual.
   zapForm: {
-    default: 1, min: 0, max: 1, step: 1,
-    options: { "Shell-Thin (lo que pone SAFE)": 1, "Shell-Thick (Mindlin)": 0 },
+    default: 0, min: 0, max: 1, step: 1,
+    options: { "Shell-Thick (Mindlin) — lo que recomienda el manual de CSI": 0,
+               "Shell-Thin (Kirchhoff) — lo que trae SAFE de fábrica": 1 },
     label: "Formulación del cimiento", folder: "⬓ Cimentación",
   },
   zapB: { default: 2.0, min: 0.6, max: 6, step: 0.1, label: "lado de zapata B (m)", folder: "⬓ Cimentación" },
@@ -390,7 +392,8 @@ export const plantillas: ExampleDef = {
     const tipo = Math.round(p.tipo);
     // La cimentacion no comparte nada con el edificio (ni pisos, ni diafragma, ni
     // apoyos: el suelo son MUELLES). Se arma aparte y se sale.
-    if (tipo === T_CIMENTACION) return construirCimentacion(p, states);
+    if (tipo === T_CIMENTACION || tipo === T_CIM_LOSA)
+      return construirCimentacion(p, states, tipo === T_CIM_LOSA ? 1 : 0);
     const X = ejes((p as any).ejesX, p.nx, p.sx);
     const Y = tipo === T_PORTICO_2D ? [0] : ejes((p as any).ejesY, p.ny, p.sy);
     const Z = niveles((p as any).alturas, p.pisos, p.h, p.h1);

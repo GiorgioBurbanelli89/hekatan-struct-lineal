@@ -17,11 +17,21 @@
  * apoyos: una cimentación sobre muelles no tiene apoyos, y ponerlos se lleva
  * por delante justo la reacción del terreno que se quiere ver.
  *
- * La formulación por defecto es SHELL-THIN, que es lo que pone SAFE: su propiedad
- * de zapata de fábrica (`Footing1`) sale con «Modeling Type = Shell-Thin» en el
- * .f2k que escribe él mismo. Se deja Shell-Thick como opción porque un cimiento de
- * 45 cm de canto y 2 m de lado tiene t/L = 0.22 —placa gruesa— y con Kirchhoff se
- * pierde el cortante, que es lo que decide el punzonamiento. Se elige, no se supone.
+ * ⚠️ THIN vs THICK, con las dos fuentes delante, porque NO dicen lo mismo:
+ *
+ *   · Lo que PONE SAFE: su propiedad de zapata de fábrica (`Footing1`) sale con
+ *     «Modeling Type = Shell-Thin» en el .f2k que escribe él mismo
+ *     (validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k).
+ *   · Lo que RECOMIENDA CSI en su manual (Analysis Reference, «Thickness
+ *     Formulation»): «Shearing deformations tend to be important when the
+ *     thickness is greater than about one-tenth to one-fifth of the span» y
+ *     «It is generally recommended that you use the thick-plate formulation».
+ *
+ * Una zapata de 2.00 m con 0.45 m de canto tiene t/L = 0.22 — por encima del
+ * quinto. O sea que el defecto de fábrica de SAFE es el que su propio manual
+ * desaconseja para esta pieza: es un defecto heredado de las LOSAS, donde t/L es
+ * pequeño. Aquí manda el criterio del manual: **Shell-Thick**, y Shell-Thin queda
+ * a un clic para quien quiera reproducir un modelo de SAFE tal como salga.
  */
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 
@@ -46,8 +56,7 @@ function partir(v: number[], ms: number): number[] {
   return out;
 }
 
-export function construirCimentacion(p: any, states: any) {
-  const sub = Math.round(p.cimTipo ?? CIM_ZAPATAS);
+export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
   const X = rejilla(p.nx, p.sx), Y = rejilla(p.ny, p.sy);
   const E = (p.Ec ?? 2.2e7) as number, nu = 0.2, rho = 2.4;
   const Gc = E / (2 * (1 + nu));
@@ -57,10 +66,8 @@ export function construirCimentacion(p: any, states: any) {
   const P = p.Pcol ?? 400;                         // carga por columna (kN)
   const hped = Math.max(0.2, p.hped ?? 0.8);       // pedestal (m)
   const ms = Math.max(0.15, p.ms ?? 0.5);
-  // 1 = Shell-Thin (DKQ), 0 = Shell-Thick (Mindlin). El defecto es THIN porque es
-  // lo que pone SAFE: su `Footing1` de fábrica sale «Modeling Type = Shell-Thin»
-  // en el .f2k que escribe él (validation/04-cimentaciones-safe/zapata-aislada).
-  const formul = Math.round(p.zapForm ?? 1);
+  // 1 = Shell-Thin (DKQ), 0 = Shell-Thick (Mindlin). Defecto THICK: ver la cabecera.
+  const formul = Math.round(p.zapForm ?? 0);
 
   const nodes: Node[] = [], elements: Element[] = [];
   const clave = new Map<string, number>();
