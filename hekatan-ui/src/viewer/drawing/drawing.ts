@@ -4809,16 +4809,33 @@ export function drawing({
   window.addEventListener("keydown", (ev: KeyboardEvent) => {
     if (ev.key !== "Delete" && ev.key !== "Backspace") return;
     const ae = document.activeElement as HTMLElement | null;
-    // La barra de comandos (siempre enfocada) y su input al cursor NO deben
-    // bloquear el Delete si están VACÍOS → permitir borrar la selección.
-    const isEmptyCmd = ae && (ae.id === "hk3-cmd-input" || ae.id === "hk-dyn-input")
-      && (ae as HTMLInputElement).value === "";
-    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable) && !isEmptyCmd) {
-      return; // editando texto real → no borrar la selección
+    const esBarra = !!ae && (ae.id === "hk3-cmd-input" || ae.id === "hk-dyn-input");
+    // ⚠️ SI HAY ALGO DESIGNADO, Supr BORRA LO DESIGNADO. Y punto.
+    //
+    // Antes la barra de comandos solo dejaba pasar el Delete si estaba VACÍA, y
+    // esa barra se autoenfoca siempre: bastaba con que hubiera quedado el texto
+    // de una orden anterior para que Supr dejara de borrar, sin decir nada.
+    // Medido en el deploy el 17-sep-2026 con 83 objetos designados: el pie decía
+    // «SELECCIÓN 83 objetos · Supr borra», se pulsaba Supr y el modelo se
+    // quedaba igual —126 nudos y 103 barras antes y después—, porque el foco
+    // estaba en `hk3-cmd-input` con texto. Jorge: «trato de seleccionar un arco
+    // y borrarlo y no se puede».
+    //
+    // Es además lo que hacen AutoCAD y ETABS: con objetos designados, Supr es
+    // «borra los objetos». El texto que hubiera en la barra se limpia, que era
+    // resto de otra orden. Solo se respeta la edición cuando el foco está en
+    // OTRO campo (el panel de propiedades, un parámetro), donde Supr sí es
+    // «borra caracteres».
+    if (selection.size > 0) {
+      if (ae && !esBarra && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) {
+        return;                                   // editando un campo de verdad
+      }
+      ev.preventDefault();
+      if (esBarra) { (ae as HTMLInputElement).value = ""; }
+      deleteSelectedItems();
+      return;
     }
-    if (selection.size === 0) return;
-    ev.preventDefault();
-    deleteSelectedItems();
+    // Sin nada designado, Supr es del texto: no se toca.
   });
 
   // ════════════════════════════════════════════════════════════════════
@@ -7024,14 +7041,28 @@ export function drawing({
    * modelo más cuatro rejillas, y nunca menos de 50 m.
    */
   const puntoRazonable = (p: THREE.Vector3): boolean => {
-    const pts = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
-    let lim = Math.max(50, 4 * (gridSize || 20));
-    if (pts.length) {
-      let r = 0;
-      for (const q of pts) r = Math.max(r, Math.abs(q[0]), Math.abs(q[1]), Math.abs(q[2]));
-      lim = Math.max(lim, 2 * r + 4 * (gridSize || 20));
-    }
-    return Math.abs(p.x) <= lim && Math.abs(p.y) <= lim && Math.abs(p.z) <= lim;
+    // ⚠️ Esto MIDE EL RAYO, no la distancia al origen.
+    //
+    // La primera versión rechazaba todo punto a más de tantos metros del
+    // modelo, y eso es una mala regla: con la cámara alejada un clic legítimo
+    // cae lejos y se quedaba sin dibujar. Jorge, en el deploy: «trato de
+    // dibujar y no se puede».
+    //
+    // Lo que de verdad hace malo un punto es que el rayo del ratón llegue al
+    // plano de trabajo CASI DE CANTO: ahí unos pocos píxeles valen decenas de
+    // metros y el punto es puro ruido —da igual a qué distancia esté—. Con el
+    // rayo entrando con ángulo, el punto es bueno aunque caiga a 200 m, que es
+    // lo normal en un puente.
+    //
+    // Se pide 1.5° entre el rayo y el plano. Por debajo de eso, un píxel de
+    // pantalla vale más de 38 veces la distancia al plano: no es dibujar.
+    const gt = drawingObj.gridTarget?.rawVal;
+    if (!gt) return true;
+    const n = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
+    const d = raycaster.ray.direction;
+    if (d.lengthSq() < 1e-12) return true;
+    const senoRasante = Math.abs(d.clone().normalize().dot(n));
+    return senoRasante >= 0.026;                    // sen(1.5°)
   };
 
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
@@ -7042,10 +7073,10 @@ export function drawing({
                             tool === "delete" || tool === "trim" || tool === "extend");
     if (creaGeometria && !puntoRazonable(point)) {
       updateStatus(
-        `✕ Ese punto cae en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ${point.z.toFixed(1)}) m, ` +
-        `fuera del modelo: el rayo llega al plano de trabajo casi de canto. ` +
-        `Ponte en una vista ortogonal (Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, ` +
-        `o teclea la coordenada.`);
+        `✕ Estás mirando el plano de trabajo casi de canto, y ahí un píxel vale ` +
+        `decenas de metros: el punto caería en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ` +
+        `${point.z.toFixed(1)}) m. Gira la vista, ponte en una ortogonal ` +
+        `(Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, o teclea la coordenada.`);
       return;
     }
 
