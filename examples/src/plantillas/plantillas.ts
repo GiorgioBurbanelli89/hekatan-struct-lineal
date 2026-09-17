@@ -59,8 +59,14 @@ const T_SOLO_REJILLA = 3;
 const T_LOSA_PLANA = 4;
 const T_LOSA_VIGAS_BORDE = 5;
 const T_DUAL = 6;              // pórtico + losa + MUROS de corte
-const T_CIMENTACION = 8;       // zapatas aisladas + vigas de amarre, sobre Winkler
-const T_CIM_LOSA = 9;          // losa de cimentación (mat), sobre Winkler
+// Cimentaciones. El número es el `tipo`; el segundo es el sub-tipo de cimentacion.ts.
+const T_CIM_AISLADA = 10;      // una zapata, columna centrada
+const T_CIMENTACION = 8;       // rejilla de zapatas + vigas de amarre
+const T_CIM_COMBINADA = 11;    // dos columnas sobre una zapata
+const T_CIM_LINDERO = 12;      // columna en la línea de propiedad + viga centradora
+const T_CIM_ESQUINERA = 13;    // columna en esquina + dos vigas centradoras
+const T_CIM_VIGA_T = 14;       // emparrillado de vigas en T invertida (frames)
+const T_CIM_LOSA = 9;          // losa de cimentación (mat)
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
                                // [Concentric]` de SAP2000, leído del binario
 
@@ -142,7 +148,12 @@ const PARAMS = {
       "▣ Losa con vigas de borde": T_LOSA_VIGAS_BORDE,
       "🧱🧱 Pórtico + losa + muros (dual)": T_DUAL,
       "⟋ Pórtico arriostrado (CBF)": T_ARRIOSTRADO,
-      "⬓ Cimentación · zapatas aisladas + vigas de amarre": T_CIMENTACION,
+      "▫ Cimentación · zapata AISLADA": T_CIM_AISLADA,
+      "⬓ Cimentación · zapatas + vigas de amarre": T_CIMENTACION,
+      "▭ Cimentación · zapata COMBINADA (2 columnas)": T_CIM_COMBINADA,
+      "◱ Cimentación · zapata de LINDERO + viga centradora": T_CIM_LINDERO,
+      "◰ Cimentación · zapata ESQUINERA + 2 vigas centradoras": T_CIM_ESQUINERA,
+      "⊥ Cimentación · vigas en T INVERTIDA (frames)": T_CIM_VIGA_T,
       "▬ Cimentación · losa de cimentación (mat)": T_CIM_LOSA,
     },
     label: "Plantilla",
@@ -164,6 +175,11 @@ const PARAMS = {
     label: "Formulación del cimiento", folder: "⬓ Cimiento — geometría y suelo",
   },
   volCim: { default: 1.0, min: 0.5, max: 4, step: 0.25, label: "vuelo de la losa mat (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  volZap: { default: 0.6, min: 0.3, max: 3, step: 0.1, label: "vuelo de la combinada (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtBf: { default: 1.00, min: 0.3, max: 3, step: 0.05, label: "T invertida · ancho del ala (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtTf: { default: 0.30, min: 0.15, max: 1, step: 0.05, label: "T invertida · canto del ala (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtBw: { default: 0.30, min: 0.15, max: 1, step: 0.05, label: "T invertida · ancho del alma (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtH: { default: 0.80, min: 0.3, max: 2.5, step: 0.05, label: "T invertida · canto total (m)", folder: "⬓ Cimiento — geometría y suelo" },
   zapB: { default: 2.0, min: 0.6, max: 6, step: 0.1, label: "lado de zapata B (m)", folder: "⬓ Cimiento — geometría y suelo" },
   zapH: { default: 0.45, min: 0.15, max: 1.5, step: 0.05, label: "canto de zapata (m)", folder: "⬓ Cimiento — geometría y suelo" },
   losaH: { default: 0.50, min: 0.2, max: 2, step: 0.05, label: "canto de la losa mat (m)", folder: "⬓ Cimiento — geometría y suelo" },
@@ -393,8 +409,14 @@ export const plantillas: ExampleDef = {
     const tipo = Math.round(p.tipo);
     // La cimentacion no comparte nada con el edificio (ni pisos, ni diafragma, ni
     // apoyos: el suelo son MUELLES). Se arma aparte y se sale.
-    if (tipo === T_CIMENTACION || tipo === T_CIM_LOSA)
-      return construirCimentacion(p, states, tipo === T_CIM_LOSA ? 1 : 0);
+    // Cada plantilla de cimentación con su sub-tipo. Un `Map`, no una cadena de
+    // `if`: añadir una tipología es añadir una línea, y no hay forma de que una se
+    // quede colgando sin rama.
+    const SUB_CIM: Record<number, number> = {
+      [T_CIMENTACION]: 0, [T_CIM_LOSA]: 1, [T_CIM_AISLADA]: 2, [T_CIM_COMBINADA]: 3,
+      [T_CIM_LINDERO]: 4, [T_CIM_ESQUINERA]: 5, [T_CIM_VIGA_T]: 6,
+    };
+    if (SUB_CIM[tipo] !== undefined) return construirCimentacion(p, states, SUB_CIM[tipo]);
     const X = ejes((p as any).ejesX, p.nx, p.sx);
     const Y = tipo === T_PORTICO_2D ? [0] : ejes((p as any).ejesY, p.ny, p.sy);
     const Z = niveles((p as any).alturas, p.pisos, p.h, p.h1);

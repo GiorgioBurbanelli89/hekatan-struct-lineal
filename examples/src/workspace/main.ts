@@ -3182,17 +3182,37 @@ function showMenu() {
       loadExample(exPlantilla);
     });
   }
-  fNuevo.addButton({ title: "✎ Editar este modelo (borrar barras, pórtico irregular)" }).on("click", () => {
-    const r = (window as any).__hekatanConvertirEditable?.();
-    if (!r) { alert("Carga primero una plantilla o un ejemplo con modelo."); return; }
-    alert(`Modelo pasado al lienzo: ${r.nudos} nudos, ${r.barras} barras y ${r.areas} panos.` +
-      "\n\nYa puedes borrar barras o panos (Selec. + Supr, o el boton Borrar) y dibujar encima." +
-      "\nOjo: el modelo queda congelado con los valores de ahora; los sliders de la plantilla ya no lo cambian.");
-  });
   fNuevo.addButton({ title: "📄 Lienzo en blanco (dibujar a mano)" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "new-blank");
     if (ex) loadExample(ex);
   });
+
+  // -- EDITAR LO QUE YA HAY: no es «nuevo modelo» --------------------------
+  //
+  // Jorge, 17-sep-2026: «esa opción está mal colocada». Y con razón: estaba en la
+  // lista de «Nuevo modelo · Plantillas», entre botones que CREAN un modelo, pero
+  // esto no crea nada — coge el que ya está cargado y lo pasa al lienzo. Pulsarlo
+  // nada más abrir la app soltaba un «Carga primero una plantilla o un ejemplo»:
+  // un botón que solo sirve a veces, puesto donde parece que sirve siempre.
+  //
+  // Ahora va en su propio apartado, DESPUÉS de las plantillas. Y si no hay modelo
+  // cargado no se enseña el botón: se enseña qué hay que hacer antes.
+  const hayModelo = (() => {
+    try { return (states.nodes?.val?.length ?? 0) > 0; } catch { return false; }
+  })();
+  const fEditar = pane.addFolder({ title: "✎ Editar el modelo que ya tienes", expanded: true });
+  if (!hayModelo) {
+    fEditar.addButton({ title: "(carga antes una plantilla o un ejemplo)" })
+      .on("click", () => alert("Elige arriba una plantilla o un ejemplo. Cuando haya un modelo en pantalla, aquí sale el botón para pasarlo al lienzo y poder borrar barras o paños."));
+  } else {
+    fNuevo.addButton({ title: "✎ Pasar este modelo al lienzo (borrar barras o paños)" }).on("click", () => {
+      const r = (window as any).__hekatanConvertirEditable?.();
+      if (!r) { alert("Carga primero una plantilla o un ejemplo con modelo."); return; }
+      alert(`Modelo pasado al lienzo: ${r.nudos} nudos, ${r.barras} barras y ${r.areas} panos.` +
+        "\n\nYa puedes borrar barras o panos (Selec. + Supr, o el boton Borrar) y dibujar encima." +
+        "\nOjo: el modelo queda congelado con los valores de ahora; los sliders de la plantilla ya no lo cambian.");
+    });
+  }
   fMenu.addButton({ title: "📂 Archivo existente" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "csi-importer");
     if (ex) loadExample(ex);
