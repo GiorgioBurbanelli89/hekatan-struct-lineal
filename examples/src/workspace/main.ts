@@ -822,6 +822,7 @@ function loadExample(ex: ExampleDef) {
   // "pressure" solo se ofrece en zapatas (con resortes Winkler); "bending*" solo
   // en elementos que flexan; "membrane*" solo en plane-stress; etc.
   filterShellResultOptions(ex.availableShellResults);
+  ajustarResultadosAlModelo();          // y apagar lo que este modelo no puede dar
   autoScaleDeformedShape();
   autoFitCamera();
   buildParamsPane();
@@ -1296,6 +1297,47 @@ function encuadrarAhora() {
 
 /** Oculta opciones no aplicables del <select> "Shell results" del Settings HTML
  *  y sincroniza su display con el estado actual de shellResults. */
+/**
+ * Los desplegables de resultados DICEN lo que este modelo puede dar.
+ *
+ * Jorge (17-sep-2026): «en algunos elementos no me estás dando para escoger otros
+ * resultados en shell results o frame result». Medido: `edificio-aporticado` tiene
+ * **0 cáscaras y 63 barras**, y aun así «Shell results» ofrecía sus 19 opciones —
+ * las 19 devolviendo −1, que es el relleno de «no hay dato». Eliges M11, no pasa
+ * nada, y parece que el programa esté roto cuando lo que pasa es que ese resultado
+ * no existe en un pórtico de barras.
+ *
+ * Así que cada desplegable mira el modelo: sin cáscaras, las opciones de cáscara se
+ * apagan y el rótulo lo dice; sin barras, las de barra. Es lo que hace ETABS, que no
+ * te deja pedir un M11 donde no hay áreas.
+ */
+function ajustarResultadosAlModelo() {
+  const elems = (states.elements.rawVal ?? []) as number[][];
+  const nCascaras = elems.filter((e) => e.length >= 3).length;
+  const nBarras = elems.filter((e) => e.length === 2).length;
+  const selects = Array.from(viewerElm.querySelectorAll<HTMLSelectElement>("select"));
+  const marcar = (sel: HTMLSelectElement | undefined, hay: boolean, que: string) => {
+    if (!sel) return;
+    for (const o of Array.from(sel.options)) {
+      if (o.value === "none") continue;
+      o.disabled = !hay;
+      o.style.color = hay ? "" : "#64748b";
+    }
+    sel.title = hay ? "" : `Este modelo no tiene ${que}: no hay resultados que enseñar.`;
+    const rot = sel.closest(".tp-lblv")?.querySelector<HTMLElement>(".tp-lblv_l");
+    if (rot) {
+      const base = rot.textContent?.replace(/\s*—.*$/, "") ?? "";
+      rot.textContent = hay ? base : `${base} — sin ${que}`;
+      rot.style.opacity = hay ? "" : "0.6";
+    }
+    if (!hay && sel.value !== "none") { sel.value = "none"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  };
+  // el de cáscara es el único con «M11»; el de barra, el único con «Axial Force»
+  marcar(selects.find((s) => Array.from(s.options).some((o) => o.value === "M11")), nCascaras > 0, "cáscaras");
+  marcar(selects.find((s) => Array.from(s.options).some((o) => o.value === "Axial Force")), nBarras > 0, "barras");
+}
+(window as any).__hekatanAjustarResultados = ajustarResultadosAlModelo;
+
 function filterShellResultOptions(allowed?: string[]) {
   const selects = viewerElm.querySelectorAll<HTMLSelectElement>("select");
   // OJO: el `value` del <option> del DOM es el LABEL de Tweakpane (estilo ETABS:
@@ -1504,7 +1546,13 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 
 // Expose rebuild + autoFitCamera al window para test/debug via DOM
 // (también usado por el csi-importer para forceRebuildAndFit).
-(window as any).__hekatanRebuild = rebuild;
+// Al RECONSTRUIR también: si dibujas la primera losa, «Shell results» tiene que
+// encenderse solo; si borras la última, apagarse.
+(window as any).__hekatanRebuild = (...a: any[]) => {
+  const r = (rebuild as any)(...a);
+  try { setTimeout(ajustarResultadosAlModelo, 60); } catch {}
+  return r;
+};
 (window as any).__hekatanAutoFit = autoFitCamera;
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
