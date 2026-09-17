@@ -7111,7 +7111,15 @@ export function drawing({
     const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
                             tool === "medir" || tool === "move" || tool === "copy" ||
                             tool === "delete" || tool === "trim" || tool === "extend");
-    if (creaGeometria && !puntoRazonable(point)) {
+    // ⚠️ Si el punto lo fijó el ORTO, el enganche a un eje o una referencia a
+    // objeto, NO viene del plano de trabajo: viene de una RECTA o de un nudo, y
+    // ahí el rayo rasante no lo estropea. Sin esta excepción el filtro se comía
+    // justo lo que hace falta para dibujar en 3D: medido el 17-sep-2026, con
+    // «⊥ ORTO Z» en pantalla y el punto en Z = −30.10, el clic no creaba la
+    // barra porque la cámara miraba el plano XY casi de canto — que es
+    // precisamente la vista en la que uno dibuja en vertical.
+    const puntoFijadoPorReferencia = !!_axisSnapPoint;
+    if (creaGeometria && !puntoFijadoPorReferencia && !puntoRazonable(point)) {
       updateStatus(
         `✕ Estás mirando el plano de trabajo casi de canto, y ahí un píxel vale ` +
         `decenas de metros: el punto caería en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ` +
