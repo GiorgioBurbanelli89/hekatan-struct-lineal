@@ -3318,9 +3318,31 @@ function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
   // ⚠️ Esto tiene que estar AQUI ademas de en `setPlane` del panel: `setPlane`
   // fija el grid y despues llama a `setView`, que lo volvia a poner en el
   // origen. El marcador y la barra ya decian Y = 15 y el plano seguia en 0.
-  const pRef = ((window as any).__hekatanPuntoRef as number[] | undefined)
+  // ⚠️ El punto de referencia tiene que estar DENTRO del modelo, o el alzado se
+  // ancla donde no hay nada. En isométrica el rayo del ratón llega al plano de
+  // trabajo casi rasante y un clic perdido deja un punto a decenas de metros;
+  // ese punto pasaba a ser la referencia y te ponía a dibujar allí. Medido en el
+  // deploy público el 17-sep-2026: `hk_drawingPoints` con 24 puntos, los dos
+  // últimos en Y = 101.45, y el alzado XZ anclado en Y = 101.45 m — con el
+  // modelo entero entre Y = 0 y Y = 0. Así se perdían los clics de la cercha.
+  const pRefBruto = ((window as any).__hekatanPuntoRef as number[] | undefined)
             ?? (() => { const p = drawingPoints.rawVal ?? [];
                         return p.length ? p[p.length - 1] : [0, 0, 0]; })();
+  const pRef = (() => {
+    const N = states.nodes.rawVal ?? [];
+    if (!N.length || !pRefBruto) return pRefBruto ?? [0, 0, 0];
+    // Margen: lo que abarca el modelo más una rejilla por lado.
+    const g = Number((window as any).__hekatanGridConfig?.gridSize) || 20;
+    const dentro = [0, 1, 2].every((k) => {
+      let lo = Infinity, hi = -Infinity;
+      for (const n of N) { if (n[k] < lo) lo = n[k]; if (n[k] > hi) hi = n[k]; }
+      return pRefBruto[k] >= lo - g && pRefBruto[k] <= hi + g;
+    });
+    if (dentro) return pRefBruto;
+    console.warn(`[Vista ↔ CAD] el último punto (${pRefBruto.map((v) => (+v).toFixed(2))}) ` +
+                 `cae fuera del modelo: el plano de trabajo se ancla en el origen.`);
+    return [0, 0, 0];
+  })();
   if (preset === "plan") {
     const wz = (window as any).__hekatanCadState?.get?.()?.workZ ?? 0;
     drawingGridTarget.val = { position: [0, 0, wz], rotation: [Math.PI/2, 0, 0] };
@@ -7687,6 +7709,113 @@ try {
       }
       if ((mRep || mDiv) && !repUltimo) {
         flash("✕ «x5» y «/5» necesitan una réplica antes. Use REPLICAR primero.", false);
+        return;
+      }
+    }
+    // ── ARCO POR MEDIDAS, como el ARC de AutoCAD ────────────────────────────
+    //
+    // Hasta el 17-sep-2026 el arco solo se podía dar por TRES PUNTOS, y encima a
+    // clics: para un cordón de cercha había que calcular fuera el punto de la
+    // clave y teclearlo. Eso no es dibujar acotado, es dibujar un resultado ya
+    // calculado en otro sitio. AutoCAD deja dar el arco por la CUERDA más una
+    // medida —radio, flecha o ángulo abarcado—, que es como viene acotada una
+    // cercha en un plano de taller.
+    //
+    //   ARCO  0,0,6.5  20,0,6.5  R 22.5     inicio, fin y RADIO
+    //   ARCO  0,0,6.5  20,0,6.5  F 2.5      inicio, fin y FLECHA (sagita)
+    //   ARCO  0,0,6.5  20,0,6.5  A 51.68    inicio, fin y ÁNGULO abarcado (°)
+    //   ARCO  0,0,6.5  10,0,9  20,0,6.5     los tres puntos de siempre
+    //   … y « N 10 » al final fija el número de tramos (por defecto 12).
+    //
+    // La relación entre las tres medidas es la del círculo, con c = cuerda:
+    //     R = (c²/4 + f²) / (2f)      f = R − √(R² − c²/4)      R = (c/2)/sen(θ/2)
+    // La flecha va hacia ARRIBA del plano de trabajo (+Z en los alzados, +Y en
+    // planta); con la medida en negativo, hacia el otro lado.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if ((c0 === "arco" || c0 === "arc") && P.length >= 3) {
+        const A = repLeerDelta(P[1]), B = repLeerDelta(P[2]);
+        if (!A || !B) { flash("✕ ARCO: los dos primeros son puntos «x,y,z».", false); return; }
+        // « N 10 » en cualquier posición
+        let nSeg = 12;
+        const iN = P.findIndex((t, i) => i > 2 && /^n$/i.test(t));
+        if (iN > 0 && isFinite(+P[iN + 1])) nSeg = Math.max(2, Math.round(+P[iN + 1]));
+        const resto = P.slice(3).filter((_, i) => iN < 0 || (3 + i !== iN && 3 + i !== iN + 1));
+        const cx = B[0] - A[0], cy = B[1] - A[1], cz = B[2] - A[2];
+        const c = Math.hypot(cx, cy, cz);
+        if (c < 1e-9) { flash("✕ ARCO: el inicio y el fin son el mismo punto.", false); return; }
+        let medio: [number, number, number] | null = null;
+        const clave = (resto[0] || "").toLowerCase();
+        const val = +resto[1];
+        if (clave === "r" || clave === "f" || clave === "a" ||
+            clave === "radio" || clave === "flecha" || clave === "angulo" || clave === "ángulo") {
+          if (!isFinite(val) || Math.abs(val) < 1e-12) {
+            flash(`✕ ARCO: «${clave.toUpperCase()}» necesita una medida.`, false); return;
+          }
+          let f: number;                       // la flecha, que es lo que hace falta
+          if (clave === "r" || clave === "radio") {
+            if (Math.abs(val) < c / 2 - 1e-9) {
+              flash(`✕ ARCO: con una cuerda de ${c.toFixed(3)} m el radio no puede ` +
+                    `bajar de ${(c / 2).toFixed(3)} m (media cuerda).`, false); return;
+            }
+            f = Math.sign(val) * (Math.abs(val) - Math.sqrt(Math.max(0, val * val - c * c / 4)));
+          } else if (clave === "a" || clave === "angulo" || clave === "ángulo") {
+            const th = Math.abs(val) * Math.PI / 180;
+            if (th <= 1e-9 || th >= 2 * Math.PI - 1e-9) {
+              flash("✕ ARCO: el ángulo abarcado va entre 0° y 360°.", false); return;
+            }
+            const R = (c / 2) / Math.sin(th / 2);
+            f = Math.sign(val) * R * (1 - Math.cos(th / 2));
+          } else f = val;
+          // Perpendicular a la cuerda DENTRO del plano de trabajo: su normal es la
+          // del plano, así el arco sale en el mismo plano en que se está dibujando.
+          const wp = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+          const nrm = wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1];
+          // perp = normal × cuerda, normalizada
+          let px = nrm[1] * cz - nrm[2] * cy;
+          let py = nrm[2] * cx - nrm[0] * cz;
+          let pz = nrm[0] * cy - nrm[1] * cx;
+          const pl = Math.hypot(px, py, pz);
+          if (pl < 1e-9) {
+            flash("✕ ARCO: la cuerda es perpendicular al plano de trabajo. " +
+                  "Cambie de plano (Planta / Frente XZ / Lado YZ).", false); return;
+          }
+          px /= pl; py /= pl; pz /= pl;
+          // «Arriba» = +Z en los alzados, +Y en planta: una flecha positiva sube.
+          const arriba = wp === "xy" ? py : pz;
+          const s = arriba < 0 ? -1 : 1;
+          medio = [(A[0] + B[0]) / 2 + s * px * f,
+                   (A[1] + B[1]) / 2 + s * py * f,
+                   (A[2] + B[2]) / 2 + s * pz * f];
+          const R = (c * c / 4 + f * f) / (2 * Math.abs(f) || 1e-12);
+          const th = 2 * Math.asin(Math.min(1, (c / 2) / R)) * (Math.abs(f) > R ? -1 : 1);
+          echo(`◜ ARCO  cuerda ${c.toFixed(3)} m · flecha ${f.toFixed(3)} m · ` +
+               `radio ${R.toFixed(3)} m · ángulo ${(Math.abs(th) * 180 / Math.PI).toFixed(2)}° · ` +
+               `${nSeg} tramos`);
+        } else {
+          const M = repLeerDelta(P[3] ?? "");
+          if (!M) {
+            flash("✕ ARCO: falta la medida. «ARCO ini fin R 22.5» (radio), " +
+                  "«F 2.5» (flecha), «A 51.7» (ángulo) o «ARCO ini medio fin».", false);
+            return;
+          }
+          // Tres puntos: el 2º es el fin y el 3º… no. AutoCAD pide ini, MEDIO, fin.
+          medio = B;
+          const fin = M;
+          try {
+            (window as any).__hekatanDrawArc?.(A, medio, fin, nSeg);
+            echo(`◜ ARCO por 3 puntos · ${nSeg} tramos`);
+            flash("✓ arco dibujado", true);
+            (window as any).__hekatanRebuild?.();
+          } catch { flash("✕ ARCO: no se pudo trazar.", false); }
+          return;
+        }
+        try {
+          (window as any).__hekatanDrawArc?.(A, medio, B, nSeg);
+          flash("✓ arco dibujado", true);
+          (window as any).__hekatanRebuild?.();
+        } catch { flash("✕ ARCO: no se pudo trazar.", false); }
         return;
       }
     }

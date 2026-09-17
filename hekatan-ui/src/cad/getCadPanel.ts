@@ -337,9 +337,32 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
    * nada. Es lo que ancla el plano de trabajo.
    */
   const puntoRef = (): [number, number, number] => {
-    const pts = drawing.points.rawVal ?? [];
+    const pts = (drawing.points.rawVal ?? []) as [number, number, number][];
     const p = pts[pts.length - 1];
-    return p ? [p[0], p[1], p[2]] : [0, 0, 0];
+    if (!p) return [0, 0, 0];
+    // ⚠️ …salvo que ese último punto sea un DESCUELGUE. En isométrica el rayo del
+    // ratón llega al plano de trabajo casi rasante: unos píxeles valen decenas de
+    // metros, y un clic perdido deja un punto lejísimos que no se ve porque queda
+    // fuera de cuadro. Si ese punto ancla el alzado, te pone a dibujar donde no hay
+    // nada. Medido en el deploy el 17-sep-2026: 24 puntos, los dos últimos en
+    // Y = 101.45, y el rótulo anunciando «ALZADO X-Z  Y = 101.45» con el modelo
+    // entero en Y = 0. Los clics de la cercha curva se perdían por esto.
+    //
+    // Se compara contra los DEMÁS puntos: si el último se sale de lo que abarcan
+    // por más de una rejilla, no es «donde me quedé», es un accidente → al origen.
+    const resto = pts.slice(0, -1);
+    if (!resto.length) return [p[0], p[1], p[2]];
+    const g = ((viewerElm as any).__settings?.gridSize?.rawVal ?? 20) as number;
+    for (let k = 0; k < 3; k++) {
+      let lo = Infinity, hi = -Infinity;
+      for (const q of resto) { if (q[k] < lo) lo = q[k]; if (q[k] > hi) hi = q[k]; }
+      if (p[k] < lo - g || p[k] > hi + g) {
+        console.warn(`[CAD] el último punto (${p.map((v) => (+v).toFixed(2))}) cae fuera ` +
+                     `de lo dibujado: el plano de trabajo se ancla en el origen.`);
+        return [0, 0, 0];
+      }
+    }
+    return [p[0], p[1], p[2]];
   };
 
   const setPlane = (kind: "xy" | "xz" | "yz", z?: number, syncCam = true) => {

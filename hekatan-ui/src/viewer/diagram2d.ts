@@ -589,8 +589,12 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     if (u && u.type === "frame") {
       chipK.dataset.idx = String(u.idx);
       chipK.textContent = "📐 Ver K local · barra " + (u.idx + 1);
-      if (hostK && !hostK.hidden) abrirK(u.idx);
-      else chipK.hidden = false;
+      // SIEMPRE el botón, sin excepciones. Antes, si la ventana ya estaba
+      // abierta se refrescaba con la barra nueva: como basta abrirla una vez
+      // para que a partir de ahí salga con cada clic, desde fuera se ve igual
+      // que si se abriera sola. Ahora tocar otra barra la CIERRA y deja el botón.
+      if (hostK) hostK.hidden = true;
+      chipK.hidden = false;
     }
   });
   (window as any).__hekatanKLocal = (idx: number) => kLocalBarra(mesh as any, idx);

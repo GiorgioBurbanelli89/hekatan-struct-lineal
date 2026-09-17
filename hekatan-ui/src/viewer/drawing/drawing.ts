@@ -891,23 +891,34 @@ export function drawing({
     return null;  // length → manejado aparte por commitTypedDistance
   };
   // Commit un punto absoluto (x,y,z) — equivalente a un click en esa coord.
+  //
+  // ⚠️ Antes esto empujaba el punto DIRECTO a `drawingObj.points/polylines`, que
+  // es el camino de la Línea y la Polilínea y de nadie más. O sea que teclear
+  // una coordenada con el Arco, el Círculo, la Parábola, la Cúbica, el
+  // Rectángulo, el Muro o la Columna activos NO le llegaba a la herramienta:
+  // el punto caía suelto en la polilínea y la herramienta seguía esperando su
+  // primer clic para siempre. Medido en el DEPLOY PÚBLICO el 17-sep-2026 con
+  // el Arco y «0,0,6.5 / 10,0,9.5 / 20,0,6.5»: 1 nudo suelto, 0 barras, y el
+  // pie repitiendo «ARCO Precise punto inicial». Por eso no se podía dibujar
+  // una cercha curva tecleando cotas.
+  //
+  // Ahora va por `procesarClic`, que es EL MISMO reparto por herramienta que
+  // usa el ratón (y el que ya usaba `__hekatanTypeCoord`, la caja de comandos
+  // de abajo): un punto tecleado es un clic en esa coordenada, ni más ni menos.
+  // De regalo reusa el nudo que ya exista a ≤ 1 mm en vez de crear otro encima.
   const commitAbsolutePoint = (pt: [number, number, number]) => {
-    if (!drawingObj.polylines) return;
-    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
-    drawingObj.points.val = [...drawingObj.points.rawVal, pt];
-    const polys = drawingObj.polylines.rawVal;
-    const last = polys.length ? polys[polys.length - 1] : [];
-    drawingObj.polylines.val = [
-      ...polys.slice(0, -1),
-      [...last, drawingObj.points.rawVal.length - 1],
-    ];
+    procesarClic(new THREE.Vector3(pt[0], pt[1], pt[2]), null);
     // El punto tecleado pasa a ser el origen del siguiente relativo: sin esto
     // «0,0,3» + «@6,0,0» por la caja de comandos daba «desconocido», porque
     // rubberStart solo lo fijaba el ratón (updateRubberLabel) y con el
     // teclado nunca llegaba a existir. Medido el 8-sep-2026 capturando el
     // vídeo 2 de School: 3 coordenadas → 1 nudo y 0 tramos.
     rubberStart = pt;
-    rubberLabelInput.blur();
+    // NO se hace blur: una herramienta de varios puntos (Arco 3, Cúbica 4)
+    // se teclea de corrido, y con el foco perdido el segundo punto se iba al
+    // vacío. Se deja el campo vivo y seleccionado para el punto siguiente.
+    rubberUserEditing = false;
+    try { rubberLabelInput.select(); } catch {}
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
@@ -4495,6 +4506,27 @@ export function drawing({
       }
     }
 
+    // 1b) Los PUNTOS de las polilíneas borradas que ya no usa nadie se van con ellas.
+    //
+    // ⚠️ El comentario del paso 1 decía «+ propagar borrado a sus pts huérfanos» y
+    // NO se hacía: al borrar una polilínea quedaban todos sus puntos sueltos, que
+    // siguen siendo NUDOS del modelo. Medido en el deploy el 17-sep-2026: borrar la
+    // cercha entera («E» → TODO → Supr) dejaba 0 barras y los 22 nudos. Y eso no es
+    // solo suciedad: el plano de trabajo del alzado se ANCLA en el último punto
+    // dibujado (`puntoRef`), así que un punto fantasma lejano manda a dibujar a 100 m
+    // de la estructura, que es por lo que no se podía dibujar una cercha con el ratón.
+    //
+    // Se borran SOLO los que venían de una polilínea borrada y no quedan en ninguna
+    // otra: un nudo puesto a mano con la herramienta Nodo nunca estuvo en una de
+    // ellas, así que no se lo lleva por delante.
+    if (polysToDelete.size > 0) {
+      const vivos = new Set<number>();
+      for (const pl of newPolys) for (const n of pl) vivos.add(n);
+      for (const i of polysToDelete) {
+        for (const n of polys[i] ?? []) if (!vivos.has(n)) ptsToDelete.add(n);
+      }
+    }
+
     // 2) Borrar pts marcados + propagar a polylines (remover refs + cortar)
     if (ptsToDelete.size > 0) {
       // Filtrar pts y construir remap viejo→nuevo
@@ -6753,8 +6785,45 @@ export function drawing({
   // por el mismo reparto de herramientas. Antes lo tecleado solo servia para
   // linea/polilinea (commitAbsolutePoint): "CIRCULO centro 0,0 radio 3" habia
   // que clicarlo. `event` es null cuando el punto viene del teclado.
+  /**
+   * ¿Ese punto cae a una distancia RAZONABLE de lo que hay dibujado?
+   *
+   * En vista isométrica el rayo del ratón llega al plano de trabajo casi
+   * rasante, así que unos pocos píxeles valen decenas de metros: un clic en
+   * mitad de la pantalla caía en X=−67 Y=101 (medido en el deploy público el
+   * 17-sep-2026, con la rejilla de 20 m). Esos puntos no se ven —quedan fuera
+   * de cuadro— pero se quedan en el dibujo, y como el plano del alzado se
+   * ancla en el último punto, la siguiente vez te pone a dibujar a 100 m de la
+   * estructura. Así se perdían los clics de la cercha curva.
+   *
+   * El límite es RELATIVO, que un puente sí mide 100 m: lo que abarque el
+   * modelo más cuatro rejillas, y nunca menos de 50 m.
+   */
+  const puntoRazonable = (p: THREE.Vector3): boolean => {
+    const pts = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
+    let lim = Math.max(50, 4 * (gridSize || 20));
+    if (pts.length) {
+      let r = 0;
+      for (const q of pts) r = Math.max(r, Math.abs(q[0]), Math.abs(q[1]), Math.abs(q[2]));
+      lim = Math.max(lim, 2 * r + 4 * (gridSize || 20));
+    }
+    return Math.abs(p.x) <= lim && Math.abs(p.y) <= lim && Math.abs(p.z) <= lim;
+  };
+
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
+    // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
+    const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
+                            tool === "medir" || tool === "move" || tool === "copy" ||
+                            tool === "delete" || tool === "trim" || tool === "extend");
+    if (creaGeometria && !puntoRazonable(point)) {
+      updateStatus(
+        `✕ Ese punto cae en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ${point.z.toFixed(1)}) m, ` +
+        `fuera del modelo: el rayo llega al plano de trabajo casi de canto. ` +
+        `Ponte en una vista ortogonal (Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, ` +
+        `o teclea la coordenada.`);
+      return;
+    }
 
     // ── SELECT/none: NO crear geometría — los planos ortogonales se quedan
     // SIMÉTRICOS al origen siempre. Antes cualquier click los movía y
