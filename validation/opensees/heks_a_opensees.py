@@ -41,7 +41,11 @@ def _main():
     DUMP     = ""                 # <- ponle la ruta aqui si quieres una fija
     OUT      = ""                 # <- vacio = al lado del dump, con _opensees.json
     NMODOS   = 12
-    OPCIONES = ["--anim=1,2,3", "--frames=36", "--embebido"]
+    # Ligero a propósito: dentro de Hekatan Py cada fotograma hay que dibujarlo Y
+    # el WebView2 tiene que pintar el GIF en base64. Con 36 fotogramas por modo y
+    # 1280x720 la espera se hacía eterna. 20 y dpi 64 se ve igual y va 3 veces más
+    # rápido; para la versión buena, --frames=60 --dpi=100 desde la terminal.
+    OPCIONES = ["--anim=1,2,3", "--frames=16", "--dpi=64", "--embebido"]
 
     def _es_dump(f):
         try:
@@ -209,12 +213,14 @@ def _main():
                 if a.startswith("--%s=" % nm): return a.split("=", 1)[1]
             return d
         modos = [int(v) for v in str(opt("anim", "1")).split(",") if v.strip().isdigit()]
+        enmemoria = []
         K = int(float(opt("frames", 60))); pc = float(opt("escala", 8.0))
         # La camara da la vuelta ENTERA pero despacio, y la estructura oscila
         # varias veces por vuelta: si giro y oscilacion van al mismo ritmo, el
         # giro se come la vibracion y solo se ve el modelo dando vueltas.
         ciclos = float(opt("ciclos", 4))    # oscilaciones por modo
         dpi = int(float(opt("dpi", 80)))    # 80 = 1024x576; 100 = 1280x720 (mas lento)
+        ligero = "--embebido" in sys.argv and dpi <= 72
         # El giro, LENTO: media vuelta repartida entre TODOS los modos, y
         # continua (la camara sigue donde la dejo el modo anterior). Con 360 por
         # modo daba seis vueltas en el GIF y no se veia vibrar nada.
@@ -229,7 +235,7 @@ def _main():
         for imodo, modo in enumerate(modos):
             if modo > len(res["periodos"]): continue
             dirsal = os.path.splitext(OUT)[0] + "_modo%d" % modo
-            os.makedirs(dirsal, exist_ok=True)
+            if not ligero: os.makedirs(dirsal, exist_ok=True)
             phi = [ops.nodeEigenvector(i + 1, modo)[:3] for i in range(len(P))]
             amp = max(max(abs(c) for c in v) for v in phi) or 1.0
             f = (pc / 100.0) * diag / amp
@@ -255,11 +261,19 @@ def _main():
             colBarra = Line3DCollection([[P[el[0]], P[el[1]]] for el in lineas],
                                         colors="#ffb547", linewidths=1.2)
             ax.add_collection3d(colBarra)
-            ax.set_xlim(min(xs) - 1, max(xs) + 1); ax.set_ylim(min(ys) - 1, max(ys) + 1)
-            ax.set_zlim(min(zs) - 1, max(zs) + 3)
+            # ⚠️ los límites se sacan de la estructura DEFORMADA (posición ±
+            # amplitud), no de la original: si no, al girar la cámara la parte que
+            # más se mueve se sale del cuadro. Y un margen del 6 % por si acaso.
+            dxm = [f * abs(phi[i][j]) for i in range(len(P)) for j in (0,)]
+            X = [P[i][0] + sg * f * phi[i][0] for i in range(len(P)) for sg in (-1, 1)]
+            Y = [P[i][1] + sg * f * phi[i][1] for i in range(len(P)) for sg in (-1, 1)]
+            Z = [P[i][2] + sg * f * phi[i][2] for i in range(len(P)) for sg in (-1, 1)]
+            mx_ = 0.06 * max(max(X) - min(X), max(Y) - min(Y), max(Z) - min(Z))
+            ax.set_xlim(min(X) - mx_, max(X) + mx_); ax.set_ylim(min(Y) - mx_, max(Y) + mx_)
+            ax.set_zlim(min(Z) - mx_, max(Z) + mx_)
             # zoom adaptativo: el cuadro es apaisado, asi que un modelo ALTO y
             # estrecho (una torre) se sale por arriba con el zoom de una nave.
-            dx, dy, dz = (max(xs)-min(xs)+2, max(ys)-min(ys)+2, max(zs)-min(zs)+4)
+            dx, dy, dz = (max(X)-min(X)+2*mx_, max(Y)-min(Y)+2*mx_, max(Z)-min(Z)+2*mx_)
             zoom = 1.15 * min(1.0, 3.2 * max(dx, dy) / max(dz, 1e-9))
             ax.set_box_aspect((dx, dy, dz), zoom=zoom)
             ax.set_axis_off()
@@ -273,8 +287,14 @@ def _main():
                 if colChapa is not None: colChapa.set_verts([[Q[n] for n in el] for el in caras0])
                 colBarra.set_segments([[Q[el[0]], Q[el[1]]] for el in lineas])
                 ax.view_init(elev=16, azim=-65 + giro * (imodo + k / K))
-                fig.savefig(os.path.join(dirsal, "f%03d.png" % k),
-                            facecolor=fig.get_facecolor(), pil_kwargs={"compress_level": 1})
+                if ligero:
+                    fig.canvas.draw()
+                    import numpy as _np
+                    buf = _np.asarray(fig.canvas.buffer_rgba())[:, :, :3].copy()
+                    enmemoria.append(buf)
+                else:
+                    fig.savefig(os.path.join(dirsal, "f%03d.png" % k),
+                                facecolor=fig.get_facecolor(), pil_kwargs={"compress_level": 1})
             plt.close(fig)
             gif = dirsal + ".gif"
             try:
@@ -296,7 +316,7 @@ def _main():
             try:
                 import imageio.v2 as iio
                 iio.mimsave(unico, todos, fps=12, loop=0)
-                iio.mimsave(unico[:-4] + ".mp4", todos, fps=12, macro_block_size=1)
+                if not ligero: iio.mimsave(unico[:-4] + ".mp4", todos, fps=12, macro_block_size=1)
                 res["gif_modos"] = unico
                 _aviso("los %d modos seguidos -> %s" % (len(modos), unico))
             except Exception as ex:

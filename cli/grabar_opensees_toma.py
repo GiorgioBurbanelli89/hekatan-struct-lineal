@@ -39,13 +39,22 @@ def clic(x, y, d=0.8, pausa=0.9):
 
 # 1. Hekatan Py con el script ya abierto (es su forma normal de abrirlo)
 subprocess.Popen([EXE, guion])
-time.sleep(12)                                  # arranque + WebView2
 from pywinauto import Desktop                   # noqa: E402
-vent = [w for w in Desktop(backend="win32").windows()
-        if w.window_text().startswith("Hekatan Py")]
-if not vent:
-    sys.exit("no encuentro la ventana de Hekatan Py (¿arrancó?)")
-w = vent[0]
+# La ventana tarda: arranque + WebView2 + el propio script, que al abrirse se
+# ejecuta solo. Se espera hasta 60 s en vez de dar por hecho que ya está.
+w = None
+for _ in range(60):
+    time.sleep(1)
+    v = [x for x in Desktop(backend="win32").windows()
+         if "hekatan" in x.window_text().lower() and "py" in x.window_text().lower()]
+    if v: w = v[0]; break
+if w is None:
+    print("ventanas visibles:")
+    for x in Desktop(backend="win32").windows():
+        if x.window_text().strip(): print("   ", x.window_text()[:70])
+    sys.exit("no encuentro la ventana de Hekatan Py")
+print("ventana:", w.window_text())
+time.sleep(6)                                   # que termine de pintar el resultado
 ctypes.windll.user32.ShowWindow(w.handle, 3)    # maximizada
 ctypes.windll.user32.SetForegroundWindow(w.handle)
 time.sleep(1.5)
