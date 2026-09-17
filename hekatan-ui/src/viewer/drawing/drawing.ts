@@ -1115,7 +1115,14 @@ export function drawing({
     let base: [number, number, number] | null = null;
     let hitFaceVerts: [number, number, number][] | null = null;
     const hits = raycaster.intersectObjects(scene.children, true)
-      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && h.object !== fillPreview && (h.object as any).visible !== false);
+      // ⚠️ Los HANDLES del reshaper también son mallas, y siguen al cursor: el rayo
+      // chocaba con el propio handle y el punto de mundo salía de su superficie.
+      // Como el handle se mueve con lo que devuelve esta función, se realimentaba y
+      // el nudo salía disparado (medido: soltando en x = 9 acababa en x = 13.1).
+      // Van fuera del rayo, igual que el marcador de snap y la vista previa.
+      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && h.object !== fillPreview
+        && (h.object.parent as any)?.name !== "hekatan-reshape-grips"
+        && (h.object as any).visible !== false);
     if (hits.length) {
       const h = hits[0]; const p = h.point; base = [p.x, p.y, p.z];
       // Vértices de la CARA impactada (para OSNAP a esquina de la malla IFC).
@@ -1138,7 +1145,16 @@ export function drawing({
     let best = base, bestD = TOL;
     const consid = (w: [number, number, number]) => { const q = px(w); const d = Math.hypot(q[0]-cur[0], q[1]-cur[1]); if (d < bestD) { bestD = d; best = w; } };
     for (const w of (hitFaceVerts ?? [])) consid(w);
-    for (const n of drawingObj.points.rawVal) consid(n as [number, number, number]);
+    // ⚠️ El punto que se está REMODELANDO no entra en el OSNAP. Si entra, se
+    // engancha a sí mismo: acabas de dejarlo bajo el cursor, así que es el más
+    // cercano, y el arrastre deja de avanzar. Medido: llevando el ratón de x = 6
+    // a x = 9, el nudo se quedaba en 6.75 por más que se insistiera.
+    const ptEnReshape = (window as any).__hekatanReshapeIgnorarPt;
+    const ptsOsnap = drawingObj.points.rawVal;
+    for (let i = 0; i < ptsOsnap.length; i++) {
+      if (i === ptEnReshape) continue;
+      consid(ptsOsnap[i] as [number, number, number]);
+    }
     return best;
   };
   const actualizarLabelMedida = () => {
@@ -4888,6 +4904,203 @@ export function drawing({
     updateStatus(`🗑 ${deletedCount} item(s) borrado(s)`);
     return true;
   };
+
+  // ══════════════════════════════════════════════════════════════════════
+  // RESHAPER — el «Reshape Object» de ETABS (Draw ▸ Reshape Object)
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  // Jorge, 17-sep-2026: «revisa ETABS, la parte donde selecciona una barra y la
+  // puede alargar o acortar solo con seleccionarla».
+  //
+  // Las reglas NO son inventadas: salen de la propia ayuda de ETABS 22
+  // (ETABS.chm > Menus/Draw/Reshape_Object.htm), y son estas:
+  //
+  //   · Al pinchar una BARRA salen «selection handles»: CIRCULOS grandes en sus
+  //     dos extremos. En una CASCARA son CUADRADOS en las esquinas.
+  //   · Arrastrando el CUERPO, el objeto se mueve entero y conserva su forma.
+  //   · Arrastrando un EXTREMO, «the other end joint remains in its original
+  //     location; the length of the frame changes»: o sea, alarga o acorta.
+  //   · Clic DERECHO en un handle: teclear las coordenadas del nudo.
+  //   · ⚠️ Y una que es facil pasar por alto, y que ETABS avisa expresamente:
+  //     al mover asi, el nudo «is disconnected from any other shells to which it
+  //     might have been connected». O sea, el reshape afecta SOLO al objeto que
+  //     estas tocando, no a los vecinos que compartian ese nudo. Aqui igual: si
+  //     el punto lo usa alguien mas, se DUPLICA antes de moverlo.
+  //
+  // Restricciones de dibujo (Drawing_Constraints_in_ETABS.htm), con las mismas
+  // teclas: X bloquea la Y, Y bloquea la X, Z bloquea X e Y, L fija la longitud,
+  // y la barra espaciadora las quita.
+  const grips = new THREE.Group();
+  grips.name = "hekatan-reshape-grips";
+  scene.add(grips);
+  let reshapePoly = -1;
+  let reshapeDrag: { pt: number; poly: number; x0: number; y0: number; z0: number;
+                     otro: [number, number, number] | null } | null = null;
+  let reshapeLock: "" | "x" | "y" | "z" | "l" = "";
+
+  const limpiarGrips = () => {
+    for (const h of [...grips.children]) {
+      grips.remove(h);
+      const m = h as THREE.Mesh;
+      m.geometry?.dispose?.();
+      (m.material as THREE.Material)?.dispose?.();
+    }
+  };
+  /** Tamano del handle en unidades de mundo, atado al paso de snap: asi no se
+   *  vuelve una pelota al alejar la camara ni desaparece al acercarla. */
+  const tamGrip = () => Math.max(0.06, ((window as any).__hekatanSnap2D ?? 0.5) * 0.35);
+
+  const pintarGrips = (polyIdx: number) => {
+    limpiarGrips();
+    reshapePoly = polyIdx;
+    if (polyIdx < 0 || !drawingObj.polylines) return;
+    const poly = drawingObj.polylines.rawVal[polyIdx];
+    const pts = drawingObj.points.rawVal;
+    if (!poly) return;
+    const esArea = drawingObj.areas?.rawVal?.includes(polyIdx) ?? false;
+    const r = tamGrip();
+    // circulo para barras, cuadrado para cascaras: los de ETABS
+    const geo = esArea ? new THREE.BoxGeometry(r * 1.7, r * 1.7, r * 1.7)
+                       : new THREE.SphereGeometry(r, 12, 10);
+    for (const idx of poly) {
+      const p = pts[idx];
+      if (!p) continue;
+      const m = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial({
+        color: 0x00e0ff, depthTest: false, transparent: true, opacity: 0.95 }));
+      m.position.set(p[0], p[1], p[2]);
+      m.renderOrder = 998;
+      (m as any).__pt = idx;
+      grips.add(m);
+    }
+    geo.dispose();
+    viewerRender?.();
+  };
+  (window as any).__hekatanReshapeGrips = () =>
+    grips.children.map((h) => ({ pt: (h as any).__pt,
+      p: [h.position.x, h.position.y, h.position.z] as [number, number, number] }));
+  (window as any).__hekatanReshapeSel = () => reshapePoly;
+
+  /** Hay un handle bajo este punto del mundo? Devuelve el indice de punto. */
+  const gripBajo = (p: [number, number, number]) => {
+    const r = tamGrip() * 2.2;
+    let mejor = -1, dMin = r;
+    for (const h of grips.children) {
+      const d = Math.hypot(h.position.x - p[0], h.position.y - p[1], h.position.z - p[2]);
+      if (d < dMin) { dMin = d; mejor = (h as any).__pt; }
+    }
+    return mejor;
+  };
+
+  /**
+   * DESCONECTAR como ETABS: si el punto lo comparten varias polilineas, se
+   * duplica y la que se esta remodelando se queda con la copia. Sin esto,
+   * alargar una viga arrastraria tambien la columna que llega a ese nudo, que es
+   * justo lo que la ayuda de ETABS dice que NO pasa.
+   */
+  const desconectar = (polyIdx: number, ptIdx: number): number => {
+    const polys = drawingObj.polylines.rawVal;
+    let usos = 0;
+    for (const pl of polys) for (const q of pl) if (q === ptIdx) usos++;
+    if (usos <= 1) return ptIdx;
+    const pts = [...drawingObj.points.rawVal];
+    const nuevo = pts.length;
+    pts.push([...pts[ptIdx]] as [number, number, number]);
+    drawingObj.points.val = pts;
+    const nuevas = polys.map((pl: number[], i: number) =>
+      i === polyIdx ? pl.map((q: number) => (q === ptIdx ? nuevo : q)) : pl);
+    drawingObj.polylines.val = nuevas;
+    return nuevo;
+  };
+
+  /** Aplica la restriccion de dibujo activa al punto destino. */
+  const conRestriccion = (destino: [number, number, number]): [number, number, number] => {
+    if (!reshapeDrag) return destino;
+    const o: [number, number, number] = [reshapeDrag.x0, reshapeDrag.y0, reshapeDrag.z0];
+    if (reshapeLock === "x") return [destino[0], o[1], o[2]];
+    if (reshapeLock === "y") return [o[0], destino[1], o[2]];
+    if (reshapeLock === "z") return [o[0], o[1], destino[2]];
+    if (reshapeLock === "l" && reshapeDrag.otro) {
+      // longitud fija: se conserva el modulo original y solo gira la direccion
+      const a = reshapeDrag.otro;
+      const L0 = Math.hypot(o[0] - a[0], o[1] - a[1], o[2] - a[2]);
+      const d = [destino[0] - a[0], destino[1] - a[1], destino[2] - a[2]];
+      const m = Math.hypot(d[0], d[1], d[2]) || 1;
+      return [a[0] + (d[0] / m) * L0, a[1] + (d[1] / m) * L0, a[2] + (d[2] / m) * L0];
+    }
+    return destino;
+  };
+
+  const enReshape = () =>
+    ((window as any).__hekatanCadState?.get?.() as any)?.tool === "reshape";
+
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!enReshape() || ev.button !== 0) return;
+    const p = puntoBajoCursor(ev);
+    if (!p) return;
+    // 1) se agarro un HANDLE -> alargar/acortar ese extremo
+    const g = gripBajo(p);
+    if (g >= 0 && reshapePoly >= 0) {
+      const ptReal = desconectar(reshapePoly, g);
+      const poly = drawingObj.polylines.rawVal[reshapePoly];
+      const pos = drawingObj.points.rawVal[ptReal];
+      const otroIdx = poly.length === 2 ? poly.find((q: number) => q !== ptReal) : undefined;
+      const otro = otroIdx !== undefined ? drawingObj.points.rawVal[otroIdx] : null;
+      reshapeDrag = { pt: ptReal, poly: reshapePoly, x0: pos[0], y0: pos[1], z0: pos[2],
+                      otro: otro ? [otro[0], otro[1], otro[2]] : null };
+      (window as any).__hekatanReshapeIgnorarPt = ptReal;
+      ev.stopPropagation();
+      updateStatus("RESHAPE: arrastra el extremo. X / Y / Z fijan un eje - L fija la longitud - Espacio quita la restriccion.");
+      return;
+    }
+    // 2) si no, se DESIGNA lo que haya debajo y salen sus handles
+    const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
+    const f = findClosestPoly(p[0], p[1], p[2], tol);
+    if (f) {
+      pintarGrips(f.polyIdx);
+      const esArea = drawingObj.areas?.rawVal?.includes(f.polyIdx) ?? false;
+      updateStatus("RESHAPE: " + (esArea ? "cascara" : "barra") + " designada - arrastra un extremo para " +
+                   (esArea ? "deformarla" : "alargarla o acortarla") + ".");
+      ev.stopPropagation();
+    } else {
+      limpiarGrips(); reshapePoly = -1;
+    }
+  }, true);
+
+  rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
+    if (!reshapeDrag) return;
+    const p = puntoBajoCursor(ev);
+    if (!p) return;
+    const d = conRestriccion(p);
+    const pts = drawingObj.points.rawVal;
+    pts[reshapeDrag.pt] = [d[0], d[1], d[2]];
+    drawingObj.points.val = [...pts];
+    const h = grips.children.find((q) => (q as any).__pt === reshapeDrag!.pt);
+    h?.position.set(d[0], d[1], d[2]);
+    if (reshapeDrag.otro) {
+      const a = reshapeDrag.otro;
+      const L = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
+      updateStatus("RESHAPE: longitud " + L.toFixed(3) + " m" +
+                   (reshapeLock ? "  -  fijo " + reshapeLock.toUpperCase() : ""));
+    }
+    viewerRender?.();
+  }, true);
+
+  rendererElm.addEventListener("pointerup", () => {
+    if (!reshapeDrag) return;
+    reshapeDrag = null; reshapeLock = "";
+    (window as any).__hekatanReshapeIgnorarPt = undefined;
+    try { (window as any).__hekatanRebuild?.(); } catch { /* no-op */ }
+    updateStatus("Reshape aplicado.");
+  }, true);
+
+  window.addEventListener("keydown", (ev: KeyboardEvent) => {
+    if (!reshapeDrag) return;
+    const k = ev.key.toLowerCase();
+    if (k === "x" || k === "y" || k === "z" || k === "l") { reshapeLock = k as any; ev.preventDefault(); }
+    else if (k === " ") { reshapeLock = ""; ev.preventDefault(); }
+  }, true);
+  (window as any).__hekatanReshapeLimpiar = () => { limpiarGrips(); reshapePoly = -1; };
+
   (window as any).__hekatanDeleteSelected = deleteSelectedItems;
 
   window.addEventListener("keydown", (ev: KeyboardEvent) => {
@@ -7026,6 +7239,11 @@ export function drawing({
 
   rendererElm.addEventListener("click", (event: PointerEvent) => {
     (window as any).__hekatanCursorPx = { x: event.clientX, y: event.clientY };
+    // ⚠️ En modo REMODELAR el clic NO dibuja: designa el objeto y agarra sus
+    // extremos. Sin esta guarda, pinchar una viga para remodelarla añadía un
+    // punto al dibujo (medido: el modelo pasaba de 3 a 4 nudos con solo
+    // designar), y a partir de ahí lo que se arrastraba ya era otra cosa.
+    if (((window as any).__hekatanCadState?.get?.() as any)?.tool === "reshape") return;
     // Ignorar click que viene de drag (rotación)
     if (pointerDownAndMovedCount > 5) {
       pointerDownAndMovedCount = 0;

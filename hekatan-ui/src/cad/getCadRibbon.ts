@@ -124,6 +124,10 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
       { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
       { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
       { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
+      // El «Reshape Object» de ETABS (Draw ▸ Reshape Object): designar y arrastrar
+      // el extremo. No es «Alargar» de AutoCAD, que necesita un contorno de destino.
+      { id: "reshape", icono: "⇲", nombre: "Remodelar", tecla: "RE",
+        ayuda: "clic en la barra o el paño: salen sus extremos. Arrastra uno y la alarga o acorta. X/Y/Z fijan un eje, L la longitud." },
       { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
       { id: "medir",  icono: "📏", nombre: "Medir",    tecla: "DI", ayuda: "2 clics: distancia y Δx Δy Δz (acotar)." },
       { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
