@@ -73,7 +73,29 @@ function crearRotulo(): HTMLDivElement {
   return r;
 }
 
-const espera = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+/**
+ * Esperar `ms`… también con la pestaña en segundo plano.
+ *
+ * ⚠️ Chrome y Edge CONGELAN los `setTimeout` de una pestaña que no se está
+ * viendo. No los retrasan: los paran. Medido el 17-sep-2026 en el deploy
+ * público — un `await setTimeout(100)` no volvía nunca, así que la promesa del
+ * clic se quedaba colgada para siempre y el simulador parecía roto cuando lo
+ * único que pasaba es que la pestaña estaba detrás. Y eso es justo lo normal
+ * mientras se automatiza: uno no mira el navegador.
+ *
+ * Con la pestaña a la vista se espera de verdad (el recorrido se ve suave). Sin
+ * ella se espera BLOQUEANDO el hilo, que no es bonito pero termina: el objetivo
+ * en segundo plano es que la secuencia se complete, no que se vea.
+ */
+const espera = (ms: number) => {
+  if (ms <= 0) return Promise.resolve();
+  if (document.visibilityState === "visible") {
+    return new Promise<void>((r) => setTimeout(r, ms));
+  }
+  const fin = performance.now() + Math.min(ms, 250);   // tope: no colgar el hilo
+  while (performance.now() < fin) { /* espera activa, la pestaña está detrás */ }
+  return Promise.resolve();
+};
 
 export function cursorAux(encender = true): void {
   const viejo = document.getElementById(ID);
@@ -162,7 +184,12 @@ export function cursorAux(encender = true): void {
   /** Movimiento visible, con suavizado a la entrada y a la salida. */
   const irA = async (x: number, y: number) => {
     const d = Math.hypot(x - px, y - py);
-    const pasos = velocidad > 0 ? Math.max(1, Math.round(d / 12)) : 1;
+    // Con la pestaña detrás no hay nadie mirando y cada espera bloquea el hilo:
+    // el recorrido se hace de un salto. Los eventos que importan (el
+    // `pointermove` final, que es el que fija el punto bajo el cursor) se
+    // emiten igual.
+    const aLaVista = document.visibilityState === "visible";
+    const pasos = velocidad > 0 && aLaVista ? Math.max(1, Math.round(d / 12)) : 1;
     const x0 = px, y0 = py;
     for (let i = 1; i <= pasos; i++) {
       const t = i / pasos;
@@ -171,7 +198,7 @@ export function cursorAux(encender = true): void {
       mover(cx, cy);
       ev("pointermove", cx, cy);
       ev("mousemove", cx, cy);
-      if (velocidad > 0) await espera(Math.max(8, (d / pasos) / velocidad * 1000));
+      if (velocidad > 0 && aLaVista) await espera(Math.max(8, (d / pasos) / velocidad * 1000));
     }
     mover(x, y);
     ev("pointermove", x, y);
@@ -244,14 +271,18 @@ export function cursorAux(encender = true): void {
       halo(px, py);
       await espera(80);
       const d = Math.hypot(x2 - x1, y2 - y1);
-      const pasos = velocidad > 0 ? Math.max(2, Math.round(d / 12)) : 2;
+      const aLaVista = document.visibilityState === "visible";
+      // Con la pestaña detrás, el arrastre sigue necesitando pasos INTERMEDIOS
+      // —un OrbitControls que solo ve el principio y el final no gira—, pero
+      // pocos: cada espera bloquea el hilo.
+      const pasos = velocidad > 0 && aLaVista ? Math.max(2, Math.round(d / 12)) : 6;
       for (let i = 1; i <= pasos; i++) {
         const t = i / pasos;
         const cx = x1 + (x2 - x1) * t, cy = y1 + (y2 - y1) * t;
         mover(cx, cy);
         ev("pointermove", cx, cy, { buttons: 1 });
         ev("mousemove", cx, cy, { buttons: 1 });
-        if (velocidad > 0) await espera(Math.max(8, (d / pasos) / velocidad * 1000));
+        if (velocidad > 0 && aLaVista) await espera(Math.max(8, (d / pasos) / velocidad * 1000));
       }
       ev("pointerup", px, py, { button: 0, buttons: 0 });
       ev("mouseup", px, py, { button: 0, buttons: 0 });
