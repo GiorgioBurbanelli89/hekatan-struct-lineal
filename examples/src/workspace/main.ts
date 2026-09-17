@@ -6529,6 +6529,10 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       title === defaultFolderTitle ||
       /\bmodo\b/i.test(title) ||
       /activar/i.test(title) ||     // "Cargas — Activar" (toggles D/L/S)
+      // ⚠️ Al elegir una cimentación, sus parámetros son LO que se viene a tocar,
+      // y estaban plegados y por debajo del pliegue: parecía que la plantilla no
+      // traía opciones dentro. Se abre solo, como los de modos y combinaciones.
+      /cimiento/i.test(title) ||
       /combinaci/i.test(title));
   const getFolder = (title: string) => {
     if (!folderMap.has(title)) {
