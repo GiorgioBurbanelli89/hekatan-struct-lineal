@@ -1311,6 +1311,17 @@ function encuadrarAhora() {
  * apagan y el rótulo lo dice; sin barras, las de barra. Es lo que hace ETABS, que no
  * te deja pedir un M11 donde no hay áreas.
  */
+const LABEL2INTERNAL_RES: Record<string, string> = {
+  none: "none",
+  F11: "membraneXX", F22: "membraneYY", F12: "membraneXY",
+  FMax: "membranePrincipalMax", FMin: "membranePrincipalMin", FVM: "vonMises",
+  V13: "tranverseShearX", V23: "tranverseShearY", VMax: "transverseShearMax",
+  M11: "bendingXX", M22: "bendingYY", M12: "bendingXY",
+  MMax: "bendingPrincipalMax", MMin: "bendingPrincipalMin",
+  "Pressure (suelo)": "pressure", Ux: "displacementX", Uy: "displacementY", Uz: "displacementZ",
+};
+const internalOf = (label: string): string => LABEL2INTERNAL_RES[label] ?? label;
+
 function ajustarResultadosAlModelo() {
   const elems = (states.elements.rawVal ?? []) as number[][];
   const nCascaras = elems.filter((e) => e.length >= 3).length;
@@ -1333,12 +1344,72 @@ function ajustarResultadosAlModelo() {
     if (!hay && sel.value !== "none") { sel.value = "none"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
   };
   // el de cáscara es el único con «M11»; el de barra, el único con «Axial Force»
-  marcar(selects.find((s) => Array.from(s.options).some((o) => o.value === "M11")), nCascaras > 0, "cáscaras");
-  marcar(selects.find((s) => Array.from(s.options).some((o) => o.value === "Axial Force")), nBarras > 0, "barras");
+  const selShell = selects.find((s) => Array.from(s.options).some((o) => o.value === "M11"));
+  const selFrame = selects.find((s) => Array.from(s.options).some((o) => o.value === "Axial Force"));
+  marcar(selShell, nCascaras > 0, "cáscaras");
+  marcar(selFrame, nBarras > 0, "barras");
+
+  // ── Y dentro de las de cáscara, apagar las que ESTE modelo no calcula ──────
+  //
+  // Una placa en flexión pura no tiene fuerzas de membrana: F11/F22/F12/FVM salen
+  // planas (medido en `plate-thin`: los cuatro a −1, que es el relleno de «sin dato»,
+  // mientras M11/M22/M12 sí dan valores). Ofrecerlas y que no pinten nada es lo que
+  // hace pensar que el programa falla. M12 —el momento TORSOR— sí está y es de los
+  // que hay que mirar en una losa: en las esquinas de una losa apoyada en 4 bordes
+  // es máximo, y entra en el armado por Wood-Armer.
+  if (selShell && nCascaras > 0) {
+    const ao: any = states.analyzeOutputs.rawVal ?? {};
+    // ⚠️ FMax/FMin, MMax/MMin y VMax NO están en `analyzeOutputs`: son DERIVADOS (círculo
+    // de Mohr) que el visor calcula al vuelo desde los tres campos de su familia
+    // (getViewer.ts). Mirarlos en analyzeOutputs los daba por «sin datos» aunque la
+    // zapata sí los pinta: un falso negativo que habría escondido justo las principales.
+    const DERIVADOS: Record<string, string[]> = {
+      membranePrincipalMax: ["membraneXX", "membraneYY", "membraneXY"],
+      membranePrincipalMin: ["membraneXX", "membraneYY", "membraneXY"],
+      bendingPrincipalMax:  ["bendingXX", "bendingYY", "bendingXY"],
+      bendingPrincipalMin:  ["bendingXX", "bendingYY", "bendingXY"],
+      transverseShearMax:   ["tranverseShearX", "tranverseShearY"],
+    };
+    const conValores = (m: any): boolean => {
+      if (m == null) return false;
+      if (typeof m.size === "number") return m.size > 0;
+      if (Array.isArray(m)) return m.length > 0;
+      return true;
+    };
+    const tieneDatos = (interno: string): boolean => {
+      if (interno.startsWith("displacement")) return true;        // salen de la deformada
+      const base = DERIVADOS[interno];
+      if (base) return base.some((k) => conValores(ao[k]));       // el derivado vive si vive su familia
+      return conValores(ao[interno]);
+    };
+    for (const o of Array.from(selShell.options)) {
+      if (o.value === "none" || o.disabled) continue;
+      const interno = internalOf(o.value);
+      if (!tieneDatos(interno)) {
+        o.disabled = true;
+        o.style.color = "#64748b";
+        if (!/sin datos/.test(o.textContent ?? "")) o.textContent = `${o.textContent}  (sin datos)`;
+      }
+    }
+  }
 }
 (window as any).__hekatanAjustarResultados = ajustarResultadosAlModelo;
 
 function filterShellResultOptions(allowed?: string[]) {
+  // ⚠️ YA NO SE RECORTA NADA. Cada ejemplo traía su propia lista `availableShellResults`
+  // —87 ejemplos, 87 listas distintas— y el desplegable salía diferente en cada uno: en
+  // una placa se ofrecían «FVM, M11, M22, Uz» y faltaba M12, el momento TORSOR, que en
+  // una losa es justo el que hay que mirar (Jorge, 17-sep-2026: «no hay momentos
+  // torsionales en placas… cada ejemplo debe ser idéntico»).
+  //
+  // El motor calcula las 19 componentes para cualquier cáscara, así que esconder unas
+  // cuantas era una decisión de cada ejemplo, no una limitación. Lo único que apaga
+  // opciones ahora es el MODELO: sin cáscaras no hay resultados de cáscara
+  // (`ajustarResultadosAlModelo`). `defaultShellResult` se respeta: sigue decidiendo
+  // cuál sale elegida al abrir.
+  if (allowed) { /* se ignora a propósito: ver arriba */ }
+  return;
+  // eslint-disable-next-line no-unreachable
   const selects = viewerElm.querySelectorAll<HTMLSelectElement>("select");
   // OJO: el `value` del <option> del DOM es el LABEL de Tweakpane (estilo ETABS:
   // "M11 (bendingXX)", "Von Mises", "pressure"); el ESTADO usa el nombre interno
