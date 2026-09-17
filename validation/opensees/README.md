@@ -264,3 +264,38 @@ edificio, se quedan a 0.8 %. Sin losas, los tres coinciden a 0.000 %.
 
 ⏳ La prueba que falta: recompilar con el Shell-Thick de CSI (el parche de `hekatan-struct-csi`)
 y ver si la torre vuelve a 0.000 % contra SAP2000. Eso cerraría la cadena entera.
+
+## La PLACA PURA: aquí es donde está el problema (17-sep-2026)
+
+Antes de mirar la cáscara hay que mirar la placa sola, sin membrana. CSI la tiene aparte
+(SAP2000: 3 PlateThin, 4 PlateThick; ETABS: 4 y 5, que su propia API marca `DO_NOT_USE`), y el
+driver la pide con `--placa`. Placa cuadrada de 10 m simplemente apoyada, malla 8×8, con **SAP2000
+de juez**:
+
+| | Hekatan vs SAP2000 |
+|---|---|
+| **PlateThin** (DKQ) | **1.3e−11 %** — es el MISMO elemento |
+| **PlateThick** | **1.072 %** |
+
+Y barriendo el espesor (w del centro, carga uniforme):
+
+| t/L | SAP2000 | Hekatan (MITC4 + Wilson) | dif |
+|---|---|---|---|
+| 0.001 | −2.109511e+2 | −2.121628e+2 | **+0.574 %** |
+| 0.01 | −2.124893e−1 | −2.124366e−1 | −0.025 % |
+| 0.05 | −1.768248e−3 | −1.749494e−3 | **−1.061 %** |
+| 0.1 | −2.342748e−4 | −2.351350e−4 | +0.367 % |
+| 0.2 | −3.484188e−5 | −3.551236e−5 | **+1.924 %** |
+
+Son **los mismos números** que da el banco `placa-thick-thin-sano` contra ETABS 19: o sea que
+SAP2000 y ETABS tienen la MISMA placa gruesa, y Hekatan difiere de los dos igual. El Thin, en
+cambio, es idéntico a los dos hasta el último dígito.
+
+⚠️ **ETABS no sirve para este banco**: una losa suelta apoyada en su perímetro, sin columnas,
+no le devuelve ni un desplazamiento (0 nudos), ni en la cota 0 ni elevada, ni como Plate ni como
+Shell. Es su semántica de edificios. Para medirlo en ETABS habría que colgarla de columnas, y
+entonces ya no es la placa pura.
+
+⚠️ Y una trampa del propio driver, ya tapada: con 0 nudos leídos escribía «peor 0.000 %», que
+parece que clava cuando lo que pasa es que el programa **no devolvió nada**. Ahora dice
+`el programa devolvio CERO nudos, no hay comparacion`.

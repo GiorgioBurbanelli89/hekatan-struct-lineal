@@ -57,6 +57,11 @@ else:
     # cubran el modelo antes de dibujar nada. SAP2000 no tiene este problema.
     _z = sorted({round(float(p[2]), 4) for p in D["nodes"]})
     _base = _z[0]; _alt = [v for v in _z[1:] if v - _base > 1e-6]
+    # Si TODO el modelo esta a una sola cota (una losa suelta), no hay ninguna
+    # altura por encima de la base y ETABS se queda con su Story1 a 1.00 m: el
+    # modelo cae fuera de todo piso y JointDispl devuelve CERO nudos.
+    if not _alt and _base > 1e-6:
+        _alt = [_base]; _base = 0.0
     if len(_alt) > 30:
         _paso = (_alt[-1] - _base) / 30.0
         _alt = [_base + _paso * (i + 1) for i in range(30)]
@@ -108,15 +113,27 @@ def shellprop(i):
     tipo = 1 if g(ei.get("plateFormulations"), i, 0) == 1 else 2       # 1 thin, 2 thick
     m = g(ei.get("shellModifiers"), i, None)
     if MEMBRANA and m and all(abs(v) < 1e-12 for v in m[3:6]): tipo = 3   # 3 = membrane
+    # --placa: el elemento PLACA de CSI (solo flexion, sin membrana), que es como
+    # se aisla la formulacion de placa del resto. SAP2000: 3 PlateThin, 4 PlateThick.
+    if "--placa" in sys.argv: tipo = 3 if tipo == 1 else 4
     k = (t, Ev, nu, tipo, rho)
     if k not in shells:
         nm = "SH%d" % len(shells)
         # OJO enum distinto: ETABS eShellType Membrane = 3; en SAP2000 3 es PLATE THIN (sin rigidez de
         # membrana: el mini lateral salia 19 %). SAP2000: ShellThin 1, ShellThick 2, PlateThin 3,
         # PlateThick 4, Membrane 5.
-        if PROG == "sap": sm.PropArea.SetShell_1(nm, 5 if tipo == 3 else tipo, True, mat(Ev, nu, rho), 0.0, t, t)
+        if PROG == "sap":
+            # ⚠️ los enums NO coinciden: en SAP2000 3 = PlateThin y 4 = PlateThick,
+            # y Membrane es el 5; en ETABS Membrane es el 3.
+            tsap = tipo if "--placa" in sys.argv else (5 if tipo == 3 else tipo)
+            sm.PropArea.SetShell_1(nm, tsap, True, mat(Ev, nu, rho), 0.0, t, t)
         elif "--wall" in sys.argv: sm.PropArea.SetWall(nm, 1, tipo, mat(Ev, nu, rho), t)   # objeto WALL (sin semantica de piso)
-        else: sm.PropArea.SetSlab(nm, 0, tipo, mat(Ev, nu, rho), t)
+        else:
+            # ETABS tiene OTRO enum: 1 ShellThin, 2 ShellThick, 3 Membrane,
+            # 4 PlateThin, 5 PlateThick (los dos de placa los marca CSI como
+            # "DO_NOT_USE" en su propia API) y 6 Layered.
+            tet = ({3: 4, 4: 5}.get(tipo, tipo)) if "--placa" in sys.argv else tipo
+            sm.PropArea.SetSlab(nm, 0, tet, mat(Ev, nu, rho), t)
         shells[k] = nm
     return shells[k]
 nombres = []
@@ -290,6 +307,13 @@ def resultados(caso, Dc):
                 d = abs(n["u"][c] - hu[c]) / umax * 100
                 if d > peor: peor, peorN = d, n["i"]
         res["peor"] = peor; res["peorNudo"] = peorN; res["umax"] = umax
+        # ⚠️ sin nudos leidos, "peor = 0.000 %" es un FALSO POSITIVO: parece que
+        # clava y lo que pasa es que el programa no devolvio nada (en ETABS, una
+        # losa en la cota 0 no es piso y no reporta desplazamientos).
+        if not res["nudos"]:
+            res["peor"] = None; res["sin_resultados"] = True
+            print("%s [%s]: el programa devolvio CERO nudos, no hay comparacion" % (PROG, caso), flush=True)
+            return res
         print("%s [%s] vs Hekatan: peor nudo %.3e %% del maximo (nudo %d, u_max %.4e), %d nudos, sumRz %s" % (PROG, caso, peor, peorN, umax, len(res["nudos"]), res["sumRz"]), flush=True)
     return res
 # ── Inspeccion del MODELO DE ANALISIS que genero CSI (malla real) ──
