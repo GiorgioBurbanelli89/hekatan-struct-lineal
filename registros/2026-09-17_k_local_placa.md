@@ -90,3 +90,43 @@ placa. Donde va a doler es en el CORTANTE (punzonamiento), que es justo lo que K
   `ceil(1.0/0.4999…) = 3` donde toca 2 — dos corridas con el mismo `ms` salían con 324 y 144
   paños. Con eso, comparar Thin contra Thick medía la malla, no la formulación. Arreglado con
   una tolerancia de 1e-9.
+
+---
+
+# El terreno no tira: muelle de solo compresión — 17-sep-2026
+
+## ✅ Funcionó
+
+- **Es lo que hace SAFE**, medido en su propio `.f2k`
+  (`validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k`):
+  `Name=ASpr1 "Subgrade Modulus"=105 "Nonlinear Option"="Compression Only"`.
+  Ojo al matiz: los `SPR1..3` de `cimentacion_9zapatas.f2k` salen `"None (Linear)"`,
+  pero ésos los escribe NUESTRO exportador, no SAFE.
+- El solver es lineal, así que se resuelve por **conjunto activo**: se resuelve, se
+  quita el muelle a los nudos que se levantan, se vuelve a resolver, y un nudo
+  apartado puede volver si vuelve a comprimir. **Converge en 2 iteraciones** en las
+  dos tipologías excéntricas.
+- Al converger se comprueban las **dos condiciones de complementariedad**, que es lo
+  que hace defendible el resultado: donde hay muelle el nudo comprime, y donde el
+  nudo se levanta no hay muelle. **0 y 0** en lindero y esquinera.
+- Efecto medido: lindero **−11.215 → −11.460 mm**, esquinera **−17.776 → −20.079 mm**.
+  Asienta más, que es lo correcto: antes había muelles *sujetando* la zapata.
+- Las siete tipologías siguen cerrando ΣR = ΣP.
+
+## ❌ No funcionó (y por qué)
+
+- **El equilibrio parecía no cerrar** (770.8 contra 800 kN): el test sumaba `−k·w` de
+  TODOS los muelles verticales, incluidos los ya retirados, cuyo `w > 0` restaba.
+  Eran muelles que la solución había quitado. Corregido: solo se suma donde comprime.
+- Y por el camino, un fallo real que salió de ahí: el modelo guardaba en
+  `nodeInputs.springs` la lista ENTERA aunque hubiera resuelto con un subconjunto.
+  Cualquiera que la leyera después (el modal, un export, una comprobación) contaría
+  muelles inexistentes. Ahora guarda los activos.
+
+## ⏳ Falta
+
+- El punzonamiento de SAFE: está en `SAFE.exe` nativo (`ConcreteSlabDesignPunchingShear`,
+  `DBTABLETYPE_DESIGN_PUNCHAPI_DETAILED`), no en los .NET. Necesita abrir SAFE por OAPI
+  (~4.6 GB) para sacar `b0`, `d`, `γv`, `Jc` y arbitrar la fórmula.
+- El exportador `.f2k` escribe muelles de NUDO lineales; SAFE usa muelle de ÁREA
+  «Compression Only». No es lo mismo y hay que igualarlo.

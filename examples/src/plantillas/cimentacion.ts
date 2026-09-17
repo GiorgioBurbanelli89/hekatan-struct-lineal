@@ -116,6 +116,80 @@ function seccionTInvertida(bf: number, tf: number, bw: number, h: number) {
   return { A, I22, I33, J, yc };
 }
 
+/**
+ * MUELLE QUE SOLO TRABAJA A COMPRESION — el «Compression Only» de SAFE.
+ *
+ * No es un capricho: es lo que SAFE pone POR DEFECTO en el muelle de area de una
+ * zapata. Medido en el .f2k que escribe el mismo
+ * (validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k):
+ *
+ *     Name=ASpr1   "Subgrade Modulus"=105   "Nonlinear Option"="Compression Only"
+ *
+ * El solver es LINEAL, asi que esto se resuelve por CONJUNTO ACTIVO, que es el
+ * metodo de siempre para un contacto unilateral:
+ *
+ *   1. se resuelve con todos los muelles puestos;
+ *   2. los nudos que se LEVANTAN (w > 0) no pueden estar tirando del terreno:
+ *      se les quita el muelle vertical;
+ *   3. se vuelve a resolver; un nudo apartado puede volver a comprimir, y
+ *      entonces se le devuelve el muelle;
+ *   4. se repite hasta que el conjunto no cambia.
+ *
+ * Al converger se cumplen las dos condiciones que definen el problema
+ * (complementariedad): donde hay muelle, el nudo comprime; donde no lo hay, el
+ * nudo se levanta o esta justo en cero. `verificarContacto` lo comprueba, y por
+ * eso el resultado se puede defender y no solo enseñar.
+ *
+ * ⚠️ Si se quedara TODO levantado, el modelo no tiene contra que apoyarse: se
+ * devuelve la ultima solucion valida y se avisa, en vez de soltar un NaN.
+ */
+function resolverSoloCompresion(
+  nodes: Node[], elements: Element[], nodeInputs: any, elementInputs: any,
+  springs: Array<{ node: number; dof: number; k: number }>,
+  deformFn: typeof deform, maxIter = 25,
+) {
+  const verticales = springs.filter((s) => s.dof === 2);
+  const otros = springs.filter((s) => s.dof !== 2);
+  let activo = new Set<number>(verticales.map((s) => s.node));
+  let salida: any = null, iter = 0, ultimaValida: any = null;
+  for (; iter < maxIter; iter++) {
+    const lista = [...otros, ...verticales.filter((s) => activo.has(s.node))];
+    if (lista.filter((s) => s.dof === 2).length === 0) {
+      console.warn("[Cimentación] todos los nudos levantados: no hay contacto con el terreno.");
+      return { out: ultimaValida ?? salida, iter, activo, convergio: false };
+    }
+    salida = deformFn(nodes, elements, { ...nodeInputs, springs: lista }, elementInputs, lista);
+    const def = salida?.deformations;
+    if (!def) break;
+    ultimaValida = salida;
+    const nuevo = new Set<number>();
+    for (const s of verticales) {
+      const w = def.get ? def.get(s.node)?.[2] : (def as any)[s.node]?.[2];
+      // se queda el muelle donde el nudo COMPRIME (w < 0). El +1e-12 evita que
+      // un cero numerico entre y salga del conjunto en bucle infinito.
+      if (w != null && isFinite(w) && w < 1e-12) nuevo.add(s.node);
+    }
+    const igual = nuevo.size === activo.size && [...nuevo].every((n) => activo.has(n));
+    if (igual) return { out: salida, iter: iter + 1, activo, convergio: true };
+    activo = nuevo;
+  }
+  return { out: salida, iter, activo, convergio: false };
+}
+
+/** Las dos condiciones del contacto unilateral, comprobadas sobre la solucion. */
+function verificarContacto(
+  def: any, activo: Set<number>, nudos: Iterable<number>,
+): { traccion: number; despegado: number } {
+  let traccion = 0, despegado = 0;
+  for (const n of nudos) {
+    const w = def?.get ? def.get(n)?.[2] : def?.[n]?.[2];
+    if (w == null || !isFinite(w)) continue;
+    if (activo.has(n) && w > 1e-9) traccion++;       // muelle puesto y nudo levantado: prohibido
+    if (!activo.has(n) && w < -1e-9) despegado++;    // sin muelle y comprimiendo: falta contacto
+  }
+  return { traccion, despegado };
+}
+
 /** Una zapata: rectángulo en planta y canto. */
 interface Zapata { x0: number; y0: number; x1: number; y1: number; t: number; }
 /** Una columna: dónde cae su EJE, su lado y la carga que baja. */
@@ -329,8 +403,33 @@ export function construirCimentacion(p: any, states: any, sub = CIM_REJILLA) {
   states.objects3D.val = [];
   if (p.__soloModelo) return;
   try {
-    states.deformOutputs.val = deform(nodes, elements, states.nodeInputs.val,
-                                      states.elementInputs.val, springs);
+    // El terreno NO TIRA: por defecto se resuelve con muelles de solo compresión,
+    // que es lo que pone SAFE de fábrica en el muelle de área de una zapata.
+    const soloCompresion = Math.round(p.suelo ?? 1) === 1;
+    if (soloCompresion) {
+      const r = resolverSoloCompresion(nodes, elements, states.nodeInputs.val,
+                                       states.elementInputs.val, springs, deform);
+      states.deformOutputs.val = r.out;
+      // El modelo se queda con los muelles que DE VERDAD trabajaron. Si guardara
+      // la lista entera, cualquiera que la lea después (el modal, un export, una
+      // comprobación de equilibrio) estaría contando muelles que la solución ya
+      // había retirado — y la reacción del terreno no cuadraría con la carga.
+      const activos = springs.filter((q) => q.dof !== 2 || r.activo.has(q.node));
+      states.nodeInputs.val = { ...states.nodeInputs.val, springs: activos };
+      const chequeo = verificarContacto(r.out?.deformations, r.activo, areaNudo.keys());
+      const fuera = [...areaNudo.keys()].filter((n) => !r.activo.has(n)).length;
+      (states as any).__cimContacto = { ...chequeo, iteraciones: r.iter,
+                                        convergio: r.convergio, despegados: fuera,
+                                        total: areaNudo.size };
+      console.info(`[Cimentación] contacto unilateral: ${r.iter} iteración(es), ` +
+        `${fuera} de ${areaNudo.size} nudos despegados del terreno` +
+        (r.convergio ? "" : " — ⚠️ NO convergió") +
+        (chequeo.traccion || chequeo.despegado
+          ? ` — ⚠️ ${chequeo.traccion} traccionando, ${chequeo.despegado} sin contacto` : ""));
+    } else {
+      states.deformOutputs.val = deform(nodes, elements, states.nodeInputs.val,
+                                        states.elementInputs.val, springs);
+    }
     states.analyzeOutputs.val = analyze(nodes, elements, states.elementInputs.val,
                                         states.deformOutputs.val);
     const def = states.deformOutputs.val?.deformations;
@@ -347,7 +446,8 @@ export function construirCimentacion(p: any, states: any, sub = CIM_REJILLA) {
       }
       (states.analyzeOutputs.val as any).pressure = pres;
 
-      // ⚠️ EL MUELLE ES LINEAL: puede TIRAR hacia abajo de una esquina que se levanta.
+      // Cuentas de control. Con el muelle de solo compresión esto DEBE salir a cero:
+      // si algún nudo queda levantado y con muelle puesto, la iteración no cerró.
       // El suelo no hace eso. SAFE tiene «Compression Only» (no lineal) justo para
       // esto. Se cuenta y se avisa: en una de lindero o esquinera, si hay muchos
       // nudos levantados, el reparto de presiones de ese caso no vale.

@@ -174,6 +174,14 @@ const PARAMS = {
                "Shell-Thin (Kirchhoff) — lo que trae SAFE de fábrica": 1 },
     label: "Formulación del cimiento", folder: "⬓ Cimiento — geometría y suelo",
   },
+  // ⚠️ El defecto es SOLO COMPRESIÓN porque es lo que pone SAFE: su muelle de área
+  // sale con «Nonlinear Option = Compression Only» en el .f2k que escribe él
+  // (validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k). El terreno no tira.
+  suelo: {
+    default: 1, min: 0, max: 1, step: 1,
+    options: { "Solo compresión (como SAFE)": 1, "Lineal (el muelle también tira)": 0 },
+    label: "Comportamiento del suelo", folder: "⬓ Cimiento — geometría y suelo",
+  },
   volCim: { default: 1.0, min: 0.5, max: 4, step: 0.25, label: "vuelo de la losa mat (m)", folder: "⬓ Cimiento — geometría y suelo" },
   volZap: { default: 0.6, min: 0.3, max: 3, step: 0.1, label: "vuelo de la combinada (m)", folder: "⬓ Cimiento — geometría y suelo" },
   vtBf: { default: 1.00, min: 0.3, max: 3, step: 0.05, label: "T invertida · ancho del ala (m)", folder: "⬓ Cimiento — geometría y suelo" },
