@@ -22,10 +22,13 @@
  * esquina (orden de los nudos del elemento), [Mx, My, Mxy] con el signo de
  * la curvatura del solver (el que llama pone el signo de CSI).
  */
-export function csiThickJointMoments(
-  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
-  penal = 1000
-): number[][] {
+
+/** El ensamblaje de la K de 22 gdl del Shell-Thick de CSI, que usan las DOS cosas que
+ *  salen de aqui: la recuperacion de momentos en los joints y la K de 12x12 condensada
+ *  que se ensena en pantalla. Una sola copia: si cambia la formulacion, cambia para las dos. */
+function ensamblarThick22(
+  xl: number[], yl: number[], E: number, nu: number, t: number, penal = 1000
+) {
   const D0 = (E * t * t * t) / (12 * (1 - nu * nu));
   const Db = [[D0, D0 * nu, 0], [D0 * nu, D0, 0], [0, 0, (D0 * (1 - nu)) / 2]];
   const Dsv = ((5 / 6) * E * t) / (2 * (1 + nu));
@@ -114,6 +117,14 @@ export function csiThickJointMoments(
       K[a][b] += (s + PENAL * Dsum * p.v[a] * p.v[b]) * p.w;
     }
   }
+  return { K, media, Ben, Db, z22 };
+}
+
+export function csiThickJointMoments(
+  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+  penal = 1000
+): number[][] {
+  const { K, media, Ben, Db, z22 } = ensamblarThick22(xl, yl, E, nu, t, penal);
   // que internos son activos: la misma eliminacion secuencial del C++ (salta pivotes nulos)
   let esc = 0; for (const f of K) for (const q of f) esc = Math.max(esc, Math.abs(q));
   const Kc = K.map((f) => f.slice());
@@ -154,4 +165,29 @@ export function csiThickJointMoments(
     return [0, 1, 2].map((i) => Db[i][0] * k[0] + Db[i][1] * k[1] + Db[i][2] * k[2]);
   };
   return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([r, s]) => Men(r, s));
+}
+
+
+/**
+ * La K de FLEXION del Shell-Thick de CSI ya CONDENSADA a los 12 gdl de nudo
+ * [w, thetax, thetay] x 4, en ejes locales del elemento.
+ *
+ * Es la misma K de 22 gdl de `getBendingK_CSI` (shellQ4.cpp) con los 10 internos
+ * eliminados por la misma eliminacion secuencial que salta pivotes nulos. O sea: la
+ * matriz con la que el motor resuelve, no una parecida escrita para ensenarla.
+ */
+export function csiThickBendingK(
+  xl: number[], yl: number[], E: number, nu: number, t: number, penal = 1000
+): number[][] {
+  const { K } = ensamblarThick22(xl, yl, E, nu, t, penal);
+  let esc = 0; for (const f of K) for (const q of f) esc = Math.max(esc, Math.abs(q));
+  const Kc = K.map((f) => f.slice());
+  for (let i = 12; i < 22; i++) {
+    const piv = Kc[i][i];
+    if (Math.abs(piv) <= 1e-14 * esc) continue;
+    const fila = Kc[i].slice(), col = Kc.map((f) => f[i]);
+    for (let a = 0; a < 22; a++) for (let b = 0; b < 22; b++) Kc[a][b] -= (col[a] * fila[b]) / piv;
+    for (let a = 0; a < 22; a++) { Kc[i][a] = 0; Kc[a][i] = 0; }
+  }
+  return Kc.slice(0, 12).map((f) => f.slice(0, 12));
 }
