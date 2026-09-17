@@ -236,3 +236,31 @@ Guiones en `hs_galpon_es.txt` / `_en.txt` y `hs_torre_es.txt` / `_en.txt`, una f
 ⚠️ Con 110 fotogramas por modo la animación va a ~8 fps dentro del vídeo; con 30 salía a 1.9 fps
 y se veía a saltos. Y el máster va a 1280x720 dejando ~90 px libres abajo: sin esa franja, la
 segunda línea del subtítulo se sale del cuadro.
+
+### CERRADO: el ±7 % de la torre es el Shell-THICK, y se mide aquí
+
+Con SAP2000 de juez, quitando una cosa cada vez:
+
+| modelo | Hekatan vs SAP2000 | Hekatan vs ETABS |
+|---|---|---|
+| **sin losas** (solo barras torcidas) | **0.000 %** en los 6 modos | **0.000 %** |
+| losas **Shell-Thin** (DKQ) | **0.000 %** en los 6 modos | — |
+| losas **Shell-Thick** | **−7.25 %** | +8.66 % |
+| losas Thick **sin masa** | −7.257 % (idéntico) | — |
+
+Lo que descarta cada fila: las barras torcidas no son (0.000 % sin losas); la masa de la losa
+tampoco (quitándola, el −7.257 % no se mueve ni una milésima); el drilling tampoco (tipos 0, 2,
+3, 8 y 13 dan entre 5.218 y 5.259 s, y SAP pide 4.842); y la malla tampoco (SAP arma 820 nudos,
+540 áreas y 1080 barras, ninguna partida, exactamente lo que se le manda).
+
+**Queda el elemento de placa gruesa.** El Shell-Thin de Hekatan es la DKQ de Batoz y Ben Tahar
+y clava con el de SAP2000 hasta el último dígito; el Shell-Thick es MITC4 + modos incompatibles
+de Wilson, que **no es el de CSI** — es el que se retiró al quitar lo del binario. En una placa
+apoyada eso valía 0.4–1.9 %; en esta torre, donde la losa trabaja de verdad, vale **7 %**.
+
+⚠️ Y SAP2000 y ETABS **discrepan un 16 % entre ellos** en el mismo modelo con Thick (−7.25 % y
++8.66 % respecto a Hekatan), mientras Hekatan y OpenSees, que son dos motores sin semántica de
+edificio, se quedan a 0.8 %. Sin losas, los tres coinciden a 0.000 %.
+
+⏳ La prueba que falta: recompilar con el Shell-Thick de CSI (el parche de `hekatan-struct-csi`)
+y ver si la torre vuelve a 0.000 % contra SAP2000. Eso cerraría la cadena entera.
