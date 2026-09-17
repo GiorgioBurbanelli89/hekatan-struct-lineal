@@ -3625,6 +3625,29 @@ function abrirCarpeta(txt: string) {
   return true;
 }
 
+/**
+ * Entradas del menú que HACEN algo en vez de abrir una carpeta del panel.
+ *
+ * ⚠️ «Display ▸ Frame Forces» estaba muerta y no lo decía: mandaba abrir la
+ * carpeta «Tablas», que vive en el panel de SETTINGS (dentro de 🔬 Analyze) y no
+ * en el de parámetros, que es donde busca `abrirCarpeta`. Pulsarla no hacía nada
+ * y solo dejaba un aviso en la consola — con lo que el menú entero parecía roto.
+ * Medido con `cli/_menu_contextual.mjs`: 10 entradas vivas, ésta muerta.
+ *
+ * Ahora hace lo que dice su nombre en ETABS: enciende el diagrama de fuerzas de
+ * barra y abre la ventana 2D de la barra designada.
+ */
+const ACCIONES: Record<string, () => void> = {
+  "Display ▸ Frame Forces": () => {
+    try {
+      const st = (window as any).__hekatanSettings?.();
+      // el momento del plano del canto es lo que se mira primero en una viga
+      if (st?.frameResults) st.frameResults.val = "Mz";
+      (window as any).__hekatanDiagrama2D?.();
+    } catch (e) { console.warn("[menu] Frame Forces:", e); }
+  },
+};
+
 /** Que se puede hacer segun lo que se selecciono. Los nombres son los de
  *  ETABS a proposito: quien lo usa ahi lo encuentra sin buscar. */
 const MENU: Record<string, Array<[string, string]>> = {
@@ -3731,6 +3754,8 @@ function montarMenuContextual(pane: any) {
       it.onclick = (e) => {
         e.stopPropagation();
         cerrar();
+        const accion = ACCIONES[texto];
+        if (accion) { accion(); return; }
         if (!destino) {
           for (const f of carpetas(paneActual)) {
             try { f.expanded = true; } catch { /* no-op */ }
