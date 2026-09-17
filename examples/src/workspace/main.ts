@@ -7302,12 +7302,11 @@ try {
     i: ["INSERT (insertar bloque)", "todavía no"],
     di: ["DIST (medir)", "todavía no; la barra de abajo canta las coordenadas y la longitud al dibujar"],
     aa: ["AREA (medir área)", "todavía no"],
-    me: ["MEASURE (dividir por distancia)", "todavía no; use «Div. vigas» en el panel"],
-    div: ["DIVIDE (dividir en n)", "todavía no; use «Div. vigas» en el panel"],
+    me: ["MEASURE (dividir por distancia)", "todavía no; use DIV (dividir en n partes)"],
     el: ["ELLIPSE (elipse)", "todavía no; hay CÍRCULO (C) y ARCO (A)"],
     spl: ["SPLINE", "todavía no; use POLILÍNEA (PL)"],
     pol: ["POLYGON (polígono regular)", "todavía no; use POLILÍNEA (PL)"],
-    ml: ["MLINE (línea múltiple)", "todavía no; use DESFASE (O)"],
+    ml: ["MLINE (línea múltiple)", "todavía no; use DESFASE (O) o DESFASAR curva (DESF)"],
     mt: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
     t: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
     dt: ["TEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
@@ -7816,6 +7815,41 @@ try {
           flash("✓ arco dibujado", true);
           (window as any).__hekatanRebuild?.();
         } catch { flash("✕ ARCO: no se pudo trazar.", false); }
+        return;
+      }
+    }
+    // ── DIVIDIR y DESFASAR una curva ────────────────────────────────────────
+    //
+    //   DIV 4        parte cada tramo de lo último dibujado en 4
+    //   DESF 0.6     desfasa esa curva 0.6 m (negativo = al otro lado)
+    //
+    // Las dos actúan sobre la última polilínea, que es el «ÚLTIMO» de AutoCAD.
+    // Con ellas, el segundo cordón de una cercha o el intradós de una bóveda ya
+    // no hay que volver a calcularlos fuera: se sacan del primero.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if (c0 === "div" || c0 === "dividir" || c0 === "divide") {
+        const n = Number((P[1] ?? "").replace(",", "."));
+        if (!isFinite(n) || n < 2) { flash("✕ DIVIDIR: «DIV 4» parte cada tramo en 4.", false); return; }
+        const r = (window as any).__hekatanDividir?.(n);
+        if (!r?.ok) { flash(`✕ DIVIDIR: ${r?.msg ?? "no se pudo"}`, false); return; }
+        echo(`✂ DIVIDIR ×${Math.round(n)} · ${r.tramosAntes} → ${r.tramosAhora} tramos · ` +
+             `+${r.nudosNuevos} nudos · largo ${r.largo} m · tramo medio ${r.tramoMedio} m`);
+        flash("✓ dividido", true);
+        return;
+      }
+      if (c0 === "desf" || c0 === "desfasar" || c0 === "offsetc" || c0 === "desfase") {
+        const d = Number((P[1] ?? "").replace(",", "."));
+        if (!isFinite(d) || Math.abs(d) < 1e-9) {
+          flash("✕ DESFASAR: «DESF 0.6» desfasa la última curva 0.6 m (negativo = al otro lado).", false);
+          return;
+        }
+        const r = (window as any).__hekatanDesfasarCurva?.(d);
+        if (!r?.ok) { flash(`✕ DESFASAR: ${r?.msg ?? "no se pudo"}`, false); return; }
+        echo(`⇉ DESFASAR ${r.distancia} m · ${r.vertices} vértices · ` +
+             `separación real ${r.separacionMin}–${r.separacionMax} m`);
+        flash("✓ curva desfasada", true);
         return;
       }
     }

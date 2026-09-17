@@ -2270,6 +2270,123 @@ export function drawing({
       drawingObj.polylines.val = [...polys.slice(0, -1), arcPoly, []];
     }
   };
+  /**
+   * La última polilínea con al menos dos puntos (la vacía es la marca de
+   * «trazo terminado», no un objeto). Es sobre lo que actúan DIVIDIR y DESFASAR
+   * cuando no hay nada designado, igual que el «ÚLTIMO» de AutoCAD.
+   */
+  const ultimaPolilinea = (): { i: number; pl: number[] } | null => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    for (let i = polys.length - 1; i >= 0; i--)
+      if (polys[i] && polys[i].length >= 2) return { i, pl: polys[i] };
+    return null;
+  };
+
+  // ── DIVIDIR: el DIVIDE de AutoCAD, partiendo la barra ────────────────────
+  //
+  // En AutoCAD DIVIDE siembra puntos a lo largo del objeto; aquí lo que hace
+  // falta es que la BARRA quede partida, que es lo que ve el cálculo. Parte cada
+  // tramo de la polilínea en `n` trozos iguales.
+  //
+  // Sin esto, un arco trazado con pocos tramos había que volver a dibujarlo
+  // entero para refinarlo, y para colgarle montantes en medio no había dónde
+  // engancharlos: no existían los nudos.
+  (window as any).__hekatanDividir = (n: number) => {
+    const N = Math.round(n);
+    if (!(N >= 2)) return { ok: false, msg: "el número de partes va de 2 en adelante" };
+    const u = ultimaPolilinea();
+    if (!u) return { ok: false, msg: "no hay ninguna polilínea que dividir" };
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...drawingObj.points.rawVal] as [number, number, number][];
+    const nueva: number[] = [u.pl[0]];
+    let largoTotal = 0;
+    for (let k = 0; k + 1 < u.pl.length; k++) {
+      const A = pts[u.pl[k]], B = pts[u.pl[k + 1]];
+      largoTotal += Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]);
+      for (let j = 1; j < N; j++) {
+        const t = j / N;
+        pts.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]);
+        nueva.push(pts.length - 1);
+      }
+      nueva.push(u.pl[k + 1]);
+    }
+    const polys = [...(drawingObj.polylines!.rawVal as number[][])];
+    polys[u.i] = nueva;
+    drawingObj.points.val = pts;
+    drawingObj.polylines!.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { ok: true, tramosAntes: u.pl.length - 1, tramosAhora: nueva.length - 1,
+             nudosNuevos: nueva.length - u.pl.length,
+             largo: +largoTotal.toFixed(4),
+             tramoMedio: +(largoTotal / (nueva.length - 1)).toFixed(4) };
+  };
+
+  // ── DESFASAR una curva: el OFFSET de AutoCAD, que sí desfasa arcos ────────
+  //
+  // El Desfase de aquí movía tramos rectos; una polilínea curva no se podía
+  // desfasar, y es justo lo que hace falta para el segundo cordón de una cercha
+  // o el intradós de una bóveda.
+  //
+  // Cada vértice se mueve por la BISECTRIZ de sus dos tramos, y el paso es
+  // d / cos(α/2) —no d— para que la distancia perpendicular salga constante:
+  // es lo que hace el OFFSET de una polilínea. En los extremos, perpendicular
+  // al único tramo que hay.
+  (window as any).__hekatanDesfasarCurva = (d: number) => {
+    if (!isFinite(d) || Math.abs(d) < 1e-9) return { ok: false, msg: "la distancia no puede ser cero" };
+    const u = ultimaPolilinea();
+    if (!u) return { ok: false, msg: "no hay ninguna polilínea que desfasar" };
+    const P = drawingObj.points.rawVal as [number, number, number][];
+    const V = u.pl.map((i) => new THREE.Vector3(...P[i]));
+    // La normal del plano de trabajo: el desfase se queda EN el plano dibujado.
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const nrm = new THREE.Vector3(...(wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1]));
+    const perp = (a: THREE.Vector3, b: THREE.Vector3) => {
+      const t = new THREE.Vector3().subVectors(b, a);
+      const p = new THREE.Vector3().crossVectors(nrm, t);
+      return p.lengthSq() < 1e-18 ? null : p.normalize();
+    };
+    const desp: (THREE.Vector3 | null)[] = V.map((_, k) => {
+      const pa = k > 0 ? perp(V[k - 1], V[k]) : null;
+      const pb = k + 1 < V.length ? perp(V[k], V[k + 1]) : null;
+      if (pa && pb) {
+        const bis = pa.clone().add(pb);
+        if (bis.lengthSq() < 1e-12) return pa;              // tramos opuestos
+        bis.normalize();
+        const cos = bis.dot(pa);                            // = cos(α/2)
+        return bis.multiplyScalar(Math.abs(cos) < 1e-6 ? 1 : 1 / cos);
+      }
+      return pa ?? pb;
+    });
+    if (desp.some((q) => q === null))
+      return { ok: false, msg: "la curva es perpendicular al plano de trabajo; cambie de plano" };
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...P];
+    const nueva: number[] = [];
+    V.forEach((v, k) => {
+      const q = v.clone().addScaledVector(desp[k]!, d);
+      pts.push([q.x, q.y, q.z]); nueva.push(pts.length - 1);
+    });
+    const polys = [...(drawingObj.polylines!.rawVal as number[][])];
+    if (polys.length && polys[polys.length - 1].length === 0) polys.pop();
+    polys.push(nueva, []);
+    drawingObj.points.val = pts;
+    drawingObj.polylines!.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    // Comprobación honesta: la distancia REAL de cada vértice nuevo a su tramo
+    // original. Si el desfase está bien, todas valen |d|.
+    let dmin = Infinity, dmax = -Infinity;
+    for (let k = 0; k + 1 < V.length; k++) {
+      const A = V[k], B = V[k + 1], p = perp(A, B)!;
+      const Q = new THREE.Vector3(...pts[nueva[k]]);
+      const e = Math.abs(new THREE.Vector3().subVectors(Q, A).dot(p));
+      dmin = Math.min(dmin, e); dmax = Math.max(dmax, e);
+    }
+    return { ok: true, vertices: nueva.length, distancia: +d.toFixed(4),
+             separacionMin: +dmin.toFixed(5), separacionMax: +dmax.toFixed(5) };
+  };
+
   // ── CERCHA CURVA, de una orden ──────────────────────────────────────────
   //
   // Dibujar una cercha curva a mano es inviable: la que se trazó en el deploy el
