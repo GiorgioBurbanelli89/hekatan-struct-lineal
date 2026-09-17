@@ -163,6 +163,7 @@ const PARAMS = {
                "Shell-Thin (Kirchhoff) — lo que trae SAFE de fábrica": 1 },
     label: "Formulación del cimiento", folder: "⬓ Cimentación",
   },
+  volCim: { default: 1.0, min: 0.5, max: 4, step: 0.25, label: "vuelo de la losa mat (m)", folder: "⬓ Cimentación" },
   zapB: { default: 2.0, min: 0.6, max: 6, step: 0.1, label: "lado de zapata B (m)", folder: "⬓ Cimentación" },
   zapH: { default: 0.45, min: 0.15, max: 1.5, step: 0.05, label: "canto de zapata (m)", folder: "⬓ Cimentación" },
   losaH: { default: 0.50, min: 0.2, max: 2, step: 0.05, label: "canto de la losa mat (m)", folder: "⬓ Cimentación" },

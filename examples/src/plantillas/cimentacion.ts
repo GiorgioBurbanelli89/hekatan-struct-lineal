@@ -106,7 +106,11 @@ export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
   // ── la malla del cimiento ────────────────────────────────────────────────
   const centros: number[] = [];                    // nudo bajo cada eje de columna
   if (sub === CIM_LOSA) {
-    const vol = Math.max(0, p.volado ?? 0.5);
+    // ⚠️ VUELO PROPIO, y con mínimo. Antes tomaba `p.volado`, que es el volado de
+    // los FORJADOS y vale 0 por defecto: la losa acababa justo en el eje de las
+    // columnas de esquina, o sea la carga en el BORDE. Eso no es un modelo, es una
+    // singularidad — y en obra tampoco se hace: el cimiento siempre sobresale.
+    const vol = Math.max(0.5, p.volCim ?? 1.0);
     const xs = partir([X[0] - vol, ...X, X[X.length - 1] + vol], ms);
     const ys = partir([Y[0] - vol, ...Y, Y[Y.length - 1] + vol], ms);
     const id: number[][] = ys.map((y) => xs.map((x) => nudo(x, y, 0)));
@@ -134,14 +138,45 @@ export function construirCimentacion(p: any, states: any, sub = CIM_ZAPATAS) {
       ponerBarra(centro(i, j), centro(i, j + 1), p.bva ?? 0.30, p.hva ?? 0.40);
   }
 
-  // ── pedestal y carga de columna ──────────────────────────────────────────
+  // ── la columna es FÍSICA: tiene huella, no es un punto ───────────────────
+  //
+  // Jorge, 17-sep-2026: «la columna física tiene un insertion point, ojo con eso».
+  // Y es literalmente lo que hace SAFE: en el nudo guarda «X Dimension / Y
+  // Dimension — dimension of the load in global X/Y direction for punching shear
+  // checks at the joint» (leído de SAFE.exe). O sea, la carga de una columna entra
+  // por su SECCIÓN, no por un nudo.
+  //
+  // Metiendo los P en un solo nudo salían picos de presión en las esquinas que no
+  // son de la estructura: son del modelo. Aquí la carga se reparte por área
+  // tributaria entre los nudos que caen dentro de la huella bcol × bcol; si la
+  // malla es más gruesa que la columna y no hay ninguno, va al nudo del eje (y se
+  // avisa, porque entonces el punzonamiento de esa columna no se puede mirar).
   const bcol = p.bcol ?? 0.40;
+  const huella: number[][] = [];
+  let sinMalla = 0;
   for (const n0 of centros) {
-    const [x, y] = nodes[n0];
-    const n1 = nudo(x, y, hped);
-    ponerBarra(n0, n1, bcol, bcol);
-    loads.set(n1, [0, 0, -P, 0, 0, 0]);
+    const [xc, yc] = nodes[n0];
+    const dentro: number[] = [];
+    for (let i = 0; i < nodes.length; i++) {
+      if (Math.abs(nodes[i][2]) > 1e-9) continue;                 // solo el cimiento
+      if (Math.abs(nodes[i][0] - xc) <= bcol / 2 + 1e-9 &&
+          Math.abs(nodes[i][1] - yc) <= bcol / 2 + 1e-9) dentro.push(i);
+    }
+    if (dentro.length === 0) { dentro.push(n0); sinMalla++; }
+    huella.push(dentro);
+    let At = 0;
+    for (const i of dentro) At += areaNudo.get(i) ?? 0;
+    for (const i of dentro) {
+      const w = At > 0 ? (areaNudo.get(i) ?? 0) / At : 1 / dentro.length;
+      const q = loads.get(i) ?? [0, 0, 0, 0, 0, 0];
+      loads.set(i, [q[0], q[1], q[2] - P * w, q[3], q[4], q[5]]);
+    }
+    // el pedestal se dibuja igual, pero ya NO es el camino de la carga
+    ponerBarra(n0, nudo(xc, yc, hped), bcol, bcol);
   }
+  if (sinMalla) console.warn(`[Cimentación] ${sinMalla} columna(s) con la malla más gruesa que su huella: ` +
+    `la carga entra por un nudo y el punzonamiento de esas no es fiable. Baja el tamaño de malla por debajo de ${bcol} m.`);
+  (states as any).__huellaColumnas = huella;
 
   // ── el terreno: muelles de Winkler, NO apoyos ────────────────────────────
   const springs: Array<{ node: number; dof: number; k: number }> = [];
