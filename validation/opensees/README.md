@@ -299,3 +299,42 @@ entonces ya no es la placa pura.
 ⚠️ Y una trampa del propio driver, ya tapada: con 0 nudos leídos escribía «peor 0.000 %», que
 parece que clava cuando lo que pasa es que el programa **no devolvió nada**. Ahora dice
 `el programa devolvio CERO nudos, no hay comparacion`.
+
+## Thin contra Thick en los cuatro, y qué elementos tiene OpenSees de verdad
+
+`OpenSees no tiene solo el MITC4`. En el árbol de `hekatan-opensees/OpenSees/SRC/element/shell`:
+
+| elemento | qué es |
+|---|---|
+| `ShellDKGQ` / `ShellDKGT` | Kirchhoff discreto: la placa **DELGADA**, la familia de la DKQ |
+| `ShellMITC4` / `ShellMITC9` | Dvorkin-Bathe: la **GRUESA** (Mindlin) |
+| `ASDShellQ4` / `ASDShellT3` | Petracca y Camata, con el drilling de Allman |
+| `ShellNLDKGQ`, `…Thermal` | no lineal y térmicos |
+
+El traductor usaba SIEMPRE `ShellMITC4` porque era el equivalente directo del Shell-Thick, sin
+justificarlo — y era mala elección: bloquea en membrana (−36.8 % en la tira en voladizo, −9.4 %
+en los modos de torsión de la torre). Ahora se elige con `--elem=<nombre>`.
+
+**Placa cuadrada apoyada 8×8, flecha del centro, juez SAP2000:**
+
+| t/L | Hekatan Thick | OpenSees MITC4 | OpenSees DKGQ | ASDShellQ4 |
+|---|---|---|---|---|
+| 0.001 | +0.574 % | +0.288 % | +0.748 % | +0.288 % |
+| 0.01 | −0.025 % | −0.309 % | +0.019 % | −0.309 % |
+| 0.05 | −1.061 % | −1.320 % | **−3.846 %** | −1.320 % |
+| 0.1 | +0.367 % | +0.144 % | **−9.282 %** | +0.144 % |
+| 0.2 | +1.924 % | +1.760 % | **−23.752 %** | +1.760 % |
+
+Y la delgada (juez SAP2000 **PlateThin**): Hekatan **1.3e−11 %** · OpenSees `ShellDKGQ` **0.000 %**.
+
+Tres lecturas:
+1. **La delgada es el MISMO elemento en los tres**: la DKQ, y coinciden hasta el último dígito.
+2. **El DKGQ se hunde al engrosar** (−23.8 % a t/L = 0.2) porque es Kirchhoff y no tiene
+   deformación por cortante: no es un fallo, es que no es su problema.
+3. **`ASDShellQ4` da EXACTAMENTE lo mismo que `ShellMITC4` en flexión**: su diferencia está en
+   la membrana, no en la placa.
+4. Hekatan y OpenSees se desvían de CSI **igual, con el mismo signo y casi la misma magnitud**
+   (+0.57/+0.29, −1.06/−1.32, +1.92/+1.76). O sea: **la placa gruesa de CSI no es un MITC4**, y
+   la desviación de Hekatan no es un error suyo — es la misma que tiene un motor independiente.
+
+Vídeo: `VIDEO_placa_thin_thick.mp4` (50.8 s), con `video_placa.py` + `placa_es.txt` / `placa_en.txt`.

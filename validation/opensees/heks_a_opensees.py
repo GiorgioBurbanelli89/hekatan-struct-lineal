@@ -148,10 +148,14 @@ def _main():
             # --asdshell: el ASDShellQ4 de Petracca y Camata (ASDEA), que lleva la
             # membrana de Allman con drilling y transformacion EICR — la familia de
             # la membrana de Hekatan. El ShellMITC4 clasico usa membrana bilineal.
-            if "--asdshell" in sys.argv:
-                ops.element("ASDShellQ4", idx + 1, *[n + 1 for n in el], secs[key])
-            else:
-                ops.element("ShellMITC4", idx + 1, *[n + 1 for n in el], secs[key])
+            # --elem=<nombre> elige el elemento de cascara. OpenSees no tiene solo
+            # el MITC4: ShellDKGQ es la placa DELGADA (Kirchhoff discreto, la
+            # familia de la DKQ), ShellMITC4 la GRUESA (Dvorkin-Bathe) y
+            # ASDShellQ4 el de Petracca y Camata. --asdshell es un atajo del ultimo.
+            elem = "ASDShellQ4" if "--asdshell" in sys.argv else "ShellMITC4"
+            for _a in sys.argv:
+                if _a.startswith("--elem="): elem = _a.split("=", 1)[1]
+            ops.element(elem, idx + 1, *[n + 1 for n in el], secs[key])
             shells.append(idx); nsh += 1
 
     # ── cargas: las MISMAS que Hekatan ya repartio a los nudos (peso propio incluido)

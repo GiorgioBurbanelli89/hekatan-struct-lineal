@@ -1,0 +1,5 @@
+A simply supported square plate under uniform load, and one question: as the slab gets thicker, who says what? SAP two thousand is the judge.
+With a paper-thin plate, thickness over span of one thousandth, all three agree within seven tenths of a percent: there is no shear here and everyone solves the same problem.
+At one twentieth they start to split: Hekatan and the OpenSees MITC4 stay within one percent, but the Kirchhoff element is already almost four percent low.
+At one tenth the Kirchhoff element drops nine percent: it has no shear deformation, and for a thick slab that can no longer be ignored.
+Finally, with the slab one fifth of the span, Kirchhoff loses twenty four percent, while Hekatan and OpenSees stay within two percent of the judge, with the same sign: the CSI thick plate is not a MITC4, and that is measurable.

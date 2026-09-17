@@ -1,0 +1,20 @@
+1
+00:00:00,050 --> 00:00:08,738
+Una placa cuadrada apoyada, con carga uniforme, y una sola pregunta: cuando la losa engorda, ¿quién dice qué? El juez es SAP dos mil.
+
+2
+00:00:08,990 --> 00:00:18,350
+Con la placa casi de papel, t sobre ele de una milésima, los tres coinciden dentro de siete décimas de por ciento: aquí no hay cortante y todos resuelven lo mismo.
+
+3
+00:00:18,600 --> 00:00:28,104
+A un veinteavo de espesor empiezan a separarse: Hekatan y el MITC4 de OpenSees se quedan a un uno por ciento, pero el elemento de Kirchhoff ya va casi cuatro por debajo.
+
+4
+00:00:28,350 --> 00:00:36,750
+A un décimo, el de Kirchhoff se hunde nueve por ciento: no tiene deformación por cortante, y cuando la losa es gruesa eso ya no se puede ignorar.
+
+5
+00:00:37,000 --> 00:00:50,608
+Al final, con la losa de un quinto de la luz, el de Kirchhoff pierde veinticuatro por ciento, mientras Hekatan y OpenSees siguen a menos de dos del juez, y con el mismo signo: la placa gruesa de CSI no es un MITC4, y eso se mide.
+
