@@ -376,6 +376,61 @@ export function cursorAux(encender = true): void {
      * ángulo con dos tanteos, en vez de dar por supuesta una convención. Luego
      * corrige el radio por proporción y el ángulo por diferencia, y repite.
      */
+    /**
+     * ¿Dónde está, en píxeles, el punto desde el que el programa está midiendo?
+     *
+     * Hace falta cuando el punto de arranque no lo puso este ratón (por ejemplo
+     * el primero de la cercha, que va tecleado). Y se averigua SIN preguntarle
+     * nada al programa: se lleva el cursor a cuatro sitios cualesquiera y se
+     * apunta la cota que canta en cada uno. El origen es el punto que está a
+     * `d·k` píxeles de los cuatro, con `k` los píxeles por metro:
+     *
+     *     (Ox − xi)² + (Oy − yi)² = K·di²        K = k²
+     *
+     * Restando la primera de las otras tres se va el término cuadrático y queda
+     * un sistema lineal de 3×3 en (Ox, Oy, K). O sea: trilateración con las
+     * cotas que se leen en pantalla, como quien se sitúa en un mapa por tres
+     * distancias. Ni una coordenada del modelo.
+     */
+    async origenPorLectura(L = 130) {
+      const vAnt = velocidad; velocidad = 0;
+      const x0 = Math.min(Math.max(px, 260), innerWidth - 260);
+      const y0 = Math.min(Math.max(py, 200), innerHeight - 260);
+      const P: Array<[number, number]> = [[x0, y0], [x0 + L, y0], [x0, y0 + L], [x0 + L, y0 + L]];
+      const d: number[] = [];
+      for (const p of P) {
+        await irA(p[0], p[1]);
+        const l = raton.lee();
+        if (l.distancia == null) { velocidad = vAnt; return { ok: false, msg: "la pantalla no canta la cota" }; }
+        d.push(l.distancia);
+      }
+      // 3 ecuaciones lineales en (Ox, Oy, K)
+      const A: number[][] = [], b: number[] = [];
+      for (let i = 1; i < 4; i++) {
+        A.push([-2 * (P[0][0] - P[i][0]), -2 * (P[0][1] - P[i][1]), -(d[0] * d[0] - d[i] * d[i])]);
+        b.push(-((P[0][0] ** 2 - P[i][0] ** 2) + (P[0][1] ** 2 - P[i][1] ** 2)));
+      }
+      // Gauss con pivoteo, que son 3×3
+      for (let c = 0; c < 3; c++) {
+        let mejor = c;
+        for (let r2 = c + 1; r2 < 3; r2++) if (Math.abs(A[r2][c]) > Math.abs(A[mejor][c])) mejor = r2;
+        [A[c], A[mejor]] = [A[mejor], A[c]]; [b[c], b[mejor]] = [b[mejor], b[c]];
+        if (Math.abs(A[c][c]) < 1e-9) { velocidad = vAnt; return { ok: false, msg: "las cuatro lecturas no bastan" }; }
+        for (let r2 = 0; r2 < 3; r2++) {
+          if (r2 === c) continue;
+          const f = A[r2][c] / A[c][c];
+          for (let k2 = c; k2 < 3; k2++) A[r2][k2] -= f * A[c][k2];
+          b[r2] -= f * b[c];
+        }
+      }
+      const Ox = b[0] / A[0][0], Oy = b[1] / A[1][1], K = b[2] / A[2][2];
+      velocidad = vAnt;
+      if (!(K > 0)) return { ok: false, msg: "no sale un origen coherente" };
+      ultimoClic = [Ox, Oy];
+      return { ok: true, origen: [Math.round(Ox), Math.round(Oy)],
+               pxPorMetro: +Math.sqrt(K).toFixed(3), cotas: d };
+    },
+
     async aMedida(o: { dist: number; ang?: number; angGeom?: number;
                        tolD?: number; tolA?: number; pasos?: number }) {
       const tolD = o.tolD ?? 0.01, tolA = o.tolA ?? 0.15;
