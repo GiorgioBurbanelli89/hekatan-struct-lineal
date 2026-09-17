@@ -354,8 +354,18 @@ export function cursorAux(encender = true): void {
       const cota = document.getElementById("hk-rubber-label") as HTMLInputElement | null;
       const ang = document.getElementById("hk-rubber-angle");
       const osn = document.getElementById("hk-osnap-etiqueta");
-      const visible = (e: Element | null) =>
-        !!e && getComputedStyle(e).display !== "none" && (e as HTMLElement).offsetParent !== null;
+      // ⚠️ Nada de `offsetParent`: estos rótulos van con `position: fixed`, y de
+      // un elemento fijo el offsetParent es SIEMPRE null. Con esa comprobación
+      // se descartaba una cota que estaba ahí escrita — medido el 17-sep-2026:
+      // el input decía «3.52 m» y el ángulo «291°», y `lee()` devolvía null en
+      // los dos. Lo que vale es que se muestre y que ocupe sitio.
+      const visible = (e: Element | null) => {
+        if (!e) return false;
+        const s = getComputedStyle(e);
+        if (s.display === "none" || s.visibility === "hidden" || +s.opacity === 0) return false;
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      };
       return {
         distancia: visible(cota) ? n(cota!.value) : null,
         angulo: visible(ang) ? n(ang!.textContent) : null,
