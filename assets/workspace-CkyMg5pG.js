@@ -21162,7 +21162,17 @@ Ojo: el modelo queda congelado con los valores de ahora; los sliders de la plant
     }
     return true;
   }
-  const bs = {
+  const G0 = {
+    "Display \u25B8 Frame Forces": () => {
+      var _a3, _b;
+      try {
+        const e = (_a3 = window.__hekatanSettings) == null ? void 0 : _a3.call(window);
+        (e == null ? void 0 : e.frameResults) && (e.frameResults.val = "Mz"), (_b = window.__hekatanDiagrama2D) == null ? void 0 : _b.call(window);
+      } catch (e) {
+        console.warn("[menu] Frame Forces:", e);
+      }
+    }
+  }, bs = {
     frame: [
       [
         "Assign \u25B8 Frame \u25B8 Section Property",
@@ -21240,7 +21250,7 @@ Ojo: el modelo queda congelado con los valores de ahora; los sliders de la plant
       ]
     ]
   };
-  function G0(e) {
+  function V0(e) {
     var _a3, _b, _c2;
     const t = ze;
     if (!t || t.__menuPuesto) return;
@@ -21303,9 +21313,15 @@ Ojo: el modelo queda congelado con los valores de ahora; los sliders de la plant
         }, u.onmouseleave = () => {
           u.style.background = "transparent";
         }, u.onclick = (I) => {
-          if (I.stopPropagation(), o(), !A) {
-            for (const p of $o(Yn)) try {
-              p.expanded = true;
+          I.stopPropagation(), o();
+          const p = G0[O];
+          if (p) {
+            p();
+            return;
+          }
+          if (!A) {
+            for (const T of $o(Yn)) try {
+              T.expanded = true;
             } catch {
             }
             return;
@@ -21325,7 +21341,7 @@ Ojo: el modelo queda congelado con los valores de ahora; los sliders de la plant
       container: bt,
       title: Re.name
     });
-    Yn = a, vi(a), G0(), setTimeout(() => Ja(bt), 0);
+    Yn = a, vi(a), V0(), setTimeout(() => Ja(bt), 0);
     const s = Array.from(new Set(ft.map((x) => x.category))), l = [
       "1\uFE0F\u20E3 Frames \xB7 \u{1F3AF} 1 GDL Axial",
       "1\uFE0F\u20E3 Frames \xB7 \u{1F3AF} 2 GDL Flexi\xF3n",
@@ -23615,7 +23631,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
     } catch {
     }
   }
-  const V0 = {
+  const $0 = {
     deformedShape: true,
     displayScale: -3,
     shellResults: "pressure",
@@ -23634,7 +23650,7 @@ Datos en window.__hekatanImportedCim. Para re-exportar el mismo modelo: window._
         analyzeOutputs: Xn
       },
       objects3D: Ha,
-      settingsObj: V0,
+      settingsObj: $0,
       drawingObj: {
         points: Ut,
         polylines: Qt,
