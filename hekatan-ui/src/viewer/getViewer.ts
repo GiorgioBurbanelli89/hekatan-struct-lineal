@@ -88,6 +88,51 @@ export function getViewer({
   controls.rotateSpeed = 0.9;
   controls.keyPanSpeed = 12;
   controls.listenToKeyEvents(window);     // arrow keys → pan (rescate sin trackpad)
+  // ── LOS BOTONES DEL RATON, COMO AUTOCAD ──────────────────────────────────
+  //
+  // Jorge (17-sep-2026): «cuando selecciono de derecha a izquierda debe ser como
+  // AutoCAD; mira el binario». Leido del perfil de SU AutoCAD 2027
+  // (HKCU\SOFTWARE\Autodesk\AutoCAD\R26.0\ACAD-A101:409): **PICKAUTO = 5**, o sea
+  // 1 (ventana automatica al clicar en vacio) + 4 (lazo al arrastrar). En AutoCAD el
+  // boton IZQUIERDO arrastrando SELECCIONA; orbitar es la rueda pulsada con Shift.
+  // ETABS hace lo mismo. Aqui el izquierdo orbitaba, asi que la ventana habia que
+  // hacerla clic-clic y el gesto natural giraba el modelo.
+  //
+  //   izquierdo        -> seleccionar (lo gestiona drawing.ts, aqui se libera)
+  //   rueda pulsada    -> PAN            (AutoCAD: encuadre)
+  //   Shift + rueda    -> ORBITAR        (AutoCAD: 3DORBIT)
+  //   rueda            -> zoom
+  // ⚠️ ORBITAR NO PUEDE DEPENDER DE UNA TECLA. El primer intento dejo el giro solo en
+  // «Shift + rueda pulsada» (que es lo literal de AutoCAD) y Jorge se quedo SIN PODER
+  // GIRAR el modelo: en un visor 3D estructural orbitar es el gesto principal, no un
+  // atajo. Asi que la rueda pulsada ORBITA directamente y Shift la pasa a encuadrar.
+  //
+  //   izquierdo        -> seleccionar (ventana/captura, lo lleva drawing.ts)
+  //   rueda pulsada    -> ORBITAR
+  //   Shift + rueda    -> PAN (encuadre)
+  //   boton derecho    -> PAN
+  //   rueda            -> zoom
+  // ── LOS BOTONES DEL RATON ────────────────────────────────────────────────
+  //
+  // De AutoCAD se calca lo que importa y SE PUEDE calcar: el izquierdo selecciona
+  // (PICKAUTO = 5 en el perfil de Jorge: arrastrar abre la ventana).
+  //
+  // Lo que NO se puede calcar es el «Shift + rueda = orbitar»: el Shift no llega. El
+  // CAD escucha el teclado a lo largo de drawing.ts y se lo come en fase de captura
+  // — medido: con el evento lanzado a mano los botones cambiaban, con Shift de verdad
+  // no, y girar se quedaba en un temblor. Un gesto que a veces funciona es peor que
+  // uno distinto, asi que cada accion tiene SU boton y ninguna depende de una tecla:
+  //
+  //   izquierdo        -> seleccionar (ventana izq→der / captura der→izq)
+  //   rueda pulsada    -> GIRAR (orbitar)
+  //   boton derecho    -> ENCUADRAR (pan)
+  //   rueda            -> zoom
+  controls.mouseButtons = {
+    LEFT: null as any,                    // libre: es para seleccionar
+    MIDDLE: THREE.MOUSE.ROTATE,           // girar, sin teclas
+    RIGHT: THREE.MOUSE.PAN,               // encuadrar, sin teclas
+  };
+
   // Touch gestures (en laptops con touchscreen y tablets)
   controls.touches = {
     ONE: THREE.TOUCH.ROTATE,

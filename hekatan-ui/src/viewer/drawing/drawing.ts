@@ -1500,6 +1500,8 @@ export function drawing({
   // columnas verticales (Lock Z), vigas horizontales (Lock X o Y) en iso.
   // Esc o repetir la misma tecla libera el lock.
   let axisLock: "x" | "y" | "z" | null = null;
+  // El rótulo de lo que enganchó el ORTO/POLAR: «X», «Z» o «30° XZ».
+  let _polarRotulo: string | null = null;
   (window as any).__hekatanAxisLock = () => axisLock;  // getter para debug
   // Punto enganchado por el SNAP A EJES 3D (pointermove). El click lo usa para
   // que el commit coincida con lo que se ve (evita el "2 cursores"). null = sin
@@ -3826,18 +3828,57 @@ export function drawing({
           // Un eje casi paralelo a la vista sale como un punto en pantalla y no
           // se puede distinguir: se descarta en vez de dar un enganche falso.
           const esc = Math.max(1, (settings.gridSize?.rawVal ?? 10)) * 0.5;
+          // ── ORTO + ÁNGULO ────────────────────────────────────────────────
+          //
+          // Con un incremento puesto (`__hekatanPolarInc`, p. ej. 15, 30 o 45)
+          // las direcciones candidatas ya no son solo los tres ejes: son cada
+          // α grados DENTRO de cada plano coordenado que pasa por el último
+          // punto — XY, XZ e YZ. Así se traza una diagonal a 30° en el alzado,
+          // que es lo que pide una cercha, sin salir del 3D y sin plano de
+          // trabajo. Los ejes son el caso α = 90°, así que el ORTO de siempre
+          // sigue estando: es esta misma lista con el incremento a 90.
+          //
+          // El panel ya ofrecía «POLAR (45°)» pero nadie leía ese valor: el
+          // rastreo solo enganchaba a los ejes, con ±6°. Ahora lo lee.
+          const incPolar = Number((window as any).__hekatanPolarInc) || 0;
+          type Cand = { rotulo: string; u: THREE.Vector3 };
+          const candidatas: Cand[] = ejes3D.map(([n, u]) => ({ rotulo: n.toUpperCase(), u }));
+          if (incPolar > 0 && incPolar < 90) {
+            const planos: Array<[string, THREE.Vector3, THREE.Vector3]> = [
+              ["XY", new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)],
+              ["XZ", new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)],
+              ["YZ", new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)],
+            ];
+            for (const [nom, u1, u2] of planos) {
+              for (let g = incPolar; g < 360; g += incPolar) {
+                if (g % 90 === 0) continue;               // eso ya es un eje
+                const t2 = g * Math.PI / 180;
+                candidatas.push({
+                  rotulo: `${g}° ${nom}`,
+                  u: u1.clone().multiplyScalar(Math.cos(t2))
+                       .addScaledVector(u2, Math.sin(t2)).normalize(),
+                });
+              }
+            }
+          }
           if (largo > 4) {
-            let mejor: { axis: "x" | "y" | "z"; cos: number; u: THREE.Vector3 } | null = null;
-            for (const [axis, u] of ejes3D) {
+            let mejor: { axis: "x" | "y" | "z"; rotulo: string; cos: number; u: THREE.Vector3 } | null = null;
+            for (const c of candidatas) {
+              const u = c.u;
               const eS = aPantalla(P0o.clone().addScaledVector(u, esc));
               const ex = eS.x - oS.x, ey = eS.y - oS.y;
               const le = Math.hypot(ex, ey);
-              if (le < 6) continue;                       // eje de punta a la cámara
+              if (le < 6) continue;                       // dirección de punta a la cámara
               const cos = Math.abs((mvx * ex + mvy * ey) / (largo * le));
-              if (!mejor || cos > mejor.cos) mejor = { axis, cos, u };
+              // El eje al que se «bloquea» es el dominante de esa dirección: lo
+              // usa la entrada de distancia por teclado para saber el signo.
+              const ax = Math.abs(u.x) >= Math.abs(u.y) && Math.abs(u.x) >= Math.abs(u.z)
+                ? "x" : (Math.abs(u.y) >= Math.abs(u.z) ? "y" : "z");
+              if (!mejor || cos > mejor.cos) mejor = { axis: ax as "x"|"y"|"z", rotulo: c.rotulo, cos, u };
             }
             if (mejor) {
               effectiveLock = mejor.axis;
+              _polarRotulo = mejor.rotulo;
               // Punto de la recta 3D más cercano al rayo de la cámara.
               const ray = raycaster.ray;
               const w0 = P0o.clone().sub(ray.origin);
@@ -4578,14 +4619,17 @@ export function drawing({
   const paintDragRect = (
     x0: number, y0: number, x1: number, y1: number, isCrossing: boolean,
   ) => {
+    // Los colores de AutoCAD, no unos parecidos: CROSSINGAREACOLOR = 100 (verde) con
+    // borde DISCONTINUO, WINDOWAREACOLOR = 150 (azul) con borde CONTINUO, y
+    // SELECTIONAREAOPACITY = 25 (%) de relleno. Estaban en cian al 10 %, mas palidos.
     if (isCrossing) {
-      dragRect.style.borderColor = "#34d399";
+      dragRect.style.borderColor = "#3faf46";          // verde AutoCAD (índice 100)
       dragRect.style.borderStyle = "dashed";
-      dragRect.style.background = "rgba(52, 211, 153, 0.10)";
+      dragRect.style.background = "rgba(63, 175, 70, 0.25)";
     } else {
-      dragRect.style.borderColor = "#22d3ee";
+      dragRect.style.borderColor = "#3f77c4";          // azul AutoCAD (índice 150)
       dragRect.style.borderStyle = "solid";
-      dragRect.style.background = "rgba(34, 211, 238, 0.10)";
+      dragRect.style.background = "rgba(63, 119, 196, 0.25)";
     }
     dragRect.style.left = Math.min(x0, x1) + "px";
     dragRect.style.top = Math.min(y0, y1) + "px";
@@ -5046,7 +5090,21 @@ export function drawing({
       else { propsState.Fx = propsState.Fy = propsState.Fz = propsState.Mx = propsState.My = propsState.Mz = 0; }
     }
     const segIds = ids.filter(id => id.startsWith("seg:"));
-    const polyIds = ids.filter(id => id.startsWith("poly:"));
+    // ⚠️ UNA POLILÍNEA NO ES UN ÁREA.
+    //
+    // Aquí se llamaba «área» a toda polilínea seleccionada, sin mirar si estaba
+    // marcada como tal. Resultado: dibujas dos LÍNEAS, las designas, y el panel
+    // anuncia «2 item(s) — ▭ 2 área(s)» y te ofrece espesor, hormigón y carga
+    // superficial de losa para dos barras. Medido el 17-sep-2026: 4 barras,
+    // 0 shells y `drawingAreas` vacío, y aun así decía 2 áreas.
+    //
+    // Área es la polilínea cuyo índice está en `drawingObj.areas` —lo que marca
+    // la herramienta Área—; las demás son líneas, y se editan como barras.
+    const setAreas = new Set(drawingObj.areas?.rawVal ?? []);
+    const esArea = (id: string) => setAreas.has(+id.split(":")[1]);
+    const polyTodas = ids.filter(id => id.startsWith("poly:"));
+    const polyIds = polyTodas.filter(esArea);
+    const lineaIds = polyTodas.filter((id) => !esArea(id));
     const auxIds = ids.filter(id => id.startsWith("aux:"));
 
     // NOTA: antes el panel era excluyente (onlyNodes / onlySegs / onlyPolys /
@@ -5058,13 +5116,15 @@ export function drawing({
     const hasNodes = nodeIds.length > 0;
     const hasSegs = segIds.length > 0;
     const hasPolys = polyIds.length > 0;
-    const noneEditable = !hasNodes && !hasSegs && !hasPolys; // solo aux / vacío
+    const hasLineas = lineaIds.length > 0;
+    const noneEditable = !hasNodes && !hasSegs && !hasPolys && !hasLineas; // solo aux / vacío
 
     // Título: resumen por tipo
     const parts: string[] = [];
     if (nodeIds.length) parts.push(`🔵 ${nodeIds.length} nodo(s)`);
     if (segIds.length) parts.push(`📏 ${segIds.length} segmento(s)`);
     if (polyIds.length) parts.push(`▭ ${polyIds.length} área(s)`);
+    if (lineaIds.length) parts.push(`／ ${lineaIds.length} línea(s)`);
     if (auxIds.length) parts.push(`┊ ${auxIds.length} aux`);
     const title = `🎯 ${selection.size} item(s) — ${parts.join(", ")}`;
 
@@ -5518,7 +5578,12 @@ export function drawing({
     //
     // `dragStart` se deja a null: el `pointermove` y el `pointerup` de abajo
     // salen solos, y los controles de camara se quedan con el arrastre.
-    dragStart = null;
+    // ⚠️ ESTO ESTABA AL REVES: el comentario de arriba decia «arrastrar es ORBITAR, y
+    // punto», pero el AutoCAD de Jorge dice lo contrario — PICKAUTO = 5 (leido de su
+    // perfil): arrastrar con el izquierdo ABRE la ventana de seleccion. Ya no se pisan
+    // los dos gestos porque el izquierdo dejo de orbitar (getViewer: LEFT libre, rueda
+    // pulsada = pan, Shift+rueda = orbitar, como en AutoCAD y en ETABS).
+    dragStart = { x: ev.clientX, y: ev.clientY };
     dragActive = false;
   });
   rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
@@ -6419,6 +6484,11 @@ export function drawing({
   // finalizaba el dibujo (no limpiaba la selección) y encima el command bar se
   // lo comía → "ESC no servía". Esto limpia clicks pendientes, polígono libre,
   // selección + panel de propiedades, y finaliza el dibujo.
+  // El cancelar general, accesible desde fuera: el Esc del CUADRO DE COMANDOS no
+  // llegaba aquí (el input hace preventDefault y el evento no sube — medido: 0 Escapes
+  // llegaban a window con el foco en `hk3-cmd-input`, que es donde suele estar). Así
+  // que el cuadro llama a esto directamente.
+  (window as any).__hekatanCancelarTodo = () => { escapeCancel(); return true; };
   const escapeCancel = () => {
     pendingClicks = [];
     polyAreaPts = [];
@@ -7111,21 +7181,23 @@ export function drawing({
     const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
                             tool === "medir" || tool === "move" || tool === "copy" ||
                             tool === "delete" || tool === "trim" || tool === "extend");
-    // ⚠️ Si el punto lo fijó el ORTO, el enganche a un eje o una referencia a
-    // objeto, NO viene del plano de trabajo: viene de una RECTA o de un nudo, y
-    // ahí el rayo rasante no lo estropea. Sin esta excepción el filtro se comía
-    // justo lo que hace falta para dibujar en 3D: medido el 17-sep-2026, con
-    // «⊥ ORTO Z» en pantalla y el punto en Z = −30.10, el clic no creaba la
-    // barra porque la cámara miraba el plano XY casi de canto — que es
-    // precisamente la vista en la que uno dibuja en vertical.
-    const puntoFijadoPorReferencia = !!_axisSnapPoint;
-    if (creaGeometria && !puntoFijadoPorReferencia && !puntoRazonable(point)) {
+    // ── AVISAR, NO BLOQUEAR ──────────────────────────────────────────────
+    //
+    // Este filtro nació para evitar los puntos a 100 m que deja un clic rasante,
+    // y en un día se comió tres cosas legítimas: los puntos del ORTO en vertical
+    // (que se fijan sobre una recta, no sobre el plano), las coordenadas
+    // TECLEADAS —que son exactas por definición— y hasta el dibujo a mano
+    // alzada en alzado. Cada vez, sin que se viera el motivo.
+    //
+    // Un punto raro es una molestia; no poder dibujar es un programa roto. Así
+    // que ahora SOLO AVISA: el punto se coloca igual y en la barra se explica
+    // qué ha pasado y cómo evitarlo, para que quien dibuja decida.
+    if (event && creaGeometria && !_axisSnapPoint && !puntoRazonable(point)) {
       updateStatus(
-        `✕ Estás mirando el plano de trabajo casi de canto, y ahí un píxel vale ` +
-        `decenas de metros: el punto caería en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ` +
-        `${point.z.toFixed(1)}) m. Gira la vista, ponte en una ortogonal ` +
-        `(Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, o teclea la coordenada.`);
-      return;
+        `⚠ Estás mirando el plano de trabajo casi de canto, y ahí un píxel vale ` +
+        `decenas de metros: el punto ha caído en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ` +
+        `${point.z.toFixed(1)}) m. Si no era eso, deshaz (Ctrl+Z) y ponte en una vista ` +
+        `ortogonal (Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, o teclea la coordenada.`);
     }
 
     // ── SELECT/none: NO crear geometría — los planos ortogonales se quedan

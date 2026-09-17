@@ -8104,7 +8104,11 @@ try {
         run(cmd); setCmdText("");
       } else if (ev.key === "Escape") {
         setCmdText(""); inp.blur();
-        (window as any).__hekatanEscapeCancel?.();
+        (window as any).__hekatanEscapeCancel?.();       // cancela la pregunta de REPLICAR
+        // …y el Esc de AutoCAD: suelta la herramienta, corta el dibujo a medias y
+        // DESELECCIONA. Antes moría aquí: el foco vive en este cuadro, así que el
+        // visor no se enteraba nunca (medido: 0 Escapes llegaban a window).
+        (window as any).__hekatanCancelarTodo?.();
         ev.preventDefault();
       }
     });
