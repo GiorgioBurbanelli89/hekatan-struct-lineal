@@ -1,15 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Hekatan Struct — Análisis estructural FEM en el navegador</title>
+    <meta name="description" content="Hekatan Struct: análisis estructural por elementos finitos en el navegador. Pórticos, armaduras, losas y cimentaciones sin instalar nada. Validado contra ETABS, SAP2000 y SAFE.">
+    <meta name="author" content="Jorge Burbano">
+    <meta name="keywords" content="análisis estructural, elementos finitos, FEM, pórticos, armaduras, losas, ingeniería estructural, ETABS, SAP2000, SAFE, software gratis">
+    <link rel="canonical" href="https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Hekatan Struct — Análisis estructural FEM en el navegador">
+    <meta property="og:description" content="Modela y calcula estructuras por elementos finitos directamente en el navegador. Sin instalación, sin servidor. Validado contra ETABS, SAP2000 y SAFE.">
+    <meta property="og:url" content="https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/">
+    <meta property="og:locale" content="es_EC">
+    <meta name="twitter:card" content="summary_large_image">
     <!-- CRITICAL: prevenir cache de index.html. Sin esto el browser cachea esta
          página con hashes de chunks viejos → 404 cuando deployamos nueva versión. -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <link rel="icon" href="/hekatan-struct-lineal/img/favicon.ico" type="image/x-icon" />
-    <title>Hekatan Struct Lineal</title>
     <style>
       /* Safe area for mobile browsers with URL bar / notch */
       :root {
@@ -21,20 +31,6 @@
         padding-bottom: var(--safe-bottom);
       }
     </style>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-1X49GCVEK9"
-    ></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-1X49GCVEK9");
-    </script>
     <!-- GoatCounter analytics removido (cuenta no configurada → 400 errors en consola).
          Para reactivar: registrate en https://www.goatcounter.com/signup, creá tu
          subdominio, y restaurá el <script data-goatcounter=...> con la URL real. -->
@@ -169,6 +165,24 @@
     <link rel="stylesheet" crossorigin href="/hekatan-struct-lineal/assets/styles-CEQ5pvJD.css">
   </head>
   <body>
+    <noscript>
+      <h1>Hekatan Struct — Análisis estructural por elementos finitos</h1>
+      <p>Plataforma web de análisis estructural que corre enteramente en el
+      navegador: solver de elementos finitos en C++/Eigen compilado a WebAssembly,
+      visualización 3D con Three.js e interfaz reactiva. Sin instalación y sin
+      servidor.</p>
+      <h2>Qué permite calcular</h2>
+      <ul>
+        <li>Pórticos y armaduras en 2D y 3D</li>
+        <li>Elementos shell: losas, muros y cascarones</li>
+        <li>Cimentaciones y vigas sobre fundación elástica</li>
+        <li>Desplazamientos, reacciones y diagramas de fuerzas internas</li>
+      </ul>
+      <p>Resultados validados contra ETABS, SAP2000 y SAFE, con más de 120 ejemplos
+      paramétricos de verificación. Desarrollado por Jorge Burbano, ingeniero
+      estructural, Manabí, Ecuador. Licencia MIT.</p>
+      <p><strong>Esta herramienta requiere JavaScript activado.</strong></p>
+    </noscript>
     <!-- OJO: NO poner aqui un sello de version a mano (antes decia
          ?v=cursorfix29). Como ese texto no cambia al editar main.ts, el
          navegador se queda con el modulo cacheado PARA SIEMPRE: se edita el
@@ -176,6 +190,7 @@
          Costo horas: el galpon no cargaba y salia Test M, con el arreglo ya
          hecho y funcionando en headless.
          Vite ya versiona los modulos por su cuenta en desarrollo, y en el
-         build les pone hash en el nombre. No hace falta nada. -->
+         build les pone hash en el nombre. No hace falta nada. -->
+
   </body>
 </html>
