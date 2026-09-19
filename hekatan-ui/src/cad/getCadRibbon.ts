@@ -1782,7 +1782,10 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     // Un modelo que llega por ENLACE (?heks= / ?m=) es para MIRARLO, no para
     // dibujar: la guía de «cuatro pasos» tapaba la bóveda en el enlace compartido.
     const porEnlace = /[?&](heks|m)=/.test(window.location.search);
-    if (!plegado && !porEnlace && !localStorage.getItem("hk_guia_vista")) {
+    // Con la pantalla de bienvenida (examples/src/shared/bienvenida.ts) la guía NO se abre
+    // sola: la abre el «🧭 Guiado» o ? / F1. Salían a la vez guía, aviso de recuperar,
+    // 🤖 y cinta, tapándose (captura de Jorge, 19-sep-2026).
+    if (!plegado && !porEnlace && !(window as any).__hekatanConBienvenida && !localStorage.getItem("hk_guia_vista")) {
       verGuia(true);
       localStorage.setItem("hk_guia_vista", "1");
     }
@@ -1890,6 +1893,22 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     estado: () => estado.textContent,
     herramientas: () => [...botones.keys()],
     pestana: (p?: Pest) => { if (p) verPestana(p); return pestActual; },
+    // para el buscador y el guiado (examples/src/shared/destinos.ts): las fichas de cada
+    // herramienta con su pestaña, y RESALTAR una: abre su pestaña y la ilumina un momento
+    fichas: () => GRUPOS.flatMap((g) => g.items.map((h) => ({ id: h.id, nombre: h.nombre, ayuda: h.ayuda, tecla: h.tecla, pest: g.pest }))),
+    traducir: (es: string) => { try { return EN[es] ?? es; } catch { return es; } },
+    resaltar: (id: string) => {
+      const g = GRUPOS.find((x) => x.items.some((h) => h.id === id));
+      const b = botones.get(id);
+      if (!g || !b) return false;
+      plegar(false); verPestana(g.pest);
+      b.animate?.([{ boxShadow: "0 0 0 0 rgba(34,211,238,.9)" }, { boxShadow: "0 0 0 8px rgba(34,211,238,0)" }],
+                  { duration: 700, iterations: 3 });
+      b.style.outline = "2px solid #22d3ee";
+      setTimeout(() => { b.style.outline = ""; }, 2200);
+      return true;
+    },
+    boton: (id: string) => botones.get(id) ?? null,
   };
   pintarActivo();
   return barra;
