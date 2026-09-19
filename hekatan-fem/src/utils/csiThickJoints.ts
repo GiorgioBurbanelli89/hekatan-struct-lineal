@@ -27,11 +27,21 @@
  *  salen de aqui: la recuperacion de momentos en los joints y la K de 12x12 condensada
  *  que se ensena en pantalla. Una sola copia: si cambia la formulacion, cambia para las dos. */
 function ensamblarThick22(
-  xl: number[], yl: number[], E: number, nu: number, t: number, penal = 1000
+  xl: number[], yl: number[], E: number, nu: number, t: number, penal = 1000,
+  mod: number[] | null = null
 ) {
   const D0 = (E * t * t * t) / (12 * (1 - nu * nu));
   const Db = [[D0, D0 * nu, 0], [D0 * nu, D0, 0], [0, 0, (D0 * (1 - nu)) / 2]];
-  const Dsv = ((5 / 6) * E * t) / (2 * (1 + nu));
+  const Ds0 = ((5 / 6) * E * t) / (2 * (1 + nu));
+  // Modificadores M11 M22 M12 (mod[3..5]) y V13 V23 (mod[6..7]), EXACTAMENTE como
+  // getBendingK_CSI (shellQ4.cpp): D_ij *= sqrt(m_i)·sqrt(m_j). Antes la
+  // recuperacion no los veia: la rigidez del solver si llevaba M×100 en los
+  // pedestales del radier MOD_002 y el momento reportado salia 100 veces chico.
+  const sq = (v: number | undefined) => Math.sqrt(Math.max(0, v ?? 1));
+  const sb = mod ? [sq(mod[3]), sq(mod[4]), sq(mod[5])] : [1, 1, 1];
+  const ss = mod ? [sq(mod[6]), sq(mod[7])] : [1, 1];
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) Db[i][j] *= sb[i] * sb[j];
+  const DsV = [Ds0 * ss[0] * ss[0], Ds0 * ss[1] * ss[1]];
   const Dsum = Db[0][0] + Db[1][1] + Db[2][2];
   const PENAL = penal;   // el 1000 del kernel; parametro solo para la prueba de sensibilidad
   const ca: number[] = [], sa: number[] = [], LL: number[] = [];
@@ -110,21 +120,23 @@ function ensamblarThick22(
     const DB = [z22(), z22(), z22(), z22(), z22()];
     for (let c = 0; c < 22; c++) {
       for (let i = 0; i < 3; i++) DB[i][c] = Db[i][0] * p.B[0][c] + Db[i][1] * p.B[1][c] + Db[i][2] * p.B[2][c];
-      DB[3][c] = Dsv * p.B[3][c]; DB[4][c] = Dsv * p.B[4][c];
+      DB[3][c] = DsV[0] * p.B[3][c]; DB[4][c] = DsV[1] * p.B[4][c];
     }
     for (let a = 0; a < 22; a++) for (let b = 0; b < 22; b++) {
       let s = 0; for (let i = 0; i < 5; i++) s += p.B[i][a] * DB[i][b];
       K[a][b] += (s + PENAL * Dsum * p.v[a] * p.v[b]) * p.w;
     }
   }
-  return { K, media, Ben, Db, z22 };
+  return { K, media, Ben, Db, DsV, A0, C0, z22 };
 }
 
-export function csiThickJointMoments(
+/** Los 10 internos recuperados de la propia K: u_i = −K_ii⁻¹ K_ib u_b (u22 completo). */
+function recuperarThick22(
   xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
-  penal = 1000
-): number[][] {
-  const { K, media, Ben, Db, z22 } = ensamblarThick22(xl, yl, E, nu, t, penal);
+  penal = 1000, mod: number[] | null = null
+) {
+  const ens = ensamblarThick22(xl, yl, E, nu, t, penal, mod);
+  const { K, z22 } = ens;
   // que internos son activos: la misma eliminacion secuencial del C++ (salta pivotes nulos)
   let esc = 0; for (const f of K) for (const q of f) esc = Math.max(esc, Math.abs(q));
   const Kc = K.map((f) => f.slice());
@@ -158,6 +170,14 @@ export function csiThickJointMoments(
   }
   const u22 = z22(); for (let b = 0; b < 12; b++) u22[b] = u12[b]; activos.forEach((i, k) => { u22[i] = ui[k]; });
 
+  return { ...ens, u22 };
+}
+
+export function csiThickJointMoments(
+  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+  penal = 1000, mod: number[] | null = null
+): number[][] {
+  const { media, Ben, Db, u22 } = recuperarThick22(xl, yl, u12, E, nu, t, penal, mod);
   const Men = (r: number, s: number) => {
     const { B } = Ben(r, s);
     for (let i = 0; i < 3; i++) for (let c = 12; c < 22; c++) B[i][c] -= media[i][c];
@@ -167,6 +187,33 @@ export function csiThickJointMoments(
   return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([r, s]) => Men(r, s));
 }
 
+
+/**
+ * Cortante transversal del Shell-Thick de CSI: [Vx, Vy] = Ds · gamma en el CENTRO
+ * del elemento, con la gamma ASUMIDA del propio elemento (los 4 cortantes de lado
+ * de Wilson, covariantes, con los internos recuperados): en (0,0) la parte lineal
+ * simetrizada se anula y queda gamma_cov = (A0·u22, C0·u22), gamma = J0⁻¹·gamma_cov.
+ * Un valor por elemento: AreaForceShell de CSI da el MISMO V13/V23 en los 4 joints.
+ * Signo de la deformacion del solver (gamma_xz = w,x + θy, gamma_yz = w,y − θx),
+ * que es ya el de CSI (V13 < 0 junto a un apoyo con carga hacia abajo).
+ */
+export function csiThickShear(
+  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+  penal = 1000, mod: number[] | null = null
+): [number, number] {
+  const { A0, C0, DsV, u22 } = recuperarThick22(xl, yl, u12, E, nu, t, penal, mod);
+  const g0 = A0.reduce((acc, q, c) => acc + q * u22[c], 0);
+  const g1 = C0.reduce((acc, q, c) => acc + q * u22[c], 0);
+  const dN4r = [-0.25, 0.25, 0.25, -0.25], dN4s = [-0.25, -0.25, 0.25, 0.25];
+  let J00 = 0, J01 = 0, J10 = 0, J11 = 0;
+  for (let i = 0; i < 4; i++) {
+    J00 += dN4r[i] * xl[i]; J01 += dN4r[i] * yl[i];
+    J10 += dN4s[i] * xl[i]; J11 += dN4s[i] * yl[i];
+  }
+  const det = J00 * J11 - J01 * J10;
+  const gx = (J11 * g0 - J01 * g1) / det, gy = (-J10 * g0 + J00 * g1) / det;
+  return [DsV[0] * gx, DsV[1] * gy];
+}
 
 /**
  * La K de FLEXION del Shell-Thick de CSI ya CONDENSADA a los 12 gdl de nudo

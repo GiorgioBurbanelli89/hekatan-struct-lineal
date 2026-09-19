@@ -6,7 +6,7 @@ import {
   DeformOutputs,
   ElementInputs,
 } from "./data-model";
-import { csiThickJointMoments } from "./utils/csiThickJoints";
+import { csiThickJointMoments, csiThickShear } from "./utils/csiThickJoints";
 import { dkqJointMoments } from "./utils/dkqJoints";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -350,6 +350,14 @@ export function analyze(
     }
     analyzeOutputs.tranverseShearX!.set(elementIndex, shearXs);
     analyzeOutputs.tranverseShearY!.set(elementIndex, shearYs);
+    // V13/V23 del PROPIO elemento, sin promediar con los vecinos: lo que lista
+    // AreaForceShell de CSI (en Thick, el mismo valor en los 4 joints)
+    if (element.length === 4) {
+      const vx = analyzeOutputsElements.tranverseShearX.get(elementIndex) ?? 0;
+      const vy = analyzeOutputsElements.tranverseShearY.get(elementIndex) ?? 0;
+      (analyzeOutputs.tranverseShearXjoint ??= new Map()).set(elementIndex, [vx, vx, vx, vx]);
+      (analyzeOutputs.tranverseShearYjoint ??= new Map()).set(elementIndex, [vy, vy, vy, vy]);
+    }
     analyzeOutputs.vonMises!.set(elementIndex, vmStress);
   });
 
@@ -597,6 +605,13 @@ function computeQ4ShellStresses(
   // esquinas: es el elemento de las plantillas (losa Thin por defecto).
   let Mj: number[][] | null = null;
   const esPlacaGruesa = ((elementInputs as any)?.plateFormulations?.get(elemIdx) ?? 0) !== 1;
+  // Modificadores de FLEXION y CORTANTE, los mismos que ve la rigidez (shellQ4.cpp):
+  // los 8 direccionales si los hay; si no, el escalar de flexion multiplica la Kb
+  // entera (flexion y cortante transversal).
+  const smodB = (elementInputs as any)?.shellModifiers?.get(elemIdx);
+  const bmodB = (elementInputs as any)?.bendingModifiers?.get(elemIdx);
+  const modB: number[] | null = Array.isArray(smodB) && smodB.length >= 8 ? smodB
+    : (typeof bmodB === "number" && bmodB !== 1 ? [1, 1, 1, bmodB, bmodB, bmodB, bmodB, bmodB] : null);
   if (Math.abs(detJ) > 1e-20) {
     const u12: number[] = [];
     for (let n = 0; n < 4; n++) u12.push(uLocal[n*6 + 2], uLocal[n*6 + 3], uLocal[n*6 + 4]);
@@ -608,56 +623,51 @@ function computeQ4ShellStresses(
       // directamente en las esquinas el M12 de los elementos de esquina se iba
       // un 26 %: CSI extrapola desde Gauss, no evalua en el nudo.
       const modoDKQ = (globalThis as any).__hekatanDkqJoints ?? "gauss";
-      Mj = (esPlacaGruesa ? csiThickJointMoments(xl, yl, u12, E, nu, t)
+      Mj = (esPlacaGruesa ? csiThickJointMoments(xl, yl, u12, E, nu, t, 1000, modB)
                           : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
              .map((m) => m.map((v) => SIGNO_CSI * v));
       if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
     } catch { Mj = null; }
   }
 
-  // --- Transverse shear (Mindlin) ---
+  // --- Cortante transversal V13 / V23 ---
   //
-  // ⚠️ OJO: ESTO SOLO VALE EN MINDLIN, Y HOY SE USA TAMBIEN EN KIRCHHOFF.
+  // Shell-Thick: Ds·gamma con la gamma ASUMIDA del propio elemento de CSI (los 4
+  // cortantes de lado con los internos recuperados), en el CENTRO: un valor por
+  // elemento, igual en los 4 joints, como AreaForceShell de CSI
+  // (`csiThickShear`, utils/csiThickJoints.ts). Validado contra SAP2000 24.
   //
-  // `Q = Ds x gamma` es la ley constitutiva de Mindlin. En KIRCHHOFF el gamma
-  // es CERO por definicion —lo dice el comentario de abajo—, asi que lo que
-  // queda es RUIDO NUMERICO, y multiplicado por Ds = 5/6 x G x t (1.39e6 en una
-  // placa de 20 cm) sale disparado.
-  //
-  // Medido el 30-ago-2026 con la placa 4x4 apoyada, t = 0.20, q = -10, que
-  // tiene solucion analitica:
-  //
-  //     M11 centro    6.767   contra 7.66 de Navier      OK (malla 8x8)
-  //     V13 borde   798.091   contra 13.52 teorico       x59
-  //
-  // Y por eso Hekatan da casi lo MISMO en thin y en thick (10388 y 10196),
-  // mientras ETABS los distingue: 154.7 en Shell-Thin contra 48.6 en
-  // Shell-Thick. Esa es su firma — en Thin, donde no hay gamma, ETABS saca el
-  // cortante por EQUILIBRIO:
-  //
-  //     Qx = dMx/dx + dMxy/dy      Qy = dMy/dy + dMxy/dx
-  //
-  // Mientras esto no se arregle, `tranverseShearX/Y` NO es comparable con el
-  // V13/V23 de ETABS ni sirve para dimensionar a cortante. Los momentos si:
-  // estan validados contra Navier al 2 % (`placa-momentos-navier`).
-  // shellQ4.cpp: γxz = dw/dx - θx_solver, donde θx_solver = -d[3]
-  // → γxz = dw/dx - (-d[3]) = dw/dx + d[3]
-  // En thin plate ideal: γxz = 0 → d[3] = -dw/dx ✓
-  // Por construccion el γ residual reportado da Qx = Ds * γ.
+  // ⚠️ BUG CORREGIDO (19-sep-2026): aqui iba gamma = dw/dx + theta_x,
+  // dw/dy + theta_y (la convencion de pendientes de Bathe, anterior a los giros de
+  // mano derecha del 3-sep-2026). Con los giros de verdad (theta_x = +w,y,
+  // theta_y = −w,x) eso no se anula en el limite delgado: vale w,x + w,y, y por
+  // Ds = 5/6·G·t salia el cortante del radier MOD_002 ~2300 veces el de SAFE.
+  // La convencion buena (la de la rigidez) es:
+  //     gamma_xz = dw/dx + theta_y        gamma_yz = dw/dy − theta_x
+  // Shell-Thin (DKQ): no tiene gamma; el cortante se saca por equilibrio mas
+  // abajo (analyze(), gradiente de momentos). Lo de aqui es solo el respaldo.
   const kappa_s = 5.0/6.0;
   const G = E / (2*(1+nu));
   const Ds = kappa_s * G * t;
-  let gammaXZ = 0, gammaYZ = 0;
-  const N_vals = [0.25, 0.25, 0.25, 0.25];
-  for (let n = 0; n < 4; n++) {
-    const w = uLocal[n*6 + 2];
-    const thetaX = uLocal[n*6 + 3];   // = -dw/dx en convencion solver
-    const thetaY = uLocal[n*6 + 4];   // = -dw/dy en convencion solver
-    gammaXZ += dNdx[n] * w + N_vals[n] * thetaX;  // dw/dx + thetaX = γxz
-    gammaYZ += dNdy[n] * w + N_vals[n] * thetaY;  // dw/dy + thetaY = γyz
+  let Qx = 0, Qy = 0;
+  let qHecho = false;
+  if (esPlacaGruesa && Math.abs(detJ) > 1e-20) {
+    try {
+      const u12s: number[] = [];
+      for (let n = 0; n < 4; n++) u12s.push(uLocal[n*6 + 2], uLocal[n*6 + 3], uLocal[n*6 + 4]);
+      const [vx, vy] = csiThickShear(xl, yl, u12s, E, nu, t, 1000, modB);
+      if (Number.isFinite(vx) && Number.isFinite(vy)) { Qx = vx; Qy = vy; qHecho = true; }
+    } catch { qHecho = false; }
   }
-  const Qx = Ds * gammaXZ;
-  const Qy = Ds * gammaYZ;
+  if (!qHecho) {
+    let gammaXZ = 0, gammaYZ = 0;
+    for (let n = 0; n < 4; n++) {
+      gammaXZ += dNdx[n] * uLocal[n*6 + 2] + 0.25 * uLocal[n*6 + 4];   // w,x + theta_y
+      gammaYZ += dNdy[n] * uLocal[n*6 + 2] - 0.25 * uLocal[n*6 + 3];   // w,y − theta_x
+    }
+    Qx = Ds * (modB ? modB[6] : 1) * gammaXZ;
+    Qy = Ds * (modB ? modB[7] : 1) * gammaYZ;
+  }
 
   // --- Von Mises stress (max of top/bottom fiber) ---
   const sigXX_top = Nx/t + 6*Mx/(t*t);
