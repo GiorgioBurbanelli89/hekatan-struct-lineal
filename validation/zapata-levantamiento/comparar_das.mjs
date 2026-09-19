@@ -53,13 +53,23 @@ for (const [nom, f] of [["SAP2000", "csi/sap2000_das610.json"], ["SAFE", "csi/sa
     out[`${nom}${caso === "NLT_DAS" ? " tol 1e-6" : ""}`] = r;
   }
 }
+// OpenSeesPy (ShellMITC4 + zeroLength ENT), segundo testigo: opensees/ops_das610.json (+ _lineal)
+if (existsSync(aqui("opensees/ops_das610.json"))) {
+  const J = JSON.parse(readFileSync(aqui("opensees/ops_das610.json"), "utf-8"));
+  const w = new Map(Object.entries(J.U3).filter(([id]) => xy[+id - 1]));
+  const r = resumen(w);
+  let peor = 0, wmx = 0; for (const [id, v] of w) { wmx = Math.max(wmx, Math.abs(v)); peor = Math.max(peor, Math.abs(v - wHek.get(id))); }
+  r.nudoPeorPct = peor / wmx * 100;
+  if (existsSync(aqui("opensees/ops_das610_lineal.json"))) r.qmaxLineal = -Math.min(...Object.values(JSON.parse(readFileSync(aqui("opensees/ops_das610_lineal.json"), "utf-8")).U3)) * P.ks;
+  out["OpenSeesPy"] = r;
+}
 writeFileSync(aqui("das610_comparacion.json"), JSON.stringify(out, null, 1));
 writeFileSync(aqui("csi/hekatan_das610.json"), JSON.stringify({ prog: "hekatan", casos: { NL_DAS: { U3: Object.fromEntries(wHek) } } }));
 const ref = out["SAP2000 tol 1e-6"] ?? out.SAP2000;
 console.log(`Das ej. 6.10  Q = ${(P.P * TONF).toFixed(0)} kN = ${P.P.toFixed(3)} tonf`);
 console.log(`  rígida  q_max ${out.rigida.qmax.toFixed(3)} tonf/m²  contacto ${(out.rigida.contacto * P.Lx * P.Ly).toFixed(4)} m²  giros ${out.rigida.giroX.toExponential(4)} ${out.rigida.giroY.toExponential(4)}`);
 console.log(`  Das A' (condición de centroide) ${out.das.A.toFixed(4)} m², libro (ábaco) 1.193 m²`);
-for (const k of Object.keys(out).filter((k) => /Hekatan|SAP|SAFE|ETABS/.test(k) && out[k].qmax)) {
+for (const k of Object.keys(out).filter((k) => /Hekatan|SAP|SAFE|ETABS|OpenSees/.test(k) && out[k].qmax)) {
   const r = out[k];
   console.log(`  ${k.padEnd(18)} q_max ${r.qmax.toFixed(4)}  w ${r.wmax_mm.toFixed(4)} mm  contacto ${r.areaContacto.toFixed(4)} m² (${r.nudosContacto} nudos)  θx ${r.giroX.toExponential(5)} θy ${r.giroY.toExponential(5)}` +
     (ref && r !== ref ? `  | vs SAP q ${pct(r.qmax, ref.qmax).toFixed(4)} %` : "") + (r.nudoPeorPct !== undefined ? `  nudo a nudo ${r.nudoPeorPct.toFixed(4)} %` : "") + (r.sumFz_tonf ? `  ΣFz ${r.sumFz_tonf.toFixed(4)}` : "") + (r.qmaxLineal ? `  lineal ${r.qmaxLineal.toFixed(3)}` : ""));

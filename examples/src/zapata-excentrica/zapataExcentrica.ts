@@ -25,6 +25,7 @@
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { cliModeler } from "../cli-modeler/cliModeler";
 import { botonTutorZapata } from "../shared/tutorFem";
+import { opensees, datosOpenSeesDeStates } from "../shared/openseesZapata";
 import { HOJA_DAS_48 as hojaDas48 } from "./das48";
 
 export const TONF = 9.80665;                 // kN
@@ -244,7 +245,10 @@ export const zapataExcentrica: ExampleDef = {
       const nodes = states?.nodes?.val as number[][] | undefined;
       if (!it?.vueltas?.length || !nodes?.length) return null;
       return { p, nodes, vueltas: it.vueltas, nodosComp: it.nodos };
-    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"]);
+    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"], (lang) => {
+      const d = datosOpenSeesDeStates(states, "Zapata con levantamiento (Hekatan Struct)");
+      return d ? opensees(d, lang) : null;
+    });
   },
   computedLabels(pr: any, states: any) {
     const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;
@@ -384,7 +388,10 @@ export const zapataLevantamientoPlantilla: ExampleDef = {
       const nodes = states?.nodes?.val as number[][] | undefined;
       if (!it?.vueltas?.length || !nodes?.length) return null;
       return { p, nodes, vueltas: it.vueltas, nodosComp: it.nodos };
-    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"]);
+    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"], (lang) => {
+      const d = datosOpenSeesDeStates(states, "Zapata con levantamiento (Hekatan Struct)");
+      return d ? opensees(d, lang) : null;
+    });
   },
   computedLabels(pr: any, states: any) {
     const p = paramsDePlantilla(pr);

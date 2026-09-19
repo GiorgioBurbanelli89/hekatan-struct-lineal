@@ -40,6 +40,14 @@ export async function correr() {
   comparar(D.U3_NLT, "SAP2000");
   comparar(D.safe_U3_NLT, "SAFE 20");
   comparar(D.etabs_U3_NLT, "ETABS 22");
+  // OpenSeesPy, segundo testigo. Su ShellMITC4 NO lleva los modos incompatibles de Wilson que el
+  // Shell-Thick de Hekatan/SAP2000 sí: por eso su límite es propio (medido 0.018 %), no el de CSI.
+  if (D.opensees_U3) {
+    let peor = 0, wmx = 0, igual = true;
+    for (const [id, v] of Object.entries(D.opensees_U3)) { wmx = Math.max(wmx, Math.abs(v)); peor = Math.max(peor, Math.abs(w(id) - v)); if ((w(id) < 0) !== (v < 0)) igual = false; }
+    filas.push({ que: "OpenSeesPy (ShellMITC4 + ENT): U3 nudo a nudo", medido: peor / wmx * 100, limite: 0.05, ok: peor / wmx * 100 <= 0.05, detalle: "otro elemento de placa (sin modos incompatibles)" });
+    filas.push({ que: "OpenSeesPy: mismos nudos en contacto", medido: igual ? 1 : 0, limite: 1, ok: igual, crudo: true });
+  }
 
   let wmin = 0, nC = 0;
   for (let i = 0; i < H.nodes.length; i++) { const v = U.get(i)[2]; wmin = Math.min(wmin, v); if (v < 0) nC++; }

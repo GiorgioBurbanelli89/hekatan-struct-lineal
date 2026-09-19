@@ -1798,6 +1798,19 @@ export const cliModeler: ExampleDef = {
       springsList.push({ node: -(eIdx + 1), dof: as.nodal ? -3 : -1, k: as.ks });
     }
     for (const [n, k] of compPorNudo) springsComp.push({ node: n, dof: 2, k });
+    // Todos los muelles de área horizontales repartidos a nudos (∫N_i dA), con o sin `compresion`: para
+    // exportar a programas que solo tienen resortes de nudo (OpenSees, openseesZapata.ts).
+    {
+      const porNudo = new Map<number, { k: number; comp: boolean }>();
+      for (const as of m.areaSprings) {
+        const eIdx = shellIdxOf.get(as.id); if (eIdx === undefined) continue;
+        const el = elements[eIdx] as number[]; const P = el.map((n) => nodes[n] as number[]);
+        if (!P.every((q) => Math.abs(q[2] - P[0][2]) < 1e-9)) continue;
+        const w = pesosAreaNudos(P);
+        el.forEach((n, i) => { const o = porNudo.get(n) ?? { k: 0, comp: !!as.comp }; o.k += as.ks * w[i]; porNudo.set(n, o); });
+      }
+      (window as any).__hekatanCliMuellesNodales = [...porNudo].map(([node, o]) => ({ node, k: o.k, comp: o.comp }));
+    }
     // `edge etabs`: nudos colgados sobre aristas de cascara -> registro gdl -2, k = indice del nudo
     if (m.edgeEtabs) {
       const lin = m.edgeLineal, tolE = lin ? 1e-4 : 1e-6;
@@ -2047,6 +2060,7 @@ export const cliModeler: ExampleDef = {
         // muelles con que queda resuelto el caso (los comp apagados NO están): equilibrio con ellos
         let springsResueltos = springsList;
         (window as any).__hekatanCliContacto = null;
+        (window as any).__hekatanCliContactoIter = null;
         if (springsComp.length) {
           const fijos = springsList.filter((s) => !sustituidos.has(s));
           // cada vuelta queda guardada (uz de todos los nudos + qué muelles estaban activos) para el Tutor FEM

@@ -9,3 +9,4 @@ hekatan_n*.json
 csi/_sap/
 csi/_etabs/
 csi/_*.log
+opensees/*.json

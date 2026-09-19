@@ -28,12 +28,12 @@ const TXT: Record<Idioma, Record<string, string>> = {
         plegar: "Plegar / desplegar", cerrar: "Cerrar (Esc)", ley: "lo usa el modelo abierto · 🧮 arriba: calculadora", pronto: "⏳ próximamente",
         lab: "Hekatan Lab (la K numérica ensamblada) solo tiene versión de escritorio: ⏳", boton: "🎓 Tutor FEM",
         botonT: "El FEM de esta zapata, paso a paso, en Hekatan LISP", sinSol: "Primero hay que resolver el modelo.",
-        hojaEn: "", idioma: "EN", idiomaT: "English" },
+        hojaEn: "", idioma: "EN", idiomaT: "English", opsT: "Exporta ESTE modelo (losa ShellMITC4 + resortes; ENT = suelo sin tracción) para correrlo en OpenSees" },
   en: { sub: "Hekatan LISP web · with the numbers of the open model", calc: "Opens Hekatan LISP with the model variables and the calculator 🖩",
         plegar: "Collapse / expand", cerrar: "Close (Esc)", ley: "used by the open model · 🧮 top: calculator", pronto: "⏳ coming soon",
         lab: "Hekatan Lab (the assembled numeric K) is desktop-only: ⏳", boton: "🎓 FEM Tutor",
         botonT: "The FEM of this footing, step by step, in Hekatan LISP", sinSol: "Solve the model first.",
-        hojaEn: "(the worksheets are in Spanish for now; English ⏳)", idioma: "ES", idiomaT: "Español" },
+        hojaEn: "(the worksheets are in Spanish for now; English ⏳)", idioma: "ES", idiomaT: "Español", opsT: "Exports THIS model (ShellMITC4 slab + springs; ENT = tensionless soil) to run it in OpenSees" },
 };
 function idioma(): Idioma {
   try { const g = localStorage.getItem("hk_tutor_lang"); if (g === "es" || g === "en") return g; } catch { /* nada */ }
@@ -255,6 +255,9 @@ const CSS = `
 #hk-tutor-btn{ position:fixed; z-index:2147481000; top:46px; right:330px; padding:6px 12px; border-radius:16px; cursor:pointer;
   border:1px solid var(--hk-marca,#D3A53C); background:var(--hk-chrome,#1B1F26); color:var(--hk-marca,#D3A53C);
   font:600 13px "Segoe UI",system-ui,sans-serif; box-shadow:0 4px 14px rgba(0,0,0,.35); }
+.hk-ops-btn{ position:fixed; z-index:2147481000; top:46px; padding:6px 10px; border-radius:16px; cursor:pointer; border:1px solid var(--hk-foco,#7F96B3);
+  background:var(--hk-chrome,#1B1F26); color:var(--hk-foco,#7F96B3); font:600 12px "Segoe UI",system-ui,sans-serif; }
+.hk-ops-btn:hover{ background:var(--hk-foco,#7F96B3); color:#111; }
 #hk-tutor-btn:hover{ background:var(--hk-marca,#D3A53C); color:#111; }
 `;
 
@@ -374,9 +377,11 @@ export function entradasZapata(d: DatosTutor, hojaDas: string): EntradaTutor[] {
 }
 
 /** El botón «🎓 Tutor FEM» del ejemplo de la zapata: solo visible mientras ese ejemplo está abierto. */
-export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: string, ids: string[] = ["zapata-excentrica"]) {
+export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: string, ids: string[] = ["zapata-excentrica"],
+  exportar?: (lenguaje: "py" | "tcl") => string | null) {
   css();
   (window as any).__hekatanTutorDatos = leerDatos;
+  (window as any).__hekatanExportarOpenSees = exportar;
   if (document.getElementById("hk-tutor-btn")) return;
   const b = document.createElement("button");
   b.id = "hk-tutor-btn"; b.textContent = tx("boton"); b.title = tx("botonT");
@@ -387,12 +392,27 @@ export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: st
       id === "W" ? hojaWinkler(d.p) : id === "NL" ? hojaTutorZapata(d) : (CADENA[id]?.hoja?.(d.p) ?? "# ⏳"));
   };
   document.body.appendChild(b);
+  // exportar a OpenSees (Py y Tcl) el modelo abierto: al lado del botón del tutor
+  const ops: HTMLButtonElement[] = [];
+  for (const [lang, txt, dx] of [["py", "OpenSeesPy (.py)", 150], ["tcl", "OpenSees Tcl (.tcl)", 290]] as const) {
+    const o = document.createElement("button");
+    o.className = "hk-ops-btn"; o.textContent = "⬇ " + txt; o.style.right = 330 + dx + "px";
+    o.title = tx("opsT");
+    o.onclick = () => {
+      const t = ((window as any).__hekatanExportarOpenSees ?? exportar)?.(lang);
+      if (!t) { alert(tx("sinSol")); return; }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t], { type: "text/plain" }));
+      a.download = `zapata_hekatan.${lang}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      (window as any).__hekatanUltimoOpenSees = t;
+    };
+    document.body.appendChild(o); ops.push(o);
+  }
   const vigila = setInterval(() => {
     const id = (window as any).__hekatanExample?.();
     if (id !== undefined && id !== null && !ids.includes(id)) {
-      b.remove(); document.getElementById("hk-tutor")?.remove(); clearInterval(vigila);
+      b.remove(); ops.forEach((o) => o.remove()); document.getElementById("hk-tutor")?.remove(); clearInterval(vigila);
     }
   }, 800);
 }
 
-(window as any).__hekatanTutorFem = { abrirTutorFem, hojaTutorZapata, hojaPlacaZapata, hojaWinkler };
+if (typeof window !== "undefined") (window as any).__hekatanTutorFem = { abrirTutorFem, hojaTutorZapata, hojaPlacaZapata, hojaWinkler };
