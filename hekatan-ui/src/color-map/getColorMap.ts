@@ -5,46 +5,66 @@ import { Lut } from "three/addons/math/Lut.js";
 import van, { State } from "vanjs-core";
 import { fixedColorMapRange } from "../viewer/getViewer";
 
-// CSI contour colormap — el MISMO en ETABS, SAFE y SAP2000 (confirmado con la leyenda
-// real de ETABS: F11 va de magenta(−4.00, extremo negativo) a azul(+1.20)). 14 bandas:
-//   t=0 = MAGENTA (extremo / máx compresión) → rosa → rojo → naranja → amarillo → verde
-//   → cian → azul → azul oscuro (t=1, mín). Para presión (rango invertido) t=0 = máx
-//   compresión = magenta, igual que SAFE/ETABS. (El magenta SÍ es del colormap CSI; el
-//   exceso de magenta en un ejemplo = rango de colormap mal ajustado, no la paleta.)
-const SAP2000_PALETTE: [number, number, number, number][] = [
-  [0.000, 255,   0, 255],  // magenta (extremo / máx compresión)
-  [0.077, 255,   0, 180],  // rosa
-  [0.154, 255,   0,   0],  // rojo
-  [0.231, 255,  80,   0],  // rojo-naranja
-  [0.308, 255, 140,   0],  // naranja
-  [0.385, 255, 190,   0],  // amarillo-naranja
-  [0.462, 255, 255,   0],  // amarillo
-  [0.538, 180, 255,   0],  // amarillo-verde
-  [0.615,   0, 255,   0],  // verde
-  [0.692,   0, 255, 180],  // verde-cian
-  [0.769,   0, 255, 255],  // cian
-  [0.846,   0, 180, 255],  // cian-azul
-  [0.923,   0,   0, 255],  // azul
-  [1.000,   0,   0, 180],  // azul oscuro (mín compresión)
+// CSI contour colormap — EXTRAÍDO (no inventado) de la tabla "OPTIONS - COLORS - OUTPUT",
+// fila "Screen"/"Screen Classic", de archivos escritos por los TRES programas (19-sep-2026):
+//   SAFE 22.6  → …/scratchpad/mod002/MOD_002.f2k
+//   SAP2000    → hekatan-struct/cli/shots/boveda_csi_ventanas/boveda_desde_sap.s2k
+//   ETABS      → galpon-bodega-electoral/pm_etabs.e2k
+// Los 15 Contour1..15 son BIT A BIT IDÉNTICOS en los tres archivos:
+//   13107400, 6553828, Red, 16639, Orange, 43775, 54527, Yellow, 65408, Green,
+//   8453888, Cyan, 16755200, 16733440, Blue
+// Los números son COLORREF de Windows (0x00BBGGRR, valor = R + 256·G + 65536·B). Decodificados:
+//   Contour1  13107400 = RGB(200,  0,200)   Contour9   65408   = RGB(128,255,  0)
+//   Contour2   6553828 = RGB(228,  0,100)   Contour11 8453888  = RGB(  0,255,128)
+//   Contour4     16639 = RGB(255, 64,  0)   Contour13 16755200 = RGB(  0,170,255)
+//   Contour6     43775 = RGB(255,170,  0)   Contour14 16733440 = RGB(  0, 85,255)
+//   Contour7     54527 = RGB(255,212,  0)
+// Los nombres (Red/Orange/Yellow/Green/Cyan/Blue) NO están numéricos en ningún archivo de CSI
+// del repo (grep sin resultado). Se despejan de los propios números: cada color con nombre cae
+// EXACTO en el punto medio (interpolación RGB lineal, verificado a 0-1 de diferencia por
+// redondeo) entre sus dos vecinos numéricos — p.ej. Contour4=(255,64,0) es el punto medio entre
+// Contour3=Red y Contour5=Orange ⇒ Orange = 2·(255,64,0) − Red(255,0,0) = (255,128,0). Con eso:
+//   Red=(255,0,0)  Orange=(255,128,0)  Yellow=(255,255,0)  Green=(0,255,0)  Cyan=(0,255,255)  Blue=(0,0,255)
+// (Orange=(255,128,0) es la del propio archivo, distinta de Color.Orange de .NET (255,165,0) —
+// por eso hay que despejarla del archivo y no usar el estándar de biblioteca.)
+// Contour1 es el extremo NEGATIVO (máx. compresión, magenta) y Contour15 el positivo (azul),
+// verificado contra el orden izquierda→derecha de la barra real de SAFE (magenta→rojo→naranja→
+// amarillo→verde→cian→azul). Las 15 bandas son EVENLY spaced (i/14) — así se generan sin volver
+// a inventar posiciones.
+const CSI_CONTOUR_15: [number, number, number][] = [
+  [200,   0, 200],  // Contour1  13107400 (extremo negativo / máx compresión)
+  [228,   0, 100],  // Contour2   6553828
+  [255,   0,   0],  // Contour3  Red
+  [255,  64,   0],  // Contour4     16639
+  [255, 128,   0],  // Contour5  Orange
+  [255, 170,   0],  // Contour6     43775
+  [255, 212,   0],  // Contour7     54527
+  [255, 255,   0],  // Contour8  Yellow
+  [128, 255,   0],  // Contour9     65408
+  [  0, 255,   0],  // Contour10 Green
+  [  0, 255, 128],  // Contour11  8453888
+  [  0, 255, 255],  // Contour12 Cyan
+  [  0, 170, 255],  // Contour13 16755200
+  [  0,  85, 255],  // Contour14 16733440
+  [  0,   0, 255],  // Contour15 Blue (extremo positivo)
 ];
+const CSI_CONTOUR_15_STOPS: [number, number, number, number][] =
+  CSI_CONTOUR_15.map(([r, g, b], i) => [i / (CSI_CONTOUR_15.length - 1), r, g, b]);
 
-// Paletas seleccionables. "csi" = la de SAFE/ETABS (magenta→azul, el colormap CSI real).
-// Las demás son alternativas perceptuales/clásicas para quien prefiera.
+/** Paletas cuya barra debe dibujarse en 15 BANDAS DISCRETAS (estilo CSI real), no degradado
+ *  continuo — "safe"/"etabs"/"sap2000" llevan la MISMA tabla Contour1..15 extraída arriba. */
+const DISCRETE_CSI_PALETTES = new Set(["safe", "etabs", "sap2000", "csi"]);
+export function isDiscreteCsiPalette(name: string): boolean {
+  return DISCRETE_CSI_PALETTES.has(name);
+}
+
+// Paletas seleccionables. safe/etabs/sap2000 son la MISMA tabla CSI (idéntica en los 3
+// programas, ver arriba). Las demás son alternativas perceptuales/clásicas para quien prefiera.
 const PALETTES: Record<string, [number, number, number, number][]> = {
-  // SAFE — Soil Pressure Diagram (Figura 180), RGB MUESTREADO con Python de la leyenda
-  // real del libro. MAGENTA(máx compresión) → rojo → naranja → amarillo → verde → AZUL(mín).
-  safe: [
-    [0.00, 224,  13, 107],  // magenta (máx compresión)
-    [0.13, 221,  20,  50],  // rojo
-    [0.27, 252,  99,  39],  // naranja-rojo
-    [0.40, 254, 161,  47],  // naranja
-    [0.52, 238, 234,  25],  // amarillo
-    [0.64,   5, 193,  69],  // verde
-    [0.78,   7, 178, 244],  // cian-azul
-    [0.90,   4, 132, 213],  // azul
-    [1.00,  90, 175, 230],  // azul claro (mín compresión)
-  ],
-  csi: SAP2000_PALETTE,                                  // ETABS / CSI completo (magenta→azul)
+  safe: CSI_CONTOUR_15_STOPS,
+  etabs: CSI_CONTOUR_15_STOPS,
+  sap2000: CSI_CONTOUR_15_STOPS,
+  csi: CSI_CONTOUR_15_STOPS,                             // alias histórico (compat)
   jet_r: [                                               // rojo(máx)→azul(mín)
     [0.0, 200, 0, 0], [0.15, 255, 80, 0], [0.32, 255, 200, 0], [0.48, 180, 255, 0],
     [0.6, 0, 230, 90], [0.74, 0, 220, 230], [0.88, 0, 110, 255], [1.0, 0, 0, 180]],
@@ -56,16 +76,32 @@ const PALETTES: Record<string, [number, number, number, number][]> = {
 };
 /** Paleta activa (seleccionable desde Settings). Por defecto la de SAFE (cimentaciones). */
 export const colorMapPalette: State<string> = van.state("safe");
+// Gancho para verificación headless (puppeteer): colorMapPalette es un singleton de módulo,
+// no vive en el objeto `settings` de cada viewer, así que sin esto un script externo no
+// puede cambiar de paleta. `window.__hekatanColorPalette.val = "etabs"` etc.
+if (typeof window !== "undefined") {
+  (window as any).__hekatanColorPalette = colorMapPalette;
+}
 /** De qué elementos sale el RANGO del colormap: "auto" = todas las cáscaras, "muros" = solo las
  *  verticales, "losas" = solo las horizontales. Con un rango global, un muro que trabaja a 10 kN/m²
  *  al lado de otro a 110 sale entero en la banda de abajo y "no se ve su colormap" (Jorge, 6-sep-2026):
  *  el número es correcto, la escala no le sirve. Con "muros" cada familia se mira con su propia escala. */
 export const colorMapScope: State<string> = van.state("auto");
 
-/** Lookup en la palette ACTIVA interpolando linealmente entre stops. */
+/** Lookup en la palette ACTIVA. Las paletas CSI (safe/etabs/sap2000) son de 15 BANDAS
+ *  DISCRETAS (sin interpolar, como el "Fill" de SAFE/ETABS/SAP2000: cada valor cae en UNA
+ *  banda con un color sólido, no en un degradado). Las demás (jet/jet_r/viridis) siguen
+ *  interpolando linealmente entre sus stops. */
 function sap2000Color(t: number): [number, number, number] {
   t = Math.max(0, Math.min(1, t));
-  const pal = PALETTES[colorMapPalette.val] ?? SAP2000_PALETTE;
+  const palName = colorMapPalette.val;
+  const pal = PALETTES[palName] ?? CSI_CONTOUR_15_STOPS;
+  if (isDiscreteCsiPalette(palName)) {
+    const n = pal.length;
+    const idx = Math.min(n - 1, Math.floor(t * n));
+    const [, r, g, b] = pal[idx];
+    return [r, g, b];
+  }
   for (let i = 0; i < pal.length - 1; i++) {
     const [t0, r0, g0, b0] = pal[i];
     const [t1, r1, g1, b1] = pal[i + 1];
@@ -91,8 +127,12 @@ function buildSap2000Texture(): THREE.DataTexture {
     data[i * 4 + 3] = 255;
   }
   const tex = new THREE.DataTexture(data, N, 1, THREE.RGBAFormat);
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
+  // Paletas CSI (safe/etabs/sap2000): filtro NEAREST → bordes de banda NÍTIDOS, sin
+  // mezclar un texel del sample 256 con el vecino (como el "Fill" real de SAFE/ETABS/
+  // SAP2000, no un degradado). Las continuas siguen con LinearFilter.
+  const nearest = isDiscreteCsiPalette(colorMapPalette.val);
+  tex.minFilter = nearest ? THREE.NearestFilter : THREE.LinearFilter;
+  tex.magFilter = nearest ? THREE.NearestFilter : THREE.LinearFilter;
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.needsUpdate = true;
@@ -100,8 +140,27 @@ function buildSap2000Texture(): THREE.DataTexture {
 }
 
 /** Gradiente CSS de la leyenda, construido de la paleta ACTIVA (top=t=1 → bottom=t=0,
- *  igual orientación que los markers de valor). Reemplaza el gradiente hardcodeado. */
+ *  igual orientación que los markers de valor). Reemplaza el gradiente hardcodeado.
+ *
+ *  Paletas CSI (safe/etabs/sap2000): 15 BANDAS DISCRETAS con bordes duros (dos color-stops
+ *  en el mismo % → CSS no interpola entre ellos), igual que la barra real de SAFE/ETABS/
+ *  SAP2000. Las demás paletas (jet/jet_r/viridis) siguen como degradado continuo. */
 export function legendGradientCss(): string {
+  const palName = colorMapPalette.val;
+  if (isDiscreteCsiPalette(palName)) {
+    const pal = PALETTES[palName] ?? CSI_CONTOUR_15_STOPS;
+    const n = pal.length;
+    const stops: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const bandIdx = n - 1 - i;                 // top (i=0) = banda más alta (t≈1)
+      const [, r, g, b] = pal[bandIdx];
+      const c = `rgb(${r | 0},${g | 0},${b | 0})`;
+      const p0 = ((i / n) * 100).toFixed(4);
+      const p1 = (((i + 1) / n) * 100).toFixed(4);
+      stops.push(`${c} ${p0}%`, `${c} ${p1}%`);
+    }
+    return `linear-gradient(${stops.join(",")})`;
+  }
   const N = 12, stops: string[] = [];
   for (let i = 0; i <= N; i++) {
     const t = 1 - i / N;                       // top (i=0) = t=1, bottom (i=N) = t=0
@@ -243,7 +302,14 @@ export function getColorMap(
       vMax += eps;
       vMin -= eps;
     }
-    const userInverted = (rng && rng[0] > rng[1]);
+    // Paletas CSI (safe/etabs/sap2000): SIEMPRE mín algebraico → banda1 (magenta) y máx
+    // algebraico → banda15 (azul), igual que la barra real de SAFE/ETABS/SAP2000 — sin
+    // importar el ORDEN en que un ejemplo haya escrito su `colorMapRanges` override (p.ej.
+    // zapata-aislada pone `pressure: [0, -q_adm]`, con rng[0] > rng[1]: ese orden es solo
+    // para fijar los EXTREMOS del rango, no para invertir qué color le toca a cada signo).
+    // "userInverted" es un truco de otros ejemplos/paletas que si se aplica aquí revierte
+    // el sentido de CSI (18-sep-2026: -10.3 tonf/m² salía azul y 0 salía magenta — al revés).
+    const userInverted = (rng && rng[0] > rng[1]) && !isDiscreteCsiPalette(colorMapPalette.val);
     const minActual = Math.min(vMin, vMax);
     const maxActual = Math.max(vMin, vMax);
     const range = maxActual - minActual;

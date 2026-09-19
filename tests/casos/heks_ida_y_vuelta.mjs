@@ -99,9 +99,10 @@ export async function correr() {
 
   // ── El modelo DUAL del artículo (test-m-dual, ms=1.0): el que pidió Jorge ──
   // Regla: o el .heks reconstruye el mismo modelo, o lo DICE en la cabecera. Lo que no
-  // puede pasar nunca es un fichero que difiere y calla. Hoy difiere un 4.4 % porque el
-  // lector no sabe declarar la placa DSE (plateFormulations = 2); con `shelltype id dse`
-  // en cliModeler.ts cerraría al 0.00018 % (medido devolviéndole el 2 a las 460 cáscaras).
+  // puede pasar nunca es un fichero que difiere y calla. El 18-sep difería un 4.4 % porque
+  // el 2 del dual era (por error) la placa DSE de Wilson y el lector no la declaraba. Desde
+  // el 19-sep el DSE es el 4 (`shelltype id wilson`) y el 2 vuelve a ser el MITC4 en el
+  // solver, que se relee como `thick` (registros/2026-09-19_platefomulations_2.md).
   try {
     const dual = await empaquetar(`
 const g = globalThis; g.window = g;
@@ -122,13 +123,13 @@ export function construir(id, over) {
     const texto = modeloAHeks(A, { nombre: "test-m-dual ms=1.0" });
     const B = resolver(cliModeler, texto);
     const c = comparar({ deformOutputs: A.deformOutputs }, B);
-    const avisa = /⚠️ .*placa DSE/.test(texto);
+    const avisa = /⚠️ .*plateFormulations/.test(texto);
     const iguales = !c.sinDatos && c.rel <= 0.5;
     filas.push({ que: "test-m-dual ms=1.0: nudos", medido: `${B.nodes.val.length}`, limite: `${A.nodes.val.length}`,
                  ok: B.nodes.val.length === A.nodes.val.length, crudo: true, detalle: "el modelo del artículo" });
     filas.push({ que: "test-m-dual: coincide O lo avisa", medido: `${c.rel?.toFixed(3)} % · aviso ${avisa ? "SÍ" : "NO"}`,
                  limite: "≤0.5 % o aviso", ok: iguales || avisa, crudo: true,
-                 detalle: iguales ? "reconstruye el mismo modelo" : "difiere, y la cabecera lo dice (falta `shelltype id dse` en el lector)" });
+                 detalle: iguales ? "reconstruye el mismo modelo" : "difiere, y la cabecera lo dice" });
   } catch (e) {
     filas.push({ que: "test-m-dual", medido: "no se pudo construir", limite: "—", ok: false, crudo: true, detalle: String(e).slice(0, 100) });
   }

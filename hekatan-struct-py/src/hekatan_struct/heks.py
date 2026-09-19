@@ -154,6 +154,12 @@ def leer_heks(ruta: str) -> ModeloHeks:
     # (w por Hermite cubica con los giros de los extremos, resto lineal), como la restriccion
     # interpolada de ETABS. Sin la directiva quedan sueltos, que es lo que hace SAP2000.
     edge_flag = [False]
+    # `edge lineal` (alias `safe`, `sap`, `linea`): el AUTO EDGE CONSTRAINT de SAFE/SAP2000 (el `@LC`,
+    # Line Constraint): el nudo colgado sigue a su arista por interpolacion LINEAL en los 6 GDL, y se atan
+    # TODOS los nudos que caen en una arista (tambien un punto cargado que no toca otro elemento).
+    # Medido en el f2k del radier MOD_002 (SAFE 22.6): la carga del punto 124 sobre la arista
+    # ~252-~250 (t = 0.189) llega 0.8108 / 0.1892 a los extremos = lineal (Hermite daria 0.906).
+    edge_lineal = [False]
     errores: list[str] = []
     ignorados: dict[str, int] = {}
 
@@ -198,7 +204,10 @@ def leer_heks(ruta: str) -> ModeloHeks:
                         sec=sec,
                     ))
                 elif cmd in ("support", "fix"):
-                    sup[int(t[1])] = _support_flags(" ".join(t[2:]))
+                    # comentario al final de linea fuera (si no, el apoyo salia libre: radier MOD_002)
+                    tt = t[2:]
+                    tt = tt[:next((k for k, x in enumerate(tt) if x.startswith("#")), len(tt))]
+                    sup[int(t[1])] = _support_flags(" ".join(tt))
                 elif cmd == "load":
                     v = [float(x) for x in t[2:8]]
                     v += [0.0] * (6 - len(v))
@@ -315,6 +324,9 @@ def leer_heks(ruta: str) -> ModeloHeks:
                 elif cmd in ("edge", "edgeconstraint"):
                     v = (t[1] if len(t) > 1 else "etabs").lower()
                     edge_flag[0] = v in ("etabs", "1", "on", "si", "hermite")
+                    edge_lineal[0] = v in ("lineal", "linear", "safe", "sap", "linea")
+                    if edge_lineal[0]:
+                        edge_flag[0] = True
                 elif cmd == "decksec":
                     vals = [float(x) for x in t[2:8]]
                     if len(vals) < 5 or vals[0] <= 0:
@@ -610,7 +622,12 @@ def leer_heks(ruta: str) -> ModeloHeks:
             m.errores.append(f"areaspring sin cáscara: {sid}")
     # `edge etabs`: buscar los nudos colgados sobre aristas de cascara y anotarlos
     if edge_flag[0]:
-        ni.hanging_nodes = _nudos_colgados(m.nodes, m.elements)
+        if edge_lineal[0]:
+            # tolerancia 1e-4*L: SAFE escribe los nudos de su malla con ruido de 1e-6 m sobre la arista
+            ni.hanging_nodes = _nudos_colgados(m.nodes, m.elements, tol=1e-4, todos=True)
+            ni.hanging_linear = True
+        else:
+            ni.hanging_nodes = _nudos_colgados(m.nodes, m.elements)
     huerfanos_muelle = []
     for nid, dof, kk in muelles:
         if nid in idx_de:
@@ -656,7 +673,7 @@ def leer_heks(ruta: str) -> ModeloHeks:
     return m
 
 
-def _nudos_colgados(nodes, elements, tol: float = 1e-6):
+def _nudos_colgados(nodes, elements, tol: float = 1e-6, todos: bool = False):
     """Nudos que caen DENTRO de una arista de una cascara sin ser vertice suyo (malla no conforme).
 
     Devuelve [(idx_elemento, idx_nudo)]. Solo se anotan los nudos que pertenecen a OTRO elemento:
@@ -674,7 +691,7 @@ def _nudos_colgados(nodes, elements, tol: float = 1e-6):
         P = N[conn]
         lo, hi = P.min(axis=0) - tol, P.max(axis=0) + tol
         for h in range(len(N)):
-            if h in conn or h not in de_algun_elem:
+            if h in conn or (h not in de_algun_elem and not todos):
                 continue
             X = N[h]
             if np.any(X < lo) or np.any(X > hi):
@@ -690,7 +707,7 @@ def _nudos_colgados(nodes, elements, tol: float = 1e-6):
                     continue
                 if np.linalg.norm((X - A) - t * d) <= tol * np.sqrt(L2):
                     # el nudo tiene que estar en OTRO elemento para que atarlo signifique algo
-                    if any(h in list(c) for i2, c in enumerate(elements) if i2 != e):
+                    if todos or any(h in list(c) for i2, c in enumerate(elements) if i2 != e):
                         out.append((e, h))
                     break
     return out

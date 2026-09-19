@@ -11,6 +11,7 @@
  *  - Area loads uniformes (q presion sobre placa)
  */
 import type { Node, Element, NodeInputs, ElementInputs } from "hekatan-fem";
+import { muellesParaExportar } from "./muellesParaExportar";
 
 /** Capa de un Shell-Layered. */
 export interface S2kLayer {
@@ -55,6 +56,8 @@ export interface S2kExportInput {
   areaLoads?: S2kAreaLoad[];
   /** Multiplicador de peso propio del LoadPat DEAD. Default 1 (SAP convencional). */
   selfWtMult?: number;
+  /** Todos los patrones del .heks por separado + combinaciones + muelles de AREA (ver «CARGAS»). */
+  patrones?: boolean;
   /** Columnas CFT (tubo relleno) en el .s2k: "sd" = Section Designer (tubo + relleno; SAP
    *  recalcula A, I, As, J de las formas) [defecto, lo mas parecido al Filled Steel Tube de
    *  ETABS] · "general" = seccion General con las propiedades que calcula Hekatan (A, I, As, J). */
@@ -572,11 +575,16 @@ export function exportS2k(input: S2kExportInput): string {
   // Joint, CoordSys, U1, U2, U3, R1, R2, R3. Hasta el 5-sep-2026 el .s2k no los
   // escribia y una zapata sobre Winkler llegaba a SAP2000 sin apoyo (inestable).
   {
-    const kNudo = new Map<number, number[]>();
-    for (const sp of (nodeInputs as any).springs ?? []) {
-      if (!(sp.k > 0)) continue;
-      const v = kNudo.get(sp.node) ?? [0, 0, 0, 0, 0, 0];
-      v[sp.dof] += sp.k; kNudo.set(sp.node, v);
+    // muelles de AREA -> nodales (int N_i dA); los nudos colgados no son muelles (muellesParaExportar.ts)
+    const areaExp = input.patrones ? ((elementInputs as any).areaSpringsExport as Map<number, { ks: number; nodal: boolean; comp: boolean }> | undefined) : undefined;
+    const kNudo = muellesParaExportar(nodes as any, elements as any, (nodeInputs as any).springs, { sinArea: !!areaExp?.size }).nodales;
+    // `patrones`: el muelle de AREA va como muelle de AREA de SAP2000 (formato leido de un .$2k que escribe
+    // SAP2000: validation/isse/muelle_sap_area.$2k), con «Compression Only» si el .heks dice `compresion`.
+    if (areaExp?.size) {
+      push(`TABLE:  "AREA SPRING ASSIGNMENTS"`);
+      for (const [e, a] of areaExp)
+        push(`   Area=${e + 1}   Type=Simple   Stiffness=${fmt(a.ks)}   SimpleType=${a.comp ? `"Compression Only"` : `"Tension and Compression"`}   Face=Bottom   Dir1Type="Object Axes"   Dir=3`);
+      blank();
     }
     if (kNudo.size > 0) {
       push(`TABLE:  "JOINT SPRING ASSIGNMENTS 1 - UNCOUPLED"`);
@@ -611,94 +619,141 @@ export function exportS2k(input: S2kExportInput): string {
     }
   }
 
-  // ── LOAD PATTERN DEFINITIONS ──
-  const selfWtMult = input.selfWtMult ?? 1;
-  push(`TABLE:  "LOAD PATTERN DEFINITIONS"`);
-  push(`   LoadPat=DEAD   DesignType=Dead   SelfWtMult=${selfWtMult}`);
-  blank();
-
-  // ── LOAD CASE DEFINITIONS ──
-  push(`TABLE:  "LOAD CASE DEFINITIONS"`);
-  push(`   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes`);
-  blank();
-
-  // ── CASE - STATIC 1 - LOAD ASSIGNMENTS ──
-  push(`TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"`);
-  push(`   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1`);
-  blank();
-
-  // ── JOINT LOADS - FORCE ──
-  // ⚠️ Esto leia `nodeInputs.forces`, que NO EXISTE en el modelo de datos: el
-  // campo es `loads` (ver hekatan-fem/src/data-model.ts). Como el objeto era
-  // `undefined`, el `if` nunca entraba y el .s2k salia SIN NINGUNA carga nodal
-  // — y SAP no protesta: abre el modelo, resuelve y da todo cero. No se habia
-  // notado porque el galpon, que es con lo que se valido el exportador, carga
-  // por `frameload` y no tiene ni una fuerza nodal.
-  // ⚠️ Desde que el cliModeler reparte `frameload` a los nudos (fuerzas w·L/2
-  // y momentos ±L²/12·(t×w)), `nodeInputs.loads` YA las lleva. Como abajo se
-  // escriben ademas como FRAME LOADS - DISTRIBUTED, SAP las contaba DOS veces:
-  // galpon ΣRz 8157 kN por 4078 (medido 2-sep-2026, csi_ida_vuelta.py). Aqui se
-  // descuenta de cada nudo lo que le llego de sus barras cargadas.
-  const fLoadsPre: Map<number, [number, number, number]> | undefined = (elementInputs as any).frameLoads;
-  const cargasNodales = new Map<number, number[]>();
-  nodeInputs.loads?.forEach((v, i) => cargasNodales.set(i, [...v]));
-  if (fLoadsPre && fLoadsPre.size > 0) {
-    const resta = (i: number, v: number[]) => {
-      const a = cargasNodales.get(i) ?? [0, 0, 0, 0, 0, 0];
-      cargasNodales.set(i, a.map((x, k) => x - v[k]));
-    };
-    for (const [idx, w] of fLoadsPre) {
-      const el = elements[idx];
-      if (!el || el.length !== 2) continue;
-      const a = nodes[el[0]], b = nodes[el[1]];
-      const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-      const L = Math.hypot(d[0], d[1], d[2]);
-      if (L < 1e-9) continue;
-      const t = [d[0] / L, d[1] / L, d[2] / L], c = L * L / 12;
-      const txw = [t[1] * w[2] - t[2] * w[1], t[2] * w[0] - t[0] * w[2], t[0] * w[1] - t[1] * w[0]];
-      resta(el[0], [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, c * txw[0], c * txw[1], c * txw[2]]);
-      resta(el[1], [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, -c * txw[0], -c * txw[1], -c * txw[2]]);
-    }
-  }
-  if (cargasNodales.size > 0) {
-    push(`TABLE:  "JOINT LOADS - FORCE"`);
-    for (const [idx, force] of cargasNodales) {
-      if (!force.some(v => Math.abs(v) > 1e-12)) continue;
-      push(`   Joint=${idx + 1}   LoadPat=DEAD   CoordSys=GLOBAL   F1=${fmt(force[0])}   F2=${fmt(force[1])}   F3=${fmt(force[2])}   M1=${fmt(force[3])}   M2=${fmt(force[4])}   M3=${fmt(force[5])}`);
-    }
+  // ── CARGAS ──
+  // `patrones: true` (heks_a_csi.mjs patrones=1, 18-sep-2026): TODOS los patrones del .heks por separado
+  // (Dead, DNE, Live...), cada uno su caso, sus combinaciones, y el PESO PROPIO lo calcula SAP2000
+  // (SelfWtMult del patron Dead = `selfweight` del .heks; las cargas nodales van SIN el peso). Sin la
+  // opcion, lo de antes (un solo patron DEAD con todo ya sumado en los nudos).
+  const cargasPP = (nodeInputs as any).cargasPorPatron as Record<string, Map<number, number[]>> | undefined;
+  if (input.patrones && cargasPP) {
+    const flPP = ((elementInputs as any).frameLoadsPorPatron ?? {}) as Record<string, Map<number, [number, number, number]>>;
+    const pats = [...new Set([...Object.keys(cargasPP), ...Object.keys(flPP)])];
+    const tipoDe = (p: string) => /^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? `"Super Dead"` : /^(live|viva|l)$/i.test(p) ? "Live" : "Other";
+    const sw = (elementInputs as any).selfWeight ?? 0;
+    push(`TABLE:  "LOAD PATTERN DEFINITIONS"`);
+    for (const p of pats) push(`   LoadPat=${p}   DesignType=${tipoDe(p)}   SelfWtMult=${/^dead$/i.test(p) ? fmt(sw) : 0}`);
     blank();
-  }
-
-  // ── FRAME LOADS - DISTRIBUTED ──
-  // Sin esta tabla el .s2k salia SIN CARGA en cuanto el modelo cargaba por
-  // `frameload` en vez de por fuerzas nodales: el galpon tiene 195 frameload y
-  // 0 force, o sea que se perdian los 4078 kN enteros y SAP abria el modelo con
-  // cero carga. Y no da error: da un modelo que resuelve y sale todo a cero.
-  //
-  // `elementInputs.frameLoads` viene en GLOBALES (kN/m), que es como lo guarda
-  // el cliModeler, asi que se escribe una fila por componente no nula con
-  // CoordSys=GLOBAL y Dir=X/Y/Z. La carga es uniforme (FOverLA = FOverLB) y va
-  // de extremo a extremo, que es lo que genera el comando `frameload`.
-  const fLoads: Map<number, [number, number, number]> | undefined =
-    (elementInputs as any).frameLoads;
-  if (fLoads && fLoads.size > 0) {
-    push(`TABLE:  "FRAME LOADS - DISTRIBUTED"`);
-    for (const [idx, w] of fLoads) {
-      const el = elements[idx];
-      if (!el || el.length !== 2) continue;
-      const a = nodes[el[0]], b = nodes[el[1]];
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-      // Numeracion de SAP: el Frame=N de CONNECTIVITY - FRAME es el indice del
-      // elemento +1, el mismo que ya usa FRAME SECTION ASSIGNMENTS.
+    push(`TABLE:  "LOAD CASE DEFINITIONS"`);
+    for (const p of pats) push(`   Case=${p}   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=${tipoDe(p)}   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes`);
+    blank();
+    push(`TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"`);
+    for (const p of pats) push(`   Case=${p}   LoadType="Load pattern"   LoadName=${p}   LoadSF=1`);
+    blank();
+    const filasJ: string[] = [];
+    for (const p of pats) for (const [idx, f] of cargasPP[p] ?? new Map()) {
+      if (!f.some(v => Math.abs(v) > 1e-12)) continue;
+      filasJ.push(`   Joint=${idx + 1}   LoadPat=${p}   CoordSys=GLOBAL   F1=${fmt(f[0])}   F2=${fmt(f[1])}   F3=${fmt(f[2])}   M1=${fmt(f[3])}   M2=${fmt(f[4])}   M3=${fmt(f[5])}`);
+    }
+    if (filasJ.length) { push(`TABLE:  "JOINT LOADS - FORCE"`); filasJ.forEach(push); blank(); }
+    const filasF: string[] = [];
+    for (const p of pats) for (const [idx, w] of flPP[p] ?? new Map()) {
+      const el = elements[idx]; if (!el || el.length !== 2) continue;
+      const a = nodes[el[0]], b = nodes[el[1]]; const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
       (["X", "Y", "Z"] as const).forEach((dir, k) => {
         if (Math.abs(w[k]) < 1e-12) return;
-        push(`   Frame=${idx + 1}   LoadPat=DEAD   CoordSys=GLOBAL   Type=Force   Dir=${dir}` +
-             `   DistType=RelDist   RelDistA=0   RelDistB=1` +
-             `   AbsDistA=0   AbsDistB=${fmt(L)}` +
-             `   FOverLA=${fmt(w[k])}   FOverLB=${fmt(w[k])}`);
+        filasF.push(`   Frame=${idx + 1}   LoadPat=${p}   CoordSys=GLOBAL   Type=Force   Dir=${dir}   DistType=RelDist   RelDistA=0   RelDistB=1   AbsDistA=0   AbsDistB=${fmt(L)}   FOverLA=${fmt(w[k])}   FOverLB=${fmt(w[k])}`);
       });
     }
+    if (filasF.length) { push(`TABLE:  "FRAME LOADS - DISTRIBUTED"`); filasF.forEach(push); blank(); }
+    const combos = ((elementInputs as any).combos ?? []) as Array<{ name: string; items: Array<[string, number]> }>;
+    if (combos.length) {
+      push(`TABLE:  "COMBINATION DEFINITIONS"`);
+      for (const c of combos) c.items.forEach(([p, f], k) => push(k === 0
+        ? `   ComboName=${c.name}   ComboType="Linear Add"   AutoDesign=No   CaseType="Linear Static"   CaseName=${p}   ScaleFactor=${fmt(f)}   SteelDesign=None   ConcDesign=None   AlumDesign=None   ColdDesign=None`
+        : `   ComboName=${c.name}   CaseType="Linear Static"   CaseName=${p}   ScaleFactor=${fmt(f)}`));
+      blank();
+    }
+  } else {
+  // ── LOAD PATTERN DEFINITIONS ──
+    const selfWtMult = input.selfWtMult ?? 1;
+    push(`TABLE:  "LOAD PATTERN DEFINITIONS"`);
+    push(`   LoadPat=DEAD   DesignType=Dead   SelfWtMult=${selfWtMult}`);
     blank();
+  
+    // ── LOAD CASE DEFINITIONS ──
+    push(`TABLE:  "LOAD CASE DEFINITIONS"`);
+    push(`   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes`);
+    blank();
+  
+    // ── CASE - STATIC 1 - LOAD ASSIGNMENTS ──
+    push(`TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"`);
+    push(`   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1`);
+    blank();
+  
+    // ── JOINT LOADS - FORCE ──
+    // ⚠️ Esto leia `nodeInputs.forces`, que NO EXISTE en el modelo de datos: el
+    // campo es `loads` (ver hekatan-fem/src/data-model.ts). Como el objeto era
+    // `undefined`, el `if` nunca entraba y el .s2k salia SIN NINGUNA carga nodal
+    // — y SAP no protesta: abre el modelo, resuelve y da todo cero. No se habia
+    // notado porque el galpon, que es con lo que se valido el exportador, carga
+    // por `frameload` y no tiene ni una fuerza nodal.
+    // ⚠️ Desde que el cliModeler reparte `frameload` a los nudos (fuerzas w·L/2
+    // y momentos ±L²/12·(t×w)), `nodeInputs.loads` YA las lleva. Como abajo se
+    // escriben ademas como FRAME LOADS - DISTRIBUTED, SAP las contaba DOS veces:
+    // galpon ΣRz 8157 kN por 4078 (medido 2-sep-2026, csi_ida_vuelta.py). Aqui se
+    // descuenta de cada nudo lo que le llego de sus barras cargadas.
+    const fLoadsPre: Map<number, [number, number, number]> | undefined = (elementInputs as any).frameLoads;
+    const cargasNodales = new Map<number, number[]>();
+    nodeInputs.loads?.forEach((v, i) => cargasNodales.set(i, [...v]));
+    if (fLoadsPre && fLoadsPre.size > 0) {
+      const resta = (i: number, v: number[]) => {
+        const a = cargasNodales.get(i) ?? [0, 0, 0, 0, 0, 0];
+        cargasNodales.set(i, a.map((x, k) => x - v[k]));
+      };
+      for (const [idx, w] of fLoadsPre) {
+        const el = elements[idx];
+        if (!el || el.length !== 2) continue;
+        const a = nodes[el[0]], b = nodes[el[1]];
+        const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const L = Math.hypot(d[0], d[1], d[2]);
+        if (L < 1e-9) continue;
+        const t = [d[0] / L, d[1] / L, d[2] / L], c = L * L / 12;
+        const txw = [t[1] * w[2] - t[2] * w[1], t[2] * w[0] - t[0] * w[2], t[0] * w[1] - t[1] * w[0]];
+        resta(el[0], [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, c * txw[0], c * txw[1], c * txw[2]]);
+        resta(el[1], [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, -c * txw[0], -c * txw[1], -c * txw[2]]);
+      }
+    }
+    if (cargasNodales.size > 0) {
+      push(`TABLE:  "JOINT LOADS - FORCE"`);
+      for (const [idx, force] of cargasNodales) {
+        if (!force.some(v => Math.abs(v) > 1e-12)) continue;
+        push(`   Joint=${idx + 1}   LoadPat=DEAD   CoordSys=GLOBAL   F1=${fmt(force[0])}   F2=${fmt(force[1])}   F3=${fmt(force[2])}   M1=${fmt(force[3])}   M2=${fmt(force[4])}   M3=${fmt(force[5])}`);
+      }
+      blank();
+    }
+  
+    // ── FRAME LOADS - DISTRIBUTED ──
+    // Sin esta tabla el .s2k salia SIN CARGA en cuanto el modelo cargaba por
+    // `frameload` en vez de por fuerzas nodales: el galpon tiene 195 frameload y
+    // 0 force, o sea que se perdian los 4078 kN enteros y SAP abria el modelo con
+    // cero carga. Y no da error: da un modelo que resuelve y sale todo a cero.
+    //
+    // `elementInputs.frameLoads` viene en GLOBALES (kN/m), que es como lo guarda
+    // el cliModeler, asi que se escribe una fila por componente no nula con
+    // CoordSys=GLOBAL y Dir=X/Y/Z. La carga es uniforme (FOverLA = FOverLB) y va
+    // de extremo a extremo, que es lo que genera el comando `frameload`.
+    const fLoads: Map<number, [number, number, number]> | undefined =
+      (elementInputs as any).frameLoads;
+    if (fLoads && fLoads.size > 0) {
+      push(`TABLE:  "FRAME LOADS - DISTRIBUTED"`);
+      for (const [idx, w] of fLoads) {
+        const el = elements[idx];
+        if (!el || el.length !== 2) continue;
+        const a = nodes[el[0]], b = nodes[el[1]];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+        // Numeracion de SAP: el Frame=N de CONNECTIVITY - FRAME es el indice del
+        // elemento +1, el mismo que ya usa FRAME SECTION ASSIGNMENTS.
+        (["X", "Y", "Z"] as const).forEach((dir, k) => {
+          if (Math.abs(w[k]) < 1e-12) return;
+          push(`   Frame=${idx + 1}   LoadPat=DEAD   CoordSys=GLOBAL   Type=Force   Dir=${dir}` +
+               `   DistType=RelDist   RelDistA=0   RelDistB=1` +
+               `   AbsDistA=0   AbsDistB=${fmt(L)}` +
+               `   FOverLA=${fmt(w[k])}   FOverLB=${fmt(w[k])}`);
+        });
+      }
+      blank();
+    }
+  
   }
 
   // ── Collect unique materials ──
@@ -748,14 +803,14 @@ export function exportS2k(input: S2kExportInput): string {
   // ── MATERIAL PROPERTIES 02 ──
   push(`TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"`);
   for (const [name, mat] of matSet) {
-    push(`   Material=${name}   UnitWeight=${fmt(mat.rho * 9.81)}   UnitMass=${fmt(mat.rho)}   E1=${fmt(mat.E)}   G12=${fmt(mat.G)}   U12=${fmt(mat.nu)}   A1=9.9E-06`);
+    push(`   Material=${name}   UnitWeight=${fmt(mat.rho * 9.80665)}   UnitMass=${fmt(mat.rho)}   E1=${fmt(mat.E)}   G12=${fmt(mat.G)}   U12=${fmt(mat.nu)}   A1=9.9E-06`);
   }
   blank();
 
   // ── MATERIAL PROPERTIES 03B ──
   push(`TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"`);
   for (const [name] of matSet) {
-    push(`   Material=${name}   Fc=27579   eFc=27579   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0`);
+    push(`   Material=${name}   Fc=${fmt((elementInputs as any).fcExport ?? 27579)}   eFc=${fmt((elementInputs as any).fcExport ?? 27579)}   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0   CoupModType="Modified Darwin-Pecknold"`);
   }
   blank();
 

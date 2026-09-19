@@ -439,11 +439,15 @@ export function getSettings(
       label: "Resultados de cáscara",
     });
 
-    // Selector de PALETA de colores del colormap. Por defecto la CSI (SAFE · ETABS).
+    // Selector de PALETA de colores del colormap. safe/etabs/sap2000 son la MISMA tabla
+    // Contour1..15 de "OPTIONS - COLORS - OUTPUT" (idéntica bit a bit en los 3 programas,
+    // ver getColorMap.ts) — 15 bandas DISCRETAS, no degradado, igual que la barra real de
+    // cada programa. Por defecto SAFE (cimentaciones).
     outputs.addBinding(colorMapPalette, "val", {
       options: {
         "SAFE (cimentación)": "safe",
-        "ETABS / CSI (magenta→azul)": "csi",
+        "ETABS": "etabs",
+        "SAP2000": "sap2000",
         "Jet_r (rojo→azul)": "jet_r",
         "Jet (azul→rojo)": "jet",
         "Viridis": "viridis",
