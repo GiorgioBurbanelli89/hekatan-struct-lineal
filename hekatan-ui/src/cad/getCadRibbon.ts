@@ -76,6 +76,28 @@ interface Herr {
 // globales que usa el Tweakpane): el mismo mando con otra entrada, sin copiar lógica.
 const W_ = () => window as any;
 const ajustes = () => W_().__hekatanSettings?.();
+/** Resultados de BARRA: el mismo State `frameResults` del desplegable «Resultados de barra». */
+const verBarra = (val: string, nom: string) => () => {
+  const st = ajustes(); if (!st?.frameResults) return "El visor todavía no tiene resultados.";
+  const ya = st.frameResults.rawVal === val;
+  st.frameResults.val = ya ? "none" : val;
+  return ya ? "Diagrama apagado." : `Diagrama de ${nom} sobre cada barra, con su valor.`;
+};
+/** Resultados de NUDO: el mismo State `nodeResults` del desplegable «Resultados de nudo». */
+const verNudo = (val: string, nom: string) => () => {
+  const st = ajustes(); if (!st?.nodeResults) return "El visor todavía no tiene resultados.";
+  const ya = st.nodeResults.rawVal === val;
+  st.nodeResults.val = ya ? "none" : val;
+  return ya ? `${nom}: apagado.` : `${nom} en cada nudo.`;
+};
+/** Escala de la deformada: el mismo State `deformScale` del slider «Escala XY». */
+const escala = (f: number) => () => {
+  const st = ajustes(); if (!st?.deformScale) return "";
+  const v = Math.max(0.1, Math.min(5000, +(st.deformScale.rawVal * f).toPrecision(3)));
+  st.deformScale.val = v;
+  if (st.deformedShape && !st.deformedShape.rawVal) st.deformedShape.val = true;
+  return `Escala de la deformada: ×${v}.`;
+};
 
 /** Botones que no son herramientas del motor: se APLICAN al nudo o barra que se clica. */
 const APLICA = new Set(["apoyo", "apoyoart", "carga", "cargaq"]);
@@ -153,6 +175,42 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> 
       { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
       { id: "medir",  icono: "📏", nombre: "Medir",    tecla: "DI", ayuda: "2 clics: distancia y Δx Δy Δz (acotar)." },
       { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
+    ],
+  },
+  // ── Pestaña RESULTADOS: antes había que plegar la cinta e ir al panel Settings ──
+  {
+    titulo: "Deformada", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-def", icono: "〰", nombre: "Deformada", tecla: "F", ayuda: "enciende o apaga la deformada, amplificada.",
+        accion: () => { const st = ajustes(); if (!st?.deformedShape) return ""; st.deformedShape.val = !st.deformedShape.rawVal;
+          return st.deformedShape.rawVal ? "Deformada encendida." : "Deformada apagada."; },
+        activo: () => !!ajustes()?.deformedShape?.rawVal },
+      { id: "r-esc-", icono: "÷2", nombre: "Menos", tecla: "", ayuda: "divide por 2 la escala de la deformada.", accion: escala(0.5) },
+      { id: "r-esc+", icono: "×2", nombre: "Más", tecla: "", ayuda: "multiplica por 2 la escala de la deformada.", accion: escala(2) },
+    ],
+  },
+  {
+    titulo: "Diagramas de barra", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-axil", icono: "N", nombre: "Axil", tecla: "A", ayuda: "diagrama de axiles (P) con su valor, como ETABS.", accion: verBarra("normals", "axiles"), activo: () => ajustes()?.frameResults?.rawVal === "normals" },
+      { id: "r-cort", icono: "V", nombre: "Cortante", tecla: "S", ayuda: "diagrama de cortante V2.", accion: verBarra("shearsY", "cortante V2"), activo: () => ajustes()?.frameResults?.rawVal === "shearsY" },
+      { id: "r-mom", icono: "M", nombre: "Momento", tecla: "D", ayuda: "diagrama de momento M3.", accion: verBarra("bendingsZ", "momento M3"), activo: () => ajustes()?.frameResults?.rawVal === "bendingsZ" },
+    ],
+  },
+  {
+    titulo: "Nudos", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-desp", icono: "↧", nombre: "Desplaz.", tecla: "", ayuda: "desplazamientos de cada nudo (U1 U2 U3).", accion: verNudo("deformations", "Desplazamientos"), activo: () => ajustes()?.nodeResults?.rawVal === "deformations" },
+      { id: "r-reac", icono: "⤒", nombre: "Reacción", tecla: "", ayuda: "reacciones en los apoyos (F y M).", accion: verNudo("reactions", "Reacciones"), activo: () => ajustes()?.nodeResults?.rawVal === "reactions" },
+    ],
+  },
+  {
+    titulo: "Ver en 2D", fila: 2, pest: "resultados",
+    items: [
+      { id: "r-2d", icono: "📐", nombre: "Diagrama 2D", tecla: "", ayuda: "el alzado con SOLO el diagrama elegido y sus valores, sin perspectiva (el botón «Ver diagrama en 2D» del panel).",
+        accion: () => { W_().__hekatanDiagrama2D?.(); return "Diagrama en 2D: se cierra con la ✕ de su ventana."; } },
+      { id: "r-barra", icono: "📈", nombre: "Barra", tecla: "", ayuda: "axil, cortante y momento a lo largo de la barra designada (el «Gráfico de la barra designada» del panel).",
+        accion: () => { W_().__hekatanDiagramaBarra?.(); return ""; } },
     ],
   },
 ];
@@ -437,7 +495,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     for (const h of g.items) {
       const b = document.createElement("button");
       b.type = "button";
-      b.title = `${h.nombre} (${h.tecla}) — ${h.ayuda}`;
+      b.title = `${h.nombre}${h.tecla ? ` (${h.tecla})` : ""} — ${h.ayuda}`;
       b.style.cssText = [
         "display:flex", "flex-direction:column", "align-items:center",
         "justify-content:center", "gap:1px",
@@ -453,7 +511,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       b.addEventListener("click", () => usar(h));
       b.addEventListener("mouseenter", () => {
         if (hooks.getTool() !== h.id) b.style.background = "rgba(34,211,238,.13)";
-        pista(`${h.icono} ${h.nombre} (${h.tecla}) — ${h.ayuda}`);
+        pista(`${h.icono} ${h.nombre}${h.tecla ? ` (${h.tecla})` : ""} — ${h.ayuda}`);
       });
       b.addEventListener("mouseleave", () => { pintarActivo(); pista(""); });
       botones.set(h.id, b);
