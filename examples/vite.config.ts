@@ -192,6 +192,7 @@ export default defineConfig({
         "viga-doble-t": "src/viga-doble-t/index.html",
         // ── Tablero de puente: 3 vigas doble-T + losa shell (test Solar) ──
         "tablero-puente": "src/tablero-puente/index.html",
+        "alcantarilla-carga-movil": "src/alcantarilla-carga-movil/index.html",
         // ── Columna CFT MIXTA (HSS shells Q4 + concreto H8 sólidos) ──
         "columna-cft-h8": "src/columna-cft-h8/index.html",
         // ── Conexión viga-columna con diafragma (Cervantes / CIDECT México) ──
