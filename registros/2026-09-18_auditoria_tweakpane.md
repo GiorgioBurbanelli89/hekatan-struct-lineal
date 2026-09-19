@@ -410,3 +410,116 @@ coordinación). Hallazgo útil para cuando se abra la ventana:
   con el textarea vacío. El arreglo bueno es **un generador genérico del .heks desde los
   `states`** (nudos, elementos, inputs) en `main.ts`, y que los tres botones lo usen: arregla
   los tres de una vez en lugar de parchear cada uno.
+
+---
+
+# Opción (c) — renombrados al español fuera de `main.ts` (20:10-20:40)
+
+## ✅ Aplicado y verificado en la app
+
+**`hekatan-ui/src/viewer/settings/getSettings.ts`** (panel izquierdo, 21 cambios):
+Display scale→**Tamaño de los símbolos** · Nodes→**Nudos** · Elements→**Elementos** ·
+Edges (delim.)→**Aristas (delim.)** · Nodes indexes→**Nº de nudo** · Elements indexes→**Nº de
+elemento** · Orientations→**Ejes locales** · Sections→**Secciones** · Supports→**Apoyos** ·
+Loads→**Cargas** · Node/Frame/Shell/Solid results→**Resultados de nudo/barra/cáscara/sólido** ·
+Deformed shape→**Deformada** · Scale XY/Z→**Escala XY/Z** · Solids→**Sólidos** ·
+📐 Grid→**📐 Rejilla** · 📌 Analysis Inputs→**📌 Datos de entrada** · 🔬 Analyze→**🔬 Resultados**.
+
+**`examples/src/workspace/loadPatternsPanel.ts`** (17 cambios): 📋 Load Patterns→**Patrones de
+carga** · 📊 Load Cases→**Casos de carga** · Σ Load Combinations→**Σ Combinaciones** ·
+Name→**Nombre** · Type→**Tipo** · Self Weight Mult.→**Factor de peso propio** · Auto
+Lateral→**Carga lateral automática** · Initial Cond.→**Condición inicial** ·
+Patterns→**Patrones** · Max Modes→**Modos máx.** · Formula→**Fórmula** · 🗑 Delete
+pattern/case/combo→**Borrar patrón/caso/combinación** · + Add New …→**+ Patrón/Caso/Combinación
+nuevo(a)**.
+
+**`hekatan-ui/src/viewer/drawing/drawing.ts`**: `label: ""` → **«Qué hacer»** (fila sin nombre).
+
+**`hekatan-ui/src/cad/getCadPanel.ts`**: la clave `select` estaba **dos veces** en
+`toolInstructions` (el compilador avisaba en cada arranque y la primera frase era código
+muerto). Queda una. Medido pulsando: Seleccionar→`tool=select`, Nodo→`node`, Línea→`line`,
+cada uno con su texto de ayuda.
+
+### Lo que impide que esto rompa los tutoriales
+Los guiones de `cli/tutoriales/*` piden los mandos **por su nombre en inglés**
+(`a.elegir("Frame results", …)`, `a.casilla("Deformed shape")`). Se añadió una tabla
+`SINONIMOS_PANEL` en **`cli/tutorial_struct.mjs`** (viejo→nuevo) que traduce antes de buscar,
+enganchada en los dos únicos sitios que miran la pantalla (`rect()` y `elegir()`); y
+`cli/shot_deformadas.mjs` + `cli/gif_itw_convergencia.mjs` aceptan ahora
+`/Deformed shape|Deformada/`. Comprobado en la app con la MISMA tabla: **0 nombres viejos
+quedan en pantalla** y **0 nombres nuevos se pierden** (los 24 se encuentran por `includes`).
+
+### Comprobaciones
+- `npx esbuild` de los 5 ficheros tocados: **compila, 0 avisos** (antes: 1 aviso por el `select`).
+- `node tests/run.mjs categorias` → **OK 3/3** (49 s).
+- `node tests/run.mjs animacion` → **FALLA 3/3, y NO es de esto**: el caso pide
+  `window.__hekatanModalResultados()`, un gancho que **no existe en el código fuente de hoy**
+  (`grep` en todo `*.ts`: 0 resultados) y corre contra el bundle de `website/src/examples`
+  construido a las **19:41 por la otra sesión** desde un `main.ts` a medio editar. Ninguno de
+  mis cambios toca el modal. No se reconstruyó el bundle a propósito: `npm run build -w examples`
+  pisa `website/src/examples`, que la otra sesión está usando.
+- Capturas: `scratchpad/panel_izq_es.png`, `nombres_es.png`, `verif_cad_final.png`.
+
+---
+
+# PREPARADO para la ventana en exclusiva sobre `main.ts`
+
+## 1. Generador genérico del `.heks` (arregla TRES botones de una vez)
+
+**Dónde:** fichero NUEVO `examples/src/workspace/modeloAHeks.ts` — así `main.ts` solo necesita
+**cuatro líneas** y el conflicto con la otra sesión es mínimo.
+
+```ts
+export function modeloAHeks(states, opts?: { directivas?: string[] }): string
+```
+
+- **Lee** `states.nodes.val` → `node i x y z`; `states.elements.val` por longitud
+  (2 → `frame`, 3/4 → `shell`, 8 → `hex`); `elementInputs` (E, A, I22, I33, J, G, As2/As3,
+  `ang`, espesor, `shelltype`, `shellmod`, `shellang`); `nodeInputs` (`support`, `load`,
+  `spring`, `diaph`, `mass`); y las directivas activas de la interfaz
+  (`etabsjoint`, `deck etabs`, `meshcross`, `automesh`, `torsion safe`).
+- ⚠️ Respeta las dos trampas ya documentadas en CLAUDE.md: en `frame` el **6º token es I22 y
+  el 7º I33**, y en `as ID As2 As3` **As2 va con I33**; en `shell id n1..n4 t E [q] [rho]` el
+  espesor va primero y el 8º token es **carga de superficie**, no ν.
+- **En `main.ts`, 4 líneas**: `import { modeloAHeks }` + una asignación
+  `(window as any).__hekatanModeloAHeks = () => modeloAHeks(states);` tras crear los states.
+  Los tres consumidores (`guardarHeks`, `crearEnlaceModelo`, `💾 Guardar .heks`) ya lo llaman.
+- **Y que no mienta**: si el texto sale vacío, **no se descarga nada** y se avisa
+  («no hay modelo que guardar»), en vez del fichero de 0 KB del Tutorial 9.
+- **Cómo se comprueba (no «parece que sí»)**: ida y vuelta. Se genera el `.heks` de un ejemplo
+  cargado, se vuelve a resolver con `tests/lib/heks.mjs` (que va por `cliModeler`, el lector de
+  verdad) y se comparan los desplazamientos nudo a nudo con el modelo original: si no
+  reconstruye el mismo modelo, no está guardado. Caso nuevo `tests/casos/heks_ida_y_vuelta.mjs`.
+- Con eso, «💾 Guardar .heks» (que además duplica a «Guardar como…») puede **desaparecer**, y
+  «Exportar .tcl» pasa a emitir el modelo de verdad en vez de los 93 bytes del textarea.
+
+## 2. FASE B — ejemplo ≠ plantilla, y el ejemplo se abre YA ANIMANDO
+
+**Distinguirlos en el dato, no a ojo**: campo nuevo en `ExampleDef`
+(`exampleRegistry.ts`): `tipo?: "ejemplo" | "plantilla"`. Por defecto, plantilla si trae
+muchos parámetros; ejemplo si no. En el selector, **dos grupos** («🧪 Ejemplos — se abren
+resueltos» / «📐 Plantillas — se ajustan y se calculan») y la etiqueta en el nombre.
+
+**Dónde:** fichero NUEVO `examples/src/workspace/autoEjecutar.ts` con
+`autoEjecutar(ex, states, { correrModal, animar })`, y **una sola línea** al final de
+`loadExample` en `main.ts`. Lo que hace:
+
+1. `tipo === "plantilla"` → no hace nada (sigue siendo una herramienta).
+2. `tipo === "ejemplo"` → resuelve al cargar y deja el resultado a la vista
+   (deformada + el `defaultShellResult` del ejemplo).
+3. Si `hasModal` → corre el modal y **deja la animación en marcha** (lo que pidió Jorge para
+   el enlace `?t=<id>`), llamando al `__hekatanRunModalAnimate` que ya existe.
+4. **Coste, con los números ya medidos** (CLAUDE.md: la animación reescribe `mesh.nodes` a
+   50-80 ms por fotograma con 6600 nudos → 10-15 fps):
+   - `nudos ≤ 1500` → animar normal;
+   - `1500 < nudos ≤ 4000` → animar a paso reducido;
+   - `nudos > 4000` → **correr el modal pero NO animar**, y decirlo en el panel
+     («modelo grande: modos calculados, animación apagada — ▶ para verla»).
+   Todo arranca en `setTimeout(…, 0)`/idle para no bloquear el primer dibujo, y se apaga solo
+   con el `__liveDrag` que ya pausa el animador al arrastrar un slider.
+5. Escape: `&auto=0` en la URL abre el ejemplo sin ejecutar (para depurar).
+
+⚠️ Lo de arriba toca `loadExample` y el animador: **es justo donde está trabajando la otra
+sesión**, y `animateMode.ts` / `animarCaso` / `mostrarModo` / escala del modo son suyos. La
+única línea que necesito en su zona es la llamada a `autoEjecutar(...)` al final de
+`loadExample`; lo demás vive en los dos ficheros nuevos.

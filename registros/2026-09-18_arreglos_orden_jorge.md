@@ -95,6 +95,12 @@ reserva los punteros y los tira; el comentario de `:260` es correcto.
 
 ### Medida ANTES (reproducible, sin WASM)
 
+> ⚠️ **Esta tabla esta medida contra ETABS, que es la ALTERNATIVA, no el juez.**
+> El juez es SAP2000. Y ETABS pone brazos rigidos automaticos por defecto, asi
+> que mide el arreglo mezclado con su propia semantica. **Pendiente de re-medir
+> contra SAP2000**; hasta entonces no se cita como buena. Ver la correccion de
+> metodo al final de este registro.
+
 `hekatan-fem/test_offset_m2col.exe` — harness NATIVO que llama a
 `getGlobalStiffnessMatrix()` con el modelo de `mesa_torsion_completa.py`.
 M2 de columna, tonf·m:
@@ -608,3 +614,69 @@ tocar el árbol durante el barrido; los que fallen hay que re-medirlos con el
 
 **Máquina:** RAM libre 2.04 GB · disco C libre 6.29 GB (el tope de parada son
 3 GB de disco: lejos).
+
+---
+
+# ⚠️ CORRECCIÓN DE MÉTODO — la cifra de `rigidOffsets` está medida contra el juez equivocado
+
+Jorge, 18-sep-2026: **«primero no es contra ETABS, es contra SAP2000; luego es
+contra ETABS»**.
+
+## Lo que hice mal
+
+Toda la FASE 1 de arriba mide el efecto de `rigidOffsets` **contra ETABS**:
+
+```
+M2 de columna, tonf·m — harness hekatan-fem/test_offset_m2col.exe
+   A (hoy, sin offsets)  +15.2 %        ← contra ETABS
+   B (offsets en K)       +4.8 %        ← contra ETABS
+```
+
+El harness **solo tiene una referencia**, y es de ETABS
+(`test_offset_m2col.cpp:43`, `static double ETABS[5] = {1.57, 2.13, 4.26, 8.16,
+10.40}`). El caso `tests/casos/mesa_torsion_fuerzas.mjs` tampoco tiene árbitro
+SAP2000: su JSON es `tests/datos/mesa_torsion_scp_etabs.json`, de ETABS 19.1.
+
+**La regla es que el juez es SIEMPRE SAP2000.** ETABS sirve para comprobar su
+propia semántica, y lo que no cierre con él se escribe como inconcluso, no como
+medida.
+
+## Y aquí además hay un motivo técnico, no solo de método
+
+**ETABS pone brazos rígidos automáticos por defecto.** Está medido y escrito en
+este mismo repo (`CLAUDE.md`, «Por qué offsets = 0»): con `AssembledJointMass` se
+ve que ETABS **no pesa el tramo de viga que cae dentro de la columna** — 1857.4
+in³ exactos en el Paz 6.3, un +2.94 % uniforme en las frecuencias.
+
+O sea que medir el efecto de **poner brazos rígidos** usando como juez a un
+programa **que ya los pone solo** mezcla dos cosas: el arreglo que se quiere
+medir y la semántica del juez. En SAP2000 no aparecen solos, así que ahí el
+efecto se ve limpio.
+
+Dicho de otra forma: el +4.8 % de la columna B puede ser el resto del arreglo, o
+puede ser la diferencia entre MIS offsets y los que ETABS se pone por su cuenta.
+Con esta medida **no se puede distinguir**, y por eso no vale.
+
+## Estado real del pendiente
+
+| | |
+|---|---|
+| `rigidOffsets` llega al solver | **NO**. El `deform` del WASM recompilado a las 20:54 sigue con **80 parámetros**, ninguno para los offsets. Hay que añadir 3 y recompilar. |
+| efecto medido contra **SAP2000** (el juez) | **SIN MEDIR** |
+| efecto medido contra **ETABS** (la alternativa) | +15.2 % → +4.8 %, **pendiente de re-medir**: no vale como prueba por lo de arriba |
+| C++ = Python | 0.02 % en las 15 celdas — esto sí se sostiene, es paridad entre dos motores nuestros, no un juicio |
+
+## Cómo medirlo bien, cuando haya RAM
+
+1. Mismo modelo y **misma malla nudo a nudo** en Hekatan y en SAP2000
+   (mesa-torsión, que es el que tiene el interruptor).
+2. **`offsets` puestos explícitamente en los dos programas**, con el mismo valor
+   (col top = h_viga/2, extremos de viga = b_col/2). Nada de dejar que cada uno
+   ponga los suyos.
+3. Generar la referencia con el driver que ya existe
+   (`galpon-bodega-electoral/csi_desde_dump.py sap …`), como se hizo para el
+   galpón, y guardarla junto a la de ETABS.
+4. Recién entonces, la de ETABS **detrás** y etiquetada como alternativa: si
+   cierra, se dice; si no, queda **inconcluso** por escrito.
+
+⚠️ Hasta que eso esté, **que nadie cite el +15.2 % → +4.8 % como bueno**.

@@ -442,3 +442,47 @@ Dos palancas independientes para lo que falta:
 
 Ficheros: `VERIF4D_cap{1,2,3}_modo{1,2,3}_cuatro_programas_{YOUTUBE,REDES_EN}.mp4` + `.srt`
 (los `VERIF4C_*` se conservan). Imagen: `registros/img/2026-09-18_verif4d_modo1_picos.png`.
+
+## ✅ Cámara igualada a SAP2000 — `VERIF4E_*` (18-sep-2026)
+
+Sondeada la cámara viva de Hekatan: `PerspectiveCamera` fov 45, `up (0,0,1)`, target en el
+centro del modelo, a 40.8 m → **elevación 35.26°, azimut 225°**. La ELEVACIÓN ya era la
+isométrica verdadera de SAP («Set Default 3D View», 35.264°). Lo que NO coincidía era la
+**proyección**: SAP trae **Aperture 0 = paralela**, y Hekatan dibujaba en perspectiva cerrada,
+que acorta la parte lejana del techo.
+
+Arreglo (solo captura): usar la `orthoCamera` que el visor ya expone en `__ctx`, colocada en
+la misma dirección iso y con `setActiveCamera`. ⚠️ Antes se probó mover la perspectiva lejos
+con fov 5: **no vale**, `OrbitControls` topa con `maxDistance` y el modelo llenó la pantalla.
+
+| | recorrido | anc. cubierta | alto | **anc. máx** | rombo/alto |
+|---|---|---|---|---|---|
+| Hekatan 4C | 9.96 px | 218 px | 408 px | — | — |
+| Hekatan 4D | 13.05 px | 291 px | 520 px | 432 px | **0.56** |
+| Hekatan **4E** | **12.90 px** | 214 px | 529 px | **432 px** | **0.82** |
+| SAP2000 | 22.71 px | 404 px | 433 px | 404 px | **0.93** |
+
+**El rombo del techo pasa de 0.56 a 0.82 contra el 0.93 de SAP**: las dos vistas ya son casi la
+misma vista. El recorrido en pantalla apenas cambia (0.57 de SAP) porque al enderezar la
+proyección el edificio también se ensancha.
+
+### ⚠️ El número de amplitud física NO está cerrado — no subir la constante con él
+
+Las tres estimaciones que he hecho **no concuerdan**, y hay que decirlo:
+
+| vía | SAP / Hekatan |
+|---|---|
+| px, normalizando por «ancho de cubierta» (banda superior 12 %) | 1.28 |
+| px, normalizando por «ancho máximo» | 1.88 |
+| **coordenadas del modelo** (la fiable) | **≈ 1.00** |
+
+La de coordenadas: con `scalePercent = 5` se midió `ampX = 0.925 m` en la cubierta; a 3.7 % son
+**0.685 m** de semiamplitud — y el 3.7 % se dedujo midiendo **0.682 m** en la grabación de SAP.
+O sea que **en metros ya coinciden**, y las dos cifras en píxeles arrastran el sesgo del
+heurístico de «banda superior» (que en una iso paralela no coge el rombo entero).
+
+**Recomendación: no tocar `MODE_SCALE_PERCENT`.** Si se quiere zanjarlo, la medida buena es en
+coordenadas del modelo (`mesh.nodes` contra los originales), no en píxeles del montaje.
+
+Ficheros: `VERIF4E_cap{1,2,3}_modo{1,2,3}_cuatro_programas_{YOUTUBE,REDES_EN}.mp4` + `.srt`
+(4C y 4D conservados). Imagen: `registros/img/2026-09-18_verif4e_modo1_picos.png`.
