@@ -118,5 +118,15 @@ export function ventanaFlotante(pan: HTMLElement): void {
   });
   pan.addEventListener("pointerup", () => { arr = false; });
   pan.addEventListener("dblclick", (e) => { if (enCabecera(e.target) && !(e.target as HTMLElement).closest("[data-plegar]")) plegar(); });
-  const c = pan.firstElementChild as HTMLElement | null; if (c) c.style.cursor = "move";
+  // La cabecera tiene que PARECER una barra de título (Jorge: «no veo que desplaza la ventana»):
+  // franja azul, ⠿ de agarre y cursor de mover. Se vuelve a poner si el panel se repinta.
+  const vestir = () => {
+    const c = pan.firstElementChild as HTMLElement | null; if (!c || c.dataset.barra === "1") return;
+    c.dataset.barra = "1";
+    c.style.cssText += ";cursor:move;background:#1f3b5a;margin:-8px -8px 8px;padding:7px 10px;border-radius:6px 6px 0 0;user-select:none";
+    c.title = "Arrastra esta barra para mover la ventana · doble clic o ▁ para plegarla";
+    const b = c.querySelector("b"); if (b && !b.textContent!.startsWith("⠿")) b.textContent = "⠿ " + b.textContent;
+  };
+  vestir();
+  new MutationObserver(vestir).observe(pan, { childList: true });
 }
