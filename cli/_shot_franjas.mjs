@@ -39,6 +39,14 @@ await p.select("#hkf-cara", "bot"); await dormir(800); await cuadro("fe_inf_X");
 await p.select("#hkf-verCapa", "B"); await p.select("#hkf-cara", "top"); await dormir(800); await cuadro("fe_sup_Y");
 await p.click("#hkf-tip"); await dormir(800); await cuadro("fe_sup_Y_tipico_adicional");
 const filasFE = await p.evaluate(() => window.__hekatanFranjas.filas());
+// paleta CSI de 15 bandas: mapa y barra con la misma paleta
+await p.click("#hkf-tip"); await p.select("#hkf-verCapa", "A");
+await p.evaluate(() => { window.__hekatanColorPalette.val = "etabs"; }); await dormir(1500); await cuadro("fe_sup_X_paleta_csi");
+const leyendas = await p.evaluate(() => ({ as: document.getElementById("hk-legend-as")?.style.display, orig: document.getElementById("legend")?.style.visibility }));
+// cerrar el panel: vuelve la leyenda del resultado
+await p.evaluate(() => window.__hekatanFranjas.cerrar()); await dormir(1000); await cuadro("panel_cerrado_leyenda_resultado");
+const leyendas2 = await p.evaluate(() => ({ as: document.getElementById("hk-legend-as")?.style.display, orig: document.getElementById("legend")?.style.visibility }));
+console.log("leyendas", JSON.stringify({ pintando: leyendas, cerrado: leyendas2 }));
 writeFileSync(`${OUT}/armado_franjas_app.json`, JSON.stringify({ caso, filas, filasFE }, null, 0));
 console.log(JSON.stringify({ caso, nfilas: filas.length, filasFE, errs: errs.slice(0, 6) }));
 await nav.close();

@@ -12,6 +12,7 @@
  * Usa los resultados que están en pantalla (el caso/combinación activo). Unidades internas kN, m.
  */
 import * as THREE from "three";
+import { colorMapPalette, isDiscreteCsiPalette, legendGradientCss } from "hekatan-ui/src/color-map/getColorMap";
 import {
   StripCutter, summarizeSpans, defaultStations, autoStripsFromGrid, armado, franjasDeSafe, feConMinimo,
   BARRAS_INEN_MM, type DesignStrip, type StripMeshElem, type ShellNodeForces, type StationDesign, type SpanZoneResult,
@@ -20,6 +21,73 @@ import {
 type Resultado = { strip: DesignStrip; spans: { name: string; start: number; end: number }[]; est: StationDesign[]; zonas: SpanZoneResult[] };
 
 const W = window as any;
+
+/** Color de la PALETA ACTIVA del visor (Settings → Paleta colores) para t ∈ [0,1]: se lee del mismo
+ *  gradiente que pinta la barra (`legendGradientCss`), así el mapa de acero y su leyenda usan
+ *  exactamente la paleta que el usuario eligió (CSI 15 bandas discretas o continua). */
+function colorPaleta(t: number): THREE.Color {
+  t = Math.max(0, Math.min(1, t));
+  const css = legendGradientCss();
+  const st = [...css.matchAll(/rgb\((\d+),(\d+),(\d+)\)\s+([\d.]+)%/g)].map(m => ({ c: [+m[1], +m[2], +m[3]], p: +m[4] / 100 }));
+  if (!st.length) return new THREE.Color().setHSL(0.66 * (1 - t), 1, 0.5);
+  const pos = 1 - t;                                   // el gradiente va de t = 1 (arriba, 0 %) a t = 0 (abajo)
+  if (isDiscreteCsiPalette(colorMapPalette.val)) {
+    const n = st.length / 2, k = Math.min(n - 1, Math.floor(pos * n));
+    const [r, g, b] = st[2 * k].c; return new THREE.Color(r / 255, g / 255, b / 255);
+  }
+  for (let i = 0; i < st.length - 1; i++) if (pos <= st[i + 1].p) {
+    const f = (pos - st[i].p) / Math.max(st[i + 1].p - st[i].p, 1e-9);
+    const c = st[i].c.map((v, j) => v + (st[i + 1].c[j] - v) * f);
+    return new THREE.Color(c[0] / 255, c[1] / 255, c[2] / 255);
+  }
+  const [r, g, b] = st[st.length - 1].c; return new THREE.Color(r / 255, g / 255, b / 255);
+}
+
+/** Barra de colores del ACERO: sustituye a la del resultado del visor (#legend) mientras el panel
+ *  pinta As, en la misma posición, con el título «As [cm²/m]» y el rango 0…máx del mapa. */
+let leyendaAs: HTMLDivElement | null = null;
+let leyendaAsVigilancia: any = null;
+function ponerLeyendaAs(qmaxCm2m: number, titulo: string, alQuitar: () => void) {
+  const orig = document.getElementById("legend") as HTMLElement | null;
+  const r = orig?.getBoundingClientRect();
+  if (!leyendaAs) {
+    leyendaAs = document.createElement("div"); leyendaAs.id = "hk-legend-as";
+    document.body.appendChild(leyendaAs);
+  }
+  let alto = r && r.height > 50 ? r.height : window.innerHeight * 0.5;
+  let top = r && r.height > 50 ? r.top : window.innerHeight * 0.25;
+  let left = r && r.height > 50 ? r.left : window.innerWidth - 420;
+  // el panel de franjas tapa la barra: se baja por debajo del panel si cabe (≥ 200 px);
+  // si el panel es alto (tabla de franjas), se pone a su izquierda
+  const pr = document.getElementById("hk-franjas")?.getBoundingClientRect();
+  if (pr && pr.height > 0 && pr.left < left + 90 && pr.bottom + 45 > top) {
+    const abajo = Math.min(Math.max(top + alto, pr.bottom + 45 + 220), window.innerHeight - 110) - (pr.bottom + 45);
+    if (abajo >= 200) { top = pr.bottom + 45; alto = abajo; } else left = pr.left - 95;
+  }
+  const discreta = isDiscreteCsiPalette(colorMapPalette.val), n = discreta ? 15 : 8;
+  Object.assign(leyendaAs.style, { position: "fixed", left: `${left}px`, top: `${top}px`, width: "20px", height: `${alto}px`,
+    background: legendGradientCss(), zIndex: "901", pointerEvents: "none", fontFamily: "monospace" } as any);
+  let html = `<div style="position:absolute;top:-34px;left:-30px;width:110px;text-align:center;font-size:11px;color:#ddd;white-space:nowrap;background:rgba(20,22,30,.78);border-radius:2px">${titulo}</div>`;
+  for (let i = 0; i <= n; i++) {
+    const v = qmaxCm2m * (1 - i / n);
+    html += `<div style="position:absolute;left:24px;top:${(i / n) * alto - 7}px;font-size:12px;color:#eee;white-space:nowrap;background:rgba(20,22,30,.78);padding:0 3px;border-radius:2px">— ${v.toFixed(2)}</div>`;
+  }
+  leyendaAs.innerHTML = html;
+  leyendaAs.style.display = "block";
+  if (orig) orig.style.visibility = "hidden";
+  // volver a la leyenda del resultado si el usuario cambia de resultado de cáscara en el visor
+  clearInterval(leyendaAsVigilancia);
+  const s0 = W.__hekatanSettings?.()?.shellResults?.rawVal;
+  leyendaAsVigilancia = setInterval(() => {
+    if (W.__hekatanSettings?.()?.shellResults?.rawVal !== s0) { quitarLeyendaAs(); alQuitar(); }
+  }, 400);
+}
+function quitarLeyendaAs() {
+  clearInterval(leyendaAsVigilancia); leyendaAsVigilancia = null;
+  if (leyendaAs) leyendaAs.style.display = "none";
+  const orig = document.getElementById("legend") as HTMLElement | null;
+  if (orig) orig.style.visibility = "";
+}
 const KGFCM2 = 98.0665; // kN/m² por kgf/cm²
 
 function viewerCtx(): any {
@@ -143,8 +211,12 @@ export function montarPanelFranjas() {
   <div id="hkf-res"></div>`;
   document.body.appendChild(pan);
   const $ = (id: string) => pan.querySelector("#" + id) as any;
-  btn.onclick = () => { pan.style.display = pan.style.display === "none" ? "block" : "none"; refrescarCaso(); };
-  $("hkf-x").onclick = () => (pan.style.display = "none");
+  btn.onclick = () => {
+    const abrir = pan.style.display === "none";
+    pan.style.display = abrir ? "block" : "none"; refrescarCaso();
+    if (abrir) { if (esFE() ? fe.length : res.length) dibujar(); } else limpiar();
+  };
+  $("hkf-x").onclick = () => { pan.style.display = "none"; limpiar(); };
 
   let franjas: DesignStrip[] = [];
   let res: Resultado[] = [];
@@ -164,16 +236,27 @@ export function montarPanelFranjas() {
     const asTip = tip ? Math.PI * (tip.dmm / 1000) ** 2 / 4 / tip.s : 0;
     let qmax = 1e-9;
     for (const e of fe) for (const v of e.v) qmax = Math.max(qmax, feVal(v, cara, dir) - asTip);
-    const col = (q: number) => q <= 0 ? new THREE.Color(0x9a9a9a) : new THREE.Color().setHSL(0.66 * (1 - Math.min(q / qmax, 1)), 1, 0.5);
-    const pos: number[] = [], cols: number[] = [];
+    ponerLeyendaAs(qmax * 1e4, tip ? "As adicional [cm²/m]" : "As [cm²/m]", limpiar);
+    // Contorno por TEXTURA 1D de la paleta (no por color de vértice): se interpola el VALOR y el color
+    // se busca por píxel, así las 15 bandas de CSI salen como bandas (con color de vértice se
+    // mezclaban). Texel 0 = gris (≤ típico), 1…256 = paleta.
+    const NT = 257, px = new Uint8Array(NT * 4);
+    for (let i = 0; i < NT; i++) {
+      const c = i === 0 ? { r: 0x9a / 255, g: 0x9a / 255, b: 0x9a / 255 } : colorPaleta((i - 1) / 255);
+      px.set([Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255), 255], 4 * i);
+    }
+    const tex = new THREE.DataTexture(px, NT, 1, THREE.RGBAFormat);
+    tex.magFilter = tex.minFilter = THREE.NearestFilter; (tex as any).colorSpace = (THREE as any).SRGBColorSpace; tex.needsUpdate = true;
+    const u = (q: number) => q <= 0 ? 0.5 / NT : (1 + Math.min(q / qmax, 1) * 254.999 + 0.5) / NT;
+    const pos: number[] = [], uv: number[] = [];
     for (const e of fe) {
       const P = e.xy.map(([x, y]) => [x, y, 0.02]);
-      const C = e.v.map(v => col(feVal(v, cara, dir) - asTip));
-      for (const tri of [[0, 1, 2], [0, 2, 3]]) for (const n of tri) { pos.push(...P[n]); cols.push(C[n].r, C[n].g, C[n].b); }
+      const U = e.v.map(v => u(feVal(v, cara, dir) - asTip));
+      for (const tri of [[0, 1, 2], [0, 2, 3]]) for (const n of tri) { pos.push(...P[n]); uv.push(U[n], 0.5); }
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(cols, 3));
-    grupo.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false })));
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    grupo.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false })));
     let best: any = null;
     for (const e of fe) e.v.forEach((v, k) => { const q = feVal(v, cara, dir); if (!best || q > best.q) best = { q, p: e.xy[k] }; });
     if (best && best.q > asTip) {
@@ -184,6 +267,7 @@ export function montarPanelFranjas() {
   };
   const grupo = new THREE.Group(); grupo.name = "hk-franjas";
 
+  const limpiar = () => { grupo.clear(); quitarLeyendaAs(); viewerCtx()?.render?.(); };
   const refrescarCaso = () => { $("hkf-caso").textContent = `${W.__hekatanStates?.activeLoadCase?.val ?? "?"} (caso/combinación en pantalla)`; };
   const lista = () => {
     const nA = franjas.filter(f => f.layer === "A").length, nB = franjas.length - nA;
@@ -198,6 +282,7 @@ export function montarPanelFranjas() {
     const cara = $("hkf-cara").value as "top" | "bot", ver = $("hkf-verCapa").value as string;
     let qmax = 1e-9;
     for (const r of res) for (const e of r.est) qmax = Math.max(qmax, (cara === "top" ? e.AsTop : e.AsBot) / (e.width || 1));
+    if (res.length) ponerLeyendaAs(qmax * 1e4, "As [cm²/m]", limpiar); else quitarLeyendaAs();
     const z = 0.02;
     for (const f of franjas) {
       if (ver !== "AB" && f.layer !== ver) continue;
@@ -211,7 +296,7 @@ export function montarPanelFranjas() {
       for (let i = 0; i < r.est.length - 1; i++) {
         const a = r.est[i], b = r.est[i + 1];
         const q = Math.max((cara === "top" ? a.AsTop : a.AsBot) / (a.width || 1), (cara === "top" ? b.AsTop : b.AsBot) / (b.width || 1));
-        const c = new THREE.Color().setHSL(0.66 * (1 - Math.min(q / qmax, 1)), 1, 0.5);
+        const c = colorPaleta(q / qmax);
         const g = new THREE.BufferGeometry().setFromPoints([P(a.station, -f.wStartRight), P(b.station, -f.wStartRight), P(b.station, f.wStartLeft), P(a.station, -f.wStartRight), P(b.station, f.wStartLeft), P(a.station, f.wStartLeft)]);
         grupo.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthTest: false })));
       }
@@ -257,7 +342,7 @@ export function montarPanelFranjas() {
     const [x0, x1, y0, y1] = m.bbox;
     franjas = autoStripsFromGrid(xs, ys, x0, x1, y0, y1); res = []; lista(); dibujar();
   };
-  $("hkf-borrar").onclick = () => { franjas = []; res = []; lista(); dibujar(); $("hkf-res").innerHTML = ""; };
+  $("hkf-borrar").onclick = () => { franjas = []; res = []; lista(); limpiar(); dibujar(); $("hkf-res").innerHTML = ""; };
   $("hkf-safe").onchange = async (ev: any) => {
     const f = ev.target.files?.[0]; if (!f) return;
     franjas = franjasDeSafe(await f.text()); res = []; lista(); dibujar();
@@ -307,7 +392,7 @@ export function montarPanelFranjas() {
     tabla(); dibujar();
   };
   $("hkf-calc").onclick = calcular;
-  $("hkf-met").onchange = () => { $("hkf-fs-franjas").style.display = esFE() ? "none" : ""; grupo.clear(); $("hkf-res").innerHTML = ""; if (esFE() ? fe.length : res.length) { tabla(); dibujar(); } };
+  $("hkf-met").onchange = () => { $("hkf-fs-franjas").style.display = esFE() ? "none" : ""; limpiar(); $("hkf-res").innerHTML = ""; if (esFE() ? fe.length : res.length) { tabla(); dibujar(); } };
   for (const id of ["hkf-cara", "hkf-verCapa", "hkf-db", "hkf-tip", "hkf-tipd", "hkf-tips", "hkf-min"]) $(id).onchange = () => { tabla(); dibujar(); };
 
   const filasFE = () => {
@@ -366,8 +451,10 @@ export function montarPanelFranjas() {
     a.download = esFE() ? "acero_fe_nudos.csv" : "armado_franjas.csv"; a.click();
   };
   lista();
+  let palPrev = colorMapPalette.val;
+  setInterval(() => { if (colorMapPalette.val !== palPrev) { palPrev = colorMapPalette.val; if (leyendaAs?.style.display === "block") dibujar(); } }, 500);
   // para pruebas y para el ribbon
   W.__hekatanFranjas = { abrir: () => { pan.style.display = "block"; refrescarCaso(); }, get franjas() { return franjas; }, set franjas(v: DesignStrip[]) { franjas = v; res = []; lista(); dibujar(); },
     calcular, dibujar, resultados: () => res, generar: () => $("hkf-auto").click(), filas,
-    metodo: (m: "franjas" | "fe") => { $("hkf-met").value = m; $("hkf-met").onchange(); }, fe: () => fe };
+    metodo: (m: "franjas" | "fe") => { $("hkf-met").value = m; $("hkf-met").onchange(); }, fe: () => fe, cerrar: () => $("hkf-x").onclick() };
 }
