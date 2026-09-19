@@ -239,6 +239,7 @@ const CSS = `
   min-width:360px; min-height:44px; resize:both; overflow:hidden; display:flex; flex-direction:column;
   background:var(--hk-panel,#232936); color:var(--hk-texto,#C8D4E4); border:1px solid var(--hk-borde,#39445A);
   border-radius:8px; box-shadow:0 18px 60px rgba(0,0,0,.55); font:13px/1.4 "Segoe UI",system-ui,sans-serif; }
+#hk-tutor > header, #hk-libro > header, #hk-codigo > header{ margin:0 !important; border-radius:8px 8px 0 0 !important; }
 #hk-tutor[data-plegado="1"]{ height:auto !important; min-height:0; resize:none; }
 #hk-tutor header{ display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:move; user-select:none;
   background:var(--hk-chrome,#1B1F26); border-bottom:1px solid var(--hk-borde,#39445A); }
