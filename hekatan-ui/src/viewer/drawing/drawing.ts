@@ -7405,7 +7405,11 @@ export function drawing({
     // pantalla vale más de 38 veces la distancia al plano: no es dibujar.
     const gt = drawingObj.gridTarget?.rawVal;
     if (!gt) return true;
-    const n = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
+    // La rejilla de trabajo es un GridHelper: vive en su plano LOCAL XZ, así que su normal es
+    // la Y local. Con (0,0,1) la normal salía EN el plano (planta: rot [π/2,0,0] → (0,−1,0)) y
+    // el aviso «casi de canto» saltaba en CADA clic mirando de frente (medido en el tutorial
+    // Warren: todos los nudos del alzado XZ con el aviso).
+    const n = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
     const d = raycaster.ray.direction;
     if (d.lengthSq() < 1e-12) return true;
     const senoRasante = Math.abs(d.clone().normalize().dot(n));
