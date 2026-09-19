@@ -1745,6 +1745,24 @@ type FrameReleases = { i: [boolean, boolean, boolean]; j: [boolean, boolean, boo
 type MaterialType = "Steel" | "Concrete" | "Aluminum" | "ColdFormed" | "Rebar" | "Tendon" | "Masonry" | "Other";
 type Material = {
   name: string;
+// Definiciones (etiqueta, opciones) de los parametros y ultimo modal: los lee el agente de IA
+// (hekatan-ui/src/cad/aiAgent.ts) para saber que significa cada clave y leer los periodos.
+(window as any).__hekatanParamDefs = () => currentExample?.params ?? {};
+(window as any).__hekatanModalResults = () => __lastModalResults;
+
+// ── Ganchos del test `animacion-modal-es-el-modo` (repuestos el 19-sep-2026) ──
+// El test compara lo DIBUJADO al animar un modo contra φ, el modo que calculó el solver:
+// si la animación pintara la deformada de Dead en vez del modo, el coseno lo delata. Los
+// añadió el agente que escribió el test y se PERDIERON cuando dos sesiones pisaron este
+// fichero (`git log -S` no los encuentra en ningún commit): desde entonces el test no podía
+// pasar nunca. Se reponen aquí, con el nombre que el test pide.
+//   · `__hekatanModalResultados()` → { frequencies, modeShapes, massParticipation } (φ)
+//   · `__hekatanModalAnimator`     → el animador ACTUAL (se reasigna en buildParamsPane y al
+//     arrancar, por eso va con getter: una referencia fija apuntaría a uno ya desechado).
+(window as any).__hekatanModalResultados = () => __lastModalResults;
+Object.defineProperty(window, "__hekatanModalAnimator", {
+  get: () => modalAnimator, configurable: true,
+});
   type: MaterialType;
   symmetry: "Isotropic" | "Orthotropic" | "Anisotropic";
   color?: string;

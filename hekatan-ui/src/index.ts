@@ -14,6 +14,7 @@ export { getToolbar } from "./toolbar/getToolbar";
 export { getDialog } from "./dialog/getDialog";
 export { getReport } from "./report/getReport";
 export { addCadPanel } from "./cad/getCadPanel";
+export { abrirAgenteIA, pedirAlAgente } from "./cad/aiAgent";
 export { addCadRibbon } from "./cad/getCadRibbon";
 export { addCadStatusBar } from "./cad/getCadStatusBar";
 export type { RibbonHooks } from "./cad/getCadRibbon";

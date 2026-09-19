@@ -29,6 +29,7 @@ import {
   listOllamaModels, isOllamaRunning, HEKATAN_SYSTEM_PROMPT,
   type AIImage,
 } from "./aiAssistant";
+import { abrirAgenteIA, montarLanzadorAgente } from "./aiAgent";
 
 export type GridTargetVal = {
   position: [number, number, number];
@@ -1036,6 +1037,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     response: "",
   };
   aiState.apiKey = aiStorage.getKey(aiState.providerId);
+  // Modo AGENTE: la IA llama herramientas y arma el modelo ella misma (aiAgent.ts).
+  fAI.addButton({ title: "🤖 Agente IA — modela por ti" }).on("click", () => abrirAgenteIA());
+  montarLanzadorAgente();
   // Selector de provider
   const providerOptions: Record<string, string> = {};
   for (const p of PROVIDERS) providerOptions[p.name] = p.id;
@@ -1337,12 +1341,13 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     if (!cli) return;
     // Setear el script CLI global y disparar ejecución (mismo flujo que el
     // textarea CLI manual). El parser está en cad-draw/cliRunner.
+    // `__hekatanCliExecute` no lo definia nadie: el boton acababa siempre copiando al
+    // portapapeles. El script se interpreta abriendo cli-modeler (su build lee el global).
     (window as any).__hekatanCliScript = cli;
-    const fn = (window as any).__hekatanCliExecute;
-    if (typeof fn === "function") {
-      fn();
-    } else {
-      // Fallback: copiar al portapapeles para que el user lo pegue manualmente
+    const w = window as any;
+    if (w.__hekatanExample?.() === "cli-modeler") w.__hekatanRebuild?.();
+    else if (typeof w.__hekatanLoadExampleById === "function") w.__hekatanLoadExampleById("cli-modeler");
+    else {
       navigator.clipboard?.writeText(cli);
       alert("Script copiado al clipboard. Pegalo en el panel CLI Comandos para ejecutarlo.");
     }
