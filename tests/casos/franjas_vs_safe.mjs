@@ -16,7 +16,7 @@ import { empaquetar, R } from "../lib/bundle.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 export const nombre = "franjas-vs-safe";
-export const descripcion = "diseño por franjas (corte, Wood-Armer, ACI 318-19) vs SAFE 20.3: fuerzas de franja, estaciones y Start/Middle/End";
+export const descripcion = "diseño de losa vs SAFE 20.3 (ACI 318-19): franjas (fuerzas, estaciones, Start/Middle/End, n varillas) y elementos finitos (acero por nudo)";
 
 export async function correr() {
   const D = JSON.parse(readFileSync(join(AQUI, "..", "datos", "radier_franjas_safe.json"), "utf-8"));
@@ -91,5 +91,26 @@ export async function correr() {
   }
   filas.push({ que: "n varillas Ø12 (⌈As/Ab⌉)", crudo: true, medido: `${nOk}/${nTot}`, limite: "exacto", ok: nOk === nTot, detalle: "SAFE CSA1 sup. máx «22-12» = ⌈0.002434/1.131e-4⌉" });
   filas.push({ que: "Start/Middle/End acero", crudo: true, medido: `${D.acero.length - malas}/${D.acero.length}`, limite: "4 cifras", ok: malas === 0, detalle: `peor rel ${(peorS * 100).toExponential(2)} %${dondeS ? "  " + dondeS : ""}` });
+  // 5. DISEÑO POR ELEMENTOS FINITOS: acero por nudo de cada elemento (arrays «Slab Design Data» del FDB de SAFE)
+  const FE = JSON.parse(readFileSync(join(AQUI, "..", "datos", "radier_fe_safe.json"), "utf-8")).elems;
+  let feN = 0, feBad = 0, fePeor = 0, feDonde = "", minBad = 0;
+  for (const e of elems) {
+    const ref = FE[e.id]; if (!ref) continue;
+    for (let k = 0; k < 4; k++) {
+      const r = cut.feNode(e.forces[k], e.h);
+      for (const c of ["top1", "bot1", "top2", "bot2"]) {
+        const a = r[c], b = ref[c][k]; feN++;
+        if (!(Math.abs(a - b) <= Math.max(1e-4 * Math.abs(b), 1e-9))) { feBad++; feDonde ||= `${e.id} nudo ${k + 1} ${c}: ${a} vs ${b}`; }
+        if (b > 1e-6) fePeor = Math.max(fePeor, Math.abs(a - b) / b);
+      }
+      for (const d of [1, 2]) {
+        const [t, bo] = mod.feConMinimo(r["top" + d], r["bot" + d], r.amin);
+        if (Math.abs(t - ref[`top${d}min`][k]) > 1e-4 * Math.max(ref[`top${d}min`][k], 1e-6) ||
+            Math.abs(bo - ref[`bot${d}min`][k]) > 1e-4 * Math.max(ref[`bot${d}min`][k], 1e-6)) minBad++;
+      }
+    }
+  }
+  filas.push({ que: "FE: As por nudo (4 dir/cara)", crudo: true, medido: `${feN - feBad}/${feN}`, limite: "4 cifras", ok: feBad === 0 && feN === 3616, detalle: `peor rel ${(fePeor * 100).toExponential(2)} %${feDonde ? "  " + feDonde : ""}` });
+  filas.push({ que: "FE: As con mínimo", crudo: true, medido: `${feN - 2 * minBad}/${feN}`, limite: "4 cifras", ok: minBad === 0, detalle: "ρmin·h en la cara con más acero" });
   return filas;
 }

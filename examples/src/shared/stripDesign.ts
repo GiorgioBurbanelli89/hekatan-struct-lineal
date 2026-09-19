@@ -484,6 +484,41 @@ export class StripCutter {
     };
   }
 
+  /**
+   * DISEÑO POR ELEMENTOS FINITOS (SAFE «Finite Element Based»), un nudo de un elemento.
+   * Binario: ᣆ.ᜌ(int, int, ref ᯞ.ᜆ) + ᢣ._1734. Por nudo, SIN promediar entre elementos:
+   *   Wood-Armer (M11, M22, M12) → momentos de diseño arriba/abajo en dir 1 (X) y dir 2 (Y);
+   *   axial P = −F11 / −F22 (la de ESA dirección, sin |F12|); compresión < 0.1·f'c·h → 0;
+   *   |M| < 1e-5·f'c·h² → 0; sección ACI con b = 1 (resultado = área por unidad de ancho);
+   *   arriba = máx(As arriba, As' del diseño de abajo) y viceversa.
+   *   Con mínimo: ρmin·h en la cara con MÁS acero (empate → abajo).
+   * Validado: 3616/3616 valores contra los arrays «Slab Design Data» del FDB de SAFE (1.3e-7).
+   * `forces` en ejes globales (dir 1 = X); para combos, llamar por combo y envolver (máximo).
+   */
+  feNode(f: ShellNodeForces, h: number): { top1: number; bot1: number; top2: number; bot2: number; amin: number } {
+    const pf = this.prefs, fc = pf.fc, db = pf.barSize;
+    const [b11, t11] = woodArmer(f.M11, f.M22, f.M12);
+    const [b22, t22] = woodArmer(f.M22, f.M11, f.M12);
+    const out: any = {};
+    for (const [dir, top, bot, F] of [[1, t11, b11, f.F11], [2, t22, b22, f.F22]] as [number, number, number, number][]) {
+      const layer = dir === 1 ? "A" : "B";
+      const inner = layer === pf.innerLayer;
+      let P = -F;
+      if (P > 0 && P < 0.1 * fc * h) P = 0;
+      const thr = 1e-5 * fc * h * h;
+      const mt = Math.abs(top) >= thr ? top : 0, mb = Math.abs(bot) >= thr ? bot : 0;
+      const dT = h - pf.coverTop - db / 2 - (inner ? db : 0), dB = h - pf.coverBot - db / 2 - (inner ? db : 0);
+      const [At, Atp] = mt !== 0 ? this.design1(mt, P, h / 2, dT, h - dT, h, 1) : [0, 0];
+      const [Ab, Abp] = mb !== 0 ? this.design1(mb, P, h / 2, dB, h - dB, h, 1) : [0, 0];
+      out["top" + dir] = f32(Math.max(At, Abp));
+      out["bot" + dir] = f32(Math.max(Ab, Atp));
+    }
+    const fyPsi = pf.fy / this.u.psi;
+    const rhoMin = pf.code === "ACI 318-19" ? 0.0018 : fyPsi < 60000 ? 0.0020 : fyPsi === 60000 ? 0.0018 : 0.0018 * 60000 / fyPsi;
+    out.amin = rhoMin * h;
+    return out;
+  }
+
   /** diseño de una estación (Before + After), como GetFlexureAndShear de SAFE. */
   designStation(strip: DesignStrip, station: number, pick: (e: StripMeshElem, k: number) => ShellNodeForces = (e, k) => e.forces[k]): StationDesign {
     const before = this.sideDesign(strip, station, -1, pick), after = this.sideDesign(strip, station, 1, pick);
@@ -500,6 +535,11 @@ export class StripCutter {
     st.width = ws.length ? Math.min(...ws) : 0;
     return st;
   }
+}
+
+/** Con mínimo (AsEnvWithMin de SAFE): ρmin·h a la cara con más acero; empate → abajo. */
+export function feConMinimo(top: number, bot: number, amin: number): [number, number] {
+  return top > bot ? [Math.max(top, amin), bot] : [top, Math.max(bot, amin)];
 }
 
 /** Resumen Start/Middle/End de cada tramo (acero_por_franja de SAFE). spans: [nombre, inicio, fin] en distancia. */

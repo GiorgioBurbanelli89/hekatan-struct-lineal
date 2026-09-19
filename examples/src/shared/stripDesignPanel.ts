@@ -13,7 +13,7 @@
  */
 import * as THREE from "three";
 import {
-  StripCutter, summarizeSpans, defaultStations, autoStripsFromGrid, armado, franjasDeSafe,
+  StripCutter, summarizeSpans, defaultStations, autoStripsFromGrid, armado, franjasDeSafe, feConMinimo,
   BARRAS_INEN_MM, type DesignStrip, type StripMeshElem, type ShellNodeForces, type StationDesign, type SpanZoneResult,
 } from "./stripDesign";
 
@@ -107,9 +107,11 @@ export function montarPanelFranjas() {
   pan.style.cssText = "position:fixed;top:90px;right:12px;z-index:950;width:500px;max-height:78vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
   const opt = (v: number[], sel: number) => v.map(d => `<option value="${d}"${d === sel ? " selected" : ""}>Ø${d} mm</option>`).join("");
   pan.innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center"><b>Diseño por franjas (SAFE · strip based)</b><span id="hkf-x" style="cursor:pointer">✕</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><b>Diseño de losa (como SAFE)</b><span id="hkf-x" style="cursor:pointer">✕</span></div>
   <div style="margin:6px 0;color:#9cc">Resultados: <span id="hkf-caso"></span></div>
-  <fieldset style="border:1px solid #445;padding:4px"><legend>Franjas</legend>
+  <div style="margin:4px 0">Método <select id="hkf-met"><option value="franjas">Franjas (strip based)</option><option value="fe">Elementos finitos (FE based)</option></select>
+    <label><input id="hkf-min" type="checkbox"> imponer mínimo</label></div>
+  <fieldset id="hkf-fs-franjas" style="border:1px solid #445;padding:4px"><legend>Franjas</legend>
     <button id="hkf-auto">Generar sobre ejes de columnas</button>
     <button id="hkf-dib">Dibujar franja</button>
     <label>capa <select id="hkf-capa"><option>A</option><option>B</option></select></label>
@@ -133,8 +135,8 @@ export function montarPanelFranjas() {
     <label><input id="hkf-tip" type="checkbox"> típico (malla base)</label>
     <select id="hkf-tipd">${opt(BARRAS_INEN_MM, 12)}</select> @ <input id="hkf-tips" type="number" value="20" style="width:40px"> cm
     <div>Ver en 3D: <select id="hkf-cara"><option value="top">superior</option><option value="bot">inferior</option></select>
-    <select id="hkf-verCapa"><option>A</option><option>B</option><option value="AB">A y B</option></select></div>
-    <div style="color:#999;font-size:11px">n = ⌈As adicional / Ab⌉ (regla de SAFE). La separación «@ s» = ancho/n redondeada hacia abajo a 2.5 cm es convención de Hekatan (SAFE solo da n).</div>
+    <select id="hkf-verCapa"><option value="A">A (dir 1 = X)</option><option value="B">B (dir 2 = Y)</option><option value="AB">A y B</option></select></div>
+    <div style="color:#999;font-size:11px">FE: acero por unidad de ancho en cada nudo de cada elemento (Wood-Armer, sin promediar), como SAFE «Finite Element Based»; el armado se da por metro.<br>n = ⌈As adicional / Ab⌉ (regla de SAFE). La separación «@ s» = ancho/n redondeada hacia abajo a 2.5 cm es convención de Hekatan (SAFE solo da n).</div>
   </fieldset>
   <div style="margin:6px 0"><button id="hkf-calc" style="background:#2d6a2d;color:#fff">Calcular acero</button>
   <button id="hkf-csv">Tabla CSV</button></div>
@@ -146,6 +148,40 @@ export function montarPanelFranjas() {
 
   let franjas: DesignStrip[] = [];
   let res: Resultado[] = [];
+  let fe: { xy: [number, number][]; v: { top1: number; bot1: number; top2: number; bot2: number; amin: number }[] }[] = [];
+  const esFE = () => $("hkf-met").value === "fe";
+  const feVal = (v: any, cara: string, dir: number) => {
+    let t = v["top" + dir], b = v["bot" + dir];
+    if ($("hkf-min").checked) [t, b] = feConMinimo(t, b, v.amin);
+    return cara === "top" ? t : b;
+  };
+  const tipico = () => $("hkf-tip").checked ? { dmm: +$("hkf-tipd").value, s: +$("hkf-tips").value / 100 } : null;
+  const dibujarFE = () => {
+    const ctx = viewerCtx(); if (!ctx) return;
+    if (!grupo.parent) ctx.scene.add(grupo);
+    grupo.clear();
+    const cara = $("hkf-cara").value, dir = $("hkf-verCapa").value === "B" ? 2 : 1, tip = tipico();
+    const asTip = tip ? Math.PI * (tip.dmm / 1000) ** 2 / 4 / tip.s : 0;
+    let qmax = 1e-9;
+    for (const e of fe) for (const v of e.v) qmax = Math.max(qmax, feVal(v, cara, dir) - asTip);
+    const col = (q: number) => q <= 0 ? new THREE.Color(0x9a9a9a) : new THREE.Color().setHSL(0.66 * (1 - Math.min(q / qmax, 1)), 1, 0.5);
+    const pos: number[] = [], cols: number[] = [];
+    for (const e of fe) {
+      const P = e.xy.map(([x, y]) => [x, y, 0.02]);
+      const C = e.v.map(v => col(feVal(v, cara, dir) - asTip));
+      for (const tri of [[0, 1, 2], [0, 2, 3]]) for (const n of tri) { pos.push(...P[n]); cols.push(C[n].r, C[n].g, C[n].b); }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(cols, 3));
+    grupo.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false })));
+    let best: any = null;
+    for (const e of fe) e.v.forEach((v, k) => { const q = feVal(v, cara, dir); if (!best || q > best.q) best = { q, p: e.xy[k] }; });
+    if (best && best.q > asTip) {
+      const a = armado(best.q, 1.0, +$("hkf-db").value, tip).texto;
+      grupo.add(etiqueta(`máx ${(best.q * 1e4).toFixed(2)} cm²/m: ${a} por metro`, new THREE.Vector3(best.p[0], best.p[1], 0.02)));
+    }
+    ctx.render?.();
+  };
   const grupo = new THREE.Group(); grupo.name = "hk-franjas";
 
   const refrescarCaso = () => { $("hkf-caso").textContent = `${W.__hekatanStates?.activeLoadCase?.val ?? "?"} (caso/combinación en pantalla)`; };
@@ -155,6 +191,7 @@ export function montarPanelFranjas() {
   };
 
   const dibujar = () => {
+    if (esFE()) return dibujarFE();
     const ctx = viewerCtx(); if (!ctx) return;
     if (!grupo.parent) ctx.scene.add(grupo);
     grupo.clear();
@@ -204,11 +241,12 @@ export function montarPanelFranjas() {
   };
 
   const etiqueta = (txt: string, p: THREE.Vector3) => {
-    const cv = document.createElement("canvas"); cv.width = 512; cv.height = 64;
-    const g = cv.getContext("2d")!; g.fillStyle = "rgba(0,0,0,.65)"; g.fillRect(0, 0, 512, 64);
-    g.fillStyle = "#fff"; g.font = "bold 34px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, 256, 34);
+    const W0 = Math.max(512, Math.ceil(txt.length * 19 / 64) * 64);
+    const cv = document.createElement("canvas"); cv.width = W0; cv.height = 64;
+    const g = cv.getContext("2d")!; g.fillStyle = "rgba(0,0,0,.65)"; g.fillRect(0, 0, W0, 64);
+    g.fillStyle = "#fff"; g.font = "bold 34px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, W0 / 2, 34);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
-    sp.scale.set(3.0, 0.38, 1); sp.position.copy(p); sp.position.z += 0.05; sp.renderOrder = 999;
+    sp.scale.set(3.0 * W0 / 512, 0.38, 1); sp.position.copy(p); sp.position.z += 0.05; sp.renderOrder = 999;
     return sp;
   };
 
@@ -255,6 +293,10 @@ export function montarPanelFranjas() {
       coverTop: +$("hkf-rt").value / 100, coverBot: +$("hkf-rb").value / 100, barSize: +$("hkf-dbd").value / 1000,
       innerLayer: $("hkf-inner").value, N: 1000, M: 1, mergeTol: 0.001,
     });
+    if (esFE()) {
+      fe = m.elems.filter(e => e.design).map(e => ({ xy: e.xy, v: e.forces.map(f => cutter.feNode(f, e.h)) }));
+      tabla(); dibujar(); return;
+    }
     res = franjas.map(strip => {
       const spans = tramos(strip, m.columnas);
       const cortes = new Set(spans.flatMap(s => [s.start, s.end]).map(x => +x.toFixed(6)));
@@ -265,9 +307,22 @@ export function montarPanelFranjas() {
     tabla(); dibujar();
   };
   $("hkf-calc").onclick = calcular;
-  for (const id of ["hkf-cara", "hkf-verCapa", "hkf-db", "hkf-tip", "hkf-tipd", "hkf-tips"]) $(id).onchange = () => { tabla(); dibujar(); };
+  $("hkf-met").onchange = () => { $("hkf-fs-franjas").style.display = esFE() ? "none" : ""; grupo.clear(); $("hkf-res").innerHTML = ""; if (esFE() ? fe.length : res.length) { tabla(); dibujar(); } };
+  for (const id of ["hkf-cara", "hkf-verCapa", "hkf-db", "hkf-tip", "hkf-tipd", "hkf-tips", "hkf-min"]) $(id).onchange = () => { tabla(); dibujar(); };
 
+  const filasFE = () => {
+    const db = +$("hkf-db").value, tip = tipico(); const out: string[][] = [];
+    for (const [dir, nom] of [[1, "X (dir 1, capa A)"], [2, "Y (dir 2, capa B)"]] as [number, string][]) for (const cara of ["top", "bot"]) {
+      let best: any = null;
+      for (const e of fe) e.v.forEach((v, k) => { const q = feVal(v, cara, dir); if (!best || q > best.q) best = { q, p: e.xy[k] }; });
+      if (!best) continue;
+      const a = armado(best.q, 1.0, db, tip);
+      out.push([nom, cara === "top" ? "superior" : "inferior", (best.q * 1e4).toFixed(2), `(${best.p[0].toFixed(2)}, ${best.p[1].toFixed(2)})`, a.texto]);
+    }
+    return out;
+  };
   const filas = () => {
+    if (esFE()) return filasFE();
     const db = +$("hkf-db").value, tip = $("hkf-tip").checked ? { dmm: +$("hkf-tipd").value, s: +$("hkf-tips").value / 100 } : null;
     const out: string[][] = [];
     for (const r of res) for (const z of r.zonas) {
@@ -281,21 +336,38 @@ export function montarPanelFranjas() {
     return out;
   };
   const CAB = ["Franja", "Capa", "Tramo", "Zona", "Ancho m", "As sup cm²", "cm²/m", "Armado sup" + ($("hkf-tip").checked ? " (adicional)" : ""), "As inf cm²", "cm²/m", "Armado inf" + ($("hkf-tip").checked ? " (adicional)" : "")];
+  const CAB_FE = ["Dirección", "Cara", "As máx cm²/m", "Nudo (x, y) m", "Armado por metro"];
   const tabla = () => {
     const f = filas(); if (!f.length) { $("hkf-res").innerHTML = ""; return; }
+    if (esFE()) {
+      const tip = $("hkf-tip").checked ? `Típico: Ø${$("hkf-tipd").value} mm @ ${$("hkf-tips").value} cm; armado = ADICIONAL. ` : "";
+      $("hkf-res").innerHTML = `<div style="color:#9c9">${tip}Máximos del mapa (cada nudo de cada elemento).</div><table style="border-collapse:collapse;font-size:11px;width:100%">
+        <tr>${CAB_FE.map(c => `<th style="border-bottom:1px solid #556;text-align:left;padding:1px 3px">${c}</th>`).join("")}</tr>
+        ${f.map(r => `<tr>${r.map((c, i) => `<td style="padding:1px 3px;${i === 4 ? "color:#ffd27a" : ""}">${c}</td>`).join("")}</tr>`).join("")}</table>`;
+      return;
+    }
     const tip = $("hkf-tip").checked ? `Típico: Ø${$("hkf-tipd").value} mm @ ${$("hkf-tips").value} cm arriba y abajo; se muestra el ADICIONAL.` : "";
     $("hkf-res").innerHTML = `<div style="color:#9c9">${tip}</div><table style="border-collapse:collapse;font-size:11px;width:100%">
       <tr>${CAB.map(c => `<th style="border-bottom:1px solid #556;text-align:left;padding:1px 3px">${c}</th>`).join("")}</tr>
       ${f.map(r => `<tr>${r.map((c, i) => `<td style="padding:1px 3px;${i === 7 || i === 10 ? "color:#ffd27a" : ""}">${c}</td>`).join("")}</tr>`).join("")}</table>`;
   };
   $("hkf-csv").onclick = () => {
-    const f = filas(); if (!f.length) return;
-    const csv = [CAB, ...f].map(r => r.join(";")).join("\n");
+    let csv: string;
+    if (esFE()) {
+      const rows = [["x m", "y m", "As sup X cm²/m", "As inf X cm²/m", "As sup Y cm²/m", "As inf Y cm²/m"]];
+      for (const e of fe) e.v.forEach((v, k) => rows.push([e.xy[k][0].toFixed(3), e.xy[k][1].toFixed(3),
+        ...([["top", 1], ["bot", 1], ["top", 2], ["bot", 2]] as [string, number][]).map(([c, d]) => (feVal(v, c, d) * 1e4).toFixed(3))]));
+      csv = rows.map(r => r.join(";")).join("\n");
+    } else {
+      const f = filas(); if (!f.length) return;
+      csv = [CAB, ...f].map(r => r.join(";")).join("\n");
+    }
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
-    a.download = "armado_franjas.csv"; a.click();
+    a.download = esFE() ? "acero_fe_nudos.csv" : "armado_franjas.csv"; a.click();
   };
   lista();
   // para pruebas y para el ribbon
   W.__hekatanFranjas = { abrir: () => { pan.style.display = "block"; refrescarCaso(); }, get franjas() { return franjas; }, set franjas(v: DesignStrip[]) { franjas = v; res = []; lista(); dibujar(); },
-    calcular, dibujar, resultados: () => res, generar: () => $("hkf-auto").click(), filas };
+    calcular, dibujar, resultados: () => res, generar: () => $("hkf-auto").click(), filas,
+    metodo: (m: "franjas" | "fe") => { $("hkf-met").value = m; $("hkf-met").onchange(); }, fe: () => fe };
 }

@@ -7,7 +7,7 @@ const nav = await puppeteer.launch({ headless: "new", executablePath: "C:/Progra
 const p = await nav.newPage(); await p.setViewport({ width: 1600, height: 950 });
 const errs = []; p.on("dialog", async d => { errs.push("dialog " + d.message()); await d.dismiss(); }); p.on("pageerror", e => errs.push(e.message)); p.on("console", m => { if (m.type() === "error") errs.push("console: " + m.text()); });
 const dormir = ms => new Promise(r => setTimeout(r, ms));
-await p.goto("http://localhost:4600/workspace/?heks=/_local/radier_corregido.heks", { waitUntil: "networkidle2", timeout: 180000 }).catch(e => errs.push("goto " + e.message));
+await p.goto("http://localhost:" + (process.env.HK_PORT || "4600") + "/workspace/?heks=/_local/radier_corregido.heks", { waitUntil: "networkidle2", timeout: 180000 }).catch(e => errs.push("goto " + e.message));
 await dormir(20000);
 let f = 0; const cuadro = async (n) => { await p.screenshot({ path: `${OUT}/f${String(f++).padStart(2, "0")}_${n}.png` }); };
 // combinación de diseño: la del modelo (1.2D+1.6L) si existe
@@ -31,6 +31,14 @@ await p.select("#hkf-cara", "bot"); await dormir(800); await cuadro("safe_acero_
 await p.select("#hkf-verCapa", "B"); await p.select("#hkf-cara", "top"); await dormir(800); await cuadro("safe_acero_sup_B");
 await p.click("#hkf-tip"); await p.select("#hkf-db", "16"); await dormir(800); await cuadro("safe_tipico_adicional");
 const filas = await p.evaluate(() => window.__hekatanFranjas.filas());
-writeFileSync(`${OUT}/armado_franjas_app.json`, JSON.stringify({ caso, filas }, null, 0));
-console.log(JSON.stringify({ caso, nfilas: filas.length, ej: filas.slice(0, 4), errs: errs.slice(0, 6) }));
+// diseño por ELEMENTOS FINITOS
+await p.click("#hkf-tip"); await dormir(300);   // sin típico
+await p.evaluate(() => { window.__hekatanFranjas.metodo("fe"); window.__hekatanFranjas.calcular(); }); await dormir(1500);
+await p.select("#hkf-verCapa", "A"); await p.select("#hkf-cara", "top"); await dormir(800); await cuadro("fe_sup_X");
+await p.select("#hkf-cara", "bot"); await dormir(800); await cuadro("fe_inf_X");
+await p.select("#hkf-verCapa", "B"); await p.select("#hkf-cara", "top"); await dormir(800); await cuadro("fe_sup_Y");
+await p.click("#hkf-tip"); await dormir(800); await cuadro("fe_sup_Y_tipico_adicional");
+const filasFE = await p.evaluate(() => window.__hekatanFranjas.filas());
+writeFileSync(`${OUT}/armado_franjas_app.json`, JSON.stringify({ caso, filas, filasFE }, null, 0));
+console.log(JSON.stringify({ caso, nfilas: filas.length, filasFE, errs: errs.slice(0, 6) }));
 await nav.close();
