@@ -348,6 +348,10 @@ export function botonABarraDeArriba(btn: HTMLButtonElement, intentos = 40): void
  * No toca main.ts ni la cinta: mira el estado real del DOM. Un panel esta PLEGADO cuando lleva
  * un translateX en su style (asi lo pliegan setPaneHidden / setLeftHidden) o no se ve.
  */
+/** ids de botones que otros paneles dejan flotando y que la piel sube a la barra de arriba. Un panel
+ *  nuevo con un boton flotante: añadir aqui su id (o llamar el mismo a botonABarraDeArriba). */
+const FLOTANTES_A_LA_BARRA = ["hk-franjas-btn", "hk-dne-btn"];
+
 function vigilarSolapes(): void {
   const q = (sel: string) => document.querySelector<HTMLElement>(sel);
   const abierto = (el: HTMLElement | null) =>
@@ -360,6 +364,15 @@ function vigilarSolapes(): void {
     // la barrita heredada, a la barra de arriba (una vez, en cuanto existan las dos)
     const tb = q("#toolbar"), barra = q("#hk-cad-tit .der");
     if (tb && barra && tb.parentElement !== barra) barra.insertBefore(tb, barra.querySelector(".marca"));
+    // Los botones FLOTANTES de otros paneles («▦ Franjas», «🧱 Sobrecarga DNE») nacen con position:fixed a
+    // top:60px, que es donde se abre la cinta. La piel los ADOPTA ella misma, por id, en cuanto aparecen:
+    // asi el arreglo no depende de que cada panel se acuerde de llamar a botonABarraDeArriba() (la 1.a
+    // version dependia de 2 lineas en stripDesignPanel.ts y sobrecargaMuertaPanel.ts, que son de otra
+    // sesion y ni siquiera estan en esta rama: la sonda de la sesion ca seguia dando 17 solapes).
+    for (const id of FLOTANTES_A_LA_BARRA) {
+      const fb = document.getElementById(id) as HTMLButtonElement | null;
+      if (fb && barra && fb.parentElement !== barra) botonABarraDeArriba(fb, 0);
+    }
     const alto = cinta && getComputedStyle(cinta).display !== "none" ? Math.round(cinta.getBoundingClientRect().bottom) : 0;
     const firma = L + "|" + R + "|" + alto + "|" + window.innerWidth;
     if (firma === ultimo) return;
