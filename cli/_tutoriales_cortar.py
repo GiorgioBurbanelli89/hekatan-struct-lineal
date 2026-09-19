@@ -45,12 +45,12 @@ GRUPOS = [
                 "Arco de la nave: 3 clics", "Arco del ala", "El entrepiso", "Resultado en isométrica"]),
     dict(id="visor", titulo="Visor de archivos IFC", sub="Ver, ocultar, medir y cortar el modelo",
          video=os.path.join(RAIZ, "TUT_VISOR_IFC.mp4"),
-         clips=["El visor IFC", "Importar y ver en 3D", "Ocultar o aislar objetos", "Panel corredizo", "Medir sobre el modelo",
-                "Cortes X, Y, Z", "El edificio abierto"]),
+         clips=["El visor IFC", "Importar y Encuadrar", "Objetos: ocultar o aislar", "Panel corredizo", "Medir sobre el modelo",
+                "Corte Z desde la cinta", "El edificio abierto"]),
     dict(id="novedades", titulo="Áreas, regla y paneles corredizos", sub="Lo básico del lienzo CAD",
          video=os.path.join(RAIZ, "TUT_NOVEDADES.mp4"),
-         clips=["Novedades", "Rectángulo: tres celdas", "Plegar el menú de dibujo", "Rellenar área con un clic", "Llenar todas las celdas",
-                "La regla mide y acota", "Ocultar el panel derecho", "Ocultar el panel de ajustes", "Volver al menú principal"]),
+         clips=["Áreas, regla y paneles", "Paneles corredizos", "Rectángulo: tres celdas", "Rellenar área con un clic",
+                "Llenar todas", "Medir y acotar", "3D y Encuadrar", "Plegar la cinta", "Volver al menú"]),
 ]
 
 
