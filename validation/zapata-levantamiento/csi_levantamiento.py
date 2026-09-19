@@ -175,6 +175,10 @@ try:
     res["seg"] = time.time() - t0
     json.dump(res, open(OUT, "w", encoding="utf-8"))
     log("-> %s" % OUT)
+    if os.environ.get("CSI_ESPERAR") == "1":
+        log("abierto para capturas; crea %s.cerrar para cerrar" % OUT)
+        while not os.path.exists(OUT + ".cerrar"):
+            time.sleep(2)
 finally:
     try:
         o.ApplicationExit(False)

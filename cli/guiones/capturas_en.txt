@@ -1,3 +1,5 @@
 And OpenSees? Hekatan exports the same model to OpenSeesPy: MITC4 plates and springs that resist no tension. Running it, OpenSees gives 81.915.
 And plotted from its own results, the pressure shows the same lifted edge.
+SAFE, same model, its nonlinear case: minimum soil pressure, minus 803.3 kilonewtons per square metre. That is 81.915 tonnes.
+ETABS: minus 803.3, again 81.915, at the same corner.
 Same model, same mesh, five programs: the same result. And the linear analysis, 6.4 percent less, on the unsafe side.
