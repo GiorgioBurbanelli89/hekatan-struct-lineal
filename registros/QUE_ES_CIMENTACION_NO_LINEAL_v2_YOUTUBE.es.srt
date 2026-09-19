@@ -1,8 +1,32 @@
+1
+00:00:00,050 --> 00:00:07,730
 Un resorte normal: si lo aprietas, empuja; si lo estiras, tira. Siempre la misma regla: una recta.
+
+2
+00:00:07,980 --> 00:00:16,524
 El suelo es distinto: si la zapata aprieta, el suelo empuja; pero si la zapata se levanta, el suelo no puede tirar de ella: se despega.
+
+3
+00:00:16,770 --> 00:00:20,394
 Eso es no lineal: la regla cambia según lo que pasa.
+
+4
+00:00:20,640 --> 00:00:24,960
 Con la columna al centro, todos los resortes del suelo aprietan igual.
+
+5
+00:00:25,210 --> 00:00:35,626
 Si la columna se corre, un lado aprieta más y el otro menos. Pasado B sextos, los resortes del borde se sueltan, el borde se levanta, y la presión máxima sube.
+
+6
+00:00:35,880 --> 00:00:47,544
 ¿Qué resortes se sueltan? La computadora no lo sabe de antemano: calcula, suelta los que tiran y vuelve a calcular, hasta que ya no cambia. En el ejemplo de Braja Das, cuatro vueltas.
+
+7
+00:00:47,790 --> 00:00:55,686
 Hekatan Struct, SAP2000 y SAFE ven lo mismo: ochenta y uno coma nueve toneladas por metro cuadrado, y el mismo borde levantado.
+
+8
+00:00:55,940 --> 00:01:01,820
 Si no lo haces, el cálculo te da seis coma cuatro por ciento menos de presión: del lado inseguro.
+

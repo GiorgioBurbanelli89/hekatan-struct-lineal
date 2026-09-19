@@ -1,8 +1,32 @@
+1
+00:00:00,050 --> 00:00:07,730
 A normal spring: squeeze it and it pushes; stretch it and it pulls. Always the same rule: a straight line.
+
+2
+00:00:07,980 --> 00:00:16,524
 Soil is different: if the footing presses, the soil pushes back; but if the footing lifts, the soil cannot pull it: it separates.
+
+3
+00:00:16,770 --> 00:00:20,394
 That is nonlinear: the rule changes depending on what happens.
+
+4
+00:00:20,640 --> 00:00:24,960
 With the column at the centre, all the soil springs press equally.
+
+5
+00:00:25,210 --> 00:00:35,626
 If the column moves off-centre, one side presses more and the other less. Beyond B over six, the edge springs let go, the edge lifts, and the maximum pressure rises.
+
+6
+00:00:35,880 --> 00:00:47,544
 Which springs let go? The computer does not know in advance: it solves, releases those pulling, and solves again, until nothing changes. In Braja Das's example, four passes.
+
+7
+00:00:47,790 --> 00:00:55,686
 Hekatan Struct, SAP2000 and SAFE see the same thing: 81.9 tonnes per square metre, and the same lifted edge.
+
+8
+00:00:55,940 --> 00:01:01,820
 If you skip this, the analysis gives 6.4 percent less pressure: on the unsafe side.
+

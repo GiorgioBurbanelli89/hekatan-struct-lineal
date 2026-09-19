@@ -178,3 +178,9 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
   de Das 6.51–6.53, q_max subiendo) → las 4 vueltas REALES del solver (Das 6.10) → −6.4 %.
   Guion `cli/guiones/no_lineal_{es,en}.txt`. Revisados los PNG antes y los fotogramas del MP4 después.
 - ⏳ Partes 2 (Struct con cursor) y 3 (comparación): guiones escritos, sin grabar.
+- ✅ v2 del vídeo corto (62 s): marca «HEKATAN ENGINEERS» centrada, 40 % del ancho, 20 % de opacidad;
+  escena nueva «Hekatan Struct, SAP2000 y SAFE ven lo mismo» (presión de los 3 con el borde levantado,
+  81.915 / 81.914 / 81.915). `QUE_ES_CIMENTACION_NO_LINEAL_v2_YOUTUBE.mp4` (sin quemar + .en.srt) y
+  `…_v2_REDES_EN.mp4` (inglés quemado, comprobado en fotogramas). El que vio Jorge era el de YouTube.
+- ✅ marca_agua.py (hekatan-school): defecto nuevo = ancho 40 % centrado (HK_ANCHO) y alfa 0.22 (HK_ALFA manda).
+- ✅ Hojas 48/49 con `#fila` (motor 9df26e9 de la 42: gráficas a 540 px). hekatan-lisp con push; URL 49 regenerada.

@@ -233,6 +233,41 @@ def p6(t, i):
 paso("vueltas", 26 * len(vv), p6)
 
 
+# ── 6b · tres programas, la misma presión ──
+AQV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "validation", "zapata-levantamiento")
+_xy = {}
+for ln in open(os.path.join(AQV, "das_ej610.heks"), encoding="utf-8"):
+    tt = ln.split()
+    if tt and tt[0] == "node": _xy[tt[1]] = (float(tt[2]), float(tt[3]))
+_xs = sorted({v[0] for v in _xy.values()}); _ys = sorted({v[1] for v in _xy.values()})
+def _malla(U3):
+    Z = np.full((len(_ys), len(_xs)), np.nan)
+    for n, w in U3.items():
+        if n in _xy: x, y = _xy[n]; Z[_ys.index(y), _xs.index(x)] = max(0.0, -w) * KS
+    return Z
+PROG = [("Hekatan Struct", "csi/hekatan_das610.json", "NL_DAS"), ("SAP2000 24", "csi/sap2000_das610.json", "NLT_DAS"),
+        ("SAFE 20", "csi/safe_das610.json", "NLT_DAS")]
+MAPAS = [(n, _malla(json.load(open(os.path.join(AQV, f), encoding="utf-8"))["casos"][c]["U3"])) for n, f, c in PROG]
+
+
+def p6b(t, i):
+    fig = lienzo("Hekatan Struct, SAP2000 y SAFE ven lo mismo")
+    for j, (n, Z) in enumerate(MAPAS):
+        ax = fig.add_axes([0.035 + 0.325 * j, 0.25, 0.27, 0.56]); ax.set_facecolor(FONDO)
+        cs = ax.contourf(_xs, _ys, Z, levels=np.linspace(0, 85, 18), cmap="jet")
+        if t > 0.25:
+            ax.contour(_xs, _ys, Z, levels=[0.05], colors="white", linewidths=2.5)
+            ax.text(0.28, 0.12, "borde\nlevantado", color="white", fontsize=12, ha="center")
+        ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
+        ax.set_title("%s\nq_max = %.3f tonf/m²" % (n, np.nanmax(Z)), fontsize=16, color=TX)
+    fig.text(0.5, 0.195, "misma malla (961 nudos) · mismos 798 nudos apoyados · línea blanca = borde del contacto",
+             ha="center", fontsize=13, color=GR)
+    guardar(fig)
+
+
+paso("tres programas", 50, p6b)
+
+
 # ── 7 · por qué importa ──
 def p7(t, i):
     fig = lienzo("Si no lo haces: 6.4 % MENOS presión, del lado inseguro")
