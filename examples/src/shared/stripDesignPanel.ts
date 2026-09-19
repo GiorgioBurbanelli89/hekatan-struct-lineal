@@ -11,7 +11,7 @@
  *
  * Usa los resultados que están en pantalla (el caso/combinación activo). Unidades internas kN, m.
  */
-import { registrarDiseno } from "./menuDiseno";
+import { registrarDiseno, ventanaFlotante } from "./menuDiseno";
 import * as THREE from "three";
 import { colorMapPalette, isDiscreteCsiPalette, legendGradientCss } from "hekatan-ui/src/color-map/getColorMap";
 import {
@@ -175,14 +175,14 @@ export function montarPanelFranjas() {
 
   const pan = document.createElement("div");
   pan.id = "hk-franjas";
-  pan.style.cssText = "position:fixed;top:90px;right:12px;z-index:950;width:500px;max-height:78vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
+  pan.style.cssText = "position:fixed;top:40px;left:310px;z-index:950;width:500px;max-height:78vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
   const opt = (v: number[], sel: number) => v.map(d => `<option value="${d}"${d === sel ? " selected" : ""}>Ø${d} mm</option>`).join("");
   pan.innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center"><b>Diseño de losa (como SAFE)</b><span id="hkf-x" style="cursor:pointer">✕</span></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><b>Diseño de losa (como SAFE)</b><span><span data-plegar title="Plegar / desplegar (o doble clic en el título). Arrastra el título para moverla." style="cursor:pointer;margin-right:12px">▁</span><span id="hkf-x" style="cursor:pointer">✕</span></span></div>
   <div style="margin:6px 0;color:#9cc">Combinación de diseño <select id="hkf-combo"></select> <span id="hkf-caso"></span></div>
-  <div style="margin:4px 0">Método <select id="hkf-met"><option value="franjas">Franjas (strip based)</option><option value="fe">Elementos finitos (FE based)</option></select>
+  <div style="margin:4px 0">Método <select id="hkf-met"><option value="fe" selected>Elementos finitos (FE based)</option><option value="franjas">Franjas (strip based)</option></select>
     <label><input id="hkf-min" type="checkbox"> imponer mínimo</label></div>
-  <fieldset id="hkf-fs-franjas" style="border:1px solid #445;padding:4px"><legend>Franjas</legend>
+  <fieldset id="hkf-fs-franjas" style="border:1px solid #445;padding:4px;display:none"><legend>Franjas</legend>
     <button id="hkf-auto">Generar sobre ejes de columnas</button>
     <button id="hkf-dib">Dibujar franja</button>
     <label>capa <select id="hkf-capa"><option>A</option><option>B</option></select></label>
@@ -212,12 +212,14 @@ export function montarPanelFranjas() {
   <div style="margin:6px 0"><button id="hkf-calc" style="background:#2d6a2d;color:#fff">Calcular acero</button>
   <button id="hkf-csv">Tabla CSV</button></div>
   <div id="hkf-res"></div>`;
-  document.body.appendChild(pan);
+  document.body.appendChild(pan); ventanaFlotante(pan);
   const $ = (id: string) => pan.querySelector("#" + id) as any;
   btn.onclick = () => {
     const abrir = pan.style.display === "none";
     pan.style.display = abrir ? "block" : "none"; refrescarCaso();
-    if (abrir) { if (esFE() ? fe.length : res.length) dibujar(); } else limpiar();
+    // Al abrir se VE el acero de una vez (Jorge: «sigo viendo tonf/m², no refuerzo de acero»):
+    // FE no necesita franjas, así que se calcula solo; franjas espera a que se dibujen.
+    if (abrir) { if (esFE() ? fe.length : res.length) dibujar(); else if (esFE()) calcular(); } else limpiar();
   };
   $("hkf-x").onclick = () => { pan.style.display = "none"; limpiar(); };
 

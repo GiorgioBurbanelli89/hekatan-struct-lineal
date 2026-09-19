@@ -87,3 +87,36 @@ function abrirMenu(k: string, btn: HTMLButtonElement) {
   m.style.top = r.bottom + 4 + "px"; m.style.left = Math.max(8, Math.min(r.left, innerWidth - 370)) + "px";
   menuAbierto = m;
 }
+
+/**
+ * Ventana flotante: se ARRASTRA por su cabecera (primer hijo) y se PLIEGA con el botón ▁
+ * (`data-plegar`) o doble clic en la cabecera — Jorge, 19-sep-2026: «debe ser desplazable, ahora
+ * colisiona con la gráfica del modelo y no se aprecia la barra color map». Por delegación en la
+ * ventana: sirve aunque el contenido se vuelva a pintar con innerHTML.
+ */
+export function ventanaFlotante(pan: HTMLElement): void {
+  let arr = false, dx = 0, dy = 0;
+  const enCabecera = (t: EventTarget | null) => { const c = pan.firstElementChild; return !!c && c.contains(t as Node); };
+  const plegar = () => {
+    const pl = pan.dataset.plegado !== "1"; pan.dataset.plegado = pl ? "1" : "0";
+    [...pan.children].slice(1).forEach((c) => ((c as HTMLElement).style.display = pl ? "none" : ""));
+    pan.style.overflow = pl ? "hidden" : "auto";
+  };
+  pan.addEventListener("pointerdown", (e) => {
+    if (!enCabecera(e.target)) return;
+    const t = e.target as HTMLElement;
+    if (t.closest("[data-plegar]")) { plegar(); return; }
+    if (t.closest("button,select,input,[id$='-x']")) return;
+    const r = pan.getBoundingClientRect(); arr = true; dx = e.clientX - r.left; dy = e.clientY - r.top;
+    pan.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  pan.addEventListener("pointermove", (e) => {
+    if (!arr) return;
+    pan.style.left = Math.min(Math.max(0, e.clientX - dx), innerWidth - 80) + "px";
+    pan.style.top = Math.min(Math.max(30, e.clientY - dy), innerHeight - 30) + "px";
+    pan.style.right = "auto";
+  });
+  pan.addEventListener("pointerup", () => { arr = false; });
+  pan.addEventListener("dblclick", (e) => { if (enCabecera(e.target) && !(e.target as HTMLElement).closest("[data-plegar]")) plegar(); });
+  const c = pan.firstElementChild as HTMLElement | null; if (c) c.style.cursor = "move";
+}
