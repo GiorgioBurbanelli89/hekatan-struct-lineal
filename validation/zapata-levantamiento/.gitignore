@@ -1,0 +1,8 @@
+csi/*.e2k
+csi/*.s2k
+csi/*.f2k
+csi/*.sdb
+csi/*.EDB
+csi/*.FDB
+csi/_*
+hekatan_n*.json

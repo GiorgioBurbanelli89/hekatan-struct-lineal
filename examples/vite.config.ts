@@ -64,6 +64,7 @@ export default defineConfig({
         "fem-explained": "src/fem-explained/index.html",
         "zapata-viga-amarre": "src/zapata-viga-amarre/index.html",
         "zapata-aislada": "src/zapata-aislada/index.html",
+        "zapata-excentrica": "src/zapata-excentrica/index.html",
         "zapata-aislada-validacion": "src/zapata-aislada-validacion/index.html",
         "safe-bench-losa-cimentacion": "src/safe-bench-losa-cimentacion/index.html",
         "safe-bench-viga-cimentacion": "src/safe-bench-viga-cimentacion/index.html",
