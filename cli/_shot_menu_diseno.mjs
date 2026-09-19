@@ -8,5 +8,5 @@ await p.goto(BASE + "/workspace/?m=e3qQ74c6C2sEmWPq", { waitUntil: "networkidle2
 await p.click("#hk-diseno-btn"); await dormir(600); await p.screenshot({ path: "cli/shots/menu_diseno_1.png" });
 await p.click('#hk-diseno-menu [data-id="franjas"]'); await dormir(1000); await p.screenshot({ path: "cli/shots/menu_diseno_2_franjas.png" });
 await p.evaluate(() => document.getElementById("hkf-x").click());
-await p.click("#hk-diseno-btn"); await dormir(400); await p.click('#hk-diseno-menu [data-id="dne"]'); await dormir(1000); await p.screenshot({ path: "cli/shots/menu_diseno_3_dne.png" });
+await p.evaluate(() => { for (const f of document.querySelectorAll(".tp-fldv_b")) if (f.textContent.includes("Patrones de carga")) f.click(); }); await dormir(500); await p.evaluate(() => { for (const b of document.querySelectorAll(".tp-btnv_b")) if (b.textContent.includes("Sobrecarga muerta")) b.click(); }); await dormir(1000); await p.screenshot({ path: "cli/shots/menu_diseno_3_dne.png" });
 console.log("errores", errs); await nav.close();

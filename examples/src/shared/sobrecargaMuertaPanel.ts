@@ -8,7 +8,6 @@
  * Uso (cuando se autorice conectarlo, un solo `<script>` en `workspace/index.html`, igual que
  * `franjasEntry.ts`): NO se toca esa página desde este módulo.
  */
-import { registrarDiseno } from "./menuDiseno";
 import {
   TABLA_NEC15, TABLA_NEC22_BORRADOR, tablaDe, sumarSobrecarga, lineaHeksSugerida, kNaTonf,
   type Normativa, type PesoMaterial, type ComponenteSeleccionado, type TipoComponente,
@@ -55,10 +54,9 @@ export function montarPanelSobrecarga() {
   const btn = document.createElement("button");
   btn.id = "hk-dne-btn"; btn.textContent = "🧱 Sobrecarga DNE";
   btn.title = "Asistente de sobrecarga muerta (enlucido, piso, mampostería...) con pesos de la NEC-SE-CG";
-  btn.style.display = "none";   // se abre desde el menú «📐 Diseño» de la barra de arriba
+  btn.style.display = "none";   // se abre desde «📋 Patrones de carga»
   document.body.appendChild(btn);
-  registrarDiseno({ id: "dne", orden: 1, icono: "🧱", titulo: "Sobrecarga muerta DNE (NEC-15)",
-    detalle: "Enlucido, masillado, piso, paredes de bloque… con los pesos de la NEC-SE-CG; se aplica como carga de área.", abrir: () => btn.click() });
+  // se abre desde «📋 Patrones de carga» (loadPatternsPanel.ts): es carga, no diseño
 
   const pan = document.createElement("div");
   pan.id = "hk-dne";
