@@ -24,7 +24,7 @@ import {
   type LineasInfluencia, type Vehiculo, type Envolvente, type EstadoPosicion,
 } from "./cargaMovil";
 
-const W = window as any;
+const W = (typeof window !== "undefined" ? window : globalThis) as any;
 const t = (es: string, en: string) => (currentLang() === "en" ? en : es);
 
 export interface DatosCargaMovil {

@@ -29,7 +29,7 @@ import { exportE2k } from "../shared/e2kExporter";
 const t = (es: string, en: string) => (currentLang() === "en" ? en : es);
 const KGFCM2 = 98.0665;          // kgf/cm² → kN/m²
 const KGFCM3 = 9806.65;          // kgf/cm³ → kN/m³
-const W = window as any;
+const W = (typeof window !== "undefined" ? window : globalThis) as any;
 
 const P = (folder: string, label: string, def: number, min: number, max: number, step: number, description?: string) =>
   ({ default: def, min, max, step, label, folder, description });

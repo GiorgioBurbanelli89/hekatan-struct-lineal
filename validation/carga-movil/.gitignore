@@ -1,0 +1,9 @@
+hekatan_*.json
+opensees_*.json
+sap2000_*.json
+sap_*
+*.sdb
+*.$2k
+*.log
+*.OUT
+*.msh
