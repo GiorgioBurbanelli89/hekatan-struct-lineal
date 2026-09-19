@@ -84,6 +84,11 @@ export function getViewer({
   controls.dampingFactor = 0.1;
   controls.screenSpacePanning = true;     // pan en plano de pantalla (más natural)
   controls.zoomSpeed = 0.8;
+  // La rueda acerca HACIA EL CURSOR, como AutoCAD y ETABS (19-sep-2026). Acercaba hacia
+  // el centro de la pantalla: para ver de cerca una cercha dibujada arriba había que
+  // acercar y luego encuadrar a mano, y en los tutoriales el dibujo quedaba debajo de la
+  // cinta. El punto bajo el cursor se queda quieto (OrbitControls.zoomToCursor, r153+).
+  (controls as any).zoomToCursor = true;
   controls.panSpeed = 1.2;
   controls.rotateSpeed = 0.9;
   controls.keyPanSpeed = 12;
