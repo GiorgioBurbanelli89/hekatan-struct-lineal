@@ -28,7 +28,7 @@ const base = () => ((import.meta as any).env?.BASE_URL ?? "./") + "tutoriales/";
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
 const HOJA = `
-#hk-tut{ position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:center;
+#hk-tut{ position:fixed; inset:0; z-index:2147483000; display:flex; align-items:center; justify-content:center;
   background:rgba(8,10,14,.62); font:13px/1.45 "Segoe UI",system-ui,sans-serif; }
 #hk-tut .caja{ width:min(1180px,96vw); height:min(720px,92vh); display:flex; flex-direction:column;
   background:var(--hk-panel,#232936); color:var(--hk-texto,#C8D4E4); border:1px solid var(--hk-borde,#39445A);
