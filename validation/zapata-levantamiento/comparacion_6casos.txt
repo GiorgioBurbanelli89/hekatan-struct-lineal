@@ -1,0 +1,24 @@
+
+E0  fórmula/rígida q_max 15.000  contacto 2.0000
+  Hekatan  q_max 15.1797 largo 2.0000 w 7.5898 mm giro 5.21211e-13  | vs SAP q -0.000 % w -0.000 % giro 88.062 %
+  SAP2000  q_max 15.1797 largo 2.0000 w 7.5898 mm giro 2.77149e-13  nudo a nudo 0.0000 % | lineal q_max 15.180 ΣFz 60.000
+
+E1_12  fórmula/rígida q_max 22.500  contacto 2.0000
+  Hekatan  q_max 22.4637 largo 2.0000 w 11.2319 mm giro 3.74827e-3  | vs SAP q -0.000 % w -0.000 % giro -0.000 %
+  SAP2000  q_max 22.4637 largo 2.0000 w 11.2319 mm giro 3.74827e-3  nudo a nudo 0.0000 % | lineal q_max 22.464 ΣFz 60.000
+
+E1_6  fórmula/rígida q_max 30.000  contacto 2.0000
+  Hekatan  q_max 30.0004 largo 2.0000 w 15.0002 mm giro 7.49942e-3  | vs SAP q 0.000 % w 0.000 % giro 0.000 %
+  SAP2000  q_max 30.0004 largo 2.0000 w 15.0002 mm giro 7.49942e-3  nudo a nudo 0.0000 % | lineal q_max 30.000 ΣFz 60.000
+
+E1_4  fórmula/rígida q_max 40.000  contacto 1.5000
+  Hekatan  q_max 40.0554 largo 1.5016 w 20.0277 mm giro 1.33367e-2  | vs SAP q 0.008 % w 0.008 % giro 0.021 %
+  SAP2000  q_max 40.0521 largo 1.5018 w 20.0261 mm giro 1.33338e-2  nudo a nudo 0.0201 % | lineal q_max 37.569 ΣFz 60.003
+
+E1_3  fórmula/rígida q_max 60.000  contacto 1.0000
+  Hekatan  q_max 60.0724 largo 1.0019 w 30.0362 mm giro 2.99594e-2  | vs SAP q 0.057 % w 0.057 % giro 0.133 %
+  SAP2000  q_max 60.0381 largo 1.0027 w 30.0190 mm giro 2.99195e-2  nudo a nudo 0.2084 % | lineal q_max 45.178 ΣFz 60.012
+
+BI  fórmula/rígida q_max 66.667  contacto 1.5000
+  Hekatan  q_max 66.5026 largo 1.5009 w 33.2513 mm giro 1.69515e-2  | vs SAP q 0.034 % w 0.034 % giro 0.061 %
+  SAP2000  q_max 66.4796 largo 1.5014 w 33.2398 mm giro 1.69411e-2  nudo a nudo 0.0706 % | lineal q_max 52.487 ΣFz 60.008

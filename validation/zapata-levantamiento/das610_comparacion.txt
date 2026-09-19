@@ -1,0 +1,11 @@
+Das ej. 6.10  Q = 606 kN = 61.795 tonf
+  rígida  q_max 82.211 tonf/m²  contacto 1.8841 m²  giros 1.3002e-2 2.4601e-2
+  Das A' (condición de centroide) 1.2054 m², libro (ábaco) 1.193 m²
+  Hekatan            q_max 81.9146  w 40.9573 mm  contacto 1.8881 m² (798 nudos)  θx 1.29617e-2 θy 2.45355e-2  | vs SAP q 0.0002 %
+  SAP2000            q_max 81.9084  w 40.9542 mm  contacto 1.8881 m² (798 nudos)  θx 1.29594e-2 θy 2.45324e-2  | vs SAP q -0.0074 %  nudo a nudo 0.0128 %  ΣFz 61.7969  lineal 76.670
+  SAP2000 tol 1e-6   q_max 81.9144  w 40.9572 mm  contacto 1.8881 m² (798 nudos)  θx 1.29617e-2 θy 2.45354e-2  nudo a nudo 0.0004 %  ΣFz 61.7949  lineal 76.670
+  SAFE               q_max 81.8857  w 40.9428 mm  contacto 1.8881 m² (798 nudos)  θx 1.29508e-2 θy 2.45201e-2  | vs SAP q -0.0351 %  nudo a nudo 0.0615 %  lineal 76.670
+  SAFE tol 1e-6      q_max 81.9146  w 40.9573 mm  contacto 1.8881 m² (798 nudos)  θx 1.29617e-2 θy 2.45355e-2  | vs SAP q 0.0002 %  nudo a nudo 0.0000 %  lineal 76.670
+  ETABS              q_max 81.9091  w 40.9545 mm  contacto 1.8881 m² (798 nudos)  θx 1.29596e-2 θy 2.45327e-2  | vs SAP q -0.0066 %  nudo a nudo 0.0117 %  ΣFz 61.7969  lineal 76.671
+  ETABS tol 1e-6     q_max 81.9152  w 40.9576 mm  contacto 1.8881 m² (798 nudos)  θx 1.29619e-2 θy 2.45358e-2  | vs SAP q 0.0010 %  nudo a nudo 0.0010 %  ΣFz 61.7948  lineal 76.671
+  OpenSeesPy         q_max 81.9149  w 40.9574 mm  contacto 1.8881 m² (798 nudos)  θx 1.29618e-2 θy 2.45355e-2  | vs SAP q 0.0006 %  nudo a nudo 0.0176 %  lineal 76.677

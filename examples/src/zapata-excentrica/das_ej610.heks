@@ -1,0 +1,4665 @@
+# Cimentaciones con no linealidad: levantamiento de zapatas (suelo sin tracción)
+# Zapata 1.5 x 1.5 x 0.4 m, f'c 240 kgf/cm2 (E = 22940519 kN/m2), ks 2000 tonf/m3 (19613.300 kN/m3)
+# Dead: columna 0.3 x 0.3 m, P = 61.79480250646245 tonf en ex = 0.1500 m (e/L = 0.1), ey = 0.3000 m (e/B = 0.2)
+# Unidades kN, m. El muelle de área lleva «compresion»: el suelo no tira (ley Gap de CSI).
+node 1 0 0 0
+node 2 0.05 0 0
+node 3 0.1 0 0
+node 4 0.15 0 0
+node 5 0.2 0 0
+node 6 0.25 0 0
+node 7 0.3 0 0
+node 8 0.35 0 0
+node 9 0.4 0 0
+node 10 0.45 0 0
+node 11 0.5 0 0
+node 12 0.55 0 0
+node 13 0.6 0 0
+node 14 0.65 0 0
+node 15 0.7 0 0
+node 16 0.75 0 0
+node 17 0.8 0 0
+node 18 0.85 0 0
+node 19 0.9 0 0
+node 20 0.95 0 0
+node 21 1 0 0
+node 22 1.05 0 0
+node 23 1.1 0 0
+node 24 1.15 0 0
+node 25 1.2 0 0
+node 26 1.25 0 0
+node 27 1.3 0 0
+node 28 1.35 0 0
+node 29 1.4 0 0
+node 30 1.45 0 0
+node 31 1.5 0 0
+node 32 0 0.05 0
+node 33 0.05 0.05 0
+node 34 0.1 0.05 0
+node 35 0.15 0.05 0
+node 36 0.2 0.05 0
+node 37 0.25 0.05 0
+node 38 0.3 0.05 0
+node 39 0.35 0.05 0
+node 40 0.4 0.05 0
+node 41 0.45 0.05 0
+node 42 0.5 0.05 0
+node 43 0.55 0.05 0
+node 44 0.6 0.05 0
+node 45 0.65 0.05 0
+node 46 0.7 0.05 0
+node 47 0.75 0.05 0
+node 48 0.8 0.05 0
+node 49 0.85 0.05 0
+node 50 0.9 0.05 0
+node 51 0.95 0.05 0
+node 52 1 0.05 0
+node 53 1.05 0.05 0
+node 54 1.1 0.05 0
+node 55 1.15 0.05 0
+node 56 1.2 0.05 0
+node 57 1.25 0.05 0
+node 58 1.3 0.05 0
+node 59 1.35 0.05 0
+node 60 1.4 0.05 0
+node 61 1.45 0.05 0
+node 62 1.5 0.05 0
+node 63 0 0.1 0
+node 64 0.05 0.1 0
+node 65 0.1 0.1 0
+node 66 0.15 0.1 0
+node 67 0.2 0.1 0
+node 68 0.25 0.1 0
+node 69 0.3 0.1 0
+node 70 0.35 0.1 0
+node 71 0.4 0.1 0
+node 72 0.45 0.1 0
+node 73 0.5 0.1 0
+node 74 0.55 0.1 0
+node 75 0.6 0.1 0
+node 76 0.65 0.1 0
+node 77 0.7 0.1 0
+node 78 0.75 0.1 0
+node 79 0.8 0.1 0
+node 80 0.85 0.1 0
+node 81 0.9 0.1 0
+node 82 0.95 0.1 0
+node 83 1 0.1 0
+node 84 1.05 0.1 0
+node 85 1.1 0.1 0
+node 86 1.15 0.1 0
+node 87 1.2 0.1 0
+node 88 1.25 0.1 0
+node 89 1.3 0.1 0
+node 90 1.35 0.1 0
+node 91 1.4 0.1 0
+node 92 1.45 0.1 0
+node 93 1.5 0.1 0
+node 94 0 0.15 0
+node 95 0.05 0.15 0
+node 96 0.1 0.15 0
+node 97 0.15 0.15 0
+node 98 0.2 0.15 0
+node 99 0.25 0.15 0
+node 100 0.3 0.15 0
+node 101 0.35 0.15 0
+node 102 0.4 0.15 0
+node 103 0.45 0.15 0
+node 104 0.5 0.15 0
+node 105 0.55 0.15 0
+node 106 0.6 0.15 0
+node 107 0.65 0.15 0
+node 108 0.7 0.15 0
+node 109 0.75 0.15 0
+node 110 0.8 0.15 0
+node 111 0.85 0.15 0
+node 112 0.9 0.15 0
+node 113 0.95 0.15 0
+node 114 1 0.15 0
+node 115 1.05 0.15 0
+node 116 1.1 0.15 0
+node 117 1.15 0.15 0
+node 118 1.2 0.15 0
+node 119 1.25 0.15 0
+node 120 1.3 0.15 0
+node 121 1.35 0.15 0
+node 122 1.4 0.15 0
+node 123 1.45 0.15 0
+node 124 1.5 0.15 0
+node 125 0 0.2 0
+node 126 0.05 0.2 0
+node 127 0.1 0.2 0
+node 128 0.15 0.2 0
+node 129 0.2 0.2 0
+node 130 0.25 0.2 0
+node 131 0.3 0.2 0
+node 132 0.35 0.2 0
+node 133 0.4 0.2 0
+node 134 0.45 0.2 0
+node 135 0.5 0.2 0
+node 136 0.55 0.2 0
+node 137 0.6 0.2 0
+node 138 0.65 0.2 0
+node 139 0.7 0.2 0
+node 140 0.75 0.2 0
+node 141 0.8 0.2 0
+node 142 0.85 0.2 0
+node 143 0.9 0.2 0
+node 144 0.95 0.2 0
+node 145 1 0.2 0
+node 146 1.05 0.2 0
+node 147 1.1 0.2 0
+node 148 1.15 0.2 0
+node 149 1.2 0.2 0
+node 150 1.25 0.2 0
+node 151 1.3 0.2 0
+node 152 1.35 0.2 0
+node 153 1.4 0.2 0
+node 154 1.45 0.2 0
+node 155 1.5 0.2 0
+node 156 0 0.25 0
+node 157 0.05 0.25 0
+node 158 0.1 0.25 0
+node 159 0.15 0.25 0
+node 160 0.2 0.25 0
+node 161 0.25 0.25 0
+node 162 0.3 0.25 0
+node 163 0.35 0.25 0
+node 164 0.4 0.25 0
+node 165 0.45 0.25 0
+node 166 0.5 0.25 0
+node 167 0.55 0.25 0
+node 168 0.6 0.25 0
+node 169 0.65 0.25 0
+node 170 0.7 0.25 0
+node 171 0.75 0.25 0
+node 172 0.8 0.25 0
+node 173 0.85 0.25 0
+node 174 0.9 0.25 0
+node 175 0.95 0.25 0
+node 176 1 0.25 0
+node 177 1.05 0.25 0
+node 178 1.1 0.25 0
+node 179 1.15 0.25 0
+node 180 1.2 0.25 0
+node 181 1.25 0.25 0
+node 182 1.3 0.25 0
+node 183 1.35 0.25 0
+node 184 1.4 0.25 0
+node 185 1.45 0.25 0
+node 186 1.5 0.25 0
+node 187 0 0.3 0
+node 188 0.05 0.3 0
+node 189 0.1 0.3 0
+node 190 0.15 0.3 0
+node 191 0.2 0.3 0
+node 192 0.25 0.3 0
+node 193 0.3 0.3 0
+node 194 0.35 0.3 0
+node 195 0.4 0.3 0
+node 196 0.45 0.3 0
+node 197 0.5 0.3 0
+node 198 0.55 0.3 0
+node 199 0.6 0.3 0
+node 200 0.65 0.3 0
+node 201 0.7 0.3 0
+node 202 0.75 0.3 0
+node 203 0.8 0.3 0
+node 204 0.85 0.3 0
+node 205 0.9 0.3 0
+node 206 0.95 0.3 0
+node 207 1 0.3 0
+node 208 1.05 0.3 0
+node 209 1.1 0.3 0
+node 210 1.15 0.3 0
+node 211 1.2 0.3 0
+node 212 1.25 0.3 0
+node 213 1.3 0.3 0
+node 214 1.35 0.3 0
+node 215 1.4 0.3 0
+node 216 1.45 0.3 0
+node 217 1.5 0.3 0
+node 218 0 0.35 0
+node 219 0.05 0.35 0
+node 220 0.1 0.35 0
+node 221 0.15 0.35 0
+node 222 0.2 0.35 0
+node 223 0.25 0.35 0
+node 224 0.3 0.35 0
+node 225 0.35 0.35 0
+node 226 0.4 0.35 0
+node 227 0.45 0.35 0
+node 228 0.5 0.35 0
+node 229 0.55 0.35 0
+node 230 0.6 0.35 0
+node 231 0.65 0.35 0
+node 232 0.7 0.35 0
+node 233 0.75 0.35 0
+node 234 0.8 0.35 0
+node 235 0.85 0.35 0
+node 236 0.9 0.35 0
+node 237 0.95 0.35 0
+node 238 1 0.35 0
+node 239 1.05 0.35 0
+node 240 1.1 0.35 0
+node 241 1.15 0.35 0
+node 242 1.2 0.35 0
+node 243 1.25 0.35 0
+node 244 1.3 0.35 0
+node 245 1.35 0.35 0
+node 246 1.4 0.35 0
+node 247 1.45 0.35 0
+node 248 1.5 0.35 0
+node 249 0 0.4 0
+node 250 0.05 0.4 0
+node 251 0.1 0.4 0
+node 252 0.15 0.4 0
+node 253 0.2 0.4 0
+node 254 0.25 0.4 0
+node 255 0.3 0.4 0
+node 256 0.35 0.4 0
+node 257 0.4 0.4 0
+node 258 0.45 0.4 0
+node 259 0.5 0.4 0
+node 260 0.55 0.4 0
+node 261 0.6 0.4 0
+node 262 0.65 0.4 0
+node 263 0.7 0.4 0
+node 264 0.75 0.4 0
+node 265 0.8 0.4 0
+node 266 0.85 0.4 0
+node 267 0.9 0.4 0
+node 268 0.95 0.4 0
+node 269 1 0.4 0
+node 270 1.05 0.4 0
+node 271 1.1 0.4 0
+node 272 1.15 0.4 0
+node 273 1.2 0.4 0
+node 274 1.25 0.4 0
+node 275 1.3 0.4 0
+node 276 1.35 0.4 0
+node 277 1.4 0.4 0
+node 278 1.45 0.4 0
+node 279 1.5 0.4 0
+node 280 0 0.45 0
+node 281 0.05 0.45 0
+node 282 0.1 0.45 0
+node 283 0.15 0.45 0
+node 284 0.2 0.45 0
+node 285 0.25 0.45 0
+node 286 0.3 0.45 0
+node 287 0.35 0.45 0
+node 288 0.4 0.45 0
+node 289 0.45 0.45 0
+node 290 0.5 0.45 0
+node 291 0.55 0.45 0
+node 292 0.6 0.45 0
+node 293 0.65 0.45 0
+node 294 0.7 0.45 0
+node 295 0.75 0.45 0
+node 296 0.8 0.45 0
+node 297 0.85 0.45 0
+node 298 0.9 0.45 0
+node 299 0.95 0.45 0
+node 300 1 0.45 0
+node 301 1.05 0.45 0
+node 302 1.1 0.45 0
+node 303 1.15 0.45 0
+node 304 1.2 0.45 0
+node 305 1.25 0.45 0
+node 306 1.3 0.45 0
+node 307 1.35 0.45 0
+node 308 1.4 0.45 0
+node 309 1.45 0.45 0
+node 310 1.5 0.45 0
+node 311 0 0.5 0
+node 312 0.05 0.5 0
+node 313 0.1 0.5 0
+node 314 0.15 0.5 0
+node 315 0.2 0.5 0
+node 316 0.25 0.5 0
+node 317 0.3 0.5 0
+node 318 0.35 0.5 0
+node 319 0.4 0.5 0
+node 320 0.45 0.5 0
+node 321 0.5 0.5 0
+node 322 0.55 0.5 0
+node 323 0.6 0.5 0
+node 324 0.65 0.5 0
+node 325 0.7 0.5 0
+node 326 0.75 0.5 0
+node 327 0.8 0.5 0
+node 328 0.85 0.5 0
+node 329 0.9 0.5 0
+node 330 0.95 0.5 0
+node 331 1 0.5 0
+node 332 1.05 0.5 0
+node 333 1.1 0.5 0
+node 334 1.15 0.5 0
+node 335 1.2 0.5 0
+node 336 1.25 0.5 0
+node 337 1.3 0.5 0
+node 338 1.35 0.5 0
+node 339 1.4 0.5 0
+node 340 1.45 0.5 0
+node 341 1.5 0.5 0
+node 342 0 0.55 0
+node 343 0.05 0.55 0
+node 344 0.1 0.55 0
+node 345 0.15 0.55 0
+node 346 0.2 0.55 0
+node 347 0.25 0.55 0
+node 348 0.3 0.55 0
+node 349 0.35 0.55 0
+node 350 0.4 0.55 0
+node 351 0.45 0.55 0
+node 352 0.5 0.55 0
+node 353 0.55 0.55 0
+node 354 0.6 0.55 0
+node 355 0.65 0.55 0
+node 356 0.7 0.55 0
+node 357 0.75 0.55 0
+node 358 0.8 0.55 0
+node 359 0.85 0.55 0
+node 360 0.9 0.55 0
+node 361 0.95 0.55 0
+node 362 1 0.55 0
+node 363 1.05 0.55 0
+node 364 1.1 0.55 0
+node 365 1.15 0.55 0
+node 366 1.2 0.55 0
+node 367 1.25 0.55 0
+node 368 1.3 0.55 0
+node 369 1.35 0.55 0
+node 370 1.4 0.55 0
+node 371 1.45 0.55 0
+node 372 1.5 0.55 0
+node 373 0 0.6 0
+node 374 0.05 0.6 0
+node 375 0.1 0.6 0
+node 376 0.15 0.6 0
+node 377 0.2 0.6 0
+node 378 0.25 0.6 0
+node 379 0.3 0.6 0
+node 380 0.35 0.6 0
+node 381 0.4 0.6 0
+node 382 0.45 0.6 0
+node 383 0.5 0.6 0
+node 384 0.55 0.6 0
+node 385 0.6 0.6 0
+node 386 0.65 0.6 0
+node 387 0.7 0.6 0
+node 388 0.75 0.6 0
+node 389 0.8 0.6 0
+node 390 0.85 0.6 0
+node 391 0.9 0.6 0
+node 392 0.95 0.6 0
+node 393 1 0.6 0
+node 394 1.05 0.6 0
+node 395 1.1 0.6 0
+node 396 1.15 0.6 0
+node 397 1.2 0.6 0
+node 398 1.25 0.6 0
+node 399 1.3 0.6 0
+node 400 1.35 0.6 0
+node 401 1.4 0.6 0
+node 402 1.45 0.6 0
+node 403 1.5 0.6 0
+node 404 0 0.65 0
+node 405 0.05 0.65 0
+node 406 0.1 0.65 0
+node 407 0.15 0.65 0
+node 408 0.2 0.65 0
+node 409 0.25 0.65 0
+node 410 0.3 0.65 0
+node 411 0.35 0.65 0
+node 412 0.4 0.65 0
+node 413 0.45 0.65 0
+node 414 0.5 0.65 0
+node 415 0.55 0.65 0
+node 416 0.6 0.65 0
+node 417 0.65 0.65 0
+node 418 0.7 0.65 0
+node 419 0.75 0.65 0
+node 420 0.8 0.65 0
+node 421 0.85 0.65 0
+node 422 0.9 0.65 0
+node 423 0.95 0.65 0
+node 424 1 0.65 0
+node 425 1.05 0.65 0
+node 426 1.1 0.65 0
+node 427 1.15 0.65 0
+node 428 1.2 0.65 0
+node 429 1.25 0.65 0
+node 430 1.3 0.65 0
+node 431 1.35 0.65 0
+node 432 1.4 0.65 0
+node 433 1.45 0.65 0
+node 434 1.5 0.65 0
+node 435 0 0.7 0
+node 436 0.05 0.7 0
+node 437 0.1 0.7 0
+node 438 0.15 0.7 0
+node 439 0.2 0.7 0
+node 440 0.25 0.7 0
+node 441 0.3 0.7 0
+node 442 0.35 0.7 0
+node 443 0.4 0.7 0
+node 444 0.45 0.7 0
+node 445 0.5 0.7 0
+node 446 0.55 0.7 0
+node 447 0.6 0.7 0
+node 448 0.65 0.7 0
+node 449 0.7 0.7 0
+node 450 0.75 0.7 0
+node 451 0.8 0.7 0
+node 452 0.85 0.7 0
+node 453 0.9 0.7 0
+node 454 0.95 0.7 0
+node 455 1 0.7 0
+node 456 1.05 0.7 0
+node 457 1.1 0.7 0
+node 458 1.15 0.7 0
+node 459 1.2 0.7 0
+node 460 1.25 0.7 0
+node 461 1.3 0.7 0
+node 462 1.35 0.7 0
+node 463 1.4 0.7 0
+node 464 1.45 0.7 0
+node 465 1.5 0.7 0
+node 466 0 0.75 0
+node 467 0.05 0.75 0
+node 468 0.1 0.75 0
+node 469 0.15 0.75 0
+node 470 0.2 0.75 0
+node 471 0.25 0.75 0
+node 472 0.3 0.75 0
+node 473 0.35 0.75 0
+node 474 0.4 0.75 0
+node 475 0.45 0.75 0
+node 476 0.5 0.75 0
+node 477 0.55 0.75 0
+node 478 0.6 0.75 0
+node 479 0.65 0.75 0
+node 480 0.7 0.75 0
+node 481 0.75 0.75 0
+node 482 0.8 0.75 0
+node 483 0.85 0.75 0
+node 484 0.9 0.75 0
+node 485 0.95 0.75 0
+node 486 1 0.75 0
+node 487 1.05 0.75 0
+node 488 1.1 0.75 0
+node 489 1.15 0.75 0
+node 490 1.2 0.75 0
+node 491 1.25 0.75 0
+node 492 1.3 0.75 0
+node 493 1.35 0.75 0
+node 494 1.4 0.75 0
+node 495 1.45 0.75 0
+node 496 1.5 0.75 0
+node 497 0 0.8 0
+node 498 0.05 0.8 0
+node 499 0.1 0.8 0
+node 500 0.15 0.8 0
+node 501 0.2 0.8 0
+node 502 0.25 0.8 0
+node 503 0.3 0.8 0
+node 504 0.35 0.8 0
+node 505 0.4 0.8 0
+node 506 0.45 0.8 0
+node 507 0.5 0.8 0
+node 508 0.55 0.8 0
+node 509 0.6 0.8 0
+node 510 0.65 0.8 0
+node 511 0.7 0.8 0
+node 512 0.75 0.8 0
+node 513 0.8 0.8 0
+node 514 0.85 0.8 0
+node 515 0.9 0.8 0
+node 516 0.95 0.8 0
+node 517 1 0.8 0
+node 518 1.05 0.8 0
+node 519 1.1 0.8 0
+node 520 1.15 0.8 0
+node 521 1.2 0.8 0
+node 522 1.25 0.8 0
+node 523 1.3 0.8 0
+node 524 1.35 0.8 0
+node 525 1.4 0.8 0
+node 526 1.45 0.8 0
+node 527 1.5 0.8 0
+node 528 0 0.85 0
+node 529 0.05 0.85 0
+node 530 0.1 0.85 0
+node 531 0.15 0.85 0
+node 532 0.2 0.85 0
+node 533 0.25 0.85 0
+node 534 0.3 0.85 0
+node 535 0.35 0.85 0
+node 536 0.4 0.85 0
+node 537 0.45 0.85 0
+node 538 0.5 0.85 0
+node 539 0.55 0.85 0
+node 540 0.6 0.85 0
+node 541 0.65 0.85 0
+node 542 0.7 0.85 0
+node 543 0.75 0.85 0
+node 544 0.8 0.85 0
+node 545 0.85 0.85 0
+node 546 0.9 0.85 0
+node 547 0.95 0.85 0
+node 548 1 0.85 0
+node 549 1.05 0.85 0
+node 550 1.1 0.85 0
+node 551 1.15 0.85 0
+node 552 1.2 0.85 0
+node 553 1.25 0.85 0
+node 554 1.3 0.85 0
+node 555 1.35 0.85 0
+node 556 1.4 0.85 0
+node 557 1.45 0.85 0
+node 558 1.5 0.85 0
+node 559 0 0.9 0
+node 560 0.05 0.9 0
+node 561 0.1 0.9 0
+node 562 0.15 0.9 0
+node 563 0.2 0.9 0
+node 564 0.25 0.9 0
+node 565 0.3 0.9 0
+node 566 0.35 0.9 0
+node 567 0.4 0.9 0
+node 568 0.45 0.9 0
+node 569 0.5 0.9 0
+node 570 0.55 0.9 0
+node 571 0.6 0.9 0
+node 572 0.65 0.9 0
+node 573 0.7 0.9 0
+node 574 0.75 0.9 0
+node 575 0.8 0.9 0
+node 576 0.85 0.9 0
+node 577 0.9 0.9 0
+node 578 0.95 0.9 0
+node 579 1 0.9 0
+node 580 1.05 0.9 0
+node 581 1.1 0.9 0
+node 582 1.15 0.9 0
+node 583 1.2 0.9 0
+node 584 1.25 0.9 0
+node 585 1.3 0.9 0
+node 586 1.35 0.9 0
+node 587 1.4 0.9 0
+node 588 1.45 0.9 0
+node 589 1.5 0.9 0
+node 590 0 0.95 0
+node 591 0.05 0.95 0
+node 592 0.1 0.95 0
+node 593 0.15 0.95 0
+node 594 0.2 0.95 0
+node 595 0.25 0.95 0
+node 596 0.3 0.95 0
+node 597 0.35 0.95 0
+node 598 0.4 0.95 0
+node 599 0.45 0.95 0
+node 600 0.5 0.95 0
+node 601 0.55 0.95 0
+node 602 0.6 0.95 0
+node 603 0.65 0.95 0
+node 604 0.7 0.95 0
+node 605 0.75 0.95 0
+node 606 0.8 0.95 0
+node 607 0.85 0.95 0
+node 608 0.9 0.95 0
+node 609 0.95 0.95 0
+node 610 1 0.95 0
+node 611 1.05 0.95 0
+node 612 1.1 0.95 0
+node 613 1.15 0.95 0
+node 614 1.2 0.95 0
+node 615 1.25 0.95 0
+node 616 1.3 0.95 0
+node 617 1.35 0.95 0
+node 618 1.4 0.95 0
+node 619 1.45 0.95 0
+node 620 1.5 0.95 0
+node 621 0 1 0
+node 622 0.05 1 0
+node 623 0.1 1 0
+node 624 0.15 1 0
+node 625 0.2 1 0
+node 626 0.25 1 0
+node 627 0.3 1 0
+node 628 0.35 1 0
+node 629 0.4 1 0
+node 630 0.45 1 0
+node 631 0.5 1 0
+node 632 0.55 1 0
+node 633 0.6 1 0
+node 634 0.65 1 0
+node 635 0.7 1 0
+node 636 0.75 1 0
+node 637 0.8 1 0
+node 638 0.85 1 0
+node 639 0.9 1 0
+node 640 0.95 1 0
+node 641 1 1 0
+node 642 1.05 1 0
+node 643 1.1 1 0
+node 644 1.15 1 0
+node 645 1.2 1 0
+node 646 1.25 1 0
+node 647 1.3 1 0
+node 648 1.35 1 0
+node 649 1.4 1 0
+node 650 1.45 1 0
+node 651 1.5 1 0
+node 652 0 1.05 0
+node 653 0.05 1.05 0
+node 654 0.1 1.05 0
+node 655 0.15 1.05 0
+node 656 0.2 1.05 0
+node 657 0.25 1.05 0
+node 658 0.3 1.05 0
+node 659 0.35 1.05 0
+node 660 0.4 1.05 0
+node 661 0.45 1.05 0
+node 662 0.5 1.05 0
+node 663 0.55 1.05 0
+node 664 0.6 1.05 0
+node 665 0.65 1.05 0
+node 666 0.7 1.05 0
+node 667 0.75 1.05 0
+node 668 0.8 1.05 0
+node 669 0.85 1.05 0
+node 670 0.9 1.05 0
+node 671 0.95 1.05 0
+node 672 1 1.05 0
+node 673 1.05 1.05 0
+node 674 1.1 1.05 0
+node 675 1.15 1.05 0
+node 676 1.2 1.05 0
+node 677 1.25 1.05 0
+node 678 1.3 1.05 0
+node 679 1.35 1.05 0
+node 680 1.4 1.05 0
+node 681 1.45 1.05 0
+node 682 1.5 1.05 0
+node 683 0 1.1 0
+node 684 0.05 1.1 0
+node 685 0.1 1.1 0
+node 686 0.15 1.1 0
+node 687 0.2 1.1 0
+node 688 0.25 1.1 0
+node 689 0.3 1.1 0
+node 690 0.35 1.1 0
+node 691 0.4 1.1 0
+node 692 0.45 1.1 0
+node 693 0.5 1.1 0
+node 694 0.55 1.1 0
+node 695 0.6 1.1 0
+node 696 0.65 1.1 0
+node 697 0.7 1.1 0
+node 698 0.75 1.1 0
+node 699 0.8 1.1 0
+node 700 0.85 1.1 0
+node 701 0.9 1.1 0
+node 702 0.95 1.1 0
+node 703 1 1.1 0
+node 704 1.05 1.1 0
+node 705 1.1 1.1 0
+node 706 1.15 1.1 0
+node 707 1.2 1.1 0
+node 708 1.25 1.1 0
+node 709 1.3 1.1 0
+node 710 1.35 1.1 0
+node 711 1.4 1.1 0
+node 712 1.45 1.1 0
+node 713 1.5 1.1 0
+node 714 0 1.15 0
+node 715 0.05 1.15 0
+node 716 0.1 1.15 0
+node 717 0.15 1.15 0
+node 718 0.2 1.15 0
+node 719 0.25 1.15 0
+node 720 0.3 1.15 0
+node 721 0.35 1.15 0
+node 722 0.4 1.15 0
+node 723 0.45 1.15 0
+node 724 0.5 1.15 0
+node 725 0.55 1.15 0
+node 726 0.6 1.15 0
+node 727 0.65 1.15 0
+node 728 0.7 1.15 0
+node 729 0.75 1.15 0
+node 730 0.8 1.15 0
+node 731 0.85 1.15 0
+node 732 0.9 1.15 0
+node 733 0.95 1.15 0
+node 734 1 1.15 0
+node 735 1.05 1.15 0
+node 736 1.1 1.15 0
+node 737 1.15 1.15 0
+node 738 1.2 1.15 0
+node 739 1.25 1.15 0
+node 740 1.3 1.15 0
+node 741 1.35 1.15 0
+node 742 1.4 1.15 0
+node 743 1.45 1.15 0
+node 744 1.5 1.15 0
+node 745 0 1.2 0
+node 746 0.05 1.2 0
+node 747 0.1 1.2 0
+node 748 0.15 1.2 0
+node 749 0.2 1.2 0
+node 750 0.25 1.2 0
+node 751 0.3 1.2 0
+node 752 0.35 1.2 0
+node 753 0.4 1.2 0
+node 754 0.45 1.2 0
+node 755 0.5 1.2 0
+node 756 0.55 1.2 0
+node 757 0.6 1.2 0
+node 758 0.65 1.2 0
+node 759 0.7 1.2 0
+node 760 0.75 1.2 0
+node 761 0.8 1.2 0
+node 762 0.85 1.2 0
+node 763 0.9 1.2 0
+node 764 0.95 1.2 0
+node 765 1 1.2 0
+node 766 1.05 1.2 0
+node 767 1.1 1.2 0
+node 768 1.15 1.2 0
+node 769 1.2 1.2 0
+node 770 1.25 1.2 0
+node 771 1.3 1.2 0
+node 772 1.35 1.2 0
+node 773 1.4 1.2 0
+node 774 1.45 1.2 0
+node 775 1.5 1.2 0
+node 776 0 1.25 0
+node 777 0.05 1.25 0
+node 778 0.1 1.25 0
+node 779 0.15 1.25 0
+node 780 0.2 1.25 0
+node 781 0.25 1.25 0
+node 782 0.3 1.25 0
+node 783 0.35 1.25 0
+node 784 0.4 1.25 0
+node 785 0.45 1.25 0
+node 786 0.5 1.25 0
+node 787 0.55 1.25 0
+node 788 0.6 1.25 0
+node 789 0.65 1.25 0
+node 790 0.7 1.25 0
+node 791 0.75 1.25 0
+node 792 0.8 1.25 0
+node 793 0.85 1.25 0
+node 794 0.9 1.25 0
+node 795 0.95 1.25 0
+node 796 1 1.25 0
+node 797 1.05 1.25 0
+node 798 1.1 1.25 0
+node 799 1.15 1.25 0
+node 800 1.2 1.25 0
+node 801 1.25 1.25 0
+node 802 1.3 1.25 0
+node 803 1.35 1.25 0
+node 804 1.4 1.25 0
+node 805 1.45 1.25 0
+node 806 1.5 1.25 0
+node 807 0 1.3 0
+node 808 0.05 1.3 0
+node 809 0.1 1.3 0
+node 810 0.15 1.3 0
+node 811 0.2 1.3 0
+node 812 0.25 1.3 0
+node 813 0.3 1.3 0
+node 814 0.35 1.3 0
+node 815 0.4 1.3 0
+node 816 0.45 1.3 0
+node 817 0.5 1.3 0
+node 818 0.55 1.3 0
+node 819 0.6 1.3 0
+node 820 0.65 1.3 0
+node 821 0.7 1.3 0
+node 822 0.75 1.3 0
+node 823 0.8 1.3 0
+node 824 0.85 1.3 0
+node 825 0.9 1.3 0
+node 826 0.95 1.3 0
+node 827 1 1.3 0
+node 828 1.05 1.3 0
+node 829 1.1 1.3 0
+node 830 1.15 1.3 0
+node 831 1.2 1.3 0
+node 832 1.25 1.3 0
+node 833 1.3 1.3 0
+node 834 1.35 1.3 0
+node 835 1.4 1.3 0
+node 836 1.45 1.3 0
+node 837 1.5 1.3 0
+node 838 0 1.35 0
+node 839 0.05 1.35 0
+node 840 0.1 1.35 0
+node 841 0.15 1.35 0
+node 842 0.2 1.35 0
+node 843 0.25 1.35 0
+node 844 0.3 1.35 0
+node 845 0.35 1.35 0
+node 846 0.4 1.35 0
+node 847 0.45 1.35 0
+node 848 0.5 1.35 0
+node 849 0.55 1.35 0
+node 850 0.6 1.35 0
+node 851 0.65 1.35 0
+node 852 0.7 1.35 0
+node 853 0.75 1.35 0
+node 854 0.8 1.35 0
+node 855 0.85 1.35 0
+node 856 0.9 1.35 0
+node 857 0.95 1.35 0
+node 858 1 1.35 0
+node 859 1.05 1.35 0
+node 860 1.1 1.35 0
+node 861 1.15 1.35 0
+node 862 1.2 1.35 0
+node 863 1.25 1.35 0
+node 864 1.3 1.35 0
+node 865 1.35 1.35 0
+node 866 1.4 1.35 0
+node 867 1.45 1.35 0
+node 868 1.5 1.35 0
+node 869 0 1.4 0
+node 870 0.05 1.4 0
+node 871 0.1 1.4 0
+node 872 0.15 1.4 0
+node 873 0.2 1.4 0
+node 874 0.25 1.4 0
+node 875 0.3 1.4 0
+node 876 0.35 1.4 0
+node 877 0.4 1.4 0
+node 878 0.45 1.4 0
+node 879 0.5 1.4 0
+node 880 0.55 1.4 0
+node 881 0.6 1.4 0
+node 882 0.65 1.4 0
+node 883 0.7 1.4 0
+node 884 0.75 1.4 0
+node 885 0.8 1.4 0
+node 886 0.85 1.4 0
+node 887 0.9 1.4 0
+node 888 0.95 1.4 0
+node 889 1 1.4 0
+node 890 1.05 1.4 0
+node 891 1.1 1.4 0
+node 892 1.15 1.4 0
+node 893 1.2 1.4 0
+node 894 1.25 1.4 0
+node 895 1.3 1.4 0
+node 896 1.35 1.4 0
+node 897 1.4 1.4 0
+node 898 1.45 1.4 0
+node 899 1.5 1.4 0
+node 900 0 1.45 0
+node 901 0.05 1.45 0
+node 902 0.1 1.45 0
+node 903 0.15 1.45 0
+node 904 0.2 1.45 0
+node 905 0.25 1.45 0
+node 906 0.3 1.45 0
+node 907 0.35 1.45 0
+node 908 0.4 1.45 0
+node 909 0.45 1.45 0
+node 910 0.5 1.45 0
+node 911 0.55 1.45 0
+node 912 0.6 1.45 0
+node 913 0.65 1.45 0
+node 914 0.7 1.45 0
+node 915 0.75 1.45 0
+node 916 0.8 1.45 0
+node 917 0.85 1.45 0
+node 918 0.9 1.45 0
+node 919 0.95 1.45 0
+node 920 1 1.45 0
+node 921 1.05 1.45 0
+node 922 1.1 1.45 0
+node 923 1.15 1.45 0
+node 924 1.2 1.45 0
+node 925 1.25 1.45 0
+node 926 1.3 1.45 0
+node 927 1.35 1.45 0
+node 928 1.4 1.45 0
+node 929 1.45 1.45 0
+node 930 1.5 1.45 0
+node 931 0 1.5 0
+node 932 0.05 1.5 0
+node 933 0.1 1.5 0
+node 934 0.15 1.5 0
+node 935 0.2 1.5 0
+node 936 0.25 1.5 0
+node 937 0.3 1.5 0
+node 938 0.35 1.5 0
+node 939 0.4 1.5 0
+node 940 0.45 1.5 0
+node 941 0.5 1.5 0
+node 942 0.55 1.5 0
+node 943 0.6 1.5 0
+node 944 0.65 1.5 0
+node 945 0.7 1.5 0
+node 946 0.75 1.5 0
+node 947 0.8 1.5 0
+node 948 0.85 1.5 0
+node 949 0.9 1.5 0
+node 950 0.95 1.5 0
+node 951 1 1.5 0
+node 952 1.05 1.5 0
+node 953 1.1 1.5 0
+node 954 1.15 1.5 0
+node 955 1.2 1.5 0
+node 956 1.25 1.5 0
+node 957 1.3 1.5 0
+node 958 1.35 1.5 0
+node 959 1.4 1.5 0
+node 960 1.45 1.5 0
+node 961 1.5 1.5 0
+shell 1 1 2 33 32 0.4 22940519.248 0 0
+shelltype 1 thick
+areaspring 1 19613.3 nodal compresion
+shell 2 2 3 34 33 0.4 22940519.248 0 0
+shelltype 2 thick
+areaspring 2 19613.3 nodal compresion
+shell 3 3 4 35 34 0.4 22940519.248 0 0
+shelltype 3 thick
+areaspring 3 19613.3 nodal compresion
+shell 4 4 5 36 35 0.4 22940519.248 0 0
+shelltype 4 thick
+areaspring 4 19613.3 nodal compresion
+shell 5 5 6 37 36 0.4 22940519.248 0 0
+shelltype 5 thick
+areaspring 5 19613.3 nodal compresion
+shell 6 6 7 38 37 0.4 22940519.248 0 0
+shelltype 6 thick
+areaspring 6 19613.3 nodal compresion
+shell 7 7 8 39 38 0.4 22940519.248 0 0
+shelltype 7 thick
+areaspring 7 19613.3 nodal compresion
+shell 8 8 9 40 39 0.4 22940519.248 0 0
+shelltype 8 thick
+areaspring 8 19613.3 nodal compresion
+shell 9 9 10 41 40 0.4 22940519.248 0 0
+shelltype 9 thick
+areaspring 9 19613.3 nodal compresion
+shell 10 10 11 42 41 0.4 22940519.248 0 0
+shelltype 10 thick
+areaspring 10 19613.3 nodal compresion
+shell 11 11 12 43 42 0.4 22940519.248 0 0
+shelltype 11 thick
+areaspring 11 19613.3 nodal compresion
+shell 12 12 13 44 43 0.4 22940519.248 0 0
+shelltype 12 thick
+areaspring 12 19613.3 nodal compresion
+shell 13 13 14 45 44 0.4 22940519.248 0 0
+shelltype 13 thick
+areaspring 13 19613.3 nodal compresion
+shell 14 14 15 46 45 0.4 22940519.248 0 0
+shelltype 14 thick
+areaspring 14 19613.3 nodal compresion
+shell 15 15 16 47 46 0.4 22940519.248 0 0
+shelltype 15 thick
+areaspring 15 19613.3 nodal compresion
+shell 16 16 17 48 47 0.4 22940519.248 0 0
+shelltype 16 thick
+areaspring 16 19613.3 nodal compresion
+shell 17 17 18 49 48 0.4 22940519.248 0 0
+shelltype 17 thick
+areaspring 17 19613.3 nodal compresion
+shell 18 18 19 50 49 0.4 22940519.248 0 0
+shelltype 18 thick
+areaspring 18 19613.3 nodal compresion
+shell 19 19 20 51 50 0.4 22940519.248 0 0
+shelltype 19 thick
+areaspring 19 19613.3 nodal compresion
+shell 20 20 21 52 51 0.4 22940519.248 0 0
+shelltype 20 thick
+areaspring 20 19613.3 nodal compresion
+shell 21 21 22 53 52 0.4 22940519.248 0 0
+shelltype 21 thick
+areaspring 21 19613.3 nodal compresion
+shell 22 22 23 54 53 0.4 22940519.248 0 0
+shelltype 22 thick
+areaspring 22 19613.3 nodal compresion
+shell 23 23 24 55 54 0.4 22940519.248 0 0
+shelltype 23 thick
+areaspring 23 19613.3 nodal compresion
+shell 24 24 25 56 55 0.4 22940519.248 0 0
+shelltype 24 thick
+areaspring 24 19613.3 nodal compresion
+shell 25 25 26 57 56 0.4 22940519.248 0 0
+shelltype 25 thick
+areaspring 25 19613.3 nodal compresion
+shell 26 26 27 58 57 0.4 22940519.248 0 0
+shelltype 26 thick
+areaspring 26 19613.3 nodal compresion
+shell 27 27 28 59 58 0.4 22940519.248 0 0
+shelltype 27 thick
+areaspring 27 19613.3 nodal compresion
+shell 28 28 29 60 59 0.4 22940519.248 0 0
+shelltype 28 thick
+areaspring 28 19613.3 nodal compresion
+shell 29 29 30 61 60 0.4 22940519.248 0 0
+shelltype 29 thick
+areaspring 29 19613.3 nodal compresion
+shell 30 30 31 62 61 0.4 22940519.248 0 0
+shelltype 30 thick
+areaspring 30 19613.3 nodal compresion
+shell 31 32 33 64 63 0.4 22940519.248 0 0
+shelltype 31 thick
+areaspring 31 19613.3 nodal compresion
+shell 32 33 34 65 64 0.4 22940519.248 0 0
+shelltype 32 thick
+areaspring 32 19613.3 nodal compresion
+shell 33 34 35 66 65 0.4 22940519.248 0 0
+shelltype 33 thick
+areaspring 33 19613.3 nodal compresion
+shell 34 35 36 67 66 0.4 22940519.248 0 0
+shelltype 34 thick
+areaspring 34 19613.3 nodal compresion
+shell 35 36 37 68 67 0.4 22940519.248 0 0
+shelltype 35 thick
+areaspring 35 19613.3 nodal compresion
+shell 36 37 38 69 68 0.4 22940519.248 0 0
+shelltype 36 thick
+areaspring 36 19613.3 nodal compresion
+shell 37 38 39 70 69 0.4 22940519.248 0 0
+shelltype 37 thick
+areaspring 37 19613.3 nodal compresion
+shell 38 39 40 71 70 0.4 22940519.248 0 0
+shelltype 38 thick
+areaspring 38 19613.3 nodal compresion
+shell 39 40 41 72 71 0.4 22940519.248 0 0
+shelltype 39 thick
+areaspring 39 19613.3 nodal compresion
+shell 40 41 42 73 72 0.4 22940519.248 0 0
+shelltype 40 thick
+areaspring 40 19613.3 nodal compresion
+shell 41 42 43 74 73 0.4 22940519.248 0 0
+shelltype 41 thick
+areaspring 41 19613.3 nodal compresion
+shell 42 43 44 75 74 0.4 22940519.248 0 0
+shelltype 42 thick
+areaspring 42 19613.3 nodal compresion
+shell 43 44 45 76 75 0.4 22940519.248 0 0
+shelltype 43 thick
+areaspring 43 19613.3 nodal compresion
+shell 44 45 46 77 76 0.4 22940519.248 0 0
+shelltype 44 thick
+areaspring 44 19613.3 nodal compresion
+shell 45 46 47 78 77 0.4 22940519.248 0 0
+shelltype 45 thick
+areaspring 45 19613.3 nodal compresion
+shell 46 47 48 79 78 0.4 22940519.248 0 0
+shelltype 46 thick
+areaspring 46 19613.3 nodal compresion
+shell 47 48 49 80 79 0.4 22940519.248 0 0
+shelltype 47 thick
+areaspring 47 19613.3 nodal compresion
+shell 48 49 50 81 80 0.4 22940519.248 0 0
+shelltype 48 thick
+areaspring 48 19613.3 nodal compresion
+shell 49 50 51 82 81 0.4 22940519.248 0 0
+shelltype 49 thick
+areaspring 49 19613.3 nodal compresion
+shell 50 51 52 83 82 0.4 22940519.248 0 0
+shelltype 50 thick
+areaspring 50 19613.3 nodal compresion
+shell 51 52 53 84 83 0.4 22940519.248 0 0
+shelltype 51 thick
+areaspring 51 19613.3 nodal compresion
+shell 52 53 54 85 84 0.4 22940519.248 0 0
+shelltype 52 thick
+areaspring 52 19613.3 nodal compresion
+shell 53 54 55 86 85 0.4 22940519.248 0 0
+shelltype 53 thick
+areaspring 53 19613.3 nodal compresion
+shell 54 55 56 87 86 0.4 22940519.248 0 0
+shelltype 54 thick
+areaspring 54 19613.3 nodal compresion
+shell 55 56 57 88 87 0.4 22940519.248 0 0
+shelltype 55 thick
+areaspring 55 19613.3 nodal compresion
+shell 56 57 58 89 88 0.4 22940519.248 0 0
+shelltype 56 thick
+areaspring 56 19613.3 nodal compresion
+shell 57 58 59 90 89 0.4 22940519.248 0 0
+shelltype 57 thick
+areaspring 57 19613.3 nodal compresion
+shell 58 59 60 91 90 0.4 22940519.248 0 0
+shelltype 58 thick
+areaspring 58 19613.3 nodal compresion
+shell 59 60 61 92 91 0.4 22940519.248 0 0
+shelltype 59 thick
+areaspring 59 19613.3 nodal compresion
+shell 60 61 62 93 92 0.4 22940519.248 0 0
+shelltype 60 thick
+areaspring 60 19613.3 nodal compresion
+shell 61 63 64 95 94 0.4 22940519.248 0 0
+shelltype 61 thick
+areaspring 61 19613.3 nodal compresion
+shell 62 64 65 96 95 0.4 22940519.248 0 0
+shelltype 62 thick
+areaspring 62 19613.3 nodal compresion
+shell 63 65 66 97 96 0.4 22940519.248 0 0
+shelltype 63 thick
+areaspring 63 19613.3 nodal compresion
+shell 64 66 67 98 97 0.4 22940519.248 0 0
+shelltype 64 thick
+areaspring 64 19613.3 nodal compresion
+shell 65 67 68 99 98 0.4 22940519.248 0 0
+shelltype 65 thick
+areaspring 65 19613.3 nodal compresion
+shell 66 68 69 100 99 0.4 22940519.248 0 0
+shelltype 66 thick
+areaspring 66 19613.3 nodal compresion
+shell 67 69 70 101 100 0.4 22940519.248 0 0
+shelltype 67 thick
+areaspring 67 19613.3 nodal compresion
+shell 68 70 71 102 101 0.4 22940519.248 0 0
+shelltype 68 thick
+areaspring 68 19613.3 nodal compresion
+shell 69 71 72 103 102 0.4 22940519.248 0 0
+shelltype 69 thick
+areaspring 69 19613.3 nodal compresion
+shell 70 72 73 104 103 0.4 22940519.248 0 0
+shelltype 70 thick
+areaspring 70 19613.3 nodal compresion
+shell 71 73 74 105 104 0.4 22940519.248 0 0
+shelltype 71 thick
+areaspring 71 19613.3 nodal compresion
+shell 72 74 75 106 105 0.4 22940519.248 0 0
+shelltype 72 thick
+areaspring 72 19613.3 nodal compresion
+shell 73 75 76 107 106 0.4 22940519.248 0 0
+shelltype 73 thick
+areaspring 73 19613.3 nodal compresion
+shell 74 76 77 108 107 0.4 22940519.248 0 0
+shelltype 74 thick
+areaspring 74 19613.3 nodal compresion
+shell 75 77 78 109 108 0.4 22940519.248 0 0
+shelltype 75 thick
+areaspring 75 19613.3 nodal compresion
+shell 76 78 79 110 109 0.4 22940519.248 0 0
+shelltype 76 thick
+areaspring 76 19613.3 nodal compresion
+shell 77 79 80 111 110 0.4 22940519.248 0 0
+shelltype 77 thick
+areaspring 77 19613.3 nodal compresion
+shell 78 80 81 112 111 0.4 22940519.248 0 0
+shelltype 78 thick
+areaspring 78 19613.3 nodal compresion
+shell 79 81 82 113 112 0.4 22940519.248 0 0
+shelltype 79 thick
+areaspring 79 19613.3 nodal compresion
+shell 80 82 83 114 113 0.4 22940519.248 0 0
+shelltype 80 thick
+areaspring 80 19613.3 nodal compresion
+shell 81 83 84 115 114 0.4 22940519.248 0 0
+shelltype 81 thick
+areaspring 81 19613.3 nodal compresion
+shell 82 84 85 116 115 0.4 22940519.248 0 0
+shelltype 82 thick
+areaspring 82 19613.3 nodal compresion
+shell 83 85 86 117 116 0.4 22940519.248 0 0
+shelltype 83 thick
+areaspring 83 19613.3 nodal compresion
+shell 84 86 87 118 117 0.4 22940519.248 0 0
+shelltype 84 thick
+areaspring 84 19613.3 nodal compresion
+shell 85 87 88 119 118 0.4 22940519.248 0 0
+shelltype 85 thick
+areaspring 85 19613.3 nodal compresion
+shell 86 88 89 120 119 0.4 22940519.248 0 0
+shelltype 86 thick
+areaspring 86 19613.3 nodal compresion
+shell 87 89 90 121 120 0.4 22940519.248 0 0
+shelltype 87 thick
+areaspring 87 19613.3 nodal compresion
+shell 88 90 91 122 121 0.4 22940519.248 0 0
+shelltype 88 thick
+areaspring 88 19613.3 nodal compresion
+shell 89 91 92 123 122 0.4 22940519.248 0 0
+shelltype 89 thick
+areaspring 89 19613.3 nodal compresion
+shell 90 92 93 124 123 0.4 22940519.248 0 0
+shelltype 90 thick
+areaspring 90 19613.3 nodal compresion
+shell 91 94 95 126 125 0.4 22940519.248 0 0
+shelltype 91 thick
+areaspring 91 19613.3 nodal compresion
+shell 92 95 96 127 126 0.4 22940519.248 0 0
+shelltype 92 thick
+areaspring 92 19613.3 nodal compresion
+shell 93 96 97 128 127 0.4 22940519.248 0 0
+shelltype 93 thick
+areaspring 93 19613.3 nodal compresion
+shell 94 97 98 129 128 0.4 22940519.248 0 0
+shelltype 94 thick
+areaspring 94 19613.3 nodal compresion
+shell 95 98 99 130 129 0.4 22940519.248 0 0
+shelltype 95 thick
+areaspring 95 19613.3 nodal compresion
+shell 96 99 100 131 130 0.4 22940519.248 0 0
+shelltype 96 thick
+areaspring 96 19613.3 nodal compresion
+shell 97 100 101 132 131 0.4 22940519.248 0 0
+shelltype 97 thick
+areaspring 97 19613.3 nodal compresion
+shell 98 101 102 133 132 0.4 22940519.248 0 0
+shelltype 98 thick
+areaspring 98 19613.3 nodal compresion
+shell 99 102 103 134 133 0.4 22940519.248 0 0
+shelltype 99 thick
+areaspring 99 19613.3 nodal compresion
+shell 100 103 104 135 134 0.4 22940519.248 0 0
+shelltype 100 thick
+areaspring 100 19613.3 nodal compresion
+shell 101 104 105 136 135 0.4 22940519.248 0 0
+shelltype 101 thick
+areaspring 101 19613.3 nodal compresion
+shell 102 105 106 137 136 0.4 22940519.248 0 0
+shelltype 102 thick
+areaspring 102 19613.3 nodal compresion
+shell 103 106 107 138 137 0.4 22940519.248 0 0
+shelltype 103 thick
+areaspring 103 19613.3 nodal compresion
+shell 104 107 108 139 138 0.4 22940519.248 0 0
+shelltype 104 thick
+areaspring 104 19613.3 nodal compresion
+shell 105 108 109 140 139 0.4 22940519.248 0 0
+shelltype 105 thick
+areaspring 105 19613.3 nodal compresion
+shell 106 109 110 141 140 0.4 22940519.248 0 0
+shelltype 106 thick
+areaspring 106 19613.3 nodal compresion
+shell 107 110 111 142 141 0.4 22940519.248 0 0
+shelltype 107 thick
+areaspring 107 19613.3 nodal compresion
+shell 108 111 112 143 142 0.4 22940519.248 0 0
+shelltype 108 thick
+areaspring 108 19613.3 nodal compresion
+shell 109 112 113 144 143 0.4 22940519.248 0 0
+shelltype 109 thick
+areaspring 109 19613.3 nodal compresion
+shell 110 113 114 145 144 0.4 22940519.248 0 0
+shelltype 110 thick
+areaspring 110 19613.3 nodal compresion
+shell 111 114 115 146 145 0.4 22940519.248 0 0
+shelltype 111 thick
+areaspring 111 19613.3 nodal compresion
+shell 112 115 116 147 146 0.4 22940519.248 0 0
+shelltype 112 thick
+areaspring 112 19613.3 nodal compresion
+shell 113 116 117 148 147 0.4 22940519.248 0 0
+shelltype 113 thick
+areaspring 113 19613.3 nodal compresion
+shell 114 117 118 149 148 0.4 22940519.248 0 0
+shelltype 114 thick
+areaspring 114 19613.3 nodal compresion
+shell 115 118 119 150 149 0.4 22940519.248 0 0
+shelltype 115 thick
+areaspring 115 19613.3 nodal compresion
+shell 116 119 120 151 150 0.4 22940519.248 0 0
+shelltype 116 thick
+areaspring 116 19613.3 nodal compresion
+shell 117 120 121 152 151 0.4 22940519.248 0 0
+shelltype 117 thick
+areaspring 117 19613.3 nodal compresion
+shell 118 121 122 153 152 0.4 22940519.248 0 0
+shelltype 118 thick
+areaspring 118 19613.3 nodal compresion
+shell 119 122 123 154 153 0.4 22940519.248 0 0
+shelltype 119 thick
+areaspring 119 19613.3 nodal compresion
+shell 120 123 124 155 154 0.4 22940519.248 0 0
+shelltype 120 thick
+areaspring 120 19613.3 nodal compresion
+shell 121 125 126 157 156 0.4 22940519.248 0 0
+shelltype 121 thick
+areaspring 121 19613.3 nodal compresion
+shell 122 126 127 158 157 0.4 22940519.248 0 0
+shelltype 122 thick
+areaspring 122 19613.3 nodal compresion
+shell 123 127 128 159 158 0.4 22940519.248 0 0
+shelltype 123 thick
+areaspring 123 19613.3 nodal compresion
+shell 124 128 129 160 159 0.4 22940519.248 0 0
+shelltype 124 thick
+areaspring 124 19613.3 nodal compresion
+shell 125 129 130 161 160 0.4 22940519.248 0 0
+shelltype 125 thick
+areaspring 125 19613.3 nodal compresion
+shell 126 130 131 162 161 0.4 22940519.248 0 0
+shelltype 126 thick
+areaspring 126 19613.3 nodal compresion
+shell 127 131 132 163 162 0.4 22940519.248 0 0
+shelltype 127 thick
+areaspring 127 19613.3 nodal compresion
+shell 128 132 133 164 163 0.4 22940519.248 0 0
+shelltype 128 thick
+areaspring 128 19613.3 nodal compresion
+shell 129 133 134 165 164 0.4 22940519.248 0 0
+shelltype 129 thick
+areaspring 129 19613.3 nodal compresion
+shell 130 134 135 166 165 0.4 22940519.248 0 0
+shelltype 130 thick
+areaspring 130 19613.3 nodal compresion
+shell 131 135 136 167 166 0.4 22940519.248 0 0
+shelltype 131 thick
+areaspring 131 19613.3 nodal compresion
+shell 132 136 137 168 167 0.4 22940519.248 0 0
+shelltype 132 thick
+areaspring 132 19613.3 nodal compresion
+shell 133 137 138 169 168 0.4 22940519.248 0 0
+shelltype 133 thick
+areaspring 133 19613.3 nodal compresion
+shell 134 138 139 170 169 0.4 22940519.248 0 0
+shelltype 134 thick
+areaspring 134 19613.3 nodal compresion
+shell 135 139 140 171 170 0.4 22940519.248 0 0
+shelltype 135 thick
+areaspring 135 19613.3 nodal compresion
+shell 136 140 141 172 171 0.4 22940519.248 0 0
+shelltype 136 thick
+areaspring 136 19613.3 nodal compresion
+shell 137 141 142 173 172 0.4 22940519.248 0 0
+shelltype 137 thick
+areaspring 137 19613.3 nodal compresion
+shell 138 142 143 174 173 0.4 22940519.248 0 0
+shelltype 138 thick
+areaspring 138 19613.3 nodal compresion
+shell 139 143 144 175 174 0.4 22940519.248 0 0
+shelltype 139 thick
+areaspring 139 19613.3 nodal compresion
+shell 140 144 145 176 175 0.4 22940519.248 0 0
+shelltype 140 thick
+areaspring 140 19613.3 nodal compresion
+shell 141 145 146 177 176 0.4 22940519.248 0 0
+shelltype 141 thick
+areaspring 141 19613.3 nodal compresion
+shell 142 146 147 178 177 0.4 22940519.248 0 0
+shelltype 142 thick
+areaspring 142 19613.3 nodal compresion
+shell 143 147 148 179 178 0.4 22940519.248 0 0
+shelltype 143 thick
+areaspring 143 19613.3 nodal compresion
+shell 144 148 149 180 179 0.4 22940519.248 0 0
+shelltype 144 thick
+areaspring 144 19613.3 nodal compresion
+shell 145 149 150 181 180 0.4 22940519.248 0 0
+shelltype 145 thick
+areaspring 145 19613.3 nodal compresion
+shell 146 150 151 182 181 0.4 22940519.248 0 0
+shelltype 146 thick
+areaspring 146 19613.3 nodal compresion
+shell 147 151 152 183 182 0.4 22940519.248 0 0
+shelltype 147 thick
+areaspring 147 19613.3 nodal compresion
+shell 148 152 153 184 183 0.4 22940519.248 0 0
+shelltype 148 thick
+areaspring 148 19613.3 nodal compresion
+shell 149 153 154 185 184 0.4 22940519.248 0 0
+shelltype 149 thick
+areaspring 149 19613.3 nodal compresion
+shell 150 154 155 186 185 0.4 22940519.248 0 0
+shelltype 150 thick
+areaspring 150 19613.3 nodal compresion
+shell 151 156 157 188 187 0.4 22940519.248 0 0
+shelltype 151 thick
+areaspring 151 19613.3 nodal compresion
+shell 152 157 158 189 188 0.4 22940519.248 0 0
+shelltype 152 thick
+areaspring 152 19613.3 nodal compresion
+shell 153 158 159 190 189 0.4 22940519.248 0 0
+shelltype 153 thick
+areaspring 153 19613.3 nodal compresion
+shell 154 159 160 191 190 0.4 22940519.248 0 0
+shelltype 154 thick
+areaspring 154 19613.3 nodal compresion
+shell 155 160 161 192 191 0.4 22940519.248 0 0
+shelltype 155 thick
+areaspring 155 19613.3 nodal compresion
+shell 156 161 162 193 192 0.4 22940519.248 0 0
+shelltype 156 thick
+areaspring 156 19613.3 nodal compresion
+shell 157 162 163 194 193 0.4 22940519.248 0 0
+shelltype 157 thick
+areaspring 157 19613.3 nodal compresion
+shell 158 163 164 195 194 0.4 22940519.248 0 0
+shelltype 158 thick
+areaspring 158 19613.3 nodal compresion
+shell 159 164 165 196 195 0.4 22940519.248 0 0
+shelltype 159 thick
+areaspring 159 19613.3 nodal compresion
+shell 160 165 166 197 196 0.4 22940519.248 0 0
+shelltype 160 thick
+areaspring 160 19613.3 nodal compresion
+shell 161 166 167 198 197 0.4 22940519.248 0 0
+shelltype 161 thick
+areaspring 161 19613.3 nodal compresion
+shell 162 167 168 199 198 0.4 22940519.248 0 0
+shelltype 162 thick
+areaspring 162 19613.3 nodal compresion
+shell 163 168 169 200 199 0.4 22940519.248 0 0
+shelltype 163 thick
+areaspring 163 19613.3 nodal compresion
+shell 164 169 170 201 200 0.4 22940519.248 0 0
+shelltype 164 thick
+areaspring 164 19613.3 nodal compresion
+shell 165 170 171 202 201 0.4 22940519.248 0 0
+shelltype 165 thick
+areaspring 165 19613.3 nodal compresion
+shell 166 171 172 203 202 0.4 22940519.248 0 0
+shelltype 166 thick
+areaspring 166 19613.3 nodal compresion
+shell 167 172 173 204 203 0.4 22940519.248 0 0
+shelltype 167 thick
+areaspring 167 19613.3 nodal compresion
+shell 168 173 174 205 204 0.4 22940519.248 0 0
+shelltype 168 thick
+areaspring 168 19613.3 nodal compresion
+shell 169 174 175 206 205 0.4 22940519.248 0 0
+shelltype 169 thick
+areaspring 169 19613.3 nodal compresion
+shell 170 175 176 207 206 0.4 22940519.248 0 0
+shelltype 170 thick
+areaspring 170 19613.3 nodal compresion
+shell 171 176 177 208 207 0.4 22940519.248 0 0
+shelltype 171 thick
+areaspring 171 19613.3 nodal compresion
+shell 172 177 178 209 208 0.4 22940519.248 0 0
+shelltype 172 thick
+areaspring 172 19613.3 nodal compresion
+shell 173 178 179 210 209 0.4 22940519.248 0 0
+shelltype 173 thick
+areaspring 173 19613.3 nodal compresion
+shell 174 179 180 211 210 0.4 22940519.248 0 0
+shelltype 174 thick
+areaspring 174 19613.3 nodal compresion
+shell 175 180 181 212 211 0.4 22940519.248 0 0
+shelltype 175 thick
+areaspring 175 19613.3 nodal compresion
+shell 176 181 182 213 212 0.4 22940519.248 0 0
+shelltype 176 thick
+areaspring 176 19613.3 nodal compresion
+shell 177 182 183 214 213 0.4 22940519.248 0 0
+shelltype 177 thick
+areaspring 177 19613.3 nodal compresion
+shell 178 183 184 215 214 0.4 22940519.248 0 0
+shelltype 178 thick
+areaspring 178 19613.3 nodal compresion
+shell 179 184 185 216 215 0.4 22940519.248 0 0
+shelltype 179 thick
+areaspring 179 19613.3 nodal compresion
+shell 180 185 186 217 216 0.4 22940519.248 0 0
+shelltype 180 thick
+areaspring 180 19613.3 nodal compresion
+shell 181 187 188 219 218 0.4 22940519.248 0 0
+shelltype 181 thick
+areaspring 181 19613.3 nodal compresion
+shell 182 188 189 220 219 0.4 22940519.248 0 0
+shelltype 182 thick
+areaspring 182 19613.3 nodal compresion
+shell 183 189 190 221 220 0.4 22940519.248 0 0
+shelltype 183 thick
+areaspring 183 19613.3 nodal compresion
+shell 184 190 191 222 221 0.4 22940519.248 0 0
+shelltype 184 thick
+areaspring 184 19613.3 nodal compresion
+shell 185 191 192 223 222 0.4 22940519.248 0 0
+shelltype 185 thick
+areaspring 185 19613.3 nodal compresion
+shell 186 192 193 224 223 0.4 22940519.248 0 0
+shelltype 186 thick
+areaspring 186 19613.3 nodal compresion
+shell 187 193 194 225 224 0.4 22940519.248 0 0
+shelltype 187 thick
+areaspring 187 19613.3 nodal compresion
+shell 188 194 195 226 225 0.4 22940519.248 0 0
+shelltype 188 thick
+areaspring 188 19613.3 nodal compresion
+shell 189 195 196 227 226 0.4 22940519.248 0 0
+shelltype 189 thick
+areaspring 189 19613.3 nodal compresion
+shell 190 196 197 228 227 0.4 22940519.248 0 0
+shelltype 190 thick
+areaspring 190 19613.3 nodal compresion
+shell 191 197 198 229 228 0.4 22940519.248 0 0
+shelltype 191 thick
+areaspring 191 19613.3 nodal compresion
+shell 192 198 199 230 229 0.4 22940519.248 0 0
+shelltype 192 thick
+areaspring 192 19613.3 nodal compresion
+shell 193 199 200 231 230 0.4 22940519.248 0 0
+shelltype 193 thick
+areaspring 193 19613.3 nodal compresion
+shell 194 200 201 232 231 0.4 22940519.248 0 0
+shelltype 194 thick
+areaspring 194 19613.3 nodal compresion
+shell 195 201 202 233 232 0.4 22940519.248 0 0
+shelltype 195 thick
+areaspring 195 19613.3 nodal compresion
+shell 196 202 203 234 233 0.4 22940519.248 0 0
+shelltype 196 thick
+areaspring 196 19613.3 nodal compresion
+shell 197 203 204 235 234 0.4 22940519.248 0 0
+shelltype 197 thick
+areaspring 197 19613.3 nodal compresion
+shell 198 204 205 236 235 0.4 22940519.248 0 0
+shelltype 198 thick
+areaspring 198 19613.3 nodal compresion
+shell 199 205 206 237 236 0.4 22940519.248 0 0
+shelltype 199 thick
+areaspring 199 19613.3 nodal compresion
+shell 200 206 207 238 237 0.4 22940519.248 0 0
+shelltype 200 thick
+areaspring 200 19613.3 nodal compresion
+shell 201 207 208 239 238 0.4 22940519.248 0 0
+shelltype 201 thick
+areaspring 201 19613.3 nodal compresion
+shell 202 208 209 240 239 0.4 22940519.248 0 0
+shelltype 202 thick
+areaspring 202 19613.3 nodal compresion
+shell 203 209 210 241 240 0.4 22940519.248 0 0
+shelltype 203 thick
+areaspring 203 19613.3 nodal compresion
+shell 204 210 211 242 241 0.4 22940519.248 0 0
+shelltype 204 thick
+areaspring 204 19613.3 nodal compresion
+shell 205 211 212 243 242 0.4 22940519.248 0 0
+shelltype 205 thick
+areaspring 205 19613.3 nodal compresion
+shell 206 212 213 244 243 0.4 22940519.248 0 0
+shelltype 206 thick
+areaspring 206 19613.3 nodal compresion
+shell 207 213 214 245 244 0.4 22940519.248 0 0
+shelltype 207 thick
+areaspring 207 19613.3 nodal compresion
+shell 208 214 215 246 245 0.4 22940519.248 0 0
+shelltype 208 thick
+areaspring 208 19613.3 nodal compresion
+shell 209 215 216 247 246 0.4 22940519.248 0 0
+shelltype 209 thick
+areaspring 209 19613.3 nodal compresion
+shell 210 216 217 248 247 0.4 22940519.248 0 0
+shelltype 210 thick
+areaspring 210 19613.3 nodal compresion
+shell 211 218 219 250 249 0.4 22940519.248 0 0
+shelltype 211 thick
+areaspring 211 19613.3 nodal compresion
+shell 212 219 220 251 250 0.4 22940519.248 0 0
+shelltype 212 thick
+areaspring 212 19613.3 nodal compresion
+shell 213 220 221 252 251 0.4 22940519.248 0 0
+shelltype 213 thick
+areaspring 213 19613.3 nodal compresion
+shell 214 221 222 253 252 0.4 22940519.248 0 0
+shelltype 214 thick
+areaspring 214 19613.3 nodal compresion
+shell 215 222 223 254 253 0.4 22940519.248 0 0
+shelltype 215 thick
+areaspring 215 19613.3 nodal compresion
+shell 216 223 224 255 254 0.4 22940519.248 0 0
+shelltype 216 thick
+areaspring 216 19613.3 nodal compresion
+shell 217 224 225 256 255 0.4 22940519.248 0 0
+shelltype 217 thick
+areaspring 217 19613.3 nodal compresion
+shell 218 225 226 257 256 0.4 22940519.248 0 0
+shelltype 218 thick
+areaspring 218 19613.3 nodal compresion
+shell 219 226 227 258 257 0.4 22940519.248 0 0
+shelltype 219 thick
+areaspring 219 19613.3 nodal compresion
+shell 220 227 228 259 258 0.4 22940519.248 0 0
+shelltype 220 thick
+areaspring 220 19613.3 nodal compresion
+shell 221 228 229 260 259 0.4 22940519.248 0 0
+shelltype 221 thick
+areaspring 221 19613.3 nodal compresion
+shell 222 229 230 261 260 0.4 22940519.248 0 0
+shelltype 222 thick
+areaspring 222 19613.3 nodal compresion
+shell 223 230 231 262 261 0.4 22940519.248 0 0
+shelltype 223 thick
+areaspring 223 19613.3 nodal compresion
+shell 224 231 232 263 262 0.4 22940519.248 0 0
+shelltype 224 thick
+areaspring 224 19613.3 nodal compresion
+shell 225 232 233 264 263 0.4 22940519.248 0 0
+shelltype 225 thick
+areaspring 225 19613.3 nodal compresion
+shell 226 233 234 265 264 0.4 22940519.248 0 0
+shelltype 226 thick
+areaspring 226 19613.3 nodal compresion
+shell 227 234 235 266 265 0.4 22940519.248 0 0
+shelltype 227 thick
+areaspring 227 19613.3 nodal compresion
+shell 228 235 236 267 266 0.4 22940519.248 0 0
+shelltype 228 thick
+areaspring 228 19613.3 nodal compresion
+shell 229 236 237 268 267 0.4 22940519.248 0 0
+shelltype 229 thick
+areaspring 229 19613.3 nodal compresion
+shell 230 237 238 269 268 0.4 22940519.248 0 0
+shelltype 230 thick
+areaspring 230 19613.3 nodal compresion
+shell 231 238 239 270 269 0.4 22940519.248 0 0
+shelltype 231 thick
+areaspring 231 19613.3 nodal compresion
+shell 232 239 240 271 270 0.4 22940519.248 0 0
+shelltype 232 thick
+areaspring 232 19613.3 nodal compresion
+shell 233 240 241 272 271 0.4 22940519.248 0 0
+shelltype 233 thick
+areaspring 233 19613.3 nodal compresion
+shell 234 241 242 273 272 0.4 22940519.248 0 0
+shelltype 234 thick
+areaspring 234 19613.3 nodal compresion
+shell 235 242 243 274 273 0.4 22940519.248 0 0
+shelltype 235 thick
+areaspring 235 19613.3 nodal compresion
+shell 236 243 244 275 274 0.4 22940519.248 0 0
+shelltype 236 thick
+areaspring 236 19613.3 nodal compresion
+shell 237 244 245 276 275 0.4 22940519.248 0 0
+shelltype 237 thick
+areaspring 237 19613.3 nodal compresion
+shell 238 245 246 277 276 0.4 22940519.248 0 0
+shelltype 238 thick
+areaspring 238 19613.3 nodal compresion
+shell 239 246 247 278 277 0.4 22940519.248 0 0
+shelltype 239 thick
+areaspring 239 19613.3 nodal compresion
+shell 240 247 248 279 278 0.4 22940519.248 0 0
+shelltype 240 thick
+areaspring 240 19613.3 nodal compresion
+shell 241 249 250 281 280 0.4 22940519.248 0 0
+shelltype 241 thick
+areaspring 241 19613.3 nodal compresion
+shell 242 250 251 282 281 0.4 22940519.248 0 0
+shelltype 242 thick
+areaspring 242 19613.3 nodal compresion
+shell 243 251 252 283 282 0.4 22940519.248 0 0
+shelltype 243 thick
+areaspring 243 19613.3 nodal compresion
+shell 244 252 253 284 283 0.4 22940519.248 0 0
+shelltype 244 thick
+areaspring 244 19613.3 nodal compresion
+shell 245 253 254 285 284 0.4 22940519.248 0 0
+shelltype 245 thick
+areaspring 245 19613.3 nodal compresion
+shell 246 254 255 286 285 0.4 22940519.248 0 0
+shelltype 246 thick
+areaspring 246 19613.3 nodal compresion
+shell 247 255 256 287 286 0.4 22940519.248 0 0
+shelltype 247 thick
+areaspring 247 19613.3 nodal compresion
+shell 248 256 257 288 287 0.4 22940519.248 0 0
+shelltype 248 thick
+areaspring 248 19613.3 nodal compresion
+shell 249 257 258 289 288 0.4 22940519.248 0 0
+shelltype 249 thick
+areaspring 249 19613.3 nodal compresion
+shell 250 258 259 290 289 0.4 22940519.248 0 0
+shelltype 250 thick
+areaspring 250 19613.3 nodal compresion
+shell 251 259 260 291 290 0.4 22940519.248 0 0
+shelltype 251 thick
+areaspring 251 19613.3 nodal compresion
+shell 252 260 261 292 291 0.4 22940519.248 0 0
+shelltype 252 thick
+areaspring 252 19613.3 nodal compresion
+shell 253 261 262 293 292 0.4 22940519.248 0 0
+shelltype 253 thick
+areaspring 253 19613.3 nodal compresion
+shell 254 262 263 294 293 0.4 22940519.248 0 0
+shelltype 254 thick
+areaspring 254 19613.3 nodal compresion
+shell 255 263 264 295 294 0.4 22940519.248 0 0
+shelltype 255 thick
+areaspring 255 19613.3 nodal compresion
+shell 256 264 265 296 295 0.4 22940519.248 0 0
+shelltype 256 thick
+areaspring 256 19613.3 nodal compresion
+shell 257 265 266 297 296 0.4 22940519.248 0 0
+shelltype 257 thick
+areaspring 257 19613.3 nodal compresion
+shell 258 266 267 298 297 0.4 22940519.248 0 0
+shelltype 258 thick
+areaspring 258 19613.3 nodal compresion
+shell 259 267 268 299 298 0.4 22940519.248 0 0
+shelltype 259 thick
+areaspring 259 19613.3 nodal compresion
+shell 260 268 269 300 299 0.4 22940519.248 0 0
+shelltype 260 thick
+areaspring 260 19613.3 nodal compresion
+shell 261 269 270 301 300 0.4 22940519.248 0 0
+shelltype 261 thick
+areaspring 261 19613.3 nodal compresion
+shell 262 270 271 302 301 0.4 22940519.248 0 0
+shelltype 262 thick
+areaspring 262 19613.3 nodal compresion
+shell 263 271 272 303 302 0.4 22940519.248 0 0
+shelltype 263 thick
+areaspring 263 19613.3 nodal compresion
+shell 264 272 273 304 303 0.4 22940519.248 0 0
+shelltype 264 thick
+areaspring 264 19613.3 nodal compresion
+shell 265 273 274 305 304 0.4 22940519.248 0 0
+shelltype 265 thick
+areaspring 265 19613.3 nodal compresion
+shell 266 274 275 306 305 0.4 22940519.248 0 0
+shelltype 266 thick
+areaspring 266 19613.3 nodal compresion
+shell 267 275 276 307 306 0.4 22940519.248 0 0
+shelltype 267 thick
+areaspring 267 19613.3 nodal compresion
+shell 268 276 277 308 307 0.4 22940519.248 0 0
+shelltype 268 thick
+areaspring 268 19613.3 nodal compresion
+shell 269 277 278 309 308 0.4 22940519.248 0 0
+shelltype 269 thick
+areaspring 269 19613.3 nodal compresion
+shell 270 278 279 310 309 0.4 22940519.248 0 0
+shelltype 270 thick
+areaspring 270 19613.3 nodal compresion
+shell 271 280 281 312 311 0.4 22940519.248 0 0
+shelltype 271 thick
+areaspring 271 19613.3 nodal compresion
+shell 272 281 282 313 312 0.4 22940519.248 0 0
+shelltype 272 thick
+areaspring 272 19613.3 nodal compresion
+shell 273 282 283 314 313 0.4 22940519.248 0 0
+shelltype 273 thick
+areaspring 273 19613.3 nodal compresion
+shell 274 283 284 315 314 0.4 22940519.248 0 0
+shelltype 274 thick
+areaspring 274 19613.3 nodal compresion
+shell 275 284 285 316 315 0.4 22940519.248 0 0
+shelltype 275 thick
+areaspring 275 19613.3 nodal compresion
+shell 276 285 286 317 316 0.4 22940519.248 0 0
+shelltype 276 thick
+areaspring 276 19613.3 nodal compresion
+shell 277 286 287 318 317 0.4 22940519.248 0 0
+shelltype 277 thick
+areaspring 277 19613.3 nodal compresion
+shell 278 287 288 319 318 0.4 22940519.248 0 0
+shelltype 278 thick
+areaspring 278 19613.3 nodal compresion
+shell 279 288 289 320 319 0.4 22940519.248 0 0
+shelltype 279 thick
+areaspring 279 19613.3 nodal compresion
+shell 280 289 290 321 320 0.4 22940519.248 0 0
+shelltype 280 thick
+areaspring 280 19613.3 nodal compresion
+shell 281 290 291 322 321 0.4 22940519.248 0 0
+shelltype 281 thick
+areaspring 281 19613.3 nodal compresion
+shell 282 291 292 323 322 0.4 22940519.248 0 0
+shelltype 282 thick
+areaspring 282 19613.3 nodal compresion
+shell 283 292 293 324 323 0.4 22940519.248 0 0
+shelltype 283 thick
+areaspring 283 19613.3 nodal compresion
+shell 284 293 294 325 324 0.4 22940519.248 0 0
+shelltype 284 thick
+areaspring 284 19613.3 nodal compresion
+shell 285 294 295 326 325 0.4 22940519.248 0 0
+shelltype 285 thick
+areaspring 285 19613.3 nodal compresion
+shell 286 295 296 327 326 0.4 22940519.248 0 0
+shelltype 286 thick
+areaspring 286 19613.3 nodal compresion
+shell 287 296 297 328 327 0.4 22940519.248 0 0
+shelltype 287 thick
+areaspring 287 19613.3 nodal compresion
+shell 288 297 298 329 328 0.4 22940519.248 0 0
+shelltype 288 thick
+areaspring 288 19613.3 nodal compresion
+shell 289 298 299 330 329 0.4 22940519.248 0 0
+shelltype 289 thick
+areaspring 289 19613.3 nodal compresion
+shell 290 299 300 331 330 0.4 22940519.248 0 0
+shelltype 290 thick
+areaspring 290 19613.3 nodal compresion
+shell 291 300 301 332 331 0.4 22940519.248 0 0
+shelltype 291 thick
+areaspring 291 19613.3 nodal compresion
+shell 292 301 302 333 332 0.4 22940519.248 0 0
+shelltype 292 thick
+areaspring 292 19613.3 nodal compresion
+shell 293 302 303 334 333 0.4 22940519.248 0 0
+shelltype 293 thick
+areaspring 293 19613.3 nodal compresion
+shell 294 303 304 335 334 0.4 22940519.248 0 0
+shelltype 294 thick
+areaspring 294 19613.3 nodal compresion
+shell 295 304 305 336 335 0.4 22940519.248 0 0
+shelltype 295 thick
+areaspring 295 19613.3 nodal compresion
+shell 296 305 306 337 336 0.4 22940519.248 0 0
+shelltype 296 thick
+areaspring 296 19613.3 nodal compresion
+shell 297 306 307 338 337 0.4 22940519.248 0 0
+shelltype 297 thick
+areaspring 297 19613.3 nodal compresion
+shell 298 307 308 339 338 0.4 22940519.248 0 0
+shelltype 298 thick
+areaspring 298 19613.3 nodal compresion
+shell 299 308 309 340 339 0.4 22940519.248 0 0
+shelltype 299 thick
+areaspring 299 19613.3 nodal compresion
+shell 300 309 310 341 340 0.4 22940519.248 0 0
+shelltype 300 thick
+areaspring 300 19613.3 nodal compresion
+shell 301 311 312 343 342 0.4 22940519.248 0 0
+shelltype 301 thick
+areaspring 301 19613.3 nodal compresion
+shell 302 312 313 344 343 0.4 22940519.248 0 0
+shelltype 302 thick
+areaspring 302 19613.3 nodal compresion
+shell 303 313 314 345 344 0.4 22940519.248 0 0
+shelltype 303 thick
+areaspring 303 19613.3 nodal compresion
+shell 304 314 315 346 345 0.4 22940519.248 0 0
+shelltype 304 thick
+areaspring 304 19613.3 nodal compresion
+shell 305 315 316 347 346 0.4 22940519.248 0 0
+shelltype 305 thick
+areaspring 305 19613.3 nodal compresion
+shell 306 316 317 348 347 0.4 22940519.248 0 0
+shelltype 306 thick
+areaspring 306 19613.3 nodal compresion
+shell 307 317 318 349 348 0.4 22940519.248 0 0
+shelltype 307 thick
+areaspring 307 19613.3 nodal compresion
+shell 308 318 319 350 349 0.4 22940519.248 0 0
+shelltype 308 thick
+areaspring 308 19613.3 nodal compresion
+shell 309 319 320 351 350 0.4 22940519.248 0 0
+shelltype 309 thick
+areaspring 309 19613.3 nodal compresion
+shell 310 320 321 352 351 0.4 22940519.248 0 0
+shelltype 310 thick
+areaspring 310 19613.3 nodal compresion
+shell 311 321 322 353 352 0.4 22940519.248 0 0
+shelltype 311 thick
+areaspring 311 19613.3 nodal compresion
+shell 312 322 323 354 353 0.4 22940519.248 0 0
+shelltype 312 thick
+areaspring 312 19613.3 nodal compresion
+shell 313 323 324 355 354 0.4 22940519.248 0 0
+shelltype 313 thick
+areaspring 313 19613.3 nodal compresion
+shell 314 324 325 356 355 0.4 22940519.248 0 0
+shelltype 314 thick
+areaspring 314 19613.3 nodal compresion
+shell 315 325 326 357 356 0.4 22940519.248 0 0
+shelltype 315 thick
+areaspring 315 19613.3 nodal compresion
+shell 316 326 327 358 357 0.4 22940519.248 0 0
+shelltype 316 thick
+areaspring 316 19613.3 nodal compresion
+shell 317 327 328 359 358 0.4 22940519.248 0 0
+shelltype 317 thick
+areaspring 317 19613.3 nodal compresion
+shell 318 328 329 360 359 0.4 22940519.248 0 0
+shelltype 318 thick
+areaspring 318 19613.3 nodal compresion
+shell 319 329 330 361 360 0.4 22940519.248 0 0
+shelltype 319 thick
+areaspring 319 19613.3 nodal compresion
+shell 320 330 331 362 361 0.4 22940519.248 0 0
+shelltype 320 thick
+areaspring 320 19613.3 nodal compresion
+shell 321 331 332 363 362 0.4 22940519.248 0 0
+shelltype 321 thick
+areaspring 321 19613.3 nodal compresion
+shell 322 332 333 364 363 0.4 22940519.248 0 0
+shelltype 322 thick
+areaspring 322 19613.3 nodal compresion
+shell 323 333 334 365 364 0.4 22940519.248 0 0
+shelltype 323 thick
+areaspring 323 19613.3 nodal compresion
+shell 324 334 335 366 365 0.4 22940519.248 0 0
+shelltype 324 thick
+areaspring 324 19613.3 nodal compresion
+shell 325 335 336 367 366 0.4 22940519.248 0 0
+shelltype 325 thick
+areaspring 325 19613.3 nodal compresion
+shell 326 336 337 368 367 0.4 22940519.248 0 0
+shelltype 326 thick
+areaspring 326 19613.3 nodal compresion
+shell 327 337 338 369 368 0.4 22940519.248 0 0
+shelltype 327 thick
+areaspring 327 19613.3 nodal compresion
+shell 328 338 339 370 369 0.4 22940519.248 0 0
+shelltype 328 thick
+areaspring 328 19613.3 nodal compresion
+shell 329 339 340 371 370 0.4 22940519.248 0 0
+shelltype 329 thick
+areaspring 329 19613.3 nodal compresion
+shell 330 340 341 372 371 0.4 22940519.248 0 0
+shelltype 330 thick
+areaspring 330 19613.3 nodal compresion
+shell 331 342 343 374 373 0.4 22940519.248 0 0
+shelltype 331 thick
+areaspring 331 19613.3 nodal compresion
+shell 332 343 344 375 374 0.4 22940519.248 0 0
+shelltype 332 thick
+areaspring 332 19613.3 nodal compresion
+shell 333 344 345 376 375 0.4 22940519.248 0 0
+shelltype 333 thick
+areaspring 333 19613.3 nodal compresion
+shell 334 345 346 377 376 0.4 22940519.248 0 0
+shelltype 334 thick
+areaspring 334 19613.3 nodal compresion
+shell 335 346 347 378 377 0.4 22940519.248 0 0
+shelltype 335 thick
+areaspring 335 19613.3 nodal compresion
+shell 336 347 348 379 378 0.4 22940519.248 0 0
+shelltype 336 thick
+areaspring 336 19613.3 nodal compresion
+shell 337 348 349 380 379 0.4 22940519.248 0 0
+shelltype 337 thick
+areaspring 337 19613.3 nodal compresion
+shell 338 349 350 381 380 0.4 22940519.248 0 0
+shelltype 338 thick
+areaspring 338 19613.3 nodal compresion
+shell 339 350 351 382 381 0.4 22940519.248 0 0
+shelltype 339 thick
+areaspring 339 19613.3 nodal compresion
+shell 340 351 352 383 382 0.4 22940519.248 0 0
+shelltype 340 thick
+areaspring 340 19613.3 nodal compresion
+shell 341 352 353 384 383 0.4 22940519.248 0 0
+shelltype 341 thick
+areaspring 341 19613.3 nodal compresion
+shell 342 353 354 385 384 0.4 22940519.248 0 0
+shelltype 342 thick
+areaspring 342 19613.3 nodal compresion
+shell 343 354 355 386 385 0.4 22940519.248 0 0
+shelltype 343 thick
+areaspring 343 19613.3 nodal compresion
+shell 344 355 356 387 386 0.4 22940519.248 0 0
+shelltype 344 thick
+areaspring 344 19613.3 nodal compresion
+shell 345 356 357 388 387 0.4 22940519.248 0 0
+shelltype 345 thick
+areaspring 345 19613.3 nodal compresion
+shell 346 357 358 389 388 0.4 22940519.248 0 0
+shelltype 346 thick
+areaspring 346 19613.3 nodal compresion
+shell 347 358 359 390 389 0.4 22940519.248 0 0
+shelltype 347 thick
+areaspring 347 19613.3 nodal compresion
+shell 348 359 360 391 390 0.4 22940519.248 0 0
+shelltype 348 thick
+areaspring 348 19613.3 nodal compresion
+shell 349 360 361 392 391 0.4 22940519.248 0 0
+shelltype 349 thick
+areaspring 349 19613.3 nodal compresion
+shell 350 361 362 393 392 0.4 22940519.248 0 0
+shelltype 350 thick
+areaspring 350 19613.3 nodal compresion
+shell 351 362 363 394 393 0.4 22940519.248 0 0
+shelltype 351 thick
+areaspring 351 19613.3 nodal compresion
+shell 352 363 364 395 394 0.4 22940519.248 0 0
+shelltype 352 thick
+areaspring 352 19613.3 nodal compresion
+shell 353 364 365 396 395 0.4 22940519.248 0 0
+shelltype 353 thick
+areaspring 353 19613.3 nodal compresion
+shell 354 365 366 397 396 0.4 22940519.248 0 0
+shelltype 354 thick
+areaspring 354 19613.3 nodal compresion
+shell 355 366 367 398 397 0.4 22940519.248 0 0
+shelltype 355 thick
+areaspring 355 19613.3 nodal compresion
+shell 356 367 368 399 398 0.4 22940519.248 0 0
+shelltype 356 thick
+areaspring 356 19613.3 nodal compresion
+shell 357 368 369 400 399 0.4 22940519.248 0 0
+shelltype 357 thick
+areaspring 357 19613.3 nodal compresion
+shell 358 369 370 401 400 0.4 22940519.248 0 0
+shelltype 358 thick
+areaspring 358 19613.3 nodal compresion
+shell 359 370 371 402 401 0.4 22940519.248 0 0
+shelltype 359 thick
+areaspring 359 19613.3 nodal compresion
+shell 360 371 372 403 402 0.4 22940519.248 0 0
+shelltype 360 thick
+areaspring 360 19613.3 nodal compresion
+shell 361 373 374 405 404 0.4 22940519.248 0 0
+shelltype 361 thick
+areaspring 361 19613.3 nodal compresion
+shell 362 374 375 406 405 0.4 22940519.248 0 0
+shelltype 362 thick
+areaspring 362 19613.3 nodal compresion
+shell 363 375 376 407 406 0.4 22940519.248 0 0
+shelltype 363 thick
+areaspring 363 19613.3 nodal compresion
+shell 364 376 377 408 407 0.4 22940519.248 0 0
+shelltype 364 thick
+areaspring 364 19613.3 nodal compresion
+shell 365 377 378 409 408 0.4 22940519.248 0 0
+shelltype 365 thick
+areaspring 365 19613.3 nodal compresion
+shell 366 378 379 410 409 0.4 22940519.248 0 0
+shelltype 366 thick
+areaspring 366 19613.3 nodal compresion
+shell 367 379 380 411 410 0.4 22940519.248 0 0
+shelltype 367 thick
+areaspring 367 19613.3 nodal compresion
+shell 368 380 381 412 411 0.4 22940519.248 0 0
+shelltype 368 thick
+areaspring 368 19613.3 nodal compresion
+shell 369 381 382 413 412 0.4 22940519.248 0 0
+shelltype 369 thick
+areaspring 369 19613.3 nodal compresion
+shell 370 382 383 414 413 0.4 22940519.248 0 0
+shelltype 370 thick
+areaspring 370 19613.3 nodal compresion
+shell 371 383 384 415 414 0.4 22940519.248 0 0
+shelltype 371 thick
+areaspring 371 19613.3 nodal compresion
+shell 372 384 385 416 415 0.4 22940519.248 0 0
+shelltype 372 thick
+areaspring 372 19613.3 nodal compresion
+shell 373 385 386 417 416 0.4 22940519.248 0 0
+shelltype 373 thick
+areaspring 373 19613.3 nodal compresion
+shell 374 386 387 418 417 0.4 22940519.248 0 0
+shelltype 374 thick
+areaspring 374 19613.3 nodal compresion
+shell 375 387 388 419 418 0.4 22940519.248 0 0
+shelltype 375 thick
+areaspring 375 19613.3 nodal compresion
+shell 376 388 389 420 419 0.4 22940519.248 0 0
+shelltype 376 thick
+areaspring 376 19613.3 nodal compresion
+shell 377 389 390 421 420 0.4 22940519.248 0 0
+shelltype 377 thick
+areaspring 377 19613.3 nodal compresion
+shell 378 390 391 422 421 0.4 22940519.248 0 0
+shelltype 378 thick
+areaspring 378 19613.3 nodal compresion
+shell 379 391 392 423 422 0.4 22940519.248 0 0
+shelltype 379 thick
+areaspring 379 19613.3 nodal compresion
+shell 380 392 393 424 423 0.4 22940519.248 0 0
+shelltype 380 thick
+areaspring 380 19613.3 nodal compresion
+shell 381 393 394 425 424 0.4 22940519.248 0 0
+shelltype 381 thick
+areaspring 381 19613.3 nodal compresion
+shell 382 394 395 426 425 0.4 22940519.248 0 0
+shelltype 382 thick
+areaspring 382 19613.3 nodal compresion
+shell 383 395 396 427 426 0.4 22940519.248 0 0
+shelltype 383 thick
+areaspring 383 19613.3 nodal compresion
+shell 384 396 397 428 427 0.4 22940519.248 0 0
+shelltype 384 thick
+areaspring 384 19613.3 nodal compresion
+shell 385 397 398 429 428 0.4 22940519.248 0 0
+shelltype 385 thick
+areaspring 385 19613.3 nodal compresion
+shell 386 398 399 430 429 0.4 22940519.248 0 0
+shelltype 386 thick
+areaspring 386 19613.3 nodal compresion
+shell 387 399 400 431 430 0.4 22940519.248 0 0
+shelltype 387 thick
+areaspring 387 19613.3 nodal compresion
+shell 388 400 401 432 431 0.4 22940519.248 0 0
+shelltype 388 thick
+areaspring 388 19613.3 nodal compresion
+shell 389 401 402 433 432 0.4 22940519.248 0 0
+shelltype 389 thick
+areaspring 389 19613.3 nodal compresion
+shell 390 402 403 434 433 0.4 22940519.248 0 0
+shelltype 390 thick
+areaspring 390 19613.3 nodal compresion
+shell 391 404 405 436 435 0.4 22940519.248 0 0
+shelltype 391 thick
+areaspring 391 19613.3 nodal compresion
+shell 392 405 406 437 436 0.4 22940519.248 0 0
+shelltype 392 thick
+areaspring 392 19613.3 nodal compresion
+shell 393 406 407 438 437 0.4 22940519.248 0 0
+shelltype 393 thick
+areaspring 393 19613.3 nodal compresion
+shell 394 407 408 439 438 0.4 22940519.248 0 0
+shelltype 394 thick
+areaspring 394 19613.3 nodal compresion
+shell 395 408 409 440 439 0.4 22940519.248 0 0
+shelltype 395 thick
+areaspring 395 19613.3 nodal compresion
+shell 396 409 410 441 440 0.4 22940519.248 0 0
+shelltype 396 thick
+areaspring 396 19613.3 nodal compresion
+shell 397 410 411 442 441 0.4 22940519.248 0 0
+shelltype 397 thick
+areaspring 397 19613.3 nodal compresion
+shell 398 411 412 443 442 0.4 22940519.248 0 0
+shelltype 398 thick
+areaspring 398 19613.3 nodal compresion
+shell 399 412 413 444 443 0.4 22940519.248 0 0
+shelltype 399 thick
+areaspring 399 19613.3 nodal compresion
+shell 400 413 414 445 444 0.4 22940519.248 0 0
+shelltype 400 thick
+areaspring 400 19613.3 nodal compresion
+shell 401 414 415 446 445 0.4 22940519.248 0 0
+shelltype 401 thick
+areaspring 401 19613.3 nodal compresion
+shell 402 415 416 447 446 0.4 22940519.248 0 0
+shelltype 402 thick
+areaspring 402 19613.3 nodal compresion
+shell 403 416 417 448 447 0.4 22940519.248 0 0
+shelltype 403 thick
+areaspring 403 19613.3 nodal compresion
+shell 404 417 418 449 448 0.4 22940519.248 0 0
+shelltype 404 thick
+areaspring 404 19613.3 nodal compresion
+shell 405 418 419 450 449 0.4 22940519.248 0 0
+shelltype 405 thick
+areaspring 405 19613.3 nodal compresion
+shell 406 419 420 451 450 0.4 22940519.248 0 0
+shelltype 406 thick
+areaspring 406 19613.3 nodal compresion
+shell 407 420 421 452 451 0.4 22940519.248 0 0
+shelltype 407 thick
+areaspring 407 19613.3 nodal compresion
+shell 408 421 422 453 452 0.4 22940519.248 0 0
+shelltype 408 thick
+areaspring 408 19613.3 nodal compresion
+shell 409 422 423 454 453 0.4 22940519.248 0 0
+shelltype 409 thick
+areaspring 409 19613.3 nodal compresion
+shell 410 423 424 455 454 0.4 22940519.248 0 0
+shelltype 410 thick
+areaspring 410 19613.3 nodal compresion
+shell 411 424 425 456 455 0.4 22940519.248 0 0
+shelltype 411 thick
+areaspring 411 19613.3 nodal compresion
+shell 412 425 426 457 456 0.4 22940519.248 0 0
+shelltype 412 thick
+areaspring 412 19613.3 nodal compresion
+shell 413 426 427 458 457 0.4 22940519.248 0 0
+shelltype 413 thick
+areaspring 413 19613.3 nodal compresion
+shell 414 427 428 459 458 0.4 22940519.248 0 0
+shelltype 414 thick
+areaspring 414 19613.3 nodal compresion
+shell 415 428 429 460 459 0.4 22940519.248 0 0
+shelltype 415 thick
+areaspring 415 19613.3 nodal compresion
+shell 416 429 430 461 460 0.4 22940519.248 0 0
+shelltype 416 thick
+areaspring 416 19613.3 nodal compresion
+shell 417 430 431 462 461 0.4 22940519.248 0 0
+shelltype 417 thick
+areaspring 417 19613.3 nodal compresion
+shell 418 431 432 463 462 0.4 22940519.248 0 0
+shelltype 418 thick
+areaspring 418 19613.3 nodal compresion
+shell 419 432 433 464 463 0.4 22940519.248 0 0
+shelltype 419 thick
+areaspring 419 19613.3 nodal compresion
+shell 420 433 434 465 464 0.4 22940519.248 0 0
+shelltype 420 thick
+areaspring 420 19613.3 nodal compresion
+shell 421 435 436 467 466 0.4 22940519.248 0 0
+shelltype 421 thick
+areaspring 421 19613.3 nodal compresion
+shell 422 436 437 468 467 0.4 22940519.248 0 0
+shelltype 422 thick
+areaspring 422 19613.3 nodal compresion
+shell 423 437 438 469 468 0.4 22940519.248 0 0
+shelltype 423 thick
+areaspring 423 19613.3 nodal compresion
+shell 424 438 439 470 469 0.4 22940519.248 0 0
+shelltype 424 thick
+areaspring 424 19613.3 nodal compresion
+shell 425 439 440 471 470 0.4 22940519.248 0 0
+shelltype 425 thick
+areaspring 425 19613.3 nodal compresion
+shell 426 440 441 472 471 0.4 22940519.248 0 0
+shelltype 426 thick
+areaspring 426 19613.3 nodal compresion
+shell 427 441 442 473 472 0.4 22940519.248 0 0
+shelltype 427 thick
+areaspring 427 19613.3 nodal compresion
+shell 428 442 443 474 473 0.4 22940519.248 0 0
+shelltype 428 thick
+areaspring 428 19613.3 nodal compresion
+shell 429 443 444 475 474 0.4 22940519.248 0 0
+shelltype 429 thick
+areaspring 429 19613.3 nodal compresion
+shell 430 444 445 476 475 0.4 22940519.248 0 0
+shelltype 430 thick
+areaspring 430 19613.3 nodal compresion
+shell 431 445 446 477 476 0.4 22940519.248 0 0
+shelltype 431 thick
+areaspring 431 19613.3 nodal compresion
+shell 432 446 447 478 477 0.4 22940519.248 0 0
+shelltype 432 thick
+areaspring 432 19613.3 nodal compresion
+shell 433 447 448 479 478 0.4 22940519.248 0 0
+shelltype 433 thick
+areaspring 433 19613.3 nodal compresion
+shell 434 448 449 480 479 0.4 22940519.248 0 0
+shelltype 434 thick
+areaspring 434 19613.3 nodal compresion
+shell 435 449 450 481 480 0.4 22940519.248 0 0
+shelltype 435 thick
+areaspring 435 19613.3 nodal compresion
+shell 436 450 451 482 481 0.4 22940519.248 0 0
+shelltype 436 thick
+areaspring 436 19613.3 nodal compresion
+shell 437 451 452 483 482 0.4 22940519.248 0 0
+shelltype 437 thick
+areaspring 437 19613.3 nodal compresion
+shell 438 452 453 484 483 0.4 22940519.248 0 0
+shelltype 438 thick
+areaspring 438 19613.3 nodal compresion
+shell 439 453 454 485 484 0.4 22940519.248 0 0
+shelltype 439 thick
+areaspring 439 19613.3 nodal compresion
+shell 440 454 455 486 485 0.4 22940519.248 0 0
+shelltype 440 thick
+areaspring 440 19613.3 nodal compresion
+shell 441 455 456 487 486 0.4 22940519.248 0 0
+shelltype 441 thick
+areaspring 441 19613.3 nodal compresion
+shell 442 456 457 488 487 0.4 22940519.248 0 0
+shelltype 442 thick
+areaspring 442 19613.3 nodal compresion
+shell 443 457 458 489 488 0.4 22940519.248 0 0
+shelltype 443 thick
+areaspring 443 19613.3 nodal compresion
+shell 444 458 459 490 489 0.4 22940519.248 0 0
+shelltype 444 thick
+areaspring 444 19613.3 nodal compresion
+shell 445 459 460 491 490 0.4 22940519.248 0 0
+shelltype 445 thick
+areaspring 445 19613.3 nodal compresion
+shell 446 460 461 492 491 0.4 22940519.248 0 0
+shelltype 446 thick
+areaspring 446 19613.3 nodal compresion
+shell 447 461 462 493 492 0.4 22940519.248 0 0
+shelltype 447 thick
+areaspring 447 19613.3 nodal compresion
+shell 448 462 463 494 493 0.4 22940519.248 0 0
+shelltype 448 thick
+areaspring 448 19613.3 nodal compresion
+shell 449 463 464 495 494 0.4 22940519.248 0 0
+shelltype 449 thick
+areaspring 449 19613.3 nodal compresion
+shell 450 464 465 496 495 0.4 22940519.248 0 0
+shelltype 450 thick
+areaspring 450 19613.3 nodal compresion
+shell 451 466 467 498 497 0.4 22940519.248 0 0
+shelltype 451 thick
+areaspring 451 19613.3 nodal compresion
+shell 452 467 468 499 498 0.4 22940519.248 0 0
+shelltype 452 thick
+areaspring 452 19613.3 nodal compresion
+shell 453 468 469 500 499 0.4 22940519.248 0 0
+shelltype 453 thick
+areaspring 453 19613.3 nodal compresion
+shell 454 469 470 501 500 0.4 22940519.248 0 0
+shelltype 454 thick
+areaspring 454 19613.3 nodal compresion
+shell 455 470 471 502 501 0.4 22940519.248 0 0
+shelltype 455 thick
+areaspring 455 19613.3 nodal compresion
+shell 456 471 472 503 502 0.4 22940519.248 0 0
+shelltype 456 thick
+areaspring 456 19613.3 nodal compresion
+shell 457 472 473 504 503 0.4 22940519.248 0 0
+shelltype 457 thick
+areaspring 457 19613.3 nodal compresion
+shell 458 473 474 505 504 0.4 22940519.248 0 0
+shelltype 458 thick
+areaspring 458 19613.3 nodal compresion
+shell 459 474 475 506 505 0.4 22940519.248 0 0
+shelltype 459 thick
+areaspring 459 19613.3 nodal compresion
+shell 460 475 476 507 506 0.4 22940519.248 0 0
+shelltype 460 thick
+areaspring 460 19613.3 nodal compresion
+shell 461 476 477 508 507 0.4 22940519.248 0 0
+shelltype 461 thick
+areaspring 461 19613.3 nodal compresion
+shell 462 477 478 509 508 0.4 22940519.248 0 0
+shelltype 462 thick
+areaspring 462 19613.3 nodal compresion
+shell 463 478 479 510 509 0.4 22940519.248 0 0
+shelltype 463 thick
+areaspring 463 19613.3 nodal compresion
+shell 464 479 480 511 510 0.4 22940519.248 0 0
+shelltype 464 thick
+areaspring 464 19613.3 nodal compresion
+shell 465 480 481 512 511 0.4 22940519.248 0 0
+shelltype 465 thick
+areaspring 465 19613.3 nodal compresion
+shell 466 481 482 513 512 0.4 22940519.248 0 0
+shelltype 466 thick
+areaspring 466 19613.3 nodal compresion
+shell 467 482 483 514 513 0.4 22940519.248 0 0
+shelltype 467 thick
+areaspring 467 19613.3 nodal compresion
+shell 468 483 484 515 514 0.4 22940519.248 0 0
+shelltype 468 thick
+areaspring 468 19613.3 nodal compresion
+shell 469 484 485 516 515 0.4 22940519.248 0 0
+shelltype 469 thick
+areaspring 469 19613.3 nodal compresion
+shell 470 485 486 517 516 0.4 22940519.248 0 0
+shelltype 470 thick
+areaspring 470 19613.3 nodal compresion
+shell 471 486 487 518 517 0.4 22940519.248 0 0
+shelltype 471 thick
+areaspring 471 19613.3 nodal compresion
+shell 472 487 488 519 518 0.4 22940519.248 0 0
+shelltype 472 thick
+areaspring 472 19613.3 nodal compresion
+shell 473 488 489 520 519 0.4 22940519.248 0 0
+shelltype 473 thick
+areaspring 473 19613.3 nodal compresion
+shell 474 489 490 521 520 0.4 22940519.248 0 0
+shelltype 474 thick
+areaspring 474 19613.3 nodal compresion
+shell 475 490 491 522 521 0.4 22940519.248 0 0
+shelltype 475 thick
+areaspring 475 19613.3 nodal compresion
+shell 476 491 492 523 522 0.4 22940519.248 0 0
+shelltype 476 thick
+areaspring 476 19613.3 nodal compresion
+shell 477 492 493 524 523 0.4 22940519.248 0 0
+shelltype 477 thick
+areaspring 477 19613.3 nodal compresion
+shell 478 493 494 525 524 0.4 22940519.248 0 0
+shelltype 478 thick
+areaspring 478 19613.3 nodal compresion
+shell 479 494 495 526 525 0.4 22940519.248 0 0
+shelltype 479 thick
+areaspring 479 19613.3 nodal compresion
+shell 480 495 496 527 526 0.4 22940519.248 0 0
+shelltype 480 thick
+areaspring 480 19613.3 nodal compresion
+shell 481 497 498 529 528 0.4 22940519.248 0 0
+shelltype 481 thick
+areaspring 481 19613.3 nodal compresion
+shell 482 498 499 530 529 0.4 22940519.248 0 0
+shelltype 482 thick
+areaspring 482 19613.3 nodal compresion
+shell 483 499 500 531 530 0.4 22940519.248 0 0
+shelltype 483 thick
+areaspring 483 19613.3 nodal compresion
+shell 484 500 501 532 531 0.4 22940519.248 0 0
+shelltype 484 thick
+areaspring 484 19613.3 nodal compresion
+shell 485 501 502 533 532 0.4 22940519.248 0 0
+shelltype 485 thick
+areaspring 485 19613.3 nodal compresion
+shell 486 502 503 534 533 0.4 22940519.248 0 0
+shelltype 486 thick
+areaspring 486 19613.3 nodal compresion
+shell 487 503 504 535 534 0.4 22940519.248 0 0
+shelltype 487 thick
+areaspring 487 19613.3 nodal compresion
+shell 488 504 505 536 535 0.4 22940519.248 0 0
+shelltype 488 thick
+areaspring 488 19613.3 nodal compresion
+shell 489 505 506 537 536 0.4 22940519.248 0 0
+shelltype 489 thick
+areaspring 489 19613.3 nodal compresion
+shell 490 506 507 538 537 0.4 22940519.248 0 0
+shelltype 490 thick
+areaspring 490 19613.3 nodal compresion
+shell 491 507 508 539 538 0.4 22940519.248 0 0
+shelltype 491 thick
+areaspring 491 19613.3 nodal compresion
+shell 492 508 509 540 539 0.4 22940519.248 0 0
+shelltype 492 thick
+areaspring 492 19613.3 nodal compresion
+shell 493 509 510 541 540 0.4 22940519.248 0 0
+shelltype 493 thick
+areaspring 493 19613.3 nodal compresion
+shell 494 510 511 542 541 0.4 22940519.248 0 0
+shelltype 494 thick
+areaspring 494 19613.3 nodal compresion
+shell 495 511 512 543 542 0.4 22940519.248 0 0
+shelltype 495 thick
+areaspring 495 19613.3 nodal compresion
+shell 496 512 513 544 543 0.4 22940519.248 0 0
+shelltype 496 thick
+areaspring 496 19613.3 nodal compresion
+shell 497 513 514 545 544 0.4 22940519.248 0 0
+shelltype 497 thick
+areaspring 497 19613.3 nodal compresion
+shell 498 514 515 546 545 0.4 22940519.248 0 0
+shelltype 498 thick
+areaspring 498 19613.3 nodal compresion
+shell 499 515 516 547 546 0.4 22940519.248 0 0
+shelltype 499 thick
+areaspring 499 19613.3 nodal compresion
+shell 500 516 517 548 547 0.4 22940519.248 0 0
+shelltype 500 thick
+areaspring 500 19613.3 nodal compresion
+shell 501 517 518 549 548 0.4 22940519.248 0 0
+shelltype 501 thick
+areaspring 501 19613.3 nodal compresion
+shell 502 518 519 550 549 0.4 22940519.248 0 0
+shelltype 502 thick
+areaspring 502 19613.3 nodal compresion
+shell 503 519 520 551 550 0.4 22940519.248 0 0
+shelltype 503 thick
+areaspring 503 19613.3 nodal compresion
+shell 504 520 521 552 551 0.4 22940519.248 0 0
+shelltype 504 thick
+areaspring 504 19613.3 nodal compresion
+shell 505 521 522 553 552 0.4 22940519.248 0 0
+shelltype 505 thick
+areaspring 505 19613.3 nodal compresion
+shell 506 522 523 554 553 0.4 22940519.248 0 0
+shelltype 506 thick
+areaspring 506 19613.3 nodal compresion
+shell 507 523 524 555 554 0.4 22940519.248 0 0
+shelltype 507 thick
+areaspring 507 19613.3 nodal compresion
+shell 508 524 525 556 555 0.4 22940519.248 0 0
+shelltype 508 thick
+areaspring 508 19613.3 nodal compresion
+shell 509 525 526 557 556 0.4 22940519.248 0 0
+shelltype 509 thick
+areaspring 509 19613.3 nodal compresion
+shell 510 526 527 558 557 0.4 22940519.248 0 0
+shelltype 510 thick
+areaspring 510 19613.3 nodal compresion
+shell 511 528 529 560 559 0.4 22940519.248 0 0
+shelltype 511 thick
+areaspring 511 19613.3 nodal compresion
+shell 512 529 530 561 560 0.4 22940519.248 0 0
+shelltype 512 thick
+areaspring 512 19613.3 nodal compresion
+shell 513 530 531 562 561 0.4 22940519.248 0 0
+shelltype 513 thick
+areaspring 513 19613.3 nodal compresion
+shell 514 531 532 563 562 0.4 22940519.248 0 0
+shelltype 514 thick
+areaspring 514 19613.3 nodal compresion
+shell 515 532 533 564 563 0.4 22940519.248 0 0
+shelltype 515 thick
+areaspring 515 19613.3 nodal compresion
+shell 516 533 534 565 564 0.4 22940519.248 0 0
+shelltype 516 thick
+areaspring 516 19613.3 nodal compresion
+shell 517 534 535 566 565 0.4 22940519.248 0 0
+shelltype 517 thick
+areaspring 517 19613.3 nodal compresion
+shell 518 535 536 567 566 0.4 22940519.248 0 0
+shelltype 518 thick
+areaspring 518 19613.3 nodal compresion
+shell 519 536 537 568 567 0.4 22940519.248 0 0
+shelltype 519 thick
+areaspring 519 19613.3 nodal compresion
+shell 520 537 538 569 568 0.4 22940519.248 0 0
+shelltype 520 thick
+areaspring 520 19613.3 nodal compresion
+shell 521 538 539 570 569 0.4 22940519.248 0 0
+shelltype 521 thick
+areaspring 521 19613.3 nodal compresion
+shell 522 539 540 571 570 0.4 22940519.248 0 0
+shelltype 522 thick
+areaspring 522 19613.3 nodal compresion
+shell 523 540 541 572 571 0.4 22940519.248 0 0
+shelltype 523 thick
+areaspring 523 19613.3 nodal compresion
+shell 524 541 542 573 572 0.4 22940519.248 0 0
+shelltype 524 thick
+areaspring 524 19613.3 nodal compresion
+shell 525 542 543 574 573 0.4 22940519.248 0 0
+shelltype 525 thick
+areaspring 525 19613.3 nodal compresion
+shell 526 543 544 575 574 0.4 22940519.248 0 0
+shelltype 526 thick
+areaspring 526 19613.3 nodal compresion
+shell 527 544 545 576 575 0.4 22940519.248 0 0
+shelltype 527 thick
+areaspring 527 19613.3 nodal compresion
+shell 528 545 546 577 576 0.4 22940519.248 0 0
+shelltype 528 thick
+areaspring 528 19613.3 nodal compresion
+shell 529 546 547 578 577 0.4 22940519.248 0 0
+shelltype 529 thick
+areaspring 529 19613.3 nodal compresion
+shell 530 547 548 579 578 0.4 22940519.248 0 0
+shelltype 530 thick
+areaspring 530 19613.3 nodal compresion
+shell 531 548 549 580 579 0.4 22940519.248 0 0
+shelltype 531 thick
+areaspring 531 19613.3 nodal compresion
+shell 532 549 550 581 580 0.4 22940519.248 0 0
+shelltype 532 thick
+areaspring 532 19613.3 nodal compresion
+shell 533 550 551 582 581 0.4 22940519.248 0 0
+shelltype 533 thick
+areaspring 533 19613.3 nodal compresion
+shell 534 551 552 583 582 0.4 22940519.248 0 0
+shelltype 534 thick
+areaspring 534 19613.3 nodal compresion
+shell 535 552 553 584 583 0.4 22940519.248 0 0
+shelltype 535 thick
+areaspring 535 19613.3 nodal compresion
+shell 536 553 554 585 584 0.4 22940519.248 0 0
+shelltype 536 thick
+areaspring 536 19613.3 nodal compresion
+shell 537 554 555 586 585 0.4 22940519.248 0 0
+shelltype 537 thick
+areaspring 537 19613.3 nodal compresion
+shell 538 555 556 587 586 0.4 22940519.248 0 0
+shelltype 538 thick
+areaspring 538 19613.3 nodal compresion
+shell 539 556 557 588 587 0.4 22940519.248 0 0
+shelltype 539 thick
+areaspring 539 19613.3 nodal compresion
+shell 540 557 558 589 588 0.4 22940519.248 0 0
+shelltype 540 thick
+areaspring 540 19613.3 nodal compresion
+shell 541 559 560 591 590 0.4 22940519.248 0 0
+shelltype 541 thick
+areaspring 541 19613.3 nodal compresion
+shell 542 560 561 592 591 0.4 22940519.248 0 0
+shelltype 542 thick
+areaspring 542 19613.3 nodal compresion
+shell 543 561 562 593 592 0.4 22940519.248 0 0
+shelltype 543 thick
+areaspring 543 19613.3 nodal compresion
+shell 544 562 563 594 593 0.4 22940519.248 0 0
+shelltype 544 thick
+areaspring 544 19613.3 nodal compresion
+shell 545 563 564 595 594 0.4 22940519.248 0 0
+shelltype 545 thick
+areaspring 545 19613.3 nodal compresion
+shell 546 564 565 596 595 0.4 22940519.248 0 0
+shelltype 546 thick
+areaspring 546 19613.3 nodal compresion
+shell 547 565 566 597 596 0.4 22940519.248 0 0
+shelltype 547 thick
+areaspring 547 19613.3 nodal compresion
+shell 548 566 567 598 597 0.4 22940519.248 0 0
+shelltype 548 thick
+areaspring 548 19613.3 nodal compresion
+shell 549 567 568 599 598 0.4 22940519.248 0 0
+shelltype 549 thick
+areaspring 549 19613.3 nodal compresion
+shell 550 568 569 600 599 0.4 22940519.248 0 0
+shelltype 550 thick
+areaspring 550 19613.3 nodal compresion
+shell 551 569 570 601 600 0.4 22940519.248 0 0
+shelltype 551 thick
+areaspring 551 19613.3 nodal compresion
+shell 552 570 571 602 601 0.4 22940519.248 0 0
+shelltype 552 thick
+areaspring 552 19613.3 nodal compresion
+shell 553 571 572 603 602 0.4 22940519.248 0 0
+shelltype 553 thick
+areaspring 553 19613.3 nodal compresion
+shell 554 572 573 604 603 0.4 22940519.248 0 0
+shelltype 554 thick
+areaspring 554 19613.3 nodal compresion
+shell 555 573 574 605 604 0.4 22940519.248 0 0
+shelltype 555 thick
+areaspring 555 19613.3 nodal compresion
+shell 556 574 575 606 605 0.4 22940519.248 0 0
+shelltype 556 thick
+areaspring 556 19613.3 nodal compresion
+shell 557 575 576 607 606 0.4 22940519.248 0 0
+shelltype 557 thick
+areaspring 557 19613.3 nodal compresion
+shell 558 576 577 608 607 0.4 22940519.248 0 0
+shelltype 558 thick
+areaspring 558 19613.3 nodal compresion
+shell 559 577 578 609 608 0.4 22940519.248 0 0
+shelltype 559 thick
+areaspring 559 19613.3 nodal compresion
+shell 560 578 579 610 609 0.4 22940519.248 0 0
+shelltype 560 thick
+areaspring 560 19613.3 nodal compresion
+shell 561 579 580 611 610 0.4 22940519.248 0 0
+shelltype 561 thick
+areaspring 561 19613.3 nodal compresion
+shell 562 580 581 612 611 0.4 22940519.248 0 0
+shelltype 562 thick
+areaspring 562 19613.3 nodal compresion
+shell 563 581 582 613 612 0.4 22940519.248 0 0
+shelltype 563 thick
+areaspring 563 19613.3 nodal compresion
+shell 564 582 583 614 613 0.4 22940519.248 0 0
+shelltype 564 thick
+areaspring 564 19613.3 nodal compresion
+shell 565 583 584 615 614 0.4 22940519.248 0 0
+shelltype 565 thick
+areaspring 565 19613.3 nodal compresion
+shell 566 584 585 616 615 0.4 22940519.248 0 0
+shelltype 566 thick
+areaspring 566 19613.3 nodal compresion
+shell 567 585 586 617 616 0.4 22940519.248 0 0
+shelltype 567 thick
+areaspring 567 19613.3 nodal compresion
+shell 568 586 587 618 617 0.4 22940519.248 0 0
+shelltype 568 thick
+areaspring 568 19613.3 nodal compresion
+shell 569 587 588 619 618 0.4 22940519.248 0 0
+shelltype 569 thick
+areaspring 569 19613.3 nodal compresion
+shell 570 588 589 620 619 0.4 22940519.248 0 0
+shelltype 570 thick
+areaspring 570 19613.3 nodal compresion
+shell 571 590 591 622 621 0.4 22940519.248 0 0
+shelltype 571 thick
+areaspring 571 19613.3 nodal compresion
+shell 572 591 592 623 622 0.4 22940519.248 0 0
+shelltype 572 thick
+areaspring 572 19613.3 nodal compresion
+shell 573 592 593 624 623 0.4 22940519.248 0 0
+shelltype 573 thick
+areaspring 573 19613.3 nodal compresion
+shell 574 593 594 625 624 0.4 22940519.248 0 0
+shelltype 574 thick
+areaspring 574 19613.3 nodal compresion
+shell 575 594 595 626 625 0.4 22940519.248 0 0
+shelltype 575 thick
+areaspring 575 19613.3 nodal compresion
+shell 576 595 596 627 626 0.4 22940519.248 0 0
+shelltype 576 thick
+areaspring 576 19613.3 nodal compresion
+shell 577 596 597 628 627 0.4 22940519.248 0 0
+shelltype 577 thick
+areaspring 577 19613.3 nodal compresion
+shell 578 597 598 629 628 0.4 22940519.248 0 0
+shelltype 578 thick
+areaspring 578 19613.3 nodal compresion
+shell 579 598 599 630 629 0.4 22940519.248 0 0
+shelltype 579 thick
+areaspring 579 19613.3 nodal compresion
+shell 580 599 600 631 630 0.4 22940519.248 0 0
+shelltype 580 thick
+areaspring 580 19613.3 nodal compresion
+shell 581 600 601 632 631 0.4 22940519.248 0 0
+shelltype 581 thick
+areaspring 581 19613.3 nodal compresion
+shell 582 601 602 633 632 0.4 22940519.248 0 0
+shelltype 582 thick
+areaspring 582 19613.3 nodal compresion
+shell 583 602 603 634 633 0.4 22940519.248 0 0
+shelltype 583 thick
+areaspring 583 19613.3 nodal compresion
+shell 584 603 604 635 634 0.4 22940519.248 0 0
+shelltype 584 thick
+areaspring 584 19613.3 nodal compresion
+shell 585 604 605 636 635 0.4 22940519.248 0 0
+shelltype 585 thick
+areaspring 585 19613.3 nodal compresion
+shell 586 605 606 637 636 0.4 22940519.248 0 0
+shelltype 586 thick
+areaspring 586 19613.3 nodal compresion
+shell 587 606 607 638 637 0.4 22940519.248 0 0
+shelltype 587 thick
+areaspring 587 19613.3 nodal compresion
+shell 588 607 608 639 638 0.4 22940519.248 0 0
+shelltype 588 thick
+areaspring 588 19613.3 nodal compresion
+shell 589 608 609 640 639 0.4 22940519.248 0 0
+shelltype 589 thick
+areaspring 589 19613.3 nodal compresion
+shell 590 609 610 641 640 0.4 22940519.248 0 0
+shelltype 590 thick
+areaspring 590 19613.3 nodal compresion
+shell 591 610 611 642 641 0.4 22940519.248 0 0
+shelltype 591 thick
+areaspring 591 19613.3 nodal compresion
+shell 592 611 612 643 642 0.4 22940519.248 0 0
+shelltype 592 thick
+areaspring 592 19613.3 nodal compresion
+shell 593 612 613 644 643 0.4 22940519.248 0 0
+shelltype 593 thick
+areaspring 593 19613.3 nodal compresion
+shell 594 613 614 645 644 0.4 22940519.248 0 0
+shelltype 594 thick
+areaspring 594 19613.3 nodal compresion
+shell 595 614 615 646 645 0.4 22940519.248 0 0
+shelltype 595 thick
+areaspring 595 19613.3 nodal compresion
+shell 596 615 616 647 646 0.4 22940519.248 0 0
+shelltype 596 thick
+areaspring 596 19613.3 nodal compresion
+shell 597 616 617 648 647 0.4 22940519.248 0 0
+shelltype 597 thick
+areaspring 597 19613.3 nodal compresion
+shell 598 617 618 649 648 0.4 22940519.248 0 0
+shelltype 598 thick
+areaspring 598 19613.3 nodal compresion
+shell 599 618 619 650 649 0.4 22940519.248 0 0
+shelltype 599 thick
+areaspring 599 19613.3 nodal compresion
+shell 600 619 620 651 650 0.4 22940519.248 0 0
+shelltype 600 thick
+areaspring 600 19613.3 nodal compresion
+shell 601 621 622 653 652 0.4 22940519.248 0 0
+shelltype 601 thick
+areaspring 601 19613.3 nodal compresion
+shell 602 622 623 654 653 0.4 22940519.248 0 0
+shelltype 602 thick
+areaspring 602 19613.3 nodal compresion
+shell 603 623 624 655 654 0.4 22940519.248 0 0
+shelltype 603 thick
+areaspring 603 19613.3 nodal compresion
+shell 604 624 625 656 655 0.4 22940519.248 0 0
+shelltype 604 thick
+areaspring 604 19613.3 nodal compresion
+shell 605 625 626 657 656 0.4 22940519.248 0 0
+shelltype 605 thick
+areaspring 605 19613.3 nodal compresion
+shell 606 626 627 658 657 0.4 22940519.248 0 0
+shelltype 606 thick
+areaspring 606 19613.3 nodal compresion
+shell 607 627 628 659 658 0.4 22940519.248 0 0
+shelltype 607 thick
+areaspring 607 19613.3 nodal compresion
+shell 608 628 629 660 659 0.4 22940519.248 0 0
+shelltype 608 thick
+areaspring 608 19613.3 nodal compresion
+shell 609 629 630 661 660 0.4 22940519.248 0 0
+shelltype 609 thick
+areaspring 609 19613.3 nodal compresion
+shell 610 630 631 662 661 0.4 22940519.248 0 0
+shelltype 610 thick
+areaspring 610 19613.3 nodal compresion
+shell 611 631 632 663 662 0.4 22940519.248 0 0
+shelltype 611 thick
+areaspring 611 19613.3 nodal compresion
+shell 612 632 633 664 663 0.4 22940519.248 0 0
+shelltype 612 thick
+areaspring 612 19613.3 nodal compresion
+shell 613 633 634 665 664 0.4 22940519.248 0 0
+shelltype 613 thick
+areaspring 613 19613.3 nodal compresion
+shell 614 634 635 666 665 0.4 22940519.248 0 0
+shelltype 614 thick
+areaspring 614 19613.3 nodal compresion
+shell 615 635 636 667 666 0.4 22940519.248 0 0
+shelltype 615 thick
+areaspring 615 19613.3 nodal compresion
+shell 616 636 637 668 667 0.4 22940519.248 0 0
+shelltype 616 thick
+areaspring 616 19613.3 nodal compresion
+shell 617 637 638 669 668 0.4 22940519.248 0 0
+shelltype 617 thick
+areaspring 617 19613.3 nodal compresion
+shell 618 638 639 670 669 0.4 22940519.248 0 0
+shelltype 618 thick
+areaspring 618 19613.3 nodal compresion
+shell 619 639 640 671 670 0.4 22940519.248 0 0
+shelltype 619 thick
+areaspring 619 19613.3 nodal compresion
+shell 620 640 641 672 671 0.4 22940519.248 0 0
+shelltype 620 thick
+areaspring 620 19613.3 nodal compresion
+shell 621 641 642 673 672 0.4 22940519.248 0 0
+shelltype 621 thick
+areaspring 621 19613.3 nodal compresion
+shell 622 642 643 674 673 0.4 22940519.248 0 0
+shelltype 622 thick
+areaspring 622 19613.3 nodal compresion
+shell 623 643 644 675 674 0.4 22940519.248 0 0
+shelltype 623 thick
+areaspring 623 19613.3 nodal compresion
+shell 624 644 645 676 675 0.4 22940519.248 0 0
+shelltype 624 thick
+areaspring 624 19613.3 nodal compresion
+shell 625 645 646 677 676 0.4 22940519.248 0 0
+shelltype 625 thick
+areaspring 625 19613.3 nodal compresion
+shell 626 646 647 678 677 0.4 22940519.248 0 0
+shelltype 626 thick
+areaspring 626 19613.3 nodal compresion
+shell 627 647 648 679 678 0.4 22940519.248 0 0
+shelltype 627 thick
+areaspring 627 19613.3 nodal compresion
+shell 628 648 649 680 679 0.4 22940519.248 0 0
+shelltype 628 thick
+areaspring 628 19613.3 nodal compresion
+shell 629 649 650 681 680 0.4 22940519.248 0 0
+shelltype 629 thick
+areaspring 629 19613.3 nodal compresion
+shell 630 650 651 682 681 0.4 22940519.248 0 0
+shelltype 630 thick
+areaspring 630 19613.3 nodal compresion
+shell 631 652 653 684 683 0.4 22940519.248 0 0
+shelltype 631 thick
+areaspring 631 19613.3 nodal compresion
+shell 632 653 654 685 684 0.4 22940519.248 0 0
+shelltype 632 thick
+areaspring 632 19613.3 nodal compresion
+shell 633 654 655 686 685 0.4 22940519.248 0 0
+shelltype 633 thick
+areaspring 633 19613.3 nodal compresion
+shell 634 655 656 687 686 0.4 22940519.248 0 0
+shelltype 634 thick
+areaspring 634 19613.3 nodal compresion
+shell 635 656 657 688 687 0.4 22940519.248 0 0
+shelltype 635 thick
+areaspring 635 19613.3 nodal compresion
+shell 636 657 658 689 688 0.4 22940519.248 0 0
+shelltype 636 thick
+areaspring 636 19613.3 nodal compresion
+shell 637 658 659 690 689 0.4 22940519.248 0 0
+shelltype 637 thick
+areaspring 637 19613.3 nodal compresion
+shell 638 659 660 691 690 0.4 22940519.248 0 0
+shelltype 638 thick
+areaspring 638 19613.3 nodal compresion
+shell 639 660 661 692 691 0.4 22940519.248 0 0
+shelltype 639 thick
+areaspring 639 19613.3 nodal compresion
+shell 640 661 662 693 692 0.4 22940519.248 0 0
+shelltype 640 thick
+areaspring 640 19613.3 nodal compresion
+shell 641 662 663 694 693 0.4 22940519.248 0 0
+shelltype 641 thick
+areaspring 641 19613.3 nodal compresion
+shell 642 663 664 695 694 0.4 22940519.248 0 0
+shelltype 642 thick
+areaspring 642 19613.3 nodal compresion
+shell 643 664 665 696 695 0.4 22940519.248 0 0
+shelltype 643 thick
+areaspring 643 19613.3 nodal compresion
+shell 644 665 666 697 696 0.4 22940519.248 0 0
+shelltype 644 thick
+areaspring 644 19613.3 nodal compresion
+shell 645 666 667 698 697 0.4 22940519.248 0 0
+shelltype 645 thick
+areaspring 645 19613.3 nodal compresion
+shell 646 667 668 699 698 0.4 22940519.248 0 0
+shelltype 646 thick
+areaspring 646 19613.3 nodal compresion
+shell 647 668 669 700 699 0.4 22940519.248 0 0
+shelltype 647 thick
+areaspring 647 19613.3 nodal compresion
+shell 648 669 670 701 700 0.4 22940519.248 0 0
+shelltype 648 thick
+areaspring 648 19613.3 nodal compresion
+shell 649 670 671 702 701 0.4 22940519.248 0 0
+shelltype 649 thick
+areaspring 649 19613.3 nodal compresion
+shell 650 671 672 703 702 0.4 22940519.248 0 0
+shelltype 650 thick
+areaspring 650 19613.3 nodal compresion
+shell 651 672 673 704 703 0.4 22940519.248 0 0
+shelltype 651 thick
+areaspring 651 19613.3 nodal compresion
+shell 652 673 674 705 704 0.4 22940519.248 0 0
+shelltype 652 thick
+areaspring 652 19613.3 nodal compresion
+shell 653 674 675 706 705 0.4 22940519.248 0 0
+shelltype 653 thick
+areaspring 653 19613.3 nodal compresion
+shell 654 675 676 707 706 0.4 22940519.248 0 0
+shelltype 654 thick
+areaspring 654 19613.3 nodal compresion
+shell 655 676 677 708 707 0.4 22940519.248 0 0
+shelltype 655 thick
+areaspring 655 19613.3 nodal compresion
+shell 656 677 678 709 708 0.4 22940519.248 0 0
+shelltype 656 thick
+areaspring 656 19613.3 nodal compresion
+shell 657 678 679 710 709 0.4 22940519.248 0 0
+shelltype 657 thick
+areaspring 657 19613.3 nodal compresion
+shell 658 679 680 711 710 0.4 22940519.248 0 0
+shelltype 658 thick
+areaspring 658 19613.3 nodal compresion
+shell 659 680 681 712 711 0.4 22940519.248 0 0
+shelltype 659 thick
+areaspring 659 19613.3 nodal compresion
+shell 660 681 682 713 712 0.4 22940519.248 0 0
+shelltype 660 thick
+areaspring 660 19613.3 nodal compresion
+shell 661 683 684 715 714 0.4 22940519.248 0 0
+shelltype 661 thick
+areaspring 661 19613.3 nodal compresion
+shell 662 684 685 716 715 0.4 22940519.248 0 0
+shelltype 662 thick
+areaspring 662 19613.3 nodal compresion
+shell 663 685 686 717 716 0.4 22940519.248 0 0
+shelltype 663 thick
+areaspring 663 19613.3 nodal compresion
+shell 664 686 687 718 717 0.4 22940519.248 0 0
+shelltype 664 thick
+areaspring 664 19613.3 nodal compresion
+shell 665 687 688 719 718 0.4 22940519.248 0 0
+shelltype 665 thick
+areaspring 665 19613.3 nodal compresion
+shell 666 688 689 720 719 0.4 22940519.248 0 0
+shelltype 666 thick
+areaspring 666 19613.3 nodal compresion
+shell 667 689 690 721 720 0.4 22940519.248 0 0
+shelltype 667 thick
+areaspring 667 19613.3 nodal compresion
+shell 668 690 691 722 721 0.4 22940519.248 0 0
+shelltype 668 thick
+areaspring 668 19613.3 nodal compresion
+shell 669 691 692 723 722 0.4 22940519.248 0 0
+shelltype 669 thick
+areaspring 669 19613.3 nodal compresion
+shell 670 692 693 724 723 0.4 22940519.248 0 0
+shelltype 670 thick
+areaspring 670 19613.3 nodal compresion
+shell 671 693 694 725 724 0.4 22940519.248 0 0
+shelltype 671 thick
+areaspring 671 19613.3 nodal compresion
+shell 672 694 695 726 725 0.4 22940519.248 0 0
+shelltype 672 thick
+areaspring 672 19613.3 nodal compresion
+shell 673 695 696 727 726 0.4 22940519.248 0 0
+shelltype 673 thick
+areaspring 673 19613.3 nodal compresion
+shell 674 696 697 728 727 0.4 22940519.248 0 0
+shelltype 674 thick
+areaspring 674 19613.3 nodal compresion
+shell 675 697 698 729 728 0.4 22940519.248 0 0
+shelltype 675 thick
+areaspring 675 19613.3 nodal compresion
+shell 676 698 699 730 729 0.4 22940519.248 0 0
+shelltype 676 thick
+areaspring 676 19613.3 nodal compresion
+shell 677 699 700 731 730 0.4 22940519.248 0 0
+shelltype 677 thick
+areaspring 677 19613.3 nodal compresion
+shell 678 700 701 732 731 0.4 22940519.248 0 0
+shelltype 678 thick
+areaspring 678 19613.3 nodal compresion
+shell 679 701 702 733 732 0.4 22940519.248 0 0
+shelltype 679 thick
+areaspring 679 19613.3 nodal compresion
+shell 680 702 703 734 733 0.4 22940519.248 0 0
+shelltype 680 thick
+areaspring 680 19613.3 nodal compresion
+shell 681 703 704 735 734 0.4 22940519.248 0 0
+shelltype 681 thick
+areaspring 681 19613.3 nodal compresion
+shell 682 704 705 736 735 0.4 22940519.248 0 0
+shelltype 682 thick
+areaspring 682 19613.3 nodal compresion
+shell 683 705 706 737 736 0.4 22940519.248 0 0
+shelltype 683 thick
+areaspring 683 19613.3 nodal compresion
+shell 684 706 707 738 737 0.4 22940519.248 0 0
+shelltype 684 thick
+areaspring 684 19613.3 nodal compresion
+shell 685 707 708 739 738 0.4 22940519.248 0 0
+shelltype 685 thick
+areaspring 685 19613.3 nodal compresion
+shell 686 708 709 740 739 0.4 22940519.248 0 0
+shelltype 686 thick
+areaspring 686 19613.3 nodal compresion
+shell 687 709 710 741 740 0.4 22940519.248 0 0
+shelltype 687 thick
+areaspring 687 19613.3 nodal compresion
+shell 688 710 711 742 741 0.4 22940519.248 0 0
+shelltype 688 thick
+areaspring 688 19613.3 nodal compresion
+shell 689 711 712 743 742 0.4 22940519.248 0 0
+shelltype 689 thick
+areaspring 689 19613.3 nodal compresion
+shell 690 712 713 744 743 0.4 22940519.248 0 0
+shelltype 690 thick
+areaspring 690 19613.3 nodal compresion
+shell 691 714 715 746 745 0.4 22940519.248 0 0
+shelltype 691 thick
+areaspring 691 19613.3 nodal compresion
+shell 692 715 716 747 746 0.4 22940519.248 0 0
+shelltype 692 thick
+areaspring 692 19613.3 nodal compresion
+shell 693 716 717 748 747 0.4 22940519.248 0 0
+shelltype 693 thick
+areaspring 693 19613.3 nodal compresion
+shell 694 717 718 749 748 0.4 22940519.248 0 0
+shelltype 694 thick
+areaspring 694 19613.3 nodal compresion
+shell 695 718 719 750 749 0.4 22940519.248 0 0
+shelltype 695 thick
+areaspring 695 19613.3 nodal compresion
+shell 696 719 720 751 750 0.4 22940519.248 0 0
+shelltype 696 thick
+areaspring 696 19613.3 nodal compresion
+shell 697 720 721 752 751 0.4 22940519.248 0 0
+shelltype 697 thick
+areaspring 697 19613.3 nodal compresion
+shell 698 721 722 753 752 0.4 22940519.248 0 0
+shelltype 698 thick
+areaspring 698 19613.3 nodal compresion
+shell 699 722 723 754 753 0.4 22940519.248 0 0
+shelltype 699 thick
+areaspring 699 19613.3 nodal compresion
+shell 700 723 724 755 754 0.4 22940519.248 0 0
+shelltype 700 thick
+areaspring 700 19613.3 nodal compresion
+shell 701 724 725 756 755 0.4 22940519.248 0 0
+shelltype 701 thick
+areaspring 701 19613.3 nodal compresion
+shell 702 725 726 757 756 0.4 22940519.248 0 0
+shelltype 702 thick
+areaspring 702 19613.3 nodal compresion
+shell 703 726 727 758 757 0.4 22940519.248 0 0
+shelltype 703 thick
+areaspring 703 19613.3 nodal compresion
+shell 704 727 728 759 758 0.4 22940519.248 0 0
+shelltype 704 thick
+areaspring 704 19613.3 nodal compresion
+shell 705 728 729 760 759 0.4 22940519.248 0 0
+shelltype 705 thick
+areaspring 705 19613.3 nodal compresion
+shell 706 729 730 761 760 0.4 22940519.248 0 0
+shelltype 706 thick
+areaspring 706 19613.3 nodal compresion
+shell 707 730 731 762 761 0.4 22940519.248 0 0
+shelltype 707 thick
+areaspring 707 19613.3 nodal compresion
+shell 708 731 732 763 762 0.4 22940519.248 0 0
+shelltype 708 thick
+areaspring 708 19613.3 nodal compresion
+shell 709 732 733 764 763 0.4 22940519.248 0 0
+shelltype 709 thick
+areaspring 709 19613.3 nodal compresion
+shell 710 733 734 765 764 0.4 22940519.248 0 0
+shelltype 710 thick
+areaspring 710 19613.3 nodal compresion
+shell 711 734 735 766 765 0.4 22940519.248 0 0
+shelltype 711 thick
+areaspring 711 19613.3 nodal compresion
+shell 712 735 736 767 766 0.4 22940519.248 0 0
+shelltype 712 thick
+areaspring 712 19613.3 nodal compresion
+shell 713 736 737 768 767 0.4 22940519.248 0 0
+shelltype 713 thick
+areaspring 713 19613.3 nodal compresion
+shell 714 737 738 769 768 0.4 22940519.248 0 0
+shelltype 714 thick
+areaspring 714 19613.3 nodal compresion
+shell 715 738 739 770 769 0.4 22940519.248 0 0
+shelltype 715 thick
+areaspring 715 19613.3 nodal compresion
+shell 716 739 740 771 770 0.4 22940519.248 0 0
+shelltype 716 thick
+areaspring 716 19613.3 nodal compresion
+shell 717 740 741 772 771 0.4 22940519.248 0 0
+shelltype 717 thick
+areaspring 717 19613.3 nodal compresion
+shell 718 741 742 773 772 0.4 22940519.248 0 0
+shelltype 718 thick
+areaspring 718 19613.3 nodal compresion
+shell 719 742 743 774 773 0.4 22940519.248 0 0
+shelltype 719 thick
+areaspring 719 19613.3 nodal compresion
+shell 720 743 744 775 774 0.4 22940519.248 0 0
+shelltype 720 thick
+areaspring 720 19613.3 nodal compresion
+shell 721 745 746 777 776 0.4 22940519.248 0 0
+shelltype 721 thick
+areaspring 721 19613.3 nodal compresion
+shell 722 746 747 778 777 0.4 22940519.248 0 0
+shelltype 722 thick
+areaspring 722 19613.3 nodal compresion
+shell 723 747 748 779 778 0.4 22940519.248 0 0
+shelltype 723 thick
+areaspring 723 19613.3 nodal compresion
+shell 724 748 749 780 779 0.4 22940519.248 0 0
+shelltype 724 thick
+areaspring 724 19613.3 nodal compresion
+shell 725 749 750 781 780 0.4 22940519.248 0 0
+shelltype 725 thick
+areaspring 725 19613.3 nodal compresion
+shell 726 750 751 782 781 0.4 22940519.248 0 0
+shelltype 726 thick
+areaspring 726 19613.3 nodal compresion
+shell 727 751 752 783 782 0.4 22940519.248 0 0
+shelltype 727 thick
+areaspring 727 19613.3 nodal compresion
+shell 728 752 753 784 783 0.4 22940519.248 0 0
+shelltype 728 thick
+areaspring 728 19613.3 nodal compresion
+shell 729 753 754 785 784 0.4 22940519.248 0 0
+shelltype 729 thick
+areaspring 729 19613.3 nodal compresion
+shell 730 754 755 786 785 0.4 22940519.248 0 0
+shelltype 730 thick
+areaspring 730 19613.3 nodal compresion
+shell 731 755 756 787 786 0.4 22940519.248 0 0
+shelltype 731 thick
+areaspring 731 19613.3 nodal compresion
+shell 732 756 757 788 787 0.4 22940519.248 0 0
+shelltype 732 thick
+areaspring 732 19613.3 nodal compresion
+shell 733 757 758 789 788 0.4 22940519.248 0 0
+shelltype 733 thick
+areaspring 733 19613.3 nodal compresion
+shell 734 758 759 790 789 0.4 22940519.248 0 0
+shelltype 734 thick
+areaspring 734 19613.3 nodal compresion
+shell 735 759 760 791 790 0.4 22940519.248 0 0
+shelltype 735 thick
+areaspring 735 19613.3 nodal compresion
+shell 736 760 761 792 791 0.4 22940519.248 0 0
+shelltype 736 thick
+areaspring 736 19613.3 nodal compresion
+shell 737 761 762 793 792 0.4 22940519.248 0 0
+shelltype 737 thick
+areaspring 737 19613.3 nodal compresion
+shell 738 762 763 794 793 0.4 22940519.248 0 0
+shelltype 738 thick
+areaspring 738 19613.3 nodal compresion
+shell 739 763 764 795 794 0.4 22940519.248 0 0
+shelltype 739 thick
+areaspring 739 19613.3 nodal compresion
+shell 740 764 765 796 795 0.4 22940519.248 0 0
+shelltype 740 thick
+areaspring 740 19613.3 nodal compresion
+shell 741 765 766 797 796 0.4 22940519.248 0 0
+shelltype 741 thick
+areaspring 741 19613.3 nodal compresion
+shell 742 766 767 798 797 0.4 22940519.248 0 0
+shelltype 742 thick
+areaspring 742 19613.3 nodal compresion
+shell 743 767 768 799 798 0.4 22940519.248 0 0
+shelltype 743 thick
+areaspring 743 19613.3 nodal compresion
+shell 744 768 769 800 799 0.4 22940519.248 0 0
+shelltype 744 thick
+areaspring 744 19613.3 nodal compresion
+shell 745 769 770 801 800 0.4 22940519.248 0 0
+shelltype 745 thick
+areaspring 745 19613.3 nodal compresion
+shell 746 770 771 802 801 0.4 22940519.248 0 0
+shelltype 746 thick
+areaspring 746 19613.3 nodal compresion
+shell 747 771 772 803 802 0.4 22940519.248 0 0
+shelltype 747 thick
+areaspring 747 19613.3 nodal compresion
+shell 748 772 773 804 803 0.4 22940519.248 0 0
+shelltype 748 thick
+areaspring 748 19613.3 nodal compresion
+shell 749 773 774 805 804 0.4 22940519.248 0 0
+shelltype 749 thick
+areaspring 749 19613.3 nodal compresion
+shell 750 774 775 806 805 0.4 22940519.248 0 0
+shelltype 750 thick
+areaspring 750 19613.3 nodal compresion
+shell 751 776 777 808 807 0.4 22940519.248 0 0
+shelltype 751 thick
+areaspring 751 19613.3 nodal compresion
+shell 752 777 778 809 808 0.4 22940519.248 0 0
+shelltype 752 thick
+areaspring 752 19613.3 nodal compresion
+shell 753 778 779 810 809 0.4 22940519.248 0 0
+shelltype 753 thick
+areaspring 753 19613.3 nodal compresion
+shell 754 779 780 811 810 0.4 22940519.248 0 0
+shelltype 754 thick
+areaspring 754 19613.3 nodal compresion
+shell 755 780 781 812 811 0.4 22940519.248 0 0
+shelltype 755 thick
+areaspring 755 19613.3 nodal compresion
+shell 756 781 782 813 812 0.4 22940519.248 0 0
+shelltype 756 thick
+areaspring 756 19613.3 nodal compresion
+shell 757 782 783 814 813 0.4 22940519.248 0 0
+shelltype 757 thick
+areaspring 757 19613.3 nodal compresion
+shell 758 783 784 815 814 0.4 22940519.248 0 0
+shelltype 758 thick
+areaspring 758 19613.3 nodal compresion
+shell 759 784 785 816 815 0.4 22940519.248 0 0
+shelltype 759 thick
+areaspring 759 19613.3 nodal compresion
+shell 760 785 786 817 816 0.4 22940519.248 0 0
+shelltype 760 thick
+areaspring 760 19613.3 nodal compresion
+shell 761 786 787 818 817 0.4 22940519.248 0 0
+shelltype 761 thick
+areaspring 761 19613.3 nodal compresion
+shell 762 787 788 819 818 0.4 22940519.248 0 0
+shelltype 762 thick
+areaspring 762 19613.3 nodal compresion
+shell 763 788 789 820 819 0.4 22940519.248 0 0
+shelltype 763 thick
+areaspring 763 19613.3 nodal compresion
+shell 764 789 790 821 820 0.4 22940519.248 0 0
+shelltype 764 thick
+areaspring 764 19613.3 nodal compresion
+shell 765 790 791 822 821 0.4 22940519.248 0 0
+shelltype 765 thick
+areaspring 765 19613.3 nodal compresion
+shell 766 791 792 823 822 0.4 22940519.248 0 0
+shelltype 766 thick
+areaspring 766 19613.3 nodal compresion
+shell 767 792 793 824 823 0.4 22940519.248 0 0
+shelltype 767 thick
+areaspring 767 19613.3 nodal compresion
+shell 768 793 794 825 824 0.4 22940519.248 0 0
+shelltype 768 thick
+areaspring 768 19613.3 nodal compresion
+shell 769 794 795 826 825 0.4 22940519.248 0 0
+shelltype 769 thick
+areaspring 769 19613.3 nodal compresion
+shell 770 795 796 827 826 0.4 22940519.248 0 0
+shelltype 770 thick
+areaspring 770 19613.3 nodal compresion
+shell 771 796 797 828 827 0.4 22940519.248 0 0
+shelltype 771 thick
+areaspring 771 19613.3 nodal compresion
+shell 772 797 798 829 828 0.4 22940519.248 0 0
+shelltype 772 thick
+areaspring 772 19613.3 nodal compresion
+shell 773 798 799 830 829 0.4 22940519.248 0 0
+shelltype 773 thick
+areaspring 773 19613.3 nodal compresion
+shell 774 799 800 831 830 0.4 22940519.248 0 0
+shelltype 774 thick
+areaspring 774 19613.3 nodal compresion
+shell 775 800 801 832 831 0.4 22940519.248 0 0
+shelltype 775 thick
+areaspring 775 19613.3 nodal compresion
+shell 776 801 802 833 832 0.4 22940519.248 0 0
+shelltype 776 thick
+areaspring 776 19613.3 nodal compresion
+shell 777 802 803 834 833 0.4 22940519.248 0 0
+shelltype 777 thick
+areaspring 777 19613.3 nodal compresion
+shell 778 803 804 835 834 0.4 22940519.248 0 0
+shelltype 778 thick
+areaspring 778 19613.3 nodal compresion
+shell 779 804 805 836 835 0.4 22940519.248 0 0
+shelltype 779 thick
+areaspring 779 19613.3 nodal compresion
+shell 780 805 806 837 836 0.4 22940519.248 0 0
+shelltype 780 thick
+areaspring 780 19613.3 nodal compresion
+shell 781 807 808 839 838 0.4 22940519.248 0 0
+shelltype 781 thick
+areaspring 781 19613.3 nodal compresion
+shell 782 808 809 840 839 0.4 22940519.248 0 0
+shelltype 782 thick
+areaspring 782 19613.3 nodal compresion
+shell 783 809 810 841 840 0.4 22940519.248 0 0
+shelltype 783 thick
+areaspring 783 19613.3 nodal compresion
+shell 784 810 811 842 841 0.4 22940519.248 0 0
+shelltype 784 thick
+areaspring 784 19613.3 nodal compresion
+shell 785 811 812 843 842 0.4 22940519.248 0 0
+shelltype 785 thick
+areaspring 785 19613.3 nodal compresion
+shell 786 812 813 844 843 0.4 22940519.248 0 0
+shelltype 786 thick
+areaspring 786 19613.3 nodal compresion
+shell 787 813 814 845 844 0.4 22940519.248 0 0
+shelltype 787 thick
+areaspring 787 19613.3 nodal compresion
+shell 788 814 815 846 845 0.4 22940519.248 0 0
+shelltype 788 thick
+areaspring 788 19613.3 nodal compresion
+shell 789 815 816 847 846 0.4 22940519.248 0 0
+shelltype 789 thick
+areaspring 789 19613.3 nodal compresion
+shell 790 816 817 848 847 0.4 22940519.248 0 0
+shelltype 790 thick
+areaspring 790 19613.3 nodal compresion
+shell 791 817 818 849 848 0.4 22940519.248 0 0
+shelltype 791 thick
+areaspring 791 19613.3 nodal compresion
+shell 792 818 819 850 849 0.4 22940519.248 0 0
+shelltype 792 thick
+areaspring 792 19613.3 nodal compresion
+shell 793 819 820 851 850 0.4 22940519.248 0 0
+shelltype 793 thick
+areaspring 793 19613.3 nodal compresion
+shell 794 820 821 852 851 0.4 22940519.248 0 0
+shelltype 794 thick
+areaspring 794 19613.3 nodal compresion
+shell 795 821 822 853 852 0.4 22940519.248 0 0
+shelltype 795 thick
+areaspring 795 19613.3 nodal compresion
+shell 796 822 823 854 853 0.4 22940519.248 0 0
+shelltype 796 thick
+areaspring 796 19613.3 nodal compresion
+shell 797 823 824 855 854 0.4 22940519.248 0 0
+shelltype 797 thick
+areaspring 797 19613.3 nodal compresion
+shell 798 824 825 856 855 0.4 22940519.248 0 0
+shelltype 798 thick
+areaspring 798 19613.3 nodal compresion
+shell 799 825 826 857 856 0.4 22940519.248 0 0
+shelltype 799 thick
+areaspring 799 19613.3 nodal compresion
+shell 800 826 827 858 857 0.4 22940519.248 0 0
+shelltype 800 thick
+areaspring 800 19613.3 nodal compresion
+shell 801 827 828 859 858 0.4 22940519.248 0 0
+shelltype 801 thick
+areaspring 801 19613.3 nodal compresion
+shell 802 828 829 860 859 0.4 22940519.248 0 0
+shelltype 802 thick
+areaspring 802 19613.3 nodal compresion
+shell 803 829 830 861 860 0.4 22940519.248 0 0
+shelltype 803 thick
+areaspring 803 19613.3 nodal compresion
+shell 804 830 831 862 861 0.4 22940519.248 0 0
+shelltype 804 thick
+areaspring 804 19613.3 nodal compresion
+shell 805 831 832 863 862 0.4 22940519.248 0 0
+shelltype 805 thick
+areaspring 805 19613.3 nodal compresion
+shell 806 832 833 864 863 0.4 22940519.248 0 0
+shelltype 806 thick
+areaspring 806 19613.3 nodal compresion
+shell 807 833 834 865 864 0.4 22940519.248 0 0
+shelltype 807 thick
+areaspring 807 19613.3 nodal compresion
+shell 808 834 835 866 865 0.4 22940519.248 0 0
+shelltype 808 thick
+areaspring 808 19613.3 nodal compresion
+shell 809 835 836 867 866 0.4 22940519.248 0 0
+shelltype 809 thick
+areaspring 809 19613.3 nodal compresion
+shell 810 836 837 868 867 0.4 22940519.248 0 0
+shelltype 810 thick
+areaspring 810 19613.3 nodal compresion
+shell 811 838 839 870 869 0.4 22940519.248 0 0
+shelltype 811 thick
+areaspring 811 19613.3 nodal compresion
+shell 812 839 840 871 870 0.4 22940519.248 0 0
+shelltype 812 thick
+areaspring 812 19613.3 nodal compresion
+shell 813 840 841 872 871 0.4 22940519.248 0 0
+shelltype 813 thick
+areaspring 813 19613.3 nodal compresion
+shell 814 841 842 873 872 0.4 22940519.248 0 0
+shelltype 814 thick
+areaspring 814 19613.3 nodal compresion
+shell 815 842 843 874 873 0.4 22940519.248 0 0
+shelltype 815 thick
+areaspring 815 19613.3 nodal compresion
+shell 816 843 844 875 874 0.4 22940519.248 0 0
+shelltype 816 thick
+areaspring 816 19613.3 nodal compresion
+shell 817 844 845 876 875 0.4 22940519.248 0 0
+shelltype 817 thick
+areaspring 817 19613.3 nodal compresion
+shell 818 845 846 877 876 0.4 22940519.248 0 0
+shelltype 818 thick
+areaspring 818 19613.3 nodal compresion
+shell 819 846 847 878 877 0.4 22940519.248 0 0
+shelltype 819 thick
+areaspring 819 19613.3 nodal compresion
+shell 820 847 848 879 878 0.4 22940519.248 0 0
+shelltype 820 thick
+areaspring 820 19613.3 nodal compresion
+shell 821 848 849 880 879 0.4 22940519.248 0 0
+shelltype 821 thick
+areaspring 821 19613.3 nodal compresion
+shell 822 849 850 881 880 0.4 22940519.248 0 0
+shelltype 822 thick
+areaspring 822 19613.3 nodal compresion
+shell 823 850 851 882 881 0.4 22940519.248 0 0
+shelltype 823 thick
+areaspring 823 19613.3 nodal compresion
+shell 824 851 852 883 882 0.4 22940519.248 0 0
+shelltype 824 thick
+areaspring 824 19613.3 nodal compresion
+shell 825 852 853 884 883 0.4 22940519.248 0 0
+shelltype 825 thick
+areaspring 825 19613.3 nodal compresion
+shell 826 853 854 885 884 0.4 22940519.248 0 0
+shelltype 826 thick
+areaspring 826 19613.3 nodal compresion
+shell 827 854 855 886 885 0.4 22940519.248 0 0
+shelltype 827 thick
+areaspring 827 19613.3 nodal compresion
+shell 828 855 856 887 886 0.4 22940519.248 0 0
+shelltype 828 thick
+areaspring 828 19613.3 nodal compresion
+shell 829 856 857 888 887 0.4 22940519.248 0 0
+shelltype 829 thick
+areaspring 829 19613.3 nodal compresion
+shell 830 857 858 889 888 0.4 22940519.248 0 0
+shelltype 830 thick
+areaspring 830 19613.3 nodal compresion
+shell 831 858 859 890 889 0.4 22940519.248 0 0
+shelltype 831 thick
+areaspring 831 19613.3 nodal compresion
+shell 832 859 860 891 890 0.4 22940519.248 0 0
+shelltype 832 thick
+areaspring 832 19613.3 nodal compresion
+shell 833 860 861 892 891 0.4 22940519.248 0 0
+shelltype 833 thick
+areaspring 833 19613.3 nodal compresion
+shell 834 861 862 893 892 0.4 22940519.248 0 0
+shelltype 834 thick
+areaspring 834 19613.3 nodal compresion
+shell 835 862 863 894 893 0.4 22940519.248 0 0
+shelltype 835 thick
+areaspring 835 19613.3 nodal compresion
+shell 836 863 864 895 894 0.4 22940519.248 0 0
+shelltype 836 thick
+areaspring 836 19613.3 nodal compresion
+shell 837 864 865 896 895 0.4 22940519.248 0 0
+shelltype 837 thick
+areaspring 837 19613.3 nodal compresion
+shell 838 865 866 897 896 0.4 22940519.248 0 0
+shelltype 838 thick
+areaspring 838 19613.3 nodal compresion
+shell 839 866 867 898 897 0.4 22940519.248 0 0
+shelltype 839 thick
+areaspring 839 19613.3 nodal compresion
+shell 840 867 868 899 898 0.4 22940519.248 0 0
+shelltype 840 thick
+areaspring 840 19613.3 nodal compresion
+shell 841 869 870 901 900 0.4 22940519.248 0 0
+shelltype 841 thick
+areaspring 841 19613.3 nodal compresion
+shell 842 870 871 902 901 0.4 22940519.248 0 0
+shelltype 842 thick
+areaspring 842 19613.3 nodal compresion
+shell 843 871 872 903 902 0.4 22940519.248 0 0
+shelltype 843 thick
+areaspring 843 19613.3 nodal compresion
+shell 844 872 873 904 903 0.4 22940519.248 0 0
+shelltype 844 thick
+areaspring 844 19613.3 nodal compresion
+shell 845 873 874 905 904 0.4 22940519.248 0 0
+shelltype 845 thick
+areaspring 845 19613.3 nodal compresion
+shell 846 874 875 906 905 0.4 22940519.248 0 0
+shelltype 846 thick
+areaspring 846 19613.3 nodal compresion
+shell 847 875 876 907 906 0.4 22940519.248 0 0
+shelltype 847 thick
+areaspring 847 19613.3 nodal compresion
+shell 848 876 877 908 907 0.4 22940519.248 0 0
+shelltype 848 thick
+areaspring 848 19613.3 nodal compresion
+shell 849 877 878 909 908 0.4 22940519.248 0 0
+shelltype 849 thick
+areaspring 849 19613.3 nodal compresion
+shell 850 878 879 910 909 0.4 22940519.248 0 0
+shelltype 850 thick
+areaspring 850 19613.3 nodal compresion
+shell 851 879 880 911 910 0.4 22940519.248 0 0
+shelltype 851 thick
+areaspring 851 19613.3 nodal compresion
+shell 852 880 881 912 911 0.4 22940519.248 0 0
+shelltype 852 thick
+areaspring 852 19613.3 nodal compresion
+shell 853 881 882 913 912 0.4 22940519.248 0 0
+shelltype 853 thick
+areaspring 853 19613.3 nodal compresion
+shell 854 882 883 914 913 0.4 22940519.248 0 0
+shelltype 854 thick
+areaspring 854 19613.3 nodal compresion
+shell 855 883 884 915 914 0.4 22940519.248 0 0
+shelltype 855 thick
+areaspring 855 19613.3 nodal compresion
+shell 856 884 885 916 915 0.4 22940519.248 0 0
+shelltype 856 thick
+areaspring 856 19613.3 nodal compresion
+shell 857 885 886 917 916 0.4 22940519.248 0 0
+shelltype 857 thick
+areaspring 857 19613.3 nodal compresion
+shell 858 886 887 918 917 0.4 22940519.248 0 0
+shelltype 858 thick
+areaspring 858 19613.3 nodal compresion
+shell 859 887 888 919 918 0.4 22940519.248 0 0
+shelltype 859 thick
+areaspring 859 19613.3 nodal compresion
+shell 860 888 889 920 919 0.4 22940519.248 0 0
+shelltype 860 thick
+areaspring 860 19613.3 nodal compresion
+shell 861 889 890 921 920 0.4 22940519.248 0 0
+shelltype 861 thick
+areaspring 861 19613.3 nodal compresion
+shell 862 890 891 922 921 0.4 22940519.248 0 0
+shelltype 862 thick
+areaspring 862 19613.3 nodal compresion
+shell 863 891 892 923 922 0.4 22940519.248 0 0
+shelltype 863 thick
+areaspring 863 19613.3 nodal compresion
+shell 864 892 893 924 923 0.4 22940519.248 0 0
+shelltype 864 thick
+areaspring 864 19613.3 nodal compresion
+shell 865 893 894 925 924 0.4 22940519.248 0 0
+shelltype 865 thick
+areaspring 865 19613.3 nodal compresion
+shell 866 894 895 926 925 0.4 22940519.248 0 0
+shelltype 866 thick
+areaspring 866 19613.3 nodal compresion
+shell 867 895 896 927 926 0.4 22940519.248 0 0
+shelltype 867 thick
+areaspring 867 19613.3 nodal compresion
+shell 868 896 897 928 927 0.4 22940519.248 0 0
+shelltype 868 thick
+areaspring 868 19613.3 nodal compresion
+shell 869 897 898 929 928 0.4 22940519.248 0 0
+shelltype 869 thick
+areaspring 869 19613.3 nodal compresion
+shell 870 898 899 930 929 0.4 22940519.248 0 0
+shelltype 870 thick
+areaspring 870 19613.3 nodal compresion
+shell 871 900 901 932 931 0.4 22940519.248 0 0
+shelltype 871 thick
+areaspring 871 19613.3 nodal compresion
+shell 872 901 902 933 932 0.4 22940519.248 0 0
+shelltype 872 thick
+areaspring 872 19613.3 nodal compresion
+shell 873 902 903 934 933 0.4 22940519.248 0 0
+shelltype 873 thick
+areaspring 873 19613.3 nodal compresion
+shell 874 903 904 935 934 0.4 22940519.248 0 0
+shelltype 874 thick
+areaspring 874 19613.3 nodal compresion
+shell 875 904 905 936 935 0.4 22940519.248 0 0
+shelltype 875 thick
+areaspring 875 19613.3 nodal compresion
+shell 876 905 906 937 936 0.4 22940519.248 0 0
+shelltype 876 thick
+areaspring 876 19613.3 nodal compresion
+shell 877 906 907 938 937 0.4 22940519.248 0 0
+shelltype 877 thick
+areaspring 877 19613.3 nodal compresion
+shell 878 907 908 939 938 0.4 22940519.248 0 0
+shelltype 878 thick
+areaspring 878 19613.3 nodal compresion
+shell 879 908 909 940 939 0.4 22940519.248 0 0
+shelltype 879 thick
+areaspring 879 19613.3 nodal compresion
+shell 880 909 910 941 940 0.4 22940519.248 0 0
+shelltype 880 thick
+areaspring 880 19613.3 nodal compresion
+shell 881 910 911 942 941 0.4 22940519.248 0 0
+shelltype 881 thick
+areaspring 881 19613.3 nodal compresion
+shell 882 911 912 943 942 0.4 22940519.248 0 0
+shelltype 882 thick
+areaspring 882 19613.3 nodal compresion
+shell 883 912 913 944 943 0.4 22940519.248 0 0
+shelltype 883 thick
+areaspring 883 19613.3 nodal compresion
+shell 884 913 914 945 944 0.4 22940519.248 0 0
+shelltype 884 thick
+areaspring 884 19613.3 nodal compresion
+shell 885 914 915 946 945 0.4 22940519.248 0 0
+shelltype 885 thick
+areaspring 885 19613.3 nodal compresion
+shell 886 915 916 947 946 0.4 22940519.248 0 0
+shelltype 886 thick
+areaspring 886 19613.3 nodal compresion
+shell 887 916 917 948 947 0.4 22940519.248 0 0
+shelltype 887 thick
+areaspring 887 19613.3 nodal compresion
+shell 888 917 918 949 948 0.4 22940519.248 0 0
+shelltype 888 thick
+areaspring 888 19613.3 nodal compresion
+shell 889 918 919 950 949 0.4 22940519.248 0 0
+shelltype 889 thick
+areaspring 889 19613.3 nodal compresion
+shell 890 919 920 951 950 0.4 22940519.248 0 0
+shelltype 890 thick
+areaspring 890 19613.3 nodal compresion
+shell 891 920 921 952 951 0.4 22940519.248 0 0
+shelltype 891 thick
+areaspring 891 19613.3 nodal compresion
+shell 892 921 922 953 952 0.4 22940519.248 0 0
+shelltype 892 thick
+areaspring 892 19613.3 nodal compresion
+shell 893 922 923 954 953 0.4 22940519.248 0 0
+shelltype 893 thick
+areaspring 893 19613.3 nodal compresion
+shell 894 923 924 955 954 0.4 22940519.248 0 0
+shelltype 894 thick
+areaspring 894 19613.3 nodal compresion
+shell 895 924 925 956 955 0.4 22940519.248 0 0
+shelltype 895 thick
+areaspring 895 19613.3 nodal compresion
+shell 896 925 926 957 956 0.4 22940519.248 0 0
+shelltype 896 thick
+areaspring 896 19613.3 nodal compresion
+shell 897 926 927 958 957 0.4 22940519.248 0 0
+shelltype 897 thick
+areaspring 897 19613.3 nodal compresion
+shell 898 927 928 959 958 0.4 22940519.248 0 0
+shelltype 898 thick
+areaspring 898 19613.3 nodal compresion
+shell 899 928 929 960 959 0.4 22940519.248 0 0
+shelltype 899 thick
+areaspring 899 19613.3 nodal compresion
+shell 900 929 930 961 960 0.4 22940519.248 0 0
+shelltype 900 thick
+areaspring 900 19613.3 nodal compresion
+support 1 1 1 0 0 0 1
+support 2 1 1 0 0 0 1
+support 3 1 1 0 0 0 1
+support 4 1 1 0 0 0 1
+support 5 1 1 0 0 0 1
+support 6 1 1 0 0 0 1
+support 7 1 1 0 0 0 1
+support 8 1 1 0 0 0 1
+support 9 1 1 0 0 0 1
+support 10 1 1 0 0 0 1
+support 11 1 1 0 0 0 1
+support 12 1 1 0 0 0 1
+support 13 1 1 0 0 0 1
+support 14 1 1 0 0 0 1
+support 15 1 1 0 0 0 1
+support 16 1 1 0 0 0 1
+support 17 1 1 0 0 0 1
+support 18 1 1 0 0 0 1
+support 19 1 1 0 0 0 1
+support 20 1 1 0 0 0 1
+support 21 1 1 0 0 0 1
+support 22 1 1 0 0 0 1
+support 23 1 1 0 0 0 1
+support 24 1 1 0 0 0 1
+support 25 1 1 0 0 0 1
+support 26 1 1 0 0 0 1
+support 27 1 1 0 0 0 1
+support 28 1 1 0 0 0 1
+support 29 1 1 0 0 0 1
+support 30 1 1 0 0 0 1
+support 31 1 1 0 0 0 1
+support 32 1 1 0 0 0 1
+support 33 1 1 0 0 0 1
+support 34 1 1 0 0 0 1
+support 35 1 1 0 0 0 1
+support 36 1 1 0 0 0 1
+support 37 1 1 0 0 0 1
+support 38 1 1 0 0 0 1
+support 39 1 1 0 0 0 1
+support 40 1 1 0 0 0 1
+support 41 1 1 0 0 0 1
+support 42 1 1 0 0 0 1
+support 43 1 1 0 0 0 1
+support 44 1 1 0 0 0 1
+support 45 1 1 0 0 0 1
+support 46 1 1 0 0 0 1
+support 47 1 1 0 0 0 1
+support 48 1 1 0 0 0 1
+support 49 1 1 0 0 0 1
+support 50 1 1 0 0 0 1
+support 51 1 1 0 0 0 1
+support 52 1 1 0 0 0 1
+support 53 1 1 0 0 0 1
+support 54 1 1 0 0 0 1
+support 55 1 1 0 0 0 1
+support 56 1 1 0 0 0 1
+support 57 1 1 0 0 0 1
+support 58 1 1 0 0 0 1
+support 59 1 1 0 0 0 1
+support 60 1 1 0 0 0 1
+support 61 1 1 0 0 0 1
+support 62 1 1 0 0 0 1
+support 63 1 1 0 0 0 1
+support 64 1 1 0 0 0 1
+support 65 1 1 0 0 0 1
+support 66 1 1 0 0 0 1
+support 67 1 1 0 0 0 1
+support 68 1 1 0 0 0 1
+support 69 1 1 0 0 0 1
+support 70 1 1 0 0 0 1
+support 71 1 1 0 0 0 1
+support 72 1 1 0 0 0 1
+support 73 1 1 0 0 0 1
+support 74 1 1 0 0 0 1
+support 75 1 1 0 0 0 1
+support 76 1 1 0 0 0 1
+support 77 1 1 0 0 0 1
+support 78 1 1 0 0 0 1
+support 79 1 1 0 0 0 1
+support 80 1 1 0 0 0 1
+support 81 1 1 0 0 0 1
+support 82 1 1 0 0 0 1
+support 83 1 1 0 0 0 1
+support 84 1 1 0 0 0 1
+support 85 1 1 0 0 0 1
+support 86 1 1 0 0 0 1
+support 87 1 1 0 0 0 1
+support 88 1 1 0 0 0 1
+support 89 1 1 0 0 0 1
+support 90 1 1 0 0 0 1
+support 91 1 1 0 0 0 1
+support 92 1 1 0 0 0 1
+support 93 1 1 0 0 0 1
+support 94 1 1 0 0 0 1
+support 95 1 1 0 0 0 1
+support 96 1 1 0 0 0 1
+support 97 1 1 0 0 0 1
+support 98 1 1 0 0 0 1
+support 99 1 1 0 0 0 1
+support 100 1 1 0 0 0 1
+support 101 1 1 0 0 0 1
+support 102 1 1 0 0 0 1
+support 103 1 1 0 0 0 1
+support 104 1 1 0 0 0 1
+support 105 1 1 0 0 0 1
+support 106 1 1 0 0 0 1
+support 107 1 1 0 0 0 1
+support 108 1 1 0 0 0 1
+support 109 1 1 0 0 0 1
+support 110 1 1 0 0 0 1
+support 111 1 1 0 0 0 1
+support 112 1 1 0 0 0 1
+support 113 1 1 0 0 0 1
+support 114 1 1 0 0 0 1
+support 115 1 1 0 0 0 1
+support 116 1 1 0 0 0 1
+support 117 1 1 0 0 0 1
+support 118 1 1 0 0 0 1
+support 119 1 1 0 0 0 1
+support 120 1 1 0 0 0 1
+support 121 1 1 0 0 0 1
+support 122 1 1 0 0 0 1
+support 123 1 1 0 0 0 1
+support 124 1 1 0 0 0 1
+support 125 1 1 0 0 0 1
+support 126 1 1 0 0 0 1
+support 127 1 1 0 0 0 1
+support 128 1 1 0 0 0 1
+support 129 1 1 0 0 0 1
+support 130 1 1 0 0 0 1
+support 131 1 1 0 0 0 1
+support 132 1 1 0 0 0 1
+support 133 1 1 0 0 0 1
+support 134 1 1 0 0 0 1
+support 135 1 1 0 0 0 1
+support 136 1 1 0 0 0 1
+support 137 1 1 0 0 0 1
+support 138 1 1 0 0 0 1
+support 139 1 1 0 0 0 1
+support 140 1 1 0 0 0 1
+support 141 1 1 0 0 0 1
+support 142 1 1 0 0 0 1
+support 143 1 1 0 0 0 1
+support 144 1 1 0 0 0 1
+support 145 1 1 0 0 0 1
+support 146 1 1 0 0 0 1
+support 147 1 1 0 0 0 1
+support 148 1 1 0 0 0 1
+support 149 1 1 0 0 0 1
+support 150 1 1 0 0 0 1
+support 151 1 1 0 0 0 1
+support 152 1 1 0 0 0 1
+support 153 1 1 0 0 0 1
+support 154 1 1 0 0 0 1
+support 155 1 1 0 0 0 1
+support 156 1 1 0 0 0 1
+support 157 1 1 0 0 0 1
+support 158 1 1 0 0 0 1
+support 159 1 1 0 0 0 1
+support 160 1 1 0 0 0 1
+support 161 1 1 0 0 0 1
+support 162 1 1 0 0 0 1
+support 163 1 1 0 0 0 1
+support 164 1 1 0 0 0 1
+support 165 1 1 0 0 0 1
+support 166 1 1 0 0 0 1
+support 167 1 1 0 0 0 1
+support 168 1 1 0 0 0 1
+support 169 1 1 0 0 0 1
+support 170 1 1 0 0 0 1
+support 171 1 1 0 0 0 1
+support 172 1 1 0 0 0 1
+support 173 1 1 0 0 0 1
+support 174 1 1 0 0 0 1
+support 175 1 1 0 0 0 1
+support 176 1 1 0 0 0 1
+support 177 1 1 0 0 0 1
+support 178 1 1 0 0 0 1
+support 179 1 1 0 0 0 1
+support 180 1 1 0 0 0 1
+support 181 1 1 0 0 0 1
+support 182 1 1 0 0 0 1
+support 183 1 1 0 0 0 1
+support 184 1 1 0 0 0 1
+support 185 1 1 0 0 0 1
+support 186 1 1 0 0 0 1
+support 187 1 1 0 0 0 1
+support 188 1 1 0 0 0 1
+support 189 1 1 0 0 0 1
+support 190 1 1 0 0 0 1
+support 191 1 1 0 0 0 1
+support 192 1 1 0 0 0 1
+support 193 1 1 0 0 0 1
+support 194 1 1 0 0 0 1
+support 195 1 1 0 0 0 1
+support 196 1 1 0 0 0 1
+support 197 1 1 0 0 0 1
+support 198 1 1 0 0 0 1
+support 199 1 1 0 0 0 1
+support 200 1 1 0 0 0 1
+support 201 1 1 0 0 0 1
+support 202 1 1 0 0 0 1
+support 203 1 1 0 0 0 1
+support 204 1 1 0 0 0 1
+support 205 1 1 0 0 0 1
+support 206 1 1 0 0 0 1
+support 207 1 1 0 0 0 1
+support 208 1 1 0 0 0 1
+support 209 1 1 0 0 0 1
+support 210 1 1 0 0 0 1
+support 211 1 1 0 0 0 1
+support 212 1 1 0 0 0 1
+support 213 1 1 0 0 0 1
+support 214 1 1 0 0 0 1
+support 215 1 1 0 0 0 1
+support 216 1 1 0 0 0 1
+support 217 1 1 0 0 0 1
+support 218 1 1 0 0 0 1
+support 219 1 1 0 0 0 1
+support 220 1 1 0 0 0 1
+support 221 1 1 0 0 0 1
+support 222 1 1 0 0 0 1
+support 223 1 1 0 0 0 1
+support 224 1 1 0 0 0 1
+support 225 1 1 0 0 0 1
+support 226 1 1 0 0 0 1
+support 227 1 1 0 0 0 1
+support 228 1 1 0 0 0 1
+support 229 1 1 0 0 0 1
+support 230 1 1 0 0 0 1
+support 231 1 1 0 0 0 1
+support 232 1 1 0 0 0 1
+support 233 1 1 0 0 0 1
+support 234 1 1 0 0 0 1
+support 235 1 1 0 0 0 1
+support 236 1 1 0 0 0 1
+support 237 1 1 0 0 0 1
+support 238 1 1 0 0 0 1
+support 239 1 1 0 0 0 1
+support 240 1 1 0 0 0 1
+support 241 1 1 0 0 0 1
+support 242 1 1 0 0 0 1
+support 243 1 1 0 0 0 1
+support 244 1 1 0 0 0 1
+support 245 1 1 0 0 0 1
+support 246 1 1 0 0 0 1
+support 247 1 1 0 0 0 1
+support 248 1 1 0 0 0 1
+support 249 1 1 0 0 0 1
+support 250 1 1 0 0 0 1
+support 251 1 1 0 0 0 1
+support 252 1 1 0 0 0 1
+support 253 1 1 0 0 0 1
+support 254 1 1 0 0 0 1
+support 255 1 1 0 0 0 1
+support 256 1 1 0 0 0 1
+support 257 1 1 0 0 0 1
+support 258 1 1 0 0 0 1
+support 259 1 1 0 0 0 1
+support 260 1 1 0 0 0 1
+support 261 1 1 0 0 0 1
+support 262 1 1 0 0 0 1
+support 263 1 1 0 0 0 1
+support 264 1 1 0 0 0 1
+support 265 1 1 0 0 0 1
+support 266 1 1 0 0 0 1
+support 267 1 1 0 0 0 1
+support 268 1 1 0 0 0 1
+support 269 1 1 0 0 0 1
+support 270 1 1 0 0 0 1
+support 271 1 1 0 0 0 1
+support 272 1 1 0 0 0 1
+support 273 1 1 0 0 0 1
+support 274 1 1 0 0 0 1
+support 275 1 1 0 0 0 1
+support 276 1 1 0 0 0 1
+support 277 1 1 0 0 0 1
+support 278 1 1 0 0 0 1
+support 279 1 1 0 0 0 1
+support 280 1 1 0 0 0 1
+support 281 1 1 0 0 0 1
+support 282 1 1 0 0 0 1
+support 283 1 1 0 0 0 1
+support 284 1 1 0 0 0 1
+support 285 1 1 0 0 0 1
+support 286 1 1 0 0 0 1
+support 287 1 1 0 0 0 1
+support 288 1 1 0 0 0 1
+support 289 1 1 0 0 0 1
+support 290 1 1 0 0 0 1
+support 291 1 1 0 0 0 1
+support 292 1 1 0 0 0 1
+support 293 1 1 0 0 0 1
+support 294 1 1 0 0 0 1
+support 295 1 1 0 0 0 1
+support 296 1 1 0 0 0 1
+support 297 1 1 0 0 0 1
+support 298 1 1 0 0 0 1
+support 299 1 1 0 0 0 1
+support 300 1 1 0 0 0 1
+support 301 1 1 0 0 0 1
+support 302 1 1 0 0 0 1
+support 303 1 1 0 0 0 1
+support 304 1 1 0 0 0 1
+support 305 1 1 0 0 0 1
+support 306 1 1 0 0 0 1
+support 307 1 1 0 0 0 1
+support 308 1 1 0 0 0 1
+support 309 1 1 0 0 0 1
+support 310 1 1 0 0 0 1
+support 311 1 1 0 0 0 1
+support 312 1 1 0 0 0 1
+support 313 1 1 0 0 0 1
+support 314 1 1 0 0 0 1
+support 315 1 1 0 0 0 1
+support 316 1 1 0 0 0 1
+support 317 1 1 0 0 0 1
+support 318 1 1 0 0 0 1
+support 319 1 1 0 0 0 1
+support 320 1 1 0 0 0 1
+support 321 1 1 0 0 0 1
+support 322 1 1 0 0 0 1
+support 323 1 1 0 0 0 1
+support 324 1 1 0 0 0 1
+support 325 1 1 0 0 0 1
+support 326 1 1 0 0 0 1
+support 327 1 1 0 0 0 1
+support 328 1 1 0 0 0 1
+support 329 1 1 0 0 0 1
+support 330 1 1 0 0 0 1
+support 331 1 1 0 0 0 1
+support 332 1 1 0 0 0 1
+support 333 1 1 0 0 0 1
+support 334 1 1 0 0 0 1
+support 335 1 1 0 0 0 1
+support 336 1 1 0 0 0 1
+support 337 1 1 0 0 0 1
+support 338 1 1 0 0 0 1
+support 339 1 1 0 0 0 1
+support 340 1 1 0 0 0 1
+support 341 1 1 0 0 0 1
+support 342 1 1 0 0 0 1
+support 343 1 1 0 0 0 1
+support 344 1 1 0 0 0 1
+support 345 1 1 0 0 0 1
+support 346 1 1 0 0 0 1
+support 347 1 1 0 0 0 1
+support 348 1 1 0 0 0 1
+support 349 1 1 0 0 0 1
+support 350 1 1 0 0 0 1
+support 351 1 1 0 0 0 1
+support 352 1 1 0 0 0 1
+support 353 1 1 0 0 0 1
+support 354 1 1 0 0 0 1
+support 355 1 1 0 0 0 1
+support 356 1 1 0 0 0 1
+support 357 1 1 0 0 0 1
+support 358 1 1 0 0 0 1
+support 359 1 1 0 0 0 1
+support 360 1 1 0 0 0 1
+support 361 1 1 0 0 0 1
+support 362 1 1 0 0 0 1
+support 363 1 1 0 0 0 1
+support 364 1 1 0 0 0 1
+support 365 1 1 0 0 0 1
+support 366 1 1 0 0 0 1
+support 367 1 1 0 0 0 1
+support 368 1 1 0 0 0 1
+support 369 1 1 0 0 0 1
+support 370 1 1 0 0 0 1
+support 371 1 1 0 0 0 1
+support 372 1 1 0 0 0 1
+support 373 1 1 0 0 0 1
+support 374 1 1 0 0 0 1
+support 375 1 1 0 0 0 1
+support 376 1 1 0 0 0 1
+support 377 1 1 0 0 0 1
+support 378 1 1 0 0 0 1
+support 379 1 1 0 0 0 1
+support 380 1 1 0 0 0 1
+support 381 1 1 0 0 0 1
+support 382 1 1 0 0 0 1
+support 383 1 1 0 0 0 1
+support 384 1 1 0 0 0 1
+support 385 1 1 0 0 0 1
+support 386 1 1 0 0 0 1
+support 387 1 1 0 0 0 1
+support 388 1 1 0 0 0 1
+support 389 1 1 0 0 0 1
+support 390 1 1 0 0 0 1
+support 391 1 1 0 0 0 1
+support 392 1 1 0 0 0 1
+support 393 1 1 0 0 0 1
+support 394 1 1 0 0 0 1
+support 395 1 1 0 0 0 1
+support 396 1 1 0 0 0 1
+support 397 1 1 0 0 0 1
+support 398 1 1 0 0 0 1
+support 399 1 1 0 0 0 1
+support 400 1 1 0 0 0 1
+support 401 1 1 0 0 0 1
+support 402 1 1 0 0 0 1
+support 403 1 1 0 0 0 1
+support 404 1 1 0 0 0 1
+support 405 1 1 0 0 0 1
+support 406 1 1 0 0 0 1
+support 407 1 1 0 0 0 1
+support 408 1 1 0 0 0 1
+support 409 1 1 0 0 0 1
+support 410 1 1 0 0 0 1
+support 411 1 1 0 0 0 1
+support 412 1 1 0 0 0 1
+support 413 1 1 0 0 0 1
+support 414 1 1 0 0 0 1
+support 415 1 1 0 0 0 1
+support 416 1 1 0 0 0 1
+support 417 1 1 0 0 0 1
+support 418 1 1 0 0 0 1
+support 419 1 1 0 0 0 1
+support 420 1 1 0 0 0 1
+support 421 1 1 0 0 0 1
+support 422 1 1 0 0 0 1
+support 423 1 1 0 0 0 1
+support 424 1 1 0 0 0 1
+support 425 1 1 0 0 0 1
+support 426 1 1 0 0 0 1
+support 427 1 1 0 0 0 1
+support 428 1 1 0 0 0 1
+support 429 1 1 0 0 0 1
+support 430 1 1 0 0 0 1
+support 431 1 1 0 0 0 1
+support 432 1 1 0 0 0 1
+support 433 1 1 0 0 0 1
+support 434 1 1 0 0 0 1
+support 435 1 1 0 0 0 1
+support 436 1 1 0 0 0 1
+support 437 1 1 0 0 0 1
+support 438 1 1 0 0 0 1
+support 439 1 1 0 0 0 1
+support 440 1 1 0 0 0 1
+support 441 1 1 0 0 0 1
+support 442 1 1 0 0 0 1
+support 443 1 1 0 0 0 1
+support 444 1 1 0 0 0 1
+support 445 1 1 0 0 0 1
+support 446 1 1 0 0 0 1
+support 447 1 1 0 0 0 1
+support 448 1 1 0 0 0 1
+support 449 1 1 0 0 0 1
+support 450 1 1 0 0 0 1
+support 451 1 1 0 0 0 1
+support 452 1 1 0 0 0 1
+support 453 1 1 0 0 0 1
+support 454 1 1 0 0 0 1
+support 455 1 1 0 0 0 1
+support 456 1 1 0 0 0 1
+support 457 1 1 0 0 0 1
+support 458 1 1 0 0 0 1
+support 459 1 1 0 0 0 1
+support 460 1 1 0 0 0 1
+support 461 1 1 0 0 0 1
+support 462 1 1 0 0 0 1
+support 463 1 1 0 0 0 1
+support 464 1 1 0 0 0 1
+support 465 1 1 0 0 0 1
+support 466 1 1 0 0 0 1
+support 467 1 1 0 0 0 1
+support 468 1 1 0 0 0 1
+support 469 1 1 0 0 0 1
+support 470 1 1 0 0 0 1
+support 471 1 1 0 0 0 1
+support 472 1 1 0 0 0 1
+support 473 1 1 0 0 0 1
+support 474 1 1 0 0 0 1
+support 475 1 1 0 0 0 1
+support 476 1 1 0 0 0 1
+support 477 1 1 0 0 0 1
+support 478 1 1 0 0 0 1
+support 479 1 1 0 0 0 1
+support 480 1 1 0 0 0 1
+support 481 1 1 0 0 0 1
+support 482 1 1 0 0 0 1
+support 483 1 1 0 0 0 1
+support 484 1 1 0 0 0 1
+support 485 1 1 0 0 0 1
+support 486 1 1 0 0 0 1
+support 487 1 1 0 0 0 1
+support 488 1 1 0 0 0 1
+support 489 1 1 0 0 0 1
+support 490 1 1 0 0 0 1
+support 491 1 1 0 0 0 1
+support 492 1 1 0 0 0 1
+support 493 1 1 0 0 0 1
+support 494 1 1 0 0 0 1
+support 495 1 1 0 0 0 1
+support 496 1 1 0 0 0 1
+support 497 1 1 0 0 0 1
+support 498 1 1 0 0 0 1
+support 499 1 1 0 0 0 1
+support 500 1 1 0 0 0 1
+support 501 1 1 0 0 0 1
+support 502 1 1 0 0 0 1
+support 503 1 1 0 0 0 1
+support 504 1 1 0 0 0 1
+support 505 1 1 0 0 0 1
+support 506 1 1 0 0 0 1
+support 507 1 1 0 0 0 1
+support 508 1 1 0 0 0 1
+support 509 1 1 0 0 0 1
+support 510 1 1 0 0 0 1
+support 511 1 1 0 0 0 1
+support 512 1 1 0 0 0 1
+support 513 1 1 0 0 0 1
+support 514 1 1 0 0 0 1
+support 515 1 1 0 0 0 1
+support 516 1 1 0 0 0 1
+support 517 1 1 0 0 0 1
+support 518 1 1 0 0 0 1
+support 519 1 1 0 0 0 1
+support 520 1 1 0 0 0 1
+support 521 1 1 0 0 0 1
+support 522 1 1 0 0 0 1
+support 523 1 1 0 0 0 1
+support 524 1 1 0 0 0 1
+support 525 1 1 0 0 0 1
+support 526 1 1 0 0 0 1
+support 527 1 1 0 0 0 1
+support 528 1 1 0 0 0 1
+support 529 1 1 0 0 0 1
+support 530 1 1 0 0 0 1
+support 531 1 1 0 0 0 1
+support 532 1 1 0 0 0 1
+support 533 1 1 0 0 0 1
+support 534 1 1 0 0 0 1
+support 535 1 1 0 0 0 1
+support 536 1 1 0 0 0 1
+support 537 1 1 0 0 0 1
+support 538 1 1 0 0 0 1
+support 539 1 1 0 0 0 1
+support 540 1 1 0 0 0 1
+support 541 1 1 0 0 0 1
+support 542 1 1 0 0 0 1
+support 543 1 1 0 0 0 1
+support 544 1 1 0 0 0 1
+support 545 1 1 0 0 0 1
+support 546 1 1 0 0 0 1
+support 547 1 1 0 0 0 1
+support 548 1 1 0 0 0 1
+support 549 1 1 0 0 0 1
+support 550 1 1 0 0 0 1
+support 551 1 1 0 0 0 1
+support 552 1 1 0 0 0 1
+support 553 1 1 0 0 0 1
+support 554 1 1 0 0 0 1
+support 555 1 1 0 0 0 1
+support 556 1 1 0 0 0 1
+support 557 1 1 0 0 0 1
+support 558 1 1 0 0 0 1
+support 559 1 1 0 0 0 1
+support 560 1 1 0 0 0 1
+support 561 1 1 0 0 0 1
+support 562 1 1 0 0 0 1
+support 563 1 1 0 0 0 1
+support 564 1 1 0 0 0 1
+support 565 1 1 0 0 0 1
+support 566 1 1 0 0 0 1
+support 567 1 1 0 0 0 1
+support 568 1 1 0 0 0 1
+support 569 1 1 0 0 0 1
+support 570 1 1 0 0 0 1
+support 571 1 1 0 0 0 1
+support 572 1 1 0 0 0 1
+support 573 1 1 0 0 0 1
+support 574 1 1 0 0 0 1
+support 575 1 1 0 0 0 1
+support 576 1 1 0 0 0 1
+support 577 1 1 0 0 0 1
+support 578 1 1 0 0 0 1
+support 579 1 1 0 0 0 1
+support 580 1 1 0 0 0 1
+support 581 1 1 0 0 0 1
+support 582 1 1 0 0 0 1
+support 583 1 1 0 0 0 1
+support 584 1 1 0 0 0 1
+support 585 1 1 0 0 0 1
+support 586 1 1 0 0 0 1
+support 587 1 1 0 0 0 1
+support 588 1 1 0 0 0 1
+support 589 1 1 0 0 0 1
+support 590 1 1 0 0 0 1
+support 591 1 1 0 0 0 1
+support 592 1 1 0 0 0 1
+support 593 1 1 0 0 0 1
+support 594 1 1 0 0 0 1
+support 595 1 1 0 0 0 1
+support 596 1 1 0 0 0 1
+support 597 1 1 0 0 0 1
+support 598 1 1 0 0 0 1
+support 599 1 1 0 0 0 1
+support 600 1 1 0 0 0 1
+support 601 1 1 0 0 0 1
+support 602 1 1 0 0 0 1
+support 603 1 1 0 0 0 1
+support 604 1 1 0 0 0 1
+support 605 1 1 0 0 0 1
+support 606 1 1 0 0 0 1
+support 607 1 1 0 0 0 1
+support 608 1 1 0 0 0 1
+support 609 1 1 0 0 0 1
+support 610 1 1 0 0 0 1
+support 611 1 1 0 0 0 1
+support 612 1 1 0 0 0 1
+support 613 1 1 0 0 0 1
+support 614 1 1 0 0 0 1
+support 615 1 1 0 0 0 1
+support 616 1 1 0 0 0 1
+support 617 1 1 0 0 0 1
+support 618 1 1 0 0 0 1
+support 619 1 1 0 0 0 1
+support 620 1 1 0 0 0 1
+support 621 1 1 0 0 0 1
+support 622 1 1 0 0 0 1
+support 623 1 1 0 0 0 1
+support 624 1 1 0 0 0 1
+support 625 1 1 0 0 0 1
+support 626 1 1 0 0 0 1
+support 627 1 1 0 0 0 1
+support 628 1 1 0 0 0 1
+support 629 1 1 0 0 0 1
+support 630 1 1 0 0 0 1
+support 631 1 1 0 0 0 1
+support 632 1 1 0 0 0 1
+support 633 1 1 0 0 0 1
+support 634 1 1 0 0 0 1
+support 635 1 1 0 0 0 1
+support 636 1 1 0 0 0 1
+support 637 1 1 0 0 0 1
+support 638 1 1 0 0 0 1
+support 639 1 1 0 0 0 1
+support 640 1 1 0 0 0 1
+support 641 1 1 0 0 0 1
+support 642 1 1 0 0 0 1
+support 643 1 1 0 0 0 1
+support 644 1 1 0 0 0 1
+support 645 1 1 0 0 0 1
+support 646 1 1 0 0 0 1
+support 647 1 1 0 0 0 1
+support 648 1 1 0 0 0 1
+support 649 1 1 0 0 0 1
+support 650 1 1 0 0 0 1
+support 651 1 1 0 0 0 1
+support 652 1 1 0 0 0 1
+support 653 1 1 0 0 0 1
+support 654 1 1 0 0 0 1
+support 655 1 1 0 0 0 1
+support 656 1 1 0 0 0 1
+support 657 1 1 0 0 0 1
+support 658 1 1 0 0 0 1
+support 659 1 1 0 0 0 1
+support 660 1 1 0 0 0 1
+support 661 1 1 0 0 0 1
+support 662 1 1 0 0 0 1
+support 663 1 1 0 0 0 1
+support 664 1 1 0 0 0 1
+support 665 1 1 0 0 0 1
+support 666 1 1 0 0 0 1
+support 667 1 1 0 0 0 1
+support 668 1 1 0 0 0 1
+support 669 1 1 0 0 0 1
+support 670 1 1 0 0 0 1
+support 671 1 1 0 0 0 1
+support 672 1 1 0 0 0 1
+support 673 1 1 0 0 0 1
+support 674 1 1 0 0 0 1
+support 675 1 1 0 0 0 1
+support 676 1 1 0 0 0 1
+support 677 1 1 0 0 0 1
+support 678 1 1 0 0 0 1
+support 679 1 1 0 0 0 1
+support 680 1 1 0 0 0 1
+support 681 1 1 0 0 0 1
+support 682 1 1 0 0 0 1
+support 683 1 1 0 0 0 1
+support 684 1 1 0 0 0 1
+support 685 1 1 0 0 0 1
+support 686 1 1 0 0 0 1
+support 687 1 1 0 0 0 1
+support 688 1 1 0 0 0 1
+support 689 1 1 0 0 0 1
+support 690 1 1 0 0 0 1
+support 691 1 1 0 0 0 1
+support 692 1 1 0 0 0 1
+support 693 1 1 0 0 0 1
+support 694 1 1 0 0 0 1
+support 695 1 1 0 0 0 1
+support 696 1 1 0 0 0 1
+support 697 1 1 0 0 0 1
+support 698 1 1 0 0 0 1
+support 699 1 1 0 0 0 1
+support 700 1 1 0 0 0 1
+support 701 1 1 0 0 0 1
+support 702 1 1 0 0 0 1
+support 703 1 1 0 0 0 1
+support 704 1 1 0 0 0 1
+support 705 1 1 0 0 0 1
+support 706 1 1 0 0 0 1
+support 707 1 1 0 0 0 1
+support 708 1 1 0 0 0 1
+support 709 1 1 0 0 0 1
+support 710 1 1 0 0 0 1
+support 711 1 1 0 0 0 1
+support 712 1 1 0 0 0 1
+support 713 1 1 0 0 0 1
+support 714 1 1 0 0 0 1
+support 715 1 1 0 0 0 1
+support 716 1 1 0 0 0 1
+support 717 1 1 0 0 0 1
+support 718 1 1 0 0 0 1
+support 719 1 1 0 0 0 1
+support 720 1 1 0 0 0 1
+support 721 1 1 0 0 0 1
+support 722 1 1 0 0 0 1
+support 723 1 1 0 0 0 1
+support 724 1 1 0 0 0 1
+support 725 1 1 0 0 0 1
+support 726 1 1 0 0 0 1
+support 727 1 1 0 0 0 1
+support 728 1 1 0 0 0 1
+support 729 1 1 0 0 0 1
+support 730 1 1 0 0 0 1
+support 731 1 1 0 0 0 1
+support 732 1 1 0 0 0 1
+support 733 1 1 0 0 0 1
+support 734 1 1 0 0 0 1
+support 735 1 1 0 0 0 1
+support 736 1 1 0 0 0 1
+support 737 1 1 0 0 0 1
+support 738 1 1 0 0 0 1
+support 739 1 1 0 0 0 1
+support 740 1 1 0 0 0 1
+support 741 1 1 0 0 0 1
+support 742 1 1 0 0 0 1
+support 743 1 1 0 0 0 1
+support 744 1 1 0 0 0 1
+support 745 1 1 0 0 0 1
+support 746 1 1 0 0 0 1
+support 747 1 1 0 0 0 1
+support 748 1 1 0 0 0 1
+support 749 1 1 0 0 0 1
+support 750 1 1 0 0 0 1
+support 751 1 1 0 0 0 1
+support 752 1 1 0 0 0 1
+support 753 1 1 0 0 0 1
+support 754 1 1 0 0 0 1
+support 755 1 1 0 0 0 1
+support 756 1 1 0 0 0 1
+support 757 1 1 0 0 0 1
+support 758 1 1 0 0 0 1
+support 759 1 1 0 0 0 1
+support 760 1 1 0 0 0 1
+support 761 1 1 0 0 0 1
+support 762 1 1 0 0 0 1
+support 763 1 1 0 0 0 1
+support 764 1 1 0 0 0 1
+support 765 1 1 0 0 0 1
+support 766 1 1 0 0 0 1
+support 767 1 1 0 0 0 1
+support 768 1 1 0 0 0 1
+support 769 1 1 0 0 0 1
+support 770 1 1 0 0 0 1
+support 771 1 1 0 0 0 1
+support 772 1 1 0 0 0 1
+support 773 1 1 0 0 0 1
+support 774 1 1 0 0 0 1
+support 775 1 1 0 0 0 1
+support 776 1 1 0 0 0 1
+support 777 1 1 0 0 0 1
+support 778 1 1 0 0 0 1
+support 779 1 1 0 0 0 1
+support 780 1 1 0 0 0 1
+support 781 1 1 0 0 0 1
+support 782 1 1 0 0 0 1
+support 783 1 1 0 0 0 1
+support 784 1 1 0 0 0 1
+support 785 1 1 0 0 0 1
+support 786 1 1 0 0 0 1
+support 787 1 1 0 0 0 1
+support 788 1 1 0 0 0 1
+support 789 1 1 0 0 0 1
+support 790 1 1 0 0 0 1
+support 791 1 1 0 0 0 1
+support 792 1 1 0 0 0 1
+support 793 1 1 0 0 0 1
+support 794 1 1 0 0 0 1
+support 795 1 1 0 0 0 1
+support 796 1 1 0 0 0 1
+support 797 1 1 0 0 0 1
+support 798 1 1 0 0 0 1
+support 799 1 1 0 0 0 1
+support 800 1 1 0 0 0 1
+support 801 1 1 0 0 0 1
+support 802 1 1 0 0 0 1
+support 803 1 1 0 0 0 1
+support 804 1 1 0 0 0 1
+support 805 1 1 0 0 0 1
+support 806 1 1 0 0 0 1
+support 807 1 1 0 0 0 1
+support 808 1 1 0 0 0 1
+support 809 1 1 0 0 0 1
+support 810 1 1 0 0 0 1
+support 811 1 1 0 0 0 1
+support 812 1 1 0 0 0 1
+support 813 1 1 0 0 0 1
+support 814 1 1 0 0 0 1
+support 815 1 1 0 0 0 1
+support 816 1 1 0 0 0 1
+support 817 1 1 0 0 0 1
+support 818 1 1 0 0 0 1
+support 819 1 1 0 0 0 1
+support 820 1 1 0 0 0 1
+support 821 1 1 0 0 0 1
+support 822 1 1 0 0 0 1
+support 823 1 1 0 0 0 1
+support 824 1 1 0 0 0 1
+support 825 1 1 0 0 0 1
+support 826 1 1 0 0 0 1
+support 827 1 1 0 0 0 1
+support 828 1 1 0 0 0 1
+support 829 1 1 0 0 0 1
+support 830 1 1 0 0 0 1
+support 831 1 1 0 0 0 1
+support 832 1 1 0 0 0 1
+support 833 1 1 0 0 0 1
+support 834 1 1 0 0 0 1
+support 835 1 1 0 0 0 1
+support 836 1 1 0 0 0 1
+support 837 1 1 0 0 0 1
+support 838 1 1 0 0 0 1
+support 839 1 1 0 0 0 1
+support 840 1 1 0 0 0 1
+support 841 1 1 0 0 0 1
+support 842 1 1 0 0 0 1
+support 843 1 1 0 0 0 1
+support 844 1 1 0 0 0 1
+support 845 1 1 0 0 0 1
+support 846 1 1 0 0 0 1
+support 847 1 1 0 0 0 1
+support 848 1 1 0 0 0 1
+support 849 1 1 0 0 0 1
+support 850 1 1 0 0 0 1
+support 851 1 1 0 0 0 1
+support 852 1 1 0 0 0 1
+support 853 1 1 0 0 0 1
+support 854 1 1 0 0 0 1
+support 855 1 1 0 0 0 1
+support 856 1 1 0 0 0 1
+support 857 1 1 0 0 0 1
+support 858 1 1 0 0 0 1
+support 859 1 1 0 0 0 1
+support 860 1 1 0 0 0 1
+support 861 1 1 0 0 0 1
+support 862 1 1 0 0 0 1
+support 863 1 1 0 0 0 1
+support 864 1 1 0 0 0 1
+support 865 1 1 0 0 0 1
+support 866 1 1 0 0 0 1
+support 867 1 1 0 0 0 1
+support 868 1 1 0 0 0 1
+support 869 1 1 0 0 0 1
+support 870 1 1 0 0 0 1
+support 871 1 1 0 0 0 1
+support 872 1 1 0 0 0 1
+support 873 1 1 0 0 0 1
+support 874 1 1 0 0 0 1
+support 875 1 1 0 0 0 1
+support 876 1 1 0 0 0 1
+support 877 1 1 0 0 0 1
+support 878 1 1 0 0 0 1
+support 879 1 1 0 0 0 1
+support 880 1 1 0 0 0 1
+support 881 1 1 0 0 0 1
+support 882 1 1 0 0 0 1
+support 883 1 1 0 0 0 1
+support 884 1 1 0 0 0 1
+support 885 1 1 0 0 0 1
+support 886 1 1 0 0 0 1
+support 887 1 1 0 0 0 1
+support 888 1 1 0 0 0 1
+support 889 1 1 0 0 0 1
+support 890 1 1 0 0 0 1
+support 891 1 1 0 0 0 1
+support 892 1 1 0 0 0 1
+support 893 1 1 0 0 0 1
+support 894 1 1 0 0 0 1
+support 895 1 1 0 0 0 1
+support 896 1 1 0 0 0 1
+support 897 1 1 0 0 0 1
+support 898 1 1 0 0 0 1
+support 899 1 1 0 0 0 1
+support 900 1 1 0 0 0 1
+support 901 1 1 0 0 0 1
+support 902 1 1 0 0 0 1
+support 903 1 1 0 0 0 1
+support 904 1 1 0 0 0 1
+support 905 1 1 0 0 0 1
+support 906 1 1 0 0 0 1
+support 907 1 1 0 0 0 1
+support 908 1 1 0 0 0 1
+support 909 1 1 0 0 0 1
+support 910 1 1 0 0 0 1
+support 911 1 1 0 0 0 1
+support 912 1 1 0 0 0 1
+support 913 1 1 0 0 0 1
+support 914 1 1 0 0 0 1
+support 915 1 1 0 0 0 1
+support 916 1 1 0 0 0 1
+support 917 1 1 0 0 0 1
+support 918 1 1 0 0 0 1
+support 919 1 1 0 0 0 1
+support 920 1 1 0 0 0 1
+support 921 1 1 0 0 0 1
+support 922 1 1 0 0 0 1
+support 923 1 1 0 0 0 1
+support 924 1 1 0 0 0 1
+support 925 1 1 0 0 0 1
+support 926 1 1 0 0 0 1
+support 927 1 1 0 0 0 1
+support 928 1 1 0 0 0 1
+support 929 1 1 0 0 0 1
+support 930 1 1 0 0 0 1
+support 931 1 1 0 0 0 1
+support 932 1 1 0 0 0 1
+support 933 1 1 0 0 0 1
+support 934 1 1 0 0 0 1
+support 935 1 1 0 0 0 1
+support 936 1 1 0 0 0 1
+support 937 1 1 0 0 0 1
+support 938 1 1 0 0 0 1
+support 939 1 1 0 0 0 1
+support 940 1 1 0 0 0 1
+support 941 1 1 0 0 0 1
+support 942 1 1 0 0 0 1
+support 943 1 1 0 0 0 1
+support 944 1 1 0 0 0 1
+support 945 1 1 0 0 0 1
+support 946 1 1 0 0 0 1
+support 947 1 1 0 0 0 1
+support 948 1 1 0 0 0 1
+support 949 1 1 0 0 0 1
+support 950 1 1 0 0 0 1
+support 951 1 1 0 0 0 1
+support 952 1 1 0 0 0 1
+support 953 1 1 0 0 0 1
+support 954 1 1 0 0 0 1
+support 955 1 1 0 0 0 1
+support 956 1 1 0 0 0 1
+support 957 1 1 0 0 0 1
+support 958 1 1 0 0 0 1
+support 959 1 1 0 0 0 1
+support 960 1 1 0 0 0 1
+support 961 1 1 0 0 0 1
+areaload 556 -6733.333333
+areaload 557 -6733.333333
+areaload 558 -6733.333333
+areaload 559 -6733.333333
+areaload 560 -6733.333333
+areaload 561 -6733.333333
+areaload 586 -6733.333333
+areaload 587 -6733.333333
+areaload 588 -6733.333333
+areaload 589 -6733.333333
+areaload 590 -6733.333333
+areaload 591 -6733.333333
+areaload 616 -6733.333333
+areaload 617 -6733.333333
+areaload 618 -6733.333333
+areaload 619 -6733.333333
+areaload 620 -6733.333333
+areaload 621 -6733.333333
+areaload 646 -6733.333333
+areaload 647 -6733.333333
+areaload 648 -6733.333333
+areaload 649 -6733.333333
+areaload 650 -6733.333333
+areaload 651 -6733.333333
+areaload 676 -6733.333333
+areaload 677 -6733.333333
+areaload 678 -6733.333333
+areaload 679 -6733.333333
+areaload 680 -6733.333333
+areaload 681 -6733.333333
+areaload 706 -6733.333333
+areaload 707 -6733.333333
+areaload 708 -6733.333333
+areaload 709 -6733.333333
+areaload 710 -6733.333333
+areaload 711 -6733.333333
+fc 23535.96
+vista pressure
+solve
