@@ -71,6 +71,38 @@ interface Herr {
   activo?: () => boolean;
 }
 
+// ── Textos de la cinta en ES y EN ────────────────────────────────────────────
+// Struct tendrá interfaz en inglés (Jorge, 19-sep-2026). Mismo interruptor que el resto
+// de la app (`localStorage.hk_lang`, ver examples/src/shared/i18n.ts); la clave es el
+// texto en español y lo que no está en la tabla sale tal cual.
+const EN: Record<string, string> = {
+  "✏ Dibujo": "✏ Draw", "🏗 Rejilla y planos": "🏗 Grid & planes", "▦ Áreas": "▦ Areas",
+  "📊 Resultados": "📊 Results", "🏛 IFC y cortes": "🏛 IFC & sections",
+  "Dibujar": "Draw", "Estructura": "Structure", "Apoyos y cargas": "Supports & loads", "Modificar": "Modify",
+  "Línea": "Line", "Polilínea": "Polyline", "Rectáng.": "Rectang.", "Círculo": "Circle", "Arco": "Arc",
+  "Parábola": "Parabola", "Cúbica": "Cubic", "Columna": "Column", "Muro": "Wall", "Losa": "Slab",
+  "Empotr.": "Fixed", "Articul.": "Pinned", "Carga": "Load", "Carga q": "Load q",
+  "Anterior": "Undo", "Rehacer": "Redo", "Selec.": "Select", "Mover": "Move", "Copiar": "Copy", "Replicar": "Replicate",
+  "Desfase": "Offset", "Recortar": "Trim", "Alargar": "Extend", "Remodelar": "Reshape", "Borrar": "Erase",
+  "Medir": "Measure", "Auxiliar": "Construction",
+  "Superficies": "Surfaces", "Rellenar": "Fill", "Llenar todas": "Fill all", "Chaflanes": "Fillets",
+  "Revoluc.": "Revolve", "Barrido": "Sweep", "Curvas": "Curves", "Guía aux.": "Guide",
+  "Deformada": "Deformed", "Menos": "Less", "Más": "More", "Diagramas de barra": "Frame diagrams",
+  "Axil": "Axial", "Cortante": "Shear", "Momento": "Moment", "Nudos": "Joints", "Desplaz.": "Displ.",
+  "Reacción": "Reaction", "Ver en 2D": "2D view", "Diagrama 2D": "2D diagram", "Barra": "Member",
+  "Importar": "Import", "Objetos": "Objects", "Copiar lín.": "Copy line", "Área cara": "Face area",
+  "Cortes": "Sections", "Corte X": "Cut X", "Corte Y": "Cut Y", "Corte Z": "Cut Z",
+  "Encuadrar": "Zoom ext.", "Planta": "Plan", "Frente": "Front", "Lado": "Side",
+  "Tramos": "Segments", "Sectores": "Sectors", "Chaflán r": "Fillet r",
+  "Tramos · sectores · radio": "Segments · sectors · radius", "Escala de la deformada": "Deformed scale",
+  "Posición del corte (m)": "Section position (m)", "Vista · plano de trabajo": "View · work plane", "Precisión": "Precision",
+  "Carga  kN · kN/m": "Load  kN · kN/m", "Rejilla  X × Y × pisos": "Grid  X × Y × storeys",
+};
+const tr = (es: string): string => {
+  try { if (localStorage.getItem("hk_lang") === "en") return EN[es] ?? es; } catch {}
+  return es;
+};
+
 // ── Acciones de la cinta que no son herramientas de dibujo ───────────────────
 // Llaman a lo MISMO que el control del panel (los States del visor o los ganchos
 // globales que usa el Tweakpane): el mismo mando con otra entrada, sin copiar lógica.
@@ -583,7 +615,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       ].join(";") + ";";
       b.innerHTML =
         `<span style="font-size:16px;line-height:1">${h.icono}</span>` +
-        `<span style="font-size:10px;line-height:1.1">${h.nombre}</span>` +
+        `<span style="font-size:10px;line-height:1.1">${tr(h.nombre)}</span>` +
         `<span style="font-size:8px;opacity:.55;line-height:1">${h.tecla}</span>`;
       b.addEventListener("click", () => usar(h));
       b.addEventListener("mouseenter", () => {
@@ -595,7 +627,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       fila.appendChild(b);
     }
     const rot = document.createElement("div");
-    rot.textContent = g.titulo;
+    rot.textContent = tr(g.titulo);
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.appendChild(fila); caja.appendChild(rot);
     caja.dataset.pest = g.pest;
@@ -1007,7 +1039,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "gap:0;width:46px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
       "border-radius:7px;color:#cbd5e1;font-family:inherit;";
     b.innerHTML = `<span style="font-size:14px;line-height:1">${ic}</span>` +
-      `<span style="font-size:10px;line-height:1.15">${nom}</span>` +
+      `<span style="font-size:10px;line-height:1.15">${tr(nom)}</span>` +
       `<span style="font-size:9px;line-height:1.1;color:#22d3ee;letter-spacing:.5px">${plano}</span>` +
       `<span style="font-size:8px;opacity:.5;line-height:1">${tecla}</span>`;
     b.addEventListener("click", () => { fn(); decir(`Vista ${nom} — plano ${plano}: ${DONDE_CAE[plano]}.`); });
@@ -1114,7 +1146,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "gap:0;width:50px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
       "border-radius:7px;color:#cbd5e1;font-family:inherit;";
     b.innerHTML = `<span style="font-size:15px;line-height:1">⛶</span>` +
-      `<span style="font-size:10px;line-height:1.15">Encuadrar</span>` +
+      `<span style="font-size:10px;line-height:1.15">${tr("Encuadrar")}</span>` +
       `<span style="font-size:8px;opacity:.5;line-height:1">ZE</span>`;
     b.addEventListener("click", () => decir(encuadrar()));
     b.addEventListener("mouseenter", () => { b.style.background = "rgba(34,211,238,.13)"; });
@@ -1142,7 +1174,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   mkConm("OSNAP", "F3", "Referencias a objetos: extremo, medio, nudo, intersección…", () => W2.__hekatanOsnapOn !== false, () => W2.__hekatanToggleOsnap?.());
   setInterval(pintarConm, 600); setTimeout(pintarConm, 300);
   const rotV = document.createElement("div");
-  rotV.textContent = "Vista · plano de trabajo";
+  rotV.textContent = tr("Vista · plano de trabajo");
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
   // En TODAS las pestañas y pegado a la derecha, como la barra de estado de AutoCAD.
@@ -1150,7 +1182,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   const cajaP = document.createElement("div");
   cajaP.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;margin-left:auto;";
   const rotP = document.createElement("div");
-  rotP.textContent = "Precisión";
+  rotP.textContent = tr("Precisión");
   rotP.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaP.append(filaP, rotP);
   cajaP.dataset.pest = "*";
@@ -1528,7 +1560,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     ];
     for (const [nom, re, def, ayuda] of MANDOS) {
       const lab = document.createElement("span");
-      lab.textContent = nom;
+      lab.textContent = tr(nom);
       lab.style.cssText = "font-size:10px;color:#94a3b8;margin-left:4px;";
       const i = document.createElement("input");
       i.type = "text"; i.value = def; i.title = ayuda + " (el mismo mando del panel)";
@@ -1543,7 +1575,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       fila.append(lab, i);
     }
     const rot = document.createElement("div");
-    rot.textContent = "Tramos · sectores · radio";
+    rot.textContent = tr("Tramos · sectores · radio");
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.append(fila, rot);
     caja.dataset.pest = "areas";
@@ -1575,7 +1607,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     lab.textContent = "×"; lab.style.cssText = "font-size:12px;color:#94a3b8;";
     fila.append(lab, i);
     const rot = document.createElement("div");
-    rot.textContent = "Escala de la deformada";
+    rot.textContent = tr("Escala de la deformada");
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.append(fila, rot);
     caja.dataset.pest = "resultados";
@@ -1604,7 +1636,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       fila.append(lab, i);
     }
     const rot = document.createElement("div");
-    rot.textContent = "Posición del corte (m)";
+    rot.textContent = tr("Posición del corte (m)");
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.append(fila, rot);
     caja.dataset.pest = "ifc";
@@ -1640,7 +1672,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   };
   for (const [p, nom, ayuda] of PESTANAS) {
     const b = document.createElement("button");
-    b.type = "button"; b.id = `hk-ribbon-tab-${p}`; b.textContent = nom;
+    b.type = "button"; b.id = `hk-ribbon-tab-${p}`; b.textContent = tr(nom);
     b.title = `${nom.replace(/^\S+\s/, "")}: ${ayuda}`;
     b.style.cssText = "height:22px;padding:0 10px;cursor:pointer;background:transparent;border:1px solid transparent;" +
       "border-radius:6px;color:#94a3b8;font:600 11px system-ui,-apple-system,Segoe UI,sans-serif;white-space:nowrap;";
