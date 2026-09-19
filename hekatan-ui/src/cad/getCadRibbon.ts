@@ -97,6 +97,19 @@ const casillaMando = (re: RegExp, on?: boolean): boolean | null => {
 };
 const casillaVal = (re: RegExp) => !!filaTp(re)?.querySelector<HTMLInputElement>("input[type=checkbox]")?.checked;
 
+/** Pulsa el botón REAL de un panel por su texto: la acción es la del panel, sin copia. */
+const pulsarPanel = (re: RegExp, falta: string) => () => {
+  const b = [...document.querySelectorAll<HTMLElement>(".tp-btnv_b")].find((x) => re.test(x.textContent || ""));
+  if (!b) return falta;
+  b.click(); return "";
+};
+/** Corte X/Y/Z: la casilla «Cortar X» del panel Settings › Cortes X/Y/Z. */
+const corte = (k: "X" | "Y" | "Z") => () => {
+  const on = casillaMando(new RegExp(`^\\s*Cortar ${k}`));
+  if (on === null) return "Los cortes todavía no están.";
+  return on ? `Corte ${k} en ${k} = ${leerMando(new RegExp(`pos ${k}`)) ?? "?"} m (la casilla «${k}» lo mueve).` : `Corte ${k} quitado.`;
+};
+
 /** Resultados de BARRA: el mismo State `frameResults` del desplegable «Resultados de barra». */
 const verBarra = (val: string, nom: string) => () => {
   const st = ajustes(); if (!st?.frameResults) return "El visor todavía no tiene resultados.";
@@ -251,6 +264,26 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> 
         accion: () => { W_().__hekatanDiagrama2D?.(); return "Diagrama en 2D: se cierra con la ✕ de su ventana."; } },
       { id: "r-barra", icono: "📈", nombre: "Barra", tecla: "", ayuda: "axil, cortante y momento a lo largo de la barra designada (el «Gráfico de la barra designada» del panel).",
         accion: () => { W_().__hekatanDiagramaBarra?.(); return ""; } },
+    ],
+  },
+  // ── Pestaña IFC y cortes: lo del panel derecho › Importar archivo y Settings › Cortes ──
+  {
+    titulo: "IFC", fila: 1, pest: "ifc",
+    items: [
+      { id: "ifc-imp", icono: "📥", nombre: "Importar", tecla: "", ayuda: "abre un IFC con el diálogo de archivos (el «Importar IFC» del panel).",
+        accion: pulsarPanel(/Importar IFC|Referencia IFC/i, "Este ejemplo no importa IFC.") },
+      { id: "ifc-obj", icono: "🏛", nombre: "Objetos", tecla: "", ayuda: "la lista de objetos del IFC: ocultar o aislar cada uno.",
+        accion: () => { const t = document.getElementById("hk-ifc-tab"); if (!t) return "Primero importa un IFC."; t.click(); return ""; } },
+      { id: "ifcline", icono: "⟋", nombre: "Copiar lín.", tecla: "", ayuda: "pasa por una arista del IFC (se ilumina) y clic: la copia como barras." },
+      { id: "ifcface", icono: "▦", nombre: "Área cara", tecla: "", ayuda: "pasa por una cara del IFC (se ilumina) y clic: la copia como área." },
+    ],
+  },
+  {
+    titulo: "Cortes", fila: 2, pest: "ifc",
+    items: [
+      { id: "c-x", icono: "✂", nombre: "Corte X", tecla: "", ayuda: "corta el modelo por el plano X = casilla «X» (la casilla «Cortar X» del panel).", accion: corte("X"), activo: () => casillaVal(/^\s*Cortar X/) },
+      { id: "c-y", icono: "✂", nombre: "Corte Y", tecla: "", ayuda: "corta por el plano Y = casilla «Y».", accion: corte("Y"), activo: () => casillaVal(/^\s*Cortar Y/) },
+      { id: "c-z", icono: "✂", nombre: "Corte Z", tecla: "", ayuda: "corta por la altura Z = casilla «Z».", accion: corte("Z"), activo: () => casillaVal(/^\s*Cortar Z/) },
     ],
   },
 ];
@@ -1404,6 +1437,35 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.append(fila, rot);
     caja.dataset.pest = "areas";
+    filaB.appendChild(caja);
+  }
+
+  // ── Posición de los cortes (pestaña IFC): los mandos «pos X/Y/Z» del panel ──
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    for (const k of ["X", "Y", "Z"]) {
+      const re = new RegExp(`pos ${k}`);
+      const lab = document.createElement("span");
+      lab.textContent = k; lab.style.cssText = "font-size:10px;color:#94a3b8;margin-left:4px;";
+      const i = document.createElement("input");
+      i.type = "text"; i.value = "0"; i.dataset.mando = "pos" + k;
+      i.title = `Posición del corte ${k}, en metros (el mando «pos ${k}» del panel)`;
+      i.style.cssText = "width:52px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+        "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+      const aplicar = () => { if (ponerMando(re, i.value)) decir(`Corte ${k} en ${k} = ${leerMando(re)} m.`); else decir("Faltan los cortes en el panel."); };
+      i.addEventListener("change", aplicar);
+      i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+      setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+      fila.append(lab, i);
+    }
+    const rot = document.createElement("div");
+    rot.textContent = "Posición del corte (m)";
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "ifc";
     filaB.appendChild(caja);
   }
 
