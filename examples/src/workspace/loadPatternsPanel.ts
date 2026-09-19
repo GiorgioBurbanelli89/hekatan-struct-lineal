@@ -112,6 +112,10 @@ export function attachLoadPatternsPanel(opts: {
   // PATTERNS FOLDER
   // ════════════════════════════════════════════════════════════════════
   const patternsFolder = pane.addFolder({ title: "📋 Patrones de carga", expanded: false });
+  // La sobrecarga muerta es CARGA (entrada del análisis), no diseño: su asistente vive aquí
+  // (Jorge, 19-sep-2026). Abre el panel de sobrecargaMuertaPanel.ts (botón oculto #hk-dne-btn).
+  patternsFolder.addButton({ title: "🧱 Sobrecarga muerta DNE (NEC-15)…" })
+    .on("click", () => (document.getElementById("hk-dne-btn") as HTMLButtonElement | null)?.click());
 
   // Cada pattern como sub-folder
   const patternSubfolders: any[] = [];

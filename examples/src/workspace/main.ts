@@ -8550,6 +8550,8 @@ document.body.appendChild(modalPanel.div);
       if (count < 3) return;
       targets.push(o);
     });
+    // con el mapa de DISEÑO en pantalla manda su propio recuadro (stripDesignPanel, #hkf-hover)
+    if ((window as any).__hekatanDisenoHover) { tooltip.style.display = "none"; (window as any).__hekatanShellTooltipVisible = false; return; }
     if (!targets.length) { tooltip.style.display = "none"; (window as any).__hekatanShellTooltipVisible = false; return; }
     const hits = raycaster.intersectObjects(targets, false);
     if (!hits.length) { tooltip.style.display = "none"; (window as any).__hekatanShellTooltipVisible = false; return; }
