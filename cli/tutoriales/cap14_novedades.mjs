@@ -1,178 +1,104 @@
-/**
- * Capítulo 14 — NOVEDADES: rellenar área (hover + clic), llenar todas las celdas
- * cerradas, la regla de medir, el panel corredizo y el botón de volver / menú.
- * Todo con el cursor (que se pone ROJO al hacer clic).
- */
-export const titulo = "Hekatan Struct · novedades";
+// Capítulo 14 · Áreas, regla y paneles corredizos, SOLO con la cinta de acceso rápido
+// (19-sep-2026, Jorge: «debes usar solo acceso rápido»; «no se ve ninguna línea»).
+// Tres celdas con Rectángulo en PLANTA y bien de cerca, Rellenar una, Llenar las demás,
+// medir, y los paneles/cinta que se pliegan.
+import { mover, clicRojo, caja, rect, panel, proj, clicMundo, estado,
+         pestana, boton, senalar, casilla, acercarA, soltar, modeloInfo } from "./_cinta.mjs";
 export const ruta = "workspace/?t=new-blank";
-
-const proj = async (a, wx, wy, wz = 0) => a.pag.evaluate(({ wx, wy, wz }) => {
-  const host = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera);
-  if (!host) return null;
-  const cam = host.__ctx.camera; const rect = host.getBoundingClientRect(); cam.updateMatrixWorld();
-  const ap = (m, v) => { const e = m.elements; return [
-    e[0]*v[0]+e[4]*v[1]+e[8]*v[2]+e[12]*v[3], e[1]*v[0]+e[5]*v[1]+e[9]*v[2]+e[13]*v[3],
-    e[2]*v[0]+e[6]*v[1]+e[10]*v[2]+e[14]*v[3], e[3]*v[0]+e[7]*v[1]+e[11]*v[2]+e[15]*v[3] ]; };
-  let v = ap(cam.matrixWorldInverse, [wx, wy, wz, 1]); v = ap(cam.projectionMatrix, v);
-  return { x: rect.left + (v[0]/v[3]*0.5+0.5)*rect.width, y: rect.top + (-v[1]/v[3]*0.5+0.5)*rect.height };
-}, { wx, wy, wz });
-
-const mover = async (a, x, y, steps = 22) => {
-  await a.pag.mouse.move(x, y, { steps });
-  await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x, y });
-};
-const clicRojoW = async (a, wx, wy, wz = 0) => {
-  const s = await proj(a, wx, wy, wz); if (!s) return;
-  await mover(a, s.x, s.y, 24); await a.quieto(3, 300);
-  await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), s);
-  await a.quieto(3, 300); await a.pag.mouse.click(s.x, s.y); await a.quieto(2, 300);
-};
-const clicRojoPx = async (a, x, y) => {
-  await mover(a, x, y, 20); await a.quieto(2, 300);
-  await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x, y });
-  await a.quieto(3, 300); await a.pag.mouse.click(x, y); await a.quieto(2, 300);
-};
-const botonEnCarpeta = async (a, carpeta, boton, nota) => {
-  const r = await a.pag.evaluate(({ f, b }) => {
-    let btn = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(b));
-    if (!btn || btn.getBoundingClientRect().width < 5) {
-      const fld = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent || "").includes(f));
-      if (fld) { fld.scrollIntoView({ block: "center" }); fld.click(); }
-      btn = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(b));
-    }
-    if (!btn) return null; btn.scrollIntoView({ block: "center" });
-    const rc = btn.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
-  }, { f: carpeta, b: boton });
-  if (!r || r.w < 5) return false;
-  await mover(a, r.x + r.w - 20, r.y + r.h / 2, 22);
-  await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }), { r, n: nota });
-  await a.quieto(5, 330);
-  await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x: r.x + r.w - 20, y: r.y + r.h / 2 });
-  await a.quieto(2, 300);
-  await a.pag.evaluate((b) => { const x = [...document.querySelectorAll("button")].find((y) => (y.textContent || "").includes(b)); if (x) x.click(); }, boton);
-  await a.pag.evaluate(() => window.__tutSinCaja());
-  await a.quieto(2, 300); return true;
-};
-const rectDe = async (a, sel) => a.pag.evaluate((s) => { const el = document.querySelector(s); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }, sel);
-
-const GRID = () => {
-  const P = []; for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) P.push([i * 2, j * 2, 0]);
-  const idx = (i, j) => j * 3 + i; const PL = [];
-  for (let j = 0; j < 3; j++) for (let i = 0; i < 2; i++) PL.push([idx(i, j), idx(i + 1, j)]);
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) PL.push([idx(i, j), idx(i, j + 1)]);
-  return { P, PL };
-};
+export const titulo = "Hekatan Struct · áreas, regla y paneles corredizos";
 
 export const pasos = [
-  { rotulo: "Portada", hacer: async (a) => { await a.portada("Novedades", "Capítulo 14", 16); } },
+  { rotulo: "Portada", hacer: async (a) => { await a.portada("Áreas, regla y paneles corredizos", "Capítulo 14", 16); } },
   {
-    rotulo: "1 · Dibujo celdas cerradas CON EL CURSOR (herramienta Rectángulo)",
+    rotulo: "1 · Paneles corredizos: la puerta derecha y la izquierda los ocultan",
     hacer: async (a) => {
-      await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo","0"); } catch(e){} });
-      // Lienzo limpio, ribbon abierto (se ve que tapa; luego el cursor lo pliega).
-      await a.pag.evaluate(() => {
-        window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = []; window.__hekatanDrawingAreas.val = [];
-        try { window.__hekatanRebuild?.(); } catch(e){}
-        try { window.__hekatanRibbonPlegar?.(false); } catch(e){}
-      });
-      await a.general(); await a.quieto(2, 300);
-      // Grid snap a 1 m: el clic en vista iso cae en enteros (si no, el
-      // raycast deja 2.95 en vez de 3.0 y la cota sale sucia).
-      await a.pag.evaluate(() => { window.__hekatanSnapEnabled = true; window.__hekatanSnap2D = 1.0; });
-      // Herramienta Rectángulo: cada rectángulo = una celda cerrada (4 barras).
-      // Se dibujan CON EL CURSOR (2 clics cada uno), nada inyectado por código.
-      await a.pag.evaluate(() => window.__hekatanCadState.setTool("rect"));
-      await clicRojoW(a, 0, 0, 0); await clicRojoW(a, 3, 3, 0);   // celda 1
-      await clicRojoW(a, 3, 0, 0); await clicRojoW(a, 6, 3, 0);   // celda 2
-      await clicRojoW(a, 0, 3, 0); await clicRojoW(a, 3, 6, 0);   // celda 3
-      await a.pag.evaluate(() => window.__hekatanCadState.setTool("select"));
-      // Reencuadrar sobre lo dibujado: si no, las celdas quedan diminutas y
-      // los clics siguientes (relleno, regla) caen imprecisos.
-      await a.pag.evaluate(() => { try { window.__hekatanAutoFit?.(); } catch(e){} });
-      await a.quieto(3, 330);
+      await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo", "0"); } catch (e) {} try { window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = [[]]; window.__hekatanDrawingAreas.val = []; } catch (e) {} });
+      await a.general(); await a.quieto(2, 320);
+      const d = await rect(a, () => document.getElementById("hk-pane-toggle"));
+      if (d) await caja(a, { x: d.rx - 4, y: d.ry - 4, w: d.rw + 8, h: d.rh + 8 }, "Esta puerta desliza el panel de la derecha.", 5);
+      await panel(a, "der", false);
+      const i = await rect(a, () => document.getElementById("hk-settings-toggle"));
+      if (i) await caja(a, { x: i.rx - 4, y: i.ry - 4, w: i.rw + 8, h: i.rh + 8 }, "Y esta, el de ajustes de la izquierda.", 5);
+      await panel(a, "izq", false);
+      await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "2 · Plego el menú de dibujo CON EL CURSOR (botón ▴)",
+    rotulo: "2 · Planta, SNAP y acercar; Rectángulo: tres celdas de 3 × 3 m",
     hacer: async (a) => {
-      // Enmarcar el botón de plegar para que se vea CUÁL es.
-      const r = await rectDe(a, "#hk-ribbon-plegar");
-      if (r) {
-        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }),
-          { r, n: "El menú de dibujo es opaco y tapa la escena. Este botón lo pliega." });
-        await a.quieto(5, 340);
-        await a.pag.evaluate(() => window.__tutSinCaja());
-        // Clic REAL del cursor rojo sobre el botón ▴.
-        await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2);
-        await a.quieto(4, 340);   // ya plegado: se ve toda la geometría
+      await boton(a, "^⬇ ?Planta", "Planta XY.");
+      await boton(a, "^SNAP", "SNAP: esquinas exactas en la rejilla.");
+      await acercarA(a, [4.5, 1.5, 0], 75);
+      // un solo clic en el botón: la herramienta sigue activa (pulsarla otra vez la APAGA)
+      await boton(a, "^▭ ?Rectáng", "Rectángulo: dos esquinas opuestas, tres veces.");
+      for (let k = 0; k < 3; k++) {
+        await clicMundo(a, [3 * k, 0, 0], k === 0 ? "(0, 0)" : "");
+        await clicMundo(a, [3 * k + 3, 3, 0], k === 0 ? "(3, 3)" : "");
       }
+      await soltar(a);
+      console.log("   ", JSON.stringify(await modeloInfo(a)));
+      await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "3 · Rellenar área: hover resalta, clic crea",
+    rotulo: "3 · Pestaña Áreas · Rellenar: al pasar el ratón la celda se resalta; un clic crea el área",
     hacer: async (a) => {
-      await a.pag.evaluate(() => window.__hekatanCadState.setTool("fillarea"));
-      const s = await proj(a, 1, 1, 0);   // centro de una celda
-      await mover(a, s.x, s.y, 24); await a.quieto(4, 340);   // se ve el HOVER naranja
-      await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), s);
-      await a.quieto(2, 300); await a.pag.mouse.click(s.x, s.y); await a.quieto(3, 330);
+      await pestana(a, "areas", "Pestaña Áreas.");
+      await boton(a, "^▦ ?Rellenar", "Rellenar: clic DENTRO de una celda cerrada.");
+      const [q] = await proj(a, [[1.5, 1.5, 0]]);
+      await mover(a, q.x - 40, q.y + 30, 10); await a.quieto(2, 300);
+      await mover(a, q.x, q.y, 10); await a.quieto(3, 300);
+      await clicMundo(a, [1.5, 1.5, 0], "Clic dentro: ya es un área (paño Q4).");
+      await soltar(a);
+      console.log("   ", JSON.stringify(await modeloInfo(a)));
+      await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "4 · Llenar TODAS las celdas cerradas",
+    rotulo: "4 · Llenar todas: las celdas cerradas que quedan, de un clic",
     hacer: async (a) => {
-      await botonEnCarpeta(a, "Áreas (shells)", "Llenar TODAS", "Un clic: rellena TODAS las celdas cerradas de golpe.");
-      await a.pag.evaluate(() => { const f = [...document.querySelectorAll(".tp-fldv_b")].find((x) => (x.textContent||"").includes("Áreas (shells)")); if (f) f.click(); });
-      await a.general(); await a.quieto(4, 340);
+      await boton(a, "^▦▦ ?Llenar todas", "Llenar todas: todas las celdas cerradas de una vez.");
+      console.log("   ", await estado(a), JSON.stringify(await modeloInfo(a)));
+      await a.quieto(5, 360);
     },
   },
   {
-    rotulo: "5 · La regla: medir / acotar",
+    rotulo: "5 · Pestaña Dibujo · Medir: engancha a las esquinas, 6.000 m exactos",
     hacer: async (a) => {
-      await a.pag.evaluate(() => window.__hekatanCadState.setTool("medir"));
-      await clicRojoW(a, 0, 0, 0);
-      await clicRojoW(a, 6, 0, 0);
-      // Cerrar la medición para que no quede una goma elástica (segunda cota
-      // en vivo) colgando del cursor; queda solo la cota fija 6.000 m.
-      await a.pag.keyboard.press("Escape");
-      await a.pag.evaluate(() => { try { window.__hekatanCadState.setTool("select"); } catch(e){} });
-      await a.quieto(5, 350);   // se ve la cota limpia (6.000 m, engancha a los nudos)
+      await pestana(a, "dibujo", "Pestaña Dibujo.");
+      await boton(a, "^📏 ?Medir", "Medir: dos clics.");
+      await clicMundo(a, [0, 0, 0], "De la esquina…");
+      await clicMundo(a, [6, 0, 0], "…a la otra: 6.000 m.");
+      await a.quieto(5, 360);
+      await soltar(a);
     },
   },
   {
-    rotulo: "6 · Puerta corrediza DERECHA: ocultar y mostrar el panel",
+    rotulo: "6 · 3D y Encuadrar",
     hacer: async (a) => {
-      const r = await rectDe(a, "#hk-pane-toggle");
-      if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
-               await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(3, 320); }
+      await boton(a, "^🧊 ?3D", "Vista 3D.");
+      await boton(a, "^⛶ ?Encuadrar", "Encuadrar.");
+      await a.quieto(5, 360);
     },
   },
   {
-    rotulo: "7 · Puerta corrediza IZQUIERDA: los ajustes también",
+    rotulo: "7 · La cinta también se pliega (▴) y vuelve (✏ Dibujar)",
     hacer: async (a) => {
-      const r = await rectDe(a, "#hk-settings-toggle");
-      if (r) { await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(4, 340);
-               await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2); await a.quieto(3, 320); }
+      const pl = await rect(a, () => document.getElementById("hk-ribbon-plegar"));
+      if (pl) { await mover(a, pl.x, pl.y, 12); await caja(a, { x: pl.rx - 4, y: pl.ry - 4, w: pl.rw + 8, h: pl.rh + 8 }, "▴ pliega la cinta: toda la vista libre.", 5); await clicRojo(a, pl.x, pl.y, false); }
+      await a.quieto(4, 360);
+      const ab = await rect(a, () => document.getElementById("hk-ribbon-abrir"));
+      if (ab) { await mover(a, ab.x, ab.y, 12); await caja(a, { x: ab.rx - 4, y: ab.ry - 4, w: ab.rw + 8, h: ab.rh + 8 }, "✏ Dibujar la vuelve a abrir.", 5); await clicRojo(a, ab.x, ab.y, false); }
+      await a.quieto(3, 360);
     },
   },
   {
-    rotulo: "8 · Volver al menú principal (botón 🏠 Menú)",
+    rotulo: "8 · Volver al menú principal (🏠 Menú, barra de arriba)",
     hacer: async (a) => {
-      // Soltar la herramienta y borrar el tooltip de osnap que si no queda
-      // encima del botón, tapándolo.
-      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
-        document.querySelectorAll(".hk-osnap-tip,#hk-osnap-tip,[data-osnap-tip]").forEach(n=>n.remove()); });
-      await a.quieto(2, 300);
-      const r = await rectDe(a, "#hk-home-btn");
-      if (r) {
-        // Enmarcar el botón para que se vea CUÁL es antes de pulsarlo.
-        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 640 }),
-          { r, n: "🏠 Menú: vuelve a la ventana principal desde cualquier ejemplo." });
-        await a.quieto(4, 340);
-        await a.pag.evaluate(() => window.__tutSinCaja());
-        await clicRojoPx(a, r.x + r.w / 2, r.y + r.h / 2);
-        await a.quieto(5, 350);
-      }
+      const r = await rect(a, () => [...document.querySelectorAll("button")].find((b) => /Menú/.test(b.textContent || "") && b.getBoundingClientRect().top < 40));
+      if (r) { await mover(a, r.x, r.y, 12); await caja(a, { x: r.rx - 4, y: r.ry - 4, w: r.rw + 8, h: r.rh + 8 }, "🏠 Menú: vuelve a la ventana principal desde cualquier ejemplo.", 6); }
+      else console.log("  x no está el botón Menú");
+      await a.quieto(3, 360);
     },
   },
 ];

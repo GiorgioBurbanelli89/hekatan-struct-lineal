@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
 
@@ -3287,23 +3290,26 @@ export function drawing({
     }
     const auxState = (window as any).__hekatanDrawingAuxLines;
     const lines: number[][] = auxState?.rawVal ?? auxState?.val ?? auxState ?? [];
-    for (const ln of lines) {
-      if (ln.length !== 6) continue;
-      const geo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(ln[0], ln[1], ln[2]),
-        new THREE.Vector3(ln[3], ln[4], ln[5]),
-      ]);
-      const mat = new THREE.LineDashedMaterial({
-        color: 0x22d3ee,    // cyan
-        dashSize: 0.3,
-        gapSize: 0.15,
-        transparent: true,
-        opacity: 0.8,
-      });
-      const line = new THREE.Line(geo, mat);
-      line.computeLineDistances();  // requerido para dashed
-      auxLinesGroup.add(line);
-    }
+    // Una sola línea discontinua GRUESA (2 px de pantalla) para todas: con
+    // LineDashedMaterial salían de 1 px cian y en el vídeo del tutorial de la cúpula el
+    // meridiano (la guía de la Revolución) casi no se veía (19-sep-2026).
+    const verts: number[] = [];
+    for (const ln of lines) if (ln.length === 6 && ln.every((v) => Number.isFinite(v))) verts.push(...ln);
+    if (!verts.length) return;
+    const geo = new LineSegmentsGeometry();
+    geo.setPositions(verts);
+    const mat = new LineMaterial({
+      color: 0x22d3ee, linewidth: 2, worldUnits: false,
+      dashed: true, dashSize: 0.3, gapSize: 0.15,
+      transparent: true, opacity: 0.9,
+    });
+    const line = new LineSegments2(geo, mat);
+    line.computeLineDistances();   // requerido para dashed
+    line.frustumCulled = false;
+    line.raycast = () => {};        // el OSNAP usa los datos, no la malla
+    const tam = new THREE.Vector2();
+    line.onBeforeRender = (renderer) => { renderer.getSize(tam); mat.resolution.set(tam.x, tam.y); };
+    auxLinesGroup.add(line);
   };
   // Re-render automático cuando cambia el array de aux lines
   van.derive(() => {
@@ -4878,6 +4884,18 @@ export function drawing({
         if (cur.length >= 2) polysAfterPtDel.push(cur);
       }
       newPolys = polysAfterPtDel;
+      // Lo asignado a NUDOS (apoyos, cargas, masa, muelles, diafragma) va por índice de
+      // punto: sin renumerarlo se quedaba en el índice viejo y caía en OTRO nudo. Medido
+      // en el tutorial de la cúpula (19-sep-2026): se borró la cúpula entera con sus 16
+      // apoyos y el Allianz dibujado después nació con 16 apoyos en nudos cualquiera.
+      for (const g of ["__hekatanManualSupports", "__hekatanManualLoads", "__hekatanManualMass",
+                       "__hekatanManualSprings", "__hekatanManualDiaphragm"]) {
+        const m = (window as any)[g] as Map<number, any> | undefined;
+        if (!m || typeof m.forEach !== "function" || m.size === 0) continue;
+        const viejo = [...m.entries()];
+        m.clear();
+        for (const [k, v] of viejo) { const nk = ptRemap.get(k); if (nk !== undefined) m.set(nk, v); }
+      }
       drawingObj.points.val = newPts;
     }
 
@@ -7387,7 +7405,11 @@ export function drawing({
     // pantalla vale más de 38 veces la distancia al plano: no es dibujar.
     const gt = drawingObj.gridTarget?.rawVal;
     if (!gt) return true;
-    const n = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
+    // La rejilla de trabajo es un GridHelper: vive en su plano LOCAL XZ, así que su normal es
+    // la Y local. Con (0,0,1) la normal salía EN el plano (planta: rot [π/2,0,0] → (0,−1,0)) y
+    // el aviso «casi de canto» saltaba en CADA clic mirando de frente (medido en el tutorial
+    // Warren: todos los nudos del alzado XZ con el aviso).
+    const n = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
     const d = raycaster.ray.direction;
     if (d.lengthSq() < 1e-12) return true;
     const senoRasante = Math.abs(d.clone().normalize().dot(n));

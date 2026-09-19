@@ -1,213 +1,118 @@
 /**
- * Tutorial 5 — Mejoras del VISOR IFC: importar y ver el modelo, ocultar/aislar
- * objetos, medir con la regla (OSNAP a esquinas) y recortar para ver por dentro.
+ * Tutorial 5 — el VISOR IFC, SOLO con la cinta de acceso rápido (19-sep-2026, Jorge:
+ * «debes usar solo acceso rápido»): importar y ver el modelo, ocultar/aislar objetos (su
+ * propio panel), medir con la regla y cortar en Z desde la pestaña «IFC y cortes».
+ *
+ * Límite honesto: el diálogo de archivos del sistema no se graba. Se señala con el cursor
+ * «📥 Importar» de la cinta y se carga el MISMO IFC.
  */
+import { mover, clicRojo, caja, rect, panel, proj, estado, pestana, boton, senalar, casilla, soltar } from "./_cinta.mjs";
 export const titulo = "Hekatan Struct · el visor IFC";
 export const ruta = "workspace/?t=ifc-viewer";
 
-const host = async (a) => a.pag.evaluate(() => {
-  const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera);
-  if (!h) return null; const r = h.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height };
-});
-// Mueve el cursor LENTO y VISIBLE: lo pinta en cada tramo del recorrido y
-// captura un fotograma por tramo (antes saltaba al destino de golpe). Más
-// `pasos` = más lento.
-const mover = async (a, x, y, pasos = 18) => {
-  const p0 = await a.pag.evaluate(() => window.__tutXY || { x: 640, y: 300 });
-  for (let i = 1; i <= pasos; i++) {
-    const cx = p0.x + (x - p0.x) * (i / pasos), cy = p0.y + (y - p0.y) * (i / pasos);
-    await a.pag.mouse.move(cx, cy);
-    await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x: cx, y: cy });
-    await a.quieto(1, 55);
-  }
-};
-const clicRojoPx = async (a, x, y) => {
-  await mover(a, x, y, 18);
-  await a.quieto(5, 320);   // el cursor se POSA sobre el control (se ve dónde)
-  await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x, y });
-  await a.quieto(5, 320);   // clic rojo BIEN visible
-  await a.pag.mouse.click(x, y);
-  await a.quieto(4, 320);   // se ve el efecto
-};
-const orbit = async (a, dx, dy, n = 6) => {
-  const r = await host(a); if (!r) return;
-  const cx = r.x + r.w * 0.5, cy = r.y + r.h * 0.5;
-  // Cursor VISIBLE durante el giro: se pinta en cada tramo del arrastre para
-  // que se vea que es el ratón quien orbita el modelo (no la cámara sola).
-  await a.pag.mouse.move(cx, cy);
-  await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x: cx, y: cy });
-  await a.pag.mouse.down();
+// girar con la RUEDA PULSADA (botón central), que es el giro de la app: el izquierdo selecciona
+const girar = async (a, dx, dy, n = 6) => {
+  const r = await a.pag.evaluate(() => { const h = document.querySelector("#viewer"); const rc = h.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height }; });
+  const cx = r.x + r.w * 0.5, cy = r.y + r.h * 0.55;
+  await mover(a, cx, cy, 10);
+  await a.pag.mouse.down({ button: "middle" });
   const K = 18;
   for (let i = 1; i <= K; i++) {
     const x = cx + (dx * i) / K, y = cy + (dy * i) / K;
     await a.pag.mouse.move(x, y);
-    await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x, y });
-    await a.quieto(1, 55);   // captura cada tramo → giro SUAVE (no a saltos)
+    await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); window.__tutXY = q; }, { x, y });
+    await a.quieto(1, 55);
   }
-  await a.pag.mouse.up();
+  await a.pag.mouse.up({ button: "middle" });
   await a.quieto(n, 320);
 };
+const porId = (a, id) => rect(a, (id) => document.getElementById(id), id);
 
 export const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada("El visor IFC", "Tutorial 5", 16); } },
   {
-    rotulo: "1 · Importar el IFC y ver el modelo",
+    rotulo: "1 · Cinta › pestaña IFC y cortes › Importar; se ve el modelo en 3D",
     hacer: async (a) => {
       await a.general(); await a.quieto(2, 320);
-      // Señalar con el CURSOR el botón de importar (el diálogo de archivo del
-      // sistema no se puede grabar, así que aquí se carga el mismo IFC).
-      const r = await a.pag.evaluate(() => {
-        const b = [...document.querySelectorAll("button")].find((x) => /Importar IFC/i.test(x.textContent || ""));
-        if (!b) return null; b.scrollIntoView({ block: "center" });
-        const rc = b.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height };
-      });
-      if (r) {
-        await mover(a, r.x + r.w / 2, r.y + r.h / 2, 22);
-        await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 720 }),
-          { r, n: "Importar IFC: se elige el archivo .ifc y se ve el modelo." });
-        await a.quieto(4, 340);
-        await a.pag.evaluate((q) => window.__tutClick && window.__tutClick(q.x, q.y), { x: r.x + r.w / 2, y: r.y + r.h / 2 });
-        await a.quieto(2, 300);
-        await a.pag.evaluate(() => window.__tutSinCaja());
-      }
-      await a.pag.evaluate(async (base) => {
+      await panel(a, "izq", false); await panel(a, "der", false);
+      const ab = await porId(a, "hk-ribbon-abrir");
+      if (ab && ab.rw > 0) { await mover(a, ab.x, ab.y, 12); await caja(a, { x: ab.rx - 4, y: ab.ry - 4, w: ab.rw + 8, h: ab.rh + 8 }, "✏ abre la cinta de acceso rápido.", 4); await clicRojo(a, ab.x, ab.y, false); }
+      await pestana(a, "ifc", "Pestaña IFC y cortes.");
+      await senalar(a, "^📥 ?Importar", "Importar: se elige el .ifc en el diálogo del sistema.", 6);
+      await a.pag.evaluate(async () => {
+        const base = location.pathname.startsWith("/hekatan-struct-lineal/") ? "/hekatan-struct-lineal/" : "/";
         const M = await fetch(base + "ifc_church.json").then((r) => r.json());
         window.__hekatanIfcMesh = M;
         try { window.__hekatanRebuild && window.__hekatanRebuild(); } catch (e) {}
         try { window.__hekatanAutoFit && window.__hekatanAutoFit(); } catch (e) {}
-      }, "/hekatan-struct-lineal/");
-      await a.general(); await a.quieto(5, 360);
-      await orbit(a, 150, -20, 4);
+      });
+      await a.quieto(3, 360);
+      await girar(a, 150, -20, 2);
+      await boton(a, "^⛶ ?Encuadrar", "Encuadrar: el edificio en el hueco libre.");
+      await a.quieto(3, 340);
     },
   },
   {
-    rotulo: "2 · Ocultar / aislar objetos (panel con la info)",
+    rotulo: "2 · «Objetos» de la cinta: la lista del IFC; ocultar dos objetos",
     hacer: async (a) => {
-      // El panel arranca MINIMIZADO (abajo-centro, no tapa los menús). Se
-      // expande CON EL CURSOR (botón ▢) para ver la lista.
-      const bm0 = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-min"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
-      if (bm0) { await clicRojoPx(a, bm0.x, bm0.y); await a.quieto(2, 320); }
-      // Panel hk-ifc-objs: destacar y ocultar 2 objetos.
-      const r = await a.pag.evaluate(() => { const p = document.getElementById("hk-ifc-objs"); if (!p) return null; const rc = p.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height }; });
-      if (r) { await a.pag.evaluate((q) => window.__tutCaja(q.r, q.n, { x: 0, y: 0, w: 1280, h: 720 }), { r, n: "Lista de objetos del IFC: color, nº de triángulos, ocultar y «solo»." }); await a.quieto(5, 340); await a.pag.evaluate(() => window.__tutSinCaja()); }
-      // Ocultar dos objetos (checkboxes) para que se vea el efecto.
+      await boton(a, "^🏛 ?Objetos", "Objetos: la lista de lo que trae el IFC.");
+      const bm0 = await porId(a, "hk-ifc-min");
+      const lista = await porId(a, "hk-ifc-objs");
+      if (lista && lista.rh < 60 && bm0) await clicRojo(a, bm0.x, bm0.y, false);   // estaba minimizada
+      const r = await porId(a, "hk-ifc-objs");
+      if (r) await caja(a, { x: r.rx, y: r.ry, w: r.rw, h: r.rh }, "Cada objeto: color, triángulos, ocultar y «solo».", 5);
       for (const idx of [0, 2]) {
-        const cb = await a.pag.evaluate((i) => { const c = document.querySelector(`[data-ifc-vis="${i}"]`); if (!c) return null; const rc = c.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; }, idx);
-        if (cb) await clicRojoPx(a, cb.x, cb.y);
+        const cb = await rect(a, (i) => document.querySelector(`[data-ifc-vis="${i}"]`), idx);
+        if (cb) await clicRojo(a, cb.x, cb.y, false);
       }
       await a.quieto(3, 340);
     },
   },
   {
-    rotulo: "3 · El panel también es corredizo: minimizar y puerta",
+    rotulo: "3 · Ese panel se minimiza y se esconde (puerta); «ver todos»",
     hacer: async (a) => {
-      // Botón minimizar (▁): encoge el panel para no tapar los otros menús.
-      const bm = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-min"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
-      if (bm) { await clicRojoPx(a, bm.x, bm.y); await a.quieto(4, 340);
-                await clicRojoPx(a, bm.x, bm.y); await a.quieto(2, 300); }  // restaurar
-      // Botón puerta corrediza (⟨): esconde el panel del todo, deja una pestaña.
-      const bs = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-slide"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
-      if (bs) { await clicRojoPx(a, bs.x, bs.y); await a.quieto(4, 340);
-        // reaparece con la pestaña
-        const tab = await a.pag.evaluate(() => { const t = document.getElementById("hk-ifc-tab"); if (!t) return null; const rc = t.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
-        if (tab) { await clicRojoPx(a, tab.x, tab.y); await a.quieto(3, 320); }
-      }
-    },
-  },
-  {
-    rotulo: "4 · Medir con la regla (engancha a las esquinas)",
-    hacer: async (a) => {
-      // ver todos otra vez — CON EL CURSOR (botón «ver todos» del panel IFC).
-      const vt = await a.pag.evaluate(() => { const b = document.getElementById("hk-ifc-all"); if (!b) return null; const rc = b.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2 }; });
-      if (vt) await clicRojoPx(a, vt.x, vt.y);
+      const bm = await porId(a, "hk-ifc-min");
+      if (bm) { await clicRojo(a, bm.x, bm.y, false); await a.quieto(3, 340); await clicRojo(a, bm.x, bm.y, false); }
+      const bs = await porId(a, "hk-ifc-slide");
+      if (bs) { await clicRojo(a, bs.x, bs.y, false); await a.quieto(3, 340); }
+      await boton(a, "^🏛 ?Objetos", "Y vuelve desde la cinta.");
+      const vt = await porId(a, "hk-ifc-all");
+      if (vt) await clicRojo(a, vt.x, vt.y, false);
+      const sl = await porId(a, "hk-ifc-slide");
+      if (sl) await clicRojo(a, sl.x, sl.y, false);
       await a.quieto(2, 320);
-      await a.pag.evaluate(() => window.__hekatanCadState.setTool("medir"));
-      const r = await host(a); if (!r) return;
-      await clicRojoPx(a, r.x + r.w * 0.40, r.y + r.h * 0.55);
-      await clicRojoPx(a, r.x + r.w * 0.62, r.y + r.h * 0.50);
-      await a.quieto(5, 350);   // se ve la cota
     },
   },
   {
-    rotulo: "5 · DÓNDE se activa el corte: panel ✂ Cortes X/Y/Z, casilla Cortar Z",
+    rotulo: "4 · Pestaña Dibujo › Medir: la regla engancha a las esquinas del IFC",
     hacer: async (a) => {
-      // Limpiar la regla de paso 4: soltar herramienta y borrar la cota (label
-      // DOM + línea de la escena) para que no quede flotando sobre el modelo.
-      await a.pag.keyboard.press("Escape");
-      await a.pag.keyboard.press("Escape");
-      await a.pag.evaluate(() => {
-        try { window.__hekatanCadState?.setTool?.(null); } catch(e){}
-        try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){}
-      });
-      await a.quieto(2, 320);
-      // 1. Abrir el folder «✂️ Cortes X/Y/Z» del panel Settings (izquierda) CON EL CURSOR.
-      const fold = await a.pag.evaluate(() => {
-        const f = [...document.querySelectorAll(".tp-fldv_b")].find((x) => /Cortes/i.test(x.textContent || ""));
-        if (!f) return null; f.scrollIntoView({ block: "center" });
-        const rc = f.getBoundingClientRect(); return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2, rx: rc.left, ry: rc.top, rw: rc.width, rh: rc.height };
-      });
-      if (fold) {
-        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "AQUÍ se activa el corte: panel ✂ Cortes X/Y/Z.", { x: 0, y: 0, w: 1280, h: 720 }), fold);
-        await a.quieto(4, 340);
-        await a.pag.evaluate(() => window.__tutSinCaja());
-        await clicRojoPx(a, fold.x, fold.y);   // abre el folder
-        await a.quieto(2, 320);
-      }
-      // 2. Fijar la altura del corte ARRASTRANDO el slider «pos Z» CON EL CURSOR.
-      const sld = await a.pag.evaluate(() => {
-        const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /pos Z/i.test(x.textContent || ""));
-        if (!row) return null; row.scrollIntoView({ block: "center" });
-        const s = row.querySelector(".tp-sldv") || row.querySelector("input[type=range]") || row.querySelector(".tp-lblv_v");
-        const rc = s.getBoundingClientRect();
-        const bb = window.__hekatanIfcMesh?.bbox; const zmid = bb ? (bb[0][2] + bb[1][2]) / 2 : 5;
-        const frac = Math.max(0.02, Math.min(0.98, (zmid + 50) / 100));  // rango -50..50
-        return { x0: rc.left + rc.width * 0.5, y: rc.top + rc.height / 2, xt: rc.left + rc.width * frac };
-      });
-      if (sld) {
-        // Arrastre visible del knob de 0 (centro) a la altura media.
-        await mover(a, sld.x0, sld.y, 18);
-        await a.pag.mouse.down();
-        const K = 14;
-        for (let i = 1; i <= K; i++) {
-          const x = sld.x0 + (sld.xt - sld.x0) * (i / K);
-          await a.pag.mouse.move(x, sld.y);
-          await a.pag.evaluate((q) => { if (window.__tutCursor) window.__tutCursor(q.x, q.y); }, { x, y: sld.y });
-        }
-        await a.pag.mouse.up();
-        await a.quieto(2, 320);
-      }
-      // 3. Activar «Cortar Z» con el cursor: se abre el modelo en el corte fijado.
-      const cz = await a.pag.evaluate(() => {
-        const row = [...document.querySelectorAll(".tp-lblv")].find((x) => /Cortar Z/i.test(x.textContent || ""));
-        if (!row) return null; row.scrollIntoView({ block: "center" });
-        const ctl = row.querySelector(".tp-ckbv_w") || row.querySelector("input[type=checkbox]") || row.querySelector(".tp-lblv_v") || row;
-        const rc = ctl.getBoundingClientRect(); const rr = row.getBoundingClientRect();
-        return { x: rc.left + rc.width / 2, y: rc.top + rc.height / 2, rx: rr.left, ry: rr.top, rw: rr.width, rh: rr.height };
-      });
-      if (cz) {
-        // El cursor se acerca LENTO a la casilla y se posa; el recuadro señala
-        // ESTE es el botón que activa el corte; luego el clic rojo bien visible.
-        await mover(a, cz.x, cz.y, 18);
-        await a.pag.evaluate((q) => window.__tutCaja({ x: q.rx, y: q.ry, w: q.rw, h: q.rh }, "ESTE botón activa el corte: marco «Cortar Z» con el ratón.", { x: 0, y: 0, w: 1280, h: 720 }), cz);
-        await a.quieto(7, 360);   // se ve BIEN qué casilla se va a pulsar
-        await a.pag.evaluate(() => window.__tutSinCaja());
-        await clicRojoPx(a, cz.x, cz.y);
-      }
-      // SIN herramienta (no «select») para que el arrastre del giro NO dibuje
-      // un rectángulo de selección; y limpiar cualquier regla a medias.
-      await a.pag.keyboard.press("Escape");
-      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){} try { window.__hekatanClearMeasure && window.__hekatanClearMeasure(); } catch(e){} });
-      await a.quieto(6, 360);   // el modelo YA está cortado: se ve el interior
+      await pestana(a, "dibujo", "Pestaña Dibujo.");
+      await boton(a, "^📏 ?Medir", "Medir: dos clics sobre el modelo.");
+      const r = await a.pag.evaluate(() => { const h = document.querySelector("#viewer"); const rc = h.getBoundingClientRect(); return { x: rc.left, y: rc.top, w: rc.width, h: rc.height }; });
+      await clicRojo(a, r.x + r.w * 0.42, r.y + r.h * 0.60, false);
+      await clicRojo(a, r.x + r.w * 0.60, r.y + r.h * 0.55, false);
+      await a.quieto(5, 350);
+      await soltar(a);
     },
   },
   {
-    rotulo: "6 · El modelo se abre: giramos para ver el interior",
+    rotulo: "5 · Pestaña IFC y cortes: altura del corte en la casilla Z y «Corte Z»",
     hacer: async (a) => {
-      // Asegurar que no hay herramienta activa: el giro es solo cámara, sin
-      // que el arrastre deje un rectángulo de selección.
-      await a.pag.evaluate(() => { try { window.__hekatanCadState?.setTool?.(null); } catch(e){} });
-      await orbit(a, 120, -30, 6);
-      await orbit(a, -90, 20, 6);
+      await pestana(a, "ifc", "Pestaña IFC y cortes.");
+      const zmid = await a.pag.evaluate(() => { const bb = window.__hekatanIfcMesh?.bbox; return bb ? +(((bb[0][2] + bb[1][2]) / 2).toFixed(1)) : 5; });
+      await casilla(a, "posZ", zmid, `Altura del corte: Z = ${zmid} m.`);
+      await boton(a, "^✂ ?Corte Z", "Corte Z: el edificio se abre a esa altura.");
+      await a.quieto(6, 360);
+    },
+  },
+  {
+    rotulo: "6 · El modelo abierto: se gira con la rueda pulsada para ver el interior",
+    hacer: async (a) => {
+      await girar(a, 120, -30, 2);
+      await boton(a, "^⛶ ?Encuadrar");
+      await girar(a, -90, 20, 2);
+      await boton(a, "^⛶ ?Encuadrar");
+      await a.quieto(5, 340);
     },
   },
 ];

@@ -23,6 +23,7 @@ import {
   deform, analyze,
 } from "hekatan-fem";
 import { autoMeshShells } from "../shared/e2kAutoMesh";
+import "../shared/bienvenida";   // pantalla de bienvenida (una sola al entrar; ver el módulo)
 
 // ── Auto-mesh shells toggle (global, persistido localStorage) ──
 // ?heks=<url> — se captura AQUI, al cargar el modulo, y no donde se usa: el
@@ -371,6 +372,14 @@ function ofrecerRecuperar(): void {
     areas = JSON.parse(localStorage.getItem(DRAW_AREAS_KEY) || "[]");
   } catch { return; }
   if (!pts.length) return;
+  // Con la pantalla de bienvenida, el dibujo guardado se ofrece DENTRO de ella.
+  const aplicarRec = () => {
+    drawingPoints.val = pts; drawingPolylines.val = polys; drawingAreas.val = areas;
+    (window as any).__hekatanRebuild?.(); (window as any).__hekatanAutoFit?.();
+  };
+  const borrarRec = () => { try { localStorage.removeItem(DRAW_PTS_KEY); localStorage.removeItem(DRAW_POLYS_KEY);
+                                  localStorage.removeItem(DRAW_AREAS_KEY); } catch {} };
+  if ((window as any).__hekatanBienvenidaRecuperar?.(pts.length, aplicarRec, borrarRec)) return;
 
   const av = document.createElement("div");
   av.style.cssText = [
@@ -687,7 +696,8 @@ function loadExample(ex: ExampleDef) {
   // tapaba la bóveda del enlace compartido — medido en el PNG, 13-sep-2026.)
   // (Y tampoco con el enlace #h= — modelo DENTRO del hash —: la condicion solo miraba ?heks y ?m, y la
   // guia salia encima del radier compartido por #h=, 18-sep-2026. URL_HEKS cubre los tres.)
-  if (ex.id === "new-blank" && !URL_HEKS) {
+  // (Y NUNCA con la pantalla de bienvenida: la guía la abre su «🧭 Guiado», o ? / F1.)
+  if (ex.id === "new-blank" && !URL_HEKS && !(window as any).__hekatanConBienvenida) {
     let mostrar = true;
     try { mostrar = localStorage.getItem("hk_guia_nuevo") !== "0"; } catch {}
     if (mostrar) setTimeout(() => { try { (window as any).__hekatanRibbon?.guia?.(true); } catch {} }, 700);

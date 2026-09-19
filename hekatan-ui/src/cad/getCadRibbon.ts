@@ -65,14 +65,119 @@ import { montarExtras } from "./ribbonExtras";
 
 interface Herr {
   id: string; icono: string; nombre: string; tecla: string; ayuda: string;
+  /** Si está, el botón no es una herramienta del motor sino una ACCIÓN (devuelve el aviso). */
+  accion?: () => string | void;
+  /** Encendido del botón para las acciones que son interruptores (deformada, axil…). */
+  activo?: () => boolean;
 }
+
+// ── Textos de la cinta en ES y EN ────────────────────────────────────────────
+// Struct tendrá interfaz en inglés (Jorge, 19-sep-2026). Mismo interruptor que el resto
+// de la app (`localStorage.hk_lang`, ver examples/src/shared/i18n.ts); la clave es el
+// texto en español y lo que no está en la tabla sale tal cual.
+const EN: Record<string, string> = {
+  "✏ Dibujo": "✏ Draw", "🏗 Rejilla y planos": "🏗 Grid & planes", "▦ Áreas": "▦ Areas",
+  "📊 Resultados": "📊 Results", "🏛 IFC y cortes": "🏛 IFC & sections",
+  "Dibujar": "Draw", "Estructura": "Structure", "Apoyos y cargas": "Supports & loads", "Modificar": "Modify",
+  "Línea": "Line", "Polilínea": "Polyline", "Rectáng.": "Rectang.", "Círculo": "Circle", "Arco": "Arc",
+  "Parábola": "Parabola", "Cúbica": "Cubic", "Columna": "Column", "Muro": "Wall", "Losa": "Slab",
+  "Empotr.": "Fixed", "Articul.": "Pinned", "Carga": "Load", "Carga q": "Load q",
+  "Anterior": "Undo", "Rehacer": "Redo", "Selec.": "Select", "Mover": "Move", "Copiar": "Copy", "Replicar": "Replicate",
+  "Desfase": "Offset", "Recortar": "Trim", "Alargar": "Extend", "Remodelar": "Reshape", "Borrar": "Erase",
+  "Medir": "Measure", "Auxiliar": "Construction",
+  "Superficies": "Surfaces", "Rellenar": "Fill", "Llenar todas": "Fill all", "Chaflanes": "Fillets",
+  "Revoluc.": "Revolve", "Barrido": "Sweep", "Curvas": "Curves", "Guía aux.": "Guide",
+  "Deformada": "Deformed", "Menos": "Less", "Más": "More", "Diagramas de barra": "Frame diagrams",
+  "Axil": "Axial", "Cortante": "Shear", "Momento": "Moment", "Nudos": "Joints", "Desplaz.": "Displ.",
+  "Reacción": "Reaction", "Ver en 2D": "2D view", "Diagrama 2D": "2D diagram", "Barra": "Member",
+  "Importar": "Import", "Objetos": "Objects", "Copiar lín.": "Copy line", "Área cara": "Face area",
+  "Cortes": "Sections", "Corte X": "Cut X", "Corte Y": "Cut Y", "Corte Z": "Cut Z",
+  "Encuadrar": "Zoom ext.", "Planta": "Plan", "Frente": "Front", "Lado": "Side",
+  "Tramos": "Segments", "Sectores": "Sectors", "Chaflán r": "Fillet r",
+  "Tramos · sectores · radio": "Segments · sectors · radius", "Escala de la deformada": "Deformed scale",
+  "Posición del corte (m)": "Section position (m)", "Vista · plano de trabajo": "View · work plane", "Precisión": "Precision",
+  "Carga  kN · kN/m": "Load  kN · kN/m", "Rejilla  X × Y × pisos": "Grid  X × Y × storeys",
+};
+const tr = (es: string): string => {
+  try { if (localStorage.getItem("hk_lang") === "en") return EN[es] ?? es; } catch {}
+  return es;
+};
+
+// ── Acciones de la cinta que no son herramientas de dibujo ───────────────────
+// Llaman a lo MISMO que el control del panel (los States del visor o los ganchos
+// globales que usa el Tweakpane): el mismo mando con otra entrada, sin copiar lógica.
+const W_ = () => window as any;
+const ajustes = () => W_().__hekatanSettings?.();
+/** La fila REAL de Tweakpane cuyo rótulo casa con `re` (el mando del panel). */
+const filaTp = (re: RegExp) => [...document.querySelectorAll<HTMLElement>(".tp-lblv")]
+  .find((f) => re.test((f.querySelector(".tp-lblv_l")?.textContent || "").replace(/\s+/g, " ")));
+/** Escribe en el mando del panel y dispara su `change`: corre la MISMA función del panel. */
+const ponerMando = (re: RegExp, v: string): boolean => {
+  const i = filaTp(re)?.querySelector<HTMLInputElement>("input[type=text], input:not([type])");
+  if (!i) return false;
+  i.value = v; i.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+};
+const leerMando = (re: RegExp): string | null =>
+  filaTp(re)?.querySelector<HTMLInputElement>("input[type=text], input:not([type])")?.value ?? null;
+/** Casilla del panel: la pulsa (su `change` es el del panel) si no está como se pide. */
+const casillaMando = (re: RegExp, on?: boolean): boolean | null => {
+  const c = filaTp(re)?.querySelector<HTMLInputElement>("input[type=checkbox]");
+  if (!c) return null;
+  if (on === undefined || c.checked !== on) c.click();
+  return c.checked;
+};
+const casillaVal = (re: RegExp) => !!filaTp(re)?.querySelector<HTMLInputElement>("input[type=checkbox]")?.checked;
+
+/** Pulsa el botón REAL de un panel por su texto: la acción es la del panel, sin copia. */
+const pulsarPanel = (re: RegExp, falta: string) => () => {
+  const b = [...document.querySelectorAll<HTMLElement>(".tp-btnv_b")].find((x) => re.test(x.textContent || ""));
+  if (!b) return falta;
+  b.click(); return "";
+};
+/** Corte X/Y/Z: la casilla «Cortar X» del panel Settings › Cortes X/Y/Z. */
+const corte = (k: "X" | "Y" | "Z") => () => {
+  const on = casillaMando(new RegExp(`^\\s*Cortar ${k}`));
+  if (on === null) return "Los cortes todavía no están.";
+  return on ? `Corte ${k} en ${k} = ${leerMando(new RegExp(`pos ${k}`)) ?? "?"} m (la casilla «${k}» lo mueve).` : `Corte ${k} quitado.`;
+};
+
+/** Resultados de BARRA: el mismo State `frameResults` del desplegable «Resultados de barra». */
+const verBarra = (val: string, nom: string) => () => {
+  const st = ajustes(); if (!st?.frameResults) return "El visor todavía no tiene resultados.";
+  const ya = st.frameResults.rawVal === val;
+  st.frameResults.val = ya ? "none" : val;
+  return ya ? "Diagrama apagado." : `Diagrama de ${nom} sobre cada barra, con su valor.`;
+};
+/** Resultados de NUDO: el mismo State `nodeResults` del desplegable «Resultados de nudo». */
+const verNudo = (val: string, nom: string) => () => {
+  const st = ajustes(); if (!st?.nodeResults) return "El visor todavía no tiene resultados.";
+  const ya = st.nodeResults.rawVal === val;
+  st.nodeResults.val = ya ? "none" : val;
+  return ya ? `${nom}: apagado.` : `${nom} en cada nudo.`;
+};
+/** Escala de la deformada: el mismo State `deformScale` del slider «Escala XY». */
+const escala = (f: number) => () => {
+  const st = ajustes(); if (!st?.deformScale) return "";
+  const v = Math.max(0.1, Math.min(5000, +(st.deformScale.rawVal * f).toPrecision(3)));
+  st.deformScale.val = v;
+  if (st.deformedShape && !st.deformedShape.rawVal) st.deformedShape.val = true;
+  return `Escala de la deformada: ×${v}.`;
+};
+
+/** Botones que no son herramientas del motor: se APLICAN al nudo o barra que se clica. */
+const APLICA = new Set(["apoyo", "apoyoart", "carga", "cargaq"]);
 
 /** Lo que se usa todo el rato. Lo demás NO entra aquí a propósito. */
 // `fila`: 1 = arriba (dibujar / estructura / analizar / vista), 2 = abajo (modificar /
 // rejilla / cota / carga). Dos filas y no más, como las barras de ETABS (Jorge, 13-sep-2026).
-const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
+// `pest`: la PESTAÑA de la cinta donde vive el grupo (como las fichas de AutoCAD: Inicio,
+// Insertar, Anotar…). Dos filas por pestaña y nada más; lo que no cabía en dos filas a
+// 1280 px (medido: fila 1 = 1238 px, fila 2 = 1678 px) se reparte en pestañas.
+type Pest = "dibujo" | "rejilla" | "areas" | "resultados" | "ifc";
+const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> = [
   {
-    titulo: "Dibujar", fila: 1,
+    titulo: "Dibujar", fila: 1, pest: "dibujo",
     items: [
       { id: "line",     icono: "／", nombre: "Línea",     tecla: "L",   ayuda: "clic tras clic, encadena. C cierra, U quita el último, Esc termina." },
       { id: "polyline", icono: "⌒", nombre: "Polilínea", tecla: "PL",  ayuda: "clics seguidos; Enter o clic derecho para terminar." },
@@ -84,13 +189,11 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     ],
   },
   {
-    titulo: "Estructura", fila: 1,
+    titulo: "Estructura", fila: 1, pest: "dibujo",
     items: [
       { id: "col",  icono: "▌", nombre: "Columna", tecla: "COL", ayuda: "teclea la altura + Enter, luego clic en la base." },
       { id: "wall", icono: "▥", nombre: "Muro",    tecla: "MU",  ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
       { id: "area", icono: "▦", nombre: "Losa",    tecla: "LO",  ayuda: "4 clics en orden, antihorario." },
-      { id: "revolve", icono: "⟳", nombre: "Revoluc.", tecla: "REV", ayuda: "designá el meridiano (guía) y hacé 1 clic en el eje: cúpula en paños Q4." },
-      { id: "loft",    icono: "⟲", nombre: "Barrido",  tecla: "BAR", ayuda: "designá contorno de planta + perfil de alzado y 1 clic en el centro: la piel en paños Q4." },
     ],
   },
   {
@@ -100,10 +203,15 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     // del ribbon: 145 nudos, 121 tramos y cero resultados
     // (`node cli/ctl_solo_botones.mjs`). Una estructura sin apoyos no tiene
     // solucion — la matriz es singular — y sin cargas no se mueve.
-    titulo: "Analizar", fila: 1,
+    titulo: "Apoyos y cargas", fila: 1, pest: "dibujo",
     items: [
-      { id: "apoyo", icono: "▲", nombre: "Apoyo", tecla: "AP",
-        ayuda: "clic sobre un nudo: lo empotra. Sin apoyos no hay solucion." },
+      // Los dos apoyos de la barra de ETABS (Assign ▸ Joint ▸ Restraints, botones rápidos):
+      // empotrado y articulado. Antes solo había «Apoyo» (empotra) y para articular había que
+      // seleccionar el nudo e ir a las casillas del panel de propiedades.
+      { id: "apoyo", icono: "▲", nombre: "Empotr.", tecla: "AP",
+        ayuda: "clic sobre un nudo: lo EMPOTRA (6 GDL). Con nudos ya seleccionados, los empotra a todos." },
+      { id: "apoyoart", icono: "△", nombre: "Articul.", tecla: "APA",
+        ayuda: "clic sobre un nudo: lo ARTICULA (Ux Uy Uz; giros libres). Con nudos ya seleccionados, los articula a todos." },
       { id: "carga", icono: "↓", nombre: "Carga", tecla: "CG",
         ayuda: "clic sobre un nudo: le pone la carga vertical de la casilla." },
       { id: "cargaq", icono: "⇊", nombre: "Carga q", tecla: "CQ",
@@ -111,7 +219,7 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     ],
   },
   {
-    titulo: "Modificar", fila: 2,
+    titulo: "Modificar", fila: 2, pest: "dibujo",
     items: [
       // Deshacer / Rehacer a la vista, como la barra de acceso rápido de AutoCAD (Ctrl+Z / Ctrl+Y)
       { id: "deshacer", icono: "↶", nombre: "Anterior", tecla: "Ctrl+Z", ayuda: "deshace la última acción (también U + Enter)." },
@@ -133,6 +241,83 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
       { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
     ],
   },
+  // ── Pestaña ÁREAS: lo del panel derecho › Áreas (shells) y › Modos de dibujo ──
+  {
+    titulo: "Superficies", fila: 1, pest: "areas",
+    items: [
+      { id: "fillarea", icono: "▦", nombre: "Rellenar", tecla: "", ayuda: "clic DENTRO de una celda cerrada por 4 barras: se vuelve área (paño Q4). Al pasar el ratón la celda se resalta." },
+      { id: "llenartodas", icono: "▦▦", nombre: "Llenar todas", tecla: "", ayuda: "un clic: todas las celdas cerradas por barras se vuelven áreas (el «Llenar TODAS» del panel).",
+        accion: () => { const n = W_().__hekatanFillClosedAreas?.() ?? 0; try { W_().__hekatanRebuild?.(); } catch {}
+          return n > 0 ? `${n} área(s) creada(s) en las celdas cerradas.` : "No hay celdas cerradas por 4 barras."; } },
+      { id: "chaflan", icono: "▱", nombre: "Chaflanes", tecla: "", ayuda: "losa con esquinas redondeadas: 2 clics en esquinas opuestas; el radio es la casilla «Chaflán r»." },
+      { id: "revolve", icono: "⟳", nombre: "Revoluc.", tecla: "REV", ayuda: "designá el meridiano (guía) y hacé 1 clic en el eje: cúpula en paños Q4. Sectores: la casilla de abajo." },
+      { id: "loft",    icono: "⟲", nombre: "Barrido",  tecla: "BAR", ayuda: "designá contorno de planta + perfil de alzado y 1 clic en el centro: la piel en paños Q4." },
+    ],
+  },
+  {
+    titulo: "Curvas", fila: 2, pest: "areas",
+    items: [
+      { id: "a-guia", icono: "┄", nombre: "Guía aux.", tecla: "", ayuda: "Arco, Círculo, Parábola y Chaflanes salen como GUÍA auxiliar (cian): se borran al usarlas en Revolución o Barrido. Es la casilla «Curvas como guía auxiliar» del panel.",
+        accion: () => { const on = casillaMando(/Curvas como gu/i); return on === null ? "Falta el panel de dibujo." : on ? "Curvas como guía auxiliar: SÍ (se borran al usarlas)." : "Curvas como barras (frames)."; },
+        activo: () => casillaVal(/Curvas como gu/i) },
+    ],
+  },
+  // ── Pestaña RESULTADOS: antes había que plegar la cinta e ir al panel Settings ──
+  {
+    titulo: "Deformada", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-def", icono: "〰", nombre: "Deformada", tecla: "F", ayuda: "enciende o apaga la deformada, amplificada.",
+        accion: () => { const st = ajustes(); if (!st?.deformedShape) return ""; st.deformedShape.val = !st.deformedShape.rawVal;
+          return st.deformedShape.rawVal ? "Deformada encendida." : "Deformada apagada."; },
+        activo: () => !!ajustes()?.deformedShape?.rawVal },
+      { id: "r-esc-", icono: "÷2", nombre: "Menos", tecla: "", ayuda: "divide por 2 la escala de la deformada.", accion: escala(0.5) },
+      { id: "r-esc+", icono: "×2", nombre: "Más", tecla: "", ayuda: "multiplica por 2 la escala de la deformada.", accion: escala(2) },
+    ],
+  },
+  {
+    titulo: "Diagramas de barra", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-axil", icono: "N", nombre: "Axil", tecla: "A", ayuda: "diagrama de axiles (P) con su valor, como ETABS.", accion: verBarra("normals", "axiles"), activo: () => ajustes()?.frameResults?.rawVal === "normals" },
+      { id: "r-cort", icono: "V", nombre: "Cortante", tecla: "S", ayuda: "diagrama de cortante V2.", accion: verBarra("shearsY", "cortante V2"), activo: () => ajustes()?.frameResults?.rawVal === "shearsY" },
+      { id: "r-mom", icono: "M", nombre: "Momento", tecla: "D", ayuda: "diagrama de momento M3.", accion: verBarra("bendingsZ", "momento M3"), activo: () => ajustes()?.frameResults?.rawVal === "bendingsZ" },
+    ],
+  },
+  {
+    titulo: "Nudos", fila: 1, pest: "resultados",
+    items: [
+      { id: "r-desp", icono: "↧", nombre: "Desplaz.", tecla: "", ayuda: "desplazamientos de cada nudo (U1 U2 U3).", accion: verNudo("deformations", "Desplazamientos"), activo: () => ajustes()?.nodeResults?.rawVal === "deformations" },
+      { id: "r-reac", icono: "⤒", nombre: "Reacción", tecla: "", ayuda: "reacciones en los apoyos (F y M).", accion: verNudo("reactions", "Reacciones"), activo: () => ajustes()?.nodeResults?.rawVal === "reactions" },
+    ],
+  },
+  {
+    titulo: "Ver en 2D", fila: 2, pest: "resultados",
+    items: [
+      { id: "r-2d", icono: "📐", nombre: "Diagrama 2D", tecla: "", ayuda: "el alzado con SOLO el diagrama elegido y sus valores, sin perspectiva (el botón «Ver diagrama en 2D» del panel).",
+        accion: () => { W_().__hekatanDiagrama2D?.(); return "Diagrama en 2D: se cierra con la ✕ de su ventana."; } },
+      { id: "r-barra", icono: "📈", nombre: "Barra", tecla: "", ayuda: "axil, cortante y momento a lo largo de la barra designada (el «Gráfico de la barra designada» del panel).",
+        accion: () => { W_().__hekatanDiagramaBarra?.(); return ""; } },
+    ],
+  },
+  // ── Pestaña IFC y cortes: lo del panel derecho › Importar archivo y Settings › Cortes ──
+  {
+    titulo: "IFC", fila: 1, pest: "ifc",
+    items: [
+      { id: "ifc-imp", icono: "📥", nombre: "Importar", tecla: "", ayuda: "abre un IFC con el diálogo de archivos (el «Importar IFC» del panel).",
+        accion: pulsarPanel(/Importar IFC|Referencia IFC/i, "Este ejemplo no importa IFC.") },
+      { id: "ifc-obj", icono: "🏛", nombre: "Objetos", tecla: "", ayuda: "la lista de objetos del IFC: ocultar o aislar cada uno.",
+        accion: () => { const t = document.getElementById("hk-ifc-tab"); if (!t) return "Primero importa un IFC."; t.click(); return ""; } },
+      { id: "ifcline", icono: "⟋", nombre: "Copiar lín.", tecla: "", ayuda: "pasa por una arista del IFC (se ilumina) y clic: la copia como barras." },
+      { id: "ifcface", icono: "▦", nombre: "Área cara", tecla: "", ayuda: "pasa por una cara del IFC (se ilumina) y clic: la copia como área." },
+    ],
+  },
+  {
+    titulo: "Cortes", fila: 2, pest: "ifc",
+    items: [
+      { id: "c-x", icono: "✂", nombre: "Corte X", tecla: "", ayuda: "corta el modelo por el plano X = casilla «X» (la casilla «Cortar X» del panel).", accion: corte("X"), activo: () => casillaVal(/^\s*Cortar X/) },
+      { id: "c-y", icono: "✂", nombre: "Corte Y", tecla: "", ayuda: "corta por el plano Y = casilla «Y».", accion: corte("Y"), activo: () => casillaVal(/^\s*Cortar Y/) },
+      { id: "c-z", icono: "✂", nombre: "Corte Z", tecla: "", ayuda: "corta por la altura Z = casilla «Z».", accion: corte("Z"), activo: () => casillaVal(/^\s*Cortar Z/) },
+    ],
+  },
 ];
 
 /** Monta el ribbon dentro de `host` (normalmente el contenedor del viewer). */
@@ -140,13 +325,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   const barra = document.createElement("div");
   barra.id = "hk-ribbon";
   barra.style.cssText = [
-    "position:absolute", "top:8px", "left:50%", "transform:translateX(-50%)",
+    "position:absolute", "top:8px", "left:8px", "right:8px",
     "z-index:60", "display:flex", "flex-direction:column", "align-items:stretch", "gap:2px",
     "background:rgba(15,23,42,.94)", "border:1px solid #1e3a4a",
     "border-radius:10px", "padding:4px 5px", "backdrop-filter:blur(6px)",
     "box-shadow:0 6px 20px rgba(0,0,0,.45)",
     "font-family:system-ui,-apple-system,Segoe UI,sans-serif",
-    "max-width:calc(100% - 24px)",
   ].join(";") + ";";
   // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
   // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.
@@ -158,17 +342,25 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     f.style.cssText = "display:flex;align-items:stretch;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;"; return f; };
   const filaA = mkFila(), filaB = mkFila();
   filaB.style.borderTop = "1px solid #1e3a4a"; filaB.style.paddingTop = "2px";
-  barra.append(filaA, filaB);
+  // Fila de PESTAÑAS (las fichas de AutoCAD): cada pestaña enseña sus dos filas.
+  const filaT = document.createElement("div");
+  filaT.id = "hk-ribbon-pestanas";
+  filaT.style.cssText = "display:flex;align-items:center;gap:2px;border-bottom:1px solid #1e3a4a;padding:0 2px 2px;";
+  barra.append(filaT, filaA, filaB);
   const enFila = (n: 1 | 2) => (n === 1 ? filaA : filaB);
 
   const botones = new Map<string, HTMLButtonElement>();
+  const HERR = new Map<string, Herr>(GRUPOS.flatMap((g) => g.items.map((h) => [h.id, h] as [string, Herr])));
 
   const pintarActivo = () => {
     const t = hooks.getTool();
     for (const [id, b] of botones) {
       // Apoyo y carga no son un tool del motor (van por seleccion), asi que su
       // boton se enciende con el modo, no con `getTool()`.
-      const on = (id === "apoyo" || id === "carga" || id === "cargaq") ? modoAplicar === id
+      const h = HERR.get(id);
+      const on = h?.activo ? h.activo()
+               : h?.accion ? false
+               : APLICA.has(id) ? modoAplicar === id
                : (modoAplicar === null && id === t);
       b.style.background = on ? "#0e7490" : "transparent";
       b.style.borderColor = on ? "#22d3ee" : "transparent";
@@ -198,6 +390,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // Ahora la cinta se centra en el HUECO LIBRE entre los dos paneles y se limita
   // a su ancho. Es lo que hace la cinta de AutoCAD cuando se acopla un panel.
   const encajarEntrePaneles = () => {
+    // Desde el 19-sep-2026 dónde va la cinta (entre los paneles, + 30 px) y la línea de
+    // estado debajo los decide la piel del CAD (hekatanCadSkin.ts, vigilarSolapes): aquí
+    // ya no se toca nada. Con las pestañas cada una cabe en ~1220 px (paneles plegados
+    // a 1280); con los paneles abiertos la piel envuelve las filas.
+    return;
     const hostR = host.getBoundingClientRect();
     if (!hostR.width) return;
     let izq = hostR.left, der = hostR.right;
@@ -211,7 +408,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
         else der = Math.min(der, r.left);
       }
     }
-    const libre = Math.max(320, der - izq - 12);
+    const libre = Math.max(320, der - izq - 12);   // (código viejo, ya no se alcanza)
     barra.style.left = `${izq - hostR.left + (der - izq) / 2}px`;
     barra.style.maxWidth = `${libre}px`;
   };
@@ -278,7 +475,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // `hk:property-applied` que usa el panel de propiedades. Reusar ese camino
   // evita una segunda forma de poner apoyos que despues no coincida con la
   // primera.
-  let modoAplicar: "apoyo" | "carga" | "cargaq" | null = null;
+  let modoAplicar: "apoyo" | "apoyoart" | "carga" | "cargaq" | null = null;
   const cargaVert = { kN: -10, kNm: -5 };
   const aplicarASeleccion = () => {
     if (!modoAplicar) return;
@@ -291,22 +488,27 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       window.dispatchEvent(new CustomEvent("hk:property-applied", { detail: { kind: "segs", ids: segs, prop: "distLoad", value: [0, 0, cargaVert.kNm] } }));
       decir(`Carga distribuida de ${cargaVert.kNm} kN/m en ${segs.length} barra${segs.length === 1 ? "" : "s"}. Segui clicando.`);
       sel.clear();
+      // la selección ya se usó: que el chip «Ver K local · barra N» no se quede colgando
+      try { window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: null } })); } catch {}
       try { (window as any).__hekatanRefreshSelection?.(); } catch {}
       try { (window as any).__hekatanRebuild?.(); } catch {}
       return;
     }
     const pts = [...sel].filter((s) => s.startsWith("pt:"));
     if (!pts.length) return;
-    const detail = modoAplicar === "apoyo"
+    const esApoyo = modoAplicar === "apoyo" || modoAplicar === "apoyoart";
+    const detail = esApoyo
       ? { kind: "nodes", ids: pts, prop: "supports",
-          value: [true, true, true, true, true, true] }
+          value: modoAplicar === "apoyo" ? [true, true, true, true, true, true] : [true, true, true, false, false, false] }
       : { kind: "nodes", ids: pts, prop: "loads",
           value: [0, 0, cargaVert.kN, 0, 0, 0] };
     window.dispatchEvent(new CustomEvent("hk:property-applied", { detail }));
-    decir(modoAplicar === "apoyo"
-      ? `Apoyo puesto en ${pts.length} nudo${pts.length === 1 ? "" : "s"}. Segui clicando.`
+    decir(esApoyo
+      ? `${modoAplicar === "apoyo" ? "Empotrado" : "Articulado"} en ${pts.length} nudo${pts.length === 1 ? "" : "s"}. Segui clicando.`
       : `Carga de ${cargaVert.kN} kN en ${pts.length} nudo${pts.length === 1 ? "" : "s"}.`);
     sel.clear();
+    // la selección ya se usó: que el chip «Ver K local · barra N» no se quede colgando
+    try { window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: null } })); } catch {}
     try { (window as any).__hekatanRefreshSelection?.(); } catch {}
     try { (window as any).__hekatanRebuild?.(); } catch {}
   };
@@ -320,8 +522,15 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir(h.id === "deshacer" ? "Deshecho (Ctrl+Z)." : "Rehecho (Ctrl+Y).");
       return;
     }
+    if (h.accion) {
+      let m: string | void = "";
+      try { m = h.accion(); } catch (e) { m = String(e); }
+      decir(m || `${h.nombre} — ${h.ayuda}`);
+      pintarActivo();
+      return;
+    }
     // Pulsar OTRA VEZ el botón activo lo apaga (vuelve a Selec.), como un interruptor
-    const yaActivo = (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq")
+    const yaActivo = APLICA.has(h.id)
       ? modoAplicar === h.id
       : (modoAplicar === null && hooks.getTool() === h.id);
     if (yaActivo && h.id !== "select") {
@@ -348,8 +557,14 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir("REPLICAR — contestá el desplazamiento y cuántas copias en el cuadro de comandos.");
       return;
     }
-    if (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq") {
-      modoAplicar = h.id as "apoyo" | "carga" | "cargaq";
+    if (APLICA.has(h.id)) {
+      modoAplicar = h.id as "apoyo" | "apoyoart" | "carga" | "cargaq";
+      // Como en ETABS: si ya hay nudos (o barras) SELECCIONADOS —una ventana sobre la
+      // base de una cúpula—, el botón se aplica a todos de una vez; después sigue
+      // esperando clics sueltos.
+      const selPrev = (window as any).__hekatanSelection as Set<string> | undefined;
+      const hayPrev = !!selPrev && [...selPrev].some((k) => k.startsWith(h.id === "cargaq" ? "seg:" : "pt:"));
+      if (hayPrev) { aplicarASeleccion(); pintarActivo(); hooks.setTool("select"); (window as any).__hekatanBloquearVentana = true; return; }
       hooks.setTool("select");
       // En apoyo/carga el arrastre NO debe abrir una ventana de seleccion: se
       // va nudo a nudo. Es el unico caso que la bloquea, y se marca con su
@@ -389,7 +604,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     for (const h of g.items) {
       const b = document.createElement("button");
       b.type = "button";
-      b.title = `${h.nombre} (${h.tecla}) — ${h.ayuda}`;
+      b.title = `${h.nombre}${h.tecla ? ` (${h.tecla})` : ""} — ${h.ayuda}`;
       b.style.cssText = [
         "display:flex", "flex-direction:column", "align-items:center",
         "justify-content:center", "gap:1px",
@@ -400,25 +615,27 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       ].join(";") + ";";
       b.innerHTML =
         `<span style="font-size:16px;line-height:1">${h.icono}</span>` +
-        `<span style="font-size:10px;line-height:1.1">${h.nombre}</span>` +
+        `<span style="font-size:10px;line-height:1.1">${tr(h.nombre)}</span>` +
         `<span style="font-size:8px;opacity:.55;line-height:1">${h.tecla}</span>`;
       b.addEventListener("click", () => usar(h));
       b.addEventListener("mouseenter", () => {
         if (hooks.getTool() !== h.id) b.style.background = "rgba(34,211,238,.13)";
-        pista(`${h.icono} ${h.nombre} (${h.tecla}) — ${h.ayuda}`);
+        pista(`${h.icono} ${h.nombre}${h.tecla ? ` (${h.tecla})` : ""} — ${h.ayuda}`);
       });
       b.addEventListener("mouseleave", () => { pintarActivo(); pista(""); });
       botones.set(h.id, b);
       fila.appendChild(b);
     }
     const rot = document.createElement("div");
-    rot.textContent = g.titulo;
+    rot.textContent = tr(g.titulo);
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.appendChild(fila); caja.appendChild(rot);
+    caja.dataset.pest = g.pest;
     enFila(g.fila).appendChild(caja);
 
     const sep = document.createElement("div");
     sep.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
+    sep.dataset.pest = g.pest; sep.dataset.disp = "block";
     enFila(g.fila).appendChild(sep);
   }
 
@@ -460,7 +677,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotG.textContent = "Rejilla  X × Y × pisos";
   rotG.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaG.append(filaG, rotG);
-  filaB.appendChild(cajaG);
+  cajaG.dataset.pest = "rejilla";
+  filaA.appendChild(cajaG);
 
   // ── EN ALTURA: lo que permite trabajar en 3D sin cambiar de vista ─────────
   //
@@ -755,9 +973,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
   rotZ.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaZ.append(filaZ, rotZ);
+  cajaZ.dataset.pest = "rejilla";
   filaB.appendChild(cajaZ);
   const sepZ = document.createElement("div");
   sepZ.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
+  sepZ.dataset.pest = "rejilla"; sepZ.dataset.disp = "block";
   filaB.appendChild(sepZ);
 
   // Cuanta carga pone el boton Carga. Sin la casilla habria que adivinar el
@@ -784,11 +1004,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   filaC.append(inC, inQ);
   rotC.textContent = "Carga  kN · kN/m";
   cajaC.append(filaC, rotC);
+  cajaC.dataset.pest = "dibujo";
   filaB.appendChild(cajaC);
-
-  const sep2 = document.createElement("div");
-  sep2.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
-  filaA.appendChild(sep2);
 
   // ── Vistas ────────────────────────────────────────────────────────────────
   const cajaV = document.createElement("div");
@@ -822,10 +1039,116 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "gap:0;width:46px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
       "border-radius:7px;color:#cbd5e1;font-family:inherit;";
     b.innerHTML = `<span style="font-size:14px;line-height:1">${ic}</span>` +
-      `<span style="font-size:10px;line-height:1.15">${nom}</span>` +
+      `<span style="font-size:10px;line-height:1.15">${tr(nom)}</span>` +
       `<span style="font-size:9px;line-height:1.1;color:#22d3ee;letter-spacing:.5px">${plano}</span>` +
       `<span style="font-size:8px;opacity:.5;line-height:1">${tecla}</span>`;
     b.addEventListener("click", () => { fn(); decir(`Vista ${nom} — plano ${plano}: ${DONDE_CAE[plano]}.`); });
+    b.addEventListener("mouseenter", () => { b.style.background = "rgba(34,211,238,.13)"; });
+    b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
+    filaV.appendChild(b);
+  }
+  // ── ⛶ ENCUADRAR: el «Zoom Extensión» de AutoCAD (ZE) ──────────────────────
+  // Jorge (19-sep-2026): «no se ve ninguna línea». Una cercha de 12 m en la rejilla de
+  // 30 m salía de 580 px, y una cúpula de 5 m de radio, de 70 px. Esto lleva TODO lo
+  // dibujado al hueco LIBRE de la pantalla (debajo de la cinta, entre los paneles y
+  // encima de la ventana de comandos), sin girar la vista: la dirección de mirada se
+  // queda, solo cambian el centro y la escala. Vale para cámara ortogonal y perspectiva.
+  const encuadrar = (margen = 1.12): string => {
+    const W = window as any;
+    const v: any = document.querySelector("#viewer");
+    const ctx = v?.__ctx; const cam = ctx?.camera;
+    if (!cam) return "El visor no responde.";
+    const P: number[][] = [];
+    for (const n of (W.__hekatanStates?.nodes?.rawVal ?? []) as number[][]) if (n && n.length >= 3) P.push(n);
+    for (const n of (W.__hekatanDrawingPoints?.rawVal ?? []) as any[]) {
+      const q = Array.isArray(n) ? n : (n && typeof n === "object" ? [n.x, n.y, n.z] : null);
+      if (q && q.every((x: any) => isFinite(x))) P.push(q as number[]);
+    }
+    // las guías auxiliares también cuentan (el contorno y el perfil del Allianz son guías)
+    const aux = W.__hekatanDrawingAuxLines; const la = (aux?.rawVal ?? aux?.val ?? []) as number[][];
+    for (const l of Array.isArray(la) ? la : []) if (l?.length === 6 && l.every((x) => isFinite(x))) { P.push(l.slice(0, 3)); P.push(l.slice(3, 6)); }
+    if (!P.length) return "No hay nada dibujado que encuadrar.";
+    const canvas: HTMLCanvasElement | null = v.querySelector("canvas");
+    const cr = (canvas ?? v).getBoundingClientRect();
+    // hueco libre: debajo de la cinta, entre paneles abiertos, encima de la línea de órdenes
+    let izq = cr.left, der = cr.right, arr = cr.top, aba = cr.bottom;
+    const rb = barra.getBoundingClientRect(); if (rb.height > 0) arr = Math.max(arr, rb.bottom + 26);
+    const est = document.getElementById("hk-ribbon-estado")?.getBoundingClientRect(); if (est && est.height > 0) arr = Math.max(arr, est.bottom + 6);
+    for (const [id, lado] of [["settings", "i"], ["hk-pane-host", "d"]] as const) {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      if (!r || r.width < 40 || r.right <= cr.left + 2 || r.left >= cr.right - 2) continue;
+      if (lado === "i") izq = Math.max(izq, r.right); else der = Math.min(der, r.left);
+    }
+    const cmd = document.getElementById("hk3-cmdline")?.getBoundingClientRect(); if (cmd && cmd.height > 0) aba = Math.min(aba, cmd.top - 8);
+    // la barra de colores (#legend) también ocupa la derecha
+    const lg = document.getElementById("legend")?.getBoundingClientRect();
+    if (lg && lg.width > 0 && lg.height > 0 && lg.left > (izq + der) / 2) der = Math.min(der, lg.left - 8);
+    const fw = Math.max(80, der - izq), fh = Math.max(80, aba - arr);
+    cam.updateMatrixWorld();
+    const V = cam.position.constructor;
+    const ex = new V().setFromMatrixColumn(cam.matrixWorld, 0).normalize();
+    const ey = new V().setFromMatrixColumn(cam.matrixWorld, 1).normalize();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const C = new V(0, 0, 0);
+    for (const p of P) C.add(new V(p[0], p[1], p[2]));
+    C.multiplyScalar(1 / P.length);
+    for (const p of P) { const d = new V(p[0], p[1], p[2]).sub(C); const a = d.dot(ex), b2 = d.dot(ey);
+      x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b2); y1 = Math.max(y1, b2); }
+    const w = Math.max(x1 - x0, 0.5), h = Math.max(y1 - y0, 0.5);
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;             // centro de la caja en ejes de pantalla
+    const ppw = Math.min(fw / (w * margen), fh / (h * margen)); // píxeles por metro
+    const target = ctx.controls?.target ?? C.clone();
+    const dir = cam.position.clone().sub(target);
+    // el centro de la caja tiene que caer en el centro del HUECO, no del lienzo
+    const dxp = (izq + der) / 2 - (cr.left + cr.right) / 2, dyp = (arr + aba) / 2 - (cr.top + cr.bottom) / 2;
+    const T = C.clone().add(ex.clone().multiplyScalar(cx - dxp / ppw)).add(ey.clone().multiplyScalar(cy + dyp / ppw));
+    if (cam.isOrthographicCamera) {
+      cam.zoom = ppw * (cam.right - cam.left) / cr.width;
+      cam.position.copy(T.clone().add(dir));
+    } else {
+      const fov = (cam.fov ?? 45) * Math.PI / 180;
+      const dist = cr.height / (2 * Math.tan(fov / 2) * ppw);
+      cam.position.copy(T.clone().add(dir.normalize().multiplyScalar(dist)));
+    }
+    ctx.controls?.target?.copy(T);
+    cam.updateProjectionMatrix?.();
+    ctx.controls?.update?.();
+    // En perspectiva lo cercano sale más grande que la cuenta de arriba: se CORRIGE
+    // midiendo dónde caen de verdad los puntos proyectados (tres pasadas bastan).
+    for (let it = 0; it < 4; it++) {
+      cam.updateMatrixWorld(); cam.updateProjectionMatrix?.();
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+      for (const p of P) { const q = new V(p[0], p[1], p[2]).project(cam);
+        const sx = (q.x * 0.5 + 0.5) * cr.width + cr.left, sy = (-q.y * 0.5 + 0.5) * cr.height + cr.top;
+        a0 = Math.min(a0, sx); a1 = Math.max(a1, sx); b0 = Math.min(b0, sy); b1 = Math.max(b1, sy); }
+      const f = Math.max((a1 - a0) * margen / fw, (b1 - b0) * margen / fh, 1e-6);
+      const tgt = ctx.controls?.target ?? T;
+      const d0 = cam.position.distanceTo(tgt);
+      const ppwT = cam.isOrthographicCamera ? cam.zoom * cr.width / (cam.right - cam.left)
+                                            : cr.height / (2 * Math.tan(((cam.fov ?? 45) * Math.PI / 180) / 2) * d0);
+      const mx = ((izq + der) / 2 - (a0 + a1) / 2) / ppwT, my = ((arr + aba) / 2 - (b0 + b1) / 2) / ppwT;
+      const mov = ex.clone().multiplyScalar(-mx).add(ey.clone().multiplyScalar(my));
+      cam.position.add(mov); tgt.add(mov);
+      if (cam.isOrthographicCamera) cam.zoom /= f;
+      else { const u = cam.position.clone().sub(tgt).normalize(); cam.position.copy(tgt.clone().add(u.multiplyScalar(d0 * f))); }
+      cam.updateProjectionMatrix?.(); ctx.controls?.update?.();
+      if (Math.abs(f - 1) < 0.01 && Math.abs(mx * ppwT) < 3 && Math.abs(my * ppwT) < 3) break;
+    }
+    ctx.render?.();
+    return `Encuadrado: ${P.length} puntos, ${(w).toFixed(1)} × ${(h).toFixed(1)} m a ${ppw.toFixed(0)} px/m.`;
+  };
+  (window as any).__hekatanEncuadrar = encuadrar;
+  {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "hk-ribbon-encuadrar";
+    b.title = "Encuadrar (ZE) — lleva todo lo dibujado al hueco libre de la pantalla, sin girar la vista (el Zoom Extensión de AutoCAD)";
+    b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
+      "gap:0;width:50px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
+      "border-radius:7px;color:#cbd5e1;font-family:inherit;";
+    b.innerHTML = `<span style="font-size:15px;line-height:1">⛶</span>` +
+      `<span style="font-size:10px;line-height:1.15">${tr("Encuadrar")}</span>` +
+      `<span style="font-size:8px;opacity:.5;line-height:1">ZE</span>`;
+    b.addEventListener("click", () => decir(encuadrar()));
     b.addEventListener("mouseenter", () => { b.style.background = "rgba(34,211,238,.13)"; });
     b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
     filaV.appendChild(b);
@@ -834,6 +1157,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // en el vídeo queda fuera del cuadro y a la vista se le escapa; en la cinta se ven y
   // se pulsan. Llaman a los MISMOS conmutadores (F9 / F8 / F3) y se repintan solos.
   const W2: any = window as any;
+  const filaP = document.createElement("div");
+  filaP.style.cssText = "display:flex;gap:3px;";
   const conmutadores: Array<{ el: HTMLButtonElement; on: () => boolean }> = [];
   const mkConm = (txt: string, tecla: string, tip: string, on: () => boolean, toggle: () => void) => {
     const b = document.createElement("button"); b.type = "button"; b.title = tip;
@@ -841,7 +1166,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "background:transparent;border:1px solid transparent;border-radius:7px;color:#cbd5e1;font-family:inherit;";
     b.innerHTML = `<span style="font-size:10px;line-height:1.1;font-weight:700;letter-spacing:.3px">${txt}</span><span style="font-size:8px;opacity:.55;line-height:1">${tecla}</span>`;
     b.addEventListener("click", () => { try { toggle(); } catch {} pintarConm(); decir(`${txt} ${on() ? "ON" : "OFF"} — ${tip}`); });
-    conmutadores.push({ el: b, on }); filaV.appendChild(b);
+    conmutadores.push({ el: b, on }); filaP.appendChild(b);
   };
   const pintarConm = () => { for (const c of conmutadores) { const v = c.on(); c.el.style.background = v ? "rgba(34,211,238,.22)" : "transparent"; c.el.style.borderColor = v ? "#22d3ee" : "transparent"; c.el.style.color = v ? "#e0fbff" : "#64748b"; } };
   mkConm("SNAP", "F9", "Engancha a los cruces de la rejilla", () => W2.__hekatanSnapEnabled === true, () => W2.__hekatanToggleSnap?.());
@@ -849,10 +1174,19 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   mkConm("OSNAP", "F3", "Referencias a objetos: extremo, medio, nudo, intersección…", () => W2.__hekatanOsnapOn !== false, () => W2.__hekatanToggleOsnap?.());
   setInterval(pintarConm, 600); setTimeout(pintarConm, 300);
   const rotV = document.createElement("div");
-  rotV.textContent = "Vista · plano de trabajo · precisión";
+  rotV.textContent = tr("Vista · plano de trabajo");
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
-  filaA.appendChild(cajaV);
+  // En TODAS las pestañas y pegado a la derecha, como la barra de estado de AutoCAD.
+  cajaV.dataset.pest = "*"; cajaV.style.marginLeft = "auto";
+  const cajaP = document.createElement("div");
+  cajaP.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;margin-left:auto;";
+  const rotP = document.createElement("div");
+  rotP.textContent = tr("Precisión");
+  rotP.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+  cajaP.append(filaP, rotP);
+  cajaP.dataset.pest = "*";
+  (window as any).__hekatanCintaFijos = () => { filaA.appendChild(cajaV); filaB.appendChild(cajaP); };
 
   // ── GUÍA dentro del programa (botón ? y F1) ───────────────────────────────
   //
@@ -1167,7 +1501,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // panel de propiedades, y la ayuda es lo último que puede permitirse no responder.
   bAyuda.style.marginLeft = "2px"; bAyuda.style.marginRight = "6px";
   bAyuda.style.flex = "0 0 auto";
-  filaA.insertBefore(bAyuda, filaA.firstChild);
+  filaT.appendChild(bAyuda);
 
   // ── Barra de estado: qué se espera AHORA (el Dynamic Prompt) ──────────────
   const estado = document.createElement("div");
@@ -1204,14 +1538,153 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bPlegar.style.cssText = "width:26px;height:26px;margin-left:4px;cursor:pointer;" +
     "background:transparent;border:1px solid #475569;border-radius:6px;color:#94a3b8;" +
     "font:600 13px inherit;align-self:center;";
-  filaA.appendChild(bPlegar);
+  filaT.appendChild(bPlegar);
   // «▾ Añadir a la cinta»: todos los botones y mandos de los paneles, a elegir (Jorge,
   // 13-sep-2026: «todo ese menú son acceso rápido»). Ver ribbonExtras.ts.
   montarExtras({
-    filaBoton: filaA, filaGrupo: filaB, barra,
+    filaBoton: filaT, filaGrupo: filaB, barra,
     paneles: () => [["Panel", document.getElementById("hk-pane-host")], ["Settings", document.getElementById("settings")]],
     decir,
   });
+
+  // ── Casillas de la pestaña Áreas: escriben en el mando REAL del panel (su `change`) ──
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    const MANDOS: Array<[string, RegExp, string, string]> = [
+      ["Tramos", /Segmentos arc/i, "12", "Tramos rectos por arco, círculo o parábola (ETABS no admite curvas)"],
+      ["Sectores", /Sectores \(revoluci/i, "16", "Sectores de la Revolución alrededor del eje"],
+      ["Chaflán r", /Chafl[aá]n r/i, "1", "Radio de las esquinas de «Chaflanes», en metros"],
+    ];
+    for (const [nom, re, def, ayuda] of MANDOS) {
+      const lab = document.createElement("span");
+      lab.textContent = tr(nom);
+      lab.style.cssText = "font-size:10px;color:#94a3b8;margin-left:4px;";
+      const i = document.createElement("input");
+      i.type = "text"; i.value = def; i.title = ayuda + " (el mismo mando del panel)";
+      i.dataset.mando = nom;
+      i.style.cssText = "width:44px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+        "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+      const aplicar = () => { if (ponerMando(re, i.value)) decir(`${nom} = ${leerMando(re) ?? i.value}.`); else decir(`Falta el mando «${nom}» en el panel.`); };
+      i.addEventListener("change", aplicar);
+      i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+      // la casilla dice lo que tiene el panel (si alguien lo cambió allí)
+      setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+      fila.append(lab, i);
+    }
+    const rot = document.createElement("div");
+    rot.textContent = tr("Tramos · sectores · radio");
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "areas";
+    filaB.appendChild(caja);
+  }
+
+  // ── Escala de la deformada (pestaña Resultados): el mando «Escala XY» del panel ──
+  // ×2 y ÷2 van bien para afinar; para ir de 1 a 1000 hacían falta diez clics.
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    const re = /Escala XY/i;
+    const i = document.createElement("input");
+    i.type = "text"; i.value = "1"; i.dataset.mando = "escala";
+    i.title = "Escala de la deformada: cuántas veces se amplifica (el mando «Escala XY» del panel)";
+    i.style.cssText = "width:60px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+      "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+    const aplicar = () => {
+      if (!ponerMando(re, i.value)) { decir("Falta el mando de escala en el panel."); return; }
+      const st = ajustes(); if (st?.deformedShape && !st.deformedShape.rawVal) st.deformedShape.val = true;
+      decir(`Deformada amplificada ×${leerMando(re)}.`);
+    };
+    i.addEventListener("change", aplicar);
+    i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+    setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+    const lab = document.createElement("span");
+    lab.textContent = "×"; lab.style.cssText = "font-size:12px;color:#94a3b8;";
+    fila.append(lab, i);
+    const rot = document.createElement("div");
+    rot.textContent = tr("Escala de la deformada");
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "resultados";
+    filaB.appendChild(caja);
+  }
+
+  // ── Posición de los cortes (pestaña IFC): los mandos «pos X/Y/Z» del panel ──
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    for (const k of ["X", "Y", "Z"]) {
+      const re = new RegExp(`pos ${k}`);
+      const lab = document.createElement("span");
+      lab.textContent = k; lab.style.cssText = "font-size:10px;color:#94a3b8;margin-left:4px;";
+      const i = document.createElement("input");
+      i.type = "text"; i.value = "0"; i.dataset.mando = "pos" + k;
+      i.title = `Posición del corte ${k}, en metros (el mando «pos ${k}» del panel)`;
+      i.style.cssText = "width:52px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+        "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+      const aplicar = () => { if (ponerMando(re, i.value)) decir(`Corte ${k} en ${k} = ${leerMando(re)} m.`); else decir("Faltan los cortes en el panel."); };
+      i.addEventListener("change", aplicar);
+      i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+      setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+      fila.append(lab, i);
+    }
+    const rot = document.createElement("div");
+    rot.textContent = tr("Posición del corte (m)");
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "ifc";
+    filaB.appendChild(caja);
+  }
+
+  // ── PESTAÑAS ──────────────────────────────────────────────────────────────
+  // Como las fichas de la cinta de AutoCAD: un clic y la cinta enseña otras dos filas,
+  // sin desplegables que abrir y cerrar. Vistas y precisión quedan fijas a la derecha.
+  (window as any).__hekatanCintaFijos?.();
+  const PESTANAS: Array<[Pest, string, string]> = [
+    ["dibujo", "✏ Dibujo", "dibujar, estructura, apoyos, cargas y modificar"],
+    ["rejilla", "🏗 Rejilla y planos", "rejilla de ejes, cota del plano, grillas auxiliares y subir pisos"],
+    ["areas", "▦ Áreas", "rellenar celdas, cúpula (revolución), piel (barrido), chaflanes"],
+    ["resultados", "📊 Resultados", "deformada, axil, cortante, momento, desplazamientos, reacciones, 2D"],
+    ["ifc", "🏛 IFC y cortes", "importar un IFC, copiar sus líneas y caras, cortes X/Y/Z"],
+  ];
+  const tabs = new Map<Pest, HTMLButtonElement>();
+  let pestActual: Pest = "dibujo";
+  const verPestana = (p: Pest) => {
+    pestActual = p;
+    for (const el of barra.querySelectorAll<HTMLElement>("[data-pest]")) {
+      const v = el.dataset.pest;
+      el.style.display = v === "*" || v === p ? (el.dataset.disp || "flex") : "none";
+    }
+    for (const [q, b] of tabs) {
+      const on = q === p;
+      b.style.background = on ? "#0e7490" : "transparent";
+      b.style.color = on ? "#ecfeff" : "#94a3b8";
+      b.style.borderColor = on ? "#22d3ee" : "transparent";
+    }
+    refrescar();
+  };
+  for (const [p, nom, ayuda] of PESTANAS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = `hk-ribbon-tab-${p}`; b.textContent = tr(nom);
+    b.title = `${nom.replace(/^\S+\s/, "")}: ${ayuda}`;
+    b.style.cssText = "height:22px;padding:0 10px;cursor:pointer;background:transparent;border:1px solid transparent;" +
+      "border-radius:6px;color:#94a3b8;font:600 11px system-ui,-apple-system,Segoe UI,sans-serif;white-space:nowrap;";
+    b.addEventListener("click", () => { verPestana(p); decir(`Pestaña ${nom.replace(/^\S+\s/, "")}: ${ayuda}.`); });
+    b.addEventListener("mouseenter", () => { if (pestActual !== p) b.style.background = "rgba(34,211,238,.13)"; });
+    b.addEventListener("mouseleave", () => { if (pestActual !== p) b.style.background = "transparent"; });
+    tabs.set(p, b);
+    filaT.insertBefore(b, bAyuda);
+  }
+  const hueco = document.createElement("div"); hueco.style.flex = "1";
+  filaT.insertBefore(hueco, bAyuda);
+  verPestana("dibujo");
 
   // El botón que queda cuando está plegada. Va en el MISMO sitio que la barra,
   // para que abrir y cerrar no mueva nada de lo que hay debajo.
@@ -1273,6 +1746,14 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     setTimeout(aplicarASeleccion, 120);
   }, true);
 
+  // Enter en una casilla de la cinta: se aplica y el foco SALE de la casilla. Si no, el
+  // foco se quedaba en ella (el lienzo no lo toma al clicar) y Supr no borraba lo
+  // designado —drawing.ts respeta un campo en edición—: medido en el tutorial de la
+  // cúpula, la ventana designaba 129 nudos y Supr no hacía nada.
+  barra.addEventListener("keydown", (e) => {
+    const t = e.target as HTMLElement | null;
+    if (e.key === "Enter" && t?.tagName === "INPUT") setTimeout(() => (t as HTMLInputElement).blur(), 0);
+  });
   if (getComputedStyle(host).position === "static") host.style.position = "relative";
   host.appendChild(barra);
   host.appendChild(bAbrir);
@@ -1301,7 +1782,10 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     // Un modelo que llega por ENLACE (?heks= / ?m=) es para MIRARLO, no para
     // dibujar: la guía de «cuatro pasos» tapaba la bóveda en el enlace compartido.
     const porEnlace = /[?&](heks|m)=/.test(window.location.search);
-    if (!plegado && !porEnlace && !localStorage.getItem("hk_guia_vista")) {
+    // Con la pantalla de bienvenida (examples/src/shared/bienvenida.ts) la guía NO se abre
+    // sola: la abre el «🧭 Guiado» o ? / F1. Salían a la vez guía, aviso de recuperar,
+    // 🤖 y cinta, tapándose (captura de Jorge, 19-sep-2026).
+    if (!plegado && !porEnlace && !(window as any).__hekatanConBienvenida && !localStorage.getItem("hk_guia_vista")) {
       verGuia(true);
       localStorage.setItem("hk_guia_vista", "1");
     }
@@ -1408,6 +1892,23 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     marcar: (tool: string) => { if (tool !== "select" || modoAplicar) { modoAplicar = null; (window as any).__hekatanBloquearVentana = false; } pintarActivo(); },
     estado: () => estado.textContent,
     herramientas: () => [...botones.keys()],
+    pestana: (p?: Pest) => { if (p) verPestana(p); return pestActual; },
+    // para el buscador y el guiado (examples/src/shared/destinos.ts): las fichas de cada
+    // herramienta con su pestaña, y RESALTAR una: abre su pestaña y la ilumina un momento
+    fichas: () => GRUPOS.flatMap((g) => g.items.map((h) => ({ id: h.id, nombre: h.nombre, ayuda: h.ayuda, tecla: h.tecla, pest: g.pest }))),
+    traducir: (es: string) => { try { return EN[es] ?? es; } catch { return es; } },
+    resaltar: (id: string) => {
+      const g = GRUPOS.find((x) => x.items.some((h) => h.id === id));
+      const b = botones.get(id);
+      if (!g || !b) return false;
+      plegar(false); verPestana(g.pest);
+      b.animate?.([{ boxShadow: "0 0 0 0 rgba(34,211,238,.9)" }, { boxShadow: "0 0 0 8px rgba(34,211,238,0)" }],
+                  { duration: 700, iterations: 3 });
+      b.style.outline = "2px solid #22d3ee";
+      setTimeout(() => { b.style.outline = ""; }, 2200);
+      return true;
+    },
+    boton: (id: string) => botones.get(id) ?? null,
   };
   pintarActivo();
   return barra;

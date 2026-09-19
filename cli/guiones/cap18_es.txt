@@ -1,12 +1,12 @@
-Vamos a dibujar dos superficies curvas en Hekatan Struct, desde el menú y con el cursor: una cúpula y la cáscara del Allianz Arena. Las dos se construyen sobre líneas auxiliares, que son la guía y se borran solas al terminar, y las dos se comprobaron contra ETABS nudo a nudo.
-Archivo nuevo. Pulso Plano X Z, que es un alzado real, ortográfico. En Precisión enciendo el grid snap, para que cada clic caiga exacto en la rejilla, pongo ocho tramos por arco y marco Curvas como guía auxiliar: lo que dibuje ahora será construcción, no estructura.
-El meridiano de la cúpula: pulso Arco por tres puntos y hago tres clics: el arranque en cinco cero, el punto medio en tres cuatro, y la cumbre en cero cinco, sobre el eje. Junto al cursor van las coordenadas del punto enganchado; con Línea o Polilínea, además la longitud y el ángulo del tramo, como en AutoCAD. Sale el arco en cian, en ocho tramos. Y con Medir, dos clics del centro al arranque: cinco metros, el radio.
-Ahora lo selecciono con una ventana: pulso Seleccionar, un clic en una esquina, muevo el cursor y otro clic en la esquina opuesta, como en AutoCAD. Las ocho líneas auxiliares quedan seleccionadas.
-En Áreas pongo dieciséis sectores y pulso Revolución de la selección. Un solo clic sobre el eje vertical, y el meridiano gira: cada punto de la guía se convierte en un anillo de dieciséis nudos, salen los paños entre anillos y la guía se borra sola.
-Y los apoyos, que sin ellos no hay solución: con Seleccionar hago una ventana estrecha sobre la base, en cota cero, y quedan los dieciséis nudos del anillo. En el panel de selección pulso Empotrar: seis grados de libertad en cada uno, de un clic.
-Vista isométrica. Ciento veinte paños y ciento veintinueve nudos, todos sobre la esfera de radio cinco, y ni una barra suelta. Miren el polo desde arriba: el nudo del eje no puede dar cuadriláteros, así que el casquete se cierra con cometas, paños de cuatro nudos convexos, sin triángulos colapsados. Contra ETABS, la flecha da cero coma cero cuarenta milímetros en los dos programas.
-Ahora el Allianz, a escala uno a diez. Limpio todo y paso a planta. Cuatro tramos por esquina, chaflán de cinco metros, sigo en guía auxiliar, y Losa con chaflanes: dos clics en las esquinas, menos trece menos doce y trece doce, y sale el contorno de veintiséis por veinticuatro con las esquinas redondeadas, en cian.
-Vuelvo al alzado y dibujo la panza con Parábola por tres puntos: en el pie dieciséis cero, a media altura sale un metro, diecisiete dos, y arriba vuelve a dieciséis cuatro. Doce tramos en altura. La dibujo aparte del contorno, porque en el alzado todos sus vértices caen en el mismo píxel y el enganche cogería uno cualquiera. Con Medir compruebo la panza: un metro justo.
-Una sola ventana selecciona el contorno y el perfil, cincuenta y dos líneas auxiliares. Pulso Barrido en alzado y hago un clic en el centro de la planta: a cada altura del perfil, el contorno se desplaza hacia afuera lo que diga la panza, salen los paños entre anillos y las guías se borran. Cuatrocientos ochenta paños y quinientos veinte nudos.
-Lo mismo para el Allianz: una ventana sobre la base toma los cuarenta nudos del anillo inferior, y Empotrar los apoya de una vez.
-En isométrica se ve la piel del Allianz, limpia: la planta redondeada y la panza en altura, sin ninguna línea de construcción. Contra ETABS la flecha da uno coma sesenta y tres milímetros en los dos programas, con el peor nudo al cero coma cero once por ciento. La revolución es el mismo barrido con un contorno circular.
+Vamos a dibujar dos superficies curvas en Hekatan Struct, solo con la cinta: una cúpula y la piel del Allianz Arena.
+Cierro los paneles. En la pestaña Áreas pongo ocho tramos por arco y enciendo Guía auxiliar: el meridiano será una guía que se borra al usarla.
+Pulso Frente y SNAP, acerco con la rueda, y con Arco hago tres clics: cinco cero, tres cuatro y cero cinco. Medir da cinco metros, el radio.
+Con Seleccionar, una ventana de dos clics atrapa el meridiano.
+En Áreas pongo dieciséis sectores, pulso Revolución y hago un clic en el eje: ciento veinte paños.
+Apoyos: una ventana estrecha sobre la base y Empotrado. Se aplica a los dieciséis nudos seleccionados.
+Vista tres D y Encuadrar: la cúpula entera sobre la esfera de cinco metros.
+Ahora el Allianz: en planta, una ventana y la tecla Suprimir borran la cúpula. Cuatro tramos, radio cinco, y Chaflanes por dos esquinas: veintiséis por veinticuatro.
+En el alzado, doce tramos y Parábola por tres puntos: la panza sale un metro a media altura, lo confirma Medir.
+Una ventana selecciona el contorno y el perfil; Barrido y un clic en el centro: cuatrocientos ochenta paños.
+Apoyos del Allianz: ventana sobre la base y Empotrado.
+En tres D se ve la piel terminada, quinientos veinte nudos. Contra ETABS, cero coma cero uno uno por ciento.
