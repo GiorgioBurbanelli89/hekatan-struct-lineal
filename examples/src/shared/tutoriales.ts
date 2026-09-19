@@ -22,7 +22,8 @@ const LS = "hk_tutorial_ultimo";
 
 interface Item { titulo: string; video: string; poster?: string; seg?: number; texto?: string }
 interface Hoja { titulo: string; ej?: string; h?: string }
-interface Grupo { titulo: string; sub?: string; hojas?: Hoja[]; items: Item[] }
+interface Modelo { titulo: string; heks: string }
+interface Grupo { id?: string; titulo: string; sub?: string; modelos?: Modelo[]; hojas?: Hoja[]; items: Item[] }
 
 const base = () => ((import.meta as any).env?.BASE_URL ?? "./") + "tutoriales/";
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -42,8 +43,17 @@ const HOJA = `
 #hk-tut header button:hover{ background:var(--hk-hover,#2E3646); }
 #hk-tut .cuerpo{ flex:1; min-height:0; display:flex; }
 #hk-tut .lista{ width:310px; flex:none; overflow-y:auto; border-right:1px solid var(--hk-borde,#39445A); padding:8px; }
-#hk-tut .grupo{ margin:4px 4px 8px; }
-#hk-tut .grupo h4{ margin:6px 0 1px; font-size:13px; color:var(--hk-marca,#D3A53C); }
+#hk-tut .grupo{ margin:4px 4px 8px; border-bottom:1px solid var(--hk-borde,#39445A); padding-bottom:6px; }
+#hk-tut .grupo > summary{ cursor:pointer; list-style:none; padding:4px 2px; border-radius:5px; }
+#hk-tut .grupo > summary::-webkit-details-marker{ display:none; }
+#hk-tut .grupo > summary:hover{ background:var(--hk-hover,#2E3646); }
+#hk-tut .grupo > summary h4::before{ content:"▸ "; color:var(--hk-suave,#8C9AAE); }
+#hk-tut .grupo[open] > summary h4::before{ content:"▾ "; }
+#hk-tut .grupo .cuantos{ float:right; color:var(--hk-suave,#8C9AAE); font-size:11px; margin-top:8px; }
+#hk-tut .modelos a{ display:block; margin:6px 0 2px; padding:6px 9px; border:1px solid var(--hk-marca,#D3A53C); border-radius:6px;
+  color:var(--hk-marca,#D3A53C); text-decoration:none; font-weight:600; }
+#hk-tut .modelos a:hover{ background:var(--hk-marca,#D3A53C); color:#111; }
+#hk-tut .grupo h4{ display:inline; margin:6px 0 1px; font-size:13px; color:var(--hk-marca,#D3A53C); }
 #hk-tut .grupo small{ color:var(--hk-suave,#8C9AAE); }
 #hk-tut .it{ display:flex; gap:9px; align-items:center; width:100%; text-align:left; margin:5px 0; padding:5px;
   border:1px solid transparent; border-radius:6px; background:transparent; color:inherit; cursor:pointer; font:inherit; }
@@ -121,14 +131,21 @@ export async function abrirTutoriales(): Promise<void> {
     texto.textContent = it.texto ?? "";
     bAnt.disabled = k === 0; bSig.disabled = k === plano.length - 1;
     lista.querySelectorAll(".it").forEach((b, i) => b.classList.toggle("on", i === k));
+    const det = lista.querySelectorAll(".it")[k]?.closest("details"); if (det) (det as HTMLDetailsElement).open = true;
     lista.querySelectorAll(".it")[k]?.scrollIntoView({ block: "nearest" });
     try { localStorage.setItem(LS, it.video); } catch {}
     if (reproducir) video.play().catch(() => {});
   };
 
   let n = 0;
-  lista.innerHTML = grupos.map((g) =>
-    '<div class="grupo"><h4>' + esc(g.titulo) + "</h4>" + (g.sub ? "<small>" + esc(g.sub) + "</small>" : "") +
+  // Abrir el MODELO del tutorial en la app: workspace/?heks=<url del .heks publicado junto a los clips>
+  const app = ((import.meta as any).env?.BASE_URL ?? "./") + "workspace/";
+  const urlModelo = (h: string) => app + "?heks=" + encodeURIComponent(new URL(base() + h, location.href).href);
+  lista.innerHTML = grupos.map((g, gi) =>
+    '<details class="grupo"' + (gi === 0 ? " open" : "") + '><summary><span class="cuantos">' + g.items.length + " clips</span><h4>" + esc(g.titulo) + "</h4>" +
+    (g.sub ? "<br><small>" + esc(g.sub) + "</small>" : "") + "</summary>" +
+    (g.modelos?.length ? '<div class="modelos">' + g.modelos.map((m) =>
+      '<a target="_blank" rel="noopener" href="' + esc(urlModelo(m.heks)) + '">📂 ' + esc(m.titulo) + " ↗</a>").join("") + "</div>" : "") +
     g.items.map((it) => {
       const k = n++;
       return '<button class="it" data-k="' + k + '">' +
@@ -142,7 +159,7 @@ export async function abrirTutoriales(): Promise<void> {
           return '<a target="_blank" rel="noopener" href="' + esc(LISP_WEB + "#" + p.toString()) + '">' + esc(h.titulo) + " ↗</a>";
         }).join("") + "</div>"
       : "") +
-    "</div>").join("");
+    "</details>").join("");
   lista.querySelectorAll<HTMLButtonElement>(".it").forEach((b) => { b.onclick = () => poner(+b.dataset.k!, true); });
   bAnt.onclick = () => poner(actual - 1, true);
   bSig.onclick = () => poner(actual + 1, true);
