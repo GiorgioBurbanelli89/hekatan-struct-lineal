@@ -184,3 +184,13 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
   `…_v2_REDES_EN.mp4` (inglés quemado, comprobado en fotogramas). El que vio Jorge era el de YouTube.
 - ✅ marca_agua.py (hekatan-school): defecto nuevo = ancho 40 % centrado (HK_ANCHO) y alfa 0.22 (HK_ALFA manda).
 - ✅ Hojas 48/49 con `#fila` (motor 9df26e9 de la 42: gráficas a 540 px). hekatan-lisp con push; URL 49 regenerada.
+
+## ✅ Vídeo v3 (2 min 56 s): concepto + Hekatan Struct (web) + OpenSees + SAP2000/SAFE/ETABS + tabla
+- `registros/ZAPATA_NO_LINEAL_v3_YOUTUBE.mp4` (+ `.en.srt`, `.es.srt`) y `ZAPATA_NO_LINEAL_v3_REDES_EN.mp4`
+  (inglés quemado). Marca HEKATAN ENGINEERS. Fotogramas revisados.
+- Capturas REALES (validation/zapata-levantamiento/capturas/): SAFE barra de estado «Min = −803.308 kN/m²
+  at [1.5,1.5]», ETABS «Min = −803.314 kN/m²», SAP2000 nudo 961 U3 = −0.04096 m (×ks 2000 = 81.92; su
+  pantalla redondea a 4 cifras, 81.914 por OAPI), OpenSeesPy en la terminal 81.915. Menús y diálogos
+  «Soil Pressure (NLT_DAS)» abiertos con el ratón (pywinauto) en los tres programas.
+- ❌ 1.er intento de SAP2000: el vigilante lo cerró (RAM a 639 MB en el arranque). 2.º con 6.7 GB: OK.
+- Programas abiertos uno a uno y cerrados; vigilante de RAM parado al terminar.

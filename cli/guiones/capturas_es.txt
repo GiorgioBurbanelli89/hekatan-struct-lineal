@@ -1,5 +1,6 @@
 ¿Y OpenSees? Hekatan exporta el mismo modelo a OpenSeesPy: placas MITC4 y resortes que no resisten tracción. Al correrlo, OpenSees da ochenta y uno coma nueve uno cinco.
 Y dibujada con sus propios resultados, la presión tiene el mismo borde levantado.
+SAP2000, el juez, con su caso no lineal: la esquina cargada, el nudo novecientos sesenta y uno, baja cuatro centímetros. Por el módulo de balasto, ochenta y uno coma nueve toneladas por metro cuadrado.
 SAFE, con el mismo modelo y su caso no lineal: presión de suelo mínima, menos ochocientos tres coma tres kilonewtons por metro cuadrado. Son ochenta y uno coma nueve uno cinco toneladas.
 ETABS: menos ochocientos tres coma tres, otra vez ochenta y uno coma nueve uno cinco, en la misma esquina.
 Mismo modelo, misma malla, en cinco programas: el mismo resultado. Y el cálculo lineal, seis coma cuatro por ciento menos, del lado inseguro.

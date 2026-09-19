@@ -1,0 +1,83 @@
+1
+00:00:00,050 --> 00:00:07,730
+A normal spring: squeeze it and it pushes; stretch it and it pulls. Always the same rule: a straight line.
+
+2
+00:00:07,980 --> 00:00:16,524
+Soil is different: if the footing presses, the soil pushes back; but if the footing lifts, the soil cannot pull it: it separates.
+
+3
+00:00:16,770 --> 00:00:20,394
+That is nonlinear: the rule changes depending on what happens.
+
+4
+00:00:20,640 --> 00:00:24,960
+With the column at the centre, all the soil springs press equally.
+
+5
+00:00:25,210 --> 00:00:35,626
+If the column moves off-centre, one side presses more and the other less. Beyond B over six, the edge springs let go, the edge lifts, and the maximum pressure rises.
+
+6
+00:00:35,880 --> 00:00:47,544
+Which springs let go? The computer does not know in advance: it solves, releases those pulling, and solves again, until nothing changes. In Braja Das's example, four passes.
+
+7
+00:00:47,790 --> 00:00:55,686
+Hekatan Struct, SAP2000 and SAFE see the same thing: 81.9 tonnes per square metre, and the same lifted edge.
+
+8
+00:00:55,940 --> 00:01:01,820
+If you skip this, the analysis gives 6.4 percent less pressure: on the unsafe side.
+
+9
+00:01:02,050 --> 00:01:10,858
+Here is an example of how it works, in Hekatan Struct on the web: the same footing from Braja Das's example, with the column offset in both directions.
+
+10
+00:01:11,110 --> 00:01:18,646
+In the Soil group there is the "tensionless soil" checkbox. When on, each soil spring works only in compression.
+
+11
+00:01:18,900 --> 00:01:25,860
+In the command window, every area carries its spring: areaspring, the subgrade modulus and the word compression.
+
+12
+00:01:26,110 --> 00:01:34,174
+The result: the loaded corner presses 81.9 tonnes per square metre, and the opposite edge lifts with zero pressure.
+
+13
+00:01:34,420 --> 00:01:41,932
+If I switch the box off, the soil pulls: the linear analysis gives 76.7, 6.4 percent less.
+
+14
+00:01:42,180 --> 00:01:49,284
+I switch it back on. In the Design menu there is the footing report, and on every step an "Explain" button.
+
+15
+00:01:49,530 --> 00:01:55,770
+And the Tutor, which explains the calculation step by step: the springs, the plate and the solver passes.
+
+16
+00:01:56,020 --> 00:02:08,668
+And OpenSees? Hekatan exports the same model to OpenSeesPy: MITC4 plates and springs that resist no tension. Running it, OpenSees gives 81.915.
+
+17
+00:02:08,920 --> 00:02:13,936
+And plotted from its own results, the pressure shows the same lifted edge.
+
+18
+00:02:14,190 --> 00:02:27,078
+SAP2000, the judge, with its nonlinear case: the loaded corner, joint 961, settles four centimetres. Times the subgrade modulus, 81.9 tonnes per square metre.
+
+19
+00:02:27,330 --> 00:02:38,970
+SAFE, same model, its nonlinear case: minimum soil pressure, minus 803.3 kilonewtons per square metre. That is 81.915 tonnes.
+
+20
+00:02:39,220 --> 00:02:45,940
+ETABS: minus 803.3, again 81.915, at the same corner.
+
+21
+00:02:46,190 --> 00:02:56,030
+Same model, same mesh, five programs: the same result. And the linear analysis, 6.4 percent less, on the unsafe side.

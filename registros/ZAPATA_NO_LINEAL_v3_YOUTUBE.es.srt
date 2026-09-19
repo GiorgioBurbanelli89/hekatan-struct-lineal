@@ -1,0 +1,83 @@
+1
+00:00:00,050 --> 00:00:07,730
+Un resorte normal: si lo aprietas, empuja; si lo estiras, tira. Siempre la misma regla: una recta.
+
+2
+00:00:07,980 --> 00:00:16,524
+El suelo es distinto: si la zapata aprieta, el suelo empuja; pero si la zapata se levanta, el suelo no puede tirar de ella: se despega.
+
+3
+00:00:16,770 --> 00:00:20,394
+Eso es no lineal: la regla cambia según lo que pasa.
+
+4
+00:00:20,640 --> 00:00:24,960
+Con la columna al centro, todos los resortes del suelo aprietan igual.
+
+5
+00:00:25,210 --> 00:00:35,626
+Si la columna se corre, un lado aprieta más y el otro menos. Pasado B sextos, los resortes del borde se sueltan, el borde se levanta, y la presión máxima sube.
+
+6
+00:00:35,880 --> 00:00:47,544
+¿Qué resortes se sueltan? La computadora no lo sabe de antemano: calcula, suelta los que tiran y vuelve a calcular, hasta que ya no cambia. En el ejemplo de Braja Das, cuatro vueltas.
+
+7
+00:00:47,790 --> 00:00:55,686
+Hekatan Struct, SAP2000 y SAFE ven lo mismo: ochenta y uno coma nueve toneladas por metro cuadrado, y el mismo borde levantado.
+
+8
+00:00:55,940 --> 00:01:01,820
+Si no lo haces, el cálculo te da seis coma cuatro por ciento menos de presión: del lado inseguro.
+
+9
+00:01:02,050 --> 00:01:10,858
+Aquí un ejemplo de cómo funciona, en Hekatan Struct, en la web: la misma zapata del ejemplo de Braja Das, con la columna corrida en las dos direcciones.
+
+10
+00:01:11,110 --> 00:01:18,646
+En el grupo Suelo está la casilla «suelo sin tracción». Encendida, cada resorte del suelo solo trabaja apretando.
+
+11
+00:01:18,900 --> 00:01:25,860
+En la ventana de comandos, cada área lleva su resorte: areaspring, el módulo de balasto y la palabra compresión.
+
+12
+00:01:26,110 --> 00:01:34,174
+El resultado: la esquina cargada aprieta ochenta y uno coma nueve toneladas por metro cuadrado, y el borde opuesto se levanta con presión cero.
+
+13
+00:01:34,420 --> 00:01:41,932
+Si apago la casilla, el suelo tira: el cálculo lineal da setenta y seis coma siete, seis coma cuatro por ciento menos.
+
+14
+00:01:42,180 --> 00:01:49,284
+La vuelvo a encender. En el menú Diseño está el informe de la zapata, y en cada paso el botón «Explícame».
+
+15
+00:01:49,530 --> 00:01:55,770
+Y el Tutor, que explica el cálculo paso a paso: los resortes, la placa y las vueltas del solver.
+
+16
+00:01:56,020 --> 00:02:08,668
+¿Y OpenSees? Hekatan exporta el mismo modelo a OpenSeesPy: placas MITC4 y resortes que no resisten tracción. Al correrlo, OpenSees da ochenta y uno coma nueve uno cinco.
+
+17
+00:02:08,920 --> 00:02:13,936
+Y dibujada con sus propios resultados, la presión tiene el mismo borde levantado.
+
+18
+00:02:14,190 --> 00:02:27,078
+SAP2000, el juez, con su caso no lineal: la esquina cargada, el nudo novecientos sesenta y uno, baja cuatro centímetros. Por el módulo de balasto, ochenta y uno coma nueve toneladas por metro cuadrado.
+
+19
+00:02:27,330 --> 00:02:38,970
+SAFE, con el mismo modelo y su caso no lineal: presión de suelo mínima, menos ochocientos tres coma tres kilonewtons por metro cuadrado. Son ochenta y uno coma nueve uno cinco toneladas.
+
+20
+00:02:39,220 --> 00:02:45,940
+ETABS: menos ochocientos tres coma tres, otra vez ochenta y uno coma nueve uno cinco, en la misma esquina.
+
+21
+00:02:46,190 --> 00:02:56,030
+Mismo modelo, misma malla, en cinco programas: el mismo resultado. Y el cálculo lineal, seis coma cuatro por ciento menos, del lado inseguro.
