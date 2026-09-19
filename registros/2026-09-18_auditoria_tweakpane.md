@@ -1,0 +1,412 @@
+# Auditoría del Tweakpane del workspace — 18-sep-2026
+
+**Rama:** `sin-binario` · **NO se tocó código** (solo auditoría) · sin commit, sin deploy.
+**Cómo se midió:** bundle local (`npx vite --port 5199` sobre `examples/`) + Chrome del
+sistema por puppeteer (`headless: "new"`). Se pulsó **botón por botón** (110 en el panel
+derecho) y se comparó una firma del estado antes/después (DOM, nº de paneles, localStorage,
+`__hekatanCadState`, blobs de descarga, consola, alertas).
+
+⚠️ **Otra sesión está editando `examples/src/workspace/main.ts` en vivo.** Los números de
+línea son de la copia de las **19:50 del 18-sep-2026** (`md5 55de0ed8bd39b1db27977c2c95c6c32e`).
+Entre mi primera lectura (19:30) y la última (19:50) las líneas ya se habían corrido +20.
+No hubo conflicto porque no escribí nada en `examples/src/`.
+
+Capturas: `registros/img/2026-09-18_tweakpane/`
+ · `01_menu_*` (arranque) · `02_edificio_*` (panel plegado) · `03_edificio_todo_*` (todo desplegado).
+
+---
+
+## ✅ Funcionó
+- Levantar el bundle local y dumpear el árbol REAL del panel (no el código) por DOM.
+- Pulsar los 110 botones del panel derecho con detección de efecto.
+- Instrumentar `URL.createObjectURL`, `a.click`, `input[file].click`, `window.open` y `alert`
+  para cazar descargas y avisos (sin eso, un botón que baja un fichero parecía muerto).
+- Capturar los diálogos flotantes (`__hekatanOpenMaterialsList`, `OpenMaterialEditor`,
+  `OpenDisplayUnits`), que es donde están los nombres de CSI en inglés.
+
+## ❌ No funcionó / datos del encargo que NO se reproducen
+- **`slider_setMode` en `getModalPanel.ts:368` ya no existe.** El fichero se reescribió
+  (está modificado sin commitear); hoy el clic de fila llama a `alElegirModo(i)` y el propio
+  comentario de la línea 250 explica que antes llamaba a un `slider_setMode` inexistente.
+- **Los `timings` clavados de `femToolsRegistry.ts:158` ya están arreglados**: hoy dice
+  `timings: undefined` con el comentario «un tiempo inventado es peor que ningún tiempo».
+- **La carpeta «⚡ Modal + Animación» NO está duplicada.** Las dos líneas (6378/6379) son las
+  dos ramas de UN ternario. Medido en `test-m-dual`: tras cargar, correr modal, cambiar pisos
+  (rebuild) y volver a correr → **siempre 1 carpeta**, 0 títulos vacíos.
+- **El título «🔢» NO sale vacío**: es `"🔢 " + label` y en el único ejemplo con parámetros
+  modales sale «🔢 N° de modos (subir si masa <90%)».
+- Las descargas no se pueden contar con `Browser.setDownloadBehavior` en headless: hay que
+  enganchar `createObjectURL`/`a.click` (por eso «PNG de la vista» parecía muerto y no lo está).
+
+## ⏳ Falta
+- Aplicar la reorganización (este documento es la propuesta; no se tocó nada).
+- Medir el panel del CAD puro (`?t=new-blank`) y el de `cad-editor`, que tienen su propio
+  `viewController.ts`; aquí se auditó el workspace con `?t=edificio-aporticado` (el más cargado).
+
+---
+
+## 1. Inventario
+
+Cuentas reales en `main.ts`: **36 `addFolder` · 71 `addBinding` · 60 `addButton`** (confirmado).
+Pero el panel que ve Jorge es la suma de **cinco** ficheros:
+
+| Fichero | Qué mete | Tamaño |
+|---|---|---|
+| `examples/src/workspace/main.ts` | selector, Vista, CLI, cimentación, ETABS/SAP, Unidades, params, Calculados, Modal | 36 F / 71 B / 60 Btn |
+| `hekatan-ui/src/cad/getCadPanel.ts` | «✏ Herramientas CAD» entera (15 carpetas) | ~60 botones |
+| `hekatan-ui/src/femTools/attachFemTools.ts` | «🛠 Herramientas FEM» (7 botones) | 7 |
+| `examples/src/workspace/loadPatternsPanel.ts` | Load Patterns / Cases / Combinations | 3 carpetas |
+| `hekatan-ui/src/viewer/settings/getSettings.ts` | **panel IZQUIERDO** (#settings): Grid, Ver, Analysis Inputs, Analyze, Cortes | 6 carpetas |
+| `examples/src/shared/panelEspectral.ts` | «🌀 Espectral dinámico (NEC)» (6 controles + 1 botón) | contextual |
+| `examples/src/shared/getCad3d.ts` | paneles propios de ejemplos legacy (no del workspace) | — |
+
+`hekatan-ui/src/modalPanel/getModalPanel.ts` **no usa Tweakpane**: es una tabla DOM flotante.
+
+### 1.1 Panel DERECHO — tabla
+
+Frecuencia: **S** = cada sesión · **V** = de vez en cuando · **M** = una vez al mes o menos.
+
+| Elemento | archivo:línea | Qué hace | ¿Funciona? | Frec. | Destino propuesto |
+|---|---|---|---|---|---|
+| Categoría (select) | main.ts:3795 | filtra la lista de ejemplos | sí | S | 📐 Modelo ▸ Ejemplo |
+| Ejemplo (select) | main.ts:3832 | carga el ejemplo | sí | S | 📐 Modelo ▸ Ejemplo |
+| 📂 Cambiar de ejemplo (carpeta) | main.ts:3792 | contenedor de los dos de arriba | sí | S | 📐 Modelo |
+| ℹ Ejemplo con panel propio ▸ ↻ Recargar | main.ts:3870 | recarga el ejemplo legacy | sí | M | Menú ▸ Ejemplos |
+| ℹ … ▸ **(trae sus propios controles)** | main.ts:3875 | **nada: `.on("click", () => {})`** | **MUERTO** | — | borrar (es un cartel, no un botón) |
+| 🛠 Herramientas FEM (carpeta) | attachFemTools.ts:77 | 7 paneles flotantes | sí | M | Menú ▸ Estudio |
+| 🔍 Inspect | attachFemTools.ts:83 | K local del 1er frame + KaTeX | sí | M | Menú ▸ Estudio |
+| 📈 Modal+ ASCE 7-22 | attachFemTools.ts:89 | corre modal y abre tabla | sí | V | ▶ Cálculo ▸ Modal |
+| 📜 Solver Log **+ tiempos** | attachFemTools.ts:94 | estadísticas del modelo | sí, **pero ya no hay tiempos** | M | Menú ▸ Estudio, renombrar |
+| 🧮 Calculadora FEM | attachFemTools.ts:99 | panel tipo MATLAB | sí | M | Menú ▸ Estudio |
+| 💻 CLI cad.* | attachFemTools.ts:104 | terminal flotante | sí | M | Menú ▸ Estudio |
+| 📄 Report Explained | attachFemTools.ts:109 | PDF imprimible | sí | M | Menú ▸ Estudio |
+| ▶ Calcular (forzar re-build) | attachFemTools.ts:114 | recalcula | sí | S | ▶ Cálculo (arriba del todo) |
+| Vista (carpeta) | main.ts:3899 | cámara + imagen | sí | S | 👁 Vista |
+| 🏗 Isométrica / ⬇ Planta / → Elev X / ↑ Elev Y | main.ts:3900-3903 | mueve la cámara | sí (los 4) | S | 👁 Vista |
+| 📷 Imagen y GIF ▸ 📷 PNG de la vista | main.ts:3911 | baja `hekatan_struct.png` | **sí** (blob 158 KB medido) | V | 👁 Vista ▸ Imagen |
+| … frames / ms-frame (2 sliders) | main.ts:3918-3919 | ajustes del GIF | sí | V | 👁 Vista ▸ Imagen |
+| … 🎞 GIF orbitando | main.ts:3920 | genera el GIF | sí | V | 👁 Vista ▸ Imagen |
+| 🔀 Vista doble ▸ Activar / Panel derecho | main.ts:4063-4064 | split | sí | V | 👁 Vista |
+| 🔀 … ▸ 🔄 Re-encuadrar derecha | main.ts:4068 | reencuadra la mitad derecha | **no hace nada con el split apagado** | V | fusionar con «Activar» |
+| 🎬 Demo simulador CAD | main.ts:4077 | animación de demostración | sí | M | Menú ▸ Estudio |
+| 📍 Ejes (frames individuales) ▸ Eje A/B/C/1/2/3 | main.ts:4104/4116 | aísla el pórtico de ese eje | sí (6/6) | V | 👁 Vista ▸ Ejes |
+| 📍 … ▸ **(modelo vacío — dibujá nodos)** | main.ts:4096 | **nada: `() => {}`** | **MUERTO** | — | borrar (cartel) |
+| 📍 … ▸ 👁 Mostrar ejes en escena | main.ts:4135 | dibuja los ejes | sí | V | 👁 Vista ▸ Ejes |
+| ✏ Herramientas CAD (15 carpetas) | getCadPanel.ts:64 | dibujo, snap, ejes, selección, IA | ver 1.2 | S (dibujando) | 📐 Modelo ▸ Dibujar |
+| 💻 CLI Comandos (carpeta + textarea) | main.ts:4240 | escribir el modelo en texto | sí | V | 📐 Modelo ▸ Texto (.heks) |
+| ▶ Ejecutar ahora | main.ts:4340 | aplica el script | sí | V | igual |
+| Comparar con (SAP2000/ETABS) | main.ts:4353 | mete/quita las directivas de semántica | sí | V | ▶ Cálculo ▸ Semánticas **(está DUPLICADO, ver 2.6)** |
+| 🗑 Limpiar comandos | main.ts:4363 | vacía el textarea | sí | V | igual |
+| 📂 Abrir .heks | main.ts:4386 | abre el selector de fichero | sí (`input[file].click`) | V | Menú ▸ Archivo |
+| 💾 Guardar como… .heks | main.ts:4426 | pide nombre y baja | sí | V | Menú ▸ Archivo |
+| 🔗 Compartir enlace | main.ts:4443 | URL con el modelo | sí | V | Menú ▸ Archivo |
+| **💾 Guardar .heks** | main.ts:4539 | baja `modelo.heks` sin preguntar | **duplicado y peligroso** (ver 2.2) | V | borrar |
+| 📂 Importar .tcl (OpenSees) | main.ts:4568 | abre selector | sí | M | Menú ▸ Archivo |
+| **💾 Exportar .tcl (OpenSees)** | main.ts:4569 | baja `modelo.tcl` | **baja 93 bytes con el edificio cargado** | M | Menú ▸ Archivo, arreglar |
+| 📋 Pórtico 2D (inline) | main.ts:4585 | pega un ejemplo en el CLI | sí | M | Menú ▸ Archivo ▸ Plantillas CLI |
+| 📋 Cantilever (inline) | main.ts:4606 | idem | sí | M | idem |
+| **📋 Pórtico 2D (bloques)** | main.ts:4616 | pega un ejemplo en el CLI | **ROTO**: «L8: comando desconocido "elements"» | M | arreglar o borrar |
+| 📥 Importar archivo (carpeta) | main.ts:4654 | IFC / F2K / limpiar | sí | M | Menú ▸ Archivo |
+| SAFE ▸ 📤 Exportar F2K / 📥 Importar F2K | main.ts:4728/4796 | cimentación a SAFE | sí | M | Menú ▸ Archivo ▸ CSI |
+| 🪨 Cimentación FEM (toggle) ▸ Ver TODAS las zapatas | main.ts:4870 | aísla la cimentación | sí | V | 📐 Modelo ▸ Cimentación |
+| 🪨 Cimentación (diseño + SAFE F2K) | main.ts:4905 | carpeta | sí | V | 📐 Modelo ▸ Cimentación |
+| … Cardinal Point col. | main.ts:4917 | punto de inserción de la columna | sí | M | 📐 Modelo ▸ Cimentación |
+| … 👁 Calcular y ver cimentación | main.ts:4947 | diseña zapatas | sí, **pero exige correr antes el análisis** (avisa) | V | ▶ Cálculo ▸ Cimentación |
+| … 🏢 Volver a vista superestructura | main.ts:5236 | sale de la vista aislada | sí (avisa si no hay) | V | fusionar en un solo interruptor |
+| … 🧮 Análisis FEM solo cimentación | main.ts:5266 | corre la cimentación sola | sí | V | ▶ Cálculo ▸ Cimentación |
+| … 📤/📥 F2K cimentación COMPLETA | main.ts:5558/5664 | exporta/importa | sí | M | Menú ▸ Archivo ▸ CSI |
+| 🔗 Origen ▸ ← Volver a … | main.ts:5696 | vuelve al modelo que te trajo | sí | M | barra de arriba (ya hay «← Volver») |
+| 📋 Load Patterns (+ subcarpeta por patrón) | loadPatternsPanel.ts:114 | patrones de carga | sí | V | 📐 Modelo ▸ Cargas |
+| 📊 Load Cases | loadPatternsPanel.ts:182 | casos | sí | V | 📐 Modelo ▸ Cargas |
+| Σ Load Combinations | loadPatternsPanel.ts:265 | combinaciones | sí | V | 📐 Modelo ▸ Cargas |
+| ⚡ Generar NEC-SE-CG | loadPatternsPanel.ts:308 | combos de norma | sí | V | 📐 Modelo ▸ Cargas |
+| ETABS ▸ Peso propio / Cargas aplicadas a | main.ts:5763/5776 | opciones del e2k | sí | M | Menú ▸ Archivo ▸ CSI |
+| ETABS ▸ 📤 Exportar E2K / 📥 Importar E2K | main.ts:5780/5821 | e2k | sí | V | Menú ▸ Archivo ▸ CSI |
+| SAP ▸ CFT en SAP / 📤 S2K / 📥 S2K | main.ts:5749/5880/5898 | s2k | sí | V | Menú ▸ Archivo ▸ CSI |
+| Unidades ▸ Fuerza / Desplazamiento | main.ts:5942/5968 | unidades de lectura | sí | S | 📏 Unidades |
+| Unidades ▸ 🔲 Auto-mesh shells | main.ts:5979 | mallado tipo ETABS | sí | V | ▶ Cálculo ▸ Malla **(no es una unidad)** |
+| 🌐 Sistema (preset) | main.ts:5988 | MKS / SI / Imperial | sí | S | 📏 Unidades (a la vista) |
+| 📐 Display Units (granular) (4 selects) | main.ts:6015 | unidad por magnitud | sí | M | Menú ▸ Preferencias |
+| 📏 Rangos (min/max de cada slider) | main.ts:6289 | cambia los topes | sí | M | Menú ▸ Preferencias |
+| 📖 Guía de pasos | main.ts:6323 | los pasos del ejemplo | sí | V | 📐 Modelo (arriba, plegable) |
+| Params del ejemplo (Geometría, Secciones, Cargas, Apoyo, Avanzado, Mesh, Losas, Muros, Cimentación, Vigas Secundarias, Secciones por piso, Luces por vano, Alturas por piso) | main.ts:6088 (bucle) | los parámetros | sí, **con duplicados** (ver 2.6) | S | 📐 Modelo |
+| 📊 Calculados | main.ts:6348 | resultados de diseño en texto | sí | S | 📊 Resultados |
+| ⚡ Modal + Animación | main.ts:6378 | correr modal, tabla, espectro | sí | V | ▶ Cálculo ▸ Modal |
+| 🌀 Espectral dinámico (NEC) | panelEspectral.ts:34 | 6 parámetros + correr | sí (donde aplica) | V | ▶ Cálculo ▸ Espectral |
+
+### 1.2 «✏ Herramientas CAD» (getCadPanel.ts) — 15 carpetas
+
+Todas las herramientas de dibujo (Nodo, Línea, Polilínea, Rectángulo, Círculo, Arco,
+Parábola, Cúbica, líneas/puntos auxiliares, Medir, las 10 de Áreas, las 4 de 3D, las 3 de
+Modificar) **funcionan**: cambian el tool activo, que es todo lo que pueden hacer sin un clic
+en el lienzo. Se comprobaron una a una. Frecuencia **S** dibujando, **M** si trabajas con
+ejemplos paramétricos.
+
+Lo que NO respondió (y por qué):
+
+| Botón | línea | Medido | Diagnóstico |
+|---|---|---|---|
+| ▦▦ Llenar TODAS las celdas cerradas | 150 | sin cambio | necesita celdas cerradas; además el aviso va a `__hekatanCadUpdateStatus`, **que no existe en el workspace** → trabaja en silencio |
+| ⬛ Enderezar plano a XY | 174 | sin cambio | ya estaba en XY (no avisa) |
+| 📐 Mostrar/ocultar planos de ref. | 388 | sin cambio en DOM ni en `cadState` | el estado vive en una variable local (`refPlanesVisible`): el botón no dice si está encendido |
+| Piso a Z=0 / 6 / 9 m | 540 | 3 de 5 sin cambio | mueve la rejilla al Z ya activo |
+| ➕ Agregar nivel / 🏢 Niveles típicos | 677/683 | sin cambio visible | los niveles se pintan en la escena 3D, no en el DOM |
+| 🗑 Limpiar selección | 926 | sin cambio | no había nada seleccionado |
+| **📋 Copiar comandos a CLI** | 519 | copia `__hekatanCliScript`, **que no existe** | **copia una cadena VACÍA y aun así alerta «Comandos copiados»** |
+| 💬 AI Assistant (Provider, Modelo, API Key) | 993 | pinta | fuera de sitio dentro de las herramientas de dibujo; frecuencia M |
+
+### 1.3 Panel IZQUIERDO (#settings, `getSettings.ts`)
+
+| Carpeta | Controles | Frec. | Destino |
+|---|---|---|---|
+| Display scale (suelto arriba) | 1 slider | V | 👁 Vista |
+| 📐 Grid (+ ⚙ Ajuste fino) | 4 + 5 | V | 👁 Vista ▸ Rejilla |
+| 👁 Ver | 19 casillas | S | 👁 Vista ▸ Mostrar (hay 6 que se pisan, ver 2.6) |
+| 📌 Analysis Inputs | 4 casillas | S | 👁 Vista ▸ Mostrar |
+| 🔬 Analyze | Resultado (Case/Combo), Case, resultados de nudo/barra/cáscara/sólido, deformada, escalas, paleta, rango | S | 📊 Resultados |
+| 🔬 ▸ 📋 Tablas | 5 botones (Base Reactions, Modal Periods & Mass, Story Forces, Story Drifts, Centers of Mass & Rigidity) | V | 📊 Resultados ▸ Tablas |
+| 🔬 ▸ ⚡ Modal + Animación | 3 | V | ▶ Cálculo ▸ Modal |
+| ✂️ Cortes X/Y/Z | 9 | V | 👁 Vista ▸ Cortes |
+
+---
+
+## 2. LO QUE NO SIRVE (con la evidencia)
+
+### 2.1 Muertos de verdad (handler vacío)
+1. **`(trae sus propios controles)`** — `main.ts:3875`, `.on("click", () => {})`.
+2. **`(modelo vacío — dibujá nodos)`** — `main.ts:4096`, `.on("click", () => {})`.
+Los dos son **carteles disfrazados de botón**. Van como texto, no como botón.
+
+### 2.2 Mienten o hacen menos de lo que dicen
+3. **`📋 Copiar comandos a CLI`** (getCadPanel.ts:519): lee `window.__hekatanCliScript`, que
+   **no está definido** en el workspace (medido: la lista de globals no lo trae). Copia `""`
+   y aun así alerta «Comandos copiados al portapapeles».
+4. **`💾 Guardar .heks`** (main.ts:4539): duplica a «Guardar como… .heks». Su salvavidas es
+   `window.__hekatanModeloAHeks`, que **tampoco existe** → si dibujaste con el ratón y el
+   cuadro CLI está vacío, baja un fichero **vacío**. Es el bug del Tutorial 9 otra vez.
+5. **`💾 Exportar .tcl (OpenSees)`**: con el edificio de 3 pisos cargado baja **93 bytes**
+   (medido: `createObjectURL size=93`). Exporta el textarea, no el modelo.
+6. **`📋 Pórtico 2D (bloques)`**: el texto que pega **no lo entiende el parser** —
+   `[CLI Modeler] Errores: L8: comando desconocido "elements" · L9: "0" · L10: "1"`.
+7. **`📜 Solver Log + tiempos`**: los tiempos ya no se enseñan (bien hecho: estaban
+   inventados), pero **el título sigue prometiéndolos**.
+8. **`📐 Mostrar/ocultar planos de ref.`**: es un interruptor sin luz — su estado vive en una
+   variable local y el botón no cambia de texto, así que no sabes si están puestos.
+
+### 2.3 Títulos y etiquetas vacías
+9. `main.ts:1907` — `fDesign.addBinding(ph, "msg", { readonly: true, label: "" })` → en el
+   editor de materiales sale una fila **sin nombre** con «(sin propiedades de diseño)».
+10. `main.ts:2309` — `addBinding(catLabel, "name", { label: "" })` en Display Units.
+11. `drawing.ts:4752` — otra `label: ""`.
+(El «🔢 sin texto» del encargo **no se reproduce**: sale «🔢 N° de modos (subir si masa <90 %)».)
+
+### 2.4 Código muerto con nombre de CSI
+12. `main.ts:1868`: `const fWM = fGen.addBlade ? fGen : editorPane.addFolder({ title:
+    "Material Weight and Mass" })` — `addBlade` **siempre** existe, así que esa carpeta
+    **nunca se crea** y `fWM` no se usa para nada. Sobra la línea y sobra el nombre.
+
+### 2.5 Todo el editor de materiales y Display Units está en inglés de CSI
+Medido abriendo los diálogos: `General Data · Name · Type · Symmetry · Display Color ·
+Weight and Mass · Weight (kN/m³) · Mass (kg/m³) · Mechanical Property Data · Design Property
+Data · Standards Reference · Region · Standard · Grade · ℹ Properties (read-only) ·
+➕ Add New Material… · 📋 Add Copy of Material… · ✏ Modify/Show Material… · 🗑 Delete
+Material · ✓ OK (cerrar) · ✕ Cancel · 🌐 Presets (1 click) · ↻ Reset Defaults`.
+Y en el panel: `Load Patterns · Load Cases · Load Combinations · Name · Type · Self Weight
+Mult. · Auto Lateral · Initial Cond. · Patterns · Max Modes · Formula · + Add New Pattern /
+Case / Combo · 🗑 Delete pattern / case / combo · Display Units (granular) · Mesh · Nodes ·
+Elements · Edges · Nodes indexes · Elements indexes · Orientations · Sections · Supports ·
+Loads · Analysis Inputs · Analyze · Node/Frame/Shell/Solid results · Deformed shape ·
+Scale XY/Z · Display scale · Base Reactions · Modal Periods & Mass · Story Forces · Story
+Drifts · Centers of Mass & Rigidity`.
+
+### 2.6 DUPLICADOS — esto es lo que más estorba
+| Lo mismo, dos veces | Dónde |
+|---|---|
+| Div. vigas / Div. columnas | «Mesh» **y** «Avanzado» |
+| Activar losas · Espesor · Subdivisiones | «Losas de Piso» **y** «Avanzado» (Losa, t losa, Discretización losa) |
+| Muros: activar · espesor · subdiv | «Muros de Corte» **y** «Avanzado» (Muros de corte (cáscara), t muro) |
+| Vigas secundarias: activar · cantidad · dirección | «Vigas Secundarias» **y** «Avanzado» |
+| «Comparar con» (SAP2000 / ETABS) | «💻 CLI Comandos» **y** «Apoyo» |
+| Ver la cimentación | botón «🪨 Ver TODAS las zapatas FEM», botón «🏢 Volver a superestructura» **y** el select «🔘 Vista (toggle)» de la carpeta «Cimentación» = **tres mandos para una cosa** |
+| Cimentación | **tres carpetas**: «🪨 Cimentación FEM (toggle)», «🪨 Cimentación (diseño + SAFE F2K)» y «Cimentación» (params) |
+| Luces / alturas | «Geometría» (Luz X/Y uniforme, h piso uniforme) **y** «Luces por vano» / «Alturas por piso» |
+| Secciones | «Secciones (global)» **y** «Secciones por piso» |
+| Qué se ve del modelo | «👁 Ver»: Elements · Frames (todos) · Columnas · Vigas · Zapatas · Losas se pisan entre sí |
+| Entrada al modal | «🛠 Herramientas FEM ▸ 📈 Modal+» (panel derecho) **y** «🔬 Analyze ▸ ⚡ Modal + Animación» (panel izquierdo) |
+
+### 2.7 Valores de adorno
+- **«Alturas por piso» con 3 pisos muestra «Piso 7» y «Piso 8»** además de «h Piso 1..3», y
+  todos a `0.0`. Etiquetas de pisos que no existen (captura `03_edificio_todo_panel_derecho.png`).
+- «Secciones por piso» (12 sliders) y «Luces por vano» (4 sliders) salen **todos a 0.00**:
+  el convenio es «0 = usa el valor uniforme», pero eso no lo dice ningún sitio.
+- «📊 Calculados» mete separadores falsos como fila (`── Reacciones máx (→ zapatas) ──`)
+  porque Tweakpane no tiene título de sección.
+
+---
+
+## 3. Frecuencia (resumen)
+
+- **Cada sesión (S):** elegir ejemplo · parámetros del modelo (Geometría, Secciones, Cargas,
+  Apoyo) · ▶ Calcular · Vista (iso/planta/elevaciones) · 👁 Ver · Analysis Inputs ·
+  resultados (nudo/barra/cáscara, deformada, escalas) · 📊 Calculados · unidades preset ·
+  dibujar (si estás en el lienzo) · guardar .heks.
+- **De vez en cuando (V):** modal + animación · espectral · tablas · cortes · patrones/casos/
+  combos · exportar/importar E2K, S2K, F2K · cimentación · split · PNG/GIF · ejes y niveles ·
+  rejilla · precisión/OSNAP · auto-mesh.
+- **Una vez al mes o menos (M):** Display Units granular · editor de materiales · 📏 Rangos ·
+  .tcl de OpenSees · IFC · AI Assistant · demo CAD · plantillas inline del CLI · Inspect ·
+  Solver Log · Calculadora FEM · Report Explained · Cardinal Point.
+
+---
+
+## 4. PANEL NUEVO — cinco temas y un Menú
+
+Hoy el panel derecho es **una lista de 25 carpetas al mismo nivel** mezclando modelo, vista,
+cálculo, resultados, ficheros y preferencias. La idea: **5 carpetas de primer nivel** y todo
+lo de frecuencia M detrás del botón «🏠 Menú» que ya está arriba y casi vacío.
+
+```
+PANEL DERECHO (trabajo)
+├─ 📐 MODELO            ← lo que define la estructura
+│   ├─ Ejemplo / plantilla  (Categoría + Ejemplo + 📖 Guía)
+│   ├─ ✏ Dibujar           (las 4 primeras de CAD: Dibujar, Áreas, En 3D, Modificar)
+│   ├─ Geometría           (vanos, luces, alturas — UNA sola, con «por vano» dentro)
+│   ├─ Secciones y materiales  (global + por piso dentro)
+│   ├─ Apoyos y uniones    (Apoyo, brazos rígidos, diafragma, releases)
+│   ├─ Cargas              (patrones · casos · combinaciones · NEC)
+│   ├─ Cimentación         (UNA sola: diseño + vista + FEM)
+│   └─ Texto (.heks)       (el CLI de comandos)
+├─ 👁 VISTA              ← lo que se ve, nunca cambia el modelo
+│   ├─ Cámara             (iso, planta, elevaciones, split, ejes)
+│   ├─ Mostrar            (nodos, barras, cáscaras, secciones, apoyos, cargas, cotas…)
+│   ├─ Rejilla y planos   (Grid + ajuste fino + planos de trabajo/referencia)
+│   ├─ Cortes X/Y/Z
+│   └─ Imagen             (PNG · GIF)
+├─ ▶ CÁLCULO
+│   ├─ ▶ Calcular  (botón grande, arriba)
+│   ├─ Malla       (auto-mesh, divisiones de viga/columna, discretización)
+│   ├─ Semánticas  (SAP2000 / ETABS — UNA sola vez)
+│   ├─ Modal       (correr, nº de modos, método, animar, tabla)
+│   └─ Espectral   (NEC)
+├─ 📊 RESULTADOS
+│   ├─ Qué se dibuja (nudo · barra · cáscara · sólido · deformada · escalas)
+│   ├─ Color        (paleta · rango · leyenda)
+│   ├─ Tablas       (las 5 de ETABS)
+│   └─ Calculados   (el de diseño)
+└─ 📏 UNIDADES
+    └─ Preset (MKS · SI · Imperial) a la vista; lo granular, en Menú ▸ Preferencias
+
+🏠 MENÚ  (lo raro, una vez al mes)
+├─ 📂 Archivo      Abrir/Guardar/Guardar como/Compartir · E2K · S2K · F2K · TCL · IFC · Limpiar
+├─ 🔬 Estudio      Inspect · Solver Log · Calculadora FEM · CLI cad.* · Report · Demo CAD
+├─ ⚙ Preferencias  Display Units granular · Materiales · 📏 Rangos · Precisión/OSNAP · AI
+└─ 🧪 Ejemplos     el catálogo por categorías
+```
+
+Regla que resuelve el «está todo mezclado»: **una carpeta de primer nivel = una pregunta**.
+Modelo = *qué* calculo · Vista = *cómo lo miro* · Cálculo = *qué le pido* · Resultados = *qué
+me devolvió* · Unidades = *en qué números*. Lo que no contesta ninguna de las cinco, al Menú.
+
+Y los dos paneles (izquierdo y derecho) hoy parten el mismo tema en dos sitios: «Vista» está
+a la derecha y «👁 Ver» a la izquierda; el modal está en los dos. La propuesta junta cada
+tema en un solo sitio; si se quieren mantener dos columnas, lo natural es
+**izquierda = Vista + Resultados** (lo que mira) y **derecha = Modelo + Cálculo + Unidades**
+(lo que decide).
+
+---
+
+## 5. Renombrados propuestos (todo en español, sin CSI)
+
+| Ahora | Propuesto |
+|---|---|
+| General Data | Datos generales |
+| Material Weight and Mass *(código muerto)* | *(borrar)* |
+| Weight and Mass | Peso y masa |
+| Mechanical Property Data | Propiedades mecánicas |
+| Design Property Data | Propiedades de diseño |
+| Standards Reference | Norma de referencia |
+| ℹ Properties (read-only) | ℹ Propiedades (solo lectura) |
+| Name / Type / Symmetry / Display Color | Nombre / Tipo / Simetría / Color |
+| Region / Standard / Grade | País / Norma / Grado |
+| ➕ Add New Material… | ➕ Material nuevo… |
+| 📋 Add Copy of Material… | 📋 Copiar material… |
+| ✏ Modify/Show Material… | ✏ Ver / editar material… |
+| 🗑 Delete Material | 🗑 Borrar material |
+| ✓ OK / ✕ Cancel / ↻ Reset Defaults | ✓ Aceptar / ✕ Cancelar / ↻ Volver a lo de fábrica |
+| Display Units | Unidades de lectura |
+| Display scale | Tamaño de los símbolos |
+| Load Patterns / Load Cases / Load Combinations | Patrones de carga / Casos de carga / Combinaciones |
+| Self Weight Mult. | Factor de peso propio |
+| Auto Lateral | Carga lateral automática |
+| Initial Cond. | Condición inicial |
+| Patterns / Formula / Max Modes | Patrones / Fórmula / Modos máx. |
+| + Add New Pattern / Case / Combo | + Patrón nuevo / Caso nuevo / Combinación nueva |
+| 🗑 Delete pattern / case / combo | 🗑 Borrar patrón / caso / combinación |
+| Mesh | Malla |
+| Nodes / Elements / Edges (delim.) | Nudos / Elementos / Aristas |
+| Nodes indexes / Elements indexes | Nº de nudo / Nº de elemento |
+| Orientations / Sections | Ejes locales / Secciones |
+| Analysis Inputs | Datos de entrada |
+| Supports / Loads | Apoyos / Cargas |
+| Analyze | Resultados |
+| Node / Frame / Shell / Solid results | Resultados de nudo / barra / cáscara / sólido |
+| Deformed shape / Scale XY / Scale Z | Deformada / Escala XY / Escala Z |
+| Base Reactions | Reacciones en la base |
+| Modal Periods & Mass | Periodos y masa modal |
+| Story Forces / Story Drifts | Fuerzas por piso / Derivas |
+| Centers of Mass & Rigidity | Centros de masa y rigidez |
+| 📜 Solver Log + tiempos | 📜 Registro del solver |
+| Cardinal Point col. | Punto de inserción de la columna |
+| 🌐 Presets (1 click) | 🌐 Sistemas de unidades |
+
+---
+
+## 6. Ficheros generados por esta auditoría (temporales, fuera del repo)
+`…/scratchpad/`: `tree_edificio.json` (árbol completo del panel), `buttons_edificio.json`
+(los 110 botones con su ruta), `clicks_edificio*.json` (resultado de pulsarlos),
+`recheck.json` (los dudosos, con blobs y alertas), `dlg_*.json` (diálogos), `dup.mjs`
+(prueba de no-duplicación del modal).
+Al repo solo entran las capturas de `registros/img/2026-09-18_tweakpane/` y este `.md`.
+
+---
+
+# APLICACIÓN — FASE A (parcial), 20:00-20:10 del 18-sep-2026
+
+## ✅ Aplicado y VERIFICADO pulsando (en `hekatan-ui/`, fichero que la otra sesión no toca)
+
+`hekatan-ui/src/cad/getCadPanel.ts`
+1. **Helper `avisarCad()`**: escribe en la barra `#hk-cad-status` y, si no existe, alerta.
+   Regla de Jorge: *ningún control puede decir que hizo algo sin comprobar que lo hizo.*
+2. **`📋 Copiar comandos a CLI`** — antes copiaba `""` y avisaba «Comandos copiados».
+   Ahora: comprueba que haya texto, cuenta las líneas, pega también en el cuadro CLI si está
+   montado, y solo dice «copiado» si `navigator.clipboard.writeText` no falló.
+   Medido pulsando: sin dibujo → «📋 No hay comandos que copiar — dibujá algo primero»;
+   con script → «📋 3 comando(s) copiados al portapapeles y pegados en el cuadro CLI».
+3. **`▦▦ Llenar TODAS las celdas cerradas`** — avisaba por un global inexistente (mudo).
+   Ahora: «▦▦ No se creó ninguna: no hay celdas cerradas por 4 barras en el dibujo» / «▦▦ N área(s) creada(s)».
+4. **`📐 Planos de referencia`** — interruptor sin luz. Ahora el título lleva el estado.
+   Medido: OFF → clic → ON → clic → OFF.
+
+`hekatan-ui/src/femTools/attachFemTools.ts`
+5. **`📜 Solver Log + tiempos` → `📜 Registro del solver`**: los tiempos se quitaron (estaban
+   inventados) y el título seguía prometiéndolos.
+
+Captura: `scratchpad/faseA1.png`. `tsc --noEmit` no añade ningún error nuevo (los que salen ya estaban).
+
+## ⛔ PARADO: colisión con la otra sesión en `examples/src/workspace/main.ts`
+
+Lo que falta de la FASE A (💾 Guardar .heks vacío · 💾 Exportar .tcl de 93 bytes ·
+📋 Pórtico 2D (bloques) roto · los dos carteles-botón · `label: ""` · «Material Weight and
+Mass» muerto · «Piso 7/8» · los 0.00) vive TODO en `main.ts`. Y la FASE B (ejemplo ya
+ejecutado) y la FASE C (5 carpetas) son `loadExample` y `buildParamsPane`.
+
+**La otra sesión escribió `main.ts` a las 20:03:30** (md5 `55de0ed8…` → `2712accb…`) y su diff
+toca justo `loadExample`, `buildParamsPane`, `mountCaseResultsInSettings`, `rebuild` y la zona
+del animador modal. Editar ahí a la vez es perder trabajo, así que **paro y aviso** (regla de
+coordinación). Hallazgo útil para cuando se abra la ventana:
+
+- `__hekatanModeloAHeks` **sí existe, pero solo en `new-blank`** (`newBlank.ts:574`). Por eso
+  con una plantilla cargada «Guardar .heks», «Compartir enlace» y «Exportar .tcl» se quedan
+  con el textarea vacío. El arreglo bueno es **un generador genérico del .heks desde los
+  `states`** (nudos, elementos, inputs) en `main.ts`, y que los tres botones lo usen: arregla
+  los tres de una vez en lugar de parchear cada uno.
