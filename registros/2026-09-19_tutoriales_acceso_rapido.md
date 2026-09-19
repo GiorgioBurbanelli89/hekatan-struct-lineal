@@ -87,3 +87,16 @@ Medido con `cli/_cinta_anchos.mjs` en la app publicada (antes):
 ## ⏳ Falta
 - Build + `_sonda_solapes.mjs` (0e) y `animacion_modal_es_el_modo` con el bundle.
 - Guion warren solo cinta, grabar, revisar, cortar. Luego cúpula.
+
+## 4. Bienvenida (19-sep, tarde) — `bc9a3bbcd`
+- ✅ `examples/src/shared/bienvenida.ts`: una sola pantalla al entrar (siempre) con 🧭 Guiado · 🔎 ¿Qué buscas? ·
+  🤖 Con IA · 👋 Ya te llamo, lo hago yo; «Abriste: …» con enlace; Recuperar dentro; ✕/Esc; ES/EN; 🙋 en el sitio del 🤖.
+- ✅ `destinos.ts` (catálogo único) + buscador Ctrl+K / «/» con tolerancia a faltas.
+- ✅ Sonda `cli/_bienvenida_check.mjs` 1920/1366/390: 0 pageerror; tras elegir nada tapa paneles ni cinta.
+  Hoja: `cli/shots/bienvenida/hoja_bienvenida.png`.
+- ✅ `_sonda_solapes` 1920×1080 y 1366×768: TOTAL 0.
+- ❌ 390×844: 28 problemas, PREVIOS: el CSS de móvil de main.ts pone `transform:none !important` al panel
+  derecho y apila los dos paneles; no se pliegan con su puerta. ⏳ rediseño móvil (main.ts / piel).
+- ⏳ Guiado paso a paso real (recorrido «pórtico» con cursor que espera el clic): hoy 🧭 abre la guía «cuatro pasos».
+- ⏳ aiAgent: `abrir_ejemplo`, `guiar`, rechazo del no lineal tras `licenciaNoLineal()` (texto de Jorge).
+- ⏳ Warren: toma grabada sin montar (`frames_tut_cap19_cercha_warren/`, 1864 fotogramas). Cúpula/novedades/visor: guion probado, sin grabar.
