@@ -139,10 +139,28 @@ export const pasos = [
     },
   },
   {
+    rotulo: "4b · Apoyos en la base: ventana sobre los 16 nudos de z = 0 y «Empotrar» en el panel de selección",
+    hacer: async (a) => {
+      await panel(a, "der", false);
+      await abrirCarpeta(a, "✂ Modificar").catch(() => {});
+      await panel(a, "der", true); await abrirCarpeta(a, "✂ Modificar");
+      await pulsar(a, "🖱 Seleccionar", "Seleccionar.");
+      await panel(a, "der", false);
+      const [p, q] = await proj(a, [[-5.6, 0, 0.35], [5.6, 0, -0.35]]);
+      await mover(a, p.x, p.y, 12); await caja(a, { x: p.x - 12, y: p.y - 12, w: 24, h: 24 }, "Una ventana estrecha sobre la base (z = 0).", 4);
+      await clicRojo(a, p.x, p.y, false);
+      await mover(a, q.x, q.y, 16); await a.quieto(2, 300); await clicRojo(a, q.x, q.y, false);
+      await a.quieto(3, 360);
+      await pulsar(a, "Empotrar los", "Empotrar los 16 nudos: 6 grados de libertad.", true);
+      console.log("   ", await estado(a));
+      await a.quieto(5, 360);
+    },
+  },
+  {
     rotulo: "5 · Vista isométrica: 120 paños, 129 nudos, todos sobre la esfera; el polo cerrado con cometas",
     hacer: async (a) => {
       await vistaBoton(a, "Vista isom", "Vista isométrica.");
-      await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; });
+      await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; if (s?.supports) s.supports.val = true; });
       await panel(a, "der", false);
       await a.quieto(3, 360);
       await orbita(a, [0, 0], 14, 8, [0, 0, 2.5], 26);
@@ -207,10 +225,24 @@ export const pasos = [
     },
   },
   {
+    rotulo: "8b · Apoyos del Allianz: ventana sobre los 40 nudos de la base y «Empotrar»",
+    hacer: async (a) => {
+      await abrirCarpeta(a, "✂ Modificar"); await pulsar(a, "🖱 Seleccionar", "Seleccionar.");
+      await panel(a, "der", false);
+      const [p, q] = await proj(a, [[-14, 0, 0.35], [14, 0, -0.35]]);
+      await mover(a, p.x, p.y, 12); await clicRojo(a, p.x, p.y, false);
+      await mover(a, q.x, q.y, 16); await a.quieto(2, 300); await clicRojo(a, q.x, q.y, false);
+      await a.quieto(3, 360);
+      await pulsar(a, "Empotrar los", "Empotrar los 40 nudos de la base.", true);
+      console.log("   ", await estado(a));
+      await a.quieto(4, 360);
+    },
+  },
+  {
     rotulo: "9 · La piel del Allianz en isométrica: 480 Q4, 520 nudos; = ETABS al 0.011 %",
     hacer: async (a) => {
       await vistaBoton(a, "Vista isom", "Vista isométrica.");
-      await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; });
+      await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; if (s?.supports) s.supports.val = true; });
       await panel(a, "der", false);
       await a.quieto(3, 360);
       await orbita(a, [0, 0], 42, 20, [0, 0, 2], 30);

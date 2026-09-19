@@ -271,6 +271,41 @@ const clic = async (x, y) => {
  *   "sel"    por un selector CSS — hace falta para la PORTADA, que no es un panel de
  *            mandos sino tres tarjetas: «Modelo nuevo», «Modelo existente», «Ejemplos».
  */
+/**
+ * Los mandos del panel pasaron del inglés de CSI al español (18-sep-2026). Los guiones
+ * de los tutoriales piden el nombre VIEJO («Frame results»), así que aquí se traduce al
+ * nuevo antes de buscarlo en la pantalla. Con esto ningún capítulo hay que reescribirlo,
+ * y si algún día se quitan los nombres viejos, se borra esta tabla y ya.
+ */
+const SINONIMOS_PANEL = {
+  "Display scale": "Tamaño de los símbolos",
+  "Nodes": "Nudos",
+  "Elements": "Elementos",
+  "Edges (delim.)": "Aristas (delim.)",
+  "Nodes indexes": "Nº de nudo",
+  "Elements indexes": "Nº de elemento",
+  "Orientations": "Ejes locales",
+  "Supports": "Apoyos",
+  "Loads": "Cargas",
+  "Node results": "Resultados de nudo",
+  "Frame results": "Resultados de barra",
+  "Shell results": "Resultados de cáscara",
+  "Solid results": "Resultados de sólido",
+  "Deformed shape": "Deformada",
+  "Scale XY": "Escala XY",
+  "Scale Z": "Escala Z",
+  "Analysis Inputs": "Datos de entrada",
+  "Analyze": "Resultados",
+  "Load Patterns": "Patrones de carga",
+  "Load Cases": "Casos de carga",
+  "Load Combinations": "Combinaciones",
+  "Self Weight Mult.": "Factor de peso propio",
+  "Auto Lateral": "Carga lateral automática",
+  "Initial Cond.": "Condición inicial",
+  "Max Modes": "Modos máx.",
+};
+const tr = (t) => (typeof t === "string" && SINONIMOS_PANEL[t.trim()]) || t;
+
 const rect = (que, texto) => pag.evaluate((q) => {
   let e = null;
   if (q.q === "sel") {
@@ -318,7 +353,7 @@ const rect = (que, texto) => pag.evaluate((q) => {
   // por debajo de lo que se graba (la banda de órdenes): el cuadro saldría cortado
   if (r.bottom > q.lim) return null;
   return { x: r.left, y: r.top, w: r.width, h: r.height };
-}, { q: que, t: texto, lim: ALTO_UTIL });
+}, { q: que, t: tr(texto), lim: ALTO_UTIL });
 
 const api = {
   pag, espera, foto,
@@ -675,7 +710,7 @@ const api = {
       const o = [...s.options].find((x) => n(x.textContent) === n(q.t)) ||
                 [...s.options].find((x) => n(x.textContent).includes(n(q.t)));
       return o ? o.value : null;
-    }, { e: etiqueta, t: textoOpcion });
+    }, { e: tr(etiqueta), t: textoOpcion });
     if (val == null) { console.log("  x no se ve la opcion: " + textoOpcion); return false; }
     // LA LISTA ABIERTA. El navegador sin pantalla no pinta la lista de un <select> al
     // pulsarlo, y en el vídeo el valor cambiaba «solo». Se dibuja la lista con SUS

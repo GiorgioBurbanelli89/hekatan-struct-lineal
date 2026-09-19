@@ -790,7 +790,7 @@ export function getViewer({
     gridObj = grid(settings.gridSize.rawVal, { planes: activePlanes() });
     scene.add(gridObj);
     // Update CSS custom properties for legend etc.
-    viewerElm.style.setProperty("--awatif-legend-color", colors.legendMarker);
+    viewerElm.style.setProperty("--hk-legend-color", colors.legendMarker);
     viewerRender();
   });
 
@@ -886,6 +886,66 @@ export function getViewer({
 }
 
 // Utils
+
+/**
+ * EL SELLO DEL CASO — ver `Mesh.caseId` en `hekatan-fem/src/data-model.ts`.
+ *
+ * Devuelve `true` si lo que se va a pintar es de ESTE modelo y ESTE caso.
+ * Si el `mesh` lleva sello y los resultados traen otro (o no traen ninguno),
+ * devuelve `false` y el visor NO pinta: mejor no dibujar nada que dibujar la
+ * deformada de otro modelo, que es exactamente el bug que se persiguio meses.
+ *
+ * Sin sello en el `mesh` no cambia nada: el comportamiento es el de siempre.
+ */
+let ultimoSelloAvisado = "";
+function avisarSello(msg: string) {
+  if (msg === ultimoSelloAvisado) return;
+  ultimoSelloAvisado = msg;
+  console.error(`[sello] ${msg}`);
+}
+
+export function selloDelCasoOk(
+  mesh: Mesh | undefined,
+  salida: { caseId?: string } | undefined | null,
+  que: string
+): boolean {
+  const esperado = (mesh as any)?.caseId?.val as string | undefined;
+  const tiene = salida?.caseId;
+  // Sello EXPLICITO que no cuadra: resultado de otro modelo/caso. Se tira.
+  // Si los resultados vienen SIN sellar no se rechaza por eso solo — de eso se
+  // encarga la comprobacion ESTRUCTURAL de abajo, que no necesita que nadie
+  // coopere.
+  if (esperado && tiene && tiene !== esperado) {
+    avisarSello(`NO pinto ${que}: los resultados son de «${tiene}» y en ` +
+      `pantalla esta «${esperado}». Resultado viejo sobre modelo nuevo.`);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * La comprobacion que NO necesita que nadie selle nada: los indices de los
+ * resultados tienen que caber en la malla que se esta mostrando. Un resultado
+ * de otro modelo casi siempre indexa fuera, y el visor lo pintaba igual
+ * (`deforms.get(i) ?? [0,0,0]`) dejando medio modelo quieto y el otro medio
+ * movido — que es justo la pinta que tenia el bug de la deformada.
+ */
+export function indicesCaben(
+  mapa: Map<number, unknown> | undefined,
+  n: number,
+  que: string
+): boolean {
+  if (!mapa || mapa.size === 0 || n === 0) return true;
+  let max = -1;
+  for (const k of mapa.keys()) if (k > max) max = k;
+  if (max >= n) {
+    avisarSello(`NO pinto ${que}: el resultado llega al indice ${max} y la malla ` +
+      `en pantalla tiene ${n}. Es de otro modelo.`);
+    return false;
+  }
+  return true;
+}
+
 function deriveNodes(
   mesh: Mesh | undefined,
   settings: Settings
@@ -895,6 +955,10 @@ function deriveNodes(
     const nodes = mesh?.nodes?.val ?? [];
     const deforms = mesh?.deformOutputs?.val?.deformations;
     if (!deforms || nodes.length === 0) return nodes;
+    // El sello: si la deformada no es de este modelo/caso, se dibuja el modelo
+    // SIN deformar en vez de mentir con la deformada de otro.
+    if (!selloDelCasoOk(mesh, mesh?.deformOutputs?.val, "la deformada")) return nodes;
+    if (!indicesCaben(deforms, nodes.length, "la deformada")) return nodes;
     // Escalas SEPARADAS: XY (en el plano horizontal) y Z (vertical).
     // Razón física: concreto y acero son axialmente RÍGIDOS (EA grande) mientras
     // que lateralmente SÍ se desplazan notablemente bajo sísmico/viento. El
@@ -953,8 +1017,14 @@ export const colorMapDispUnit: State<"mm" | "cm" | "m" | "in" | "ft"> = van.stat
  * ingenieros prefieren unidades compuestas estándar (MPa, ksi, kgf/cm²)
  * en lugar de combinar manualmente force + length.
  */
-export type StressUnit = "kN/m²" | "kPa" | "MPa" | "GPa" | "kgf/cm²" | "tonf/m²" | "ksi" | "psi";
-export const colorMapStressUnit: State<StressUnit> = van.state("kN/m²");
+// ⚠️ Esta lista tenia OCHO unidades y la del workspace (`units.ts`) tiene NUEVE:
+// faltaba `kip/ft²`. Y el defecto era "kN/m²" mientras el del workspace es
+// "tonf/m²" — y nadie los sincronizaba (`main.ts` si sincroniza fuerza y
+// desplazamiento, la tension no). Resultado medido: en los ejemplos de solidos
+// la LEYENDA rotulaba kN/m² y el TOOLTIP tonf/m² para el mismo numero, o sea
+// x9.80665 entre lo que dicen dos partes de la misma pantalla.
+export type StressUnit = "kN/m²" | "kPa" | "MPa" | "GPa" | "kgf/cm²" | "tonf/m²" | "ksi" | "psi" | "kip/ft²";
+export const colorMapStressUnit: State<StressUnit> = van.state("tonf/m²");
 
 // Factores de conversión (mismos que units.ts del workspace, duplicados acá
 // porque hekatan-ui es un paquete independiente y no debe importar de examples/).
@@ -978,6 +1048,7 @@ const STRESS_FACTORS: Record<StressUnit, number> = {
   "tonf/m²": 1 / 9.80665,
   "psi":     1 / 6.89476,
   "ksi":     1 / 6894.76,
+  "kip/ft²": 1 / 47.88026,
 };
 
 function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
@@ -1037,6 +1108,18 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       });
     };
 
+    // El sello, otra vez: un colormap de otro modelo pinta colores plausibles
+    // sobre la malla equivocada y no se nota en ningun JSON.
+    const nElem = mesh.elements.val.length;
+    const ao: any = mesh.analyzeOutputs?.val;
+    const selloOk = selloDelCasoOk(mesh, ao, "el colormap de cascara")
+      && indicesCaben(ao?.bendingXX, nElem, "el colormap de cascara")
+      && indicesCaben(ao?.membraneXX, nElem, "el colormap de cascara")
+      && indicesCaben(ao?.vonMises, nElem, "el colormap de cascara")
+      && indicesCaben(ao?.pressure, nElem, "el colormap de cascara");
+    if (!selloOk) {
+      // Mapas vacios -> el visor pinta sin colores en vez de con los ajenos.
+    } else {
     mapResultToNodes(mesh.analyzeOutputs?.val?.bendingXX, nodeBendingXX);
     mapResultToNodes(mesh.analyzeOutputs?.val?.bendingYY, nodeBendingYY);
     mapResultToNodes(mesh.analyzeOutputs?.val?.bendingXY, nodeBendingXY);
@@ -1047,6 +1130,7 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     mapResultToNodes(mesh.analyzeOutputs?.val?.tranverseShearY, nodeShearY);
     mapResultToNodes(mesh.analyzeOutputs?.val?.vonMises, nodeVonMises);
     mapResultToNodes((mesh.analyzeOutputs?.val as any)?.pressure, nodePressure);
+    }
 
     // ── Los PRINCIPALES y el cortante máximo ────────────────────────────
     //

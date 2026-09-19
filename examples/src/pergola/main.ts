@@ -7,7 +7,7 @@
  * - Correas perpendiculares (a lo largo de X) en cada Y
  * - Paneles shell Q4 entre vigas como cubierta
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generatePergola()` en getCad3d.ts (líneas 10667-10912).
  */
 import van, { State } from "vanjs-core";

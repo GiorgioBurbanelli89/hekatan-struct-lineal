@@ -4749,7 +4749,8 @@ export function drawing({
       // Solo elementos auxiliares (o nada editable) — mostrar info
       const fInfo = propsPaneInstance.addFolder({ title: "ℹ Selección" });
       const infoState = { msg: "Seleccioná nodos, frames o áreas para editar" };
-      fInfo.addBinding(infoState, "msg", { readonly: true, label: "" });
+      // Etiqueta vacía = una fila sin nombre, que no se entiende de dónde sale.
+      fInfo.addBinding(infoState, "msg", { readonly: true, label: "Qué hacer" });
     }
 
     // Botón ✕ cerrar (siempre presente)

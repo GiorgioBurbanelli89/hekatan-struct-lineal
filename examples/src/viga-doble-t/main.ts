@@ -13,7 +13,7 @@
  * Benchmark: tensión flexional σ = M·c/I con eje neutro desplazado
  * (sección asimétrica → centroid no está en h/2).
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  */
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";

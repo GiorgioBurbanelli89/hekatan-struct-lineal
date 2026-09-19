@@ -26,6 +26,7 @@ import type { ViewerContext3D } from "hekatan-ui/src/viewer/getViewer";
 import { getTheme, getThemeName, onThemeChange } from "hekatan-ui/src/theme";
 import { UNIT_SYSTEMS, buildUnitSystem, FORCE_UNITS, LENGTH_UNITS, getGeneratorParams, getLoadParams, getSupportOptions, type UnitSystemId, type UnitSystem, type ForceUnitId, type LengthUnitId } from "./units";
 import { createModalPanel } from "./renderModalTable";
+import { MODE_SCALE_PERCENT, modelDiagonal } from "./modeScale";
 import { STEEL_PROFILES, getWProfileOptions, getHSSProfileOptions } from "./steelProfiles";
 import { buildReportExplained } from "./reportExplained";
 import { buildElementReport } from "./elementReport";
@@ -39,6 +40,7 @@ import { rectSection, circSection, iParamSection, hollowRectSection, cftSection 
 import { exportOpenSeesPy, exportOpenSeesTcl, importOpenSeesPy, importOpenSeesTcl } from "./openseesIO";
 import { parseIfcToAnalytical } from "./ifcAnalyticalParser";
 import { loadIfcToScene, filterIfcByPreset, type IfcLoadResult, type IfcDetailCategory } from "./Draw3DIfc";
+import { ecHormigonACI } from "./materials";
 
 export interface Cad3dMesh {
   nodes: State<Node[]>;
@@ -2126,7 +2128,7 @@ VIEW:
       console.log(`Mxy_max = ${result.maxMxy.toExponential(4)}`);
       console.log(`Qx_max = ${result.maxQx.toExponential(4)}, Qy_max = ${result.maxQy.toExponential(4)}`);
 
-      // Map to awatif mesh format for visualization
+      // Map to mesh format for visualization
       const nodes: Node[] = result.nodeResults.map(n => [n.x, n.y, 0]);
       const elements: Element[] = result.elementResults.map(e => [...e.nodes]);
       mesh.nodes.val = nodes;
@@ -2689,7 +2691,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
     const dt = performance.now() - t0;
     console.log(`Solved in ${dt.toFixed(1)} ms, w_max = ${result.maxW.toExponential(4)}`);
 
-    // Map to awatif mesh format for visualization
+    // Map to mesh format for visualization
     const nodes: Node[] = result.nodeResults.map(n => [n.x, n.y, 0]);
     const elements: Element[] = result.elementResults.map(e => [...e.nodes]);
     mesh.nodes.val = nodes;
@@ -2750,7 +2752,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       maxMeshSize: meshSize,
     });
 
-    // Solver nodes: XY plane (Z=0) — required by awatif shell solver
+    // Solver nodes: XY plane (Z=0) — required by shell solver
     const solverNodes: Node[] = meshNodes;
 
     // Supports: bottom edge (y=0) at x <= 0.4m and x >= l-0.4m
@@ -5151,7 +5153,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       --cad-toggle-hover: #fff;
     }
     /* ── Light theme overrides ── */
-    :root.awatif-light {
+    :root.hk-light {
       --fem-bg: rgba(250,250,252,0.97);
       --fem-text: #333;
       --fem-border: #bbb;
@@ -5409,10 +5411,10 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
   document.head.appendChild(style);
 
   // Sync theme class on <html> element
-  if (getThemeName() === "light") document.documentElement.classList.add("awatif-light");
+  if (getThemeName() === "light") document.documentElement.classList.add("hk-light");
   onThemeChange((name) => {
-    if (name === "light") document.documentElement.classList.add("awatif-light");
-    else document.documentElement.classList.remove("awatif-light");
+    if (name === "light") document.documentElement.classList.add("hk-light");
+    else document.documentElement.classList.remove("hk-light");
     // Recreate grid + axes with new theme colors (keep current camera)
     if (activeGenerator) {
       autoFitGridSize(true);
@@ -5520,7 +5522,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         <button id="cad3d-modal" title="Análisis modal (frecuencias y modos)">⚡ Modal</button>
         <button id="cad3d-mode-prev" style="display:none" title="Modo anterior">◀</button>
         <button id="cad3d-mode-next" style="display:none" title="Modo siguiente">▶</button>
-        <input id="cad3d-modal-scale" type="number" min="0.1" max="100" step="0.5" value="5" style="display:none;width:40px;font-size:10px;padding:1px 3px;background:var(--cad-bg);color:var(--cad-heading);border:1px solid var(--cad-border);border-radius:3px;text-align:center" title="Escala de animacion (% del modelo)" />
+        <input id="cad3d-modal-scale" type="number" min="0.1" max="100" step="0.5" value="3.7" style="display:none;width:40px;font-size:10px;padding:1px 3px;background:var(--cad-bg);color:var(--cad-heading);border:1px solid var(--cad-border);border-radius:3px;text-align:center" title="Escala de animacion (% de la diagonal; 3.7 = SAP2000 Automatic)" />
       </div>
       <div id="cad3d-mode-label" style="display:none;color:var(--cad-heading);font-size:10px;line-height:16px;padding:2px 4px;white-space:nowrap;overflow-x:auto">Modo 1</div>
       <div class="btn-row" style="margin-top:2px">
@@ -5552,7 +5554,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
     const f = activeForceId;
     const lines: string[] = [];
 
-    lines.push(`# Awatif FEM — Model Export`);
+    lines.push(`# Hekatan Struct — Model Export`);
     lines.push(`# Generator: ${activeGenerator || "custom"}`);
     lines.push(`# Units: ${f}, ${u}`);
     lines.push(`# ${new Date().toISOString()}`);
@@ -5891,9 +5893,14 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
     const elems = mesh.elements.rawVal;
 
     // Compute modal scale from user input (% of model extent)
-    const { extent } = getModelBounds();
+    // Amplitud del modo: % de la DIAGONAL, con LA constante (`shared/modeScale.ts`).
+    // Antes: 5 % del LADO MAYOR. El mismo modo daba tres amplitudes distintas
+    // en el CAD, el visor y el GIF.
+    const extent = modelDiagonal(mesh.nodes.val);
     const scaleInput = panel.querySelector("#cad3d-modal-scale") as HTMLInputElement;
-    const scalePct = scaleInput ? parseFloat(scaleInput.value) || 5 : 5;
+    const scalePct = scaleInput
+      ? parseFloat(scaleInput.value) || MODE_SCALE_PERCENT
+      : MODE_SCALE_PERCENT;
     let maxDisp = 0;
     for (let i = 0; i < nNodes; i++) {
       const dx = shape[i * 6] || 0, dy = shape[i * 6 + 1] || 0, dz = shape[i * 6 + 2] || 0;
@@ -6275,7 +6282,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       const { colMat, vigaMat, colShape, fc, perFloor } = sectionState;
 
       // Concrete material properties
-      const Ec = 4700 * Math.sqrt(fc / 1000) * 1000;
+      const Ec = ecHormigonACI(fc / 1000);
       const Gc = Ec / (2 * 1.2); // ν = 0.2
       const rhoC = 24 / 9.80665;
       // Steel material properties
@@ -6285,7 +6292,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         // ── Shear wall elements (Q4 shell) ──
         if (wallElementIndices.has(i)) {
           // Muros de corte: shell thick (Mindlin-Reissner — includes transverse shear)
-          const Ec_wall = 4700 * Math.sqrt(fc / 1000) * 1000;
+          const Ec_wall = ecHormigonACI(fc / 1000);
           const nuC_wall = 0.20;
           ei.elasticities!.set(i, Ec_wall);
           ei.poissonsRatios!.set(i, nuC_wall);
@@ -6296,7 +6303,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         }
         if (slabElementIndices.has(i)) {
           // Losas: shell thin (Kirchhoff — losas delgadas, t/L < 1/10)
-          const Ec_slab = 4700 * Math.sqrt(fc / 1000) * 1000;
+          const Ec_slab = ecHormigonACI(fc / 1000);
           const nuC_slab = 0.20;
           ei.elasticities!.set(i, Ec_slab);
           ei.poissonsRatios!.set(i, nuC_slab);
@@ -6582,7 +6589,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       const Ab = 0.25 * 0.4, Izb = 0.25 * 0.4 ** 3 / 12, Iyb = 0.4 * 0.25 ** 3 / 12, Jb = 0.001;
       const AsC = 5 / 6 * Ac, AsB = 5 / 6 * Ab;
 
-      const tests: { name: string; formulation: string; nodes: number[][]; elements: number[][]; results: { label: string; awatif: number; reference: number; refSource: string }[] }[] = [];
+      const tests: { name: string; formulation: string; nodes: number[][]; elements: number[][]; results: { label: string; hekatan: number; reference: number; refSource: string }[] }[] = [];
 
       function makeFrameInputs(nElms: number, colIdx: number[], beamIdx: number[]) {
         const ei: any = {
@@ -6633,7 +6640,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         tests.push({
           name: "Cantilever Beam", formulation: "Euler-Bernoulli (PL³/3EI)",
           nodes, elements,
-          results: [{ label: "Uz tip (cm)", awatif: r.deformations.get(1)[2] * 100, reference: exact * 100, refSource: "Analytical" }]
+          results: [{ label: "Uz tip (cm)", hekatan: r.deformations.get(1)[2] * 100, reference: exact * 100, refSource: "Analytical" }]
         });
       }
 
@@ -6650,7 +6657,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         tests.push({
           name: "Portal 1-Story (Timoshenko)", formulation: "Frame Timoshenko (As=5/6·A)",
           nodes, elements,
-          results: [{ label: "Ux top (cm)", awatif: r.deformations.get(2)[0] * 100, reference: 2.0618, refSource: "ETABS 22.6" }]
+          results: [{ label: "Ux top (cm)", hekatan: r.deformations.get(2)[0] * 100, reference: 2.0618, refSource: "ETABS 22.6" }]
         });
       }
 
@@ -6671,8 +6678,8 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
           name: "Portal 2-Story", formulation: "Frame Timoshenko",
           nodes, elements,
           results: [
-            { label: "Ux Z=3m (cm)", awatif: r.deformations.get(2)[0] * 100, reference: 2.5188, refSource: "ETABS 22.6" },
-            { label: "Ux Z=6m (cm)", awatif: r.deformations.get(4)[0] * 100, reference: 5.6424, refSource: "ETABS 22.6" },
+            { label: "Ux Z=3m (cm)", hekatan: r.deformations.get(2)[0] * 100, reference: 2.5188, refSource: "ETABS 22.6" },
+            { label: "Ux Z=6m (cm)", hekatan: r.deformations.get(4)[0] * 100, reference: 5.6424, refSource: "ETABS 22.6" },
           ]
         });
       }
@@ -6693,7 +6700,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         tests.push({
           name: "Wall Q4 Only", formulation: "Membrane (incompatible modes) + Mindlin-Reissner + Hughes-Brezzi drilling",
           nodes, elements,
-          results: [{ label: "Ux top (cm)", awatif: r.deformations.get(2)[0] * 100, reference: 0.013519, refSource: "ETABS 22.6" }]
+          results: [{ label: "Ux top (cm)", hekatan: r.deformations.get(2)[0] * 100, reference: 0.013519, refSource: "ETABS 22.6" }]
         });
       }
 
@@ -6716,8 +6723,8 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
           name: "Portal 2-Story + Wall Q4", formulation: "Frame Timoshenko + Shell Q4 (Hughes-Brezzi drilling)",
           nodes, elements,
           results: [
-            { label: "Ux h=3m (cm)", awatif: r.deformations.get(2)[0] * 100, reference: 0.0195, refSource: "ETABS 22.6" },
-            { label: "Ux h=6m (cm)", awatif: r.deformations.get(4)[0] * 100, reference: 2.1133, refSource: "ETABS 22.6" },
+            { label: "Ux h=3m (cm)", hekatan: r.deformations.get(2)[0] * 100, reference: 0.0195, refSource: "ETABS 22.6" },
+            { label: "Ux h=6m (cm)", hekatan: r.deformations.get(4)[0] * 100, reference: 2.1133, refSource: "ETABS 22.6" },
           ]
         });
       }
@@ -6779,8 +6786,8 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
             formulation: "2 Q4 elements + incompatible modes (Wilson 1971, Table 6.1)",
             nodes: wn, elements: we,
             results: [
-              { label: "Uy/Uy_exact (cortante)", awatif: normalized, reference: 0.932, refSource: "Wilson Table 6.1" },
-              { label: "Uy free end", awatif: uy_max, reference: delta_exact * 0.932, refSource: "Wilson" },
+              { label: "Uy/Uy_exact (cortante)", hekatan: normalized, reference: 0.932, refSource: "Wilson Table 6.1" },
+              { label: "Uy free end", hekatan: uy_max, reference: delta_exact * 0.932, refSource: "Wilson" },
             ]
           });
         } catch (e: any) {
@@ -6788,7 +6795,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
             name: "Wilson Fig 6.2 — Cantilever Q4",
             formulation: "ERROR: " + e.message,
             nodes: wn, elements: we,
-            results: [{ label: "Error", awatif: 0, reference: 0.932, refSource: "Wilson" }]
+            results: [{ label: "Error", hekatan: 0, reference: 0.932, refSource: "Wilson" }]
           });
         }
       }
@@ -6891,7 +6898,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
             nodes: sl_nodes, elements: sl_elements,
             results: [{
               label: "Uz midspan free edge (ft)",
-              awatif: Math.abs(uz),
+              hekatan: Math.abs(uz),
               reference: 0.3086,
               refSource: "Wilson (2004) / MacNeal-Harder"
             }]
@@ -6901,7 +6908,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
             name: "Scordelis-Lo Barrel Vault",
             formulation: "ERROR: " + e.message,
             nodes: sl_nodes, elements: sl_elements,
-            results: [{ label: "Error", awatif: 0, reference: 0.3086, refSource: "Wilson" }]
+            results: [{ label: "Error", hekatan: 0, reference: 0.3086, refSource: "Wilson" }]
           });
         }
       }
@@ -6932,7 +6939,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
     function generateTestE2k(test: any): string {
       const E = 15000 * Math.sqrt(210) * 10;
       const lines: string[] = [];
-      lines.push(`$ File exported from Awatif FEM Validation: ${test.name}`);
+      lines.push(`$ File exported from Hekatan Struct — validacion FEM: ${test.name}`);
       lines.push(` `);
       lines.push(`$ PROGRAM INFORMATION`);
       lines.push(`  PROGRAM  "ETABS"  VERSION "22.6.0"  `);
@@ -7049,7 +7056,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       const E = 15000 * Math.sqrt(210) * 10;
       const py: string[] = [];
       py.push(`"""ETABS API Validation: ${test.name}`);
-      py.push(`Generated by Awatif FEM Studio"""`);
+      py.push(`Generated by Hekatan Struct"""`);
       py.push(`import comtypes.client, time, math`);
       py.push(``);
       py.push(`helper = comtypes.client.CreateObject('ETABSv1.Helper')`);
@@ -7120,9 +7127,9 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       py.push(`    if NR > 0:`);
       py.push(`        print(f"  {name} Z={float(c[2]):.1f}: Ux={U1[0]*100:.4f} cm")`);
       py.push(``);
-      py.push(`print("\\nAwatif results:")`);
+      py.push(`print("\\nHekatan results:")`);
       for (const r of test.results) {
-        py.push(`print(f"  ${r.label}: Awatif=${r.awatif.toFixed(4)}, ETABS=${r.reference.toFixed(4)}, Ratio={${r.awatif.toFixed(4)}/${r.reference.toFixed(4)}:.4f}")`);
+        py.push(`print(f"  ${r.label}: Hekatan=${r.hekatan.toFixed(4)}, ETABS=${r.reference.toFixed(4)}, Ratio={${r.hekatan.toFixed(4)}/${r.reference.toFixed(4)}:.4f}")`);
       }
       py.push(`SapModel.View.RefreshView(0, False)`);
       return py.join("\n");
@@ -7148,14 +7155,14 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         box-shadow:0 10px 40px rgba(0,0,0,0.5);`;
 
       let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="margin:0;color:#00d4ff">Awatif FEM Validation</h3>
+        <h3 style="margin:0;color:#00d4ff">Hekatan Struct — validacion FEM</h3>
         <button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer">X</button>
       </div>`;
 
       let allPass = true;
 
       // Store tests on window for download buttons
-      (window as any).__awatifTests = tests;
+      (window as any).__hekatanTests = tests;
 
       for (let ti = 0; ti < tests.length; ti++) {
         const test = tests[ti];
@@ -7163,22 +7170,22 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         html += `<div style="display:flex;justify-content:space-between;align-items:center">`;
         html += `<div style="font-weight:bold;color:#00d4ff">${test.name}</div>`;
         html += `<div>`;
-        html += `<button onclick="window.__awatifDownloadE2k(${ti})" style="background:#1e3a5f;color:#aaa;border:1px solid #444;padding:2px 6px;font-size:10px;cursor:pointer;margin-right:4px;border-radius:3px">e2k</button>`;
-        html += `<button onclick="window.__awatifDownloadPy(${ti})" style="background:#2a1e3a;color:#aaa;border:1px solid #444;padding:2px 6px;font-size:10px;cursor:pointer;border-radius:3px">py</button>`;
+        html += `<button onclick="window.__hekatanDownloadE2k(${ti})" style="background:#1e3a5f;color:#aaa;border:1px solid #444;padding:2px 6px;font-size:10px;cursor:pointer;margin-right:4px;border-radius:3px">e2k</button>`;
+        html += `<button onclick="window.__hekatanDownloadPy(${ti})" style="background:#2a1e3a;color:#aaa;border:1px solid #444;padding:2px 6px;font-size:10px;cursor:pointer;border-radius:3px">py</button>`;
         html += `</div></div>`;
         html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${test.formulation}</div>`;
         html += `<table style="width:100%;border-collapse:collapse;font-size:12px">
-          <tr style="color:#888"><td style="padding:3px 6px">Measure</td><td style="text-align:right">Awatif</td><td style="text-align:right">Reference</td><td style="text-align:right">Ratio</td><td style="text-align:right">Source</td><td style="text-align:center"></td></tr>`;
+          <tr style="color:#888"><td style="padding:3px 6px">Measure</td><td style="text-align:right">Hekatan</td><td style="text-align:right">Reference</td><td style="text-align:right">Ratio</td><td style="text-align:right">Source</td><td style="text-align:center"></td></tr>`;
 
         for (const r of test.results) {
-          const ratio = r.reference !== 0 ? r.awatif / r.reference : 1;
+          const ratio = r.reference !== 0 ? r.hekatan / r.reference : 1;
           const pass = Math.abs(ratio - 1) < 0.05;
           if (!pass) allPass = false;
           const color = pass ? "#4caf50" : "#f44336";
           const icon = pass ? "PASS" : "FAIL";
           html += `<tr style="border-top:1px solid #333">
             <td style="padding:3px 6px">${r.label}</td>
-            <td style="text-align:right;color:#fff">${r.awatif.toFixed(4)}</td>
+            <td style="text-align:right;color:#fff">${r.hekatan.toFixed(4)}</td>
             <td style="text-align:right;color:#aaa">${r.reference.toFixed(4)}</td>
             <td style="text-align:right;color:${color};font-weight:bold">${ratio.toFixed(4)}</td>
             <td style="text-align:right;color:#888;font-size:11px">${r.refSource}</td>
@@ -7196,13 +7203,13 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       document.body.appendChild(overlay);
 
       // Download handlers
-      (window as any).__awatifDownloadE2k = (idx: number) => {
-        const t = (window as any).__awatifTests[idx];
+      (window as any).__hekatanDownloadE2k = (idx: number) => {
+        const t = (window as any).__hekatanTests[idx];
         const fname = t.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
         downloadText2(generateTestE2k(t), `${fname}.e2k`);
       };
-      (window as any).__awatifDownloadPy = (idx: number) => {
-        const t = (window as any).__awatifTests[idx];
+      (window as any).__hekatanDownloadPy = (idx: number) => {
+        const t = (window as any).__hekatanTests[idx];
         const fname = t.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
         downloadText2(generateTestPy(t), `${fname}_etabs.py`);
       };
@@ -7503,9 +7510,9 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
         };
         try {
           if (ioAction === "export-e2k") {
-            downloadText(exportE2k({ ...input, title: "Awatif Model", e2kModel: lastImportedE2k ?? undefined }), "model.e2k");
+            downloadText(exportE2k({ ...input, title: "Hekatan Model", e2kModel: lastImportedE2k ?? undefined }), "model.e2k");
           } else if (ioAction === "export-s2k") {
-            downloadText(exportS2k({ ...input, title: "Awatif Model" }), "model.s2k");
+            downloadText(exportS2k({ ...input, title: "Hekatan Model" }), "model.s2k");
           } else if (ioAction === "export-py") {
             downloadText(exportOpenSeesPy(input), "model_opensees.py");
           } else if (ioAction === "export-tcl") {
@@ -11262,248 +11269,10 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
     document.body.appendChild(reportDiv);
     return;
 
-    // --- Legacy code below (kept for reference, never reached) ---
-
-    const totalDof = nodes_arr.length * 6;
-    const nElem = elements_arr.length;
-
-    // ── Build report HTML ──
-    let html = `<button class="fem-rpt-close" id="fem-rpt-close">✕</button>`;
-    html += `<h2>📐 Report Explained — FEM Solver Step-by-Step</h2>`;
-    html += `<div class="fem-rpt-summary">
-      <span>Nodos: <b>${nodes_arr.length}</b></span>
-      <span>Elementos: <b>${nElem}</b></span>
-      <span>DOFs totales: <b>${totalDof}</b></span>
-    </div>`;
-
-    // ── Step 1: Element Loop — K local, T, K global for each ──
-    html += `<h3 class="fem-rpt-section" data-toggle="s1">▼ Paso 1 — Matrices por elemento (K local → T → K global)</h3>`;
-    html += `<div id="fem-rpt-s1" class="fem-rpt-body">`;
-
-    for (let e = 0; e < nElem; e++) {
-      const elem = elements_arr[e];
-      const elmNodes = elem.map(n => nodes_arr[n]) as Node[];
-      const isFrame = elem.length === 2;
-
-      let kLocal: number[][] | null = null, T: number[][] | null = null, kGlobal: number[][] | null = null;
-      try {
-        kLocal = getLocalStiffnessMatrix(elmNodes, ei, e);
-        T = getTransformationMatrix(elmNodes);
-        kGlobal = multiply(transpose(T), multiply(kLocal, T)) as number[][];
-      } catch { /* skip */ }
-
-      const L = isFrame ? (norm(subtract(elmNodes[1], elmNodes[0])) as number) : 0;
-      const E = ei.elasticities?.get(e) ?? 0;
-      const A = ei.areas?.get(e) ?? 0;
-      const Iz = ei.momentsOfInertiaZ?.get(e) ?? 0;
-      const Iy = ei.momentsOfInertiaY?.get(e) ?? 0;
-
-      html += `<div class="fem-rpt-elem">`;
-      html += `<h4 class="fem-rpt-elem-header" data-toggle="e${e}">▶ Elemento ${e} — ${isFrame ? "Frame" : "Shell"} [${elem.join("→")}] L=${fmt(L)}</h4>`;
-      html += `<div id="fem-rpt-e${e}" class="fem-rpt-elem-body" style="display:none">`;
-
-      // Properties
-      html += `<div class="fem-rpt-props">E=${fmt(E)}, A=${fmt(A)}, Iz=${fmt(Iz)}, Iy=${fmt(Iy)}</div>`;
-
-      // K local
-      if (kLocal) {
-        html += `<div class="fem-rpt-mtx-title">k_local (${kLocal.length}×${kLocal.length})</div>`;
-        html += femMatrixHTML(kLocal, isFrame ? 12 : 18);
-      }
-
-      // T
-      if (T) {
-        html += `<div class="fem-rpt-mtx-title">T — Transformación</div>`;
-        html += femMatrixHTML(T as number[][], isFrame ? 12 : 18);
-      }
-
-      // K global
-      if (kGlobal) {
-        html += `<div class="fem-rpt-mtx-title">K_global = T<sup>T</sup> · k · T</div>`;
-        html += femMatrixHTML(kGlobal as number[][], isFrame ? 12 : 18);
-      }
-
-      // Assembly DOFs
-      const dofs = elem.map(n => `nodo ${n}: DOFs ${n*6}..${n*6+5}`).join(", ");
-      html += `<div class="fem-rpt-props" style="margin-top:4px">Ensamblaje: ${dofs}</div>`;
-
-      html += `</div></div>`;
-    }
-    html += `</div>`;
-
-    // ── Step 2: Assembly K total ──
-    html += `<h3 class="fem-rpt-section" data-toggle="s2">▼ Paso 2 — Ensamblaje K total (${totalDof}×${totalDof})</h3>`;
-    html += `<div id="fem-rpt-s2" class="fem-rpt-body">`;
-    html += `<div class="fem-rpt-props">K_total = Σ (T<sub>e</sub><sup>T</sup> · k<sub>e</sub> · T<sub>e</sub>) para e = 0..${nElem-1}</div>`;
-    // Assembly map showing which elements contribute to which DOFs
-    const maxShowDof = Math.min(totalDof, 36);
-    html += `<div class="fem-rpt-mtx-title">Mapa de ensamblaje (${maxShowDof}×${maxShowDof} de ${totalDof}×${totalDof})</div>`;
-    html += `<div style="overflow-x:auto"><table class="fem-rpt-matrix" style="font-size:9px">`;
-    html += `<tr><td></td>`;
-    for (let j = 0; j < maxShowDof; j++) html += `<td class="fem-hdr">${j}</td>`;
-    html += `</tr>`;
-    // Build element contribution map
-    const contribMap: Set<number>[][] = Array.from({length: maxShowDof}, () => Array.from({length: maxShowDof}, () => new Set()));
-    for (let e = 0; e < nElem; e++) {
-      const elem = elements_arr[e];
-      const offsets = elem.map(n => n * 6);
-      for (const oi of offsets) {
-        for (const oj of offsets) {
-          for (let di = 0; di < 6; di++) {
-            for (let dj = 0; dj < 6; dj++) {
-              const gi = oi + di, gj = oj + dj;
-              if (gi < maxShowDof && gj < maxShowDof) contribMap[gi][gj].add(e);
-            }
-          }
-        }
-      }
-    }
-    for (let i = 0; i < maxShowDof; i++) {
-      html += `<tr><td class="fem-hdr">${i}</td>`;
-      for (let j = 0; j < maxShowDof; j++) {
-        const s = contribMap[i][j];
-        const n = s.size;
-        const bg = n === 0 ? "transparent" : n === 1 ? "#0a2a4a" : n === 2 ? "#0f3460" : "#1a4a7a";
-        const txt = n === 0 ? "." : n.toString();
-        const clr = n === 0 ? "#333" : "#00d4ff";
-        html += `<td style="background:${bg};color:${clr};text-align:center;width:18px;height:18px;padding:0" title="elem: ${[...s].join(",")}">${txt}</td>`;
-      }
-      html += `</tr>`;
-    }
-    html += `</table></div>`;
-    html += `</div>`;
-
-    // ── Step 3: Boundary Conditions ──
-    html += `<h3 class="fem-rpt-section" data-toggle="s3">▼ Paso 3 — Condiciones de borde</h3>`;
-    html += `<div id="fem-rpt-s3" class="fem-rpt-body">`;
-    const dofNames = ["ux","uy","uz","θx","θy","θz"];
-    const fixedDofs: number[] = [];
-    ni.supports?.forEach((sup, nodeIdx) => {
-      sup.forEach((fixed, d) => { if (fixed) fixedDofs.push(nodeIdx * 6 + d); });
-    });
-    html += `<div class="fem-rpt-props"><b>Apoyos fijos:</b></div>`;
-    ni.supports?.forEach((sup, nodeIdx) => {
-      const fixedLabels = sup.map((f, d) => f ? `<span style="color:#e94560">${dofNames[d]}</span>` : `<span style="color:#333">${dofNames[d]}</span>`).join(" ");
-      html += `<div class="fem-rpt-props">Nodo ${nodeIdx}: ${fixedLabels}</div>`;
-    });
-    html += `<div class="fem-rpt-props" style="margin-top:4px">DOFs fijos: [${fixedDofs.join(", ")}]</div>`;
-    html += `<div class="fem-rpt-props">DOFs libres: ${totalDof - fixedDofs.length} de ${totalDof}</div>`;
-
-    // Loads
-    html += `<div class="fem-rpt-props" style="margin-top:8px"><b>Cargas aplicadas:</b></div>`;
-    ni.loads?.forEach((load, nodeIdx) => {
-      const vals = load.map((v, d) => Math.abs(v) > 1e-10 ? `${dofNames[d]}=${fmt(v)}` : "").filter(Boolean).join(", ");
-      if (vals) html += `<div class="fem-rpt-props">Nodo ${nodeIdx}: ${vals}</div>`;
-    });
-    html += `</div>`;
-
-    // ── Step 4: Solution ──
-    html += `<h3 class="fem-rpt-section" data-toggle="s4">▼ Paso 4 — Solución u = K<sup>-1</sup>·F</h3>`;
-    html += `<div id="fem-rpt-s4" class="fem-rpt-body">`;
-    html += `<div class="fem-rpt-props">K<sub>free</sub> · u<sub>free</sub> = F<sub>free</sub> → LU decomposition → u</div>`;
-    if (dOut?.deformations) {
-      html += `<div class="fem-rpt-mtx-title">Desplazamientos por nodo</div>`;
-      html += `<table class="fem-rpt-matrix"><tr><td class="fem-hdr">Nodo</td>`;
-      for (const dn of dofNames) html += `<td class="fem-hdr">${dn}</td>`;
-      html += `</tr>`;
-      dOut.deformations.forEach((d, nodeIdx) => {
-        html += `<tr><td class="fem-hdr">${nodeIdx}</td>`;
-        d.forEach(v => {
-          const nz = Math.abs(v) > 1e-10;
-          html += `<td style="color:${nz ? "#7bed9f" : "#444"}">${fmt(v, 6)}</td>`;
-        });
-        html += `</tr>`;
-      });
-      html += `</table>`;
-    }
-    if (dOut?.reactions) {
-      html += `<div class="fem-rpt-mtx-title" style="margin-top:8px">Reacciones</div>`;
-      html += `<table class="fem-rpt-matrix"><tr><td class="fem-hdr">Nodo</td>`;
-      for (const dn of dofNames) html += `<td class="fem-hdr">${dn}</td>`;
-      html += `</tr>`;
-      dOut.reactions.forEach((r, nodeIdx) => {
-        html += `<tr><td class="fem-hdr">${nodeIdx}</td>`;
-        r.forEach(v => {
-          const nz = Math.abs(v) > 1e-10;
-          html += `<td style="color:${nz ? "#ffd700" : "#444"}">${fmt(v, 4)}</td>`;
-        });
-        html += `</tr>`;
-      });
-      html += `</table>`;
-    }
-    html += `</div>`;
-
-    // ── Step 5: Internal Forces per element ──
-    html += `<h3 class="fem-rpt-section" data-toggle="s5">▼ Paso 5 — Fuerzas internas por elemento</h3>`;
-    html += `<div id="fem-rpt-s5" class="fem-rpt-body">`;
-    if (aOut && dOut?.deformations) {
-      const fLabels = ["N","Vy","Vz","Mx","My","Mz"];
-      html += `<table class="fem-rpt-matrix"><tr><td class="fem-hdr">Elem</td><td class="fem-hdr">Nodos</td>`;
-      for (const fl of fLabels) html += `<td class="fem-hdr">${fl}<sub>i</sub></td>`;
-      for (const fl of fLabels) html += `<td class="fem-hdr">${fl}<sub>j</sub></td>`;
-      html += `</tr>`;
-      for (let e = 0; e < nElem; e++) {
-        const elem = elements_arr[e];
-        if (elem.length !== 2) continue; // frames only
-        const elmNodes = elem.map(n => nodes_arr[n]) as Node[];
-        try {
-          const kL = getLocalStiffnessMatrix(elmNodes, ei, e);
-          const T2 = getTransformationMatrix(elmNodes);
-          const uG: number[] = [];
-          for (const n of elem) {
-            const d = dOut.deformations?.get(n) || [0,0,0,0,0,0];
-            uG.push(...d);
-          }
-          const uL = multiply(T2, uG) as number[];
-          const fL = multiply(kL, uL) as number[];
-          html += `<tr><td class="fem-hdr">${e}</td><td style="color:#888">${elem.join("→")}</td>`;
-          for (let i = 0; i < 12; i++) {
-            const nz = Math.abs(fL[i]) > 1e-10;
-            html += `<td style="color:${nz ? "#7bed9f" : "#444"}">${fmt(fL[i], 2)}</td>`;
-          }
-          html += `</tr>`;
-        } catch { /* skip */ }
-      }
-      html += `</table>`;
-    } else {
-      html += `<div class="fem-rpt-props" style="color:#888">Ejecute el análisis primero</div>`;
-    }
-    html += `</div>`;
-
-    // ── Create overlay ──
-    const overlay = document.createElement("div");
-    overlay.className = "fem-solver-overlay";
-    overlay.innerHTML = html;
-    document.body.appendChild(overlay);
-
-    // Event handlers
-    overlay.querySelector("#fem-rpt-close")?.addEventListener("click", () => overlay.remove());
-
-    // Collapsible sections
-    overlay.querySelectorAll("[data-toggle]").forEach(el => {
-      el.addEventListener("click", () => {
-        const id = (el as HTMLElement).dataset.toggle!;
-        const body = overlay.querySelector(`#fem-rpt-${id}`) as HTMLElement;
-        if (body) {
-          const visible = body.style.display !== "none";
-          body.style.display = visible ? "none" : "";
-          (el as HTMLElement).textContent = (el as HTMLElement).textContent!.replace(/^[▼▶]/, visible ? "▶" : "▼");
-        }
-      });
-    });
-
-    // Collapsible elements
-    overlay.querySelectorAll(".fem-rpt-elem-header").forEach(el => {
-      el.addEventListener("click", () => {
-        const id = (el as HTMLElement).dataset.toggle!;
-        const body = overlay.querySelector(`#fem-rpt-${id}`) as HTMLElement;
-        if (body) {
-          const visible = body.style.display !== "none";
-          body.style.display = visible ? "none" : "";
-          (el as HTMLElement).textContent = (el as HTMLElement).textContent!.replace(/^[▼▶]/, visible ? "▶" : "▼");
-        }
-      });
-    });
+    // (Detras de este `return` habia 242 lineas INALCANZABLES: la version
+    //  anterior del informe, escrita a mano en HTML. La sustituyo
+    //  `buildReportExplained` de arriba y se quedaron ahi. Borradas el
+    //  18-sep-2026; estan en el historial de git.)
   }
 
   /** Render a matrix as compact HTML table */

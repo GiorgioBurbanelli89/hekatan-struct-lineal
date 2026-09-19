@@ -100,10 +100,27 @@ export function computeBeamSection(p: BeamParams, matKey: BeamMaterialKey): Beam
     // Iy_strong = b·h³/12 (flexión vertical, eje débil del rectángulo cuando b<h)
     const Iy_strong = b * Math.pow(h, 3) / 12;
     const Iz_weak  = h * Math.pow(b, 3) / 12;
-    // Saint-Venant rectángulo: J ≈ β·b·h³ con β según razón h/b
-    const ratio = Math.max(h, b) / Math.min(h, b);
-    const beta = ratio < 2 ? 0.196 : ratio < 4 ? 0.229 : 0.281;
-    const J = beta * Math.min(h, b) * Math.pow(Math.max(h, b), 3);
+    // Saint-Venant de un rectangulo, con LA formula del resto del arbol
+    // (Timoshenko & Goodier, la misma de `shared/materials.ts:rectSection` y
+    // `shared/cadSections.ts`):
+    //
+    //     J = beta * a * c^3     con a = lado LARGO, c = lado CORTO
+    //     beta = (1/3)*(1 - 0.63*(c/a)*(1 - (c/a)^4/12))
+    //
+    // Da 0.1408 para el cuadrado y 0.2289 para 2:1, o sea la tabla de Roark.
+    //
+    // ⚠️ Aqui habia OTRA formula, y estaba mal dos veces:
+    //   1. `beta * min(h,b) * max(h,b)^3` — los lados CAMBIADOS. Para una viga
+    //      0.30 x 0.60 daba J = 1.4839e-2 m^4 en vez de 3.1752e-3: **x4.67**.
+    //   2. la tabla de beta corrida una fila: para un CUADRADO devolvia 0.196
+    //      en vez de 0.141 (**+39 %**).
+    // Hoy no lo nota nadie porque su unico consumidor (`benchmark-steel-beam`)
+    // va por la rama de acero y ademas no esta ni registrado ni compilado. Es
+    // una trampa cargada, no un bug vivo.
+    const aLargo = Math.max(h, b), cCorto = Math.min(h, b);
+    const rc = cCorto / aLargo;
+    const beta = (1 / 3) * (1 - 0.63 * rc * (1 - Math.pow(rc, 4) / 12));
+    const J = beta * aLargo * Math.pow(cCorto, 3);
     const E_col = p.E_c, G_col = E_col / 2.4;
     const q_self = p.gamma_c * A;
     const nameEtabs = `B${(b * 1000).toFixed(0)}x${(h * 1000).toFixed(0)}`;

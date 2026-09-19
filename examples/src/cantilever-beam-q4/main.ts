@@ -5,7 +5,7 @@
  * punta a media altura (downward Z). Comparación con flexión analítica
  * Euler-Bernoulli: δ = P·L³/(3·E·I) con I = t·h³/12.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateCantileverBeamQ4()` en getCad3d.ts (líneas 10530-10594).
  */
 import van, { State } from "vanjs-core";

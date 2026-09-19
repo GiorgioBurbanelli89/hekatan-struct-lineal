@@ -6,7 +6,7 @@
  *   widthAtY  = span · (1 − 0.3 · t_y²)
  * Cada vela siguiente es un poco más chica que la previa.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateSydneyOpera()` en getCad3d.ts (líneas 10322-10389).
  * Material: shell de hormigón (E=35 GPa, t=15 cm).
  */

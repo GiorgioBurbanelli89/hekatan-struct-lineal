@@ -175,7 +175,7 @@ document.body.append(
   }),
   getToolbar({
     sourceCode:
-      "https://github.com/madil4/awatif/blob/main/examples/src/building/main.ts",
+      "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/building/main.ts",
     author: "https://www.linkedin.com/in/abderrahmane-mazri-4638a81b8/",
   })
 );

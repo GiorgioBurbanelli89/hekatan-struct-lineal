@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Awatif FEM — CLI Unificado
+ * Hekatan Struct — CLI Unificado
  * Analisis estatico + modal sin UI, desde Node.js con WASM (Eigen C++)
  *
  * Uso:
@@ -208,7 +208,7 @@ function printModel(model) {
   const nSup = nodeInputs.supports ? nodeInputs.supports.size : 0;
   const nLoads = nodeInputs.loads ? nodeInputs.loads.size : 0;
   console.log("=".repeat(72));
-  console.log(`  AWATIF FEM CLI | Modelo: ${info.type}`);
+  console.log(`  HEKATAN STRUCT CLI | Modelo: ${info.type}`);
   console.log("=".repeat(72));
   console.log(`  Nodos: ${nodes.length}  |  Elementos: ${elements.length}  |  Apoyos: ${nSup}  |  Cargas: ${nLoads}`);
   if (info.svx) console.log(`  svx = [${info.svx.join(", ")}]  svy = [${info.svy.join(", ")}]  sp = [${info.sp.join(", ")}]`);
@@ -314,7 +314,7 @@ async function main() {
 
   if (args.length === 0 || args[0] === "help") {
     console.log(`
-Awatif FEM CLI — Analisis Estructural sin UI
+Hekatan Struct CLI — Analisis Estructural sin UI
 =============================================
 Uso: node cli.mjs <generador> [parametros] [opciones]
 

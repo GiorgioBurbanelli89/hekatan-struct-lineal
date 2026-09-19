@@ -63,6 +63,13 @@ await abrirCarpeta("Modificar"); await pulsar("🖱 Seleccionar");
 { const sel = await ev(() => [...(window.__hekatanSelection ?? [])]); const nA = sel.filter((i) => i.startsWith("aux:")).length; ok("selección: contorno + perfil (auxiliares)", nA, "= 52", nA === 52); }
 // 4. Barrido en alzado: 1 clic en el centro de la planta
 await abrirCarpeta("Áreas \\(shells\\)"); await pulsar("Barrido en alzado"); await foto("boton_barrido"); await clicMundo([[0, 0, 2]]); const st = await estado(); console.log("  ", st); await foto("piel_alzado");
+// 4b. apoyos: ventana sobre la base → 40 nudos → «Empotrar»
+await abrirCarpeta("Modificar"); await pulsar("🖱 Seleccionar");
+{ const [p, q] = await proj([[-14, 0, 0.35], [14, 0, -0.35]]); await clic(p.x, p.y); await mover(q.x, q.y, 10); await clic(q.x, q.y); await espera(400); }
+{ const nPt = await ev(() => [...(window.__hekatanSelection ?? [])].filter((i) => i.startsWith("pt:")).length); ok("apoyos: nudos de la base seleccionados", nPt, "= 40", nPt === 40); }
+await pulsar("Empotrar los"); await espera(600); console.log("  ", await estado()); await foto("apoyos_base");
+{ const sup = await ev(() => { const s = window.__hekatanStates?.nodeInputs?.rawVal?.supports; if (!s) return null; const v = s instanceof Map ? [...s.values()] : Object.values(s); return { n: v.length, seis: v.filter((d) => Array.isArray(d) && d.length === 6 && d.every(Boolean)).length }; });
+  ok("apoyos: nudos empotrados en el modelo", sup ? sup.n : "sin estado", "= 40", !!sup && sup.n === 40); }
 // 5. iso
 await abrirCarpeta("Plano de trabajo"); await pulsar("Vista isom"); await ev(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; }); await espera(600); await foto("piel_iso");
 await ev(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); const c = h.__ctx; c.camera.position.set(30, -34, 16); c.camera.up.set(0, 0, 1); c.controls.target.set(0, 0, 2); c.camera.lookAt(0, 0, 2); c.controls.update(); c.render(); }); await espera(400); await foto("piel_iso_2");

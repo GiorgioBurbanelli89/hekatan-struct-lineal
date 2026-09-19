@@ -63,14 +63,14 @@
   width: 10px;
   height: 1px;
   margin-left: 20px;
-  background: var(--awatif-legend-color, white);
+  background: var(--hk-legend-color, white);
   position: relative;
 }
 
 #legend .marker p,
 #frame-legend .marker p {
   position: absolute;
-  color: var(--awatif-legend-color, white);
+  color: var(--hk-legend-color, white);
   font-size: var(--legend-font, 14px);
   top: -7px;
   left: 15px;

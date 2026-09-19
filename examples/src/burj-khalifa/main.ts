@@ -5,7 +5,7 @@
  * que reducen el radio adicional. 3 alas a 120° conectan núcleo y
  * extremos con punto medio (buttress) y diagonales en cada ala.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateBurjKhalifa()` en getCad3d.ts (líneas 10244-10319).
  * Material: hormigón armado (E=35 GPa).
  */

@@ -29,6 +29,7 @@ import {
   type ElementInputs,
 } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { ecHormigonACI } from "../shared/materials";
 
 const TONF_TO_KN = 9.80665;
 const G_GRAVITY = 9.81;
@@ -72,7 +73,7 @@ export const vigaMedioElastico: ExampleDef = {
    */
   computedLabels(p, states) {
     const fc_MPa = p.fc * 0.0981;
-    const Ec = 4700 * Math.sqrt(fc_MPa) * 1000;  // kN/m²
+    const Ec = ecHormigonACI(fc_MPa);  // kN/m²
     const A = p.b * p.h;
     const I = (p.b * p.h ** 3) / 12;
     const EI = Ec * I;
@@ -117,7 +118,7 @@ export const vigaMedioElastico: ExampleDef = {
     const N = Math.max(2, Math.round(p.N));
     const dL = L / N;
     const fc_MPa = p.fc * 0.0981;
-    const Ec = 4700 * Math.sqrt(fc_MPa) * 1000;
+    const Ec = ecHormigonACI(fc_MPa);
     const nu = 0.2;
     const Gc = Ec / (2 * (1 + nu));
     const A = p.b * p.h;

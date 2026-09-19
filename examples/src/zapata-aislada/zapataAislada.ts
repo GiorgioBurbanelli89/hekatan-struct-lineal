@@ -377,19 +377,29 @@ export const zapataAislada: ExampleDef = {
     const modeName = activeList.join("+") + (useFactors && !useSimple ? " (factor)" : "");
     // q_max / q_min desde analyzeOutputs.pressure
     // pressure ahora en kN/m² SI base — convertir a tonf/m² para ratio (q_adm en tonf).
+    // ⚠️ Los DOS `if` de aqui buscaban el MINIMO (`q < qMax_kN` y
+    // `q < qMin_kN`), y ademas `qMax_kN` arrancaba en 0. Con la zapata
+    // ENTERAMENTE LEVANTADA (sin compresion en ningun nudo) `qMax_kN` se
+    // quedaba en 0, el ratio salia 0 y el panel escribia «✓ OK» sobre una
+    // zapata que no toca el suelo. Signo: presion NEGATIVA = compresion.
     let qMax_kN = 0, qMin_kN = 0;
+    let levantada = false;
     const pr = (states.analyzeOutputs.rawVal as any)?.pressure as Map<number, number[]> | undefined;
     if (pr && pr.size) {
+      let masCompresion = Infinity;     // el valor MAS NEGATIVO
+      let menosCompresion = -Infinity;  // el valor MAS POSITIVO
       for (const vals of pr.values()) {
         for (const q of vals) {
-          if (q < qMax_kN) qMax_kN = q;
-          if (q < qMin_kN || qMin_kN === 0) qMin_kN = q;
+          if (!Number.isFinite(q)) continue;
+          if (q < masCompresion) masCompresion = q;
+          if (q > menosCompresion) menosCompresion = q;
         }
       }
-      let localMin_kN = Infinity;
-      for (const vals of pr.values())
-        for (const q of vals) if (Math.abs(q) < localMin_kN) localMin_kN = Math.abs(q);
-      qMin_kN = -localMin_kN;
+      if (Number.isFinite(masCompresion)) {
+        qMax_kN = Math.min(0, masCompresion);     // pico de compresion
+        qMin_kN = Math.min(0, menosCompresion);   // la menos comprimida
+        levantada = masCompresion >= -1e-9;       // ni un nudo en compresion
+      }
     }
     const TONF_TO_KN_LOCAL = 9.80665;
     const qMax = qMax_kN / TONF_TO_KN_LOCAL;   // tonf/m²
@@ -479,7 +489,9 @@ export const zapataAislada: ExampleDef = {
       // Presión de contacto suelo (signo negativo = compresión Hekatan/SAFE)
       "q_max (tonf/m²)":       qMax.toFixed(2)  + " (compresión pico)",
       "q_min (tonf/m²)":       qMin.toFixed(2)  + " (compresión menor)",
-      "q/q_adm":               ratio.toFixed(2) + (ratio > 1 ? " ⚠ EXCEDE" : " ✓ OK"),
+      "q/q_adm":               levantada
+        ? "⚠ ZAPATA LEVANTADA (sin compresion en ningun nudo)"
+        : ratio.toFixed(2) + (ratio > 1 ? " ⚠ EXCEDE" : " ✓ OK"),
       // Asentamientos (deformación vertical)
       "Δz max losa (mm)":      wMin_mm.toFixed(2) + " ↓ (más negativo)",
       "Δz centro losa (mm)":   wCenter_mm.toFixed(2),

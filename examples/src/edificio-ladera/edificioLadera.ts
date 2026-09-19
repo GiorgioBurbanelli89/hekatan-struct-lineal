@@ -13,6 +13,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { ecHormigonACI } from "../shared/materials";
 
 const G_GRAVITY = 9.81;
 const rho_c = 24 / G_GRAVITY;
@@ -180,7 +181,7 @@ export const edificioLadera: ExampleDef = {
 
     // Material (kN/m²)
     const fc_MPa = p.fcConcr * 0.0981;
-    const Ec = 4700 * Math.sqrt(fc_MPa) * 1000;
+    const Ec = ecHormigonACI(fc_MPa);
     const nu = 0.20;
     const Gc = Ec / (2 * (1 + nu));
     const Acol = p.colSize * p.colSize;

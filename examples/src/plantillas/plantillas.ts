@@ -47,6 +47,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { ecHormigonNEC } from "../shared/materials";
 
 const G = 9.80665;
 
@@ -590,7 +591,7 @@ export const plantillas: ExampleDef = {
     // Así «pórtico de acero» y «pórtico de hormigón» se comparan con la misma
     // geometría sin que uno de los dos sea un disparate.
     const acero = Math.round(p.material) === 1;
-    const E = acero ? 200e6 : 15100 * Math.sqrt(p.fc) * 98.0665;
+    const E = acero ? 200e6 : ecHormigonNEC(p.fc);
     const NU = acero ? 0.30 : 0.20;
     const Gm = E / (2 * (1 + NU));
     const RHO = (acero ? 78.5 : 24) / G;
@@ -625,7 +626,7 @@ export const plantillas: ExampleDef = {
     const shellModifiers = new Map<number, number[]>();
     // La losa y los muros son de HORMIGÓN aunque el pórtico sea de acero: eso es
     // un edificio mixto de verdad, no un edificio de chapa.
-    const Eh = 15100 * Math.sqrt(p.fc) * 98.0665, NUh = 0.20, RHOh = 24 / G;
+    const Eh = ecHormigonNEC(p.fc), NUh = 0.20, RHOh = 24 / G;
     // brazos rigidos automaticos (ETABS): nudos donde llega una columna, y factor de longitud
     // "que pesa" de cada tramo de viga = (L - off_i - off_j) / L, con off = b_col / 2 en cada
     // extremo que toca columna (las columnas son cuadradas: el mismo medio lado en X y en Y)

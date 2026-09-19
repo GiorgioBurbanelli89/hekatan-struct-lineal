@@ -67,10 +67,11 @@ const zinc = (a, b, c, d) => { s++; Lh.push(`shell ${s} ${a} ${b} ${c} ${d} ${P.
 // ── la cercha: cordón superior zSup(y) y canto; cordón inferior = zSup − canto ──
 let xs, L, zSup, hApoyo, titulo;
 if (P.tipo === "mezanine") {
-  // galpón de la bodega electoral: 26.63 × 14.74, alero 8.00, un agua 7.5 % (sube de y = 0 a y = D), canto 1.20
+  // galpón de la bodega electoral: 26.63 × 14.74, alero 8.00, un agua 7.5 %, canto 1.20.
+  // galpon_geom.py: ALTO_EN = "y0" → el lado ALTO es y = 0 y baja hacia y = D (antes subía al revés).
   xs = [0.000, 5.025, 10.050, 15.075, 20.100, 26.630];
   L = 14.74; P.hAlero = 8.0; P.canto = 1.2; P.nPan = 12;
-  zSup = (y) => P.hAlero + P.canto + 0.075 * y;
+  zSup = (y) => P.hAlero + P.canto + 0.075 * (L - y);
   titulo = `Galpón con mezanine (bodega electoral) 26.63×14.74, alero 8 m, un agua 7.5 %, mezanine a ${P.zMez} m`;
 } else {
   xs = Array.from({ length: P.nPort }, (_, i) => i * P.sep);
@@ -154,10 +155,27 @@ if (P.tipo === "mezanine") {
   const xm = [];
   for (let i = 0; i < xs.length - 1; i++) for (let q = 0; q <= P.nSecMez; q++) { const v = xs[i] + q * (xs[i + 1] - xs[i]) / (P.nSecMez + 1); if (!xm.some((u) => Math.abs(u - v) < 1e-6)) xm.push(v); }
   xm.push(xs[xs.length - 1]);
+  // HUECO DE LA RAMPA en L (galpon_geom.py HUECO_RAMPA; Jorge 15-sep-2026: «le falta la rampa, no tiene vacío»):
+  // brazo oeste x 0–2.00 · y 3.20–14.74 y brazo norte x 2.00–20.10 · y 12.42–14.74. Dentro no va losa, ni viga ni
+  // vigueta; el borde lo cierran las vigas que quedan en su contorno (brochales). x = 2.00 entra como línea de viga.
+  const HUECO = [[0.0, 3.2, 2.0, L], [2.0, 12.42, 20.1, L]];
+  const RAMPA_X1 = 2.0;
+  if (!xm.some((u) => Math.abs(u - RAMPA_X1) < 1e-6)) xm.push(RAMPA_X1);
+  xm.sort((a, b) => a - b);
+  const dentro = (x, y) => HUECO.some(([x0, y0, x1, y1]) => x > x0 + 1e-6 && x < x1 - 1e-6 && y > y0 + 1e-6 && y < y1 - 1e-6);
   const esEjeX = (v) => xs.some((u) => Math.abs(u - v) < 1e-6);
-  for (const y of ysEj) for (let i = 0; i < xm.length - 1; i++) barra(nodo(xm[i], y, z), nodo(xm[i + 1], y, z), SEC.vP);   // en X por los ejes
-  for (const x of xm) for (let j = 0; j < ysEj.length - 1; j++) barra(nodo(x, ysEj[j], z), nodo(x, ysEj[j + 1], z), esEjeX(x) ? SEC.vP : SEC.vI);  // en Y
+  for (const y of ysEj) for (let i = 0; i < xm.length - 1; i++) {   // en X por los ejes
+    if (dentro((xm[i] + xm[i + 1]) / 2, y)) continue;
+    barra(nodo(xm[i], y, z), nodo(xm[i + 1], y, z), SEC.vP);
+  }
+  for (const x of xm) for (let j = 0; j < ysEj.length - 1; j++) {   // en Y
+    if (dentro(x, (ysEj[j] + ysEj[j + 1]) / 2)) continue;
+    // la de x = 2.00 solo existe como brochal del brazo oeste (no es vigueta suelta en el resto de la planta)
+    if (Math.abs(x - RAMPA_X1) < 1e-6 && !(ysEj[j] >= 3.2 - 1e-6 && ysEj[j + 1] <= 12.42 + 1e-6)) continue;
+    barra(nodo(x, ysEj[j], z), nodo(x, ysEj[j + 1], z), esEjeX(x) || Math.abs(x - RAMPA_X1) < 1e-6 ? SEC.vP : SEC.vI);
+  }
   for (let i = 0; i < xm.length - 1; i++) for (let j = 0; j < ysEj.length - 1; j++) {
+    if (dentro((xm[i] + xm[i + 1]) / 2, (ysEj[j] + ysEj[j + 1]) / 2)) continue;
     s++;
     Lh.push(`shell ${s} ${nodo(xm[i], ysEj[j], z)} ${nodo(xm[i + 1], ysEj[j], z)} ${nodo(xm[i + 1], ysEj[j + 1], z)} ${nodo(xm[i], ysEj[j + 1], z)} ${P.tc} 25000000 0 2.4`);
     Lh.push(`decksec ${s} ${P.tc} ${P.hr} ${P.wrt} ${P.wrb} ${P.sr} ${P.w}`);

@@ -12,7 +12,7 @@
  * Display: deformaciones remapeadas Y→Z para vista vertical, plastic strain
  * mostrada como colormap "membraneXX".
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateSlope()` en getCad3d.ts (líneas 4075-4197).
  */
 import van, { State } from "vanjs-core";

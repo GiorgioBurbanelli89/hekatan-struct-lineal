@@ -89,7 +89,7 @@ export function exportS2k(input: S2kExportInput): string {
     console.warn(`[s2k] el modelo va en kN·m y el exportador NO convierte: se ` +
       `declara CurrUnits="KN, m, C" y se ignora "${input.units.force}, ${input.units.length}". ` +
       `Etiquetarlo de otra forma hace que SAP2000 lea las fuerzas escaladas.`);
-  const title = input.title || "Awatif Model";
+  const title = input.title || "Hekatan Model";
   const L: string[] = [];
 
   const push = (s: string) => L.push(s);

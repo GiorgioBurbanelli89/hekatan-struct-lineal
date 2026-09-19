@@ -148,7 +148,7 @@ export function createCli(
 
     help() {
       console.log(`
-=== Awatif FEM Studio CLI ===
+=== Hekatan Struct CLI ===
 
 Grid:
   cad.addGrid('X', [0, 4, 8, 12])     Add X axes (auto-names: 1,2,3,4)
@@ -349,7 +349,7 @@ Utility:
     example(name?: string) {
       if (!name) {
         console.log(`
-Available examples (awatif):
+Available examples:
   cad.example('truss')            Parametric truss (span=15, div=5, h=2)
   cad.example('beams')            Portal frame (L=10, H=10)
   cad.example('3d-structure')     3D tower with diagonals (dx=dy=dz=2, div=4)

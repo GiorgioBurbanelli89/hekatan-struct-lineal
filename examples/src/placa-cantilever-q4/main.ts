@@ -4,7 +4,7 @@
  * Placa horizontal (plano XY, elev=0), empotrada en el borde x=0,
  * carga distribuida vertical en el borde libre x=Lx (downward Y).
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generatePlacaCantileverQ4()` en getCad3d.ts (líneas 10597-10664).
  */
 import van, { State } from "vanjs-core";

@@ -11,7 +11,7 @@
  *
  * Validación: AISC 360-22 §I2.1b composite axial capacity Pno y EI_eff.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  */
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
@@ -24,6 +24,7 @@ import {
   getToolbar, getParameters, Parameters, getViewer,
   colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, enableDraggableAllPanes,
 } from "hekatan-ui";
+import { ecHormigonACI } from "../shared/materials";
 
 // Acero HSS (kN/m², kN/m³)
 const Es = 200e6;
@@ -74,7 +75,7 @@ van.derive(() => {
   const fc = parameters.fc.value.val;
   const Pu = parameters.Pu.value.val;
   // E concreto AISC: Ec = 4700·√(fc en MPa) [MPa] = 4700·√(fc/1000) [MPa] → kN/m² = MPa·1000
-  const Ec = 4700 * Math.sqrt(fc / 1000) * 1000;
+  const Ec = ecHormigonACI(fc / 1000);
   void Ec_default;
 
   // ── Geometría: tubo HSS y H8 concreto comparten nodos en interfaz interna ──

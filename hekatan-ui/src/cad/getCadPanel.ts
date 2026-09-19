@@ -59,13 +59,33 @@ export interface CadPanelOptions {
   };
 }
 
+/**
+ * Aviso HONESTO: escribe en la barra de estado del CAD si existe, y si no,
+ * en un `alert`. Regla de Jorge (18-sep-2026): **ningún control puede decir
+ * que hizo algo sin comprobar que lo hizo** — antes «📋 Copiar comandos a CLI»
+ * avisaba «Comandos copiados» aunque hubiera copiado la cadena vacía.
+ */
+function avisarCad(msg: string, forzarAlert = false): void {
+  const el = document.getElementById("hk-cad-status");
+  if (el && !forzarAlert) {
+    el.textContent = msg;
+    (window as any).__hekatanCadStatusText = msg;
+    try { (window as any).__hekatanRefreshStatus?.(); } catch { /* no-op */ }
+    return;
+  }
+  alert(msg);
+}
+
 export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   const { parentPane, expanded = true, viewerElm, drawing, hooks } = opts;
   const fCad = parentPane.addFolder({ title: "✏ Herramientas CAD", expanded });
 
   const proxyTool = { v: "node" };
   const toolInstructions: Record<string, string> = {
-    select:   "🖱 Seleccionar — click sobre un nodo/elemento para seleccionarlo",
+    // ⚠️ `select` estaba DOS veces en este objeto (aquí y al final): la segunda
+    // pisaba a la primera y el compilador avisaba en cada arranque. Se deja una
+    // sola, la que explica además que sin herramienta activa no se crean nodos.
+    select:   "🖱 Seleccionar — click sobre un elemento. Sin herramienta activa no se crean nodos.",
     node:     "● Nodo — click crea nodo. Tipear: 5,3,2 (abs) | @1,0,0 (rel) | Enter",
     line:     "／ Línea — click 2 puntos. Tipear: 5 (DDE) | 5,3,2 (abs) | @5,3,2 (rel) | @5<45 (polar) | @5<45<30 (esférico) | Enter",
     polyline: "⌒ Polilínea — click sucesivos. Tipear: 5 | 5,3 | @5,3 | @5<45. Right-click para terminar.",
@@ -86,7 +106,6 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     "delete": "🗑 Borrar — hover sobre línea/área (se resalta en rojo) + click para eliminar.",
     ifcface: "▦ Área desde cara del IFC — pasá el cursor por una cara (se ilumina en cian; naranja = curva) y hacé clic. La malla va donde diga «Malla del área IFC».",
     ifcline: "⟋ Copiar línea del IFC — acercá el cursor a un borde o al perfil del corte (se ilumina en azul) y hacé clic.",
-    select:   "🖱 Seleccionar — click sobre un elemento. Sin tool activo no se crean nodos.",
   };
   const setActiveTool = (tool: string) => {
     proxyTool.v = tool;
@@ -148,8 +167,13 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // (la panza) seleccionados → la piel en paños Q4.
   fArea.addButton({ title: "⟲ Barrido en alzado (contorno × perfil, 1 clic = eje)" }).on("click", () => setActiveTool("loft"));
   fArea.addButton({ title: "▦▦ Llenar TODAS las celdas cerradas" }).on("click", () => {
+    // `__hekatanCadUpdateStatus` NO existe en el workspace (medido 18-sep-2026):
+    // el botón trabajaba en silencio y parecía muerto. Ahora informa de verdad,
+    // incluido el caso «no había ninguna celda cerrada».
     const n = (window as any).__hekatanFillClosedAreas?.() ?? 0;
-    try { (window as any).__hekatanCadUpdateStatus?.(`✓ ${n} área(s) creada(s) en celdas cerradas.`); } catch {}
+    avisarCad(n > 0
+      ? `▦▦ ${n} área(s) creada(s) en las celdas cerradas.`
+      : "▦▦ No se creó ninguna: no hay celdas cerradas por 4 barras en el dibujo.");
   });
   fArea.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
   // Cara del IFC de fondo → área (la cara se ilumina al pasar el cursor).
@@ -375,28 +399,24 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fPlane.addButton({ title: "Plano XY (planta)" }).on("click", () => setPlane("xy"));
   fPlane.addButton({ title: "Plano XZ (elevación frontal)" }).on("click", () => setPlane("xz"));
   fPlane.addButton({ title: "Plano YZ (elevación lateral)" }).on("click", () => setPlane("yz"));
-  // En isométrica el marcador del plano de trabajo («ALZADO X-Z Y = …») se esconde:
-  // se quedaba flotando sobre la cúpula en el vídeo (Jorge, 13-sep-2026).
-  fPlane.addButton({ title: "🧊 Vista isométrica (3D)" }).on("click", () => { refGroup.visible = false; hooks.setView("iso"); try { (viewerElm as any).__ctx?.render?.(); } catch {} });
-  fPlane.addButton({ title: "🔀 Vista doble (planta + iso)" }).on("click", () => {
-    hooks.splitState.enabled = !hooks.splitState.enabled;
-    if (hooks.splitState.enabled) {
-      hooks.splitState.secondary = 0;
-      // ⚠️ refreshSplit GUARDA la cámara que hay para devolverla al apagar: tiene
-      // que ir ANTES de setPlane("xy"), que ya la cambia a planta (si no, lo que
-      // se guardaba era la planta y al apagar se quedaba en planta).
-      hooks.refreshSplit();
-      setPlane("xy");
-    }
-    hooks.refreshSplit();
-  });
+  // DUPLICADOS QUITADOS (18-sep-2026, revisión de la interfaz para el vídeo 0): aquí había
+  // «🧊 Vista isométrica (3D)» (= «🏗 Isométrica» de la carpeta Vista y el botón 3D del ribbon) y
+  // «🔀 Vista doble (planta + iso)» (= «Vista doble (split) › Activar»). Un mando por función.
+  // Lo que hacían de más se reparte: Vista › Isométrica esconde el marcador del plano
+  // (`__hekatanOcultarRef`, como ya hace el ribbon) y `Activar` pone la planta como plano de
+  // trabajo al encender, a través de `__hekatanSetPlane`.
+  (window as any).__hekatanSetPlane = setPlane;
 
   // Planos de referencia horizontales (Z=0,3,6,9,12)
+  // Interruptor CON LUZ: el botón dice en qué estado está. Antes el estado vivía
+  // solo en esta variable y el botón se veía igual puesto que quitado.
   let refPlanesVisible = false;
-  fPlane.addButton({ title: "📐 Mostrar/ocultar planos de ref. (Z=0,3,6,9,12)" }).on("click", () => {
+  const bRefPlanes = fPlane.addButton({ title: "📐 Planos de referencia (Z=0,3,6,9,12): OFF" });
+  bRefPlanes.on("click", () => {
     refPlanesVisible = !refPlanesVisible;
     if (refPlanesVisible) (window as any).__hekatanShowRefPlanes?.([0, 3, 6, 9, 12], 20, 0, 0);
     else (window as any).__hekatanHideRefPlanes?.();
+    (bRefPlanes as any).title = `📐 Planos de referencia (Z=0,3,6,9,12): ${refPlanesVisible ? "ON" : "OFF"}`;
   });
 
   // Planos ortogonales del último punto (XY/XZ/YZ rubber band guide)
@@ -536,10 +556,30 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     drawing.auxLines.val = [];
     hooks.onRebuild?.();
   });
-  fAcc.addButton({ title: "📋 Copiar comandos a CLI" }).on("click", () => {
-    const script = (window as any).__hekatanCliScript ?? "";
-    navigator.clipboard?.writeText(script);
-    alert("Comandos copiados al portapapeles. Pega en cli-modeler para editar/correr el FEM.");
+  // 📋 Copiar los comandos del dibujo. Tres comprobaciones ANTES de decir que
+  // se copió: (1) que haya texto, (2) que el navegador tenga portapapeles
+  // (sin https no lo hay), (3) que la escritura no haya fallado. Y si el
+  // cuadro del CLI está en pantalla, se pega ahí también — que es lo que
+  // quiere decir «a CLI».
+  fAcc.addButton({ title: "📋 Copiar comandos a CLI" }).on("click", async () => {
+    const script = String((window as any).__hekatanCliScript ?? "").trim();
+    if (!script) {
+      avisarCad("📋 No hay comandos que copiar — dibujá algo primero (el dibujo se va escribiendo solo).");
+      return;
+    }
+    const nLineas = script.split("\n").filter(l => l.trim()).length;
+    // El textarea del CLI del workspace, si está montado
+    const ta = document.querySelector("#hk-pane-host textarea") as HTMLTextAreaElement | null;
+    if (ta) ta.value = script;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("sin portapapeles");
+      await navigator.clipboard.writeText(script);
+      avisarCad(`📋 ${nLineas} comando(s) copiados al portapapeles${ta ? " y pegados en el cuadro CLI" : ""}.`);
+    } catch {
+      avisarCad(ta
+        ? `📋 ${nLineas} comando(s) pegados en el cuadro CLI (el portapapeles no está disponible en esta página).`
+        : "📋 No se pudo copiar: el navegador no da acceso al portapapeles aquí (hace falta https).");
+    }
   });
 
   // Plantas de pisos (Z=0,3,6,9,12 — atajos de cota Z común)

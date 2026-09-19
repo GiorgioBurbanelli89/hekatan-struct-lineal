@@ -5,7 +5,7 @@
  * 2 torres a 1/3 y 2/3 del span con piernas y traviesa superior,
  * cables en abanico desde la cima de cada torre hacia el tablero.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateBridge()` en getCad3d.ts (líneas 10034-10139).
  */
 import van, { State } from "vanjs-core";

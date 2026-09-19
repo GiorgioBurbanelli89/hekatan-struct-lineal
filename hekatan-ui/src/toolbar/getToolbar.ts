@@ -25,7 +25,7 @@ export function getToolbar({
   const template = html`
     <div class="buttons-container">
       <button class="btn btn-icon" @click=${onIconClick}>
-        ${getAwatifSvg()}
+        ${getLogoHekatanSvg()}
       </button>
       ${buttons?.map(
         (button) =>
@@ -40,7 +40,7 @@ export function getToolbar({
 
     <div id="dropdown-menu" style="display: none;">
       <a
-        href="${sourceCode ? sourceCode : "https://github.com/GiorgioBurbanelli89/awatif-workspace"}"
+        href="${sourceCode ? sourceCode : "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal"}"
         class="dropdown-link"
         >Hekatan Struct Lineal — Source Code</a
       >
@@ -88,7 +88,7 @@ export function getToolbar({
 }
 
 // Utils
-function getAwatifSvg(): TemplateResult {
+function getLogoHekatanSvg(): TemplateResult {
   // El logo vive en la raíz del site, NO en la subcarpeta del ejemplo actual.
   //   dev:       /img/hekatan-logo.png
   //   gh-pages:  /hekatan-struct-lineal/img/hekatan-logo.png

@@ -10,7 +10,7 @@
  * Cargas: axial compresión Pu (kN) + momento Mu (kN·m) aplicados en el top
  * de la columna stub.
  *
- * Patrón awatif v2: todo en main.ts (parámetros + geometría + viewer).
+ * Patron de ejemplo con panel propio: todo en main.ts (parametros + geometria + viewer).
  *
  * Referencias normativas:
  *   - AISC 360-22 §J8 (column base plates)
@@ -24,6 +24,7 @@ import {
 import { analyze, deform } from "hekatan-fem";
 import { getToolbar, getParameters, Parameters, getViewer } from "hekatan-ui";
 import * as THREE from "three";
+import { ecHormigonACI } from "../shared/materials";
 
 // Material acero (kN/m², kN/m³)
 const Es = 200e6;
@@ -395,7 +396,7 @@ van.derive(() => {
   // que la placa). El concreto se modela como un BLOQUE VISUAL (THREE.Mesh) +
   // resortes Winkler en las bases de los pernos (k = E_c × A / L_eff).
   // E_c = 4700 √f'c (ACI 318) en MPa, convertido a kN/m².
-  const Ec_kNm2 = 4700 * Math.sqrt(fc / 1000) * 1000; // ACI 318: E_c (kN/m²)
+  const Ec_kNm2 = ecHormigonACI(fc / 1000); // ACI 318: E_c (kN/m²)
 
   const pedGeom = new THREE.BoxGeometry(B_ped, H_ped, h_ped);
   const pedMat = new THREE.MeshBasicMaterial({

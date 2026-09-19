@@ -719,7 +719,7 @@ function templateMatlabStandalone(data: ModelData): string {
 
   return `%% ═══════════════════════════════════════════════════════
 %% ${name} — Script MATLAB/Octave standalone
-%% Generado por awatif-clone FEM Studio
+%% Generado por Hekatan Struct
 %% Ejecutar: octave ${name.replace(/\s/g,"_")}.m
 %% ═══════════════════════════════════════════════════════
 clear; clc;

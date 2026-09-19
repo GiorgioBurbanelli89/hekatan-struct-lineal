@@ -11,6 +11,7 @@ import { addRigidDiaphragms, mergeDiaphragmProps } from "../shared/rigidDiaphrag
 import { computeHinges, buildHingeObjects3D, summarizeHinges } from "../shared/plasticHinges";
 import { designAllFootings, classifyFootingType, type FootingType } from "../shared/footingDesign";
 import * as THREE from "three";
+import { ecHormigonACI } from "../shared/materials";
 
 // Densidad de MASA del concreto, NO peso específico.
 // CSI Manual §4.12: "Mass values must be given in consistent mass units (W/g)".
@@ -437,7 +438,7 @@ export const edificioAporticado: ExampleDef = {
 
     // Material propiedades (kN/m²)
     const fc_MPa = p.fcConcr * 0.0981;  // kg/cm² → MPa
-    const Ec = 4700 * Math.sqrt(fc_MPa) * 1000;   // ACI: E = 4700√f'c MPa → kN/m²
+    const Ec = ecHormigonACI(fc_MPa);   // ACI: E = 4700√f'c MPa → kN/m²
     const Es = 200e6;                              // acero W
     const nu_c = 0.2, nu_s = 0.3;
     const Gc = Ec / (2 * (1 + nu_c));

@@ -4,7 +4,7 @@
  * 2 arcos paralelos en Y conectados por transversales y X-bracing.
  * Curva del arco: parábola simplificada z(x) = H · (1 − (2x/span − 1)²)
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateGatewayArch()` en getCad3d.ts (líneas 9967-10031).
  */
 import van, { State } from "vanjs-core";

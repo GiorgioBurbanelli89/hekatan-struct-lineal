@@ -43,13 +43,13 @@ export function openCalcPanel(modelData: ModelData) {
 
   if (panelElement) {
     panelElement.style.display = "flex";
-    resizeAwatifViewer(true);
+    resizeViewer3D(true);
     return;
   }
 
   ensureKatex(() => {
     createPanel();
-    resizeAwatifViewer(true);
+    resizeViewer3D(true);
     // Load default template
     loadTemplate("fem_auto");
   });
@@ -59,13 +59,13 @@ export function openCalcPanel(modelData: ModelData) {
 export function closeCalcPanel() {
   if (panelElement) {
     panelElement.style.display = "none";
-    resizeAwatifViewer(false);
+    resizeViewer3D(false);
   }
 }
 
-/** Resize the awatif 3D viewer when calc panel opens/closes */
-function resizeAwatifViewer(calcOpen: boolean) {
-  // Find the awatif viewer container (canvas parent)
+/** Resize the 3D viewer when calc panel opens/closes */
+function resizeViewer3D(calcOpen: boolean) {
+  // Find the 3D viewer container (canvas parent)
   const canvas = document.querySelector("canvas");
   if (canvas && canvas.parentElement) {
     const container = canvas.parentElement;
@@ -299,7 +299,7 @@ function exportAs(code: string, target: "matlab" | "python") {
     const comment = cIdx >= 0 ? out.substring(cIdx) : "";
     if (cIdx >= 0) out = out.substring(0, cIdx).trim();
 
-    // Replace awatif-specific functions with pure math equivalents
+    // Replace funciones propias del motor with pure math equivalents
     // stiffness(i), transform(i), kglobal(i) → comment explaining manual implementation
     if (/^(\w+)\s*=\s*(stiffness|transform|kglobal|solve_model|u_node|r_node)\(/.test(out)) {
       const commentStr = target === "python" ? "#" : "%";
@@ -764,7 +764,7 @@ function showFunctionsHelp(output: HTMLDivElement) {
     <tr><td style="color:#98c379">polyval(p,x)</td><td>Evaluar polinomio</td></tr>
     </table>
 
-    <h3 style="color: #e5c07b; margin: 12px 0 6px;">🏗️ FEM (awatif)</h3>
+    <h3 style="color: #e5c07b; margin: 12px 0 6px;">🏗️ FEM</h3>
     <table style="border-collapse: collapse; width: 100%;">
     <tr><td style="color:#98c379;padding:2px 12px 2px 0">stiffness(i)</td><td>K local del elemento i (12×12)</td></tr>
     <tr><td style="color:#98c379">transform(i)</td><td>Matriz T de transformación (12×12)</td></tr>

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI Modal Analysis — Awatif FEM (Eigen WASM)
+ * CLI Modal Analysis — Hekatan FEM (Eigen WASM)
  * Runs Example 6.3 Space Frame (Paz & Leigh) directly from Node.js
  * Uses the same C++/Eigen WASM solver as the browser version.
  *
@@ -221,7 +221,7 @@ const elementInputs = {
 // ============================================================================
 
 console.log("=".repeat(72));
-console.log("  AWATIF (Eigen WASM) Modal Analysis — CLI");
+console.log("  HEKATAN (Eigen WASM) Modal Analysis — CLI");
 console.log("  Example 6.3 Space Frame (Paz & Leigh) — No diagonals");
 console.log("=".repeat(72));
 console.log(`  E=${E} ksi, G=${G_val.toFixed(2)} ksi, rho=${RHO.toExponential(4)}`);

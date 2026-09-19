@@ -129,8 +129,8 @@ document.body.append(
   toolbar({ onToolbarClick }),
   getToolbar({
     sourceCode:
-      "https://github.com/madil4/awatif/blob/main/examples/src/drawing/main.ts",
-    author: "https://www.linkedin.com/in/madil4/",
+      "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/drawing/main.ts",
+    author: "https://www.linkedin.com/in/jorge-burbano-037444113/",
   })
 );
 

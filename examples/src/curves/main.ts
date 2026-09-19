@@ -156,7 +156,7 @@ document.body.append(
   }),
   getToolbar({
     sourceCode:
-      "https://github.com/madil4/awatif/blob/main/examples/src/curves/main.ts",
-    author: "https://www.linkedin.com/in/madil4/",
+      "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/curves/main.ts",
+    author: "https://www.linkedin.com/in/jorge-burbano-037444113/",
   })
 );

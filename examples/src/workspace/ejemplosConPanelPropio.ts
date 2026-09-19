@@ -1,28 +1,30 @@
 /**
- * Legacy awatif examples (rebrandeados como Hekatan).
+ * Ejemplos que traen su PROPIO panel de control (patron VanJS toolbar) en vez
+ * de exportar `params` + `build()` como los demas.
  *
- * Estos ejemplos provienen del repo upstream de Mohamed Adil (madil4/awatif) y
- * usan el patrón "VanJS toolbar" propio de awatif (no el flujo Tweakpane que
- * usan los ejemplos parametrizados nuevos de Hekatan).
+ * Cada uno se compila ademas como pagina propia (`/<id>/index.html`, ver
+ * `examples/vite.config.ts`). Pero eso es un detalle de COMPILACION: dentro de
+ * la app se ven en el lienzo del workspace, sin salir de la pagina
+ * (`mostrarEjemploEmbebido` en `workspace/main.ts`).
  *
- * Cada uno se compila como una página standalone (`/<id>/index.html`) con
- * `vite.config.ts`. El workspace los registra para que sean cazables desde el
- * selector unificado, y al elegir uno se navega al index.html standalone.
- *
- * Convenciones para añadir un legacy nuevo:
- *   - id: igual al folder en `examples/src/`
- *   - name: nombre con marca Hekatan (ej. "Hekatan – 1D Mesh")
- *   - category: agrupa en el selector ("Legacy · …")
+ * Convenciones para anadir uno:
+ *   - id: igual a la carpeta en `examples/src/`
+ *   - name: el nombre que sale en el selector
+ *   - category: agrupa en el selector
  *   - standaloneUrl: ruta relativa a `/workspace/` (ej. "../1d-mesh/")
  *
- * NOTA: cuando alguno de estos ejemplos se "gradúe" al patrón ExampleDef
- * (Tweakpane integrado), se mueve fuera de este archivo y se registra como
- * los demás (con params + build).
+ * NOTA: lo que toca es GRADUARLOS al patron `ExampleDef` (params + build). El
+ * visor del workspace ya sabe pintar lo suyo, incluidos los solidos
+ * (`settings.solids` + `analyzeOutputs.solidStress`). Mientras tanto, se ven
+ * embebidos.
+ *
+ * (El fork parte de awatif v2.0.0; la atribucion esta en los CREDITOS, en el
+ * desplegable del logo — `hekatan-ui/src/toolbar/getToolbar.ts`.)
  */
 
 import type { ExampleDef } from "./exampleRegistry";
 
-/** Helper para crear una entrada legacy mínima. */
+/** Helper para una entrada minima de ejemplo con panel propio. */
 function legacy(id: string, name: string, category: string, benchmark = false): ExampleDef {
   return {
     id,
@@ -59,7 +61,11 @@ export const legacyTables       = legacy("tables",        "Hekatan – Tables de
 
 // ─── Editores (CAD / cálculo / losas) ───────────────────────────────
 export const legacyCadEditor    = legacy("cad-editor",    "Hekatan – CAD Editor",       "🧪 Utilidades");
-export const legacyCalcEditor   = legacy("calc-editor",   "Hekatan – Calc Editor",      "🧪 Utilidades");
+// `calc-editor` NO es una pagina: `examples/src/calc-editor/` solo tiene
+// modulos (`calcPanel.ts` y compania) que cargan las FEM Tools y el panel de
+// tutoriales. No hay `index.html` ni entrada en `examples/vite.config.ts`, asi
+// que este stub apuntaba a `../calc-editor/` = **404**. Fuera del selector
+// (18-sep-2026).
 export const legacySlabDesigner = legacy("slab-designer", "Hekatan – Slab Designer",    "🧪 Utilidades");
 
 // ─── Educativo ──────────────────────────────────────────────────────
@@ -72,11 +78,12 @@ export const iconicCableBridge  = legacy("cable-stayed-bridge",  "Puente Atirant
 export const iconicTwistedTower = legacy("twisted-tower",        "Torre Retorcida",             "4️⃣ Mixtos · 🌉 Puentes e icónicos");
 export const iconicBurjKhalifa  = legacy("burj-khalifa",         "Burj Khalifa style",          "4️⃣ Mixtos · 🌉 Puentes e icónicos");
 export const iconicSydneyOpera  = legacy("sydney-opera",         "Sydney Opera House",          "2️⃣ Shells · 🐚 Cáscaras");
-// ⚠️ "diagrid" y "pergola" también existen paramétricos en shared/moreExamples.ts (18 ejemplos que NO
-// están en el registry). Se probó renombrar estos stubs a <id>-awatif (6-sep-2026) y `?t=diagrid` quedó
-// en blanco: hasta que se registre moreExamples, los ids se quedan aquí.
-export const iconicDiagrid      = legacy("diagrid",              "Diagrid (Gherkin) style",     "4️⃣ Mixtos · 🌉 Puentes e icónicos");
-export const iconicPergola      = legacy("pergola",              "Pérgola de acero",            "4️⃣ Mixtos · 🌉 Puentes e icónicos");
+// ⚠️ Aqui habia dos stubs mas, `legacy("diagrid")` y `legacy("pergola")`, que
+// SECUESTRABAN el id de los ejemplos parametricos del mismo nombre: `?t=diagrid`
+// abria el stub, no el ejemplo. El comentario decia "hasta que se registre
+// moreExamples". Ya esta: los 21 viven en su carpeta y estan en el registry
+// (18-sep-2026), asi que los stubs se van y el id vuelve a su dueno. Las paginas
+// `/diagrid/` y `/pergola/` siguen existiendo y se pueden abrir por URL directa.
 
 // ─── Demos FEM Q4 (validación contra OpenSees/SAP/ETABS) ────────────
 export const demoShearWallQ4    = legacy("shear-wall-q4",        "Muro de Corte Q4",            "2️⃣ Shells · 🕸 Membranas");
@@ -108,7 +115,7 @@ export const bulboPresionesSuelo= legacy("bulbo-presiones-suelo","Bulbo de Presi
 export const muroContencionSolido = legacy("muro-contencion-solido","Muro de contención en SÓLIDOS H8 (vs SAP2000)",  "3️⃣ Sólidos", true);
 
 /** Array completo de los 19+11 ejemplos legacy para registrar de un golpe. */
-export const legacyAwatifExamples: ExampleDef[] = [
+export const ejemplosConPanelPropio: ExampleDef[] = [
   legacy1dMesh,
   legacy2dMesh,
   legacy3dStructure,
@@ -124,7 +131,6 @@ export const legacyAwatifExamples: ExampleDef[] = [
   legacyDrawing,
   legacyTables,
   legacyCadEditor,
-  legacyCalcEditor,
   legacySlabDesigner,
   legacyFemExplained,
   legacyReport,
@@ -134,8 +140,6 @@ export const legacyAwatifExamples: ExampleDef[] = [
   iconicTwistedTower,
   iconicBurjKhalifa,
   iconicSydneyOpera,
-  iconicDiagrid,
-  iconicPergola,
   // FEM demos Q4
   demoShearWallQ4,
   demoCantileverQ4,

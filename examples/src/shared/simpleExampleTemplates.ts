@@ -93,3 +93,24 @@ export function makeSimpleExample(args: SimpleGenArgs): ExampleDef {
     },
   };
 }
+
+/**
+ * Clona el mapa de `params` de un ExampleDef cambiando SOLO el `default` de las
+ * claves indicadas. Todo lo demas de cada parametro (min, max, step, label,
+ * folder, unitType…) se conserva.
+ *
+ * Es el `cloneEdificioParams` que vivia dentro de `shared/moreExamples.ts`,
+ * generalizado para cualquier ejemplo base. Lo usan las variantes de
+ * `edificio-aporticado` (`edif-acero-diag`, `edif-mixto`, `edif-muros`…) que
+ * se sacaron de ese fichero a su carpeta propia.
+ */
+export function clonarParamsCon<T extends Record<string, any>>(
+  base: T,
+  overrides: Record<string, number>,
+): T {
+  const out: any = {};
+  for (const [k, v] of Object.entries(base)) {
+    out[k] = { ...v, default: overrides[k] ?? v.default };
+  }
+  return out as T;
+}

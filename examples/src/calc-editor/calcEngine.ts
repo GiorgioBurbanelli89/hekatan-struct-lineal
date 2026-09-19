@@ -1278,7 +1278,20 @@ function registerMatlabFunction(
 // FUNCTION LIBRARY — persistent storage (localStorage)
 // ═══════════════════════════════════════════════════════
 
-const LIBRARY_KEY = "awatif_calc_functions";
+const LIBRARY_KEY = "hekatan_calc_functions";
+/** La clave de antes. Se lee UNA vez para no perder las funciones que el
+ *  usuario ya tenia guardadas: renombrar la clave a secas se las borraba. */
+const LIBRARY_KEY_VIEJA = "awatif_calc_functions";
+(function migrarLibreria() {
+  try {
+    if (localStorage.getItem(LIBRARY_KEY) !== null) return;   // ya migrada
+    const viejo = localStorage.getItem(LIBRARY_KEY_VIEJA);
+    if (viejo === null) return;
+    localStorage.setItem(LIBRARY_KEY, viejo);
+    localStorage.removeItem(LIBRARY_KEY_VIEJA);
+    console.log("[calc] libreria de funciones migrada a la clave nueva");
+  } catch { /* localStorage no disponible */ }
+})();
 
 interface StoredFunction {
   name: string;

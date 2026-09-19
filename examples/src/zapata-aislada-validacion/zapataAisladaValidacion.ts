@@ -439,17 +439,29 @@ export const zapataAisladaValidacion: ExampleDef = {
         const r = deform(states.nodes.val, states.elements.val, inputsP, states.elementInputs.val, springs);
         (ao as any).pressure_P = computePressure(r.deformations);
         (ao as any).deform_P = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(P) fallo: ${e?.message ?? e}`);
+      }
       try {
         const r = deform(states.nodes.val, states.elements.val, inputsMx, states.elementInputs.val, springs);
         (ao as any).pressure_Mx = computePressure(r.deformations);
         (ao as any).deform_Mx = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(Mx) fallo: ${e?.message ?? e}`);
+      }
       try {
         const r = deform(states.nodes.val, states.elements.val, inputsMy, states.elementInputs.val, springs);
         (ao as any).pressure_My = computePressure(r.deformations);
         (ao as any).deform_My = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(My) fallo: ${e?.message ?? e}`);
+      }
 
       states.analyzeOutputs.val = ao;
 
