@@ -456,6 +456,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       window.dispatchEvent(new CustomEvent("hk:property-applied", { detail: { kind: "segs", ids: segs, prop: "distLoad", value: [0, 0, cargaVert.kNm] } }));
       decir(`Carga distribuida de ${cargaVert.kNm} kN/m en ${segs.length} barra${segs.length === 1 ? "" : "s"}. Segui clicando.`);
       sel.clear();
+      // la selección ya se usó: que el chip «Ver K local · barra N» no se quede colgando
+      try { window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: null } })); } catch {}
       try { (window as any).__hekatanRefreshSelection?.(); } catch {}
       try { (window as any).__hekatanRebuild?.(); } catch {}
       return;
@@ -473,6 +475,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       ? `${modoAplicar === "apoyo" ? "Empotrado" : "Articulado"} en ${pts.length} nudo${pts.length === 1 ? "" : "s"}. Segui clicando.`
       : `Carga de ${cargaVert.kN} kN en ${pts.length} nudo${pts.length === 1 ? "" : "s"}.`);
     sel.clear();
+    // la selección ya se usó: que el chip «Ver K local · barra N» no se quede colgando
+    try { window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: null } })); } catch {}
     try { (window as any).__hekatanRefreshSelection?.(); } catch {}
     try { (window as any).__hekatanRebuild?.(); } catch {}
   };
@@ -1540,6 +1544,38 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.append(fila, rot);
     caja.dataset.pest = "areas";
+    filaB.appendChild(caja);
+  }
+
+  // ── Escala de la deformada (pestaña Resultados): el mando «Escala XY» del panel ──
+  // ×2 y ÷2 van bien para afinar; para ir de 1 a 1000 hacían falta diez clics.
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    const re = /Escala XY/i;
+    const i = document.createElement("input");
+    i.type = "text"; i.value = "1"; i.dataset.mando = "escala";
+    i.title = "Escala de la deformada: cuántas veces se amplifica (el mando «Escala XY» del panel)";
+    i.style.cssText = "width:60px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+      "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+    const aplicar = () => {
+      if (!ponerMando(re, i.value)) { decir("Falta el mando de escala en el panel."); return; }
+      const st = ajustes(); if (st?.deformedShape && !st.deformedShape.rawVal) st.deformedShape.val = true;
+      decir(`Deformada amplificada ×${leerMando(re)}.`);
+    };
+    i.addEventListener("change", aplicar);
+    i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+    setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+    const lab = document.createElement("span");
+    lab.textContent = "×"; lab.style.cssText = "font-size:12px;color:#94a3b8;";
+    fila.append(lab, i);
+    const rot = document.createElement("div");
+    rot.textContent = "Escala de la deformada";
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "resultados";
     filaB.appendChild(caja);
   }
 

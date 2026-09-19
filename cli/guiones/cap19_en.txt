@@ -7,7 +7,7 @@ Diagonals: one zigzag polyline, thirteen clicks. A click on an existing node reu
 Supports: I press Fixed and click each end. Next to it is Pinned, which leaves the rotations free.
 Loads: minus ten kilonewtons in the box. I press Load and click each top node. The app solves by itself.
 Distributed load: minus five kilonewtons per metre, Load q, and one click on each top chord segment.
-Results tab: Deformed and Axial. Maximum deflection is zero point two nine eight millimetres.
+Results tab: Deformed, scale times one thousand in its box, and Axial. Maximum deflection is zero point two nine eight millimetres.
 Moment three-three, and the reactions at both supports.
 2D diagram: the elevation with the diagram and its values, no perspective. I close it with the cross.
 Back to the Draw tab. With Measure, support to support: twelve metres.

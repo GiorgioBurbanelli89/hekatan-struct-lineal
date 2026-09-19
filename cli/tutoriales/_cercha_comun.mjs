@@ -196,6 +196,8 @@ const pasos = [
       await clicMundo(a, inf[n], "Apoyo derecho.", true);
       await a.quieto(2, 320);
       await senalar(a, "^△ ?Articul", "Articul.: el apoyo articulado, giros libres. Se usa igual.", 7);
+      await a.pag.keyboard.press("Escape");
+      await a.pag.evaluate(() => { try { window.__hekatanClearSelection?.(); } catch (e) {} });
       await a.quieto(1, 300);
     },
   },
@@ -219,6 +221,11 @@ const pasos = [
       await boton(a, "^⇊ ?Carga q", "Carga q: clic sobre una barra.");
       for (let i = 0; i + 1 < sup.length; i++) await clicMundo(a, [(sup[i][0] + sup[i + 1][0]) / 2, 0, H], i === 0 ? "En medio del tramo." : "");
       console.log("   modelo:", JSON.stringify(await modelo(a)));
+      // soltar el modo (Esc) y la selección que deja, y el cursor fuera del dibujo: si no,
+      // la tarjeta de la barra bajo el cursor y «Ver K local» tapan los resultados
+      await a.pag.keyboard.press("Escape");
+      await a.pag.evaluate(() => { try { window.__hekatanClearSelection?.(); } catch (e) {} });
+      { const h = await hueco(a); await mover(a, 1180, h.y + h.alto / 2 - 10, 8); }
       await a.quieto(5, 360);
     },
   },
@@ -226,8 +233,19 @@ const pasos = [
     rotulo: "9 · Pestaña Resultados: Deformada y Axil",
     hacer: async (a) => {
       await pestana(a, "resultados", "Pestaña Resultados.");
-      await boton(a, "^〰 ?Deformada", "Deformada, amplificada.");
-      await a.quieto(3, 360);
+      // la deformada puede venir ya encendida (defecto del lienzo): pulsarla la APAGARÍA
+      const yaDef = await a.pag.evaluate(() => !!window.__hekatanSettings?.()?.deformedShape?.rawVal);
+      if (yaDef) await senalar(a, "^〰 ?Deformada", "Deformada: ya encendida (botón resaltado).", 5);
+      else await boton(a, "^〰 ?Deformada", "Deformada.");
+      // 0.3 mm en 12 m no se ven: la escala a 1000 en su casilla de la cinta
+      const e = await rect(a, () => document.querySelector('#hk-ribbon input[data-mando="escala"]'));
+      if (e) {
+        await mover(a, e.x, e.y, 12); await caja(a, { x: e.rx, y: e.ry, w: e.rw, h: e.rh }, "Escala ×1000: 0.3 mm se ven como 30 cm.", 5);
+        await clicRojo(a, e.x, e.y, false);
+        await a.pag.keyboard.down("Control"); await a.pag.keyboard.press("a"); await a.pag.keyboard.up("Control");
+        await a.pag.keyboard.type("1000", { delay: 70 }); await a.pag.keyboard.press("Enter");
+      } else console.log("  x no está la casilla de escala");
+      await a.quieto(4, 360);
       await boton(a, "^N ?Axil", "Axil: el diagrama con su valor en cada barra.");
       console.log("   modelo:", JSON.stringify(await modelo(a)));
       await a.quieto(6, 360);

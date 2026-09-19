@@ -7,7 +7,7 @@ Diagonales: una polilínea en zigzag de trece clics. El clic sobre un nudo que y
 Apoyos: pulso Empotrado y un clic en cada extremo. Al lado está Articulado, que deja libres los giros.
 Cargas: en la casilla va menos diez kilonewton. Pulso Carga y un clic en cada nudo superior. La app calcula sola.
 Carga distribuida: menos cinco kilonewton por metro, Carga q y un clic en cada tramo del cordón superior.
-Pestaña Resultados: Deformada y Axil. La flecha máxima es cero coma dos nueve ocho milímetros.
+Pestaña Resultados: Deformada, escala por mil en su casilla, y Axil. La flecha máxima es cero coma dos nueve ocho milímetros.
 Momento tres tres, y las reacciones en los dos apoyos.
 Diagrama en dos D: el alzado con el diagrama y sus valores, sin perspectiva. Lo cierro con la equis.
 Vuelvo a la pestaña Dibujo. Con Medir, de apoyo a apoyo: doce metros.
