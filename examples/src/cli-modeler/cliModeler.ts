@@ -62,6 +62,30 @@ import type { ExampleDef } from "../workspace/exampleRegistry";
 /** true cuando el WASM trae el nudo colgado LINEAL (gdl -4 de springsExtra.h). Deploy 1: false. */
 const EDGE_LINEAL_EN_MOTOR = false;
 
+/**
+ * Banner ROJO fijo encima del visor 3D con los avisos de carga perdida (nudos sin
+ * rigidez, desequilibrio Σcargas/Σreacciones). Jorge, 19-sep-2026: "no ocultes el
+ * problema" — antes esto solo iba a `console.warn`/`m.errors` (la ventana de
+ * comandos, abajo del todo, facil de no ver); ahora además un banner encima del
+ * modelo 3D, imposible de perder. Módulo interno de `cliModeler.ts` (no toca
+ * main.ts): DOM puro, mismo patrón que `stripDesignPanel.ts`/`sobrecargaMuertaPanel.ts`.
+ */
+function mostrarBannerAviso(mensajes: string[]): void {
+  if (typeof document === "undefined") return;   // Node (tests/CLI): sin DOM, el aviso ya salió por consola/m.errors
+  const ID = "hk-banner-sin-rigidez";
+  let el = document.getElementById(ID);
+  if (!mensajes.length) { el?.remove(); return; }
+  if (!el) {
+    el = document.createElement("div");
+    el.id = ID;
+    el.style.cssText = "position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:1000;" +
+      "max-width:90vw;background:#7a1414;color:#fff;border:2px solid #ff4d4d;border-radius:6px;" +
+      "padding:8px 14px;font:bold 13px sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.5);white-space:pre-line";
+    document.body.appendChild(el);
+  }
+  el.textContent = "⚠ " + mensajes.join("\n⚠ ");
+}
+
 interface ParsedModel {
   nodes: Map<number, [number, number, number]>;
   frames: Array<{
@@ -1581,16 +1605,15 @@ export const cliModeler: ExampleDef = {
     // (galpon-bodega-electoral/re_carga_area_etabs.py): la suma da q por el area
     // exacta del poligono, tambien en trapecio y en triangulo.
     const cargaDeArea = new Map<number, number>();
-    const G2 = 1 / Math.sqrt(3);
-    const GAUSS: Array<[number, number]> = [[-G2, -G2], [G2, -G2], [G2, G2], [-G2, G2]];
-    // f_i = integral(N_i * q * dA) del shell `s` con carga `q`, o null si el shell no
-    // se puede ubicar (nodo inexistente). Factorizado para usarlo con Dead (m.shellLoads,
-    // como siempre) Y con cualquier otro patron (m.shellLoadsPat, p.ej. DNE) por el MISMO
-    // camino — antes del 19-sep-2026 `areaload` solo sabia de Dead.
-    const nodalConsistente = (s: ParsedModel["shells"][number], q: number): { idx: number[]; f: number[] } | null => {
-      const idx = s.pts.map((p) => idToIdx.get(p));
-      if (idx.some((i) => i === undefined)) return null;
-      const P = idx.map((i) => nodes[i as number]);
+    // f_i = integral(N_i * q * dA) de un Q4 con esquinas `P` (coordenadas GLOBALES,
+    // en el orden 0-1-2-3 del elemento), Gauss 2x2 y jacobiano REAL. Con q=1 da
+    // exactamente los pesos ∫N_i dA — el mismo numero que usa el muelle de area
+    // NODAL (`ks * uz_i * ∫N_i dA`, ver `utils/springsExtra.h`), asi que sirve para
+    // convertir presion de Winkler en fuerza SIN reinventar la formula (equilibrio
+    // mas abajo). Factorizado del bucle de `areaload` (19-sep-2026).
+    const pesosGaussQ4 = (P: number[][], q: number): number[] => {
+      const G2 = 1 / Math.sqrt(3);
+      const GAUSS: Array<[number, number]> = [[-G2, -G2], [G2, -G2], [G2, G2], [-G2, G2]];
       const f = [0, 0, 0, 0];
       for (const [xi, eta] of GAUSS) {
         const N = [0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
@@ -1606,7 +1629,17 @@ export const cliModeler: ExampleDef = {
         const detJ = Math.hypot(cr[0], cr[1], cr[2]);   // area diferencial real
         for (let i = 0; i < 4; i++) f[i] += N[i] * q * detJ;
       }
-      return { idx: idx as number[], f };
+      return f;
+    };
+    // f_i = integral(N_i * q * dA) del shell `s` con carga `q`, o null si el shell no
+    // se puede ubicar (nodo inexistente). Para Dead (m.shellLoads, como siempre) Y
+    // para cualquier otro patron (m.shellLoadsPat, p.ej. DNE) por el MISMO camino —
+    // antes del 19-sep-2026 `areaload` solo sabia de Dead.
+    const nodalConsistente = (s: ParsedModel["shells"][number], q: number): { idx: number[]; f: number[] } | null => {
+      const idx = s.pts.map((p) => idToIdx.get(p));
+      if (idx.some((i) => i === undefined)) return null;
+      const P = idx.map((i) => nodes[i as number]);
+      return { idx: idx as number[], f: pesosGaussQ4(P, q) };
     };
     for (const s of m.shells) {
       const q = m.shellLoads.get(s.id);
@@ -1781,6 +1814,51 @@ export const cliModeler: ExampleDef = {
         }
       }
     }
+
+    // ── AVISO: cargas en nudos SIN RIGIDEZ ──────────────────────────────────
+    // Un nudo que no pertenece a NINGUN frame/shell/solido, no tiene muelle y no
+    // esta apoyado queda con la diagonal de K en CERO: `getZerosIndices` (deform.cpp)
+    // lo saca del sistema entero y la carga desaparece SIN AVISO. Medido en
+    // radier_dne.heks (19-sep-2026, hallazgo del agente de diseño, commit d676553d7):
+    // 7 nudos colgados de `edge lineal` — que este motor TODAVIA no ata
+    // (EDGE_LINEAL_EN_MOTOR = false, mas arriba) — se tragaban 1348 kN de Dead,
+    // 653 de DNE y 355 de Live sin una sola linea en la consola. Se detecta ANTES
+    // de resolver, por conectividad (no repite la geometria de `edge`: mas simple,
+    // y pesca CUALQUIER causa de nudo suelto, no solo esta).
+    const nodosConRigidez = new Set<number>();
+    for (const el of elements) for (const n of el) nodosConRigidez.add(n);
+    for (const [n] of supports) nodosConRigidez.add(n);
+    for (const sp of springsList) {
+      if (sp.node >= 0) nodosConRigidez.add(sp.node);
+      // nudo colgado atado (Hermite `edge etabs` o lineal, si el motor algun dia lo trae):
+      // el registro usa nudo NEGATIVO = -(elemento+1) y el nudo real va en `.k` (ver arriba).
+      else if (sp.dof === -2 || sp.dof === -4) nodosConRigidez.add(sp.k);
+    }
+    const idHeksDe = (idx: number) => sortedIds[idx] ?? idx;
+    const patronesDeCarga: Record<string, Map<number, number[]>> = { Dead: loads, ...Object.fromEntries(loadsOtros) };
+    const nudosSinRigidezConCarga = new Set<number>();
+    const perdidaPorPatron: Record<string, [number, number, number]> = {};
+    for (const [pat, mp] of Object.entries(patronesDeCarga)) {
+      for (const [n, v] of mp) {
+        if (nodosConRigidez.has(n) || !v.some((x) => Math.abs(x) > 1e-9)) continue;
+        nudosSinRigidezConCarga.add(n);
+        const acc = perdidaPorPatron[pat] ?? (perdidaPorPatron[pat] = [0, 0, 0]);
+        acc[0] += v[0]; acc[1] += v[1]; acc[2] += v[2];
+      }
+    }
+    let avisoSinRigidez: string | null = null;
+    let avisoEquilibrio: string | null = null;   // se llena mas abajo, tras resolver (banner rojo del visor)
+    if (nudosSinRigidezConCarga.size) {
+      const idsTxt = [...nudosSinRigidezConCarga].map(idHeksDe).sort((a, b) => a - b).join(", ");
+      const detalle = Object.entries(perdidaPorPatron).map(([pat, v]) => `${pat} ${v[2].toFixed(0)} kN`).join(", ");
+      const totalKN = Object.values(perdidaPorPatron).reduce((s, v) => s + Math.abs(v[2]), 0);
+      avisoSinRigidez = `${nudosSinRigidezConCarga.size} carga(s) en nudos SIN RIGIDEZ [${idsTxt}]: ${totalKN.toFixed(0)} kN se perderían sin avisar (${detalle})`;
+      m.errors.push(avisoSinRigidez);
+      console.warn("[CLI Modeler] ⚠", avisoSinRigidez);
+    }
+    (window as any).__hekatanCliNudosSinRigidez = nudosSinRigidezConCarga.size
+      ? { nudos: [...nudosSinRigidezConCarga].map(idHeksDe), perdidaPorPatron, mensaje: avisoSinRigidez }
+      : null;
 
     states.nodes.val = nodes;
     states.elements.val = elements;
@@ -1978,6 +2056,49 @@ export const cliModeler: ExampleDef = {
             console.warn("[CLI Modeler] tensiones de solidos:", e?.message ?? e);
           }
         }
+        // ── EQUILIBRIO: Σ cargas vs Σ reacciones ────────────────────────────
+        // Tercera ley de Newton del sistema completo, no una aproximación: si el
+        // modelo está bien resuelto, Σcargas + Σreacciones = 0 (medido a 1e-6 en un
+        // patch test con soporte fijo Y con muelle nodal Y con muelle de área nodal —
+        // ver el commit). Si difieren, algo NO llegó a ningún lado que reaccione: el
+        // aviso de arriba (nudos sin rigidez) atrapa la causa más común, pero esto es
+        // el respaldo — por si el nudo SÍ pertenece a un elemento pero el GDL que
+        // recibe la carga queda libre igual (p.ej. un momento en un nudo que solo
+        // toca membranas sin drilling).
+        try {
+          let sumCargas = 0;
+          for (const v of cargasCaso.values()) sumCargas += v[2];
+          let sumReacciones = 0;
+          for (const v of states.deformOutputs.val.reactions?.values() ?? []) sumReacciones += v[2];
+          const Ueq = states.deformOutputs.val.deformations;
+          for (const sp of springsList) {
+            if (sp.node >= 0 && sp.dof === 2) sumReacciones += -sp.k * (Ueq?.get(sp.node)?.[2] ?? 0);
+          }
+          // Muelle de AREA nodal: reaccion_i = -ks * uz_i * ∫N_i dA (EXACTO — la misma
+          // cuenta que ya usa la presión de Winkler de arriba, pasada de tensión a
+          // fuerza con `pesosGaussQ4(P,1)`; verificado contra un patch test analítico
+          // a 1e-6, ver commit). El modo `consistente` (acoplado) usa la MISMA fórmula
+          // diagonal como aproximación — no hay drama: si el error por eso supera el
+          // 0.1 %, este mismo aviso lo dice, no se oculta.
+          for (const asr of m.areaSprings) {
+            const eIdx = shellIdxOf.get(asr.id); if (eIdx === undefined) continue;
+            const el = elements[eIdx] as number[];
+            const pesos = pesosGaussQ4(el.map((n) => nodes[n]), 1);
+            el.forEach((n, i) => { sumReacciones += -asr.ks * (Ueq?.get(n)?.[2] ?? 0) * pesos[i]; });
+          }
+          const diff = sumCargas + sumReacciones;
+          const base = Math.max(Math.abs(sumCargas), Math.abs(sumReacciones), 1e-6);
+          const pctErr = (Math.abs(diff) / base) * 100;
+          (window as any).__hekatanCliEquilibrio = {
+            sumCargasFz: +sumCargas.toFixed(3), sumReaccionesFz: +(-sumReacciones).toFixed(3), pctErr: +pctErr.toFixed(4),
+          };
+          if (pctErr > 0.1) {
+            avisoEquilibrio = `Equilibrio: ΣcargasFz ${sumCargas.toFixed(1)} kN vs ΣreaccionesFz ${(-sumReacciones).toFixed(1)} kN — difieren ${pctErr.toFixed(2)} % (> 0.1 %)`;
+            m.errors.push(avisoEquilibrio);
+            console.warn("[CLI Modeler] ⚠", avisoEquilibrio);
+          }
+        } catch (e: any) { console.warn("[CLI Modeler] equilibrio:", e?.message ?? e); }
+
         console.log("[CLI Modeler] Solve OK —", elements.length, "elementos,", nodes.length, "nodos");
       } catch (e: any) {
         m.errors.push(`solve falló: ${e.message}`);
@@ -2017,5 +2138,8 @@ export const cliModeler: ExampleDef = {
       solved: m.doSolve, errors: m.errors.length,
       maxUzMm: +(maxUz * 1000).toFixed(3), sumRz: +sumRz.toFixed(1),
     };
+    // Banner rojo en el visor: nudos sin rigidez y/o desequilibrio Σcargas/Σreacciones.
+    // Ninguno de los dos se oculta detrás de la ventana de comandos.
+    mostrarBannerAviso([avisoSinRigidez, avisoEquilibrio].filter((s): s is string => !!s));
   },
 };
