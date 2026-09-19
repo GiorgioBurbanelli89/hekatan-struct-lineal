@@ -137,17 +137,25 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
             // Dispatch de la formulacion de placa, segun plateFormulations[idx]:
             //   0 = Mindlin con MITC4   (Shell-Thick, defecto de hoy)
             //   1 = Kirchhoff MZC       (Shell-Thin)
-            //   2 = DSE de Wilson       (Shell-Thick del libro, cap. 8)
+            //   2 = «Membrane» para los EXPORTADORES (.e2k/.s2k, ver data-model.ts).
+            //       En el solver NO quita la flexion: cae en el MITC4 igual que
+            //       el 0 (medido con el WASM de 6be372b75: mismo w que el 0). La
+            //       membrana del solver es flexion 0 (bendingModifiers = 0 o
+            //       shellModifiers m11=m22=m12=0 -> `sinFlexion` en shellQ4.cpp).
             //   3 = DKMQ de Katili      (Discrete Kirchhoff-Mindlin)
+            //   4 = DSE de Wilson       (Shell-Thick del libro, cap. 8)
             //
-            // El 2 se conecta el 17-sep-2026: es la placa GRUESA que expone
+            // El 4 (DSE) se conecto el 17-sep-2026 en el 2 y se movio al 4 el
+            // 19-sep-2026, porque el 2 ya era la membrana de los exportadores y
+            // los modelos que lo ponian (Test M, galpon, ITW) pasaron a flexar
+            // con otra placa sin que nadie lo pidiera. Es la placa GRUESA que expone
             // Wilson en el cap. 8 de «Analisis Estatico y Dinamico de
             // Estructuras» (cortante discreto de lado Ec. 8.6-8.9, correccion
             // de patch test Ec. 8.17, condensacion estatica Ec. 8.18-8.19), y
             // que el propio libro (pag. PDF 155) dice que es «el enfoque
             // empleado en el programa SAP2000». El codigo ya estaba escrito
             // (getBendingK_DSE_FULL) pero solo se podia encender con un
-            // #define, o sea recompilando el WASM en cada prueba. El 2 lo
+            // #define, o sea recompilando el WASM en cada prueba. El 4 lo
             // atiende getLocalStiffnessMatrixShellQ4 leyendo plateFormulations
             // en EJECUCION, para poder medir A/B contra SAP2000.
             //

@@ -1774,17 +1774,24 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     Eigen::MatrixXd Kitw = usaITW ? getMembraneITW(x, y, E, nu, t, dmod, drillScale, ngITW, taylorITW, khgITW, waITW, proyITW, sriITW, k0Wilson)
                                   : Eigen::MatrixXd::Zero(12, 12);        // 12×12
     // ── Conmutador EN EJECUCIÓN de la formulación de flexión ────────────────
-    // plateFormulations[index] == 2  →  DSE de Wilson (cap. 8 del libro), el
+    // plateFormulations[index] == 4  →  DSE de Wilson (cap. 8 del libro), el
     // «Shell-Thick» que Wilson dice (pág. PDF 155) que es «el enfoque empleado
     // en el programa SAP2000». Se lee aquí, no con un #define, para poder medir
     // A/B contra SAP2000 sin recompilar el WASM en cada prueba.
     // El resto de valores los reparte getLocalStiffnessMatrix.cpp (1=Thin, 3=DKMQ).
+    //
+    // ⚠️ Es el 4, NO el 2 (19-sep-2026). Del 17 al 19-sep estuvo en el 2, que ya
+    // tenía dueño: los exportadores escriben el 2 como `Membrane` (data-model.ts)
+    // y los modelos que lo ponen (Test M, galpón, importador CSI, ITW) lo hacían
+    // para eso. Medido con el WASM de 6be372b75 (16-sep): el 2 daba EXACTAMENTE
+    // lo mismo que el 0 (MITC4), w = -1.032929e-3 en los dos; con el DSE en el 2
+    // pasó a -1.265599e-3. El 2 vuelve a caer aquí como el 0, sin tocar Kb.
     const int plateForm = getMapVal(elementInputs.plateFormulations, index, 0);
 
     Eigen::MatrixXd Kb;
     if (sinFlexion) {
         Kb = Eigen::MatrixXd::Zero(12, 12);
-    } else if (plateForm == 2) {
+    } else if (plateForm == 4) {
         // Wilson DSE completo (cap. 8): cortante discreto de lado + corrección
         // de patch test (8.17) + condensación estática (8.18-8.19).
         Kb = getBendingK_DSE_FULL(x, y, E, nu, t);

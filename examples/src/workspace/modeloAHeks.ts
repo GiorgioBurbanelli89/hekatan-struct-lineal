@@ -150,22 +150,23 @@ export function modeloAHeks(states: any, opts: OpcionesHeks = {}): string {
       L.push(`shell ${e + 1} ${p[0] + 1} ${p[1] + 1} ${p[2] + 1} ${p[3] + 1} ` +
              `${N(t, 0.2)} ${N(E, 25e6)} ${N(q, 0)} ${N(rho, 2.45)}`);
     }
-    // `plateFormulations`: 0 = Thick (MITC4), 1 = Thin (DKQ) y 2 = **placa DSE completa de
-    // Wilson (cap. 8)** — así lo resuelve el solver (`shellQ4.cpp:1787`), aunque el
-    // comentario de `data-model.ts` diga «2 = MEMBRANA». El lector `.heks` solo sabe
-    // `shelltype thin|thick`: el 2 NO se puede declarar. Se escribe como `thick` (lo más
-    // cercano) y la cabecera AVISA con cuántas cáscaras, porque el modelo releído NO es
-    // el mismo (medido en el dual `test-m-dual` ms=1.0: 4.4 % en el peor nudo). Callarlo
-    // sería entregar un fichero que parece bueno y no lo es.
+    // `plateFormulations`: 0 = Thick (MITC4), 1 = Thin (DKQ), 2 = «Membrane» de los
+    // exportadores (en el SOLVER es el MITC4, igual que el 0), 3 = DKMQ, 4 = placa DSE de
+    // Wilson (cap. 8). Del 17 al 19-sep-2026 el DSE estuvo en el 2 y aquí se avisaba de
+    // que no se podía declarar; ahora es el 4 y el lector lo entiende (`shelltype id wilson`).
+    // El 2 se escribe `thick`: en el solver es EXACTO (mismo MITC4). Lo que se pierde es la
+    // etiqueta Membrane de los exportadores, y se avisa.
     const conTipo = cascaras.filter((e) => g(ei.plateFormulations, e) !== undefined);
-    const dse = conTipo.filter((e) => g(ei.plateFormulations, e) === 2);
-    if (dse.length) avisos.push(
-      `# ⚠️ ${dse.length} cáscara(s) usan la placa DSE de Wilson (plateFormulations = 2), que el ` +
-      `lector .heks aún no sabe declarar:`,
-      "#    se guardan como `thick` y el modelo releído DIFIERE. Falta en el lector: `shelltype id dse`.");
+    const memb = conTipo.filter((e) => g(ei.plateFormulations, e) === 2);
+    if (memb.length) avisos.push(
+      `# ⚠️ ${memb.length} cáscara(s) con plateFormulations = 2 («Membrane» solo para .e2k/.s2k): ` +
+      "se guardan como `thick`,",
+      "#    que es lo que el solver ya calculaba; al exportar a CSI saldrán Shell-Thick, no Membrane.");
+    const palabra = (f: number | undefined) =>
+      f === 1 ? "thin" : f === 3 ? "dkmq" : f === 4 ? "wilson" : "thick";
     if (conTipo.length) {
-      L.push("# formulación de placa: shelltype id thin|thick   (el 2 = DSE sale como thick, ver aviso arriba)");
-      for (const e of conTipo) L.push(`shelltype ${e + 1} ${g(ei.plateFormulations, e) === 1 ? "thin" : "thick"}`);
+      L.push("# formulación de placa: shelltype id thin|thick|dkmq|wilson");
+      for (const e of conTipo) L.push(`shelltype ${e + 1} ${palabra(g(ei.plateFormulations, e))}`);
     }
     // El tipo de DRILLING tampoco tiene orden en el `.heks` (el lector usa el suyo). Medido en
     // el dual: pesa un 0.004 % en desplazamientos, pero se avisa igual — no es el mismo elemento.

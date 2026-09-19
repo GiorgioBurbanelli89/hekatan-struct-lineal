@@ -708,8 +708,12 @@ export function parseCliCommands(text: string): ParsedModel {
           let v: number | undefined;
           if (q === "thin" || q === "delgada" || q === "kirchhoff" || q === "1") v = 1;
           else if (q === "thick" || q === "gruesa" || q === "mindlin" || q === "0") v = 0;
+          // 3 = DKMQ de Katili; 4 = placa DSE de Wilson (cap. 8). El 2 NO se ofrece: es la
+          // «Membrane» de los exportadores y en el solver es el MITC4 (data-model.ts).
+          else if (q === "dkmq" || q === "3") v = 3;
+          else if (q === "wilson" || q === "dse" || q === "4") v = 4;
           if (v === undefined) {
-            m.errors.push(`shelltype ${id}: se esperaba thin o thick`);
+            m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq o wilson`);
             break;
           }
           m.shellTypes.set(id, v);
@@ -1420,7 +1424,8 @@ export const cliModeler: ExampleDef = {
         const hormigon = dk.tc + (dk.sr > 0 ? dk.hr * (dk.wrt + dk.wrb) / 2 / dk.sr : 0);
         thicknesses.set(eIdx, dk.tc);
         densities.set(eIdx, ((s.rho ?? 2.45) * hormigon + dk.w / 9.80665) / dk.tc);
-        // membrana = flexión 0 (abajo, con los modificadores). NO plateFormulations 2: eso es DKMQ.
+        // membrana = flexión 0 (abajo, con los modificadores). NO plateFormulations 2: en el solver
+        // el 2 es el MITC4 con flexión (solo los exportadores lo leen como Membrane).
         deckSections.set(eIdx, { ...dk });
       }
     }
