@@ -15,7 +15,7 @@ t0 = time.time()
 import comtypes.gen.SAP2000v1 as S  # noqa: E402  (generado por comtypes la primera vez)
 h = comtypes.client.CreateObject("SAP2000v1.Helper").QueryInterface(S.cHelper)
 o = h.CreateObjectProgID("CSI.SAP2000.API.SapObject")
-o.ApplicationStart()
+o.ApplicationStart(6, True)   # visible: para las capturas
 sm = o.SapModel
 try:
     sm.InitializeNewModel(6)          # kN, m, C
@@ -49,6 +49,10 @@ try:
         sm.LoadPatterns.Add(c["nombre"], 8, 0.0, True)
         for nd, P in c["cargas"]:
             sm.PointObj.SetLoadForce(nom[nd], c["nombre"], [0.0, 0.0, -float(P), 0.0, 0.0, 0.0])
+    # la envolvente de todas las posiciones como combinación (tipo 1 = Envelope), para verla en SAP
+    sm.RespCombo.Add("ENV_CAMION", 1)
+    for c in M["casos"]:
+        sm.RespCombo.SetCaseList("ENV_CAMION", 0, c["nombre"], 1.0)
     sm.File.Save(__import__("os").path.abspath(f"sap_{cual}.sdb"))
     print("modelo", len(nom), "nudos", len(M["barras"]), "barras", len(M["casos"]), "casos", f"{time.time() - t0:.0f} s", flush=True)
     print("run", sm.Analyze.RunAnalysis(), f"{time.time() - t0:.0f} s", flush=True)
@@ -76,5 +80,11 @@ try:
             res[cs]["F"][e] = [i[1], j[1], i[2], j[2], i[3], j[3]]
     json.dump(res, open(f"sap2000_{cual}.json", "w"))
     print(f"SAP2000 {cual}: {len(res)} posiciones · {time.time() - t0:.0f} s", flush=True)
+    # HK_ESPERA=<fichero>: SAP queda abierto para las capturas hasta que aparezca ese fichero
+    espera = __import__("os").environ.get("HK_ESPERA")
+    if espera:
+        print("ESPERANDO capturas; crear", espera, "para cerrar", flush=True)
+        while not __import__("os").path.exists(espera):
+            time.sleep(2)
 finally:
     o.ApplicationExit(False)

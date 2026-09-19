@@ -26,7 +26,7 @@ export async function correr() {
     repartido = Math.max(repartido, s.pesos.repartido);
     est.set(+x.toFixed(6), s);
   }
-  filas.push({ que: "equilibrio ΣR = ΣP en las 277 posiciones (kN)", medido: peorEq, limite: 1e-6, ok: peorEq < 1e-6 });
+  filas.push({ que: `equilibrio ΣR = ΣP en las ${xs.length} posiciones (kN)`, medido: peorEq, limite: 1e-6, ok: peorEq < 1e-6 });
   filas.push({ que: "todos los ejes caen en nudo (kN repartidos por palanca)", medido: repartido, limite: 0, ok: repartido === 0 });
   for (const prog of ["sap2000", "opensees"]) {
     const f = join(AQUI, "..", "datos", `alcantarilla_${prog}.json`);

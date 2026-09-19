@@ -50,7 +50,7 @@ function params(def: { nC: number; L: number; H: number; tS: number; tI: number;
     sep2: P("Camión HL-93", "Separación trasera (m)", HL93.sepTraseraMin, HL93.sepTraseraMin, HL93.sepTraseraMax, 0.1, "AASHTO: 4.3 a 9.0 m. La de la animación."),
     varSep: { default: 1, boolean: true, label: "Envolvente: probar 4.3–9.0 m", folder: "Camión HL-93" },
     IM: P("Camión HL-93", "IM factor dinámico (%)", 0, 0, 75, 1, "Solo a los ejes (CSI Analysis Reference, p. 515)."),
-    ancho: P("Camión HL-93", "Ancho de reparto (m)", 1, 0.5, 6, 0.05, "Las cargas se dividen por este ancho para dar kN por metro de franja. 1 = sin reparto."),
+    ancho: P("Camión HL-93", "Ancho de reparto E (m)", 1, 0.5, 6, 0.05, "Las cargas de eje se dividen por E para dar kN por metro de franja. 1 = sin reparto (el eje entero sobre 1 m, del lado seguro). El ancho de AASHTO LRFD para alcantarillas (franja equivalente y propagación por el relleno) está PENDIENTE DE FUENTE: no hay PDF de AASHTO en la PC y los manuales de CSI no lo traen; pon aquí el E de tu norma."),
     carril: { default: 1, boolean: true, label: "Carga de carril 9.3 kN/m en la envolvente", folder: "Camión HL-93" },
     paso: { default: def.paso, options: { "0.10 m": 0.1, "0.05 m": 0.05 }, label: "Paso del camión = malla del tablero", folder: "Malla" },
     dxInf: P("Malla", "Malla losa inferior y muros (m)", 0.5, 0.1, 1.0, 0.05),
@@ -116,7 +116,7 @@ export function openseesCargaMovil(m: ModeloLineal, cam: Camino, v: Vehiculo, xs
   return L.join("\n") + "\n";
 }
 
-function crear(id: string, name: string, def: Parameters<typeof params>[0], guia: string[]): ExampleDef {
+function crear(id: string, name: string, def: Parameters<typeof params>[0], guia: string[], avisoFijo?: string): ExampleDef {
   return {
     id, name,
     category: "1️⃣ Frames · 🚚 Carga móvil y puentes",
@@ -187,6 +187,13 @@ function crear(id: string, name: string, def: Parameters<typeof params>[0], guia
           titulo: `${t("Alcantarilla", "Box culvert")} ${pm.nCeldas}×${pm.L} m × ${pm.H} m · ${veh.nombre}`,
           exportar,
           encuadrar: primera,
+          avisos: [
+            ...(avisoFijo ? [avisoFijo] : []),
+            ...(Math.abs(p.ancho - 1) < 1e-9
+              ? [t("Ancho de reparto AASHTO pendiente de fuente: el eje entero va sobre la franja de 1 m (E = 1 m, del lado seguro).",
+                   "AASHTO distribution width pending a source: the whole axle acts on the 1 m strip (E = 1 m, conservative).")]
+              : [t(`Ejes repartidos en E = ${p.ancho} m (dato del usuario).`, `Axles spread over E = ${p.ancho} m (user input).`)]),
+          ],
           notas: [
             t("Franja de 1 m, dibujada con 3 m de fondo para verla. Suelo lineal (Winkler).", "1 m strip, drawn 3 m deep to be seen. Linear soil (Winkler)."),
             t(`Camión y carril: ${HL93.fuente}.`, `Truck and lane: ${HL93.fuente}.`),
@@ -235,22 +242,24 @@ function exportarE2k(states: any, id: string) {
 export const alcantarillaCargaMovil = crear(
   "alcantarilla-carga-movil",
   "Alcantarilla cajón con carga móvil HL-93",
-  { nC: 2, L: 9.5, H: 6.0, tS: 0.50, tI: 0.55, tM: 0.45, ks: 2.0, paso: 0.1 },
+  { nC: 2, L: 3.0, H: 2.5, tS: 0.30, tI: 0.30, tM: 0.30, ks: 2.0, paso: 0.1 },
   [
-    "Abre calculada: el camión HL-93 cruza la losa superior paso a paso.",
+    "Abre calculada: alcantarilla típica de 2 celdas de 3.0 × 2.5 m, losas y muros de 0.30 m.",
+    "El camión HL-93 cruza la losa superior paso a paso (un nudo cada 10 cm: los ejes caen en nudo).",
     "Colores = desplazamiento |u| (escala fija para todo el recorrido). Rojo/azul = momento M3.",
     "Al final de la pasada se ven las envolventes (camión + carril).",
-    "Exporta a SAP2000 (un caso por posición), ETABS y OpenSeesPy desde la ventana 🚚.",
+    "Ancho de reparto E: 1 m por defecto (el eje entero); el de AASHTO está pendiente de fuente.",
   ],
 );
 
 export const plantillaAlcantarilla = crear(
   "plantilla-alcantarilla-carga-movil",
-  "Plantilla · Alcantarilla cajón + carga móvil (tus datos)",
-  { nC: 2, L: 3.0, H: 2.5, tS: 0.30, tI: 0.30, tM: 0.30, ks: 2.0, paso: 0.1 },
+  "Plantilla · Alcantarilla cajón + carga móvil (caso grande del vídeo, tus datos)",
+  { nC: 2, L: 9.5, H: 6.0, tS: 0.50, tI: 0.55, tM: 0.45, ks: 2.0, paso: 0.1 },
   [
+    "Caso grande (luz de puente): réplica de las medidas del vídeo, 2 celdas de 9.5 × 6 m.",
     "Pon tus celdas, luces, espesores y el balasto ks.",
     "El paso del camión es la malla del tablero: los ejes caen siempre en nudo.",
-    "Ancho de reparto = el de tu norma (AASHTO para alcantarillas); 1 m = sin reparto.",
   ],
+  "Caso grande (luz de puente), réplica del vídeo.",
 );

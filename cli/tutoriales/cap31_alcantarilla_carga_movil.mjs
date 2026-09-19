@@ -98,7 +98,7 @@ export const pasos = [
         const d = document.createElement("div"); d.id = "hk-tut-tabla";
         d.style.cssText = "position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);z-index:2147483600;background:rgba(10,14,20,.97);border:2px solid #22d3ee;border-radius:10px;padding:16px 22px;color:#e8f6fb;font:15px 'Segoe UI',sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.8)";
         const celdas = (l) => l.split("|").slice(1, -1).map((c) => c.trim());
-        d.innerHTML = `<div style="font:700 18px 'Segoe UI';margin-bottom:8px">Hekatan Struct contra ${celdas(F[0]).slice(2).join(" y ")} · 277 posiciones · mismo modelo nudo a nudo</div><table style="border-collapse:collapse">` +
+        d.innerHTML = `<div style="font:700 18px 'Segoe UI';margin-bottom:8px">Hekatan Struct contra ${celdas(F[0]).slice(2).join(" y ")} · todas las posiciones · mismo modelo nudo a nudo</div><table style="border-collapse:collapse">` +
           F.map((l, i) => `<tr>${celdas(l).map((c) => `<${i === 0 ? "th" : "td"} style="padding:3px 12px;border-bottom:1px solid #2a3a4a;text-align:${i ? "right" : "left"}">${c}</${i === 0 ? "th" : "td"}>`).join("")}</tr>`).join("") + `</table>`;
         document.body.appendChild(d);
       }, filas.slice(0, 7));

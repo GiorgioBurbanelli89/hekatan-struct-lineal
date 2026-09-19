@@ -51,6 +51,8 @@ export interface DatosCargaMovil {
   encuadrar?: boolean;
   /** exportadores (botones de la ventana) */
   exportar?: Array<{ etiqueta: string; accion: () => void }>;
+  /** avisos que se ven SIEMPRE (no plegados), en naranja */
+  avisos?: string[];
   /** textos extra para la ventana (fuente de la carga, avisos) */
   notas?: string[];
 }
@@ -137,6 +139,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       <span><span data-plegar title="${t("Plegar / desplegar", "Fold / unfold")}" style="cursor:pointer;margin-right:12px">▁</span><span id="hkcm-x" style="cursor:pointer" title="${t("Cerrar", "Close")}">✕</span></span></div>
     <div>
       <div id="hkcm-tit" style="color:#9fc3e6;margin:4px 0"></div>
+      <div id="hkcm-avisos" style="margin:4px 0;color:#f0a050;line-height:1.35"></div>
       <div id="hkcm-prog" style="margin:4px 0;color:#e0c070"></div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0">
         <button id="hkcm-ini" style="${btn}" title="${t("Al inicio", "To start")}">⏮</button>
@@ -352,6 +355,24 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     geoEnvF.setAttribute("position", new THREE.BufferAttribute(new Float32Array(Pf), 3));
     geoEnvF.setAttribute("color", new THREE.BufferAttribute(new Float32Array(Cf), 3));
     geoEnvF.computeBoundingSphere();
+  }
+
+  // ── la calzada a cada lado (el camión entra y sale por ella: sin esto las ruedas fuera de la
+  //    estructura se ven colgando en el aire). Solo dibujo, no es parte del modelo. ──
+  const calzada = new THREE.Group();
+  grupo.add(calzada);
+  function armarCalzada() {
+    calzada.clear();
+    if (!D) return;
+    const s = D.IL.camino.s, L = s[s.length - 1] - s[0], largo = largoVehiculo(D.vehiculo) + 4;
+    const mat = new THREE.MeshBasicMaterial({ color: 0x4a4f57 });
+    for (const [x0, x1] of [[D.x0 - largo, D.x0 - 0.3], [D.x0 + L + 0.3, D.x0 + L + largo]]) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, FONDO, 0.12), mat);
+      m.position.set((x0 + x1) / 2, 0, D.zRodadura - 0.06);
+      calzada.add(m);
+      const l = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x777d86 }));
+      m.add(l);
+    }
   }
 
   // ── el camión ──
@@ -603,10 +624,11 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       D = d; cache.clear(); i = 0; enEnvolvente = false;
       $("hkcm-tit").textContent = d.titulo;
       $("hkcm-prog").textContent = "";
+      $("hkcm-avisos").innerHTML = (d.avisos ?? []).map((a) => `<div>⚠ ${a}</div>`).join("");
       $("hkcm-notas").innerHTML = (d.notas ?? []).map((s) => `<div>${s}</div>`).join("");
       const ex = $("hkcm-exp"); ex.innerHTML = "";
       for (const b of d.exportar ?? []) { const bb = document.createElement("button"); bb.textContent = b.etiqueta; bb.style.cssText = btn; bb.onclick = b.accion; ex.appendChild(bb); }
-      prepararCuerpo(); escalas(); armarCamion(); textoEnvolvente();
+      prepararCuerpo(); escalas(); armarCamion(); armarCalzada(); textoEnvolvente();
       if (d.encuadrar) encuadrar();
       dibujar();
     },
