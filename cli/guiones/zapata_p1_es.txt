@@ -1,0 +1,8 @@
+Cimentación no lineal: la zapata que se levanta. Parte uno: qué es y por qué.
+Un resorte normal es una recta: el doble de fuerza, el doble de desplazamiento.
+El suelo es distinto: empuja cuando lo aprietas, pero si la zapata sube, no tira. Ahí está el codo en cero.
+Con la columna centrada, todos los resortes aprietan igual: presión uniforme, Q entre B por L.
+Si la carga se corre una distancia e, la presión es Q entre B por L, por uno más o menos seis e sobre B. Braja Das, página doscientos treinta y seis.
+Con e igual a B sextos, el borde llega a cero. Pasado ese punto, la recta pide tracción, y el suelo no tira.
+Entonces el borde se levanta: la presión es un triángulo de largo tres por B medios menos e, y su máximo es cuatro Q entre tres L por B menos dos e.
+Por eso el ordenador itera: resuelve, apaga los resortes que tiran y vuelve a resolver. En el ejemplo seis punto diez de Das: novecientos sesenta y uno, ochocientos cincuenta y uno, ochocientos dos, setecientos noventa y ocho resortes.

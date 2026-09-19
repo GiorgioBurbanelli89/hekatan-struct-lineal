@@ -1,0 +1,8 @@
+Nonlinear foundation: the footing that lifts off. Part one: what it is and why.
+A normal spring is a straight line: twice the force, twice the displacement.
+Soil is different: it pushes when compressed, but if the footing rises, it does not pull. That is the kink at zero.
+With a centred column, all springs press equally: uniform pressure, Q over B times L.
+If the load moves a distance e, the pressure is Q over BL, times one plus or minus six e over B. Braja Das, page 236.
+At e equal to B over six, the edge reaches zero. Beyond that, the straight line asks for tension, and soil does not pull.
+So the edge lifts: the pressure is a triangle of length three times B over two minus e, with maximum four Q over three L times B minus two e.
+That is why the computer iterates: solve, switch off the springs in tension, solve again. In Das example 6.10: 961, 851, 802, 798 springs.

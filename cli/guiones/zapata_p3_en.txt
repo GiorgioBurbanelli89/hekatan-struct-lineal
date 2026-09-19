@@ -1,0 +1,5 @@
+Part three: does it match commercial software? The same mesh, 961 nodes, in five programs.
+SAP2000, the judge: 81.914. Hekatan, SAFE, ETABS and OpenSees: 81.915.
+All five lift the same edge: 798 nodes in contact.
+Das's rigid footing gives 82.2: the real plate bends and spreads the load a little better.
+And the linear analysis gives 6.4 percent less: on the unsafe side. Nonlinear means the soil cannot pull.

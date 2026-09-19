@@ -1,0 +1,6 @@
+Part two: the same footing in Hekatan Struct. Das example 6.10: 1.5 by 1.5 metres, 606 kilonewtons.
+The analytical model: a plate mesh at mid-plane and a soil spring at every node.
+Springs in tension are switched off: that corner lifts and does not press the soil.
+Maximum pressure: 81.9 tonnes per square metre, at the loaded corner.
+If we turn off "tensionless soil", the linear analysis gives 76.7: 6.4 percent less.
+In the Design menu, the footing report: Das, pressure, contact and validation. And on every step, "Explain".

@@ -1,0 +1,6 @@
+Parte dos: la misma zapata en Hekatan Struct. El ejemplo seis punto diez de Das: uno y medio por uno y medio metros, seiscientos seis kilonewtons.
+El modelo analítico: una malla de placas en el plano medio y un resorte de suelo en cada nudo.
+Los resortes que tiran se apagan: esa esquina se levanta y no aprieta el suelo.
+La presión máxima: ochenta y uno coma nueve toneladas por metro cuadrado, en la esquina cargada.
+Si apagamos «suelo sin tracción», el cálculo lineal da setenta y seis coma siete: seis coma cuatro por ciento menos.
+En el menú Diseño, el informe de la zapata: Das, presión, contacto y validación. Y en cada paso, «Explícame».

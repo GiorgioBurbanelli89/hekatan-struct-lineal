@@ -1,0 +1,5 @@
+Parte tres: ¿coincide con los programas comerciales? La misma malla, novecientos sesenta y un nudos, en cinco programas.
+SAP2000, el juez: ochenta y uno coma novecientos catorce. Hekatan, SAFE, ETABS y OpenSees: ochenta y uno coma novecientos quince.
+Los cinco levantan el mismo borde: setecientos noventa y ocho nudos apoyados.
+La zapata rígida de Das da ochenta y dos coma dos: la placa real se flexa y reparte un poco mejor.
+Y el lineal da seis coma cuatro por ciento menos: del lado inseguro. No lineal significa que el suelo no puede tirar.

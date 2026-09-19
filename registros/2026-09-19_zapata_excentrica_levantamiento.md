@@ -164,3 +164,8 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
   solver en Das 6.10 (961 → 851 → 802 → 798; 76.67 → 81.91), puntos de los 5 programas y del barrido.
 - Renderizada en la web publicada (PNG `hoja49_render.png`), 0 errores. Abierta a Jorge por #h=
   (URL en `url_hoja49.txt`). ⏳ versión EN. ⏳ #ej=49 depende de que la web publique ejemplos/.
+- ⏳ Gráficas más pequeñas en las hojas 48/49: el motor NO tiene parámetro de tamaño (el svg de PlotSvg,
+  LispConverter.cs:2025, lleva solo viewBox + max-width:100%) ni directiva «lado a lado». Pedido a la 42
+  (dueña del motor): ancho por defecto ~540 px, `ancho=`, `#fila`. No toco el motor.
+- ⏳ VÍDEO (3 partes): guiones ES/EN escritos (`cli/guiones/zapata_p1..3_{es,en}.txt`). No grabado:
+  532 MB de RAM libre (regla: ≥ 2.5 GB) y SAP2000 abierto por otra sesión.
