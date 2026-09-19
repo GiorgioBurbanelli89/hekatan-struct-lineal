@@ -656,7 +656,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
 
     // Tooltip — suprimir si el "tooltip grande" del shell results está activo
     // (evita doble tooltip cuando el cursor está sobre un shell con results activos)
-    const shellTooltipActive = (window as any).__hekatanShellTooltipVisible === true;
+    const shellTooltipActive = (window as any).__hekatanShellTooltipVisible === true || (window as any).__hekatanDisenoHover === true;
     if (shellTooltipActive) {
       tooltip.style.display = "none";
       ctx.render();

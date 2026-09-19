@@ -270,7 +270,90 @@ export function montarPanelFranjas() {
   };
   const grupo = new THREE.Group(); grupo.name = "hk-franjas";
 
-  const limpiar = () => { grupo.clear(); quitarLeyendaAs(); viewerCtx()?.render?.(); };
+  // ── HOVER como SAFE: el valor bajo el cursor (Jorge, 19-sep-2026). SAFE enseña en el punto el
+  // campo que se está dibujando; aquí van los CUATRO (arriba/abajo × dir 1/dir 2) con su armado,
+  // resaltando el que está en pantalla. FE: interpolación lineal en los dos triángulos con que se
+  // pinta cada elemento (lo mismo que se ve). Franjas: la estación más cercana de la franja.
+  const tipHover = document.createElement("div");
+  tipHover.id = "hkf-hover";
+  tipHover.style.cssText = "position:fixed;z-index:960;pointer-events:none;display:none;background:rgba(15,18,24,.95);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:5px;font:12px/1.35 sans-serif;padding:6px 8px;white-space:nowrap";
+  document.body.appendChild(tipHover);
+  const bary = (p: number[], a: number[], b: number[], c: number[]) => {
+    const d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(d) < 1e-14) return null;
+    const l1 = ((b[1] - c[1]) * (p[0] - c[0]) + (c[0] - b[0]) * (p[1] - c[1])) / d;
+    const l2 = ((c[1] - a[1]) * (p[0] - c[0]) + (a[0] - c[0]) * (p[1] - c[1])) / d;
+    const l3 = 1 - l1 - l2, e = -1e-9;
+    return l1 >= e && l2 >= e && l3 >= e ? [l1, l2, l3] : null;
+  };
+  const valorFE = (x: number, y: number) => {
+    for (const e of fe) for (const t of [[0, 1, 2], [0, 2, 3]]) {
+      const w = bary([x, y], e.xy[t[0]], e.xy[t[1]], e.xy[t[2]]); if (!w) continue;
+      const q = (cara: string, dir: number) => t.reduce((sum, n, k) => sum + w[k] * feVal(e.v[n], cara, dir), 0);
+      return { t1: q("top", 1), b1: q("bot", 1), t2: q("top", 2), b2: q("bot", 2) };
+    }
+    return null;
+  };
+  const valorFranjas = (x: number, y: number) => {
+    const out: string[] = [];
+    for (const r of res) {
+      const f = r.strip, [ax, ay] = f.start, [bx, by] = f.end, L = Math.hypot(bx - ax, by - ay);
+      const tx = (bx - ax) / L, ty = (by - ay) / L, sLoc = (x - ax) * tx + (y - ay) * ty, wLoc = -(x - ax) * ty + (y - ay) * tx;
+      if (sLoc < 0 || sLoc > L || wLoc > f.wStartLeft || wLoc < -f.wStartRight || !r.est.length) continue;
+      const e = r.est.reduce((m, z) => (Math.abs(z.station - sLoc) < Math.abs(m.station - sLoc) ? z : m), r.est[0]);
+      const db = +$("hkf-db").value, tip = tipico(), an = e.width || (f.wStartLeft + f.wStartRight);
+      out.push(`<b>Franja ${f.name}</b> (capa ${f.layer}), estación ${sLoc.toFixed(2)} m, ancho ${an.toFixed(2)} m`,
+        `&nbsp;arriba: ${(e.AsTop * 1e4).toFixed(2)} cm² → ${armado(e.AsTop, an, db, tip).texto}`,
+        `&nbsp;abajo: ${(e.AsBot * 1e4).toFixed(2)} cm² → ${armado(e.AsBot, an, db, tip).texto}`);
+    }
+    return out.length ? out.join("<br>") : null;
+  };
+  let hoverPend = false;
+  const alMover = (ev: PointerEvent) => {
+    const activo = pan.style.display !== "none" && !!(esFE() ? fe.length : res.length);
+    W.__hekatanDisenoHover = activo;   // apaga el recuadro de resultados del visor mientras tanto
+    if (!activo) { tipHover.style.display = "none"; return; }
+    if (hoverPend) return;
+    hoverPend = true;
+    requestAnimationFrame(() => {
+      hoverPend = false;
+      const ctx = viewerCtx(), cv = ev.target as HTMLCanvasElement; if (!ctx?.camera) return;
+      const r = cv.getBoundingClientRect();
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), ctx.camera);
+      const P = new THREE.Vector3();
+      if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.02), P)) { tipHover.style.display = "none"; return; }
+      let html: string | null = null;
+      if (esFE()) {
+        const v = valorFE(P.x, P.y);
+        if (v) {
+          const db = +$("hkf-db").value, tip = tipico(), cara = $("hkf-cara").value, dir = $("hkf-verCapa").value === "B" ? 2 : 1;
+          const fila = (nom: string, q: number, c: string, d: number) => {
+            const on = c === cara && d === dir;
+            return `<div style="${on ? "color:#ffd166;font-weight:bold" : ""}">${nom}: ${(q * 1e4).toFixed(2)} cm²/m → ${armado(q, 1.0, db, tip).texto} por metro</div>`;
+          };
+          html = `<div style="color:#9cc">x = ${P.x.toFixed(2)} m, y = ${P.y.toFixed(2)} m</div>` +
+            fila("X arriba", v.t1, "top", 1) + fila("X abajo", v.b1, "bot", 1) + fila("Y arriba", v.t2, "top", 2) + fila("Y abajo", v.b2, "bot", 2);
+        }
+      } else html = valorFranjas(P.x, P.y);
+      if (!html) { tipHover.style.display = "none"; return; }
+      tipHover.innerHTML = html; tipHover.style.display = "block";
+      const w = tipHover.offsetWidth, h = tipHover.offsetHeight;
+      tipHover.style.left = Math.min(ev.clientX + 16, innerWidth - w - 8) + "px";
+      tipHover.style.top = Math.min(ev.clientY + 16, innerHeight - h - 8) + "px";
+    });
+  };
+  const engancharHover = () => {
+    const ctx = viewerCtx(); if (!ctx) return setTimeout(engancharHover, 800);
+    const host = [...document.querySelectorAll("div")].find(el => (el as any).__ctx?.scene);
+    const cv = host?.querySelector("canvas");
+    if (!cv) return setTimeout(engancharHover, 800);
+    cv.addEventListener("pointermove", alMover as any);
+    cv.addEventListener("pointerleave", () => (tipHover.style.display = "none"));
+  };
+  engancharHover();
+
+  const limpiar = () => { grupo.clear(); quitarLeyendaAs(); tipHover.style.display = "none"; W.__hekatanDisenoHover = false; viewerCtx()?.render?.(); };
   // El diseño va SIEMPRE con una combinación (1.2D+1.6L…), no con un caso suelto (Jorge, 19-sep-2026).
   // Por defecto la que se llame «diseño/última/U…»; si no, la de mayor Σ|factor| (la que más carga).
   const combos = (): any[] => W.__hekatanStates?.loadCombinations?.val ?? [];
