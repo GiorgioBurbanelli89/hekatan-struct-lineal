@@ -1,6 +1,7 @@
 {
  "grupos": [
   {
+   "id": "warren",
    "titulo": "Cercha Warren, de principio a fin",
    "sub": "Todo con el mouse, desde la cinta",
    "items": [
@@ -85,8 +86,14 @@
      "titulo": "Guardar y Guardar como",
      "video": "warren_11.mp4",
      "poster": "warren_11.jpg",
-     "seg": 27,
+     "seg": 25,
      "texto": "Y para guardar: con la flecha de la cinta se busca Guardar punto heks, se marca y queda como acceso rápido; un clic y se descarga. Y Guardar como, arriba, pide el nombre: cercha Warren punto heks; desde entonces Guardar lo reescribe. Es el formato de texto de Hekatan Struct: nudos, barras, apoyos y cargas en líneas que se leen; sirve para guardar el modelo y compartirlo en un grupo. Siguen la Howe y la Pratt."
+    }
+   ],
+   "modelos": [
+    {
+     "titulo": "Abrir este modelo en Hekatan Struct",
+     "heks": "warren.heks"
     }
    ],
    "hojas": [
@@ -101,6 +108,344 @@
     {
      "titulo": "Deformada de una barra: funciones de Hermite",
      "ej": "15 Deformada de un frame - funciones de Hermite.lisp"
+    }
+   ]
+  },
+  {
+   "id": "cupula",
+   "titulo": "Cúpula y piel del Allianz Arena",
+   "sub": "Superficies curvas: Revolución y Barrido en alzado",
+   "items": [
+    {
+     "titulo": "Introducción",
+     "video": "cupula_00.mp4",
+     "poster": "cupula_00.jpg",
+     "seg": 16,
+     "texto": "Vamos a dibujar dos superficies curvas en Hekatan Struct, desde el menú y con el cursor: una cúpula y la cáscara del Allianz Arena. Las dos se construyen sobre líneas auxiliares, que son la guía y se borran solas al terminar, y las dos se comprobaron contra ETABS nudo a nudo."
+    },
+    {
+     "titulo": "Alzado XZ y rejilla",
+     "video": "cupula_01.mp4",
+     "poster": "cupula_01.jpg",
+     "seg": 17,
+     "texto": "Archivo nuevo. Pulso Plano X Z, que es un alzado real, ortográfico. En Precisión enciendo el grid snap, para que cada clic caiga exacto en la rejilla, pongo ocho tramos por arco y marco Curvas como guía auxiliar: lo que dibuje ahora será construcción, no estructura."
+    },
+    {
+     "titulo": "El meridiano: Arco por 3 puntos",
+     "video": "cupula_02.mp4",
+     "poster": "cupula_02.jpg",
+     "seg": 26,
+     "texto": "El meridiano de la cúpula: pulso Arco por tres puntos y hago tres clics: el arranque en cinco cero, el punto medio en tres cuatro, y la cumbre en cero cinco, sobre el eje. Junto al cursor van las coordenadas del punto enganchado; con Línea o Polilínea, además la longitud y el ángulo del tramo, como en AutoCAD. Sale el arco en cian, en ocho tramos. Y con Medir, dos clics del centro al arranque: cinco metros, el radio."
+    },
+    {
+     "titulo": "Seleccionar con ventana",
+     "video": "cupula_03.mp4",
+     "poster": "cupula_03.jpg",
+     "seg": 12,
+     "texto": "Ahora lo selecciono con una ventana: pulso Seleccionar, un clic en una esquina, muevo el cursor y otro clic en la esquina opuesta, como en AutoCAD. Las ocho líneas auxiliares quedan seleccionadas."
+    },
+    {
+     "titulo": "Revolución: 16 sectores",
+     "video": "cupula_04.mp4",
+     "poster": "cupula_04.jpg",
+     "seg": 14,
+     "texto": "En Áreas pongo dieciséis sectores y pulso Revolución de la selección. Un solo clic sobre el eje vertical, y el meridiano gira: cada punto de la guía se convierte en un anillo de dieciséis nudos, salen los paños entre anillos y la guía se borra sola."
+    },
+    {
+     "titulo": "La cúpula en isométrica",
+     "video": "cupula_05.mp4",
+     "poster": "cupula_05.jpg",
+     "seg": 24,
+     "texto": "Vista isométrica. Ciento veinte paños y ciento veintinueve nudos, todos sobre la esfera de radio cinco, y ni una barra suelta. Miren el polo desde arriba: el nudo del eje no puede dar cuadriláteros, así que el casquete se cierra con cometas, paños de cuatro nudos convexos, sin triángulos colapsados. Contra ETABS, la flecha da cero coma cero cuarenta milímetros en los dos programas."
+    },
+    {
+     "titulo": "Allianz: la planta redondeada",
+     "video": "cupula_06.mp4",
+     "poster": "cupula_06.jpg",
+     "seg": 20,
+     "texto": "Ahora el Allianz, a escala uno a diez. Limpio todo y paso a planta. Cuatro tramos por esquina, chaflán de cinco metros, sigo en guía auxiliar, y Losa con chaflanes: dos clics en las esquinas, menos trece menos doce y trece doce, y sale el contorno de veintiséis por veinticuatro con las esquinas redondeadas, en cian."
+    },
+    {
+     "titulo": "La panza: Parábola por 3 puntos",
+     "video": "cupula_07.mp4",
+     "poster": "cupula_07.jpg",
+     "seg": 23,
+     "texto": "Vuelvo al alzado y dibujo la panza con Parábola por tres puntos: en el pie dieciséis cero, a media altura sale un metro, diecisiete dos, y arriba vuelve a dieciséis cuatro. Doce tramos en altura. La dibujo aparte del contorno, porque en el alzado todos sus vértices caen en el mismo píxel y el enganche cogería uno cualquiera. Con Medir compruebo la panza: un metro justo."
+    },
+    {
+     "titulo": "Barrido en alzado",
+     "video": "cupula_08.mp4",
+     "poster": "cupula_08.jpg",
+     "seg": 20,
+     "texto": "Una sola ventana selecciona el contorno y el perfil, cincuenta y dos líneas auxiliares. Pulso Barrido en alzado y hago un clic en el centro de la planta: a cada altura del perfil, el contorno se desplaza hacia afuera lo que diga la panza, salen los paños entre anillos y las guías se borran. Cuatrocientos ochenta paños y quinientos veinte nudos."
+    },
+    {
+     "titulo": "La piel terminada",
+     "video": "cupula_09.mp4",
+     "poster": "cupula_09.jpg",
+     "seg": 19,
+     "texto": "En isométrica se ve la piel del Allianz, limpia: la planta redondeada y la panza en altura, sin ninguna línea de construcción. Contra ETABS la flecha da uno coma sesenta y tres milímetros en los dos programas, con el peor nudo al cero coma cero once por ciento. La revolución es el mismo barrido con un contorno circular."
+    }
+   ],
+   "modelos": [
+    {
+     "titulo": "Abrir este modelo en Hekatan Struct",
+     "heks": "cupula.heks"
+    },
+    {
+     "titulo": "Abrir la piel del Allianz",
+     "heks": "allianz.heks"
+    }
+   ],
+   "hojas": [
+    {
+     "titulo": "El Jacobiano: del cuadrado natural al elemento real",
+     "ej": "27 El Jacobiano - del cuadrado natural al elemento real.lisp"
+    }
+   ]
+  },
+  {
+   "id": "capilla",
+   "titulo": "Replicar una estructura real barra por barra",
+   "sub": "La capilla del modelo de ETABS, por planos de trabajo",
+   "items": [
+    {
+     "titulo": "Introducción",
+     "video": "capilla_00.mp4",
+     "poster": "capilla_00.jpg",
+     "seg": 10,
+     "texto": "Vamos a replicar la capilla real, la del modelo de ETABS, barra por barra y nudo por nudo, solo con el cursor y el menú de dibujo, y voy a decir cada cosa que hago."
+    },
+    {
+     "titulo": "Preparar el lienzo",
+     "video": "capilla_01.mp4",
+     "poster": "capilla_01.jpg",
+     "seg": 18,
+     "texto": "Preparo el lienzo: lo dejo vacío, apago la rejilla porque las cotas reales no son redondas, apago el modo orto, apago el enganche a ejes auxiliares y el rastreo polar para que el cursor no se pegue a un eje al marcar un nudo, y cierro los dos paneles laterales con sus puertas corredizas para dibujar con todo el lienzo."
+    },
+    {
+     "titulo": "Primer eje: plano de trabajo en el alzado",
+     "video": "capilla_02.mp4",
+     "poster": "capilla_02.jpg",
+     "seg": 23,
+     "texto": "Primer eje, Y igual a ocho setenta y cuatro. Pongo el plano de trabajo en el alzado frontal de ese eje y con la herramienta Línea dibujo cada barra del modelo entre sus dos nudos: las dos columnas, los tres tramos rectos del arco, que ya es así en ETABS porque ETABS no admite curvas, el cabio, la viga de cumbrera y los cinco tramos del arco del ala hasta el suelo."
+    },
+    {
+     "titulo": "Los otros ejes",
+     "video": "capilla_03.mp4",
+     "poster": "capilla_03.jpg",
+     "seg": 27,
+     "texto": "Hago lo mismo en los otros ejes: cambio el plano de trabajo al alzado de cada eje, acerco la cámara, y dibujo sus barras con Línea, nudo a nudo. En los ejes doce veinticuatro y dieciséis cincuenta y cuatro van además los arcos de contrafuerte hasta el suelo, y la viga del entrepiso aparece solo en algunos ejes. Cuando un clic no cae a menos de tres centímetros del nudo, deshago con control zeta y lo repito con la cámara más cerca."
+    },
+    {
+     "titulo": "Planos laterales: vigas longitudinales",
+     "video": "capilla_04.mp4",
+     "poster": "capilla_04.jpg",
+     "seg": 13,
+     "texto": "Ahora los planos laterales: ahí van las vigas longitudinales que cruzan los ejes, otra vez con Línea entre sus nudos. Son cincuenta y siete barras: las correas de la nave, las del ala y las de los contrafuertes."
+    },
+    {
+     "titulo": "Diagonales del entrepiso con OSNAP",
+     "video": "capilla_05.mp4",
+     "poster": "capilla_05.jpg",
+     "seg": 16,
+     "texto": "Por último las diagonales del entrepiso, enganchando con osnap a nudos que ya están dibujados. Y una nota: ese entrepiso, colgado arriba junto a la cumbrera, es un error del modelo de ETABS que el IFC delata; aquí lo replico igual para comparar, y luego lo bajamos."
+    },
+    {
+     "titulo": "La capilla replicada en 3D",
+     "video": "capilla_06.mp4",
+     "poster": "capilla_06.jpg",
+     "seg": 9,
+     "texto": "Vuelvo el plano de trabajo a la planta, y ésta es la capilla del EDB replicada: arrastro con el ratón por la parte baja del lienzo y giramos para verla completa."
+    }
+   ]
+  },
+  {
+   "id": "ifc",
+   "titulo": "Dibujar la estructura sobre un IFC",
+   "sub": "El IFC de fondo, como un plano de referencia",
+   "items": [
+    {
+     "titulo": "Introducción",
+     "video": "ifc_00.mp4",
+     "poster": "ifc_00.jpg",
+     "seg": 12,
+     "texto": "Vamos a dibujar la estructura sobre el IFC, como se hace en Revit con un plano de fondo: el IFC es la referencia, y los arcos se dibujan con la herramienta Arco, discretizados, no barra por barra."
+    },
+    {
+     "titulo": "Importar el IFC de referencia",
+     "video": "ifc_01.mp4",
+     "poster": "ifc_01.jpg",
+     "seg": 10,
+     "texto": "Abro un archivo nuevo, pliego la cinta con el cursor y en el panel de la derecha pulso Importar IFC: elijo el archivo de la iglesia y queda de fondo, tenue, como referencia."
+    },
+    {
+     "titulo": "Corte en elevación",
+     "video": "ifc_02.mp4",
+     "poster": "ifc_02.jpg",
+     "seg": 24,
+     "texto": "Ahora el corte en elevación: en el panel de la izquierda abro Cortes, escribo la posición equis dieciséis y medio, que es un pórtico limpio sin la torre, y marco Cortar equis. Cierro el panel y pulso Plano Y Z, elevación lateral: es una vista de alzado real, ortográfica, no una perspectiva. Acerco con la rueda del ratón y aparece en naranja el perfil de la sección: ahí es donde la mirilla va a enganchar."
+    },
+    {
+     "titulo": "Tramos del arco en Precisión",
+     "video": "ifc_03.mp4",
+     "poster": "ifc_03.jpg",
+     "seg": 14,
+     "texto": "Antes de dibujar, en Precisión pongo seis tramos y el reparto del arco en Y igual: así está partido el arco en el modelo de ETABS, a saltos iguales, y así divide Dynamo. ETABS no admite curvas, por eso el arco sale como tramos rectos."
+    },
+    {
+     "titulo": "Arco de la nave: 3 clics",
+     "video": "ifc_04.mp4",
+     "poster": "ifc_04.jpg",
+     "seg": 20,
+     "texto": "Arco de la nave: pulso Arco y hago tres clics sobre la cara interior del perfil naranja, que es la cara donde conectan las otras barras: el arranque sobre la columna, un punto a media subida y la cumbre. Fíjense en la etiqueta: Sección IFC, el punto cae exactamente en el plano del corte. El arco sale discretizado en seis tramos."
+    },
+    {
+     "titulo": "Arco del ala",
+     "video": "ifc_05.mp4",
+     "poster": "ifc_05.jpg",
+     "seg": 12,
+     "texto": "Arco del ala: cinco tramos, y otros tres clics, desde la cumbre, por la mitad de la bajada, hasta el suelo. Ya están los dos arcos del pórtico, sacados del IFC y no del modelo de ETABS."
+    },
+    {
+     "titulo": "El entrepiso",
+     "video": "ifc_06.mp4",
+     "poster": "ifc_06.jpg",
+     "seg": 19,
+     "texto": "Y el entrepiso, que en el EDB estaba colgado arriba junto a la cumbrera: corto en Y ciento veinticuatro, pulso Plano X Z, elevación frontal, otro alzado real, acerco con la rueda, y con Línea uno los dos bordes del canto del entrepiso en el perfil. Queda a su cota real, unos cinco metros, la que dice el IFC."
+    },
+    {
+     "titulo": "Resultado en isométrica",
+     "video": "ifc_07.mp4",
+     "poster": "ifc_07.jpg",
+     "seg": 10,
+     "texto": "Quito el corte, vuelvo a la vista isométrica y giro con el ratón: los dos arcos y el entrepiso dibujados sobre la iglesia. Con esto ya podemos seguir con la segunda parte."
+    }
+   ]
+  },
+  {
+   "id": "visor",
+   "titulo": "Visor de archivos IFC",
+   "sub": "Ver, ocultar, medir y cortar el modelo",
+   "items": [
+    {
+     "titulo": "El visor IFC",
+     "video": "visor_00.mp4",
+     "poster": "visor_00.jpg",
+     "seg": 4,
+     "texto": "El visor de archivos IFC en Hekatan Struct."
+    },
+    {
+     "titulo": "Importar y ver en 3D",
+     "video": "visor_01.mp4",
+     "poster": "visor_01.jpg",
+     "seg": 5,
+     "texto": "Importamos el IFC y vemos el modelo completo en tres dimensiones."
+    },
+    {
+     "titulo": "Ocultar o aislar objetos",
+     "video": "visor_02.mp4",
+     "poster": "visor_02.jpg",
+     "seg": 5,
+     "texto": "El panel lista los objetos del modelo: podemos ocultar o aislar cada uno."
+    },
+    {
+     "titulo": "Panel corredizo",
+     "video": "visor_03.mp4",
+     "poster": "visor_03.jpg",
+     "seg": 6,
+     "texto": "El panel también es corredizo: se minimiza o se esconde del todo, para no tapar los otros menús."
+    },
+    {
+     "titulo": "Medir sobre el modelo",
+     "video": "visor_04.mp4",
+     "poster": "visor_04.jpg",
+     "seg": 4,
+     "texto": "La regla mide sobre el modelo y engancha a las esquinas."
+    },
+    {
+     "titulo": "Cortes X, Y, Z",
+     "video": "visor_05.mp4",
+     "poster": "visor_05.jpg",
+     "seg": 12,
+     "texto": "Para cortar uso el panel Cortes equis, ye, zeta. Primero elijo la altura arrastrando con el ratón el slider pos zeta; luego, con el ratón, marco la casilla Cortar zeta, y eso activa el corte."
+    },
+    {
+     "titulo": "El edificio abierto",
+     "video": "visor_06.mp4",
+     "poster": "visor_06.jpg",
+     "seg": 7,
+     "texto": "El edificio se abre justo a esa altura; arrastrando con el ratón giro el modelo para ver los niveles por dentro."
+    }
+   ]
+  },
+  {
+   "id": "novedades",
+   "titulo": "Áreas, regla y paneles corredizos",
+   "sub": "Lo básico del lienzo CAD",
+   "items": [
+    {
+     "titulo": "Novedades",
+     "video": "novedades_00.mp4",
+     "poster": "novedades_00.jpg",
+     "seg": 3,
+     "texto": "Estas son las novedades de Hekatan Struct."
+    },
+    {
+     "titulo": "Rectángulo: tres celdas",
+     "video": "novedades_01.mp4",
+     "poster": "novedades_01.jpg",
+     "seg": 8,
+     "texto": "Con el cursor y la herramienta Rectángulo dibujo tres celdas cerradas; fíjate que el menú de dibujo, opaco, tapa parte de la escena."
+    },
+    {
+     "titulo": "Plegar el menú de dibujo",
+     "video": "novedades_02.mp4",
+     "poster": "novedades_02.jpg",
+     "seg": 6,
+     "texto": "Con este botón plego el menú de dibujo, y ahora se ve toda la geometría; también es corredizo."
+    },
+    {
+     "titulo": "Rellenar área con un clic",
+     "video": "novedades_03.mp4",
+     "poster": "novedades_03.jpg",
+     "seg": 7,
+     "texto": "Con la herramienta rellenar área, al pasar el ratón la celda se resalta, y al hacer clic se crea el área."
+    },
+    {
+     "titulo": "Llenar todas las celdas",
+     "video": "novedades_04.mp4",
+     "poster": "novedades_04.jpg",
+     "seg": 4,
+     "texto": "Un solo botón llena de golpe todas las celdas cerradas."
+    },
+    {
+     "titulo": "La regla mide y acota",
+     "video": "novedades_05.mp4",
+     "poster": "novedades_05.jpg",
+     "seg": 6,
+     "texto": "La regla mide y acota; engancha a las esquinas, por eso marca seis metros exactos."
+    },
+    {
+     "titulo": "Ocultar el panel derecho",
+     "video": "novedades_06.mp4",
+     "poster": "novedades_06.jpg",
+     "seg": 5,
+     "texto": "Todos los menús son corredizos: esta puerta oculta y muestra el panel de la derecha."
+    },
+    {
+     "titulo": "Ocultar el panel de ajustes",
+     "video": "novedades_07.mp4",
+     "poster": "novedades_07.jpg",
+     "seg": 6,
+     "texto": "Y esta otra desliza el panel de ajustes de la izquierda, para dejar toda la vista libre."
+    },
+    {
+     "titulo": "Volver al menú principal",
+     "video": "novedades_08.mp4",
+     "poster": "novedades_08.jpg",
+     "seg": 3,
+     "texto": "Y con este botón volvemos al menú principal."
     }
    ]
   }
