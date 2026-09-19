@@ -1,0 +1,25 @@
+// El botón «🎬 Tutorial» de la barra de arriba: abre el panel, lista los clips, reproduce, Siguiente, enlaces a LISP web, Esc cierra
+import puppeteer from "puppeteer";
+const URL0 = process.argv[2] || "http://localhost:4600/workspace/?t=new-blank";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--autoplay-policy=no-user-gesture-required"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });
+const errores = []; pag.on("pageerror", (e) => errores.push(String(e).slice(0, 200)));
+await pag.goto(URL0, { waitUntil: "networkidle2", timeout: 120000 }); await pag.waitForSelector("#hk-cad-tutorial", { timeout: 60000 }); await new Promise((r) => setTimeout(r, 2500));
+const w = (ms) => new Promise((r) => setTimeout(r, ms));
+let ok = 0, n = 0; const t = (que, c, det = "") => { n++; if (c) ok++; console.log((c ? "✓" : "x"), que, det); };
+const b = await pag.evaluate(() => { const b = document.getElementById("hk-cad-tutorial"); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, txt: b.textContent, enc: document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b }; });
+t("botón en la barra de arriba", !!b && b.enc, JSON.stringify(b));
+await pag.mouse.click(b.x, b.y); await w(1500);
+const st = await pag.evaluate(() => ({ items: document.querySelectorAll("#hk-tut .it").length, hojas: [...document.querySelectorAll("#hk-tut .hojas a")].map((a) => a.href.slice(0, 90)), src: document.querySelector("#hk-tut video")?.src }));
+t("panel con 12 clips", st.items === 12, st.items + " clips"); t("enlaces a Hekatan LISP web (pública)", st.hojas.length === 3 && st.hojas.every((h) => h.startsWith("https://giorgioburbanelli89.github.io/hekatan-lisp/#ej=")), st.hojas[0]);
+const it = await pag.evaluate(() => { const r = document.querySelectorAll("#hk-tut .it")[2].getBoundingClientRect(); return { x: r.left + 40, y: r.top + 20 }; });
+await pag.mouse.click(it.x, it.y); await w(3000);
+const v = await pag.evaluate(() => { const v = document.querySelector("#hk-tut video"); return { src: v.src.split("/").pop(), t: v.currentTime, dur: v.duration, w: v.videoWidth, err: v.error?.code ?? null, txt: document.querySelector("#hk-tut .pie p").textContent.slice(0, 60) }; });
+t("el clip 3 se reproduce", v.src === "warren_02.mp4" && v.t > 0.5 && v.w === 1280, JSON.stringify(v));
+await pag.screenshot({ path: "cli/shots/_tutorial_panel.png" });
+await pag.evaluate(() => document.getElementById("hk-tut-sig").click()); await w(800);
+t("Siguiente ▶", (await pag.evaluate(() => document.querySelector("#hk-tut video").src.split("/").pop())) === "warren_03.mp4");
+await pag.keyboard.press("Escape"); await w(400);
+t("Esc cierra", !(await pag.evaluate(() => !!document.getElementById("hk-tut"))));
+t("sin errores de página", errores.length === 0, errores.join(" | "));
+console.log(`${ok}/${n}`); await nav.close(); process.exit(ok === n ? 0 : 1);
