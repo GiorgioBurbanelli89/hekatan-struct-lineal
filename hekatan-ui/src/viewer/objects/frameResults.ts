@@ -44,7 +44,9 @@ export function frameResults(
     }
     const diag = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]);
     if (!isFinite(diag) || diag <= 0) return 0.05 * settings.gridSize.rawVal;
-    return 0.025 * diag;
+    // Ordenada máxima = 2·escala = 8 % de la diagonal con el slider por defecto (antes 2.5 %: el
+    // diagrama casi no se veía; Jorge 19-sep-2026 «que esté calibrada la escala»).
+    return (0.04 / Math.pow(10, -3 / 10)) * diag;
   };
 
   // init
@@ -114,6 +116,9 @@ export function frameResults(
 
       group.add(resultObject);
     });
+    // Con muchas barras los rótulos se pisan y tapan el modelo: solo el diagrama (como ETABS en 3D).
+    if (group.children.length > 60)
+      group.children.forEach((c: any) => { if (c.text) c.text.visible = false; if (c.text2) c.text2.visible = false; });
   });
 
   // on deridedDisplayScale update scale

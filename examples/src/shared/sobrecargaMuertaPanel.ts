@@ -8,6 +8,7 @@
  * Uso (cuando se autorice conectarlo, un solo `<script>` en `workspace/index.html`, igual que
  * `franjasEntry.ts`): NO se toca esa página desde este módulo.
  */
+import { ventanaFlotante } from "./menuDiseno";
 import {
   TABLA_NEC15, TABLA_NEC22_BORRADOR, tablaDe, sumarSobrecarga, lineaHeksSugerida, kNaTonf,
   type Normativa, type PesoMaterial, type ComponenteSeleccionado, type TipoComponente,
@@ -54,13 +55,14 @@ export function montarPanelSobrecarga() {
   const btn = document.createElement("button");
   btn.id = "hk-dne-btn"; btn.textContent = "🧱 Sobrecarga DNE";
   btn.title = "Asistente de sobrecarga muerta (enlucido, piso, mampostería...) con pesos de la NEC-SE-CG";
-  btn.style.cssText = "position:fixed;top:60px;right:130px;z-index:950;padding:4px 10px;background:#5a3b1f;color:#fff;border:1px solid #b0834a;border-radius:4px;font:12px sans-serif;cursor:pointer";
+  btn.style.display = "none";   // se abre desde «📋 Patrones de carga»
   document.body.appendChild(btn);
+  // se abre desde «📋 Patrones de carga» (loadPatternsPanel.ts): es carga, no diseño
 
   const pan = document.createElement("div");
   pan.id = "hk-dne";
-  pan.style.cssText = "position:fixed;top:90px;right:130px;z-index:950;width:560px;max-height:80vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #b0834a;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
-  document.body.appendChild(pan);
+  pan.style.cssText = "position:fixed;top:40px;left:310px;z-index:950;width:560px;max-height:80vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #b0834a;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
+  document.body.appendChild(pan); ventanaFlotante(pan);
   const $ = (id: string) => pan.querySelector("#" + id) as any;
 
   let normativa: Normativa = "NEC-15";
@@ -113,7 +115,7 @@ export function montarPanelSobrecarga() {
   const render = () => {
     const { disponible } = opcionesTabla();
     pan.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center"><b>Asistente de sobrecarga muerta (DNE)</b><span id="hkd-x" style="cursor:pointer">✕</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:move"><b>Asistente de sobrecarga muerta (DNE)</b><span><span data-plegar title="Plegar / desplegar (o doble clic en el título). Arrastra el título para moverla." style="cursor:pointer;margin-right:12px">▁</span><span id="hkd-x" style="cursor:pointer">✕</span></span></div>
     <div style="margin:4px 0">Normativa
       <select id="hkd-norma">
         <option value="NEC-15" ${normativa === "NEC-15" ? "selected" : ""}>NEC-15 (oficial, vigente)</option>

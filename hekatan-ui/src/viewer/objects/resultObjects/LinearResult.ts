@@ -31,8 +31,8 @@ export class LinearResult extends THREE.Group implements IResultObject {
     const twoSegments = result[0] * result[1] > 0;
 
     // text
-    this.text = new Text(`${result[0].toFixed(4)}`);
-    this.text2 = new Text(`${(result[1] * -1).toFixed(4)}`);
+    this.text = new Text(`${result[0].toFixed(2)}`);
+    this.text2 = new Text(`${(result[1] * -1).toFixed(2)}`);
 
     this.normalizedResult = normalizedResult;
     this.textPosition = get10thFromFirstPoint(node1, node2);

@@ -22,7 +22,7 @@ await dormir(20000);
 // vista en planta
 await p.evaluate(() => window.__hekatanRibbon?.vista?.(0));
 await dormir(1500);
-await p.click("#hk-franjas-btn"); await dormir(500); await cuadro("panel");
+await p.evaluate(() => document.getElementById("hk-franjas-btn").click()); await dormir(500); await cuadro("panel");
 // 1) automáticas sobre ejes
 await p.evaluate(() => window.__hekatanFranjas.generar()); await dormir(800); await cuadro("auto_franjas");
 await p.evaluate(() => window.__hekatanFranjas.calcular()); await dormir(1500); await cuadro("auto_acero_sup_A");

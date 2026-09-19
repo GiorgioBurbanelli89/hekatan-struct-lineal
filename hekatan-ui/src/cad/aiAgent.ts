@@ -142,6 +142,7 @@ const TOOLS = [
   },
 ];
 
+let plantillaEnEstaPeticion = false;
 const SYSTEM_PROMPT = `Eres el agente de Hekatan Struct, un programa de análisis estructural por elementos finitos.
 No escribes el modelo en el chat: lo CONSTRUYES llamando a las herramientas, y compruebas cada paso.
 
@@ -160,6 +161,10 @@ Cómo trabajar:
      placa base (áreas) → placa-base · zapata aislada → zapata-aislada
      zapatas con viga de amarre → zapata-viga-amarre · viga de cimentación → viga-cim-guerra-ej7
      losa de cimentación → guerra-ej8-losa-cimentacion
+     CIMENTACIÓN COMPLETA (rejilla de zapatas aisladas + vigas de amarre, varias columnas)
+       → id "plantillas" con parametros {"tipo": 8}; losa de cimentación en rejilla → {"tipo": 9}
+       (las demás claves: las que devuelva cargar_plantilla)
+   Si ya abriste una plantilla, NO uses modelar_heks: ajusta con cambiar_parametros.
    Usa SIEMPRE las claves exactas que devuelve la herramienta.
 2. Si es una estructura a medida, usa modelar_heks.
 3. Después de modelar, llama a resultados (y a analisis_modal si preguntan por periodos o sismo).
@@ -326,6 +331,7 @@ async function ejecutar(nombre: string, a: any): Promise<any> {
     }
     case "cargar_plantilla": {
       const id = String(a?.id ?? "");
+      plantillaEnEstaPeticion = true;
       if (!(W().__hekatanExamples ?? []).some((e: any) => e.id === id))
         return { error: `no existe la plantilla '${id}'. Usa listar_plantillas.` };
       historial.push(foto());
@@ -347,6 +353,10 @@ async function ejecutar(nombre: string, a: any): Promise<any> {
       };
     }
     case "modelar_heks": {
+      // Baranda para modelos pequeños: con una plantilla abierta en esta petición, un .heks «nuevo»
+      // la BORRA (qwen2.5:7b lo hacía: zapatas → 6 nudos sueltos). Se rechaza y se le dice qué usar.
+      if (plantillaEnEstaPeticion && a?.modo !== "agregar")
+        return { error: "Ya abriste una plantilla y modelar_heks la borraría. Ajusta con cambiar_parametros y luego llama resultados." };
       let script = String(a?.script ?? "").replace(/^```[a-z]*\n?/i, "").replace(/\n?```\s*$/, "");
       if (a?.modo === "agregar") {
         const ex = W().__hekatanExample?.();
@@ -563,6 +573,7 @@ async function enviar() {
   // Barandas para modelos pequeños: no dejarlo cerrar sin haber comprobado lo que modeló.
   const MODIFICAN = new Set(["cargar_plantilla", "cambiar_parametros", "modelar_heks"]);
   let modifico = false, verifico = false, empujones = 0;
+  plantillaEnEstaPeticion = false;
   try {
     for (let paso = 0; paso < MAX_PASOS; paso++) {
       const msg = await llamarModelo(p, modelo, clave, control.signal);
@@ -579,6 +590,17 @@ async function enviar() {
       if (!calls.length) {
         pensando.remove();
         burbuja("ia", (msg.content ?? "").trim() || "(sin respuesta)");
+        // Los números los pone el PROGRAMA, no el modelo: uno pequeño los inventa (qwen2.5:7b dijo
+        // «0.89 kN/m²» sin haberlos leído). Se leen y se muestran aparte, con su fuente.
+        if (modifico) {
+          try {
+            const r: any = await ejecutar("resultados", {});
+            const m = r?.mapa_de_colores, t = (kN: number) => (kN / 9.80665).toFixed(2);
+            burbuja("paso", `📊 Datos del programa (no de la IA): asentamiento máx ${Math.abs(r.uz_max_mm)} mm · `
+              + `reacciones ΣFz ${r.suma_reacciones_kN?.Fz} kN (${t(r.suma_reacciones_kN?.Fz ?? 0)} t)`
+              + (m ? ` · ${m.campo}: ${m.minimo} … ${m.maximo} kN/m² (${t(m.minimo)} … ${t(m.maximo)} t/m²)` : ""));
+          } catch { /* sin resultados que mostrar */ }
+        }
         return;
       }
       for (const c of calls) {
