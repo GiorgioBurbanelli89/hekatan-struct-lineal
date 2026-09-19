@@ -1,0 +1,3 @@
+¿Y OpenSees? Hekatan exporta el mismo modelo a OpenSeesPy: placas MITC4 y resortes que no resisten tracción. Al correrlo, OpenSees da ochenta y uno coma nueve uno cinco.
+Y dibujada con sus propios resultados, la presión tiene el mismo borde levantado.
+Mismo modelo, misma malla, en cinco programas: el mismo resultado. Y el cálculo lineal, seis coma cuatro por ciento menos, del lado inseguro.

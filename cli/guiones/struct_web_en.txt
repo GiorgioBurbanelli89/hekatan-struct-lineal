@@ -1,0 +1,7 @@
+Here is an example of how it works, in Hekatan Struct on the web: the same footing from Braja Das's example, with the column offset in both directions.
+In the Soil group there is the "tensionless soil" checkbox. When on, each soil spring works only in compression.
+In the command window, every area carries its spring: areaspring, the subgrade modulus and the word compression.
+The result: the loaded corner presses 81.9 tonnes per square metre, and the opposite edge lifts with zero pressure.
+If I switch the box off, the soil pulls: the linear analysis gives 76.7, 6.4 percent less.
+I switch it back on. In the Design menu there is the footing report, and on every step an "Explain" button.
+And the Tutor, which explains the calculation step by step: the springs, the plate and the solver passes.

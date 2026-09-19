@@ -1,0 +1,3 @@
+And OpenSees? Hekatan exports the same model to OpenSeesPy: MITC4 plates and springs that resist no tension. Running it, OpenSees gives 81.915.
+And plotted from its own results, the pressure shows the same lifted edge.
+Same model, same mesh, five programs: the same result. And the linear analysis, 6.4 percent less, on the unsafe side.

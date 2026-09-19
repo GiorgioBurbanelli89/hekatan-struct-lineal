@@ -1,0 +1,5 @@
+[
+ {"rotulo": "opensees terminal", "titulo": "OpenSeesPy: el mismo modelo, exportado por Hekatan", "png": "ops_cap_terminal.png", "caja": [30, 154, 775, 178], "nota": "OpenSees: 81.915  ·  Hekatan: 81.915 tonf/m²", "n": 40},
+ {"rotulo": "opensees presion", "titulo": "OpenSeesPy: la presión, dibujada con SUS resultados", "png": "ops_cap_figura.png", "caja": [30, 140, 780, 175], "nota": "mismo borde levantado (línea negra)", "n": 36},
+ {"rotulo": "tabla", "tabla": true, "n": 60}
+]

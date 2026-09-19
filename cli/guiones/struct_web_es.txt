@@ -1,0 +1,7 @@
+Aquí un ejemplo de cómo funciona, en Hekatan Struct, en la web: la misma zapata del ejemplo de Braja Das, con la columna corrida en las dos direcciones.
+En el grupo Suelo está la casilla «suelo sin tracción». Encendida, cada resorte del suelo solo trabaja apretando.
+En la ventana de comandos, cada área lleva su resorte: areaspring, el módulo de balasto y la palabra compresión.
+El resultado: la esquina cargada aprieta ochenta y uno coma nueve toneladas por metro cuadrado, y el borde opuesto se levanta con presión cero.
+Si apago la casilla, el suelo tira: el cálculo lineal da setenta y seis coma siete, seis coma cuatro por ciento menos.
+La vuelvo a encender. En el menú Diseño está el informe de la zapata, y en cada paso el botón «Explícame».
+Y el Tutor, que explica el cálculo paso a paso: los resortes, la placa y las vueltas del solver.
