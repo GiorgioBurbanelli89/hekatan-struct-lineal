@@ -3217,6 +3217,13 @@ function showMenu() {
         "\nOjo: el modelo queda congelado con los valores de ahora; los sliders de la plantilla ya no lo cambian.");
     });
   }
+  // El agente de IA (hekatan-ui/src/cad/aiAgent.ts) desde la PORTADA: que no haya que
+  // saber que existe el 🤖 del lienzo. Abre el lienzo en blanco y la ventana del agente.
+  fMenu.addButton({ title: "🤖 Agente IA — pídele el modelo" }).on("click", () => {
+    const ex = examplesRegistry.find((e) => e.id === "new-blank");
+    if (ex) loadExample(ex);
+    setTimeout(() => { try { (window as any).__hekatanAgenteIA?.(); } catch {} }, 300);
+  });
   fMenu.addButton({ title: "📂 Archivo existente" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "csi-importer");
     if (ex) loadExample(ex);

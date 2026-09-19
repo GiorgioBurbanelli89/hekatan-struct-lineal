@@ -41,7 +41,7 @@ const PROVEEDORES: AgentProvider[] = [
   {
     id: "ollama", nombre: "🦙 Ollama (local)", url: "http://localhost:11434/v1/chat/completions",
     clave: false, modelos: ["qwen2.5:7b", "qwen2.5:3b", "llama3.1:8b", "qwen3:8b"],
-    pista: "Local y gratis. Instalar: ollama.com → ollama pull qwen2.5:7b",
+    pista: "Local y gratis: ollama.com → ollama pull qwen2.5:7b. Desde la web pública, arrancar Ollama con OLLAMA_ORIGINS=* (si no, bloquea la página).",
   },
   {
     id: "gemini", nombre: "✨ Gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
@@ -431,7 +431,8 @@ async function llamarModelo(p: AgentProvider, modelo: string, clave: string, se�
   }).catch((e) => {
     if (e?.name === "AbortError") throw e;
     throw new Error(p.id === "ollama"
-      ? "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b"
+      ? "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b" +
+        (location.hostname !== "localhost" ? "\nDesde esta web hace falta permitirla: variable de entorno OLLAMA_ORIGINS=* y reiniciar Ollama." : "")
       : `sin conexión con ${p.nombre}: ${e?.message ?? e}`);
   });
   if (!r.ok) {
