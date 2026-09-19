@@ -78,7 +78,9 @@ const estado = async (nombre) => {
   informe.push({ nombre, ...r });
 };
 const clicId = (id) => pag.evaluate((id) => { const b = document.getElementById(id); if (b) b.click(); return !!b; }, id);
-const cargar = async (q) => { await pag.goto(`http://localhost:${PUERTO}${BASE}workspace/${q}`, { waitUntil: "networkidle2", timeout: 180000 }); await espera(6500); await pag.keyboard.press("Escape"); await espera(400); };
+// HK_URL=<servidor> (p. ej. el vite de un worktree) en vez del bundle; HK_EJEMPLO=<id> añade los estados de ese ejemplo
+const URL_BASE = process.env.HK_URL ? process.env.HK_URL.replace(/\/?$/, "/") : `http://localhost:${PUERTO}${BASE}`;
+const cargar = async (q) => { await pag.goto(`${URL_BASE}workspace/${q}`, { waitUntil: "networkidle2", timeout: 180000 }); await espera(6500); await pag.keyboard.press("Escape"); await espera(400); };
 
 await cargar("?t=plantillas");
 await estado("1_plantilla_al_cargar");
@@ -86,6 +88,11 @@ await clicId("hk-ribbon-abrir"); await estado("2_plantilla_cinta_abierta");
 await clicId("hk-pane-toggle"); await espera(900); await estado("3_cinta_abierta_panel_derecho_plegado");
 await clicId("hk-settings-toggle"); await espera(900); await estado("4_cinta_abierta_los_dos_paneles_plegados");
 await clicId("hk-ribbon-plegar"); await estado("5_cinta_plegada_paneles_plegados");
+if (process.env.HK_EJEMPLO) {
+  await cargar(`?t=${process.env.HK_EJEMPLO}&sinBienvenida=1`); await espera(4000);
+  await estado("E1_" + process.env.HK_EJEMPLO + "_al_cargar");
+  await clicId("hk-ribbon-abrir"); await espera(600); await estado("E2_" + process.env.HK_EJEMPLO + "_cinta_abierta");
+}
 await cargar("?t=new-blank");
 await estado("6_lienzo_en_blanco_al_cargar");
 await clicId("hk-pane-toggle"); await clicId("hk-settings-toggle"); await espera(900); await estado("7_lienzo_en_blanco_paneles_plegados");

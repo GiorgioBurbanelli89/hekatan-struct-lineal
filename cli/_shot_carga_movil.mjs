@@ -15,7 +15,7 @@ pg.on("console", (m) => log.push(`[${m.type()}] ${m.text()}`));
 pg.on("pageerror", (e) => log.push(`[pageerror] ${e.message}`));
 await pg.evaluateOnNewDocument((l) => { try { localStorage.setItem("hk_lang", l); } catch {} }, lang);
 const t0 = Date.now();
-await pg.goto(`${base}/workspace/?t=${id}`, { waitUntil: "networkidle2", timeout: 180000 });
+await pg.goto(`${base}/workspace/?t=${id}&sinBienvenida=1`, { waitUntil: "networkidle2", timeout: 180000 });
 // espera a que la envolvente esté lista
 await pg.waitForFunction(() => !!window.__hekatanCargaMovilDatos, { timeout: 180000 });
 const tListo = Date.now() - t0;

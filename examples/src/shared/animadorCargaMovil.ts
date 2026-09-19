@@ -172,6 +172,21 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       </details>
     </div>`;
   ventanaFlotante(pan);
+  // La cinta de arriba (#hk-ribbon) crece al abrirla: la ventana se queda SIEMPRE debajo de ella
+  // (medido con cli/_sonda_solapes.mjs a 1366×768: tapaba 13 botones de la cinta). Si el usuario
+  // la arrastra, manda él.
+  let movida = false;
+  pan.addEventListener("pointerdown", (e) => { if ((pan.firstElementChild as HTMLElement)?.contains(e.target as Node)) movida = true; });
+  const acomodar = () => {
+    if (movida || !pan.isConnected) return;
+    const rib = document.getElementById("hk-ribbon");
+    const r = rib && rib.offsetParent !== null ? rib.getBoundingClientRect() : null;
+    const top = Math.max(40, (r && r.height > 0 ? r.bottom : 0) + 6);
+    pan.style.top = top + "px"; pan.style.bottom = "auto";
+    pan.style.maxHeight = Math.max(160, innerHeight - top - 90) + "px";
+  };
+  const vigiaCinta = setInterval(acomodar, 400);
+  acomodar();
   const $ = (id: string) => pan.querySelector("#" + id) as any;
 
   // ── objetos 3D ──
@@ -678,7 +693,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       return { i, n: D?.xs.length ?? 0, xF: D?.xs[i] ?? 0, jugando, msCuadro: med, fps: med ? 1000 / med : 0 };
     },
     dispose() {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(raf); clearInterval(vigiaCinta);
       ctx?.scene?.remove(grupo);
       grupo.traverse((o: any) => { o.geometry?.dispose?.(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m: any) => { m.map?.dispose?.(); m.dispose?.(); }); });
       pan.remove(); marca.remove();
