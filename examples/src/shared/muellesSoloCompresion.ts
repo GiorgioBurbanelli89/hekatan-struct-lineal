@@ -52,6 +52,8 @@ export function resolverSoloCompresion<D extends { deformations?: Map<number, nu
   fijos: Muelle[],
   comp: Muelle[],
   maxIt = 60,
+  /** se llama tras CADA resolución (it = 1, 2…) con el conjunto activo usado: para enseñar las vueltas */
+  alIterar?: (it: number, out: D, activo: boolean[]) => void,
 ): ResultadoSoloCompresion<D> {
   let activo = comp.map(() => true);
   const historial: number[] = [];
@@ -66,6 +68,7 @@ export function resolverSoloCompresion<D extends { deformations?: Map<number, nu
                mensaje: "todos los muelles en tracción: la zapata vuelca (e ≥ L/2), no hay equilibrio" };
     lista = fijos.concat(comp.filter((_, i) => activo[i]));
     out = resolver(lista);
+    alIterar?.(it, out, activo);
     const U = out.deformations;
     const nuevo = comp.map((s) => (U?.get(s.node)?.[s.dof] ?? 0) < 0);
     if (nuevo.every((v, i) => v === activo[i]))

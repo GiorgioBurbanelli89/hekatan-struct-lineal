@@ -24,6 +24,8 @@
  */
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { cliModeler } from "../cli-modeler/cliModeler";
+import { botonTutorZapata } from "../shared/tutorFem";
+import { HOJA_DAS_48 as hojaDas48 } from "./das48";
 
 export const TONF = 9.80665;                 // kN
 export const KGF_CM2 = 98.0665;             // kN/m²
@@ -234,6 +236,13 @@ export const zapataExcentrica: ExampleDef = {
     const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;
     (window as any).__hekatanCliScript = heksZapataExcentrica(p);
     cliModeler.build({}, states, mp);
+    // «🎓 Tutor FEM»: la hoja se escribe con ESTE modelo y sus vueltas reales del solver
+    if (typeof document !== "undefined" && document.body?.appendChild) botonTutorZapata(() => {
+      const it = (window as any).__hekatanCliContactoIter;
+      const nodes = states?.nodes?.val as number[][] | undefined;
+      if (!it?.vueltas?.length || !nodes?.length) return null;
+      return { p, nodes, vueltas: it.vueltas, nodosComp: it.nodos };
+    }, hojaDas48);
   },
   computedLabels(pr: any, states: any) {
     const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;

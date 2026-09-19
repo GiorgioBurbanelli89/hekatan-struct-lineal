@@ -92,3 +92,29 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
 - Lineal (sin levantamiento) SAP = Hekatan 0.0000 % en los 6. Las diferencias NL son la tolerancia 1e-4
   de SAP (ΣFz 60.012 en e/L = 1/3). SAP convierte el muelle de área en 14 400 gaps (4 por área).
 - ⏳ SAFE y ETABS del barrido (el ejemplo Das sí tiene los cuatro).
+
+## ✅ Hoja Hekatan LISP 48 (Das) — commit 89dc262 en hekatan-lisp (solo ese fichero, autorizado por la 96)
+- «48 Levantamiento de zapatas - Braja Das.lisp»: excentricidad → por qué e > B/6 levanta (Despejar da
+  B/6) → triángulo (6.53) deducido → ejemplo 6.10 reproducido (605 sin redondear, 606 con los redondeos
+  del libro) → ábaco en forma cerrada → Das (rígida) vs FEM → #anim de la presión de e = 0 a B/3.
+- Verificada en la web publicada por `#h=` (cli/_shot_lisp_web.mjs, PNG en cli/shots/lisp48/), 0 errores.
+- ❌ `Despejar{… = 0 @ e}` daba «?»: con `e` y con división. ✅ `Despejar{B - 6*e_c = 0 @ e_c}`.
+- ⏳ #anim no pinta puntos sueltos (dice la 42): los FEM van en tabla al lado. La 42 propone
+  `fplot(…, pts=…)` en el motor si Jorge lo autoriza.
+- ⏳ La hoja solo en español (hekatan-lisp no tiene mecanismo de idioma); EN pendiente.
+- ⏳ Publicarla en la web como #ej=48 (hoy va por #h=).
+
+## ✅ Tutor FEM (examples/src/shared/tutorFem.ts + tutorCadena.ts)
+- Botón «🎓 Tutor FEM» del ejemplo; ventana flotante arrastrable, redimensionable, plegable, ES/EN.
+- La hoja se ESCRIBE con el modelo abierto (B, L, t, ks, Q, e, malla) y las vueltas REALES del solver
+  (`__hekatanCliContactoIter`: activos, en tracción, apagados, q_max por vuelta + #anim del perfil de
+  presión por la diagonal en cada vuelta). Viaja a Hekatan LISP web por `#h=` (sin servidor).
+- Índice de formulaciones; ● = lo usa el modelo (levantamiento, K de la placa, Winkler, Das).
+  Enlaza hojas ya publicadas (26 barra, 24 pórtico, 40 Shell-Thin, 43 DK). ⏳: pórtico 3D, DKMQ/DSE,
+  membrana ITW, sólido H8 (sin hojas vacías).
+- «¿De dónde sale?»: K → B → N, J · Gauss · D · ensamble → Winkler → no linealidad, con miga de pan y
+  «⬆ volver». Cada hoja con archivo:línea del solver (shellQ4.cpp 807–1015, getGlobalStiffnessMatrix.cpp,
+  deform.cpp 162) y libro (Bathe y Wilson 1976; Chandrupatla cap. 7). Simplificaciones dichas en la hoja.
+- 🧮 calculadora: abre Hekatan LISP con las variables del modelo definidas (modo editor).
+- Verificado con puppeteer (cli/_shot_tutor_fem.mjs): se abre, carga, navega la cadena, 0 pageerror.
+- ⏳ «De la integral al código» (LISP/MATLAB/Python/C++ del motor + OpenSees), Hekatan Lab (.m; sin web).

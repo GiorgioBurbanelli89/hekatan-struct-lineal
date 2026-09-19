@@ -2049,7 +2049,14 @@ export const cliModeler: ExampleDef = {
         (window as any).__hekatanCliContacto = null;
         if (springsComp.length) {
           const fijos = springsList.filter((s) => !sustituidos.has(s));
-          const r = resolverSoloCompresion(resolverCon, fijos, springsComp);
+          // cada vuelta queda guardada (uz de todos los nudos + qué muelles estaban activos) para el Tutor FEM
+          const vueltas: Array<{ activo: boolean[]; uz: Float64Array }> = [];
+          const r = resolverSoloCompresion(resolverCon, fijos, springsComp, 60, (_it, out, activo) => {
+            const uz = new Float64Array(nodes.length);
+            for (let i = 0; i < nodes.length; i++) uz[i] = out.deformations?.get(i)?.[2] ?? 0;
+            vueltas.push({ activo: [...activo], uz });
+          });
+          (window as any).__hekatanCliContactoIter = { nodos: springsComp.map((s) => s.node), k: springsComp.map((s) => s.k), vueltas };
           states.deformOutputs.val = r.deformOutputs;
           springsResueltos = r.springsFinales;
           const nAct = r.activo.filter(Boolean).length;
