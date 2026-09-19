@@ -67,12 +67,19 @@ interface Herr {
   id: string; icono: string; nombre: string; tecla: string; ayuda: string;
 }
 
+/** Botones que no son herramientas del motor: se APLICAN al nudo o barra que se clica. */
+const APLICA = new Set(["apoyo", "apoyoart", "carga", "cargaq"]);
+
 /** Lo que se usa todo el rato. Lo demás NO entra aquí a propósito. */
 // `fila`: 1 = arriba (dibujar / estructura / analizar / vista), 2 = abajo (modificar /
 // rejilla / cota / carga). Dos filas y no más, como las barras de ETABS (Jorge, 13-sep-2026).
-const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
+// `pest`: la PESTAÑA de la cinta donde vive el grupo (como las fichas de AutoCAD: Inicio,
+// Insertar, Anotar…). Dos filas por pestaña y nada más; lo que no cabía en dos filas a
+// 1280 px (medido: fila 1 = 1238 px, fila 2 = 1678 px) se reparte en pestañas.
+type Pest = "dibujo" | "rejilla" | "areas" | "resultados" | "ifc";
+const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> = [
   {
-    titulo: "Dibujar", fila: 1,
+    titulo: "Dibujar", fila: 1, pest: "dibujo",
     items: [
       { id: "line",     icono: "／", nombre: "Línea",     tecla: "L",   ayuda: "clic tras clic, encadena. C cierra, U quita el último, Esc termina." },
       { id: "polyline", icono: "⌒", nombre: "Polilínea", tecla: "PL",  ayuda: "clics seguidos; Enter o clic derecho para terminar." },
@@ -84,7 +91,7 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     ],
   },
   {
-    titulo: "Estructura", fila: 1,
+    titulo: "Estructura", fila: 1, pest: "dibujo",
     items: [
       { id: "col",  icono: "▌", nombre: "Columna", tecla: "COL", ayuda: "teclea la altura + Enter, luego clic en la base." },
       { id: "wall", icono: "▥", nombre: "Muro",    tecla: "MU",  ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
@@ -100,10 +107,15 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     // del ribbon: 145 nudos, 121 tramos y cero resultados
     // (`node cli/ctl_solo_botones.mjs`). Una estructura sin apoyos no tiene
     // solucion — la matriz es singular — y sin cargas no se mueve.
-    titulo: "Analizar", fila: 1,
+    titulo: "Apoyos y cargas", fila: 1, pest: "dibujo",
     items: [
-      { id: "apoyo", icono: "▲", nombre: "Apoyo", tecla: "AP",
-        ayuda: "clic sobre un nudo: lo empotra. Sin apoyos no hay solucion." },
+      // Los dos apoyos de la barra de ETABS (Assign ▸ Joint ▸ Restraints, botones rápidos):
+      // empotrado y articulado. Antes solo había «Apoyo» (empotra) y para articular había que
+      // seleccionar el nudo e ir a las casillas del panel de propiedades.
+      { id: "apoyo", icono: "▲", nombre: "Empotr.", tecla: "AP",
+        ayuda: "clic sobre un nudo: lo EMPOTRA (6 GDL). Con nudos ya seleccionados, los empotra a todos." },
+      { id: "apoyoart", icono: "△", nombre: "Articul.", tecla: "APA",
+        ayuda: "clic sobre un nudo: lo ARTICULA (Ux Uy Uz; giros libres). Con nudos ya seleccionados, los articula a todos." },
       { id: "carga", icono: "↓", nombre: "Carga", tecla: "CG",
         ayuda: "clic sobre un nudo: le pone la carga vertical de la casilla." },
       { id: "cargaq", icono: "⇊", nombre: "Carga q", tecla: "CQ",
@@ -111,7 +123,7 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
     ],
   },
   {
-    titulo: "Modificar", fila: 2,
+    titulo: "Modificar", fila: 2, pest: "dibujo",
     items: [
       // Deshacer / Rehacer a la vista, como la barra de acceso rápido de AutoCAD (Ctrl+Z / Ctrl+Y)
       { id: "deshacer", icono: "↶", nombre: "Anterior", tecla: "Ctrl+Z", ayuda: "deshace la última acción (también U + Enter)." },
@@ -168,7 +180,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     for (const [id, b] of botones) {
       // Apoyo y carga no son un tool del motor (van por seleccion), asi que su
       // boton se enciende con el modo, no con `getTool()`.
-      const on = (id === "apoyo" || id === "carga" || id === "cargaq") ? modoAplicar === id
+      const on = APLICA.has(id) ? modoAplicar === id
                : (modoAplicar === null && id === t);
       b.style.background = on ? "#0e7490" : "transparent";
       b.style.borderColor = on ? "#22d3ee" : "transparent";
@@ -278,7 +290,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // `hk:property-applied` que usa el panel de propiedades. Reusar ese camino
   // evita una segunda forma de poner apoyos que despues no coincida con la
   // primera.
-  let modoAplicar: "apoyo" | "carga" | "cargaq" | null = null;
+  let modoAplicar: "apoyo" | "apoyoart" | "carga" | "cargaq" | null = null;
   const cargaVert = { kN: -10, kNm: -5 };
   const aplicarASeleccion = () => {
     if (!modoAplicar) return;
@@ -297,14 +309,15 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     }
     const pts = [...sel].filter((s) => s.startsWith("pt:"));
     if (!pts.length) return;
-    const detail = modoAplicar === "apoyo"
+    const esApoyo = modoAplicar === "apoyo" || modoAplicar === "apoyoart";
+    const detail = esApoyo
       ? { kind: "nodes", ids: pts, prop: "supports",
-          value: [true, true, true, true, true, true] }
+          value: modoAplicar === "apoyo" ? [true, true, true, true, true, true] : [true, true, true, false, false, false] }
       : { kind: "nodes", ids: pts, prop: "loads",
           value: [0, 0, cargaVert.kN, 0, 0, 0] };
     window.dispatchEvent(new CustomEvent("hk:property-applied", { detail }));
-    decir(modoAplicar === "apoyo"
-      ? `Apoyo puesto en ${pts.length} nudo${pts.length === 1 ? "" : "s"}. Segui clicando.`
+    decir(esApoyo
+      ? `${modoAplicar === "apoyo" ? "Empotrado" : "Articulado"} en ${pts.length} nudo${pts.length === 1 ? "" : "s"}. Segui clicando.`
       : `Carga de ${cargaVert.kN} kN en ${pts.length} nudo${pts.length === 1 ? "" : "s"}.`);
     sel.clear();
     try { (window as any).__hekatanRefreshSelection?.(); } catch {}
@@ -321,7 +334,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       return;
     }
     // Pulsar OTRA VEZ el botón activo lo apaga (vuelve a Selec.), como un interruptor
-    const yaActivo = (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq")
+    const yaActivo = APLICA.has(h.id)
       ? modoAplicar === h.id
       : (modoAplicar === null && hooks.getTool() === h.id);
     if (yaActivo && h.id !== "select") {
@@ -348,8 +361,14 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir("REPLICAR — contestá el desplazamiento y cuántas copias en el cuadro de comandos.");
       return;
     }
-    if (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq") {
-      modoAplicar = h.id as "apoyo" | "carga" | "cargaq";
+    if (APLICA.has(h.id)) {
+      modoAplicar = h.id as "apoyo" | "apoyoart" | "carga" | "cargaq";
+      // Como en ETABS: si ya hay nudos (o barras) SELECCIONADOS —una ventana sobre la
+      // base de una cúpula—, el botón se aplica a todos de una vez; después sigue
+      // esperando clics sueltos.
+      const selPrev = (window as any).__hekatanSelection as Set<string> | undefined;
+      const hayPrev = !!selPrev && [...selPrev].some((k) => k.startsWith(h.id === "cargaq" ? "seg:" : "pt:"));
+      if (hayPrev) { aplicarASeleccion(); pintarActivo(); hooks.setTool("select"); (window as any).__hekatanBloquearVentana = true; return; }
       hooks.setTool("select");
       // En apoyo/carga el arrastre NO debe abrir una ventana de seleccion: se
       // va nudo a nudo. Es el unico caso que la bloquea, y se marca con su
