@@ -1032,6 +1032,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       const q = Array.isArray(n) ? n : (n && typeof n === "object" ? [n.x, n.y, n.z] : null);
       if (q && q.every((x: any) => isFinite(x))) P.push(q as number[]);
     }
+    // las guías auxiliares también cuentan (el contorno y el perfil del Allianz son guías)
+    const aux = W.__hekatanDrawingAuxLines; const la = (aux?.rawVal ?? aux?.val ?? []) as number[][];
+    for (const l of Array.isArray(la) ? la : []) if (l?.length === 6 && l.every((x) => isFinite(x))) { P.push(l.slice(0, 3)); P.push(l.slice(3, 6)); }
     if (!P.length) return "No hay nada dibujado que encuadrar.";
     const canvas: HTMLCanvasElement | null = v.querySelector("canvas");
     const cr = (canvas ?? v).getBoundingClientRect();

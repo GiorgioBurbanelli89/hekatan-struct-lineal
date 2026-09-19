@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
 
@@ -3287,23 +3290,26 @@ export function drawing({
     }
     const auxState = (window as any).__hekatanDrawingAuxLines;
     const lines: number[][] = auxState?.rawVal ?? auxState?.val ?? auxState ?? [];
-    for (const ln of lines) {
-      if (ln.length !== 6) continue;
-      const geo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(ln[0], ln[1], ln[2]),
-        new THREE.Vector3(ln[3], ln[4], ln[5]),
-      ]);
-      const mat = new THREE.LineDashedMaterial({
-        color: 0x22d3ee,    // cyan
-        dashSize: 0.3,
-        gapSize: 0.15,
-        transparent: true,
-        opacity: 0.8,
-      });
-      const line = new THREE.Line(geo, mat);
-      line.computeLineDistances();  // requerido para dashed
-      auxLinesGroup.add(line);
-    }
+    // Una sola línea discontinua GRUESA (2 px de pantalla) para todas: con
+    // LineDashedMaterial salían de 1 px cian y en el vídeo del tutorial de la cúpula el
+    // meridiano (la guía de la Revolución) casi no se veía (19-sep-2026).
+    const verts: number[] = [];
+    for (const ln of lines) if (ln.length === 6 && ln.every((v) => Number.isFinite(v))) verts.push(...ln);
+    if (!verts.length) return;
+    const geo = new LineSegmentsGeometry();
+    geo.setPositions(verts);
+    const mat = new LineMaterial({
+      color: 0x22d3ee, linewidth: 2, worldUnits: false,
+      dashed: true, dashSize: 0.3, gapSize: 0.15,
+      transparent: true, opacity: 0.9,
+    });
+    const line = new LineSegments2(geo, mat);
+    line.computeLineDistances();   // requerido para dashed
+    line.frustumCulled = false;
+    line.raycast = () => {};        // el OSNAP usa los datos, no la malla
+    const tam = new THREE.Vector2();
+    line.onBeforeRender = (renderer) => { renderer.getSize(tam); mat.resolution.set(tam.x, tam.y); };
+    auxLinesGroup.add(line);
   };
   // Re-render automático cuando cambia el array de aux lines
   van.derive(() => {
