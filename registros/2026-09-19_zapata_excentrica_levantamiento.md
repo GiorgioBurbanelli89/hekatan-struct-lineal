@@ -157,3 +157,10 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
 - Hojas de la cadena para pórtico 3D, DKMQ/DSE, membrana ITW, sólido H8.
 - SAFE y ETABS del barrido e/L (el ejemplo de Das sí tiene los cuatro programas).
 - Paridad del motor de Python (`hekatan-struct-py`) con `compresion`.
+
+## ✅ Hoja 49 «Qué es una cimentación no lineal - explicado despacio» (hekatan-lisp 5c3a178, push)
+- Resorte lineal vs suelo que no tira (codo en 0), resorte animado, fila de resortes (27.46 uniforme),
+  #anim de e = 0 → B/3 con la curva lineal (baja de 0) y la real sin tracción, 4 vueltas REALES del
+  solver en Das 6.10 (961 → 851 → 802 → 798; 76.67 → 81.91), puntos de los 5 programas y del barrido.
+- Renderizada en la web publicada (PNG `hoja49_render.png`), 0 errores. Abierta a Jorge por #h=
+  (URL en `url_hoja49.txt`). ⏳ versión EN. ⏳ #ej=49 depende de que la web publique ejemplos/.
