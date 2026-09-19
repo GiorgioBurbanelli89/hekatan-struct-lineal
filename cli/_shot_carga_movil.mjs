@@ -20,13 +20,22 @@ await pg.goto(`${base}/workspace/?t=${id}`, { waitUntil: "networkidle2", timeout
 await pg.waitForFunction(() => !!window.__hekatanCargaMovilDatos, { timeout: 180000 });
 const tListo = Date.now() - t0;
 const perf = await pg.evaluate(() => { const d = window.__hekatanCargaMovilDatos; return { IL: d.IL.ms, env: d.env.ms, nPos: d.xs.length, nCasos: d.IL.camino.nudos.length }; });
-const fotos = [0.12, 0.35, 0.6];
+const fotos = [0.1, 0.45, 0.85];
 const a = await pg.evaluate(() => window.__hekatanCargaMovil.estado());
 for (const f of fotos) {
   await pg.evaluate((k) => { const A = window.__hekatanCargaMovil; A.pausa(); A.ir(k); }, Math.round(f * (a.n - 1)));
   await new Promise((r) => setTimeout(r, 400));
   await pg.screenshot({ path: `${out}/pos_${Math.round(f * 100)}.png` });
 }
+// alzado XZ (de frente, desde −Y) en la posición central
+await pg.evaluate((k) => {
+  const A = window.__hekatanCargaMovil; A.pausa(); A.ir(k);
+  const v = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__settings); const c = v.__ctx;
+  const t = c.controls.target; const dist = c.camera.position.distanceTo(t);
+  c.camera.position.set(t.x, t.y - dist, t.z); c.camera.up.set(0, 0, 1); c.camera.lookAt(t); c.controls.update(); c.render();
+}, Math.round(0.45 * (a.n - 1)));
+await new Promise((r) => setTimeout(r, 500));
+await pg.screenshot({ path: `${out}/alzado_xz.png` });
 await pg.evaluate(() => { document.querySelector("#hkcm-env")?.click(); });
 await new Promise((r) => setTimeout(r, 500));
 await pg.screenshot({ path: `${out}/envolvente.png` });

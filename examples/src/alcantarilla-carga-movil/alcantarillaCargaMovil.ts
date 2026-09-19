@@ -119,7 +119,7 @@ export function openseesCargaMovil(m: ModeloLineal, cam: Camino, v: Vehiculo, xs
 function crear(id: string, name: string, def: Parameters<typeof params>[0], guia: string[]): ExampleDef {
   return {
     id, name,
-    category: "1️⃣ Frames · 🎯 3 GDL Pórtico plano",
+    category: "1️⃣ Frames · 🚚 Carga móvil y puentes",
     params: params(def),
     guide: guia,
     viewFrom: [0.3, -1, 0.3],
@@ -159,6 +159,13 @@ function crear(id: string, name: string, def: Parameters<typeof params>[0], guia
           if (Math.abs(a[0] - b[0]) < 1e-9) return pm.tMuro;
           return Math.abs(a[2] - pm.H) < 1e-6 ? pm.tSup : pm.tInf;
         };
+        // dibujo a caras: el muro de cara a cara de losa, la losa hasta la cara exterior del muro
+        const largo = pm.nCeldas * pm.L;
+        const extremos = (e: number): [number, number] => {
+          const el = elements[e]; const a = nodes[el[0]], b = nodes[el[1]];
+          if (Math.abs(a[0] - b[0]) < 1e-9) return [a[2] < 1e-9 ? -pm.tInf / 2 : 0, b[2] > pm.H - 1e-9 ? -pm.tSup / 2 : 0];
+          return [a[0] < 1e-9 ? pm.tMuro / 2 : 0, b[0] > largo - 1e-9 ? pm.tMuro / 2 : 0];
+        };
         const exportar = [
           { etiqueta: "SAP2000 .s2k", accion: () => exportarS2k(states, modelo, cam, veh, xs, id) },
           { etiqueta: "ETABS .e2k", accion: () => exportarE2k(states, id) },
@@ -176,7 +183,7 @@ function crear(id: string, name: string, def: Parameters<typeof params>[0], guia
           return f.join("\n") + "\n";
         };
         anim.cargar({
-          nodes, elements, IL, vehiculo: veh, xs, fija, canto: idxElem, zRodadura: pm.H + pm.tSup / 2, x0: nodes[cam.nudos[0]][0],
+          nodes, elements, IL, vehiculo: veh, xs, fija, canto: idxElem, zRodadura: pm.H + pm.tSup / 2 + (pm.hRelleno || 0), extremos, x0: nodes[cam.nudos[0]][0],
           titulo: `${t("Alcantarilla", "Box culvert")} ${pm.nCeldas}×${pm.L} m × ${pm.H} m · ${veh.nombre}`,
           exportar,
           encuadrar: primera,

@@ -38,6 +38,10 @@ export interface DatosCargaMovil {
   fija?: { U: Float64Array; F: Float64Array; R: Float64Array } | null;
   /** canto de cada barra (m) para dibujarla extruida */
   canto: (e: number) => number;
+  /** alargar (+) o recortar (−) el DIBUJO de la barra en su nudo i / j (m), para que la sección
+   *  extruida cierre las esquinas sin cruzarse: el muro va de cara a cara de losa y la losa llega
+   *  hasta la cara exterior del muro. Solo dibujo; el cálculo es a ejes. */
+  extremos?: (e: number) => [number, number];
   /** cota de la cara superior del tablero (m): ahí ruedan las ruedas */
   zRodadura: number;
   /** abscisa global (X) del primer nudo del camino */
@@ -119,8 +123,8 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   // ── marca de agua (PNG / vídeo publicables) ──
   const marca = document.createElement("div");
   marca.textContent = "Hekatan Struct";
-  marca.style.cssText = "position:absolute;left:14px;bottom:10px;z-index:40;font:600 15px sans-serif;color:rgba(255,255,255,.35);pointer-events:none;letter-spacing:.5px";
-  (visor ?? document.body).appendChild(marca);
+  marca.style.cssText = "position:fixed;left:62%;bottom:96px;transform:translateX(-50%);z-index:900;font:600 16px sans-serif;color:rgba(255,255,255,.42);pointer-events:none;letter-spacing:.5px";
+  document.body.appendChild(marca);   // fija en la ventana: el visor queda debajo de los paneles laterales
 
   // ── ventana ──
   const pan = document.createElement("div");
@@ -194,7 +198,8 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   let nVert = 0;
   let pos: Float32Array = new Float32Array(0), col: Float32Array = new Float32Array(0);
   let posB: Float32Array = new Float32Array(0);
-  const FONDO = 3.0;   // la franja de 1 m se DIBUJA con 3 m de fondo para que se vea (solo dibujo)
+  const FONDO = 3.0;
+  const ESCALA_DEFORMADA = 0.015;   // fracción de la diagonal (ver escalas())   // la franja de 1 m se DIBUJA con 3 m de fondo para que se vea (solo dibujo)
   const SOMBRA = [1.0, 0.82, 0.62, 0.7];   // cara frontal, superior, trasera, inferior
 
   function prepararCuerpo() {
@@ -243,14 +248,18 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       const ti = ui[2], tj = uj[2];                                            // θy
       const ci = colorDe ? colorDe(el[0]) : Math.hypot(ui[0], ui[1]);
       const cj = colorDe ? colorDe(el[1]) : Math.hypot(uj[0], uj[1]);
+      const [eI, eJ] = D.extremos ? D.extremos(tr.e) : [0, 0];
       for (let s = 0; s <= tr.nSeg; s++) {
-        const x = s / tr.nSeg;
+        // abscisa del dibujo, de −eI a L + eJ (m); fuera de [0, L] el trozo se mueve como sólido rígido
+        const d = -eI + (L + eI + eJ) * s / tr.nSeg;
+        const x = Math.min(1, Math.max(0, d / L)), fuera = d < 0 ? d : d > L ? d - L : 0;
         // Hermite cúbica para lo transversal (con los giros de los extremos), lineal para lo axial
         const N1 = 1 - 3 * x * x + 2 * x ** 3, N2 = L * (x - 2 * x * x + x ** 3), N3 = 3 * x * x - 2 * x ** 3, N4 = L * (-x * x + x ** 3);
-        const v = N1 * vi + N2 * ti + N3 * vj + N4 * tj;
+        const th = d < 0 ? ti : tj;
+        const v = N1 * vi + N2 * ti + N3 * vj + N4 * tj + (fuera ? th * fuera : 0);
         const a = (1 - x) * ai + x * aj;
         const ux = a * ex + v * tx, uz = a * ez + v * tz;
-        const X = A[0] + x * dx + esc * ux, Z = A[2] + x * dz + esc * uz;
+        const X = A[0] + d * ex + esc * ux, Z = A[2] + d * ez + esc * uz;
         const mag = colorDe ? (1 - x) * ci + x * cj : Math.hypot(ux, uz);
         jet(mag / (uRef || 1), tmpC);
         // 4 esquinas de la sección: (±h en el plano, ±FONDO/2 en Y)
@@ -347,6 +356,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
 
   // ── el camión ──
   const flechas: THREE.ArrowHelper[] = [];
+  const ruedas: Array<{ m: THREE.Object3D; k: number; z0: number }> = [];
   const etiquetas: THREE.Sprite[] = [];
   function textoSprite(txt: string, color = "#ffdddd") {
     const c = document.createElement("canvas"); c.width = 256; c.height = 64;
@@ -360,7 +370,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     camion.clear(); flechas.length = 0; etiquetas.length = 0;
     if (!D) return;
     const v = D.vehiculo, Lv = largoVehiculo(v);
-    const R = 0.5, anchoC = 2.5, yR = 0.95;
+    const R = 0.5, anchoC = 2.6, yR = 0.9;   // HL-93: ancho ~2.6 m, vía 1.8 m (ruedas a ±0.9 m)
     const caja = (w: number, h: number, d: number, color: number) => new THREE.Mesh(new THREE.BoxGeometry(w, d, h), new THREE.MeshBasicMaterial({ color }));
     const aristas = (m: THREE.Mesh) => { const l = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x222222 })); m.add(l); return m; };
     // cabina (delante del eje delantero), remolque (del eje 2 hacia atrás)
@@ -372,10 +382,12 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     const chasis = caja(Lv + 2.2, 0.25, 1.4, 0x444444); chasis.position.set(-Lv / 2 + 0.2, 0, R + 0.35); camion.add(chasis);
     const geoR = new THREE.CylinderGeometry(R, R, 0.4, 20), matR = new THREE.MeshBasicMaterial({ color: 0x1b1b1b });
     const geoL = new THREE.CylinderGeometry(R * 0.45, R * 0.45, 0.42, 14), matL = new THREE.MeshBasicMaterial({ color: 0x9a9a9a });
-    for (const e of v.ejes) for (const sy of [-1, 1]) {
+    ruedas.length = 0;
+    v.ejes.forEach((e, k) => { for (const sy of [-1, 1]) {
       const w = new THREE.Mesh(geoR, matR); w.position.set(-e.d, sy * yR, R); camion.add(w);   // cilindro de three va en Y: ya es el eje de la rueda
       const l = new THREE.Mesh(geoL, matL); l.position.set(-e.d, sy * (yR + 0.01), R); camion.add(l);
-    }
+      ruedas.push({ m: w, k, z0: R }, { m: l, k, z0: R });
+    } });
     // flechas de los ejes (largo ∝ P) y su valor
     const Pmax = Math.max(...v.ejes.map((e) => e.P)) || 1;
     for (const e of v.ejes) {
@@ -411,8 +423,11 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       for (let n = 0; n < D.nodes.length; n++) uMax = Math.max(uMax, Math.hypot(s.U[n * 6], s.U[n * 6 + 2]));
       for (let e = 0; e < D.elements.length; e++) mMax = Math.max(mMax, Math.abs(s.F[e * F_POR_BARRA + 4]), Math.abs(s.F[e * F_POR_BARRA + 5]));
     }
-    // deformada: el peor desplazamiento se ve como el 4 % de la diagonal (del orden de SAP2000 en «Auto»)
-    escDefAuto = 0.04 * diag / uMax;
+    // Deformada: el peor desplazamiento de TODO el recorrido se ve como el 1.5 % de la diagonal del
+    // modelo. Con el 3.7 % del modal (`modeScale.ts`, el «Auto» de SAP2000 para MODOS) la losa y los
+    // muros salían como de goma (×75 en la alcantarilla); aquí se busca que se lea sin deformar la
+    // geometría. El factor se enseña en pantalla («deformada ×N»).
+    escDefAuto = ESCALA_DEFORMADA * diag / uMax;
   }
   const cache = new Map<number, EstadoPosicion>();
   function estado(xF: number): EstadoPosicion {
@@ -455,8 +470,11 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       pintarEnvolvente(false, 0);
       camion.visible = true;
       // el camión rueda sobre la cara superior del tablero, siguiendo la deformada bajo sus ejes
+      // cada rueda apoya en la cara superior de la losa DEFORMADA bajo su eje; la caja, a la media
       const zs = s.pesos.xEjes.map((x) => zDeformada(x, s.U, verDef ? esc : 0));
-      camion.position.set(D.x0 + xF, 0, D.zRodadura + Math.max(...zs));
+      const zMed = zs.reduce((q, z) => q + z, 0) / zs.length;
+      camion.position.set(D.x0 + xF, 0, D.zRodadura + zMed);
+      ruedas.forEach((r) => { r.m.position.z = r.z0 + zs[r.k] - zMed; });
     }
     cuerpo.visible = true;
     diagM.visible = verM && !enEnvolvente; diagMl.visible = diagM.visible;
