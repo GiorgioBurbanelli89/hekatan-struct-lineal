@@ -195,7 +195,7 @@ function getLocalStiffnessMatrixFrame(
   // END LENGTH OFFSETS de CSI. La ley, medida contra ETABS 22.6.0 al 0.005 %
   // (registro `2026-08-25_ley_end_length_offset.md`):
   //   Lf = L - rz*(offI + offJ)   -> flexion y cortante
-  //   axil EA/L y torsion GJ/L    -> con la L COMPLETA (manual CSI:
+  //   axil EA/L y torsion GJ/L    -> con la L COMPLETA (literal del binario:
   //   "The rigid zones never affect axial and torsional deformations")
   // Con rz = 0 —las 723 barras del galpon— Lf = L y no cambia nada.
   // ⚠️ Una barra de LONGITUD CERO no es un problema de offsets, y el mensaje

@@ -8,21 +8,6 @@ export type Mesh = {
   elementInputs?: State<ElementInputs>;
   deformOutputs?: State<DeformOutputs>;
   analyzeOutputs?: State<AnalyzeOutputs>;
-  /**
-   * SELLO DEL CASO. Identifica el modelo + el caso de carga que se esta
-   * MOSTRANDO ahora mismo. Cuando esta puesto, el visor compara este valor con
-   * el `caseId` que traen `deformOutputs` y `analyzeOutputs` y **se niega a
-   * pintar** si no coinciden.
-   *
-   * Existe porque el bug de la deformada no fue un error de calculo: fue un
-   * resultado VIEJO pintado sobre un modelo NUEVO. Un calculo que llega tarde
-   * (el modal, un arrastre de slider, un boton asincrono) trae el sello de
-   * cuando arranco; si el modelo cambio por debajo, el sello ya no cuadra y el
-   * dibujo se descarta en vez de mentir.
-   *
-   * Sin sello (cadena vacia o `undefined`) el visor se comporta como siempre.
-   */
-  caseId?: State<string>;
 };
 
 // The geometry of any structure can be represented by these two entities:
@@ -216,13 +201,9 @@ export type ElementInputs = {
 export type DeformOutputs = {
   deformations?: Map<number, [number, number, number, number, number, number]>;
   reactions?: Map<number, [number, number, number, number, number, number]>;
-  /** Sello del modelo/caso con el que se calculo esto. Ver `Mesh.caseId`. */
-  caseId?: string;
 };
 
 export type AnalyzeOutputs = {
-  /** Sello del modelo/caso con el que se calculo esto. Ver `Mesh.caseId`. */
-  caseId?: string;
   normals?: Map<number, [number, number]>;
   shearsY?: Map<number, [number, number]>;
   shearsZ?: Map<number, [number, number]>;
@@ -266,19 +247,8 @@ export type AnalyzeOutputs = {
 
 export type ModalOutputs = {
   frequencies?: number[];    // natural frequencies [Hz]
-  modeShapes?: number[][];   // mode shapes [mode_index][dof_index], normalizadas a máx = 1
+  modeShapes?: number[][];   // mode shapes [mode_index][dof_index]
   massParticipation?: number[][]; // [mode_index][6] ratios (ux,uy,uz,rx,ry,rz)
-
-  // ── AÑADIDO 17-sep-2026 para el espectral estilo SAP2000 ──
-  // Nada de lo de arriba cambia; esto es información que antes se perdía.
-  //
-  // Γ_mj = φ_mᵀ·M·r_j con φ MASA-NORMALIZADO (φᵀMφ = 1). El ratio de arriba es
-  // Γ²/M_total: pierde el SIGNO y la escala absoluta, y sin signo los modos
-  // acoplados (modo 2 = Y + torsión) no se combinan como en SAP2000.
-  participationFactors?: number[][]; // [mode_index][6], unidades √masa
-  totalMass?: number[];              // [6] masa que PUEDE participar por dirección
-  // φ_masa_normalizado = modeShapes[m] · modeScales[m]
-  modeScales?: number[];             // [mode_index]
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

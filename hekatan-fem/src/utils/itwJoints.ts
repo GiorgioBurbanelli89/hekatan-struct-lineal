@@ -8,10 +8,8 @@
  * Recuperación: la deformación se evalúa en Gauss 2×2 con la B de Allman proyectada
  * (SIN la burbuja: así clava los joints de CSI, ver abajo) y se extrapola
  * bilinealmente a las esquinas, como en el DKQ.
- * Tipo 13 (el defecto): ng = 2, proyección y reloj de arena khg = 2e-4.
- * Tipo 8 (ITW 1990 + proyección de FEAP/Taylor): ng = 3, proyección.
- * Tipo 3 (ITW 1990): ng = 3, sin proyección. Tipo 6: ng = 2, reloj de arena
- * khg = 2e-4 (medido por flexibilidad). Otros: null.
+ * Tipo 12 (el defecto, la membrana de CSI): ng = 2, proyección, khg = 2e-4.
+ * Tipo 3 (ITW 1990): ng = 3, sin proyección, sin reloj. Otros: null.
  *
  * GDL por nudo [u, v, θz] en ejes locales del elemento (los mismos que xl, yl).
  */
@@ -30,16 +28,16 @@ function jac(xl: number[], yl: number[], dNxi: number[], dNeta: number[]) {
   return { det, Ji: [[J11 * inv, -J01 * inv], [-J10 * inv, J00 * inv]] };
 }
 
-export function itwJointForces(
-  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+/** El ensamblaje de la K de 14 gdl de la membrana ITW (12 de nudo + 2 de burbuja). Lo
+ *  comparten la recuperacion de fuerzas en los joints y la K de 12x12 que se ensena. */
+function ensamblarItw14(
+  xl: number[], yl: number[], E: number, nu: number, t: number,
   opts: { tipo?: number; gammaFac?: number; mod?: number[] | null } = {}
-): number[][] | null {
-  const tipo = opts.tipo ?? 13, gammaFac = opts.gammaFac ?? 0.4, mod = opts.mod ?? null;
+) {
+  const tipo = opts.tipo ?? 12, gammaFac = opts.gammaFac ?? 0.4, mod = opts.mod ?? null;
   let ng: number, proy: boolean, khg: number;
-  if (tipo === 8) { ng = 3; proy = true; khg = 0; }
+  if (tipo === 12) { ng = 2; proy = true; khg = 2e-4; }
   else if (tipo === 3) { ng = 3; proy = false; khg = 0; }
-  else if (tipo === 6) { ng = 2; proy = false; khg = 2e-4; }
-  else if (tipo === 13) { ng = 2; proy = true; khg = 2e-4; }   // el 8 con 2x2 + reloj de arena
   else return null;
   const f = E / (1 - nu * nu);
   const Dm = [[f, f * nu, 0], [f * nu, f, 0], [0, 0, (f * (1 - nu)) / 2]];
@@ -119,6 +117,16 @@ export function itwJointForces(
       for (let a = 0; a < 14; a++) for (let b = 0; b < 14; b++) K[a][b] += fh * hg[a] * hg[b];
     }
   }
+  return { K, Ben, Dm, GP2 };
+}
+
+export function itwJointForces(
+  xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number,
+  opts: { tipo?: number; gammaFac?: number; mod?: number[] | null } = {}
+): number[][] | null {
+  const arm = ensamblarItw14(xl, yl, E, nu, t, opts);
+  if (!arm) return null;
+  const { K, Ben, Dm, GP2 } = arm;
   // burbuja recuperada: u_b = −Kbb⁻¹ Kabᵀ u
   const u14 = [...u12, 0, 0];
   const Kbb = [[K[12][12], K[12][13]], [K[13][12], K[13][13]]];
@@ -154,4 +162,31 @@ export function itwJointForces(
     const Nn = esq.map(([a, b]) => ((1 + a * R) * (1 + b * S)) / 4);
     return [0, 1, 2].map((i) => Nn.reduce((acc, w, k) => acc + w * Ng[k][i], 0));
   });
+}
+
+
+/**
+ * La K de MEMBRANA del elemento de CSI (ITW tipo 12) condensada a los 12 gdl de nudo
+ * [u, v, thetaz] x 4, en ejes locales. Es la de `getMembraneITW` (shellQ4.cpp) con los
+ * dos gdl de burbuja eliminados: la misma con la que resuelve el motor.
+ */
+export function itwMembraneK(
+  xl: number[], yl: number[], E: number, nu: number, t: number,
+  opts: { tipo?: number; gammaFac?: number; mod?: number[] | null } = {}
+): number[][] | null {
+  const arm = ensamblarItw14(xl, yl, E, nu, t, opts);
+  if (!arm) return null;
+  const K = arm.K;
+  const Kbb = [[K[12][12], K[12][13]], [K[13][12], K[13][13]]];
+  const det = Kbb[0][0] * Kbb[1][1] - Kbb[0][1] * Kbb[1][0];
+  const Kc = K.slice(0, 12).map((f) => f.slice(0, 12));
+  if (Math.abs(det) > 1e-30) {
+    const inv = [[Kbb[1][1] / det, -Kbb[0][1] / det], [-Kbb[1][0] / det, Kbb[0][0] / det]];
+    for (let a = 0; a < 12; a++) for (let b = 0; b < 12; b++) {
+      let s = 0;
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) s += K[a][12 + i] * inv[i][j] * K[12 + j][b];
+      Kc[a][b] -= s;
+    }
+  }
+  return Kc;
 }

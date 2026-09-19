@@ -386,6 +386,11 @@ Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
     // del shell; y la cuadratura de 14 puntos es de Irons, «Quadrature rules for
     // **BRICK** based finite elements», IJNME 3, 293-294 (1971) — hexaedros.
     //
+    // Y encaja con lo que ya se vio en el binario en agosto: la funcion de
+    // `CsiGo2.dll` donde viven esas constantes tiene TRES coordenadas naturales
+    // y 24 huecos de funciones de forma — un hexaedro de 8 nudos, no el shell.
+    // Las dos vias, la documental y la del binario, dicen lo mismo.
+    //
     // Conclusion: **esta regla no viene de ningun paper del SHELL**. Se deja
     // porque esta MEDIDA (hemisferio 8x8: -34 % -> -4 %), pero como eleccion
     // numerica propia, no como «lo que hace CSI».
@@ -408,8 +413,14 @@ Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
     //
     // con 3 modos nulos y el patch test EXACTO en las dos.
     //
-    // Lo que sostiene a esta regla es lo MEDIDO: 3 modos nulos, patch test
-    // exacto y el hemisferio de -34 % a -4 %.
+    // OJO: se llego a escribir aqui que alpha(W_a=1) = 9^(-1/4) = 1/raiz(3)
+    // "demuestra" que CSI usa esta regla, porque CsiGo2.dll carga ese numero.
+    // ES FALSO, y se deja escrito para que no vuelva: la funcion donde vive esa
+    // constante tiene TRES coordenadas naturales y escribe 24 huecos de
+    // funciones de forma — es un HEXAEDRO de 8 nudos, no el shell, y su 0.125
+    // es el 1/8 de N = 1/8 (1+-r)(1+-s)(1+-t). Un numero compatible con dos
+    // explicaciones no confirma ninguna. Lo que sostiene a esta regla es lo
+    // MEDIDO: 3 modos nulos, patch test exacto y el hemisferio de -34 % a -4 %.
     double qr[9], qs[9], qw[9];
     int nq = 0;
     if (wAlpha > 0.0) {
@@ -708,8 +719,10 @@ Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
     // 1/5000 * G*t*A — pequenisimo, justo lo justo para quitar el mecanismo sin
     // rigidizar nada. O sea que NO es rigidez: es estabilizacion.
     //
-    // Con esto, el elemento con Gauss 2x2 tiene 3 modos nulos y patch test
-    // EXACTO (1.500000 / 0.600000).
+    // Con esto, el elemento cumple a la vez las tres cosas que cumple ETABS:
+    // 3 modos nulos, patch test EXACTO (1.500000 / 0.600000) y Gauss 2x2 — que
+    // es el unico orden que aparece en el binario (1/sqrt(3) se carga 8 veces;
+    // sqrt(3/5), 5/9 y 8/9 NO se cargan nunca).
     if (khg > 0.0) {
         double A = 0.0;                       // area del cuadrilatero
         for (int i = 0; i < 4; i++) {
@@ -1285,25 +1298,9 @@ static Eigen::MatrixXd getBendingK_DSE(const double x[4], const double y[4],
 //   esquinas reconstruidas correctamente, en cuadriláteros convexos).
 // - Sin shear locking en flexión pura (el (2/3)·Δθ_ij + condensación absorbe
 //   el cortante parásito Q4, equivalente al ANS / MITC4 en rectángulos).
-// - ⚠️ «Equivalente exacto a MITC4 para rectángulos perfectos»: MEDIDO FALSO
-//   (17-sep-2026). En la celda cuadrada 1.25×1.25 con t/L = 0.008,
-//   ‖K_DSE − K_MITC4‖/‖K_MITC4‖ = 9.998e-01. Lo que sí se midió: los DOS dan
-//   3 modos de energía nula (ninguno es un mecanismo) y los DOS dan la energía
-//   de flexión pura EXACTA (0.000 %). Son dos elementos distintos, sin más.
-// - Para mallas distorsionadas, diferente de MITC4 (DSE muestrea en coords
-//   físicas, MITC4 en coords naturales).
-//
-// ⚠️⚠️ PIDE BORDE «DURO». Wilson, §8.9.2: «Note que la rotación normal a lo largo
-//   del extremo con soporte simple está fijado en cero. Para el DSE se requiere
-//   la condición de "hard" boundary. El DKE rinde los mismos resultados para
-//   condiciones de bordes tanto duras como blandas».
-//   Medido en la placa apoyada 16×16 con carga uniforme (razón DSE/Kirchhoff,
-//   que el libro da en su Tabla 8.4 = 1.00082 para h fino):
-//       borde BLANDO (solo w atado)          -> 1.0222   (2.2 % blando)
-//       borde DURO  (+ rotación normal atada)-> 1.0036   (0.36 %)
-//   O sea: con el borde que NO le corresponde, este elemento parece 2-5 %
-//   blando y no lo es. Cualquier banco que lo juzgue tiene que atar la rotación
-//   normal en el borde simplemente apoyado, o no está midiendo este elemento.
+// - Equivalente exacto a MITC4 para rectángulos perfectos en plano X-Y.
+// - Para mallas distorsionadas, ligeramente diferente de MITC4 (DSE muestrea
+//   en coords físicas, MITC4 en coords naturales).
 //
 // Refs:
 //   - Wilson, E.L., "Análisis Estructural", 4ª Ed., Cap. 6 §6.3-§6.5, Cap. 8 §8.2-§8.6
@@ -1426,25 +1423,6 @@ static Eigen::MatrixXd getBendingK_DSE_FULL(const double x[4], const double y[4]
     // Wilson Eq. 8.6:
     //   γ_e = (1/L_e)(w_j − w_i) + (1/2)(θ_n_i + θ_n_j) + (2/3)·Δθ_e
     //   donde θ_n = −sin α_e · θx + cos α_e · θy (perpendicular en plano)
-    //
-    // ⚠️ EL SIGNO DEL (2/3): el libro pone MENOS, aquí va MÁS. NO es un error.
-    //    Wilson Ec. (8.6), pág. PDF 131:
-    //        γ_ij = (1/L)(u_zj − u_zi) − (1/2)(θ_i + θ_j) − (2/3)·Δθ_ij
-    //    y su Ec. (8.3) reparte la rotación de lado como
-    //        Δθx = +sen α·Δθ_ij ,  Δθy = −cos α·Δθ_ij
-    //    Aquí la rotación de lado se mide a lo largo de n̂ = (−sen α, +cos α),
-    //    que es el vector OPUESTO al de Wilson (ver Bb_aa más arriba). O sea
-    //        Δθ_e (este código) = −Δθ_ij (Wilson)
-    //    con lo cual el −(2/3)·Δθ_ij del libro se escribe +(2/3)·Δθ_e. Los
-    //    términos de w y de θ nodal SÍ coinciden letra por letra con la Ec.(8.7).
-    //
-    //    Y da igual de todos modos: Δθ es un GDL INTERNO que se condensa
-    //    (Ec. 8.18-8.19). En Kb = Kuu − Kua·Kaa⁻¹·Kau el cambio de signo de Δθ
-    //    aparece DOS veces (Kua y Kau) y Kaa no cambia → Kb es idéntica.
-    //    MEDIDO (17-sep-2026, cuadrilátero distorsionado, 3 espesores):
-    //      · convención literal de Wilson (−2/3 Y Bb_aa volteado) → ‖ΔK‖/‖K‖ = 0.000e+00
-    //      · voltear SÓLO el 2/3 (el "arreglo" ingenuo)           → ‖ΔK‖/‖K‖ = 17-19 %  ← BUG
-    //    Conclusión: no tocar el +2/3 sin voltear también Bb_aa.
     // DOF layout: cols 0..11 = [w0,θx0,θy0, w1,θx1,θy1, w2,θx2,θy2, w3,θx3,θy3]
     //             cols 12..15 = [Δθ_0, Δθ_1, Δθ_2, Δθ_3]
     Eigen::MatrixXd B_gamma_edge = Eigen::MatrixXd::Zero(4, 16);
@@ -1541,13 +1519,160 @@ static Eigen::MatrixXd getBendingK_DSE_FULL(const double x[4], const double y[4]
 }
 
 // ─── FORMULATION SWITCH ─────────────────────────────────────────────────
-// 3 = MITC4 (Bathe-Dvorkin 1985) + modos incompatibles de Wilson (defecto)
+// 0 = MITC4 + Wilson α-modes (default, current Hekatan, Variant A)
 // 1 = DSE Bathe-Wilson híbrido (DSE-bending + MITC4-shear, Variant B)
 // 2 = DSE Wilson COMPLETO (Cap 8 textbook, edge-discrete shear, Variant C)
 // Cambiar y recompilar para evaluar la formulación deseada.
 
+// ============================================================================
+// SHELL-THICK DE CSI (ETABS / SAP2000) — extraido del binario (2026-09-02)
+// ----------------------------------------------------------------------------
+// Verificado a ~1e-12 % contra la K MEDIDA de ETABS/SAP en ~140 celdas (cuadrado,
+// rectangulo, 27 trapecios, cuadrilateros irregulares, barridos de t/nu/L y
+// modificadores). Bitacora: registros/2026-09-02_binario_drilling_shellthick.md
+// Espejo en Python: hekatan-struct-py/.../elements/plate_csi_thick.py
+//
+//   Giros con 9 funciones (4 bilineales + 4 jerarquicas de lado + burbuja), DOS
+//   componentes cada una; w bilineal. 22 gdl: 12 nodales [w, thx, thy] + 10
+//   internos (8 de lado + 2 de burbuja) que se condensan.
+//   Curvaturas  : kx = thy,x   ky = -thx,y   kxy = thy,y - thx,x
+//   Cortante    : los 4 cortantes de LADO de Wilson (cap.8, ec.8.7), con las
+//                 jerarquicas entrando con 2/3; interpolados en COVARIANTES tipo
+//                 MITC con la parte lineal SIMETRIZADA (m = (b+d)/2); fisico = J^-1 g
+//   Penalizacion: 1000*(D11+D22+D33) * INT (thx,x + thy,y)^2 dA  (divergencia)
+//   Cuadratura  : ITW 1991 de 8 puntos (9/49 y 40/49). B-barra en las 10 internas.
+//   Condensacion: Gauss saltando pivotes nulos (asi trata los modificadores a 0).
+// Convencion de giros: [w, thx_global, thy_global] por nudo, mano derecha (la
+// misma que getBendingK; alli las curvaturas llevan el signo opuesto, K identica).
+// ============================================================================
+static Eigen::MatrixXd getBendingK_CSI(const double x[4], const double y[4],
+                                        double E, double nu, double t,
+                                        const double *mod = nullptr)
+{
+    const double D0 = E * t * t * t / (12.0 * (1.0 - nu * nu));
+    Eigen::Matrix3d Db;
+    Db << D0, D0 * nu, 0,
+          D0 * nu, D0, 0,
+          0, 0, D0 * (1.0 - nu) / 2.0;
+    Eigen::Matrix2d Ds = Eigen::Matrix2d::Identity() * ((5.0 / 6.0) * E * t / (2.0 * (1.0 + nu)));
+    if (mod) {
+        const double sb[3] = { std::sqrt(std::max(0.0, mod[3])), std::sqrt(std::max(0.0, mod[4])), std::sqrt(std::max(0.0, mod[5])) };
+        const double ss[2] = { std::sqrt(std::max(0.0, mod[6])), std::sqrt(std::max(0.0, mod[7])) };
+        for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) Db(i, j) *= sb[i] * sb[j];
+        for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) Ds(i, j) *= ss[i] * ss[j];
+    }
+    Eigen::Matrix<double, 5, 5> D = Eigen::Matrix<double, 5, 5>::Zero();
+    D.block<3, 3>(0, 0) = Db;
+    D.block<2, 2>(3, 3) = Ds;
+    const double Dsum = Db.trace();
+    const double PENAL = 1000.0;
+
+    // geometria de los lados: k va del nudo k al k+1
+    double ca[4], sa[4], LL[4];
+    double Lmax = 0.0, Lmin = 1e300;
+    for (int k = 0; k < 4; k++) {
+        const int j = (k + 1) % 4;
+        const double dx = x[j] - x[k], dy = y[j] - y[k], L = std::hypot(dx, dy);
+        LL[k] = L; Lmax = std::max(Lmax, L); Lmin = std::min(Lmin, L);
+        ca[k] = (L > 0) ? dx / L : 1.0; sa[k] = (L > 0) ? dy / L : 0.0;
+    }
+    // Un Q4 COLAPSADO (lado nulo) no es un elemento: la formulacion divide por
+    // L del lado. Se cae al camino viejo, que topa el jacobiano y no revienta.
+    if (Lmin <= 1e-12 * Lmax)
+        return getBendingK(x, y, E, nu, t, mod);
+    // cortante de cada lado (8.7) como fila sobre los 22 gdl
+    Eigen::Matrix<double, 4, 22> Bl = Eigen::Matrix<double, 4, 22>::Zero();
+    for (int k = 0; k < 4; k++) {
+        const int j = (k + 1) % 4;
+        Bl(k, 3 * j) += 1.0 / LL[k];       Bl(k, 3 * k) -= 1.0 / LL[k];
+        Bl(k, 3 * k + 1) -= sa[k] / 2.0;   Bl(k, 3 * j + 1) -= sa[k] / 2.0;
+        Bl(k, 3 * k + 2) += ca[k] / 2.0;   Bl(k, 3 * j + 2) += ca[k] / 2.0;
+        Bl(k, 12 + 2 * k) -= 2.0 / 3.0 * sa[k];
+        Bl(k, 13 + 2 * k) += 2.0 / 3.0 * ca[k];
+    }
+    const Eigen::Matrix<double, 1, 22> gb =  Bl.row(0) * (LL[0] / 2.0);
+    const Eigen::Matrix<double, 1, 22> gt = -Bl.row(2) * (LL[2] / 2.0);
+    const Eigen::Matrix<double, 1, 22> gR =  Bl.row(1) * (LL[1] / 2.0);
+    const Eigen::Matrix<double, 1, 22> gL = -Bl.row(3) * (LL[3] / 2.0);
+    const Eigen::Matrix<double, 1, 22> A0 = (gb + gt) / 2.0, bb = (gt - gb) / 2.0;
+    const Eigen::Matrix<double, 1, 22> C0 = (gL + gR) / 2.0, dd = (gR - gL) / 2.0;
+    const Eigen::Matrix<double, 1, 22> mm = (bb + dd) / 2.0;
+
+    const double qA = std::sqrt(7.0 / 9.0), qB = std::sqrt(7.0 / 15.0);
+    const double qp[8][2] = { {-qA, -qA}, {qA, -qA}, {qA, qA}, {-qA, qA}, {0, -qB}, {qB, 0}, {0, qB}, {-qB, 0} };
+    const double qw[8] = { 9.0 / 49, 9.0 / 49, 9.0 / 49, 9.0 / 49, 40.0 / 49, 40.0 / 49, 40.0 / 49, 40.0 / 49 };
+
+    Eigen::Matrix<double, 5, 22> B[8];
+    Eigen::Matrix<double, 1, 22> v[8];
+    double w[8];
+    double wsum = 0.0;
+    for (int p = 0; p < 8; p++) {
+        const double r = qp[p][0], s = qp[p][1];
+        const double dN4r[4] = { -(1 - s) / 4, (1 - s) / 4, (1 + s) / 4, -(1 + s) / 4 };
+        const double dN4s[4] = { -(1 - r) / 4, -(1 + r) / 4, (1 + r) / 4, (1 - r) / 4 };
+        const double dNhr[4] = { -r * (1 - s), (1 - s * s) / 2, -r * (1 + s), -(1 - s * s) / 2 };
+        const double dNhs[4] = { -(1 - r * r) / 2, -s * (1 + r), (1 - r * r) / 2, -s * (1 - r) };
+        Eigen::Matrix2d J;
+        J << dN4r[0]*x[0]+dN4r[1]*x[1]+dN4r[2]*x[2]+dN4r[3]*x[3], dN4r[0]*y[0]+dN4r[1]*y[1]+dN4r[2]*y[2]+dN4r[3]*y[3],
+             dN4s[0]*x[0]+dN4s[1]*x[1]+dN4s[2]*x[2]+dN4s[3]*x[3], dN4s[0]*y[0]+dN4s[1]*y[1]+dN4s[2]*y[2]+dN4s[3]*y[3];
+        const Eigen::Matrix2d Ji = J.inverse();
+        const double dJ = std::abs(J.determinant());
+        B[p].setZero(); v[p].setZero();
+        auto giro = [&](int col, double a, double b, double fx, double fy) {
+            B[p](0, col) += b * fx;
+            B[p](1, col) -= a * fy;
+            B[p](2, col) += b * fy - a * fx;
+            v[p](col)    += a * fx + b * fy;      // divergencia del campo de giros
+        };
+        for (int i = 0; i < 4; i++) {
+            const double gx = Ji(0, 0) * dN4r[i] + Ji(0, 1) * dN4s[i];
+            const double gy = Ji(1, 0) * dN4r[i] + Ji(1, 1) * dN4s[i];
+            giro(3 * i + 1, 1, 0, gx, gy);
+            giro(3 * i + 2, 0, 1, gx, gy);
+        }
+        for (int k = 0; k < 4; k++) {
+            const double hx = Ji(0, 0) * dNhr[k] + Ji(0, 1) * dNhs[k];
+            const double hy = Ji(1, 0) * dNhr[k] + Ji(1, 1) * dNhs[k];
+            giro(12 + 2 * k, 1, 0, hx, hy);
+            giro(13 + 2 * k, 0, 1, hx, hy);
+        }
+        {
+            const double d9r = -2 * r * (1 - s * s), d9s = -2 * s * (1 - r * r);
+            const double g9x = Ji(0, 0) * d9r + Ji(0, 1) * d9s, g9y = Ji(1, 0) * d9r + Ji(1, 1) * d9s;
+            giro(20, 1, 0, g9x, g9y);
+            giro(21, 0, 1, g9x, g9y);
+        }
+        // cortante covariante simetrizado -> fisico
+        Eigen::Matrix<double, 2, 22> gcov;
+        gcov.row(0) = A0 + mm * s;
+        gcov.row(1) = C0 + mm * r;
+        B[p].block<2, 22>(3, 0) = Ji * gcov;
+        w[p] = qw[p] * dJ; wsum += w[p];
+    }
+    // B-barra: media pesada de las curvaturas de las 10 columnas internas
+    Eigen::Matrix<double, 3, 10> media = Eigen::Matrix<double, 3, 10>::Zero();
+    for (int p = 0; p < 8; p++) media += B[p].block<3, 10>(0, 12) * w[p];
+    media /= wsum;
+    Eigen::Matrix<double, 22, 22> K22 = Eigen::Matrix<double, 22, 22>::Zero();
+    for (int p = 0; p < 8; p++) {
+        B[p].block<3, 10>(0, 12) -= media;
+        K22 += (B[p].transpose() * D * B[p] + PENAL * Dsum * v[p].transpose() * v[p]) * w[p];
+    }
+    // condensacion de los 10 internos: Gauss, saltando pivotes nulos
+    const double esc = K22.cwiseAbs().maxCoeff();
+    for (int i = 12; i < 22; i++) {
+        const double piv = K22(i, i);
+        if (std::abs(piv) <= 1e-14 * esc) continue;
+        const Eigen::Matrix<double, 1, 22> fila = K22.row(i);
+        const Eigen::Matrix<double, 22, 1> col = K22.col(i);
+        K22 -= (col * fila) / piv;
+        K22.row(i).setZero(); K22.col(i).setZero();
+    }
+    return K22.block<12, 12>(0, 0);
+}
+
 #ifndef HK_BENDING_FORMULATION
-#define HK_BENDING_FORMULATION 3
+#define HK_BENDING_FORMULATION 0
 #endif
 
 // ─── Public: Combined Shell Q4 stiffness 24×24 ─────────────────────────────
@@ -1657,16 +1782,15 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     //
     // Para cascara doblemente curva sigue siendo mejor el 9 (hemisferio 8x8 a
     // -0.50 %); se pide por `elementInputs.drillingTypes`.
-    int drillingType = getMapVal(elementInputs.drillingTypes, index, 13);
+    int drillingType = getMapVal(elementInputs.drillingTypes, index, 12);   // 12 = la membrana de CSI (2-sep-2026)
     // Con drillingType 3 este numero es gamma/mu del paper (defecto 0.4, que es
     // lo medido de ETABS). Con el 2 es el alpha de Hughes-Brezzi (defecto 0.05).
     double drillScale = getMapVal(elementInputs.drillingPenaltyScales, index,
-                                  ((drillingType >= 3 && drillingType <= 11)
-                                   || drillingType == 13) ? 0.4 : 0.05);
+                                  (drillingType >= 3 && drillingType <= 12) ? 0.4 : 0.05);
     // ⚠️ el 11 (receta de Wilson) TAMBIEN es ITW: si el rango se queda en 10 se
     // cae a la membrana vieja y el tipo no hace nada — daba el mismo numero que
     // el 3 y parecia que K0 no servia.
-    const bool usaITW = ((drillingType >= 3 && drillingType <= 11) || drillingType == 13);
+    const bool usaITW = (drillingType >= 3 && drillingType <= 12);
     // 3 = ITW con Gauss 3x3, que es lo que pide el paper   [DEFECTO]
     // 4 = ITW con Gauss 2x2 (integracion reducida)  -- NO USAR, ver abajo
     // 5 = ITW 3x3 con la burbuja a la Taylor (J0 del centro)
@@ -1684,16 +1808,25 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     // Tampoco valen los 4 modos incompatibles de Wilson en lugar de la burbuja
     // (o ademas de ella): con ellos el patch test de orden superior da un giro
     // de -0.98 en vez de 0.6 y el elemento se queda con 5 modos nulos.
-    // 6 = Allman + Gauss 2x2 + rango uno de Wilson + estabilizacion del reloj
-    //     de arena (su valor, 1/5000*G*t*A, medido en la 12x12 de ETABS
-    //     reconstruida por flexibilidad). Cumple a la vez:
+    // 6 = COMO EL DE CSI, deducido del binario: Allman + Gauss 2x2 + rango uno
+    //     de Wilson + estabilizacion del reloj de arena. Es el unico que cumple
+    //     a la vez las tres cosas que cumple ETABS:
     //         3 modos nulos · patch test EXACTO (1.500000/0.600000) · Gauss 2x2
+    //
+    //     ⚠️ AQUI DECIA que el binario lo respalda, porque CsiGo2.dll carga
+    //     1/sqrt(3) ocho veces y nunca sqrt(3/5). RETIRADO el 19-ago-2026: la
+    //     funcion donde viven esas cargas tiene TRES coordenadas naturales y
+    //     escribe 24 huecos de funciones de forma — es un HEXAEDRO de 8 nudos,
+    //     no el shell. Su 1/sqrt(3) es Gauss 2x2x2 del solido y su 0.125 es el
+    //     1/8 de N = 1/8 (1+-r)(1+-s)(1+-t), no el l/8 de Allman. La zona del
+    //     shell en el binario esta todavia SIN localizar.
+    //     Lo que sigue en pie es lo medido contra los bancos.
     //
     //     Medido contra los bancos:
     //                        patch    cantilever  Cook   drilling-dof  hemisferio
     //       HB (el viejo)   -1.7/-6.3%   0.18%    0.46%     11.46%       -3.6%
     //       ITW 3x3 (hoy)    EXACTO      0.13%    0.96%      5.45%      -37.4%
-    //       tipo 6 (2x2)     EXACTO      0.05%    0.83%      7.14%       -5.2%
+    //       CSI-like 2x2     EXACTO      0.05%    0.83%      7.14%       -5.2%
     //
     //     ⚖️ NO es defecto todavia porque hay un COMPROMISO sin decidir: el 2x2
     //     arregla el hemisferio (de -37 % a -5 %, y en 16x16 de -4.2 % a -0.85 %)
@@ -1711,18 +1844,15 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     //      Ya se habia medido que el 2x2 solo desbloquea el hemisferio
     //      (-37 % -> -5 %) pero deja modos nulos, y se descarto por mecanismo:
     //      faltaba K0.
-    // 13 = [DEFECTO] el 8 con la cuadratura BAJADA a Gauss 2x2 y la estabilizacion
-    //      del reloj de arena del theta_z (khg = 2e-4, o sea 1/5000 * G*t*A).
-    //      NADA de esto sale de un binario: son las DOS elecciones numericas que
-    //      ya estaban medidas aqui arriba —el 2x2 desbloquea el hemisferio
-    //      (-37 % -> -5 %) y el khg quita el mecanismo que el 2x2 deja— y el valor
-    //      del khg se obtuvo de la 12x12 de ETABS reconstruida por FLEXIBILIDAD
-    //      (caja negra: se carga el elemento y se mide). Patch test EXACTO
-    //      (1.500000 / 0.600000) y 3 modos nulos.
+    // 12 = LA MEMBRANA DE CSI, extraida del binario (2-sep-2026): ITW con burbuja,
+    //      Gauss 2x2, proyeccion FEAP del drilling, penalizacion gamma=0.4*mu en el
+    //      centro y el reloj de arena del theta_z con 5e-5*G*t*A (= khg 2e-4/4).
+    //      Contra la 12x12 MEDIDA de ETABS: 1e-13 % en las 9 geometrias
+    //      (cuadrados con nu, rectangulos, paralelogramo, trapecio). Es el defecto.
     const int  ngITW  = (drillingType == 4 || drillingType == 6
-                         || drillingType == 11 || drillingType == 13) ? 2 : 3;
+                         || drillingType == 11 || drillingType == 12) ? 2 : 3;
     const bool k0Wilson = (drillingType == 11);
-    const double khgITW = (drillingType == 6 || drillingType == 13) ? 2.0e-4 : 0.0;
+    const double khgITW = (drillingType == 6 || drillingType == 12) ? 2.0e-4 : 0.0;
     const bool taylorITW = (drillingType == 5);
     //  7 = la regla de OCHO puntos.
     //      ⚠️ Ponia «ITW 1991, ec. (30), el paper que cita el manual de CSI» y
@@ -1762,8 +1892,7 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     //  8 = la via de FEAP/Taylor: Gauss 3x3 + PROYECCION del drilling. Es la
     //      que reproduce la matriz 12x12 medida de ETABS al 1.42 % (contra el
     //      15.97 % del tipo 3). Ver el comentario de `proyDrill` mas abajo.
-    const bool proyITW = (drillingType == 8 || drillingType == 9 || drillingType == 10
-                          || drillingType == 13);
+    const bool proyITW = (drillingType == 8 || drillingType == 9 || drillingType == 10 || drillingType == 12);
     // 10 = proyeccion + INTEGRACION SELECTIVA del volumetrico a 2x2.
     //      Baja la matriz de ETABS de 1.42 % a 0.878 % sin tocar el patch
     //      test (1.500000/0.600000) ni los 3 modos nulos.
@@ -1773,31 +1902,20 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
                                   : getMembraneK(x, y, E, nu, t, dmod);   // 8×8
     Eigen::MatrixXd Kitw = usaITW ? getMembraneITW(x, y, E, nu, t, dmod, drillScale, ngITW, taylorITW, khgITW, waITW, proyITW, sriITW, k0Wilson)
                                   : Eigen::MatrixXd::Zero(12, 12);        // 12×12
-    // ── Conmutador EN EJECUCIÓN de la formulación de flexión ────────────────
-    // plateFormulations[index] == 2  →  DSE de Wilson (cap. 8 del libro), el
-    // «Shell-Thick» que Wilson dice (pág. PDF 155) que es «el enfoque empleado
-    // en el programa SAP2000». Se lee aquí, no con un #define, para poder medir
-    // A/B contra SAP2000 sin recompilar el WASM en cada prueba.
-    // El resto de valores los reparte getLocalStiffnessMatrix.cpp (1=Thin, 3=DKMQ).
-    const int plateForm = getMapVal(elementInputs.plateFormulations, index, 0);
-
-    Eigen::MatrixXd Kb;
-    if (sinFlexion) {
-        Kb = Eigen::MatrixXd::Zero(12, 12);
-    } else if (plateForm == 2) {
-        // Wilson DSE completo (cap. 8): cortante discreto de lado + corrección
-        // de patch test (8.17) + condensación estática (8.18-8.19).
-        Kb = getBendingK_DSE_FULL(x, y, E, nu, t);
-    } else {
     #if HK_BENDING_FORMULATION == 2
-        Kb = getBendingK_DSE_FULL(x, y, E, nu, t);  // 12×12 (Wilson DSE Cap 8 completo, Variant C)
+        Eigen::MatrixXd Kb = getBendingK_DSE_FULL(x, y, E, nu, t);  // 12×12 (Wilson DSE Cap 8 completo, Variant C)
     #elif HK_BENDING_FORMULATION == 1
-        Kb = getBendingK_DSE(x, y, E, nu, t);       // 12×12 (DSE-bending + MITC4-shear, Variant B)
+        Eigen::MatrixXd Kb = getBendingK_DSE(x, y, E, nu, t);       // 12×12 (DSE-bending + MITC4-shear, Variant B)
+    #elif HK_BENDING_FORMULATION == 3
+        Eigen::MatrixXd Kb = sinFlexion
+        ? Eigen::MatrixXd::Zero(12, 12)
+        : getBendingK(x, y, E, nu, t, dmod);     // 12×12 (MITC4 + Wilson α, Variant A: lo de antes)
     #else
-        // 3 (defecto): MITC4 (Bathe-Dvorkin 1985) + modos incompatibles de Wilson
-        Kb = getBendingK(x, y, E, nu, t, dmod);     // 12×12
+        // 0 (defecto): el Shell-Thick de CSI extraido del binario (2026-09-02)
+        Eigen::MatrixXd Kb = sinFlexion
+        ? Eigen::MatrixXd::Zero(12, 12)
+        : getBendingK_CSI(x, y, E, nu, t, dmod);
     #endif
-    }
     Km   *= mFactor;
     Kitw *= mFactor;
     Kb   *= bFactor;
@@ -1935,4 +2053,11 @@ Eigen::MatrixXd getTransformationMatrixShellQ4(
     }
 
     return T;
+}
+
+// Para plate_q4 (plateQ4Solve): la placa de CSI a secas, sin modificadores.
+Eigen::MatrixXd getBendingK_CSI_placa(const double x[4], const double y[4],
+                                      double E, double nu, double t)
+{
+    return getBendingK_CSI(x, y, E, nu, t, nullptr);
 }

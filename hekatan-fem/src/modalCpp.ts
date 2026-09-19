@@ -182,17 +182,6 @@ export function modalCpp(
   gc.push(massRowsOut);
   const massColsOut = mod._malloc(4);
   gc.push(massColsOut);
-  // Salidas NUEVAS (17-sep-2026): Γ masa-normalizado, masa total por dirección y
-  // la escala que lleva la forma «máx = 1» a la masa-normalizada. Ver modal.cpp.
-  const gammaPtrOut = mod._malloc(4);
-  gc.push(gammaPtrOut);
-  const totalMassPtrOut = mod._malloc(4);
-  gc.push(totalMassPtrOut);
-  const modeScalesPtrOut = mod._malloc(4);
-  gc.push(modeScalesPtrOut);
-  mod.HEAPU32[gammaPtrOut / 4] = 0;
-  mod.HEAPU32[totalMassPtrOut / 4] = 0;
-  mod.HEAPU32[modeScalesPtrOut / 4] = 0;
 
   // 2- Call C++ modal()
   mod._modal(
@@ -289,10 +278,7 @@ export function modalCpp(
     modesColsOut,
     massPtrOut,
     massRowsOut,
-    massColsOut,
-    gammaPtrOut,
-    totalMassPtrOut,
-    modeScalesPtrOut
+    massColsOut
   );
 
   // 3- Read outputs
@@ -341,39 +327,10 @@ export function modalCpp(
     gc.push(massPtr);
   }
 
-  // Salidas nuevas: Γ (masa-normalizado), masa total por dirección, escala de φ.
-  let participationFactors: number[][] = [];
-  let totalMass: number[] = [];
-  let modeScales: number[] = [];
-  const gammaPtr = mod.HEAPU32[gammaPtrOut / 4];
-  if (gammaPtr && massRows > 0) {
-    const f = new Float64Array(mod.HEAPF64.buffer, gammaPtr, massRows * 6);
-    for (let i = 0; i < massRows; i++)
-      participationFactors.push(Array.from(f.slice(i * 6, (i + 1) * 6)));
-    gc.push(gammaPtr);
-  }
-  const tmPtr = mod.HEAPU32[totalMassPtrOut / 4];
-  if (tmPtr) {
-    totalMass = Array.from(new Float64Array(mod.HEAPF64.buffer, tmPtr, 6));
-    gc.push(tmPtr);
-  }
-  const msPtr = mod.HEAPU32[modeScalesPtrOut / 4];
-  if (msPtr && nFreq > 0) {
-    modeScales = Array.from(new Float64Array(mod.HEAPF64.buffer, msPtr, nFreq));
-    gc.push(msPtr);
-  }
-
   // Free memory
   gc.forEach((ptr) => mod._free(ptr));
 
-  return {
-    frequencies,
-    modeShapes,
-    massParticipation,
-    participationFactors,
-    totalMass,
-    modeScales,
-  };
+  return { frequencies, modeShapes, massParticipation };
 }
 
 // Utils

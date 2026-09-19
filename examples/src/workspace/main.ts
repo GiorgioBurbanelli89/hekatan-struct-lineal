@@ -226,6 +226,9 @@ import {
   stressUnit, subgradeUnit, stiffTransUnit, lengthSectionUnit,
   applyConsistentUnits, detectCurrentPreset,
 } from "./units";
+// Cursor auxiliar dibujado (?cursor=1): el del sistema no sale en las capturas
+// ni en la automatizacion, asi que al ensenar la app no se ve donde se pulsa.
+import "./cursorAux";
 
 // Propagación de unidades al viewer de hekatan-ui: cualquier cambio en
 // forceUnit/dispUnit del workspace se refleja en el colormap legend y en
@@ -456,6 +459,61 @@ const states: BuildStates = {
 // apoyos quedaron aplicados: solo se ve el dibujo, y el dibujo no dice si el
 // modelo se puede calcular.
 (window as any).__hekatanStates = states;
+  // ── CONVERTIR LA PLANTILLA EN ALGO EDITABLE ───────────────────────────────
+  //
+  // Jorge (16-sep-2026): «falta eliminar barras, un paño… si quisiera un pórtico
+  // IRREGULAR de una plantilla ya hecha».
+  //
+  // No se podía, y la razón no era el botón Borrar: en una plantilla el modelo lo
+  // fabrica `build()` a partir de los parámetros, y el lienzo de dibujo está VACÍO
+  // (medido: 0 nudos con `edificio-aporticado` cargado). No hay ninguna barra que
+  // tocar porque no hay nada dibujado; lo que se ve es la malla FEM.
+  //
+  // Esto vuelca esa malla al lienzo —nudos, barras y paños pasan a ser objetos
+  // dibujados, y los apoyos y cargas a los mapas manuales— y abre el lienzo. A
+  // partir de ahí se borra una barra, se mueve un nudo o se añade lo que sea, como
+  // si lo hubieras dibujado tú. El precio, y hay que decirlo: el modelo se CONGELA
+  // con los valores de ahora y deja de seguir a los sliders de la plantilla.
+  (window as any).__hekatanConvertirEditable = (): { nudos: number; barras: number; areas: number } | null => {
+    const N = (states.nodes.rawVal ?? []) as number[][];
+    const E = (states.elements.rawVal ?? []) as number[][];
+    if (!N.length || !E.length) return null;
+    const pts: [number, number, number][] = N.map((q) => [q[0], q[1], q[2]] as [number, number, number]);
+    const polys: number[][] = [];
+    const areas: number[] = [];
+    for (const e of E) {
+      if (e.length === 2) polys.push([e[0], e[1]]);
+      else if (e.length >= 3) {
+        // un paño se guarda como polilínea CERRADA y su índice va en `areas`
+        polys.push([...e, e[0]]);
+        areas.push(polys.length - 1);
+      }
+    }
+    // apoyos y cargas: el índice del nudo FEM y el del punto dibujado coinciden
+    const ni: any = states.nodeInputs.rawVal ?? {};
+    const sup = new Map<number, any>(), lds = new Map<number, any>();
+    for (const [k, v] of (ni.supports ?? new Map())) sup.set(Number(k), [...(v as any)]);
+    for (const [k, v] of (ni.loads ?? new Map())) lds.set(Number(k), [...(v as any)]);
+    (window as any).__hekatanManualSupports = sup;
+    (window as any).__hekatanManualLoads = lds;
+    drawingPoints.val = pts;
+    drawingPolylines.val = polys;
+    drawingAreas.val = areas;
+    const ex = examplesRegistry.find((e) => e.id === "new-blank");
+    if (ex) loadExample(ex);
+    // el lienzo se monta con su propio build: se le devuelve el dibujo después
+    setTimeout(() => {
+      drawingPoints.val = pts;
+      drawingPolylines.val = polys;
+      drawingAreas.val = areas;
+      (window as any).__hekatanManualSupports = sup;
+      (window as any).__hekatanManualLoads = lds;
+      (window as any).__hekatanRebuild?.();
+      (window as any).__hekatanAutoFit?.();
+    }, 60);
+    return { nudos: pts.length, barras: polys.length - areas.length, areas: areas.length };
+  };
+
 
 // ── El modelo de la pantalla, escrito como .heks ─────────────────────────────
 // `__hekatanModeloAHeks` lo usan «Guardar», «Guardar como…», «Compartir enlace» y
@@ -875,6 +933,7 @@ function loadExample(ex: ExampleDef) {
   // "pressure" solo se ofrece en zapatas (con resortes Winkler); "bending*" solo
   // en elementos que flexan; "membrane*" solo en plane-stress; etc.
   filterShellResultOptions(ex.availableShellResults);
+  ajustarResultadosAlModelo();          // y apagar lo que este modelo no puede dar
   autoScaleDeformedShape();
   autoFitCamera();
   buildParamsPane();
@@ -1396,7 +1455,119 @@ function encuadrarAhora() {
 
 /** Oculta opciones no aplicables del <select> "Shell results" del Settings HTML
  *  y sincroniza su display con el estado actual de shellResults. */
+/**
+ * Los desplegables de resultados DICEN lo que este modelo puede dar.
+ *
+ * Jorge (17-sep-2026): «en algunos elementos no me estás dando para escoger otros
+ * resultados en shell results o frame result». Medido: `edificio-aporticado` tiene
+ * **0 cáscaras y 63 barras**, y aun así «Shell results» ofrecía sus 19 opciones —
+ * las 19 devolviendo −1, que es el relleno de «no hay dato». Eliges M11, no pasa
+ * nada, y parece que el programa esté roto cuando lo que pasa es que ese resultado
+ * no existe en un pórtico de barras.
+ *
+ * Así que cada desplegable mira el modelo: sin cáscaras, las opciones de cáscara se
+ * apagan y el rótulo lo dice; sin barras, las de barra. Es lo que hace ETABS, que no
+ * te deja pedir un M11 donde no hay áreas.
+ */
+const LABEL2INTERNAL_RES: Record<string, string> = {
+  none: "none",
+  F11: "membraneXX", F22: "membraneYY", F12: "membraneXY",
+  FMax: "membranePrincipalMax", FMin: "membranePrincipalMin", FVM: "vonMises",
+  V13: "tranverseShearX", V23: "tranverseShearY", VMax: "transverseShearMax",
+  M11: "bendingXX", M22: "bendingYY", M12: "bendingXY",
+  MMax: "bendingPrincipalMax", MMin: "bendingPrincipalMin",
+  "Pressure (suelo)": "pressure", Ux: "displacementX", Uy: "displacementY", Uz: "displacementZ",
+};
+const internalOf = (label: string): string => LABEL2INTERNAL_RES[label] ?? label;
+
+function ajustarResultadosAlModelo() {
+  const elems = (states.elements.rawVal ?? []) as number[][];
+  const nCascaras = elems.filter((e) => e.length >= 3).length;
+  const nBarras = elems.filter((e) => e.length === 2).length;
+  const selects = Array.from(viewerElm.querySelectorAll<HTMLSelectElement>("select"));
+  const marcar = (sel: HTMLSelectElement | undefined, hay: boolean, que: string) => {
+    if (!sel) return;
+    for (const o of Array.from(sel.options)) {
+      if (o.value === "none") continue;
+      o.disabled = !hay;
+      o.style.color = hay ? "" : "#64748b";
+    }
+    sel.title = hay ? "" : `Este modelo no tiene ${que}: no hay resultados que enseñar.`;
+    const rot = sel.closest(".tp-lblv")?.querySelector<HTMLElement>(".tp-lblv_l");
+    if (rot) {
+      const base = rot.textContent?.replace(/\s*—.*$/, "") ?? "";
+      rot.textContent = hay ? base : `${base} — sin ${que}`;
+      rot.style.opacity = hay ? "" : "0.6";
+    }
+    if (!hay && sel.value !== "none") { sel.value = "none"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  };
+  // el de cáscara es el único con «M11»; el de barra, el único con «Axial Force»
+  const selShell = selects.find((s) => Array.from(s.options).some((o) => o.value === "M11"));
+  const selFrame = selects.find((s) => Array.from(s.options).some((o) => o.value === "Axial Force"));
+  marcar(selShell, nCascaras > 0, "cáscaras");
+  marcar(selFrame, nBarras > 0, "barras");
+
+  // ── Y dentro de las de cáscara, apagar las que ESTE modelo no calcula ──────
+  //
+  // Una placa en flexión pura no tiene fuerzas de membrana: F11/F22/F12/FVM salen
+  // planas (medido en `plate-thin`: los cuatro a −1, que es el relleno de «sin dato»,
+  // mientras M11/M22/M12 sí dan valores). Ofrecerlas y que no pinten nada es lo que
+  // hace pensar que el programa falla. M12 —el momento TORSOR— sí está y es de los
+  // que hay que mirar en una losa: en las esquinas de una losa apoyada en 4 bordes
+  // es máximo, y entra en el armado por Wood-Armer.
+  if (selShell && nCascaras > 0) {
+    const ao: any = states.analyzeOutputs.rawVal ?? {};
+    // ⚠️ FMax/FMin, MMax/MMin y VMax NO están en `analyzeOutputs`: son DERIVADOS (círculo
+    // de Mohr) que el visor calcula al vuelo desde los tres campos de su familia
+    // (getViewer.ts). Mirarlos en analyzeOutputs los daba por «sin datos» aunque la
+    // zapata sí los pinta: un falso negativo que habría escondido justo las principales.
+    const DERIVADOS: Record<string, string[]> = {
+      membranePrincipalMax: ["membraneXX", "membraneYY", "membraneXY"],
+      membranePrincipalMin: ["membraneXX", "membraneYY", "membraneXY"],
+      bendingPrincipalMax:  ["bendingXX", "bendingYY", "bendingXY"],
+      bendingPrincipalMin:  ["bendingXX", "bendingYY", "bendingXY"],
+      transverseShearMax:   ["tranverseShearX", "tranverseShearY"],
+    };
+    const conValores = (m: any): boolean => {
+      if (m == null) return false;
+      if (typeof m.size === "number") return m.size > 0;
+      if (Array.isArray(m)) return m.length > 0;
+      return true;
+    };
+    const tieneDatos = (interno: string): boolean => {
+      if (interno.startsWith("displacement")) return true;        // salen de la deformada
+      const base = DERIVADOS[interno];
+      if (base) return base.some((k) => conValores(ao[k]));       // el derivado vive si vive su familia
+      return conValores(ao[interno]);
+    };
+    for (const o of Array.from(selShell.options)) {
+      if (o.value === "none" || o.disabled) continue;
+      const interno = internalOf(o.value);
+      if (!tieneDatos(interno)) {
+        o.disabled = true;
+        o.style.color = "#64748b";
+        if (!/sin datos/.test(o.textContent ?? "")) o.textContent = `${o.textContent}  (sin datos)`;
+      }
+    }
+  }
+}
+(window as any).__hekatanAjustarResultados = ajustarResultadosAlModelo;
+
 function filterShellResultOptions(allowed?: string[]) {
+  // ⚠️ YA NO SE RECORTA NADA. Cada ejemplo traía su propia lista `availableShellResults`
+  // —87 ejemplos, 87 listas distintas— y el desplegable salía diferente en cada uno: en
+  // una placa se ofrecían «FVM, M11, M22, Uz» y faltaba M12, el momento TORSOR, que en
+  // una losa es justo el que hay que mirar (Jorge, 17-sep-2026: «no hay momentos
+  // torsionales en placas… cada ejemplo debe ser idéntico»).
+  //
+  // El motor calcula las 19 componentes para cualquier cáscara, así que esconder unas
+  // cuantas era una decisión de cada ejemplo, no una limitación. Lo único que apaga
+  // opciones ahora es el MODELO: sin cáscaras no hay resultados de cáscara
+  // (`ajustarResultadosAlModelo`). `defaultShellResult` se respeta: sigue decidiendo
+  // cuál sale elegida al abrir.
+  if (allowed) { /* se ignora a propósito: ver arriba */ }
+  return;
+  // eslint-disable-next-line no-unreachable
   const selects = viewerElm.querySelectorAll<HTMLSelectElement>("select");
   // OJO: el `value` del <option> del DOM es el LABEL de Tweakpane (estilo ETABS:
   // "M11 (bendingXX)", "Von Mises", "pressure"); el ESTADO usa el nombre interno
@@ -1646,7 +1817,13 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 
 // Expose rebuild + autoFitCamera al window para test/debug via DOM
 // (también usado por el csi-importer para forceRebuildAndFit).
-(window as any).__hekatanRebuild = rebuild;
+// Al RECONSTRUIR también: si dibujas la primera losa, «Shell results» tiene que
+// encenderse solo; si borras la última, apagarse.
+(window as any).__hekatanRebuild = (...a: any[]) => {
+  const r = (rebuild as any)(...a);
+  try { setTimeout(ajustarResultadosAlModelo, 60); } catch {}
+  return r;
+};
 (window as any).__hekatanAutoFit = autoFitCamera;
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
@@ -3229,6 +3406,40 @@ function showMenu() {
     const ex = examplesRegistry.find((e) => e.id === "new-blank");
     if (ex) loadExample(ex);
   });
+
+  // -- EDITAR LO QUE YA HAY: no es «nuevo modelo» --------------------------
+  //
+  // Jorge, 17-sep-2026: «esa opción está mal colocada». Y con razón: estaba en la
+  // lista de «Nuevo modelo · Plantillas», entre botones que CREAN un modelo, pero
+  // esto no crea nada — coge el que ya está cargado y lo pasa al lienzo. Pulsarlo
+  // nada más abrir la app soltaba un «Carga primero una plantilla o un ejemplo»:
+  // un botón que solo sirve a veces, puesto donde parece que sirve siempre.
+  //
+  // Ahora va en su propio apartado, DESPUÉS de las plantillas. Y si no hay modelo
+  // cargado no se enseña el botón: se enseña qué hay que hacer antes.
+  const hayModelo = (() => {
+    try { return (states.nodes?.val?.length ?? 0) > 0; } catch { return false; }
+  })();
+  const fEditar = pane.addFolder({ title: "✎ Editar el modelo que ya tienes", expanded: true });
+  if (!hayModelo) {
+    fEditar.addButton({ title: "(carga antes una plantilla o un ejemplo)" })
+      .on("click", () => alert("Elige arriba una plantilla o un ejemplo. Cuando haya un modelo en pantalla, aquí sale el botón para pasarlo al lienzo y poder borrar barras o paños."));
+  } else {
+    fNuevo.addButton({ title: "✎ Pasar este modelo al lienzo (borrar barras o paños)" }).on("click", () => {
+      const r = (window as any).__hekatanConvertirEditable?.();
+      if (!r) { alert("Carga primero una plantilla o un ejemplo con modelo."); return; }
+      alert(`Modelo pasado al lienzo: ${r.nudos} nudos, ${r.barras} barras y ${r.areas} panos.` +
+        "\n\nYa puedes borrar barras o panos (Selec. + Supr, o el boton Borrar) y dibujar encima." +
+        "\nOjo: el modelo queda congelado con los valores de ahora; los sliders de la plantilla ya no lo cambian.");
+    });
+  }
+  // El agente de IA (hekatan-ui/src/cad/aiAgent.ts) desde la PORTADA: que no haya que
+  // saber que existe el 🤖 del lienzo. Abre el lienzo en blanco y la ventana del agente.
+  fMenu.addButton({ title: "🤖 Agente IA — pídele el modelo" }).on("click", () => {
+    const ex = examplesRegistry.find((e) => e.id === "new-blank");
+    if (ex) loadExample(ex);
+    setTimeout(() => { try { (window as any).__hekatanAgenteIA?.(); } catch {} }, 300);
+  });
   fMenu.addButton({ title: "📂 Archivo existente" }).on("click", () => {
     const ex = examplesRegistry.find((e) => e.id === "csi-importer");
     if (ex) loadExample(ex);
@@ -3473,9 +3684,31 @@ function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
   // ⚠️ Esto tiene que estar AQUI ademas de en `setPlane` del panel: `setPlane`
   // fija el grid y despues llama a `setView`, que lo volvia a poner en el
   // origen. El marcador y la barra ya decian Y = 15 y el plano seguia en 0.
-  const pRef = ((window as any).__hekatanPuntoRef as number[] | undefined)
+  // ⚠️ El punto de referencia tiene que estar DENTRO del modelo, o el alzado se
+  // ancla donde no hay nada. En isométrica el rayo del ratón llega al plano de
+  // trabajo casi rasante y un clic perdido deja un punto a decenas de metros;
+  // ese punto pasaba a ser la referencia y te ponía a dibujar allí. Medido en el
+  // deploy público el 17-sep-2026: `hk_drawingPoints` con 24 puntos, los dos
+  // últimos en Y = 101.45, y el alzado XZ anclado en Y = 101.45 m — con el
+  // modelo entero entre Y = 0 y Y = 0. Así se perdían los clics de la cercha.
+  const pRefBruto = ((window as any).__hekatanPuntoRef as number[] | undefined)
             ?? (() => { const p = drawingPoints.rawVal ?? [];
                         return p.length ? p[p.length - 1] : [0, 0, 0]; })();
+  const pRef = (() => {
+    const N = states.nodes.rawVal ?? [];
+    if (!N.length || !pRefBruto) return pRefBruto ?? [0, 0, 0];
+    // Margen: lo que abarca el modelo más una rejilla por lado.
+    const g = Number((window as any).__hekatanGridConfig?.gridSize) || 20;
+    const dentro = [0, 1, 2].every((k) => {
+      let lo = Infinity, hi = -Infinity;
+      for (const n of N) { if (n[k] < lo) lo = n[k]; if (n[k] > hi) hi = n[k]; }
+      return pRefBruto[k] >= lo - g && pRefBruto[k] <= hi + g;
+    });
+    if (dentro) return pRefBruto;
+    console.warn(`[Vista ↔ CAD] el último punto (${pRefBruto.map((v) => (+v).toFixed(2))}) ` +
+                 `cae fuera del modelo: el plano de trabajo se ancla en el origen.`);
+    return [0, 0, 0];
+  })();
   if (preset === "plan") {
     const wz = (window as any).__hekatanCadState?.get?.()?.workZ ?? 0;
     drawingGridTarget.val = { position: [0, 0, wz], rotation: [Math.PI/2, 0, 0] };
@@ -3619,6 +3852,29 @@ function abrirCarpeta(txt: string) {
   return true;
 }
 
+/**
+ * Entradas del menú que HACEN algo en vez de abrir una carpeta del panel.
+ *
+ * ⚠️ «Display ▸ Frame Forces» estaba muerta y no lo decía: mandaba abrir la
+ * carpeta «Tablas», que vive en el panel de SETTINGS (dentro de 🔬 Analyze) y no
+ * en el de parámetros, que es donde busca `abrirCarpeta`. Pulsarla no hacía nada
+ * y solo dejaba un aviso en la consola — con lo que el menú entero parecía roto.
+ * Medido con `cli/_menu_contextual.mjs`: 10 entradas vivas, ésta muerta.
+ *
+ * Ahora hace lo que dice su nombre en ETABS: enciende el diagrama de fuerzas de
+ * barra y abre la ventana 2D de la barra designada.
+ */
+const ACCIONES: Record<string, () => void> = {
+  "Display ▸ Frame Forces": () => {
+    try {
+      const st = (window as any).__hekatanSettings?.();
+      // el momento del plano del canto es lo que se mira primero en una viga
+      if (st?.frameResults) st.frameResults.val = "Mz";
+      (window as any).__hekatanDiagrama2D?.();
+    } catch (e) { console.warn("[menu] Frame Forces:", e); }
+  },
+};
+
 /** Que se puede hacer segun lo que se selecciono. Los nombres son los de
  *  ETABS a proposito: quien lo usa ahi lo encuentra sin buscar. */
 const MENU: Record<string, Array<[string, string]>> = {
@@ -3725,6 +3981,8 @@ function montarMenuContextual(pane: any) {
       it.onclick = (e) => {
         e.stopPropagation();
         cerrar();
+        const accion = ACCIONES[texto];
+        if (accion) { accion(); return; }
         if (!destino) {
           for (const f of carpetas(paneActual)) {
             try { f.expanded = true; } catch { /* no-op */ }
@@ -4321,12 +4579,17 @@ function buildParamsPane() {
         setPlane: (k) => {
           const st = (window as any).__hekatanCadState?.get?.();
           if (st) st.workPlane = k;
-          const wz = st?.workZ ?? 0;
+          // ⚠️ Los planos VERTICALES iban siempre por el origen: en alzado, la rejilla
+          // pasaba por Y = 0 y no había manera de ponerla en el pórtico que toca
+          // (Jorge, 16-sep: «cómo se coloca la grilla auxiliar a cierta distancia»).
+          // Ahora cada plano tiene su distancia, como el «Cota Z» de la planta:
+          //   xy → Z = workZ   ·   xz → Y = workY   ·   yz → X = workX
+          const wz = st?.workZ ?? 0, wy = st?.workY ?? 0, wx = st?.workX ?? 0;
           drawingGridTarget.val = k === "xy"
             ? { position: [0, 0, wz], rotation: [Math.PI / 2, 0, 0] }
             : k === "xz"
-              ? { position: [0, 0, 0], rotation: [0, 0, 0] }
-              : { position: [0, 0, 0], rotation: [0, 0, Math.PI / 2] };
+              ? { position: [0, wy, 0], rotation: [0, 0, 0] }
+              : { position: [wx, 0, 0], rotation: [0, 0, Math.PI / 2] };
         },
         grid: (vx, vy, vz, col) => (window as any).__hekatanGenerarRejilla?.(vx, vy, vz, col),
         finish: () => { try { (window as any).__hekatanCadResetPending?.(); } catch {} },
@@ -6224,6 +6487,10 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       title === defaultFolderTitle ||
       /\bmodo\b/i.test(title) ||
       /activar/i.test(title) ||     // "Cargas — Activar" (toggles D/L/S)
+      // ⚠️ Al elegir una cimentación, sus parámetros son LO que se viene a tocar,
+      // y estaban plegados y por debajo del pliegue: parecía que la plantilla no
+      // traía opciones dentro. Se abre solo, como los de modos y combinaciones.
+      /cimiento/i.test(title) ||
       /combinaci/i.test(title));
   const getFolder = (title: string) => {
     if (!folderMap.has(title)) {
@@ -6931,7 +7198,7 @@ try {
       if (hl.visible) { hl.visible = false; render(); } return;
     }
     // snap al MISMO paso que usa la app al hacer click (__hekatanSnap2D)
-    const snap = (window as any).__hekatanSnap2D ?? gridStep();
+    const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? gridStep());   // = separación de la rejilla
     const sn = (v: number) => (snap > 0 ? Math.round(v / snap) * snap : v);
     let sx = sn(hitPt.x), sy = sn(hitPt.y), sz = sn(hitPt.z);
     if (wpName === "xz") sy = coord; else if (wpName === "yz") sx = coord; else sz = coord;
@@ -7116,12 +7383,11 @@ try {
     i: ["INSERT (insertar bloque)", "todavía no"],
     di: ["DIST (medir)", "todavía no; la barra de abajo canta las coordenadas y la longitud al dibujar"],
     aa: ["AREA (medir área)", "todavía no"],
-    me: ["MEASURE (dividir por distancia)", "todavía no; use «Div. vigas» en el panel"],
-    div: ["DIVIDE (dividir en n)", "todavía no; use «Div. vigas» en el panel"],
+    me: ["MEASURE (dividir por distancia)", "todavía no; use DIV (dividir en n partes)"],
     el: ["ELLIPSE (elipse)", "todavía no; hay CÍRCULO (C) y ARCO (A)"],
     spl: ["SPLINE", "todavía no; use POLILÍNEA (PL)"],
     pol: ["POLYGON (polígono regular)", "todavía no; use POLILÍNEA (PL)"],
-    ml: ["MLINE (línea múltiple)", "todavía no; use DESFASE (O)"],
+    ml: ["MLINE (línea múltiple)", "todavía no; use DESFASE (O) o DESFASAR curva (DESF)"],
     mt: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
     t: ["MTEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
     dt: ["TEXT (texto)", "aquí no se rotula: el modelo se acota solo"],
@@ -7526,6 +7792,199 @@ try {
         return;
       }
     }
+    // ── ARCO POR MEDIDAS, como el ARC de AutoCAD ────────────────────────────
+    //
+    // Hasta el 17-sep-2026 el arco solo se podía dar por TRES PUNTOS, y encima a
+    // clics: para un cordón de cercha había que calcular fuera el punto de la
+    // clave y teclearlo. Eso no es dibujar acotado, es dibujar un resultado ya
+    // calculado en otro sitio. AutoCAD deja dar el arco por la CUERDA más una
+    // medida —radio, flecha o ángulo abarcado—, que es como viene acotada una
+    // cercha en un plano de taller.
+    //
+    //   ARCO  0,0,6.5  20,0,6.5  R 22.5     inicio, fin y RADIO
+    //   ARCO  0,0,6.5  20,0,6.5  F 2.5      inicio, fin y FLECHA (sagita)
+    //   ARCO  0,0,6.5  20,0,6.5  A 51.68    inicio, fin y ÁNGULO abarcado (°)
+    //   ARCO  0,0,6.5  10,0,9  20,0,6.5     los tres puntos de siempre
+    //   … y « N 10 » al final fija el número de tramos (por defecto 12).
+    //
+    // La relación entre las tres medidas es la del círculo, con c = cuerda:
+    //     R = (c²/4 + f²) / (2f)      f = R − √(R² − c²/4)      R = (c/2)/sen(θ/2)
+    // La flecha va hacia ARRIBA del plano de trabajo (+Z en los alzados, +Y en
+    // planta); con la medida en negativo, hacia el otro lado.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if ((c0 === "arco" || c0 === "arc") && P.length >= 3) {
+        const A = repLeerDelta(P[1]), B = repLeerDelta(P[2]);
+        if (!A || !B) { flash("✕ ARCO: los dos primeros son puntos «x,y,z».", false); return; }
+        // « N 10 » en cualquier posición
+        let nSeg = 12;
+        const iN = P.findIndex((t, i) => i > 2 && /^n$/i.test(t));
+        if (iN > 0 && isFinite(+P[iN + 1])) nSeg = Math.max(2, Math.round(+P[iN + 1]));
+        const resto = P.slice(3).filter((_, i) => iN < 0 || (3 + i !== iN && 3 + i !== iN + 1));
+        const cx = B[0] - A[0], cy = B[1] - A[1], cz = B[2] - A[2];
+        const c = Math.hypot(cx, cy, cz);
+        if (c < 1e-9) { flash("✕ ARCO: el inicio y el fin son el mismo punto.", false); return; }
+        let medio: [number, number, number] | null = null;
+        const clave = (resto[0] || "").toLowerCase();
+        const val = +resto[1];
+        if (clave === "r" || clave === "f" || clave === "a" ||
+            clave === "radio" || clave === "flecha" || clave === "angulo" || clave === "ángulo") {
+          if (!isFinite(val) || Math.abs(val) < 1e-12) {
+            flash(`✕ ARCO: «${clave.toUpperCase()}» necesita una medida.`, false); return;
+          }
+          let f: number;                       // la flecha, que es lo que hace falta
+          if (clave === "r" || clave === "radio") {
+            if (Math.abs(val) < c / 2 - 1e-9) {
+              flash(`✕ ARCO: con una cuerda de ${c.toFixed(3)} m el radio no puede ` +
+                    `bajar de ${(c / 2).toFixed(3)} m (media cuerda).`, false); return;
+            }
+            f = Math.sign(val) * (Math.abs(val) - Math.sqrt(Math.max(0, val * val - c * c / 4)));
+          } else if (clave === "a" || clave === "angulo" || clave === "ángulo") {
+            const th = Math.abs(val) * Math.PI / 180;
+            if (th <= 1e-9 || th >= 2 * Math.PI - 1e-9) {
+              flash("✕ ARCO: el ángulo abarcado va entre 0° y 360°.", false); return;
+            }
+            const R = (c / 2) / Math.sin(th / 2);
+            f = Math.sign(val) * R * (1 - Math.cos(th / 2));
+          } else f = val;
+          // Perpendicular a la cuerda DENTRO del plano de trabajo: su normal es la
+          // del plano, así el arco sale en el mismo plano en que se está dibujando.
+          const wp = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+          const nrm = wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1];
+          // perp = normal × cuerda, normalizada
+          let px = nrm[1] * cz - nrm[2] * cy;
+          let py = nrm[2] * cx - nrm[0] * cz;
+          let pz = nrm[0] * cy - nrm[1] * cx;
+          const pl = Math.hypot(px, py, pz);
+          if (pl < 1e-9) {
+            flash("✕ ARCO: la cuerda es perpendicular al plano de trabajo. " +
+                  "Cambie de plano (Planta / Frente XZ / Lado YZ).", false); return;
+          }
+          px /= pl; py /= pl; pz /= pl;
+          // «Arriba» = +Z en los alzados, +Y en planta: una flecha positiva sube.
+          const arriba = wp === "xy" ? py : pz;
+          const s = arriba < 0 ? -1 : 1;
+          medio = [(A[0] + B[0]) / 2 + s * px * f,
+                   (A[1] + B[1]) / 2 + s * py * f,
+                   (A[2] + B[2]) / 2 + s * pz * f];
+          const R = (c * c / 4 + f * f) / (2 * Math.abs(f) || 1e-12);
+          const th = 2 * Math.asin(Math.min(1, (c / 2) / R)) * (Math.abs(f) > R ? -1 : 1);
+          echo(`◜ ARCO  cuerda ${c.toFixed(3)} m · flecha ${f.toFixed(3)} m · ` +
+               `radio ${R.toFixed(3)} m · ángulo ${(Math.abs(th) * 180 / Math.PI).toFixed(2)}° · ` +
+               `${nSeg} tramos`);
+        } else {
+          const M = repLeerDelta(P[3] ?? "");
+          if (!M) {
+            flash("✕ ARCO: falta la medida. «ARCO ini fin R 22.5» (radio), " +
+                  "«F 2.5» (flecha), «A 51.7» (ángulo) o «ARCO ini medio fin».", false);
+            return;
+          }
+          // Tres puntos: el 2º es el fin y el 3º… no. AutoCAD pide ini, MEDIO, fin.
+          medio = B;
+          const fin = M;
+          try {
+            (window as any).__hekatanDrawArc?.(A, medio, fin, nSeg);
+            echo(`◜ ARCO por 3 puntos · ${nSeg} tramos`);
+            flash("✓ arco dibujado", true);
+            (window as any).__hekatanRebuild?.();
+          } catch { flash("✕ ARCO: no se pudo trazar.", false); }
+          return;
+        }
+        try {
+          (window as any).__hekatanDrawArc?.(A, medio, B, nSeg);
+          flash("✓ arco dibujado", true);
+          (window as any).__hekatanRebuild?.();
+        } catch { flash("✕ ARCO: no se pudo trazar.", false); }
+        return;
+      }
+    }
+    // ── DIVIDIR y DESFASAR una curva ────────────────────────────────────────
+    //
+    //   DIV 4        parte cada tramo de lo último dibujado en 4
+    //   DESF 0.6     desfasa esa curva 0.6 m (negativo = al otro lado)
+    //
+    // Las dos actúan sobre la última polilínea, que es el «ÚLTIMO» de AutoCAD.
+    // Con ellas, el segundo cordón de una cercha o el intradós de una bóveda ya
+    // no hay que volver a calcularlos fuera: se sacan del primero.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if (c0 === "div" || c0 === "dividir" || c0 === "divide") {
+        const n = Number((P[1] ?? "").replace(",", "."));
+        if (!isFinite(n) || n < 2) { flash("✕ DIVIDIR: «DIV 4» parte cada tramo en 4.", false); return; }
+        const r = (window as any).__hekatanDividir?.(n);
+        if (!r?.ok) { flash(`✕ DIVIDIR: ${r?.msg ?? "no se pudo"}`, false); return; }
+        echo(`✂ DIVIDIR ×${Math.round(n)} · ${r.tramosAntes} → ${r.tramosAhora} tramos · ` +
+             `+${r.nudosNuevos} nudos · largo ${r.largo} m · tramo medio ${r.tramoMedio} m`);
+        flash("✓ dividido", true);
+        return;
+      }
+      if (c0 === "desf" || c0 === "desfasar" || c0 === "offsetc" || c0 === "desfase") {
+        const d = Number((P[1] ?? "").replace(",", "."));
+        if (!isFinite(d) || Math.abs(d) < 1e-9) {
+          flash("✕ DESFASAR: «DESF 0.6» desfasa la última curva 0.6 m (negativo = al otro lado).", false);
+          return;
+        }
+        const r = (window as any).__hekatanDesfasarCurva?.(d);
+        if (!r?.ok) { flash(`✕ DESFASAR: ${r?.msg ?? "no se pudo"}`, false); return; }
+        echo(`⇉ DESFASAR ${r.distancia} m · ${r.vertices} vértices · ` +
+             `separación real ${r.separacionMin}–${r.separacionMax} m`);
+        flash("✓ curva desfasada", true);
+        return;
+      }
+    }
+    // ── CERCHA CURVA de una orden ───────────────────────────────────────────
+    //
+    //   CERCHA luz 20 flecha 2.5 canto 0.6 panos 10 tipo warren
+    //          [base 6.5] [x0 0] [y0 0] [copias 4] [sep 6] [correas]
+    //
+    // Los pares van en cualquier orden. `copias` + `sep` la repiten en Y y
+    // `correas` ata los cordones de arriba: ahí deja de ser un dibujo plano y
+    // pasa a ser una cubierta espacial.
+    {
+      const P = raw.trim().split(/\s+/);
+      const c0 = (P[0] || "").toLowerCase();
+      if (c0 === "cercha" || c0 === "cerchacurva" || c0 === "truss") {
+        const kv: Record<string, string> = {};
+        for (let i = 1; i < P.length; i++) {
+          const k = P[i].toLowerCase();
+          if (k === "correas" || k === "correa") { kv.correas = "1"; continue; }
+          if (i + 1 < P.length) { kv[k] = P[i + 1]; i++; }
+        }
+        const num = (k: string, d?: number) => {
+          const v = kv[k]; if (v === undefined) return d;
+          const q = Number(v.replace(",", ".")); return isFinite(q) ? q : d;
+        };
+        const luz = num("luz") ?? num("l"), flecha = num("flecha") ?? num("f");
+        const canto = num("canto") ?? num("h") ?? 0.6;
+        const panos = num("panos") ?? num("paños") ?? num("n") ?? 10;
+        if (luz === undefined || flecha === undefined) {
+          flash("✕ CERCHA: hacen falta al menos «luz» y «flecha». " +
+                "Ej: CERCHA luz 20 flecha 2.5 canto 0.6 panos 10 tipo warren", false);
+          return;
+        }
+        const tipoTxt = (kv.tipo ?? "montantes").toLowerCase();
+        const tipo = tipoTxt.startsWith("w") ? "warren" : tipoTxt.startsWith("h") ? "howe" : "montantes";
+        const r = (window as any).__hekatanDrawCercha?.({
+          luz, flecha, canto, panos, tipo,
+          x0: num("x0") ?? 0, y0: num("y0") ?? 0, base: num("base") ?? 0,
+          copias: num("copias") ?? 1, sep: num("sep") ?? 0, correas: !!kv.correas,
+        });
+        if (!r?.ok) { flash(`✕ CERCHA: ${r?.msg ?? "no se pudo trazar"}`, false); return; }
+        // Las cotas, cantadas: lo que se dibuja se tiene que poder leer.
+        echo(`⌂ CERCHA ${r.tipo} · luz ${r.luz} m · flecha ${r.flecha} m · canto ${r.canto} m · ` +
+             `${r.panos} paños${r.cerchas > 1 ? ` · ${r.cerchas} cerchas a ${r.separacion} m` : ""}`);
+        echo(`   radio ${r.radio} m · ángulo abarcado ${r.anguloAbarcado}° · clave a ${r.clave} m · ` +
+             `centro (${r.centro.join(", ")})`);
+        echo(`   desarrollo del cordón: arriba ${r.desarrolloSup} m, abajo ${r.desarrolloInf} m`);
+        echo(`   tramo arriba ${r.tramoSupMin}–${r.tramoSupMax} m · abajo ${r.tramoInfMin}–${r.tramoInfMax} m · ` +
+             `diagonales de ${r.anguloDiagMin}° a ${r.anguloDiagMax}°`);
+        echo(`   ${r.nudosNuevos} nudos · ${r.montantes} montantes · ${r.diagonales} diagonales`);
+        flash("✓ cercha dibujada", true);
+        return;
+      }
+    }
     {
       const partes = raw.trim().split(/\s+/);
       const c0 = partes[0].toLowerCase();
@@ -7726,7 +8185,11 @@ try {
         run(cmd); setCmdText("");
       } else if (ev.key === "Escape") {
         setCmdText(""); inp.blur();
-        (window as any).__hekatanEscapeCancel?.();
+        (window as any).__hekatanEscapeCancel?.();       // cancela la pregunta de REPLICAR
+        // …y el Esc de AutoCAD: suelta la herramienta, corta el dibujo a medias y
+        // DESELECCIONA. Antes moría aquí: el foco vive en este cuadro, así que el
+        // visor no se enteraba nunca (medido: 0 Escapes llegaban a window).
+        (window as any).__hekatanCancelarTodo?.();
         ev.preventDefault();
       }
     });

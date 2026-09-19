@@ -22,6 +22,8 @@
  */
 import type { State } from "vanjs-core";
 import { ejesCSI, diagramaCSI, ladoPositivo } from "./objects/utils/diagramaCSI";
+import { scriptKLocalBarra, kLocalBarra } from "./klocalMatlab";
+import { kPanoQ4 } from "hekatan-fem";
 
 type Nodo = number[];
 type Plano = "XZ" | "YZ" | "XY";
@@ -127,6 +129,14 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
       <svg class="hk-d2-svg" style="flex:1;width:100%;height:100%"></svg>
       <div class="hk-d2-pie" style="padding:4px 10px;color:#6f7d90;border-top:1px solid #1d2533"></div>`;
     document.body.appendChild(host);
+    // ⚠️ El estilo en línea lleva `display:flex`, que GANA al atributo `hidden` (15-sep-2026:
+    // la ✕ ponía hidden = true y la ventana no se iba). La regla con !important lo arregla.
+    if (!document.getElementById("hk-d2-hidden-css")) {
+      const css = document.createElement("style");
+      css.id = "hk-d2-hidden-css";
+      css.textContent = "#hk-diagrama-2d[hidden]{display:none !important;}";
+      document.head.appendChild(css);
+    }
     host.querySelector(".hk-d2-x")!.addEventListener("click", () => { host!.hidden = true; });
     const selP = host.querySelector(".hk-d2-plano") as HTMLSelectElement;
     const selE = host.querySelector(".hk-d2-en") as HTMLSelectElement;
@@ -396,10 +406,12 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
         '<b style="color:#e6c463;white-space:nowrap">📈 Barra</b><span class="hk-b-tit" style="color:#9fb0c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto"></span>' +
         '<select class="hk-b-pl" style="margin-left:auto;background:#1b2230;color:#dbe6f5;border:1px solid #33415c;border-radius:4px">' +
         '<option value="12">plano 1-2 (V2 · M3)</option><option value="13">plano 1-3 (V3 · M2)</option></select>' +
+        '<button class="hk-b-k" title="Descarga un script MATLAB (Hekatan Lab / Octave) con la matriz de rigidez local 12×12 de esta barra" style="background:#1b2230;color:#e6c463;border:1px solid #33415c;border-radius:4px;cursor:pointer;padding:2px 8px;white-space:nowrap">📄 K local .m</button>' +
         '<button class="hk-b-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button>' +
         '</div><div class="hk-b-cuerpo" style="padding:6px 10px 10px"></div>';
       document.body.appendChild(hostB);
       hostB.querySelector(".hk-b-x")!.addEventListener("click", () => { hostB!.hidden = true; acomodar(); pintar(); });
+      hostB.querySelector(".hk-b-k")!.addEventListener("click", () => { if (barraActual >= 0) descargarKLocal(barraActual); });
       (hostB.querySelector(".hk-b-pl") as HTMLSelectElement).addEventListener("change", (ev) => {
         planoLocal = (ev.target as HTMLSelectElement).value as "12" | "13";
         pintarBarra();
@@ -503,6 +515,161 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     }
   }
   (window as any).__hekatanDiagramaBarra = abrirBarra;
+
+  // Script MATLAB con la matriz de rigidez local de la barra (Hekatan Lab / Octave).
+  function descargarKLocal(idx: number) {
+    const { nombre, texto } = scriptKLocalBarra(mesh as any, idx);
+    const url = URL.createObjectURL(new Blob([texto], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  }
+  // Sin argumento: la barra designada. Devuelve el texto (para pruebas) y descarga si se pide.
+  (window as any).__hekatanKLocalMatlab = (idx?: number, descargar = false) => {
+    if (idx == null) {
+      const sel = ((window as any).__hekatanModelSelection as any[] | undefined) ?? [];
+      const fr = [...sel].reverse().find((x) => x.type === "frame");
+      if (!fr) return null;
+      idx = fr.idx;
+    }
+    if (descargar) descargarKLocal(idx as number);
+    return scriptKLocalBarra(mesh as any, idx as number);
+  };
+
+
+  // ── Al TOCAR un PAÑO: la K del elemento de cáscara ───────────────────────────────
+  //
+  // Jorge, 17-sep-2026: «nos falta la matriz de rigidez local de placas y barras».
+  // La de barra ya estaba; ésta es la de placa. Son DOS bloques de 12×12 porque el
+  // elemento es dos elementos superpuestos que no se acoplan (cáscara plana):
+  //   · flexión  [w, θ1, θ2] × 4   ← Shell-Thick de CSI, o DKQ si el paño es Thin
+  //   · membrana [u1, u2, θ3] × 4  ← ITW tipo 12, la membrana de CSI
+  // Los 24 gdl del elemento son la unión de los dos. En ejes DEL ELEMENTO (eje 1 =
+  // v01+v32), que es donde el motor la arma: en un trapecio no coinciden con los ejes
+  // con los que se REPORTAN M11/M22, y la misma matriz escrita en la otra base se va
+  // varios % entrada a entrada. Verificado contra el C++ en `cli/_k_placa_vs_cpp.mjs`.
+  function tablaK(K: number[][], gdl: string[], color: string) {
+    const g = (v: number) => (Math.abs(v) < 1e-12 ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? v.toExponential(4) : v.toPrecision(6));
+    const filas = K.map((row, i) => `<tr><th style="color:#9fb0c6;padding:2px 6px;text-align:right">${gdl[i]}</th>` +
+      row.map((v) => `<td style="padding:2px 6px;text-align:right;color:${Math.abs(v) < 1e-12 ? "#4a5568" : v < 0 ? "#ff9f9a" : "#e6edf5"}">${g(v)}</td>`).join("") + "</tr>").join("");
+    return `<div style="overflow-x:auto;padding:4px 8px 10px">` +
+      `<div style="color:${color};font-weight:600;padding:6px 2px">${gdl === GDL_FLEX ? "FLEXIÓN — [w, θ1, θ2] × 4" : "MEMBRANA — [u1, u2, θ3] × 4"}</div>` +
+      `<table style="border-collapse:collapse;font-family:Consolas,monospace;font-size:11px">` +
+      `<tr><th></th>${gdl.map((d) => `<th style="color:#9fb0c6;padding:2px 6px">${d}</th>`).join("")}</tr>${filas}</table></div>`;
+  }
+  const GDL_FLEX = ["w 1", "θ1 1", "θ2 1", "w 2", "θ1 2", "θ2 2", "w 3", "θ1 3", "θ2 3", "w 4", "θ1 4", "θ2 4"];
+  const GDL_MEMB = ["u1 1", "u2 1", "θ3 1", "u1 2", "u2 2", "θ3 2", "u1 3", "u2 3", "θ3 3", "u1 4", "u2 4", "θ3 4"];
+
+  function abrirKPano(idx: number) {
+    const N = (mesh as any).nodes?.rawVal ?? [], El = (mesh as any).elements?.rawVal ?? [];
+    const el = El[idx];
+    if (!el || el.length !== 4) { alert("La K de paño de esta pantalla es la del Q4 (4 nudos)."); return; }
+    const ei = (mesh as any).elementInputs?.rawVal ?? {};
+    const v = (m: string, d = 0) => (ei[m]?.get?.(idx) ?? d) as number;
+    const E = v("elasticities"), nu = v("poissonsRatios", 0.2), t = v("thicknesses");
+    let r;
+    try {
+      r = kPanoQ4(el.map((n: number) => N[n]), E, nu, t, {
+        tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 12),
+        gammaFac: v("drillingPenaltyScales", 0.4),
+      });
+    } catch (e) { alert(String(e)); return; }
+    if (!hostK) crearHostK();
+    const mod = ei.shellModifiers?.get?.(idx);
+    const aviso = Array.isArray(mod) && mod.some((q: number) => q !== 1)
+      ? ` · <b style="color:#f59e0b">modificadores ${mod.join("/")} aplicados</b>` : "";
+    hostK!.innerHTML =
+      `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">` +
+      `<b style="color:#e6c463">K local · paño ${idx + 1}</b>` +
+      `<span style="color:#9fb0c6">${r.formulacion} · área ${r.area.toFixed(4)} m² · t = ${t} m · E = ${E} · ν = ${nu}${aviso}</span>` +
+      `<button class="hk-k-x" style="margin-left:auto;background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button></div>` +
+      `<div style="padding:4px 10px;color:#6f7d90">ejes del elemento · e1 = ${r.ex.map((q) => q.toFixed(3)).join(", ")} · e2 = ${r.ey.map((q) => q.toFixed(3)).join(", ")} · e3 = ${r.ez.map((q) => q.toFixed(3)).join(", ")}</div>` +
+      tablaK(r.flexion, GDL_FLEX, "#8fd3ff") +
+      (r.membrana ? tablaK(r.membrana, GDL_MEMB, "#9be59b")
+                  : `<div style="padding:8px 10px;color:#f59e0b">La membrana de este paño no es la ITW (drilling ${v("drillingTypes", 12)}): no se enseña una matriz que no es la suya.</div>`);
+    hostK!.querySelector(".hk-k-x")!.addEventListener("click", () => { hostK!.hidden = true; });
+    hostK!.hidden = false;
+  }
+  (window as any).__hekatanKPano = (idx: number) => {
+    const N = (mesh as any).nodes?.rawVal ?? [], El = (mesh as any).elements?.rawVal ?? [];
+    const ei = (mesh as any).elementInputs?.rawVal ?? {};
+    const v = (m: string, d = 0) => (ei[m]?.get?.(idx) ?? d) as number;
+    return kPanoQ4((El[idx] ?? []).map((n: number) => N[n]), v("elasticities"), v("poissonsRatios", 0.2), v("thicknesses"),
+      { tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 12), gammaFac: v("drillingPenaltyScales", 0.4) });
+  };
+
+  // ── Al TOCAR una barra: aviso «K local» y ventana con la matriz 12×12 ─────────────
+  let chipK: HTMLButtonElement | null = null, hostK: HTMLDivElement | null = null, barraK = -1;
+  function crearHostK() {
+    if (hostK) return;
+    hostK = document.createElement("div");
+    hostK.id = "hk-klocal";
+    hostK.style.cssText = "position:fixed;left:50%;top:80px;transform:translateX(-50%);width:min(1100px,96vw);max-height:80vh;overflow:auto;z-index:9992;background:#0b0e14;border:1px solid #2f3b50;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.6);font:12px 'Segoe UI',system-ui,sans-serif;color:#c9d3e0";
+    document.body.appendChild(hostK);
+    const css = document.createElement("style");
+    css.textContent = "#hk-klocal[hidden]{display:none!important}";
+    document.head.appendChild(css);
+  }
+  function abrirK(idx: number) {
+    barraK = idx;
+    crearHostK();
+    let r;
+    try { r = kLocalBarra(mesh as any, idx); } catch (e) { alert(String(e)); return; }
+    const g = (v: number) => (Math.abs(v) < 1e-12 ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? v.toExponential(4) : v.toPrecision(6));
+    // Lo que el motor aplica DESPUÉS de la K local (getGlobalStiffnessMatrix.cpp): se avisa, no se oculta
+    const eiK = (mesh as any).elementInputs?.rawVal ?? {};
+    const rOff = eiK.rigidOffsets?.get?.(idx), angK = eiK.localAngles?.get?.(idx);
+    const avisoK = [
+      rOff && (rOff[0] > 1e-12 || rOff[1] > 1e-12) ? `brazos rígidos ${rOff[0]}·L / ${rOff[1]}·L (se aplican en K global: Rᵀ·K·R)` : "",
+      angK ? `ang ${angK}° (gira T, no esta K)` : "",
+    ].filter(Boolean).join(" · ");
+    const gdl = ["u1 i", "u2 i", "u3 i", "θ1 i", "θ2 i", "θ3 i", "u1 j", "u2 j", "u3 j", "θ1 j", "θ2 j", "θ3 j"];
+    const filas = r.K.map((row, i) => `<tr><th style="color:#9fb0c6;padding:2px 6px;text-align:right">${gdl[i]}</th>` +
+      row.map((v) => `<td style="padding:2px 6px;text-align:right;color:${Math.abs(v) < 1e-12 ? "#4a5568" : v < 0 ? "#ff9f9a" : "#e6edf5"}">${g(v)}</td>`).join("") + "</tr>").join("");
+    hostK.innerHTML =
+      `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">` +
+      `<b style="color:#e6c463">K local · barra ${idx + 1}</b><span style="color:#9fb0c6">L = ${r.L.toFixed(3)} m · φ₂ = ${r.phiZ.toFixed(5)} · φ₃ = ${r.phiY.toFixed(5)} · getLocalStiffnessMatrix (motor)${avisoK ? ` · <b style="color:#f59e0b">${avisoK}</b>` : ""}</span>` +
+      `<button class="hk-k-m" style="margin-left:auto;background:#1b2230;color:#e6c463;border:1px solid #33415c;border-radius:4px;cursor:pointer;padding:2px 8px">📄 Script MATLAB (.m)</button>` +
+      `<button class="hk-k-x" style="background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button></div>` +
+      `<div style="overflow-x:auto;padding:8px"><table style="border-collapse:collapse;font-family:Consolas,monospace;font-size:11px">` +
+      `<tr><th></th>${gdl.map((d) => `<th style="color:#9fb0c6;padding:2px 6px">${d}</th>`).join("")}</tr>${filas}</table></div>`;
+    hostK.querySelector(".hk-k-x")!.addEventListener("click", () => { hostK!.hidden = true; });
+    hostK.querySelector(".hk-k-m")!.addEventListener("click", () => descargarKLocal(barraK));
+    hostK.hidden = false;
+  }
+  window.addEventListener("hk:model-selection", (ev: any) => {
+    const u = ev.detail?.ultimo;
+    if (!chipK) {
+      chipK = document.createElement("button");
+      chipK.id = "hk-klocal-chip";
+      chipK.style.cssText = "position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:9989;background:#141a24;color:#e6c463;border:1px solid #e6c463;border-radius:16px;padding:5px 14px;font:600 12px 'Segoe UI',system-ui;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5)";
+      document.body.appendChild(chipK);
+      chipK.addEventListener("click", () => {
+        const i = Number(chipK!.dataset.idx);
+        if (i >= 0) (chipK!.dataset.tipo === "shell" ? abrirKPano : abrirK)(i);
+      });
+    }
+    // 17-sep-2026, Jorge: tocar una barra ya NO abre la ventana — tapaba el modelo
+    // entero. Sale un BOTÓN y la ventana se abre solo si se pulsa. Si la ventana
+    // ya estaba abierta, cambia a la barra nueva (que es lo que se espera al ir
+    // tocando barras con la ventana puesta).
+    chipK.hidden = true;
+    if (u && (u.type === "frame" || u.type === "shell")) {
+      chipK.dataset.idx = String(u.idx);
+      chipK.dataset.tipo = u.type;
+      chipK.textContent = u.type === "shell"
+        ? "📐 Ver K local · paño " + (u.idx + 1)
+        : "📐 Ver K local · barra " + (u.idx + 1);
+      // SIEMPRE el botón, sin excepciones. Antes, si la ventana ya estaba
+      // abierta se refrescaba con la barra nueva: como basta abrirla una vez
+      // para que a partir de ahí salga con cada clic, desde fuera se ve igual
+      // que si se abriera sola. Ahora tocar otra barra la CIERRA y deja el botón.
+      if (hostK) hostK.hidden = true;
+      chipK.hidden = false;
+    }
+  });
+  (window as any).__hekatanKLocal = (idx: number) => kLocalBarra(mesh as any, idx);
+  (window as any).__hekatanMallaK = mesh;   // para las pruebas: proyectar una barra y tocarla con el ratón
 
   (window as any).__hekatanDiagrama2D = abrir;
   return { abrir, abrirBarra };

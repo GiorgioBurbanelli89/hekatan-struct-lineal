@@ -135,21 +135,9 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
         if (itT != elementInputs.thicknesses.end() && itT->second > 1e-12)
         {
             // Dispatch de la formulacion de placa, segun plateFormulations[idx]:
-            //   0 = Mindlin con MITC4   (Shell-Thick, defecto de hoy)
+            //   0 = Mindlin con MITC4   (Shell-Thick)
             //   1 = Kirchhoff MZC       (Shell-Thin)
-            //   2 = DSE de Wilson       (Shell-Thick del libro, cap. 8)
             //   3 = DKMQ de Katili      (Discrete Kirchhoff-Mindlin)
-            //
-            // El 2 se conecta el 17-sep-2026: es la placa GRUESA que expone
-            // Wilson en el cap. 8 de «Analisis Estatico y Dinamico de
-            // Estructuras» (cortante discreto de lado Ec. 8.6-8.9, correccion
-            // de patch test Ec. 8.17, condensacion estatica Ec. 8.18-8.19), y
-            // que el propio libro (pag. PDF 155) dice que es «el enfoque
-            // empleado en el programa SAP2000». El codigo ya estaba escrito
-            // (getBendingK_DSE_FULL) pero solo se podia encender con un
-            // #define, o sea recompilando el WASM en cada prueba. El 2 lo
-            // atiende getLocalStiffnessMatrixShellQ4 leyendo plateFormulations
-            // en EJECUCION, para poder medir A/B contra SAP2000.
             //
             // El 3 estaba COMPILADO pero desenchufado desde que se porto: el
             // dispatcher solo miraba el 1. Se conecta el 19-ago-2026 para poder
@@ -166,11 +154,7 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
             {
                 return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
             }
-#ifdef HK_THICK_DKMQ
-            return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
-#else
             return getLocalStiffnessMatrixShellQ4(elementNodes, elementInputs, elementIndex);
-#endif
         }
         return getLocalStiffnessMatrixInterface(elementNodes, elementInputs, elementIndex);
     }

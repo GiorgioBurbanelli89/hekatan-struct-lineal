@@ -48,6 +48,7 @@
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { ecHormigonNEC } from "../shared/materials";
+import { construirCimentacion } from "./cimentacion";
 
 const G = 9.80665;
 
@@ -59,6 +60,14 @@ const T_SOLO_REJILLA = 3;
 const T_LOSA_PLANA = 4;
 const T_LOSA_VIGAS_BORDE = 5;
 const T_DUAL = 6;              // pórtico + losa + MUROS de corte
+// Cimentaciones. El número es el `tipo`; el segundo es el sub-tipo de cimentacion.ts.
+const T_CIM_AISLADA = 10;      // una zapata, columna centrada
+const T_CIMENTACION = 8;       // rejilla de zapatas + vigas de amarre
+const T_CIM_COMBINADA = 11;    // dos columnas sobre una zapata
+const T_CIM_LINDERO = 12;      // columna en la línea de propiedad + viga centradora
+const T_CIM_ESQUINERA = 13;    // columna en esquina + dos vigas centradoras
+const T_CIM_VIGA_T = 14;       // emparrillado de vigas en T invertida (frames)
+const T_CIM_LOSA = 9;          // losa de cimentación (mat)
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
                                // [Concentric]` de SAP2000
 
@@ -140,9 +149,54 @@ const PARAMS = {
       "▣ Losa con vigas de borde": T_LOSA_VIGAS_BORDE,
       "🧱🧱 Pórtico + losa + muros (dual)": T_DUAL,
       "⟋ Pórtico arriostrado (CBF)": T_ARRIOSTRADO,
+      "▫ Cimentación · zapata AISLADA": T_CIM_AISLADA,
+      "⬓ Cimentación · zapatas + vigas de amarre": T_CIMENTACION,
+      "▭ Cimentación · zapata COMBINADA (2 columnas)": T_CIM_COMBINADA,
+      "◱ Cimentación · zapata de LINDERO + viga centradora": T_CIM_LINDERO,
+      "◰ Cimentación · zapata ESQUINERA + 2 vigas centradoras": T_CIM_ESQUINERA,
+      "⊥ Cimentación · vigas en T INVERTIDA (frames)": T_CIM_VIGA_T,
+      "▬ Cimentación · losa de cimentación (mat)": T_CIM_LOSA,
     },
     label: "Plantilla",
   },
+
+  // ── Cimentación (solo en la plantilla ⬓ Cimentación) ─────────────────────
+  // ⚠️ El defecto es Shell-THICK, y las dos fuentes NO dicen lo mismo:
+  //   · SAFE trae Shell-Thin de fábrica en su `Footing1` (lo escribe él en el
+  //     .f2k: validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k);
+  //   · el manual de CSI dice que el cortante importa cuando el canto pasa de
+  //     1/10 a 1/5 de la luz, y que «it is generally recommended that you use
+  //     the thick-plate formulation».
+  // Una zapata de 2.00 m con 0.45 m de canto está en t/L = 0.22: por encima del
+  // quinto. Manda el manual; el Thin queda a un clic para reproducir SAFE tal cual.
+  zapForm: {
+    default: 0, min: 0, max: 1, step: 1,
+    options: { "Shell-Thick (Mindlin) — lo que recomienda el manual de CSI": 0,
+               "Shell-Thin (Kirchhoff) — lo que trae SAFE de fábrica": 1 },
+    label: "Formulación del cimiento", folder: "⬓ Cimiento — geometría y suelo",
+  },
+  // ⚠️ El defecto es SOLO COMPRESIÓN porque es lo que pone SAFE: su muelle de área
+  // sale con «Nonlinear Option = Compression Only» en el .f2k que escribe él
+  // (validation/04-cimentaciones-safe/zapata-aislada/zapata.f2k). El terreno no tira.
+  suelo: {
+    default: 1, min: 0, max: 1, step: 1,
+    options: { "Solo compresión (como SAFE)": 1, "Lineal (el muelle también tira)": 0 },
+    label: "Comportamiento del suelo", folder: "⬓ Cimiento — geometría y suelo",
+  },
+  volCim: { default: 1.0, min: 0.5, max: 4, step: 0.25, label: "vuelo de la losa mat (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  volZap: { default: 0.6, min: 0.3, max: 3, step: 0.1, label: "vuelo de la combinada (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtBf: { default: 1.00, min: 0.3, max: 3, step: 0.05, label: "T invertida · ancho del ala (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtTf: { default: 0.30, min: 0.15, max: 1, step: 0.05, label: "T invertida · canto del ala (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtBw: { default: 0.30, min: 0.15, max: 1, step: 0.05, label: "T invertida · ancho del alma (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  vtH: { default: 0.80, min: 0.3, max: 2.5, step: 0.05, label: "T invertida · canto total (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  zapB: { default: 2.0, min: 0.6, max: 6, step: 0.1, label: "lado de zapata B (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  zapH: { default: 0.45, min: 0.15, max: 1.5, step: 0.05, label: "canto de zapata (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  losaH: { default: 0.50, min: 0.2, max: 2, step: 0.05, label: "canto de la losa mat (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  ks: { default: 20000, min: 1000, max: 200000, step: 1000, label: "balasto ks (kN/m³)", folder: "⬓ Cimiento — geometría y suelo" },
+  Pcol: { default: 400, min: 10, max: 5000, step: 10, label: "carga por columna P (kN)", folder: "⬓ Cimiento — geometría y suelo" },
+  hped: { default: 0.8, min: 0.2, max: 3, step: 0.1, label: "altura del pedestal (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  bva: { default: 0.30, min: 0.15, max: 0.8, step: 0.05, label: "viga de amarre, base (m)", folder: "⬓ Cimiento — geometría y suelo" },
+  hva: { default: 0.40, min: 0.2, max: 1.2, step: 0.05, label: "viga de amarre, canto (m)", folder: "⬓ Cimiento — geometría y suelo" },
 
   // ── Rejilla en planta — el «Grid Dimensions (Plan)» de ETABS ──────────────
   nx: { default: 4, min: 2, max: 12, step: 1, label: "líneas en X", folder: "📐 Rejilla (planta)" },
@@ -361,6 +415,16 @@ export const plantillas: ExampleDef = {
 
   build(p, states) {
     const tipo = Math.round(p.tipo);
+    // La cimentacion no comparte nada con el edificio (ni pisos, ni diafragma, ni
+    // apoyos: el suelo son MUELLES). Se arma aparte y se sale.
+    // Cada plantilla de cimentación con su sub-tipo. Un `Map`, no una cadena de
+    // `if`: añadir una tipología es añadir una línea, y no hay forma de que una se
+    // quede colgando sin rama.
+    const SUB_CIM: Record<number, number> = {
+      [T_CIMENTACION]: 0, [T_CIM_LOSA]: 1, [T_CIM_AISLADA]: 2, [T_CIM_COMBINADA]: 3,
+      [T_CIM_LINDERO]: 4, [T_CIM_ESQUINERA]: 5, [T_CIM_VIGA_T]: 6,
+    };
+    if (SUB_CIM[tipo] !== undefined) return construirCimentacion(p, states, SUB_CIM[tipo]);
     const X = ejes((p as any).ejesX, p.nx, p.sx);
     const Y = tipo === T_PORTICO_2D ? [0] : ejes((p as any).ejesY, p.ny, p.sy);
     const Z = niveles((p as any).alturas, p.pisos, p.h, p.h1);

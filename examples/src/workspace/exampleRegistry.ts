@@ -275,6 +275,7 @@ export interface ExampleDef {
 import { csiImporter } from "../csi-importer/csiImporter";
 import { ifcViewer } from "../ifc-viewer/ifcViewer";
 import { cliModeler } from "../cli-modeler/cliModeler";
+import { tipologiasHeks } from "../tipologias-heks/tipologiasHeks";
 import { cadDraw } from "../cad-draw/cadDraw";
 import { vigaMedioElastico } from "../viga-medio-elastico/vigaMedioElastico";
 import { zapataVigaAmarre } from "../zapata-viga-amarre/zapataVigaAmarre";
@@ -429,6 +430,7 @@ export const examplesRegistry: ExampleDef[] = [
   ifcViewer,
   // CLI Modeler — modelar con comandos tipo SAP (sin importar ningun archivo)
   cliModeler,
+  ...tipologiasHeks,
   // CAD Drawer — dibujar con mouse + Tweakpane (sincronizado con CLI)
   cadDraw,
   // ── Los 21 que vivian dentro de `shared/moreExamples.ts`, un fichero que NO

@@ -30,6 +30,8 @@
  * La caja de comandos de abajo (`#hk3-cmdline`) ya existe y no se toca: es
  * la misma para los dos paneles.
  */
+import { DEMOS, DEMO_GENERICA, reproducir } from "./helpAnim";
+
 
 export interface RibbonHooks {
   /** Activa una herramienta ("line", "rect", "col", …). */
@@ -111,6 +113,9 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
   {
     titulo: "Modificar", fila: 2,
     items: [
+      // Deshacer / Rehacer a la vista, como la barra de acceso rápido de AutoCAD (Ctrl+Z / Ctrl+Y)
+      { id: "deshacer", icono: "↶", nombre: "Anterior", tecla: "Ctrl+Z", ayuda: "deshace la última acción (también U + Enter)." },
+      { id: "rehacer",  icono: "↷", nombre: "Rehacer",  tecla: "Ctrl+Y", ayuda: "rehace lo último deshecho." },
       { id: "select", icono: "🖱", nombre: "Selec.", tecla: "S",  ayuda: "clic sobre un elemento. Ventana: clic en una esquina, mueve, clic en la otra (izq→der ventana, der→izq captura). Arrastrar orbita." },
       { id: "move",   icono: "✥", nombre: "Mover",  tecla: "M",  ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
       { id: "copy",   icono: "⧉", nombre: "Copiar", tecla: "CO", ayuda: "con algo seleccionado: punto base y segundo punto (o @dx,dy,dz)." },
@@ -119,6 +124,10 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
       { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
       { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
       { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
+      // El «Reshape Object» de ETABS (Draw ▸ Reshape Object): designar y arrastrar
+      // el extremo. No es «Alargar» de AutoCAD, que necesita un contorno de destino.
+      { id: "reshape", icono: "⇲", nombre: "Remodelar", tecla: "RE",
+        ayuda: "clic en la barra o el paño: salen sus extremos. Arrastra uno y la alarga o acorta. X/Y/Z fijan un eje, L la longitud." },
       { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
       { id: "medir",  icono: "📏", nombre: "Medir",    tecla: "DI", ayuda: "2 clics: distancia y Δx Δy Δz (acotar)." },
       { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
@@ -141,7 +150,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   ].join(";") + ";";
   // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
   // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.
-  const mkFila = () => { const f = document.createElement("div"); f.style.cssText = "display:flex;align-items:stretch;gap:0;"; return f; };
+  // `overflow-x:auto`: si el hueco entre paneles no da para toda la fila, la fila se
+  // DESPLAZA dentro de la cinta. Sin esto, limitar el ancho no sirve de nada —los
+  // botones tienen ancho fijo y se desbordan por debajo del panel, que es como el
+  // «?» acababa en x = 1470 con la ventana de 1400 (medido).
+  const mkFila = () => { const f = document.createElement("div");
+    f.style.cssText = "display:flex;align-items:stretch;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;"; return f; };
   const filaA = mkFila(), filaB = mkFila();
   filaB.style.borderTop = "1px solid #1e3a4a"; filaB.style.paddingTop = "2px";
   barra.append(filaA, filaB);
@@ -174,7 +188,55 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // línea de estado de AutoCAD.
   let prompt = "Elige una herramienta arriba, o teclea su comando y Enter (L, PL, REC, COL, M, CO).";
   let pistaActiva = false;   // mientras el ratón está sobre un botón, manda su pista
+  // ── QUE LA CINTA NO QUEDE DEBAJO DE LOS PANELES ──────────────────────────
+  //
+  // La barra iba centrada en TODO el ancho, así que con el panel de la derecha
+  // abierto sus últimos botones quedaban debajo: el «?» estaba pintado pero el
+  // clic se lo comía el panel (medido con elementFromPoint: devolvía el panel,
+  // «Categoría»). Se veía el botón y no respondía, que es la peor versión.
+  //
+  // Ahora la cinta se centra en el HUECO LIBRE entre los dos paneles y se limita
+  // a su ancho. Es lo que hace la cinta de AutoCAD cuando se acopla un panel.
+  const encajarEntrePaneles = () => {
+    const hostR = host.getBoundingClientRect();
+    if (!hostR.width) return;
+    let izq = hostR.left, der = hostR.right;
+    for (const sel of ["#settings", "#parameters", ".tp-dfwv"]) {
+      for (const e of [...document.querySelectorAll(sel)] as HTMLElement[]) {
+        const r = e.getBoundingClientRect();
+        if (r.width < 40 || r.height < 40) continue;            // no está desplegado
+        if (r.top > hostR.top + 220) continue;                  // no estorba a la cinta
+        if (r.right < hostR.left || r.left > hostR.right) continue;
+        if (r.left <= hostR.left + hostR.width / 2) izq = Math.max(izq, r.right);
+        else der = Math.min(der, r.left);
+      }
+    }
+    const libre = Math.max(320, der - izq - 12);
+    barra.style.left = `${izq - hostR.left + (der - izq) / 2}px`;
+    barra.style.maxWidth = `${libre}px`;
+  };
+
   const refrescar = () => {
+    encajarEntrePaneles();
+    // la casilla de distancia dice a qué se refiere AHORA
+    try {
+      const i = document.getElementById("hk-dist-plano") as HTMLInputElement | null;
+      const r = document.getElementById("hk-dist-rotulo");
+      if (i && r) {
+        const pl = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+        const L = pl === "xz" ? "Y" : pl === "yz" ? "X" : "Z";
+        const v = (window as any).__hekatanCadState?.get?.()?.[pl === "xz" ? "workY" : pl === "yz" ? "workX" : "workZ"];
+        const oo = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+        const conSCU = oo.some((v) => Math.abs(v) > 1e-9);
+        r.textContent = conSCU
+          ? `${L} del plano · ⌖ origen en (${oo.map((v) => v.toFixed(2)).join(", ")})`
+          : `${L} del plano: escribe · arrastra · ↕ cursor · ▦+ deja · ▦× replica · ⌖ origen`;
+        i.title = `Distancia del plano de trabajo: ${L} = ... (m). Enter lo aplica; ▦+ deja la grilla puesta ahí.`;
+        if (document.activeElement !== i && typeof v === "number" && parseFloat(i.value) !== v) i.value = String(v);
+        const sl = document.getElementById("hk-dist-slider") as HTMLInputElement | null;
+        if (sl && document.activeElement !== sl && typeof v === "number" && parseFloat(sl.value) !== v) sl.value = String(v);
+      }
+    } catch {}
     const e = document.getElementById("hk-ribbon-estado");
     if (!e || pistaActiva) return;
     const st = (window as any).__hekatanCadState?.get?.();
@@ -250,6 +312,26 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   };
 
   const usar = (h: Herr) => {
+    // Deshacer / Rehacer: acciones, no herramientas (no cambian el tool activo)
+    if (h.id === "deshacer" || h.id === "rehacer") {
+      const W = window as any;
+      if (h.id === "deshacer") { if (!W.__hekatanCadOption?.("u")) W.__hekatanUndo?.(); }
+      else W.__hekatanRedo?.();
+      decir(h.id === "deshacer" ? "Deshecho (Ctrl+Z)." : "Rehecho (Ctrl+Y).");
+      return;
+    }
+    // Pulsar OTRA VEZ el botón activo lo apaga (vuelve a Selec.), como un interruptor
+    const yaActivo = (h.id === "apoyo" || h.id === "carga" || h.id === "cargaq")
+      ? modoAplicar === h.id
+      : (modoAplicar === null && hooks.getTool() === h.id);
+    if (yaActivo && h.id !== "select") {
+      modoAplicar = null;
+      (window as any).__hekatanBloquearVentana = false;
+      hooks.setTool("select");
+      pintarActivo();
+      decir(`${h.nombre} desactivado — Selec.`);
+      return;
+    }
     // REPLICAR no es una herramienta de dibujo: es la orden REP, la misma que se
     // teclea. Estaba solo en el cuadro de comandos y en una carpeta del panel de
     // propiedades — o sea, escondida. Es la que convierte un pórtico en un
@@ -364,6 +446,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bG.style.cssText = "height:26px;padding:0 10px;cursor:pointer;background:#0e7490;border:1px solid #22d3ee;" +
     "border-radius:6px;color:#ecfeff;font:600 11px inherit;";
   const lanzarGrid = () => {
+    // ⚠️ La foto para Ctrl+Z la hace `__hekatanGenerarRejilla` ANTES de generar. Aquí
+    // había otro pushUndo DESPUÉS, o sea una foto con la rejilla ya puesta: deshacer
+    // devolvía exactamente lo que se quería quitar (medido: 100 nudos antes y después).
     hooks.grid?.(inX.value, inY.value, inZ.value, true);
     decir(`Rejilla generada: X=${inX.value} · Y=${inY.value} · pisos=${inZ.value}`);
   };
@@ -400,15 +485,36 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     return i;
   };
   const inCotaZ = campoZ("0", "48px", "Cota Z del plano de planta, en metros");
+  inCotaZ.id = "hk-dist-plano";
+  // El rótulo y el significado de la casilla CAMBIAN con el plano de trabajo: en
+  // planta es la cota Z, en alzado frontal es la Y por donde corta y en el lateral
+  // la X. Antes solo valía para planta, así que en alzado la rejilla se quedaba en
+  // Y = 0 y no había forma de llevarla al pórtico que tocaba.
+  const planoActual = (): "xy" | "xz" | "yz" =>
+    ((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy") as "xy" | "xz" | "yz";
+  const claveDist = () => ({ xy: "workZ", xz: "workY", yz: "workX" }[planoActual()]);
+  const letraDist = () => ({ xy: "Z", xz: "Y", yz: "X" }[planoActual()]);
   const inAltPiso = campoZ("3", "44px", "Altura de piso para subir la planta, en metros");
   const inNumPisos = campoZ("3", "36px", "Cuantos pisos subir");
   const ponerZ = () => {
     const z = parseFloat(inCotaZ.value);
     if (!isFinite(z)) { inCotaZ.value = "0"; return; }
     const st = (window as any).__hekatanCadState?.get?.();
-    if (st) st.workZ = z;
-    hooks.setPlane("xy");
-    hooks.setView("plan");
+    const plano = planoActual();
+    if (st) (st as any)[claveDist()] = z;
+    hooks.setPlane(plano);
+    const sl = document.getElementById("hk-dist-slider") as HTMLInputElement | null;
+    if (sl) sl.value = String(z);
+    if (plano !== "xy") {
+      decir(`Plano ${plano.toUpperCase()} a ${letraDist()} = ${z.toFixed(2)} m. Lo que dibujes cae ahi.`);
+      refrescar();
+      return;
+    }
+    // ⚠️ NO se toca la vista. Cambiar de cota es cambiar de NIVEL, no de punto de
+    // mira: ni ETABS ni AutoCAD te reencuadran al subir de planta. Con el
+    // `setView("plan")` que habia aqui, poner la cota en una vista 3D te saltaba a
+    // cenital (medido: cámara 30,-30,30 -> 0,0,1000) y los clics siguientes caian
+    // en otro sitio — por eso no se podia dibujar un piso alto seguido.
     decir(`Plano de planta a la cota Z = ${z.toFixed(2)} m. Lo que dibujes cae ahi.`);
     refrescar();
   };
@@ -438,9 +544,215 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     try { w.__hekatanRebuild?.(); } catch {}
     decir(`${hechas} copia${hechas === 1 ? "" : "s"} cada ${h} m. Ya hay ${n + 1} plantas.`);
   });
-  filaZ.append(inCotaZ, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  // ── GRILLA AUXILIAR: dejar puesto dónde referenciarse a esa altura ────────
+  //
+  // «Ubico una altura y allí no hay con qué referenciarse.» La rejilla del plano
+  // de trabajo sube contigo, pero es UNA: en cuanto te mueves, esa cota se queda
+  // sin nada. Este botón DEJA una grilla auxiliar a la cota escrita, como los
+  // niveles de ETABS o los planos de referencia de Revit: se quedan puestos, se
+  // ven tenues, y el OSNAP engancha a sus cruces aunque estés dibujando en otra.
+  const bGrillaAux = document.createElement("button");
+  bGrillaAux.type = "button";
+  bGrillaAux.textContent = "▦+";
+  bGrillaAux.title = "Deja una grilla auxiliar a la cota Z escrita (nivel de referencia). " +
+    "Vuelve a pulsarlo con la misma cota para quitarla.";
+  bGrillaAux.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bGrillaAux.addEventListener("click", () => {
+    const d = parseFloat(inCotaZ.value);
+    const plano = planoActual(), L = letraDist();
+    if (!isFinite(d)) { decir(`Escribe primero la distancia ${L}.`); return; }
+    const w = window as any;
+    const lista = w.__hekatanGrillaAux?.(d, plano);
+    if (!lista) { decir("El visor todavia no expone las grillas auxiliares."); return; }
+    const quitada = !lista.some((g: any) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
+    decir(quitada
+      ? `Quitada la grilla auxiliar ${plano.toUpperCase()} de ${L} = ${d.toFixed(2)} m. Quedan ${lista.length}.`
+      : `Grilla auxiliar ${plano.toUpperCase()} en ${L} = ${d.toFixed(2)} m. Ya puedes engancharte ahi desde cualquier vista.`);
+  });
+  // ── El SLIDER: colocar la grilla arrastrando, no escribiendo ──────────────
+  //
+  // Jorge (16-sep-2026): «lo que me interesa es cómo posiciono la grilla auxiliar,
+  // o con un slider puede ser». Escribir 3.20 exige saber ya la cota; arrastrando se
+  // BUSCA: la rejilla se mueve con el dedo y se ve dónde cae respecto de lo dibujado,
+  // que es como se coloca un plano de referencia en Revit.
+  //
+  // Rango −10 … 50 m con paso 0.1, el mismo del mando «Cota Z» del panel, para que los
+  // dos digan lo mismo. La casilla y el slider van atados: mueves uno y el otro sigue.
+  const slider = document.createElement("input");
+  // Rango −5 … 25 m y paso 0.25: con −10 … 50 en 104 px cada píxel valía 0.58 m
+  // (medido: 6 px de arrastre = 4 m), o sea imposible de colocar. Con esto un píxel
+  // son 29 cm, las flechas del teclado dan el paso fino y la casilla, el valor exacto.
+  slider.type = "range"; slider.min = "-5"; slider.max = "25"; slider.step = "0.25"; slider.value = "0";
+  slider.id = "hk-dist-slider";
+  slider.title = "Arrastra para colocar el plano (y su grilla) a ojo; la casilla de al lado dice la distancia exacta";
+  slider.style.cssText = "width:104px;height:26px;cursor:ew-resize;accent-color:#22d3ee;";
+  const aplicarDist = (d: number, avisar = true) => {
+    if (!isFinite(d)) return;
+    const st = (window as any).__hekatanCadState?.get?.();
+    const plano = planoActual();
+    if (st) (st as any)[claveDist()] = d;
+    hooks.setPlane(plano);
+    inCotaZ.value = String(+d.toFixed(2));
+    slider.value = String(d);
+    if (avisar) decir(`Plano ${plano.toUpperCase()} en ${letraDist()} = ${d.toFixed(2)} m` +
+      ` — ▦+ deja la grilla puesta ahi.`);
+  };
+  // `input` = mientras se arrastra: la rejilla se mueve en vivo, que es el punto.
+  slider.addEventListener("input", () => aplicarDist(parseFloat(slider.value), false));
+  slider.addEventListener("change", () => aplicarDist(parseFloat(slider.value)));
+  (window as any).__hekatanPonerDistanciaPlano = (d: number) => aplicarDist(d);
+  // Y el tercer camino, el de AutoCAD: COGER la grilla con el cursor y moverla
+  // paralela a sí misma, con el recuadro de distancia junto al cursor. La casilla es
+  // para el valor exacto, el slider para buscar a ojo, y esto para colocarla mirando
+  // el modelo. Los tres escriben la misma distancia.
+  const bMover = document.createElement("button");
+  bMover.type = "button";
+  bMover.textContent = "↕";
+  bMover.title = "Mover la grilla con el cursor: se desplaza paralela a si misma; " +
+    "teclea la distancia y Enter para dejarla exacta, Esc cancela";
+  bMover.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  bMover.addEventListener("click", () => {
+    const w = window as any;
+    if (!w.__hekatanMoverGrilla) { decir("El visor todavia no permite mover la grilla."); return; }
+    w.__hekatanMoverGrilla(true);
+    decir(`Mueve el raton: la grilla ${planoActual().toUpperCase()} se desplaza paralela. ` +
+      "Teclea la distancia + Enter para dejarla exacta · clic la fija · Esc cancela.");
+  });
+  // REPLICAR la grilla auxiliar, como se replica una planta: n grillas separadas la
+  // altura de las casillas de al lado. Jorge: «si está en XY debe replicarse en las
+  // posiciones Z; si tengo XZ se desplaza en Y, y YZ en X». Es la misma regla del
+  // plano de trabajo: la grilla solo se mueve en su normal.
+  const bRepGrid = document.createElement("button");
+  bRepGrid.type = "button";
+  bRepGrid.textContent = "▦×";
+  bRepGrid.title = "Replicar la grilla auxiliar: deja n grillas NUEVAS aparte, separadas la " +
+    "altura de las casillas de la derecha (alt x n), SIN mover la tuya. En planta van en Z, " +
+    "en alzado frontal en Y y en el lateral en X.";
+  bRepGrid.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bRepGrid.addEventListener("click", () => {
+    const d0 = parseFloat(inCotaZ.value);
+    const paso = parseFloat(inAltPiso.value);
+    const n = Math.max(1, Math.round(parseFloat(inNumPisos.value) || 1));
+    const plano = planoActual(), L = letraDist();
+    if (!isFinite(d0) || !isFinite(paso) || paso === 0) {
+      decir("Para replicar la grilla hacen falta la distancia y una separacion distinta de 0."); return;
+    }
+    const w = window as any;
+    if (!w.__hekatanGrillaAux) { decir("El visor todavia no expone las grillas auxiliares."); return; }
+    // ⚠️ DESPLAZAR y REPLICAR no son lo mismo (Jorge, 16-sep): desplazar mueve la
+    // grilla de trabajo y no crea nada; replicar deja grillas auxiliares APARTE y no
+    // toca la tuya. Por eso se empieza en k = 1: la distancia donde estás ya la
+    // ocupa el plano de trabajo, y si la duplicásemos «replicar» acabaría pareciendo
+    // un desplazamiento.
+    let ultima: any[] = [];
+    const puestas: string[] = [];
+    for (let k = 1; k <= n; k++) {
+      const d = +(d0 + paso * k).toFixed(4);
+      const yaEsta = ((w.__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>)
+        .some((g) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
+      if (yaEsta) continue;                       // no duplicar la que ya estuviera
+      ultima = w.__hekatanGrillaAux(d, plano);
+      puestas.push(d.toFixed(2));
+    }
+    decir(puestas.length
+      ? `${puestas.length} grillas ${plano.toUpperCase()} en ${L} = ${puestas.join(" · ")} m. ` +
+        `Hay ${ultima.length} grillas auxiliares puestas.`
+      : "Esas grillas ya estaban puestas.");
+  });
+  // ── ORIGEN LOCAL (SCU), lo del dibujo de los dos trípodes ─────────────────
+  // «Cuando hacía un vector había una posición donde dentro había otra coordenada;
+  // es lo que quiero para dibujar en 3D». Pones el origen en un punto del modelo y
+  // a partir de ahí «0,0,0» es ESE punto: se acabó sumar a mano en cada coordenada.
+  const bSCU = document.createElement("button");
+  bSCU.type = "button";
+  bSCU.textContent = "⌖";
+  bSCU.title = "Origen local (SCU): toca un punto y las coordenadas que teclees seran " +
+    "relativas a EL. Vuelve a pulsarlo para regresar al origen global (0,0,0).";
+  bSCU.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  const pintarSCU = () => {
+    const o = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+    const puesto = o.some((v) => Math.abs(v) > 1e-9);
+    bSCU.style.background = puesto ? "#0e7490" : "transparent";
+    bSCU.style.borderColor = puesto ? "#22d3ee" : "#1e3a4a";
+    bSCU.style.color = puesto ? "#ecfeff" : "#cdeefb";
+  };
+  bSCU.addEventListener("click", () => {
+    const w = window as any;
+    if (!w.__hekatanElegirSCU) { decir("El visor todavia no expone el origen local."); return; }
+    const o = (w.__hekatanSCU ?? [0, 0, 0]) as number[];
+    if (o.some((v: number) => Math.abs(v) > 1e-9)) {
+      w.__hekatanQuitarSCU(); pintarSCU();
+      decir("Origen local quitado: vuelves al origen global (0,0,0).");
+      return;
+    }
+    w.__hekatanElegirSCU(true);
+    decir("Toca el punto donde quieres el origen local (el OSNAP engancha a un nudo o a un cruce). " +
+      "Desde ahi, 0,0,0 sera ese punto.");
+  });
+  setInterval(pintarSCU, 700);
+  // Quitar TODAS las grillas auxiliares: ponerlas era fácil y recogerlas no, había que
+  // acertar la cota exacta de cada una.
+  const bLimpiar = document.createElement("button");
+  bLimpiar.type = "button";
+  bLimpiar.textContent = "▦−";
+  bLimpiar.title = "Quitar TODAS las grillas auxiliares puestas (Ctrl+Z las devuelve)";
+  bLimpiar.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 12px inherit;";
+  bLimpiar.addEventListener("click", () => {
+    const n = (window as any).__hekatanLimpiarGrillasAux?.() ?? 0;
+    decir(n ? `Quitadas ${n} grillas auxiliares. Ctrl+Z las devuelve.` : "No hay grillas auxiliares puestas.");
+  });
+  // ── IR A LA VISTA DE ESA GRILLA ───────────────────────────────────────────
+  //
+  // Jorge (16-sep-2026): «debe haber algo para ir a la vista en esa posición de esa
+  // grilla, en el plano tanto XY, XZ o YZ». Es el doble clic sobre una planta en
+  // ETABS: te pone mirando ESE plano, de frente y centrado en él.
+  //
+  // Los botones de vista (Planta/Frente/Lado) miran desde el origen; este mira desde
+  // la DISTANCIA del plano de trabajo, que es donde está lo que acabas de dibujar.
+  const bVerPlano = document.createElement("button");
+  bVerPlano.type = "button";
+  bVerPlano.textContent = "◎";
+  bVerPlano.title = "Ir a la vista de ESTE plano: te pone mirándolo de frente y centrado " +
+    "en su distancia (planta si es XY, alzado si es XZ, lateral si es YZ)";
+  bVerPlano.style.cssText = "height:26px;padding:0 8px;cursor:pointer;background:transparent;" +
+    "border:1px solid #1e3a4a;border-radius:6px;color:#cdeefb;font:600 13px inherit;";
+  bVerPlano.addEventListener("click", () => {
+    const plano = planoActual(), L = letraDist();
+    const st = (window as any).__hekatanCadState?.get?.();
+    const d = Number(st?.[claveDist()] ?? 0);
+    const v: any = document.querySelector("#viewer");
+    const ctx = v?.__ctx;
+    if (!ctx) { decir("El visor no responde."); return; }
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as number[];
+    // centro del plano: su distancia en la normal, y el origen local en las otras dos
+    const centro = plano === "xy" ? [O[0], O[1], d]
+                 : plano === "xz" ? [O[0], d, O[2]]
+                 : [d, O[1], O[2]];
+    // a qué distancia se pone la cámara: el tamaño de la rejilla, para que se vea entera
+    const tam = Number((window as any).__hekatanGridConfig?.gridSize ?? 20);
+    const L0 = Math.max(12, tam * 1.35);
+    const cam = ctx.camera;
+    const pos = plano === "xy" ? [centro[0], centro[1] - 0.001, centro[2] + L0]
+              : plano === "xz" ? [centro[0], centro[1] - L0, centro[2]]
+              : [centro[0] + L0, centro[1], centro[2]];
+    cam.position.set(pos[0], pos[1], pos[2]);
+    cam.up.set(0, 0, 1);                       // Z arriba, como todo el programa
+    ctx.controls?.target?.set(centro[0], centro[1], centro[2]);
+    cam.lookAt(centro[0], centro[1], centro[2]);
+    if ((cam as any).isOrthographicCamera) { (cam as any).zoom = 1; cam.updateProjectionMatrix(); }
+    ctx.controls?.update?.(); ctx.render?.();
+    const nombre = plano === "xy" ? "PLANTA" : plano === "xz" ? "ALZADO FRONTAL" : "ALZADO LATERAL";
+    decir(`Vista de ${nombre} en ${L} = ${d.toFixed(2)} m — mirando el plano de frente.`);
+  });
+  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bLimpiar, bVerPlano, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
-  rotZ.textContent = "Cota Z · subir alt × nº";
+  rotZ.id = "hk-dist-rotulo";
+  rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
   rotZ.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaZ.append(filaZ, rotZ);
   filaB.appendChild(cajaZ);
@@ -706,8 +1018,156 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bAyuda.style.cssText = "width:26px;height:26px;margin-left:6px;cursor:pointer;" +
     "background:transparent;border:1px solid #22d3ee;border-radius:50%;color:#22d3ee;" +
     "font:600 13px inherit;align-self:center;";
-  bAyuda.addEventListener("click", () => verGuia());
-  filaA.appendChild(bAyuda);
+  // ── AYUDA SEÑALANDO: «toca el botón del que quieres ayuda» ────────────────
+  //
+  // Jorge (16-sep-2026): «un botón help, pero este help preguntará "toca el botón
+  // o ventana de la que quieres asistencia", y debe tener un cuadro animado de un
+  // ejemplo de cómo usar, así para cada botón».
+  //
+  // Es el «¿Qué es esto?» de toda la vida (Shift+F1 de Office, el ? de AutoCAD),
+  // con la diferencia que importa: además del texto, se VE el ejemplo. La frase
+  // «clic en dos esquinas opuestas» ya estaba en el tooltip y aun así no dice
+  // cuántos clics ni en qué orden; el ejemplo animado sí.
+  //
+  // El clic en modo ayuda NO ejecuta el botón (se captura antes): si no, pedir
+  // ayuda de «Borrar» borraría algo.
+  let modoAyuda = false;
+  let pararAnim: (() => void) | null = null;
+  const porBoton = () => {                       // botón del DOM -> ficha de la cinta
+    const m = new Map<HTMLElement, typeof GRUPOS[number]["items"][number]>();
+    for (const g of GRUPOS) for (const h of g.items) { const b = botones.get(h.id); if (b) m.set(b, h); }
+    return m;
+  };
+  const cuadro = document.createElement("div");
+  cuadro.id = "hk-ayuda-anim";
+  // Debajo de la cinta (dos filas + barra de estado ≈ 185 px): el cuadro explica un
+  // botón, así que tapárselo al usuario mientras lo mira es justo lo que no debe pasar.
+  cuadro.style.cssText = [
+    "position:absolute", "top:196px", "left:50%", "transform:translateX(-50%)",
+    "z-index:80", "display:none", "width:390px", "padding:14px 16px 12px",
+    "background:rgba(10,18,32,.98)", "border:1px solid #22d3ee", "border-radius:12px",
+    "box-shadow:0 10px 40px rgba(0,0,0,.6)", "color:#cbd5e1",
+    "font:13px/1.55 system-ui,-apple-system,Segoe UI,sans-serif",
+  ].join(";") + ";";
+  host.appendChild(cuadro);
+  const cerrarAyuda = () => {
+    pararAnim?.(); pararAnim = null;
+    cuadro.style.display = "none";
+  };
+  const salirModoAyuda = () => {
+    modoAyuda = false;
+    (window as any).__hekatanAyudaModo = false;
+    bAyuda.style.background = "transparent"; bAyuda.style.color = "#22d3ee";
+    document.body.style.cursor = "";
+    refrescar();
+  };
+  const abrirAyuda = (clave: string, titulo: string, texto: string, idTool?: string) => {
+    pararAnim?.();
+    cuadro.innerHTML = "";
+    const cab = document.createElement("div");
+    cab.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:8px";
+    cab.innerHTML = `<div style="font:600 15px inherit;color:#22d3ee">${titulo}</div>`;
+    const x = document.createElement("button");
+    x.type = "button"; x.textContent = "✕"; x.title = "Cerrar (Esc)";
+    x.style.cssText = "width:24px;height:24px;border-radius:50%;border:1px solid #1e3a4a;" +
+      "background:transparent;color:#94a3b8;cursor:pointer;font:600 13px inherit";
+    x.addEventListener("click", cerrarAyuda);
+    cab.appendChild(x);
+    const lienzo = document.createElement("div");
+    const pieN = document.createElement("div");
+    pieN.style.cssText = "margin-top:8px;color:#64748b;font-size:11px";
+    pieN.textContent = "El ejemplo se repite solo · Esc cierra";
+    cuadro.append(cab, lienzo, pieN);
+    if (idTool) {
+      const probar = document.createElement("button");
+      probar.type = "button"; probar.textContent = "▶ Probar ahora";
+      probar.style.cssText = "margin-top:9px;width:100%;height:28px;cursor:pointer;background:#0e7490;" +
+        "border:1px solid #22d3ee;border-radius:6px;color:#ecfeff;font:600 12px inherit";
+      probar.addEventListener("click", () => {
+        cerrarAyuda(); salirModoAyuda();
+        const h = GRUPOS.flatMap((g) => g.items).find((q) => q.id === idTool);
+        if (h) usar(h);
+      });
+      cuadro.appendChild(probar);
+    }
+    cuadro.style.display = "block";
+    pararAnim = reproducir(lienzo, DEMOS[clave] ?? DEMO_GENERICA(texto));
+  };
+  // Se captura ANTES que nadie (fase de captura) para que el botón no se ejecute.
+  window.addEventListener("pointerdown", (e) => {
+    if (!modoAyuda) return;
+    const t = e.target as HTMLElement | null;
+    if (!t || cuadro.contains(t)) return;
+    e.preventDefault(); e.stopPropagation();
+    // tocar el propio «?» en modo ayuda explica la ayuda (y no la apaga a medias)
+    if (bAyuda.contains(t)) { abrirAyuda("ayuda", "? Ayuda — toca un botón", bAyuda.title); return; }
+    const btn = t.closest("button") as HTMLElement | null;
+    const ficha = btn ? porBoton().get(btn) : undefined;
+    if (ficha) { abrirAyuda(ficha.id, `${ficha.icono} ${ficha.nombre} (${ficha.tecla})`, ficha.ayuda, ficha.id); return; }
+    // los mandos de la cinta que no son herramientas: se reconocen por su title
+    const cerca = (t.closest("input,button") as HTMLElement | null) ?? t;
+    const tit = (cerca.getAttribute("title") || "").toLowerCase();
+    if (tit.includes("grilla auxiliar") && tit.includes("replicar"))
+      return void abrirAyuda("repGrid", "▦×  Replicar la grilla auxiliar", cerca.title);
+    if (tit.includes("grilla auxiliar")) return void abrirAyuda("grillaAux", "▦+  Grilla auxiliar", cerca.title);
+    if (tit.includes("paralela a si misma")) return void abrirAyuda("moverGrilla", "↕  Mover la grilla con el cursor", cerca.title);
+    if (tit.includes("origen local")) return void abrirAyuda("scu", "⌖  Origen local (SCU)", cerca.title);
+    if (tit.includes("distancia del plano")) return void abrirAyuda("cotaZ", "Distancia del plano de trabajo", cerca.title);
+    if (tit.includes("cota z")) return void abrirAyuda("cotaZ", "Cota Z — a qué altura dibujas", cerca.title);
+    if (tit.includes("pisos de arriba")) return void abrirAyuda("subir", "⇈ Subir — replicar plantas", cerca.title);
+    // los conmutadores y las vistas, que tampoco son herramientas
+    const rot0 = (cerca.textContent || "").replace(/\s+/g, " ").trim();
+    if (/^SNAP/.test(rot0)) return void abrirAyuda("snap", "SNAP (F9) — caer en los cruces", cerca.title || "");
+    if (rot0 === "▴" || tit.includes("plegar")) return void abrirAyuda("plegar", "▴ Plegar la cinta", cerca.title || "");
+    if (rot0 === "▾" || tit.includes("añadir a la cinta")) return void abrirAyuda("extras", "▾ Añadir a la cinta", cerca.title || "");
+    if (/^ORTO/.test(rot0)) return void abrirAyuda("orto", "ORTO (F8) — recto en X o en Y", cerca.title || "");
+    if (/^OSNAP/.test(rot0)) return void abrirAyuda("osnap", "OSNAP (F3) — referencias a objetos", cerca.title || "");
+    if (/(Planta|Frente|Lado|3D)/.test(rot0) && /(XY|XZ|YZ)/.test(rot0))
+      return void abrirAyuda("vista", `${rot0} — vista y plano de trabajo`, cerca.title || "");
+    if (tit.includes("rejilla") || (cerca.textContent || "").includes("Rejilla"))
+      return void abrirAyuda("rejilla", "🏗 Rejilla — ejes, niveles y columnas", cerca.title || "");
+    const rotulo = (cerca.textContent || "").replace(/\s+/g, " ").trim().slice(0, 48);
+    abrirAyuda("_nada", rotulo || "Esta parte de la pantalla",
+      cerca.title || "Todavía no hay un ejemplo animado de esto. Dime cuál falta y lo añado.");
+  }, true);
+  // ⚠️ Parar el `pointerdown` NO basta: `click` es otro evento y llega igual, así
+  // que el botón se ejecutaba de todos modos (medido: pedir ayuda de ▦+ creaba el
+  // nivel). Hay que tapar también el click —y el mouseup/mousedown que usan algunos
+  // mandos— mientras dure el modo.
+  for (const tipo of ["click", "mousedown", "mouseup"] as const)
+    window.addEventListener(tipo, (e) => {
+      if (!modoAyuda) return;
+      const t = e.target as HTMLElement | null;
+      if (!t || cuadro.contains(t) || bAyuda.contains(t)) return;
+      e.preventDefault(); e.stopPropagation();
+    }, true);
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (cuadro.style.display !== "none") cerrarAyuda();
+    if (modoAyuda) salirModoAyuda();
+  });
+
+  bAyuda.addEventListener("click", () => {
+    // Si el cuadro está abierto es porque acaban de PEDIR ayuda del propio «?»
+    // (su ficha se abre en el pointerdown): apagarlo aquí la cerraría de inmediato
+    // y parecería que el botón no responde.
+    if (modoAyuda && cuadro.style.display === "block") return;
+    if (modoAyuda) { cerrarAyuda(); salirModoAyuda(); return; }
+    modoAyuda = true;
+    (window as any).__hekatanAyudaModo = true;
+    bAyuda.style.background = "#0e7490"; bAyuda.style.color = "#ecfeff";
+    document.body.style.cursor = "help";
+    pistaActiva = true;
+    const e2 = document.getElementById("hk-ribbon-estado");
+    if (e2) e2.innerHTML = '<b style="color:#22d3ee">AYUDA</b> ' +
+      '<span>— toca el botón o la ventana de la que quieres asistencia (Esc para salir)</span>';
+  });
+  bAyuda.title = "Ayuda: toca un botón y te enseño un ejemplo animado de cómo se usa (F1: los cuatro pasos)";
+  // Al PRINCIPIO, no al final: el extremo derecho de la cinta es justo lo que tapa el
+  // panel de propiedades, y la ayuda es lo último que puede permitirse no responder.
+  bAyuda.style.marginLeft = "2px"; bAyuda.style.marginRight = "6px";
+  bAyuda.style.flex = "0 0 auto";
+  filaA.insertBefore(bAyuda, filaA.firstChild);
 
   // ── Barra de estado: qué se espera AHORA (el Dynamic Prompt) ──────────────
   const estado = document.createElement("div");
@@ -890,6 +1350,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       // El guardia `enCampo` no basta porque en el keydown del primer carácter el
       // cuadro todavía está vacío.
       if ((window as any).__hekatanCadEsperaRespuesta?.()) return;
+      // ⚠️ Y tampoco mientras se está COLOCANDO la grilla con el cursor: ahí los
+      // números son la distancia que se teclea, no vistas. Medido: al teclear «3»
+      // para poner la grilla a 3 m, la cinta lo leía como «vista Lado YZ» y las
+      // grillas acababan en el plano lateral.
+      if ((window as any).__hekatanMoviendoGrilla) return;
       e.preventDefault(); VISTAS[v][4](); decir(`Vista ${VISTAS[v][1]} — plano ${VISTAS[v][2]}`);
       setTimeout(limpiarCmd, 0); return;
     }
