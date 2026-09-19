@@ -1,7 +1,7 @@
-El visor de archivos IFC en Hekatan Struct.
-Importamos el IFC y vemos el modelo completo en tres dimensiones.
-El panel lista los objetos del modelo: podemos ocultar o aislar cada uno.
-El panel también es corredizo: se minimiza o se esconde del todo, para no tapar los otros menús.
-La regla mide sobre el modelo y engancha a las esquinas.
-Para cortar uso el panel Cortes equis, ye, zeta. Primero elijo la altura arrastrando con el ratón el slider pos zeta; luego, con el ratón, marco la casilla Cortar zeta, y eso activa el corte.
-El edificio se abre justo a esa altura; arrastrando con el ratón giro el modelo para ver los niveles por dentro.
+El visor de archivos IFC en Hekatan Struct, solo con la cinta.
+Abro la cinta, pestaña IFC y cortes, e Importar: se elige el archivo y se ve el modelo en tres D. Encuadrar lo centra.
+Objetos abre la lista del IFC: cada objeto se puede ocultar o aislar.
+Esa lista se minimiza o se esconde con su puerta, y Objetos la trae de vuelta.
+En la pestaña Dibujo, Medir mide sobre el modelo y engancha a las esquinas.
+En IFC y cortes escribo la altura en la casilla Z y pulso Corte Z: el edificio se abre ahí.
+Con la rueda pulsada giro el modelo para ver los niveles por dentro.

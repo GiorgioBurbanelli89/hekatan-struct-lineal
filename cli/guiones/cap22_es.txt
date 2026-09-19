@@ -1,0 +1,10 @@
+Bienvenidos a Hekatan Struct. Hoy le pedimos a un agente de inteligencia artificial una cimentación completa, desde cero, y la revisamos con los números del programa.
+Este es el agente de Hekatan Struct. Corre en tu propia computadora con Ollama, sin clave y sin nube, y trabaja con las mismas herramientas que usarías tú.
+Le escribimos el pedido como se lo diríamos a un colega: una rejilla de zapatas aisladas con vigas de amarre, para tres por tres columnas, y que nos diga la presión del suelo y el asentamiento.
+Al enviar, el agente busca la plantilla de cimentación, la abre, ajusta sus parámetros y manda a calcular. Cada paso queda escrito en el chat, para que puedas revisarlo.
+Fíjate en la última línea: la presión máxima del suelo y el asentamiento los escribe el programa, leídos del cálculo. La inteligencia artificial puede equivocarse con un número; el programa no lo inventa.
+Cerramos el chat y ahí está el modelo: nueve zapatas sobre resortes que representan el suelo, unidas por vigas de amarre, con la presión de contacto en colores.
+Pasando el cursor por encima, el programa nos dice la presión en ese punto exacto. Debajo de la columna es donde más carga el suelo.
+Ahora el diseño. En la barra de arriba, Diseño, diseño de losa. El acero se calcula con la combinación de diseño, por elementos finitos, con ACI 318 diecinueve, y la barra de colores pasa a centímetros cuadrados por metro.
+Y como en SAFE, con el cursor vemos el acero en cada punto: arriba y abajo, en las dos direcciones, con el armado en varillas en milímetros y su separación.
+Eso es todo. Hekatan Struct: del pedido al acero, con cada número verificable. La marca de agua de Hekatan va en todo el vídeo. Nos vemos en el próximo capítulo.

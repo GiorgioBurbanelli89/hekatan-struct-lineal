@@ -1,7 +1,7 @@
-The IFC file viewer in Hekatan Struct.
-We import the IFC and see the whole model in three dimensions.
-The panel lists the model objects: we can hide or isolate each one.
-The panel also slides: it minimizes or hides completely, so it never covers the other menus.
-The ruler measures on the model and snaps to corners.
-To cut I use the Cuts X, Y, Z panel. First I choose the height by dragging the pos Z slider with the mouse; then, with the mouse, I check the Cut Z box, and that activates the cut.
-The building opens right at that height; by dragging with the mouse I orbit the model to see the levels inside.
+The IFC file viewer in Hekatan Struct, using only the ribbon.
+I open the ribbon, IFC and sections tab, and Import: pick the file and the model shows in 3D. Zoom Extents centres it.
+Objects opens the IFC list: each object can be hidden or isolated.
+That list minimises or hides behind its door, and Objects brings it back.
+In the Draw tab, Measure works on the model and snaps to its corners.
+In IFC and sections I type the height in the Z box and press Cut Z: the building opens there.
+Holding the wheel I orbit the model to see the floors inside.

@@ -1,12 +1,15 @@
-A Warren truss in Hekatan Struct, start to finish and only with the quick-access ribbon: draw, support, load, see the analysis and save. No menus to open.
-The ribbon has two rows. Top: draw, structure, analyze, view and precision; bottom: modify, grid, level and load. I press Front, the X Z elevation, and turn on SNAP right here on the ribbon, so every click lands exactly on the grid.
-Bottom chord: I press Polyline and click seven times, from minus six to six metres every two metres. Next to the cursor you see the length and angle of each segment. Enter to finish.
-Top chord: another polyline, six clicks at two metres height, one over the centre of each panel.
-Diagonals: a single zigzag polyline, thirteen clicks alternating bottom and top. When a click lands on an existing node it is reused, not duplicated, like ETABS joints. Thirteen nodes and twenty-three members.
-Supports: I press Support on the ribbon and click once on each end. By default the support is fixed: all six degrees of freedom. With Select I click the node and the panel shows its Restraints, six boxes ticked; right there, Pin changes it, and with right click there is Assign, Joint, Restraints, as in ETABS.
-Loads: the ribbon box holds minus ten kilonewtons, negative means downward. Ten kilonewtons per node is the distributed load of five kilonewtons per metre times its tributary width of two metres: the point-load way of simulating it, node by node. I press Load and click on each top node. As soon as there are supports and loads, the app solves by itself: there is no analyze button.
-And the truly distributed form, on the member, as in ETABS: the second box holds minus five kilonewtons per metre, I press Load q and click once on each segment of the top chord: five segments, fifty more kilonewtons, drawn as arrows along the member. The app solves again by itself.
-To see results I fold the ribbon, and the left panel shows its controls in full view. I tick the deformed shape and under Frame results choose the axial force diagram: maximum deflection zero point two nine eight millimetres, maximum axial force eighty kilonewtons. Under Node results I choose displacements, then reactions, and under Frame results the moment three-three: every result you can check on a truss is in those two lists. I open the ribbon again.
-With Measure, two clicks from support to support: twelve metres, and the dimension is small, not covering the drawing.
-In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point two nine eight millimetres, at all thirteen nodes.
-And to save: with the ribbon arrow, search Save dot heks, tick it and it becomes a quick-access button; one click and it downloads. And Save As, at the top, asks for the name: cercha Warren dot heks; from then on Save overwrites it. It is the text format of Hekatan Struct: nodes, members, supports and loads in readable lines; it stores the model and lets you share it with a group. Howe and Pratt come next.
+A Warren truss in Hekatan Struct, start to finish, using only the quick-access ribbon.
+I close both side panels. The ribbon has tabs, like AutoCAD: Draw holds drawing, supports, loads and modify.
+I press Front, the X Z elevation, and turn on SNAP so every click lands on the grid. I zoom in with the mouse wheel.
+Bottom chord: Polyline and seven clicks, from minus six to six metres, every two metres. Enter finishes.
+Top chord: another polyline, six clicks at two metres high, over the centre of each panel.
+Diagonals: one zigzag polyline, thirteen clicks. A click on an existing node reuses it. Thirteen nodes, twenty-three members.
+Supports: I press Fixed and click each end. Next to it is Pinned, which leaves the rotations free.
+Loads: minus ten kilonewtons in the box. I press Load and click each top node. The app solves by itself.
+Distributed load: minus five kilonewtons per metre, Load q, and one click on each top chord segment.
+Results tab: Deformed, scale times one thousand in its box, and Axial. Maximum deflection is zero point two nine eight millimetres.
+Moment three-three, and the reactions at both supports.
+2D diagram: the elevation with the diagram and its values, no perspective. I close it with the cross.
+Back to the Draw tab. With Measure, support to support: twelve metres.
+3D view and Zoom Extents. ETABS 22 gives the same deflection at all thirteen nodes.
+Save As, at the top, asks for the name: cercha warren dot heks. It is plain text: nodes, members, supports and loads.

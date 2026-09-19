@@ -21,18 +21,19 @@ GRUPOS = [
     dict(id="warren", titulo="Cercha Warren, de principio a fin", sub="Todo con el mouse, desde la cinta",
          video=os.path.join(ORIG, "TUT_CERCHA_WARREN.mp4"),
          modelos_fijos=[("Abrir este modelo en Hekatan Struct", "warren.heks")],   # lo escribe cli/_tutoriales_warren_heks.py (13 nudos, 23 barras)
-         clips=["Introducción", "La cinta: Frente y SNAP", "Cordón inferior (Polilínea)", "Cordón superior", "Diagonales en zigzag",
-                "Apoyos y cómo cambiarlos", "Cargas puntuales por nudo", "Carga distribuida (Carga q)", "Ver resultados",
-                "Medir una distancia", "Vista 3D", "Guardar y Guardar como"],
+         clips=["Introducción", "La cinta y sus pestañas", "Frente, SNAP y acercar", "Cordón inferior (Polilínea)", "Cordón superior",
+                "Diagonales en zigzag", "Apoyos: empotrado y articulado", "Cargas puntuales por nudo", "Carga distribuida (Carga q)",
+                "Resultados: deformada y axil", "Momento y reacciones", "Diagrama en 2D", "Medir una distancia", "3D y Encuadrar",
+                "Guardar como .heks"],
          hojas=[dict(titulo="De dónde sale la rigidez de una barra (EI y L)", ej="26 De donde sale la rigidez de barra (EI y L, deducida).lisp"),
                 dict(titulo="El pórtico: de dónde sale la K (ensamblaje)", ej="24 El portico - de donde sale la K (ensamblaje).lisp"),
                 dict(titulo="Deformada de una barra: funciones de Hermite", ej="15 Deformada de un frame - funciones de Hermite.lisp")]),
     dict(id="cupula", titulo="Cúpula y piel del Allianz Arena", sub="Superficies curvas: Revolución y Barrido en alzado",
          video=os.path.join(ORIG, "TUT_CUPULA_ALLIANZ.mp4"), modelo=os.path.join(ORIG, "cli", "shots", "cupula.heks"),
          modelos_extra=[("Abrir la piel del Allianz", os.path.join(ORIG, "cli", "shots", "allianz.heks"))],
-         clips=["Introducción", "Alzado XZ y rejilla", "El meridiano: Arco por 3 puntos", "Seleccionar con ventana",
-                "Revolución: 16 sectores", "La cúpula en isométrica", "Allianz: la planta redondeada", "La panza: Parábola por 3 puntos",
-                "Barrido en alzado", "La piel terminada"],
+         clips=["Introducción", "Pestaña Áreas: tramos y guía", "El meridiano: Arco por 3 puntos", "Seleccionar con ventana",
+                "Revolución: 16 sectores", "Apoyos en la base", "La cúpula en 3D", "Allianz: la planta redondeada",
+                "La panza: Parábola por 3 puntos", "Barrido", "Apoyos del Allianz", "La piel terminada"],
          hojas=[dict(titulo="El Jacobiano: del cuadrado natural al elemento real", ej="27 El Jacobiano - del cuadrado natural al elemento real.lisp")]),
     dict(id="capilla", titulo="Replicar una estructura real barra por barra", sub="La capilla del modelo de ETABS, por planos de trabajo",
          video=os.path.join(RAIZ, "TUT_CAPILLA_ANALITICA.mp4"),
@@ -44,12 +45,12 @@ GRUPOS = [
                 "Arco de la nave: 3 clics", "Arco del ala", "El entrepiso", "Resultado en isométrica"]),
     dict(id="visor", titulo="Visor de archivos IFC", sub="Ver, ocultar, medir y cortar el modelo",
          video=os.path.join(RAIZ, "TUT_VISOR_IFC.mp4"),
-         clips=["El visor IFC", "Importar y ver en 3D", "Ocultar o aislar objetos", "Panel corredizo", "Medir sobre el modelo",
-                "Cortes X, Y, Z", "El edificio abierto"]),
+         clips=["El visor IFC", "Importar y Encuadrar", "Objetos: ocultar o aislar", "Panel corredizo", "Medir sobre el modelo",
+                "Corte Z desde la cinta", "El edificio abierto"]),
     dict(id="novedades", titulo="Áreas, regla y paneles corredizos", sub="Lo básico del lienzo CAD",
          video=os.path.join(RAIZ, "TUT_NOVEDADES.mp4"),
-         clips=["Novedades", "Rectángulo: tres celdas", "Plegar el menú de dibujo", "Rellenar área con un clic", "Llenar todas las celdas",
-                "La regla mide y acota", "Ocultar el panel derecho", "Ocultar el panel de ajustes", "Volver al menú principal"]),
+         clips=["Áreas, regla y paneles", "Paneles corredizos", "Rectángulo: tres celdas", "Rellenar área con un clic",
+                "Llenar todas", "Medir y acotar", "3D y Encuadrar", "Plegar la cinta", "Volver al menú"]),
 ]
 
 
@@ -64,10 +65,32 @@ def dur(v):
     return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", v]).decode().strip())
 
 
+# MARCA DE AGUA «Hekatan Struct» (Jorge, 19-sep-2026: todo vídeo, GIF y PNG que se publica la
+# lleva). El rótulo oficial (branding/products/struct/hekatan_struct_lockup.png), semitransparente,
+# abajo a la IZQUIERDA sobre la franja de subtítulos: ahí no tapa la cinta (arriba) ni el modelo
+# (centro) ni el disco de Hekatan de la esquina derecha.
+MARCA_PNG = os.path.join(RAIZ, "branding", "products", "struct", "hekatan_struct_lockup.png")
+MARCA_ALFA, MARCA_ALTO = 0.6, 38
+
+
+def marca_struct():
+    from PIL import Image
+    dst = os.path.join(OUT, "_marca_struct.png")
+    im = Image.open(MARCA_PNG).convert("RGBA")
+    im = im.resize((round(im.width * MARCA_ALTO / im.height), MARCA_ALTO), Image.LANCZOS)
+    a = im.getchannel("A").point(lambda x: int(x * MARCA_ALFA))
+    im.putalpha(a); im.save(dst)
+    return dst
+
+
 def cortar(v, a, b, out):
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", v, "-vf", "scale=1280:-2", "-c:v", "libx264",
-                    "-crf", "30", "-preset", "slow", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart", out], check=True)
-    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{(a + b) / 2:.3f}", "-i", v, "-frames:v", "1", "-vf", "scale=320:-2", "-q:v", "6",
+    m = marca_struct()
+    filtro = "[0:v]scale=1280:-2[v];[v][1:v]overlay=14:main_h-overlay_h-12"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", v, "-i", m, "-filter_complex", filtro,
+                    "-c:v", "libx264", "-crf", "30", "-preset", "slow", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "64k",
+                    "-movflags", "+faststart", out], check=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{(a + b) / 2:.3f}", "-i", v, "-i", m, "-frames:v", "1",
+                    "-filter_complex", "[0:v]scale=1280:-2[v];[v][1:v]overlay=14:main_h-overlay_h-12,scale=320:-2", "-q:v", "6",
                     out.replace(".mp4", ".jpg")], check=True)
 
 

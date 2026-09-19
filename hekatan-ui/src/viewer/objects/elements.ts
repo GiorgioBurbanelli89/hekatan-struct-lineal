@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import van, { State } from "vanjs-core";
 import { Mesh, Element, Node } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
@@ -143,6 +146,30 @@ export function elements(
   lines.renderOrder = 3;
   group.add(lines);
 
+  // ── La MISMA línea, gruesa ────────────────────────────────────────────────
+  // Jorge (19-sep-2026, tutoriales): «no se ve ninguna línea». WebGL pinta un
+  // LineBasicMaterial SIEMPRE a 1 px (ignora `linewidth`): una barra blanca de 1 px
+  // sobre fondo oscuro se funde al bajar el vídeo a 1280 y más en el panel de
+  // tutoriales. Encima va un LineSegments2 (triángulos con ancho en píxeles de
+  // pantalla) con la misma geometría y colores. La línea fina se queda debajo para
+  // lo que ya la usaba; esta no se raycastea.
+  const ANCHO_LINEA_PX = 2.2;
+  const fatMat = new LineMaterial({
+    color: t.elementLine, linewidth: ANCHO_LINEA_PX, worldUnits: false,
+    depthTest: false, transparent: true, opacity: 1, vertexColors: false,
+  });
+  onThemeChange((_n, c) => { fatMat.color.setHex(c.elementLine); });
+  const fat = new LineSegments2(new LineSegmentsGeometry(), fatMat);
+  fat.frustumCulled = false;
+  fat.renderOrder = 3;
+  fat.raycast = () => {};                         // la selección sigue usando la fina
+  fat.name = "__hekatan_element_lines_fat";
+  // la resolución en CADA fotograma: así el grosor sigue bien al redimensionar
+  const tam = new THREE.Vector2();
+  fat.onBeforeRender = (renderer) => { renderer.getSize(tam); fatMat.resolution.set(tam.x, tam.y); };
+  group.add(fat);
+  (group as any).__disposeFat = () => { fat.geometry.dispose(); fatMat.dispose(); };
+
   // Solid faces for shell elements (Q4 = 4 nodes, CST = 3 nodes)
   // Uses vertex colors to differentiate walls (vertical) vs slabs (horizontal)
   const shellMat = new THREE.MeshBasicMaterial({
@@ -233,7 +260,13 @@ export function elements(
     // Wireframe buffer + colores por edge (cuando colorByType=ON)
     const wireVerts: number[] = [];
     const wireCols: number[] = [];
+    // Solo las BARRAS van gruesas: los bordes de cáscara y sólido siguen finos, que
+    // en una malla densa (Allianz, 480 paños) gruesos tapaban el colormap.
+    const fatVerts: number[] = [];
+    const fatCols: number[] = [];
     for (const e of elems) {
+      const iv = wireVerts.length, ic = wireCols.length;
+      try {
       if (!showElement(e)) continue;
       let edgeColor: THREE.Color | null = null;
       if (colorByType) {
@@ -305,11 +338,28 @@ export function elements(
           wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
         }
       }
+      } finally {
+        if (e.length === 2 && wireVerts.length > iv) {
+          for (let k = iv; k < wireVerts.length; k++) fatVerts.push(wireVerts[k]);
+          for (let k = ic; k < wireCols.length; k++) fatCols.push(wireCols[k]);
+        }
+      }
     }
     lines.geometry.setAttribute(
       "position",
       new THREE.Float32BufferAttribute(wireVerts, 3)
     );
+    // la gruesa: geometría NUEVA en cada cambio (deformada, animación modal, ocultar…)
+    {
+      const g = new LineSegmentsGeometry();
+      if (fatVerts.length >= 6) g.setPositions(fatVerts);
+      const conColor = colorByType && fatCols.length === fatVerts.length && fatVerts.length >= 6;
+      if (conColor) g.setColors(fatCols);
+      fat.geometry.dispose();
+      fat.geometry = g;
+      if (fatMat.vertexColors !== conColor) { fatMat.vertexColors = conColor; fatMat.needsUpdate = true; }
+      fat.visible = fatVerts.length >= 6 && lines.visible;
+    }
     if (colorByType && wireCols.length === wireVerts.length) {
       lines.geometry.setAttribute(
         "color",
@@ -389,7 +439,7 @@ export function elements(
   // Permite ver el colormap "limpio" sin las líneas de delimitación, o ver
   // sólo las líneas sin el shellMesh fill, etc.
   van.derive(() => {
-    if (settings.edges) lines.visible = settings.edges.val;
+    if (settings.edges) { lines.visible = settings.edges.val; fat.visible = settings.edges.val; }
   });
 
   // ── Toggle independiente para Caras (shellMesh fill) ──
