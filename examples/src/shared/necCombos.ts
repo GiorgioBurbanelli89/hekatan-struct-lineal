@@ -18,6 +18,18 @@
  * TIPO del pattern que aplican (Dead→D, Live→L, Live (Roof)→Lr, Snow→S,
  * Wind→W, Seismic→E). El sismo y viento generan variantes ± por cada case
  * (p.ej. EQX, EQY producen sus propias combinaciones).
+ *
+ * DNE — SOBRECARGA MUERTA / "Super Dead" (Jorge, 19-sep-2026): enlucido, masillado,
+ * piso, cielo raso, mampostería... Igual que en SAFE/ETABS (ACI 318-19), DNE lleva
+ * SIEMPRE el MISMO factor que D en TODA combinación — por eso cada término D de abajo
+ * ahora también emite su DNE hermano con idéntico factor (función `Ds`). Además de
+ * las combinaciones NEC-SE-CG genéricas, se agregan las DOS que pidió Jorge con SUS
+ * nombres literales (no autogenerados), que es como las tiene costumbre de nombrar
+ * en Ecuador:
+ *   SERVICIO = 1.0 D + 1.0 DNE + 1.0 L
+ *   DISEÑO   = 1.2 D + 1.2 DNE + 1.6 L
+ * Si no hay case de tipo "Super Dead" en el modelo, `DNE` sale `undefined` y `Ds()`
+ * no añade nada — 0 % de cambio para un modelo que no usa DNE (compatibilidad).
  */
 import type { LoadCase, LoadPattern, LoadCombination } from "hekatan-fem";
 
@@ -46,7 +58,7 @@ function comboName(cases: Term[]): string {
 export function generateNecSeCgCombos(cases: LoadCase[], patterns: LoadPattern[]): LoadCombination[] {
   const ptype = new Map(patterns.map((p) => [p.name, p.type as string]));
   const bucket: Record<string, string[]> = {
-    Dead: [], Live: [], "Live (Roof)": [], Snow: [], Wind: [], Seismic: [],
+    Dead: [], "Super Dead": [], Live: [], "Live (Roof)": [], Snow: [], Wind: [], Seismic: [],
   };
   for (const c of cases) {
     const t = caseLoadType(c, ptype);
@@ -54,6 +66,7 @@ export function generateNecSeCgCombos(cases: LoadCase[], patterns: LoadPattern[]
   }
 
   const D = bucket.Dead[0];
+  const DNE = bucket["Super Dead"][0];
   const L = bucket.Live[0];
   const Lr = bucket["Live (Roof)"][0];
   const S = bucket.Snow[0];
@@ -72,33 +85,50 @@ export function generateNecSeCgCombos(cases: LoadCase[], patterns: LoadPattern[]
     });
   };
   const T = (c: string | undefined, sf: number): Term | null => (c ? { case: c, sf } : null);
+  // D y su hermana DNE con el MISMO factor (Super Dead, semántica CSI). Si el
+  // modelo no tiene case "Super Dead", `DNE` es undefined y T(DNE,sf) da null,
+  // que `add` descarta — igual que hoy para un modelo sin DNE.
+  const Ds = (sf: number): Term[] => [T(D, sf), T(DNE, sf)].filter((t): t is Term => !!t);
 
-  // 1) 1.4 D
-  add([T(D, 1.4)]);
-  // 2) 1.2 D + 1.6 L + 0.5 (Lr ó S)
-  add([T(D, 1.2), T(L, 1.6), T(roof, 0.5)]);
-  // 3) 1.2 D + 1.6 (Lr ó S) + 1.0 L   y   1.2 D + 1.6 (Lr ó S) + 0.5 W (por viento)
-  add([T(D, 1.2), T(roof, 1.6), T(L, 1.0)]);
-  for (const w of winds) add([T(D, 1.2), T(roof, 1.6), T(w, 0.5)]);
-  // 4) 1.2 D ± 1.0 W + 1.0 L + 0.5 (Lr ó S)   (por viento)
+  // 1) 1.4 D (+1.4 DNE)
+  add([...Ds(1.4)]);
+  // 2) 1.2 D (+1.2 DNE) + 1.6 L + 0.5 (Lr ó S)
+  add([...Ds(1.2), T(L, 1.6), T(roof, 0.5)]);
+  // 3) 1.2 D (+DNE) + 1.6 (Lr ó S) + 1.0 L   y   ... + 0.5 W (por viento)
+  add([...Ds(1.2), T(roof, 1.6), T(L, 1.0)]);
+  for (const w of winds) add([...Ds(1.2), T(roof, 1.6), T(w, 0.5)]);
+  // 4) 1.2 D (+DNE) ± 1.0 W + 1.0 L + 0.5 (Lr ó S)   (por viento)
   for (const w of winds) {
-    add([T(D, 1.2), T(w, 1.0), T(L, 1.0), T(roof, 0.5)]);
-    add([T(D, 1.2), T(w, -1.0), T(L, 1.0), T(roof, 0.5)]);
+    add([...Ds(1.2), T(w, 1.0), T(L, 1.0), T(roof, 0.5)]);
+    add([...Ds(1.2), T(w, -1.0), T(L, 1.0), T(roof, 0.5)]);
   }
-  // 5) 1.2 D ± 1.0 E + 1.0 L   (por sismo: EQX, EQY, ...)
+  // 5) 1.2 D (+DNE) ± 1.0 E + 1.0 L   (por sismo: EQX, EQY, ...)
   for (const e of eqs) {
-    add([T(D, 1.2), T(e, 1.0), T(L, 1.0)]);
-    add([T(D, 1.2), T(e, -1.0), T(L, 1.0)]);
+    add([...Ds(1.2), T(e, 1.0), T(L, 1.0)]);
+    add([...Ds(1.2), T(e, -1.0), T(L, 1.0)]);
   }
-  // 6) 0.9 D ± 1.0 W   (por viento)
+  // 6) 0.9 D (+DNE) ± 1.0 W   (por viento)
   for (const w of winds) {
-    add([T(D, 0.9), T(w, 1.0)]);
-    add([T(D, 0.9), T(w, -1.0)]);
+    add([...Ds(0.9), T(w, 1.0)]);
+    add([...Ds(0.9), T(w, -1.0)]);
   }
-  // 7) 0.9 D ± 1.0 E   (por sismo)
+  // 7) 0.9 D (+DNE) ± 1.0 E   (por sismo)
   for (const e of eqs) {
-    add([T(D, 0.9), T(e, 1.0)]);
-    add([T(D, 0.9), T(e, -1.0)]);
+    add([...Ds(0.9), T(e, 1.0)]);
+    add([...Ds(0.9), T(e, -1.0)]);
+  }
+
+  // SERVICIO / DISEÑO — los nombres literales que usa Jorge en Ecuador (no el
+  // autogenerado "NEC 1D+1DNE+1L"), como hace SAFE/ETABS con ACI 318-19. Solo
+  // se generan si el modelo tiene Dead y Live (DNE es opcional: sin ella, D solo).
+  const addNombrada = (nombre: string, terms: Array<Term | null>) => {
+    const cs = terms.filter((t): t is Term => !!t && !!t.case);
+    if (!cs.length) return;
+    combos.push({ name: nombre, type: "Linear Add", cases: cs.map((t) => ({ case: t.case, scaleFactor: t.sf })) });
+  };
+  if (D || DNE) {
+    addNombrada("SERVICIO", [...Ds(1.0), T(L, 1.0)]);
+    addNombrada("DISEÑO", [...Ds(1.2), T(L, 1.6)]);
   }
 
   // dedup por nombre (combos que colapsan al faltar términos L/Lr/S/W/E)

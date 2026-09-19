@@ -228,6 +228,9 @@ export type AnalyzeOutputs = {
   bendingXXjoint?: Map<number, number[]>;
   bendingYYjoint?: Map<number, number[]>;
   bendingXYjoint?: Map<number, number[]>;
+  /** V13/V23 por elemento SIN promediar (4 valores; en Shell-Thick iguales, como CSI). */
+  tranverseShearXjoint?: Map<number, number[]>;
+  tranverseShearYjoint?: Map<number, number[]>;
   membraneXXcentro?: Map<number, number>;
   membraneYYcentro?: Map<number, number>;
   membraneXYcentro?: Map<number, number>;
@@ -263,6 +266,13 @@ export type ModalOutputs = {
 
 export type LoadPatternType =
   | "Dead"
+  /** Sobrecarga muerta NO estructural (DNE): enlucido, masillado, piso, cielo raso,
+   *  mampostería, instalaciones... Es el "Super Dead" de CSI (ETABS/SAFE): en TODA
+   *  combinación de diseño lleva el MISMO factor que Dead (Jorge, 19-sep-2026: "SERVICIO
+   *  = D+DNE+L; DISEÑO = 1.2D+1.2DNE+1.6L, como SAFE/ETABS con ACI 318-19"). Separado de
+   *  Dead porque el peso propio del material (Dead) sale de la geometría/densidad del
+   *  elemento, mientras que la DNE es una carga declarada aparte (kN/m² de acabados). */
+  | "Super Dead"
   | "Live"
   | "Live (Roof)"
   | "Wind"

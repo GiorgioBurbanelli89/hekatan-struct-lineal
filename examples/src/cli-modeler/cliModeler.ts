@@ -76,6 +76,11 @@ interface ParsedModel {
   shells: Array<{ id: number; pts: number[]; t: number; E: number; rho?: number }>;
   /** Carga de SUPERFICIE por shell, en kN/m2 (+z arriba). Ver areaload. */
   shellLoads: Map<number, number>;
+  /** Igual que `shellLoads` pero para un patrón que NO es Dead (`areaload shellID q
+   *  patrón`), p.ej. DNE (Super Dead): enlucido, masillado, piso, mampostería... El
+   *  mismo hueco que ya se cerró para `load`/`frameload` (`loadsPat`/`frameLoadsPat`) —
+   *  hasta el 19-sep-2026 una losa cargada con `areaload` caía siempre en Dead. */
+  shellLoadsPat: Map<string, Map<number, number>>;
   /** Modificadores de rigidez por shell: [membrana, flexion]. Default 1,1.
    *  Es el «Assign -> Area -> Stiffness Modifiers» de ETABS. Un DECK aporta
    *  poca flexion: con bending 0 trabaja como membrana y entrega la carga a
@@ -260,6 +265,7 @@ export function parseCliCommands(text: string): ParsedModel {
     frames: [],
     shells: [],
     shellLoads: new Map(),
+    shellLoadsPat: new Map(),
     shellTypes: new Map(),
     shellMods: new Map(),
     shellModsDir: new Map(),
@@ -787,13 +793,19 @@ export function parseCliCommands(text: string): ParsedModel {
         }
         case "areaload":
         case "qarea": {
+          // areaload shellID q [patrón]   (kN/m2, +z; sin patrón = Dead, como antes)
           const id = parseInt(tokens[1], 10);
           const q = parseFloat(tokens[2]);
           if (!isFinite(id) || !isFinite(q)) {
-            m.errors.push(`areaload: se esperaba "areaload shellID q"`);
+            m.errors.push(`areaload: se esperaba "areaload shellID q [patron]"`);
             break;
           }
-          m.shellLoads.set(id, q);
+          const patA = tokens[3] && isNaN(parseFloat(tokens[3])) ? tokens[3] : "Dead";
+          if (/^dead$/i.test(patA)) m.shellLoads.set(id, q);
+          else {
+            if (!m.shellLoadsPat.has(patA)) m.shellLoadsPat.set(patA, new Map());
+            m.shellLoadsPat.get(patA)!.set(id, q);
+          }
           break;
         }
         case "support":
@@ -1571,15 +1583,13 @@ export const cliModeler: ExampleDef = {
     const cargaDeArea = new Map<number, number>();
     const G2 = 1 / Math.sqrt(3);
     const GAUSS: Array<[number, number]> = [[-G2, -G2], [G2, -G2], [G2, G2], [-G2, G2]];
-    for (const s of m.shells) {
-      const q = m.shellLoads.get(s.id);
-      if (!q) continue;
-      if (m.deckTributario.has(s.id)) continue;   // `deck etabs`: ya fue a las barras de borde
+    // f_i = integral(N_i * q * dA) del shell `s` con carga `q`, o null si el shell no
+    // se puede ubicar (nodo inexistente). Factorizado para usarlo con Dead (m.shellLoads,
+    // como siempre) Y con cualquier otro patron (m.shellLoadsPat, p.ej. DNE) por el MISMO
+    // camino — antes del 19-sep-2026 `areaload` solo sabia de Dead.
+    const nodalConsistente = (s: ParsedModel["shells"][number], q: number): { idx: number[]; f: number[] } | null => {
       const idx = s.pts.map((p) => idToIdx.get(p));
-      if (idx.some((i) => i === undefined)) {
-        m.errors.push(`areaload ${s.id}: algun nodo inexistente`);
-        continue;
-      }
+      if (idx.some((i) => i === undefined)) return null;
       const P = idx.map((i) => nodes[i as number]);
       const f = [0, 0, 0, 0];
       for (const [xi, eta] of GAUSS) {
@@ -1596,16 +1606,43 @@ export const cliModeler: ExampleDef = {
         const detJ = Math.hypot(cr[0], cr[1], cr[2]);   // area diferencial real
         for (let i = 0; i < 4; i++) f[i] += N[i] * q * detJ;
       }
+      return { idx: idx as number[], f };
+    };
+    for (const s of m.shells) {
+      const q = m.shellLoads.get(s.id);
+      if (!q) continue;
+      if (m.deckTributario.has(s.id)) continue;   // `deck etabs`: ya fue a las barras de borde
+      const r = nodalConsistente(s, q);
+      if (!r) { m.errors.push(`areaload ${s.id}: algun nodo inexistente`); continue; }
       for (let i = 0; i < 4; i++) {
-        const k = idx[i] as number;
+        const k = r.idx[i];
         const prev = loads.get(k) ?? [0, 0, 0, 0, 0, 0];
-        prev[2] += f[i];                                 // Fz
+        prev[2] += r.f[i];                                 // Fz
         loads.set(k, prev as [number,number,number,number,number,number]);
         // Se anota APARTE cuanto de la carga de ese nudo vino del area. El
         // solver usa `loads` y no le importa, pero el exportador e2k si: ahi
         // la carga se escribe como AREALOAD sobre el objeto, y si ademas
         // saliera como POINTLOAD quedaria contada DOS VECES.
-        cargaDeArea.set(k, (cargaDeArea.get(k) ?? 0) + f[i]);
+        cargaDeArea.set(k, (cargaDeArea.get(k) ?? 0) + r.f[i]);
+      }
+    }
+    // Mismo reparto, para `areaload shellID q PATRON` (DNE...): a `loadsOtros[patron]`,
+    // no a `loads` (Dead). `cargasDelCaso` (cargasPorCaso.ts) las suma segun el
+    // caso/combo activo — es lo mismo que ya hacia `frameload ... [patron]`.
+    for (const [pat, mp] of m.shellLoadsPat) {
+      if (!loadsOtros.has(pat)) loadsOtros.set(pat, new Map());
+      const destino = loadsOtros.get(pat)!;
+      for (const [sid, q] of mp) {
+        const s = m.shells.find(sh => sh.id === sid);
+        if (!s || !q) continue;
+        const r = nodalConsistente(s, q);
+        if (!r) { m.errors.push(`areaload ${sid} ${pat}: algun nodo inexistente`); continue; }
+        for (let i = 0; i < 4; i++) {
+          const k = r.idx[i];
+          const prev = destino.get(k) ?? [0, 0, 0, 0, 0, 0];
+          prev[2] += r.f[i];
+          destino.set(k, prev as [number,number,number,number,number,number]);
+        }
       }
     }
     // PESO PROPIO. Igual que `apply_selfweight` del motor de Python: barras

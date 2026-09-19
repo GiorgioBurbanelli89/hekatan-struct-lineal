@@ -40,6 +40,7 @@ por `errores`. Un modelo que no se lee entero da flecha 0 y báscula perfecta
 """
 from __future__ import annotations
 
+import copy
 import math
 from dataclasses import dataclass, field
 
@@ -73,6 +74,16 @@ class ModeloHeks:
     # ademas lo que el lector reparte (areaload, selfweight); el ESCRITOR tiene
     # que sacar solo estos, o al releer la carga se cuenta dos veces.
     cargas_explicitas: dict[int, tuple] = field(default_factory=dict)
+    # Cargas de un PATRON que NO es Dead (`load ID ... DNE`, `frameload ID w DNE`,
+    # `areaload ID q DNE`): el mismo `[patron]` opcional que ya entendia `cliModeler.ts`
+    # para `load`/`frameload`, aqui ademas para `areaload` (19-sep-2026, DNE/Super Dead).
+    # SIN esto, un `.heks` con varios patrones se leia TODO junto, en un solo lumped —
+    # asi el modelo del radier (45 `load` en Dead/Live/DNE) daba por casualidad el total
+    # de SERVICIO (los tres a factor 1) pero NUNCA el de DISEÑO (1.2/1.2/1.6).
+    # Claves por indice INTERNO (como `ei.frame_loads`/`m.shell_load`), NO por ID del .heks.
+    cargas_patron: dict[str, dict[int, tuple]] = field(default_factory=dict)
+    fl_patron: dict[str, dict[int, tuple]] = field(default_factory=dict)
+    q_area_patron: dict[str, dict[int, float]] = field(default_factory=dict)
     errores: list[str] = field(default_factory=list)
     # comandos que el lector NO monta (hoy: `spring`, `mass`, `diaph`, y
     # cualquiera que se añada al .heks). Antes se saltaban en silencio: el
@@ -90,6 +101,45 @@ _SOLO_MODAL = {"mass"}
 # nombre del desplazamiento o por el de la fuerza.
 _DOF_NOMBRE = {"ux": 0, "uy": 1, "uz": 2, "rx": 3, "ry": 4, "rz": 5,
                "fx": 0, "fy": 1, "fz": 2, "mx": 3, "my": 4, "mz": 5}
+
+
+def _es_numero(tok: str) -> bool:
+    """True si `tok` parsea como float — igual que `isNaN(parseFloat(...))` en cliModeler.ts,
+    para distinguir un valor numerico de un nombre de PATRON (Dead, DNE, Live...) en el
+    ultimo token opcional de `load`/`frameload`/`areaload`."""
+    try:
+        float(tok)
+        return True
+    except ValueError:
+        return False
+
+
+_G2 = 1.0 / math.sqrt(3.0)
+_GAUSS2X2 = ((-_G2, -_G2), (_G2, -_G2), (_G2, _G2), (-_G2, _G2))
+
+
+def _carga_area_nodal(P: list[tuple[float, float, float]], q: float) -> list[float]:
+    """f_i = integral(N_i * q * dA) de un Q4 con esquinas `P`, Gauss 2x2 y jacobiano
+    REAL (sirve para un paño en cualquier plano). Factorizado de `leer_heks` para
+    reusarlo en `resolver_heks_patron` con la MISMA cuenta, no una copia que pueda
+    desalinearse — es la funcion que ya usaba el bucle de Dead, sin cambiar un digito."""
+    f = [0.0, 0.0, 0.0, 0.0]
+    for xi, eta in _GAUSS2X2:
+        N = (0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
+             0.25 * (1 + xi) * (1 + eta), 0.25 * (1 - xi) * (1 + eta))
+        dNx = (-0.25 * (1 - eta), 0.25 * (1 - eta),
+               0.25 * (1 + eta), -0.25 * (1 + eta))
+        dNe = (-0.25 * (1 - xi), -0.25 * (1 + xi),
+               0.25 * (1 + xi), 0.25 * (1 - xi))
+        a = [sum(dNx[i] * P[i][c] for i in range(4)) for c in range(3)]
+        b = [sum(dNe[i] * P[i][c] for i in range(4)) for c in range(3)]
+        cr = (a[1] * b[2] - a[2] * b[1],
+              a[2] * b[0] - a[0] * b[2],
+              a[0] * b[1] - a[1] * b[0])
+        detJ = math.sqrt(cr[0] ** 2 + cr[1] ** 2 + cr[2] ** 2)  # dA real
+        for i in range(4):
+            f[i] += N[i] * q * detJ
+    return f
 
 
 def _support_flags(spec: str) -> tuple[bool, bool, bool, bool, bool, bool]:
@@ -113,6 +163,11 @@ def leer_heks(ruta: str) -> ModeloHeks:
     sup: dict[int, tuple] = {}
     cargas: dict[int, list[float]] = {}
     fl: dict[int, tuple[float, float, float]] = {}
+    # Igual que `cargas`/`fl`/`q_area` pero para un patron con nombre (DNE...), por
+    # ID del .heks (se traducen a indice interno mas abajo, junto con los demas).
+    cargas_pat: dict[str, dict[int, list[float]]] = {}
+    fl_pat: dict[str, dict[int, tuple[float, float, float]]] = {}
+    q_area_pat: dict[str, dict[int, float]] = {}
     angs: dict[int, float] = {}
     ashear: dict[int, tuple[float, float]] = {}
     # `cft ID b h t Ec [nuC]`: tubo de acero relleno; pisa A, I, J y As con las
@@ -209,13 +264,24 @@ def leer_heks(ruta: str) -> ModeloHeks:
                     tt = tt[:next((k for k, x in enumerate(tt) if x.startswith("#")), len(tt))]
                     sup[int(t[1])] = _support_flags(" ".join(tt))
                 elif cmd == "load":
+                    # load ID FX FY FZ MX MY MZ [patron]   (8vo token opcional; sin el, Dead)
                     v = [float(x) for x in t[2:8]]
                     v += [0.0] * (6 - len(v))
-                    a = cargas.setdefault(int(t[1]), [0.0] * 6)
+                    pat_l = t[8] if len(t) > 8 and not _es_numero(t[8]) else "Dead"
+                    if pat_l.lower() == "dead":
+                        a = cargas.setdefault(int(t[1]), [0.0] * 6)
+                    else:
+                        a = cargas_pat.setdefault(pat_l, {}).setdefault(int(t[1]), [0.0] * 6)
                     for k in range(6):
                         a[k] += v[k]
                 elif cmd == "frameload":
-                    fl[int(t[1])] = (float(t[2]), float(t[3]), float(t[4]))
+                    # frameload ID WX WY WZ [patron]   (kN/m, globales; sin patron, Dead)
+                    pat_f = t[5] if len(t) > 5 and not _es_numero(t[5]) else "Dead"
+                    w = (float(t[2]), float(t[3]), float(t[4]))
+                    if pat_f.lower() == "dead":
+                        fl[int(t[1])] = w
+                    else:
+                        fl_pat.setdefault(pat_f, {})[int(t[1])] = w
                 elif cmd == "ang":
                     angs[int(t[1])] = float(t[2])
                 elif cmd == "as":
@@ -307,7 +373,12 @@ def leer_heks(ruta: str) -> ModeloHeks:
                     rho_sh = float(t[9]) if len(t) > 9 else 2.45
                     shells.append(dict(id=sid, pts=pts, t=esp, E=Esh, rho=rho_sh))
                 elif cmd in ("areaload", "qarea"):
-                    q_area[int(t[1])] = float(t[2])
+                    # areaload ID q [patron]   (kN/m2, +z; sin patron, Dead — como cliModeler.ts)
+                    pat_a = t[3] if len(t) > 3 and not _es_numero(t[3]) else "Dead"
+                    if pat_a.lower() == "dead":
+                        q_area[int(t[1])] = float(t[2])
+                    else:
+                        q_area_pat.setdefault(pat_a, {})[int(t[1])] = float(t[2])
                 elif cmd == "shellmod":
                     sid = int(t[1])
                     vals = [float(v) for v in t[2:]]
@@ -503,6 +574,9 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.end_offsets[k] = endoffs[f["id"]]
         if f["id"] in fl:
             ei.frame_loads[k] = fl[f["id"]]
+        for pat, mp in fl_pat.items():
+            if f["id"] in mp:
+                m.fl_patron.setdefault(pat, {})[k] = mp[f["id"]]
 
     # ── CÁSCARAS ────────────────────────────────────────────────────────
     # Van DESPUÉS de las barras, como en `cliModeler.ts`: el índice interno de
@@ -546,6 +620,9 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.plate_formulations[k] = stipo[sh["id"]]
         if sh["id"] in q_area:
             m.shell_load[k] = q_area[sh["id"]]
+        for pat, mp in q_area_pat.items():
+            if sh["id"] in mp:
+                m.q_area_patron.setdefault(pat, {})[k] = mp[sh["id"]]
 
     for nid, flags in sup.items():
         if nid in idx_de:
@@ -554,6 +631,11 @@ def leer_heks(ruta: str) -> ModeloHeks:
         if nid in idx_de:
             ni.loads[idx_de[nid]] = tuple(v)  # type: ignore[assignment]
             m.cargas_explicitas[idx_de[nid]] = tuple(v)
+    for pat, mp in cargas_pat.items():
+        dst = m.cargas_patron.setdefault(pat, {})
+        for nid, v in mp.items():
+            if nid in idx_de:
+                dst[idx_de[nid]] = tuple(v)  # type: ignore[assignment]
 
     # ── CARGA DE SUPERFICIE -> vector de fuerzas nodales CONSISTENTE ────────
     # Una carga de área entra al FEM por un único camino: f_i = ∫ N_i·q·dA. No
@@ -565,8 +647,6 @@ def leer_heks(ruta: str) -> ModeloHeks:
     # solo horizontal). En un rectángulo sale q·A/4 en cada nudo; en un
     # cuadrilátero deformado NO, y ahí está la diferencia con repartir el área
     # entre cuatro.
-    g2 = 1.0 / math.sqrt(3.0)
-    gauss = ((-g2, -g2), (g2, -g2), (g2, g2), (-g2, g2))
     for sh in shells:
         q = q_area.get(sh["id"])
         if not q:
@@ -575,22 +655,7 @@ def leer_heks(ruta: str) -> ModeloHeks:
             continue                       # ya avisado al montar la cáscara
         idx4 = [idx_de[p] for p in sh["pts"]]
         P = [m.nodes[i] for i in idx4]
-        f = [0.0, 0.0, 0.0, 0.0]
-        for xi, eta in gauss:
-            N = (0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
-                 0.25 * (1 + xi) * (1 + eta), 0.25 * (1 - xi) * (1 + eta))
-            dNx = (-0.25 * (1 - eta), 0.25 * (1 - eta),
-                   0.25 * (1 + eta), -0.25 * (1 + eta))
-            dNe = (-0.25 * (1 - xi), -0.25 * (1 + xi),
-                   0.25 * (1 + xi), 0.25 * (1 - xi))
-            a = [sum(dNx[i] * P[i][c] for i in range(4)) for c in range(3)]
-            b = [sum(dNe[i] * P[i][c] for i in range(4)) for c in range(3)]
-            cr = (a[1] * b[2] - a[2] * b[1],
-                  a[2] * b[0] - a[0] * b[2],
-                  a[0] * b[1] - a[1] * b[0])
-            detJ = math.sqrt(cr[0] ** 2 + cr[1] ** 2 + cr[2] ** 2)  # dA real
-            for i in range(4):
-                f[i] += N[i] * q * detJ
+        f = _carga_area_nodal(P, q)
         for i, k in enumerate(idx4):
             prev = list(ni.loads.get(k, (0.0,) * 6))
             prev[2] += f[i]                                        # Fz
@@ -716,6 +781,76 @@ def _nudos_colgados(nodes, elements, tol: float = 1e-6, todos: bool = False):
 def resolver_heks(m: ModeloHeks):
     """`deform` sobre un modelo ya leído."""
     return deform(m.nodes, m.elements, m.node_inputs, m.element_inputs)
+
+
+def resolver_heks_patron(m: ModeloHeks, factores: dict[str, float]):
+    """Como `resolver_heks`, pero combinando los PATRONES de carga con un factor cada
+    uno — el equivalente en Python de `cargasDelCaso` (`cargasPorCaso.ts`) / un
+    caso o combo de ETABS. `factores` es `{patron: factor}`; "Dead" pondera lo que
+    `leer_heks` ya dejó combinado en `ni.loads`/`ei.frame_loads`/`m.shell_load`
+    (cargas explícitas + peso propio + área, todo Dead junto, como siempre), y
+    cualquier OTRO patrón sale de `m.cargas_patron`/`fl_patron`/`q_area_patron`.
+
+    Ejemplo — el radier (Jorge, 19-sep-2026):
+        SERVICIO = resolver_heks_patron(m, {"Dead": 1,   "DNE": 1,   "Live": 1})
+        DISENO   = resolver_heks_patron(m, {"Dead": 1.2, "DNE": 1.2, "Live": 1.6})
+
+    La conversión de área a fuerza nodal es LINEAL en `q`: combinar los `q` crudos
+    por su factor y hacer Gauss UNA sola vez da el mismo resultado que hacer Gauss
+    por patrón y sumar los vectores — más barato, y es la misma cuenta (`_carga_area_nodal`
+    es la MISMA función que usa el patrón Dead en `leer_heks`, no una copia aparte).
+    """
+    def acumular(dst: dict[int, list[float]], k: int, v: list[float], factor: float) -> None:
+        if not factor:
+            return
+        a = dst.setdefault(k, [0.0] * 6)
+        for i in range(6):
+            a[i] += factor * v[i]
+
+    f_dead = factores.get("Dead", 0.0)
+    combinado: dict[int, list[float]] = {}
+    for k, v in m.node_inputs.loads.items():
+        acumular(combinado, k, list(v), f_dead)
+    for pat, mp in m.cargas_patron.items():
+        f = factores.get(pat, 0.0)
+        for k, v in mp.items():
+            acumular(combinado, k, list(v), f)
+
+    frame_loads_comb: dict[int, tuple[float, float, float]] = {}
+    for k, w in m.element_inputs.frame_loads.items():
+        frame_loads_comb[k] = tuple(f_dead * c for c in w)  # type: ignore[assignment]
+    for pat, mp in m.fl_patron.items():
+        f = factores.get(pat, 0.0)
+        if not f:
+            continue
+        for k, w in mp.items():
+            prev = frame_loads_comb.get(k, (0.0, 0.0, 0.0))
+            frame_loads_comb[k] = tuple(prev[i] + f * w[i] for i in range(3))  # type: ignore[assignment]
+
+    # OJO: `m.shell_load` (Dead) NO entra aquí — su conversión de área a nodal ya
+    # está DENTRO de `m.node_inputs.loads` (la hizo `leer_heks`); sumarla otra vez
+    # aquí la contaría DOBLE. Solo los patrones aparte necesitan Gauss fresco.
+    q_comb: dict[int, float] = {}
+    for pat, mp in m.q_area_patron.items():
+        f = factores.get(pat, 0.0)
+        if not f:
+            continue
+        for k, q in mp.items():
+            q_comb[k] = q_comb.get(k, 0.0) + f * q
+    for k, q in q_comb.items():
+        if not q:
+            continue
+        idx4 = m.elements[k]
+        P = [m.nodes[i] for i in idx4]
+        fz = _carga_area_nodal(P, q)
+        for i, nidx in enumerate(idx4):
+            acumular(combinado, nidx, [0.0, 0.0, fz[i], 0.0, 0.0, 0.0], 1.0)
+
+    ni2 = copy.copy(m.node_inputs)
+    ni2.loads = {k: tuple(v) for k, v in combinado.items()}  # type: ignore[assignment]
+    ei2 = copy.copy(m.element_inputs)
+    ei2.frame_loads = frame_loads_comb
+    return deform(m.nodes, m.elements, ni2, ei2)
 
 
 def esfuerzos_heks(m: ModeloHeks, res):

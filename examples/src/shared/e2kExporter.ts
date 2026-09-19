@@ -1833,27 +1833,37 @@ function exportFromScratch(input: ExportE2kInput): string {
     : [{ name: "Dead", type: "Dead", selfWeightMultiplier: selfWt },
        { name: "Live", type: "Live", selfWeightMultiplier: 0 }];
   for (const lp of pats) {
+    // Si no viene `type` explicito (o viene "Other"), se infiere del NOMBRE del
+    // patron — igual que ya hacen `f2kExporter.ts`/`s2kExporter.ts` con su `tipoDe()`
+    // (18-sep-2026): un patron llamado DNE/SDEAD/SCM/SUPERDEAD es Sobrecarga Muerta,
+    // el "Super Dead" de CSI, aunque nadie haya puesto `type: "Super Dead"` a mano.
+    const tipoCsi = lp.type && lp.type !== "Other" ? lp.type
+      : /^(dne|sdead|scm|superdead)$/i.test(lp.name) ? "Super Dead"
+      : /^dead$/i.test(lp.name) ? "Dead"
+      : /^(live|viva|l)$/i.test(lp.name) ? "Live"
+      : "Other";
     // ── El PESO PROPIO va SOLO en Dead ───────────────────────────────────────
     //
     // Es el peso de la estructura: no es una sobrecarga de uso, ni viento, ni
     // sismo. Antes se respetaba el `selfWeightMultiplier` que trajera cada
     // patron, asi que un Live con SW = 1 metia el peso de la estructura DOS
     // veces en cuanto se combinaba con Dead — y sin que nada lo dijera.
-    // Ahora, en cualquier patron que no sea de tipo Dead, se fuerza a 0.
+    // Ahora, en cualquier patron que no sea de tipo Dead (DNE incluido: es un
+    // patron declarado, no el peso propio de CSI), se fuerza a 0.
     //
     // Sigue siendo OPCIONAL en Dead: `selfWeightMultiplier: 0` (o el modo de
     // peso "manual", que lo emite como cargas nodales) lo apaga.
     let sw: number;
-    if (lp.type === "Dead") {
+    if (tipoCsi === "Dead") {
       sw = weightMode === "manual" ? 0 : (lp.selfWeightMultiplier ?? swDecl ?? 1);
     } else {
       sw = 0;
       if ((lp.selfWeightMultiplier ?? 0) !== 0) {
-        console.warn(`[e2k] El patron "${lp.name}" (tipo ${lp.type ?? "Other"}) pedia ` +
+        console.warn(`[e2k] El patron "${lp.name}" (tipo ${tipoCsi}) pedia ` +
           `SELFWEIGHT ${lp.selfWeightMultiplier}. Se exporta 0: el peso propio va solo en Dead.`);
       }
     }
-    lines.push(`  LOADPATTERN "${lp.name}"  TYPE  "${lp.type ?? "Other"}"  SELFWEIGHT  ${sw}`);
+    lines.push(`  LOADPATTERN "${lp.name}"  TYPE  "${tipoCsi}"  SELFWEIGHT  ${sw}`);
   }
   lines.push(``);
   // El LC al que se cuelgan las cargas nodales: el primer patron de gravedad
