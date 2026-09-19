@@ -165,6 +165,7 @@ Cómo trabajar:
        → id "plantillas" con parametros {"tipo": 8}; losa de cimentación en rejilla → {"tipo": 9}
        (las demás claves: las que devuelva cargar_plantilla)
    Si ya abriste una plantilla, NO uses modelar_heks: ajusta con cambiar_parametros.
+   La presión del suelo la devuelve resultados en presion_suelo: NO la calcules a mano.
    Usa SIEMPRE las claves exactas que devuelve la herramienta.
 2. Si es una estructura a medida, usa modelar_heks.
 3. Después de modelar, llama a resultados (y a analisis_modal si preguntan por periodos o sismo).
@@ -287,13 +288,32 @@ function leerResultados() {
     if (Number.isFinite(lo)) campo = { campo: nombre, minimo: +lo.toPrecision(5), elemento_min: eLo, maximo: +hi.toPrecision(5), elemento_max: eHi,
       unidades: "kN, m (momentos kN·m/m, fuerzas kN/m, tensiones kN/m²)" };
   }
+  // La PRESIÓN DEL SUELO siempre que haya muelles (cimentaciones), esté o no a la vista: sin ella un
+  // modelo pequeño se la inventa (qwen2.5:7b: «400 kN / 0.4² = 2500 kN/m²»).
+  let presion: any = undefined;
+  const pr = W().__hekatanStates?.analyzeOutputs?.val?.pressure;
+  if (pr instanceof Map && pr.size) {
+    let lo = Infinity, hi = -Infinity;
+    for (const [, v] of pr as Map<number, number | number[]>) for (const x of (Array.isArray(v) ? v : [v]))
+      if (Number.isFinite(x)) { if (x < lo) lo = x; if (x > hi) hi = x; }
+    if (Number.isFinite(lo)) {
+      const maxAbs = Math.max(Math.abs(lo), Math.abs(hi));
+      presion = { maxima_kN_m2: +maxAbs.toPrecision(4), maxima_t_m2: +(maxAbs / 9.80665).toPrecision(4),
+        minima_kN_m2: +Math.min(Math.abs(lo), Math.abs(hi)).toPrecision(4), nota: "presión de contacto suelo-cimiento (compresión)" };
+    }
+  }
   return {
+    ...(presion ? { presion_suelo: presion } : {}),
     ...(campo ? { mapa_de_colores: campo } : {}),
     // el nudo es el índice interno (0, 1, 2…), no el id del .heks
     ux_max_mm: mm(max[0]), indice_nudo_ux: nudo[0],
     uy_max_mm: mm(max[1]), indice_nudo_uy: nudo[1],
     uz_max_mm: mm(max[2]), indice_nudo_uz: nudo[2],
-    suma_reacciones_kN: { Fx: +R[0].toFixed(2), Fy: +R[1].toFixed(2), Fz: +R[2].toFixed(2) },
+    // Con muelles (suelo) la carga NO pasa por apoyos rígidos: su suma sale ~0 y un modelo pequeño lo
+    // leía como «equilibrado». Se dice qué es cada cosa.
+    ...(presion
+      ? { suma_reacciones_apoyos_rigidos_kN: +R[2].toFixed(2), nota_reacciones: "la carga la toma el SUELO (muelles); por eso los apoyos rígidos suman ~0. No es un chequeo de equilibrio." }
+      : { suma_reacciones_kN: { Fx: +R[0].toFixed(2), Fy: +R[1].toFixed(2), Fz: +R[2].toFixed(2) } }),
   };
 }
 
@@ -509,7 +529,8 @@ function resumenResultado(nombre: string, r: any): string {
     case "modelar_heks":
       return `${r.nudos} nudos · ${r.barras} barras · ${r.cascaras} cáscaras · Uz ${r.uz_max_mm} mm · ΣRz ${r.suma_Rz_kN} kN`
         + (r.errores?.length ? ` · ⚠ ${r.errores.length} errores` : "");
-    case "resultados": return `Uz ${r.uz_max_mm} mm · Ux ${r.ux_max_mm} mm · ΣFz ${r.suma_reacciones_kN?.Fz} kN`
+    case "resultados": return `Uz ${r.uz_max_mm} mm · Ux ${r.ux_max_mm} mm` + (r.suma_reacciones_kN ? ` · ΣFz ${r.suma_reacciones_kN.Fz} kN` : "")
+      + (r.presion_suelo ? ` · presión suelo máx ${r.presion_suelo.maxima_t_m2} t/m²` : "")
       + (r.mapa_de_colores ? ` · ${r.mapa_de_colores.campo} ${r.mapa_de_colores.minimo}…${r.mapa_de_colores.maximo}` : "");
     case "analisis_modal": return r.modos?.slice(0, 3).map((m: any) => `T${m.modo} = ${m.T_s} s`).join(" · ");
     case "obtener_modelo": return `${r.plantilla ?? "vacío"} · ${r.nudos ?? 0} nudos`;
@@ -580,6 +601,14 @@ async function enviar() {
       let calls: any[] = msg.tool_calls ?? [];
       if (!calls.length && msg.content) calls = llamadasEnTexto(msg.content);
       conversacion.push({ role: "assistant", content: calls.length ? (msg.content ?? "") : msg.content, tool_calls: calls.length ? calls : undefined });
+      // respuesta VACÍA sin herramientas (qwen2.5:7b tras listar_plantillas): empujón para que siga
+      if (!calls.length && !(msg.content ?? "").trim() && empujones < 2) {
+        empujones++;
+        conversacion.push({ role: "user", content: modifico
+          ? "(Hekatan) Sigue: llama resultados y responde con esos números."
+          : "(Hekatan) Sigue: abre la plantilla que corresponde con cargar_plantilla (para una cimentación completa: id \"plantillas\" con {\"tipo\": 8})." });
+        continue;
+      }
       if (!calls.length && modifico && !verifico && empujones < 2) {
         empujones++;
         conversacion.push({ role: "user", content:
@@ -595,10 +624,9 @@ async function enviar() {
         if (modifico) {
           try {
             const r: any = await ejecutar("resultados", {});
-            const m = r?.mapa_de_colores, t = (kN: number) => (kN / 9.80665).toFixed(2);
-            burbuja("paso", `📊 Datos del programa (no de la IA): asentamiento máx ${Math.abs(r.uz_max_mm)} mm · `
-              + `reacciones ΣFz ${r.suma_reacciones_kN?.Fz} kN (${t(r.suma_reacciones_kN?.Fz ?? 0)} t)`
-              + (m ? ` · ${m.campo}: ${m.minimo} … ${m.maximo} kN/m² (${t(m.minimo)} … ${t(m.maximo)} t/m²)` : ""));
+            const ps = r?.presion_suelo;
+            burbuja("paso", `📊 Datos del programa (no de la IA): asentamiento máx ${Math.abs(r.uz_max_mm)} mm`
+              + (ps ? ` · presión máx del suelo ${ps.maxima_t_m2} t/m² (${ps.maxima_kN_m2} kN/m²)` : ""));
           } catch { /* sin resultados que mostrar */ }
         }
         return;
