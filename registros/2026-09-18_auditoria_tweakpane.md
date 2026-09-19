@@ -523,3 +523,120 @@ resueltos» / «📐 Plantillas — se ajustan y se calculan») y la etiqueta en
 sesión**, y `animateMode.ts` / `animarCaso` / `mostrarModo` / escala del modo son suyos. La
 única línea que necesito en su zona es la llamada a `autoEjecutar(...)` al final de
 `loadExample`; lo demás vive en los dos ficheros nuevos.
+
+---
+
+# FASE A (lo que faltaba, en `main.ts`) — 23:00-23:40 · ventana en exclusiva
+
+## `examples/src/workspace/modeloAHeks.ts` (nuevo) — el agujero de fondo
+`__hekatanModeloAHeks` **solo lo definía `new-blank`** (`newBlank.ts:574`). Con una plantilla
+cargada no existía, y «Guardar .heks», «Guardar como…», «Compartir enlace» y «Exportar .tcl»
+se quedaban con el cuadro CLI **vacío**. Por eso no se pudo dar el `.heks` del modelo dual.
+
+Ahora el `.heks` se escribe desde los `states` (nudos, elementos, `elementInputs`,
+`nodeInputs`), o sea desde lo que el solver tiene de verdad, y vale para cualquier modelo.
+Respeta las trampas del formato: `frame` con **I22 en el 6.º token e I33 en el 7.º**,
+`as id As2 As3` con **As2 ↔ I33** (`shearAreasZ`), y `shell id n1..n4 t E [q] [rho]` con el
+espesor antes que E.
+
+**Comprobado por IDA Y VUELTA**, no a ojo (`tests/casos/heks_ida_y_vuelta.mjs`):
+`.heks → cliModeler → states → modeloAHeks → .heks' → cliModeler → states'` y se comparan los
+desplazamientos nudo a nudo. **6/6 al 0.000 %** en tres modelos distintos:
+
+| modelo | qué prueba | peor nudo |
+|---|---|---|
+| `galpon_lc.heks` (609 nudos, 1371 elem.) | barras con `ang`/`as`, deck, cáscaras | **0.000 %** |
+| `cimentacion_9zapatas.heks` (234 nudos, 225 muelles) | Winkler + `shelltype thick` | **0.000 %** |
+| `mixto_solido_muro_columna.heks` | sólidos H8 + muro + barras | **0.000 %** |
+
+El test cazó **dos errores míos** que a ojo no se ven, y por eso está escrito así:
+1. los muelles viven en `nodeInputs.springs` (no en un Map) y un nudo **negativo** es
+   −(elemento+1): muelle de área o nudo colgado del `edge etabs`. Sin eso, la cimentación se
+   iba **3×10¹⁴ %** (sin muelles, flota).
+2. **`selfweight` NO se puede reescribir**: el lector reparte el peso propio a los nudos en
+   cuanto lo lee, así que ya viaja dentro de `load`. Guardándolo otra vez el modelo pesaba el
+   doble → **44 %** de error. Ahora va como comentario, no como directiva.
+
+## Los botones que mentían (todos medidos pulsando, en `?t=edificio-aporticado`)
+
+| Botón | Antes | Ahora (medido) |
+|---|---|---|
+| 💾 Guardar .heks | fichero de **0 KB** | blob de **5 984 bytes** con el modelo (36 nudos, 63 barras) |
+| 💾 Exportar .tcl | **93 bytes** | **7 091 bytes** |
+| 📋 Pórtico 2D (bloques) | `comando desconocido "elements"` | **0 errores**; el modelo queda con 4 nudos y 3 barras |
+| «Guardar como…» / «Guardar» con lienzo vacío | bajaba fichero vacío | **no descarga nada** y avisa |
+| (trae sus propios controles) | botón con clic vacío | fila de texto |
+| (modelo vacío — dibujá nodos) | botón con clic vacío | fila de texto |
+| `label: ""` ×2 | filas sin nombre | «Sin datos» y «Grupo» |
+| «Material Weight and Mass» | carpeta que **nunca se creaba** (`addBlade` siempre existe) | borrada; la buena se llama **«Peso y masa»** |
+| «Piso 7» y «Piso 8» con 3 plantas | dos alturas de pisos inexistentes (`hP_7`/`hP_8` fijos) | borrados; los pisos los crea `dynamicParams` 1..nPisos |
+| Sliders a 0.00 sin explicar | «h Piso 1 (m)», «b col P1 (m)», «svX #1 (m)» | «… **· 0 = usa la uniforme / la global**» (19 etiquetas) |
+
+Por qué «Pórtico 2D (bloques)» estaba roto: el lector **solo abre un bloque si la cabecera va
+sola en su línea** (`cmd === "elements" && tokens.length === 1`), y el ejemplo escribía
+`elements    # pares 0-based…`. El comentario al lado la convertía en dos tokens.
+(Queda apuntado: hacer el lector tolerante a comentarios en la cabecera sería el arreglo de
+raíz — vive en `cliModeler.ts`, fuera de esta ventana.)
+
+---
+
+# RETOMADO tras el reinicio (19-sep, 00:20) — cierre de 2 y 3
+
+## Dónde lo encontré
+`modeloAHeks.ts` y `autoEjecutar.ts` escritos; `main.ts` con FASE A aplicada y FASE B ya
+enganchada; `edificioAporticado.ts` con mis cambios de FASE A. Compilaba. Lo que faltaba:
+probar con el modelo DUAL, y eso destapó un hueco.
+
+## 2 · `.heks` del modelo dual (test-m-dual, ms=1.0, 545 nudos) — medido
+- Desde la app, «💾 Guardar .heks» baja **78 917 bytes** (antes 0 KB). Copia en
+  `registros/test-m-dual_ms1.heks`.
+- **Ida y vuelta: masa 0 % de diferencia, desplazamientos 4.4 % en el peor nudo.** No se da
+  por bueno. Causa encontrada, medida y no supuesta:
+  1. El dual usa `plateFormulations = 2` en sus 460 cáscaras. `data-model.ts` dice
+     «2 = MEMBRANA», pero el SOLVER (`shellQ4.cpp:1787`) con 2 usa la **placa DSE completa de
+     Wilson (cap. 8)**, que sí flexa. Documentación y solver no dicen lo mismo.
+  2. El lector `.heks` solo sabe `shelltype thin|thick`: **el 2 no se puede declarar**.
+  3. **Prueba**: devolviéndole el 2 a esas 460 cáscaras en el modelo releído, coincide al
+     **0.00018 %**. El drilling (tipo 2 declarado) aparte pesa un 0.004 %.
+  Por el camino se descartaron, midiendo, dos hipótesis mías: «es membrana» (escribirla como
+  `shellmod 1 0` o con los 8 modificadores rompía el modelo: los nudos de losa se quedaban sin
+  rigidez y su carga se perdía — 100 %) y «es el drilling» (0.004 %).
+- **Qué hace hoy el fichero**: lo escribe como `thick` y lo **AVISA en la cabecera**
+  («⚠️ 460 cáscara(s) usan la placa DSE… el modelo releído DIFIERE. Falta en el lector:
+  `shelltype id dse`»), y al pulsar «Guardar» se le dice también al usuario.
+- **Lo que lo cierra** (NO aplicado: `cliModeler.ts` es de otra sesión): una línea en el
+  `case "shelltype"` → `else if (q === "dse" || q === "2") v = 2;` y que `modeloAHeks` escriba
+  `shelltype id dse`. Con eso, medido: 0.00018 %.
+- Test `heks-ida-y-vuelta`: **8/8**. Regla del caso del dual: *o coincide, o la cabecera lo
+  dice*. Cazó que mi primer intento de insertar el aviso no había entrado (un reemplazo que no
+  encontró el texto y calló).
+- El gancho de `new-blank` se quedaba pegado al pasar a otro modelo: ahora se repone en cada
+  `loadExample`. `new-blank` mantiene el suyo (escribe ρ en kN/m³ → t/m³; conviven dos
+  convenios de densidad en el código: `cliModeler`/`edificioAporticado`/`test-m` en t/m³ y
+  `newBlank` en kN/m³).
+
+## 3 · Ejemplo ≠ plantilla — medido pulsando
+| | `?t=arco` (ejemplo) | `?t=arco&auto=0` | `?t=edificio-aporticado` (plantilla) |
+|---|---|---|---|
+| resuelto al abrir | sí | sí | sí (el estático en vivo de siempre) |
+| modal corrido y «🎞 Animar» marcado | **sí** (Case = Modal, modo 1, T = 4.02 s) | no | **no** |
+| paso de animación | normal (21 nudos) | — | — |
+
+- Selector: **▶ = ejemplo** (se abre ejecutándose) · **📐 = plantilla**. Era 🧪, pero la
+  categoría «🧪 Utilidades» ya lo usa y en la lista se confundían.
+- Clasificación sobre el registro real: **51 ejemplos / 110 plantillas** de 161 (`tipo` en el
+  `ExampleDef` manda; si no, `dynamicParams` o ≥ 6 mandos = plantilla).
+- Freno por tamaño (≤1500 animar · ≤4000 paso reducido · más: modos sí, animación no, y se
+  dice) — test `auto-ejecutar` 12/12.
+- Capturas: `img/2026-09-18_tweakpane/04_ejemplo_arco_abre_animando.png`,
+  `05_plantilla_edificio_no_se_ejecuta.png`.
+
+## Avisos
+- ⚠️ En headless con WebGL por software, tras un «Context Lost / Restored» el visor puede
+  quedar NEGRO hasta el primer movimiento del ratón (el modelo está: 0 NaN, cámara bien; se
+  pinta al repintar). No es de estos cambios; queda apuntado.
+- ⚠️ `taskkill /IM chrome.exe` mata TODOS los Chrome (18 procesos esta vez, no solo los míos).
+  Los scripts cierran su navegador en `finally`; no volver a usar el taskkill global.
+- Queda para una decisión de Jorge: la plantilla sigue resolviendo el ESTÁTICO en vivo (los
+  sliders dan respuesta inmediata, como siempre); lo que ya no hace sola es lanzar modal ni
+  animación.
