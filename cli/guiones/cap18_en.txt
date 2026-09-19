@@ -1,12 +1,12 @@
-We are going to draw two curved surfaces in Hekatan Struct, from the menu and with the cursor: a dome and the skin of the Allianz Arena. Both are built on auxiliary lines, which are the guide and delete themselves when done, and both were checked against ETABS node by node.
-New file. I press Plane X Z, a true orthographic elevation. In Precision I turn on grid snap, so every click lands exactly on the grid, set eight segments per arc and tick Curves as auxiliary guide: whatever I draw now is construction, not structure.
-The meridian of the dome: I press Arc by three points and click three times: the springing at five zero, the middle point at three four, and the crown at zero five, on the axis. Next to the cursor you see the coordinates of the snapped point; with Line or Polyline, also the length and angle of the segment, as in AutoCAD. The arc appears in cyan, in eight segments. And with Measure, two clicks from the centre to the springing: five metres, the radius.
-Now I select it with a window: press Select, one click at a corner, move the cursor and another click at the opposite corner, as in AutoCAD. The eight auxiliary lines are selected.
-In Areas I set sixteen sectors and press Revolve selection. A single click on the vertical axis, and the meridian spins: every point of the guide becomes a ring of sixteen nodes, the panels appear between rings and the guide deletes itself.
-And the supports, without which there is no solution: with Select I draw a narrow window over the base, at level zero, and the sixteen ring nodes are selected. In the selection panel I press Fix: six degrees of freedom on each, in one click.
-Isometric view. One hundred twenty panels and one hundred twenty-nine nodes, all on the sphere of radius five, and not a single loose bar. Look at the pole from above: the node on the axis cannot give quadrilaterals, so the cap is closed with kites, convex four-node panels, no collapsed triangles. Against ETABS, the deflection is zero point zero forty millimetres in both programs.
-Now the Allianz, at one to ten scale. I clear everything and switch to plan. Four segments per corner, a five metre fillet, still as auxiliary guide, and Slab with fillets: two clicks at the corners, minus thirteen minus twelve and thirteen twelve, and the twenty-six by twenty-four outline with rounded corners appears, in cyan.
-Back to the elevation, I draw the bulge with Parabola by three points: at the foot sixteen zero, at mid height it bulges one metre, seventeen two, and at the top it returns to sixteen four. Twelve segments in height. I draw it away from the outline, because in the elevation all its vertices fall on the same pixel and the snap would grab any of them. With Measure I check the bulge: exactly one metre.
-A single window selects the outline and the profile, fifty-two auxiliary lines. I press Sweep in elevation and click once at the centre of the plan: at every height of the profile, the outline moves outward by the bulge, the panels appear between rings and the guides are deleted. Four hundred eighty panels and five hundred twenty nodes.
-The same for the Allianz: a window over the base takes the forty nodes of the bottom ring, and Fix supports them all at once.
-In isometric you see the skin of the Allianz, clean: the rounded plan and the bulge in height, with no construction line left. Against ETABS the deflection is one point sixty-three millimetres in both programs, worst node at zero point zero eleven percent. The revolution is the same sweep with a circular outline.
+We will draw two curved surfaces in Hekatan Struct using only the ribbon: a dome and the skin of the Allianz Arena.
+I close the panels. In the Areas tab I set eight segments per arc and turn on Guide: the meridian is a guide that is deleted when used.
+I press Front and SNAP, zoom with the wheel, and with Arc I click three times: five zero, three four and zero five. Measure gives five metres, the radius.
+With Select, a two-click window picks the meridian.
+In Areas I set sixteen sectors, press Revolve and click the axis: one hundred and twenty panels.
+Supports: a thin window over the base and Fixed. It applies to the sixteen selected nodes.
+3D view and Zoom Extents: the whole dome, on the five-metre sphere.
+Now the Allianz: in plan, a window and the Delete key erase the dome. Four segments, radius five, and Fillets by two corners: twenty-six by twenty-four.
+In elevation, twelve segments and a three-point Parabola: the belly bulges one metre at mid-height, as Measure confirms.
+One window selects the outline and the profile; Sweep and one click at the centre: four hundred and eighty panels.
+Allianz supports: a window over the base and Fixed.
+In 3D, the finished skin: five hundred and twenty nodes. Against ETABS, zero point zero one one percent.
