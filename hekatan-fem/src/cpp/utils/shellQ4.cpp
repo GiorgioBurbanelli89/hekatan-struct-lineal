@@ -1285,9 +1285,25 @@ static Eigen::MatrixXd getBendingK_DSE(const double x[4], const double y[4],
 //   esquinas reconstruidas correctamente, en cuadriláteros convexos).
 // - Sin shear locking en flexión pura (el (2/3)·Δθ_ij + condensación absorbe
 //   el cortante parásito Q4, equivalente al ANS / MITC4 en rectángulos).
-// - Equivalente exacto a MITC4 para rectángulos perfectos en plano X-Y.
-// - Para mallas distorsionadas, ligeramente diferente de MITC4 (DSE muestrea
-//   en coords físicas, MITC4 en coords naturales).
+// - ⚠️ «Equivalente exacto a MITC4 para rectángulos perfectos»: MEDIDO FALSO
+//   (17-sep-2026). En la celda cuadrada 1.25×1.25 con t/L = 0.008,
+//   ‖K_DSE − K_MITC4‖/‖K_MITC4‖ = 9.998e-01. Lo que sí se midió: los DOS dan
+//   3 modos de energía nula (ninguno es un mecanismo) y los DOS dan la energía
+//   de flexión pura EXACTA (0.000 %). Son dos elementos distintos, sin más.
+// - Para mallas distorsionadas, diferente de MITC4 (DSE muestrea en coords
+//   físicas, MITC4 en coords naturales).
+//
+// ⚠️⚠️ PIDE BORDE «DURO». Wilson, §8.9.2: «Note que la rotación normal a lo largo
+//   del extremo con soporte simple está fijado en cero. Para el DSE se requiere
+//   la condición de "hard" boundary. El DKE rinde los mismos resultados para
+//   condiciones de bordes tanto duras como blandas».
+//   Medido en la placa apoyada 16×16 con carga uniforme (razón DSE/Kirchhoff,
+//   que el libro da en su Tabla 8.4 = 1.00082 para h fino):
+//       borde BLANDO (solo w atado)          -> 1.0222   (2.2 % blando)
+//       borde DURO  (+ rotación normal atada)-> 1.0036   (0.36 %)
+//   O sea: con el borde que NO le corresponde, este elemento parece 2-5 %
+//   blando y no lo es. Cualquier banco que lo juzgue tiene que atar la rotación
+//   normal en el borde simplemente apoyado, o no está midiendo este elemento.
 //
 // Refs:
 //   - Wilson, E.L., "Análisis Estructural", 4ª Ed., Cap. 6 §6.3-§6.5, Cap. 8 §8.2-§8.6
@@ -1410,6 +1426,25 @@ static Eigen::MatrixXd getBendingK_DSE_FULL(const double x[4], const double y[4]
     // Wilson Eq. 8.6:
     //   γ_e = (1/L_e)(w_j − w_i) + (1/2)(θ_n_i + θ_n_j) + (2/3)·Δθ_e
     //   donde θ_n = −sin α_e · θx + cos α_e · θy (perpendicular en plano)
+    //
+    // ⚠️ EL SIGNO DEL (2/3): el libro pone MENOS, aquí va MÁS. NO es un error.
+    //    Wilson Ec. (8.6), pág. PDF 131:
+    //        γ_ij = (1/L)(u_zj − u_zi) − (1/2)(θ_i + θ_j) − (2/3)·Δθ_ij
+    //    y su Ec. (8.3) reparte la rotación de lado como
+    //        Δθx = +sen α·Δθ_ij ,  Δθy = −cos α·Δθ_ij
+    //    Aquí la rotación de lado se mide a lo largo de n̂ = (−sen α, +cos α),
+    //    que es el vector OPUESTO al de Wilson (ver Bb_aa más arriba). O sea
+    //        Δθ_e (este código) = −Δθ_ij (Wilson)
+    //    con lo cual el −(2/3)·Δθ_ij del libro se escribe +(2/3)·Δθ_e. Los
+    //    términos de w y de θ nodal SÍ coinciden letra por letra con la Ec.(8.7).
+    //
+    //    Y da igual de todos modos: Δθ es un GDL INTERNO que se condensa
+    //    (Ec. 8.18-8.19). En Kb = Kuu − Kua·Kaa⁻¹·Kau el cambio de signo de Δθ
+    //    aparece DOS veces (Kua y Kau) y Kaa no cambia → Kb es idéntica.
+    //    MEDIDO (17-sep-2026, cuadrilátero distorsionado, 3 espesores):
+    //      · convención literal de Wilson (−2/3 Y Bb_aa volteado) → ‖ΔK‖/‖K‖ = 0.000e+00
+    //      · voltear SÓLO el 2/3 (el "arreglo" ingenuo)           → ‖ΔK‖/‖K‖ = 17-19 %  ← BUG
+    //    Conclusión: no tocar el +2/3 sin voltear también Bb_aa.
     // DOF layout: cols 0..11 = [w0,θx0,θy0, w1,θx1,θy1, w2,θx2,θy2, w3,θx3,θy3]
     //             cols 12..15 = [Δθ_0, Δθ_1, Δθ_2, Δθ_3]
     Eigen::MatrixXd B_gamma_edge = Eigen::MatrixXd::Zero(4, 16);
@@ -1738,16 +1773,31 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
                                   : getMembraneK(x, y, E, nu, t, dmod);   // 8×8
     Eigen::MatrixXd Kitw = usaITW ? getMembraneITW(x, y, E, nu, t, dmod, drillScale, ngITW, taylorITW, khgITW, waITW, proyITW, sriITW, k0Wilson)
                                   : Eigen::MatrixXd::Zero(12, 12);        // 12×12
+    // ── Conmutador EN EJECUCIÓN de la formulación de flexión ────────────────
+    // plateFormulations[index] == 2  →  DSE de Wilson (cap. 8 del libro), el
+    // «Shell-Thick» que Wilson dice (pág. PDF 155) que es «el enfoque empleado
+    // en el programa SAP2000». Se lee aquí, no con un #define, para poder medir
+    // A/B contra SAP2000 sin recompilar el WASM en cada prueba.
+    // El resto de valores los reparte getLocalStiffnessMatrix.cpp (1=Thin, 3=DKMQ).
+    const int plateForm = getMapVal(elementInputs.plateFormulations, index, 0);
+
+    Eigen::MatrixXd Kb;
+    if (sinFlexion) {
+        Kb = Eigen::MatrixXd::Zero(12, 12);
+    } else if (plateForm == 2) {
+        // Wilson DSE completo (cap. 8): cortante discreto de lado + corrección
+        // de patch test (8.17) + condensación estática (8.18-8.19).
+        Kb = getBendingK_DSE_FULL(x, y, E, nu, t);
+    } else {
     #if HK_BENDING_FORMULATION == 2
-        Eigen::MatrixXd Kb = getBendingK_DSE_FULL(x, y, E, nu, t);  // 12×12 (Wilson DSE Cap 8 completo, Variant C)
+        Kb = getBendingK_DSE_FULL(x, y, E, nu, t);  // 12×12 (Wilson DSE Cap 8 completo, Variant C)
     #elif HK_BENDING_FORMULATION == 1
-        Eigen::MatrixXd Kb = getBendingK_DSE(x, y, E, nu, t);       // 12×12 (DSE-bending + MITC4-shear, Variant B)
+        Kb = getBendingK_DSE(x, y, E, nu, t);       // 12×12 (DSE-bending + MITC4-shear, Variant B)
     #else
         // 3 (defecto): MITC4 (Bathe-Dvorkin 1985) + modos incompatibles de Wilson
-        Eigen::MatrixXd Kb = sinFlexion
-        ? Eigen::MatrixXd::Zero(12, 12)
-        : getBendingK(x, y, E, nu, t, dmod);     // 12×12
+        Kb = getBendingK(x, y, E, nu, t, dmod);     // 12×12
     #endif
+    }
     Km   *= mFactor;
     Kitw *= mFactor;
     Kb   *= bFactor;
