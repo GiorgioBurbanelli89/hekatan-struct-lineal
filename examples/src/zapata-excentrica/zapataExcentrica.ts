@@ -24,7 +24,7 @@
  */
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { cliModeler } from "../cli-modeler/cliModeler";
-import { botonTutorZapata } from "../shared/tutorFem";
+import { herramientasZapata } from "../shared/tutorFem";
 import { opensees, datosOpenSeesDeStates } from "../shared/openseesZapata";
 import { HOJA_DAS_48 as hojaDas48 } from "./das48";
 
@@ -227,7 +227,7 @@ export const zapataExcentrica: ExampleDef = {
     t: F("Zapata", "Espesor (m)", DAS_EJ610.t, 0.25, 1.5, 0.05),
     fc: F("Zapata", "f'c (kgf/cm²)", DAS_EJ610.fc, 180, 420, 10),
     c: F("Columna", "Lado columna (m)", DAS_EJ610.c, 0.2, 0.8, 0.05),
-    P: F("Columna", "Q (tonf)", DAS_EJ610.P, 1, 500, 0.001),
+    P: F("Columna", "Q (tonf)", DAS_EJ610.P, 1, 500, 0.0001),
     exL: { default: DAS_EJ610.exL, label: "e_B/B (en x)", folder: "Columna",
            options: { "0": 0, "0.1 (Das 6.10)": 0.1, "1/12": 1 / 12, "1/6 (límite)": 1 / 6, "1/4": 0.25, "1/3": 1 / 3 } },
     eyB: { default: DAS_EJ610.eyB, label: "e_L/L (en y)", folder: "Columna",
@@ -240,7 +240,7 @@ export const zapataExcentrica: ExampleDef = {
     (window as any).__hekatanCliScript = heksZapataExcentrica(p);
     cliModeler.build({}, states, mp);
     // «🎓 Tutor FEM»: la hoja se escribe con ESTE modelo y sus vueltas reales del solver
-    if (typeof document !== "undefined" && document.body?.appendChild) botonTutorZapata(() => {
+    if (typeof document !== "undefined" && document.body?.appendChild) herramientasZapata(() => {
       const it = (window as any).__hekatanCliContactoIter;
       const nodes = states?.nodes?.val as number[][] | undefined;
       if (!it?.vueltas?.length || !nodes?.length) return null;
@@ -363,7 +363,7 @@ export const zapataLevantamientoPlantilla: ExampleDef = {
     c: F("Columna", "Lado columna (m)", DAS_EJ610.c, 0.2, 1, 0.05),
     xcol: F("Columna", "Posición x desde el centro (m)", 0.15, -3, 3, 0.05),
     ycol: F("Columna", "Posición y desde el centro (m)", 0.30, -3, 3, 0.05),
-    P: F("Cargas", "P (tonf, hacia abajo)", DAS_EJ610.P, 0.1, 2000, 0.1),
+    P: F("Cargas", "P (tonf, hacia abajo)", DAS_EJ610.P, 0.1, 2000, 0.0001),
     Mx: F("Cargas", "Mx (tonf·m) → mueve la resultante en y", 0, -500, 500, 0.5),
     My: F("Cargas", "My (tonf·m) → mueve la resultante en x", 0, -500, 500, 0.5),
     soilType: { default: 0, label: "Tipo de suelo", folder: "Suelo", options: Object.fromEntries(SOIL_TYPES.map((s, i) => [s.name, i])) },
@@ -383,7 +383,7 @@ export const zapataLevantamientoPlantilla: ExampleDef = {
     const p = paramsDePlantilla(pr);
     (window as any).__hekatanCliScript = heksZapataExcentrica(p);
     cliModeler.build({}, states, mp);
-    if (typeof document !== "undefined" && document.body?.appendChild) botonTutorZapata(() => {
+    if (typeof document !== "undefined" && document.body?.appendChild) herramientasZapata(() => {
       const it = (window as any).__hekatanCliContactoIter;
       const nodes = states?.nodes?.val as number[][] | undefined;
       if (!it?.vueltas?.length || !nodes?.length) return null;
@@ -391,7 +391,7 @@ export const zapataLevantamientoPlantilla: ExampleDef = {
     }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"], (lang) => {
       const d = datosOpenSeesDeStates(states, "Zapata con levantamiento (Hekatan Struct)");
       return d ? opensees(d, lang) : null;
-    });
+    }, () => p.q_adm);
   },
   computedLabels(pr: any, states: any) {
     const p = paramsDePlantilla(pr);

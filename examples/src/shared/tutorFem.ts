@@ -9,6 +9,7 @@
  * Hekatan LISP web y de tutoriales.ts. Nada pasa por un servidor. Se queda dentro de Struct (iframe).
  */
 import { CADENA } from "./tutorCadena";
+import { registrarDiseno, ventanaFlotante } from "./menuDiseno";
 import { DAS_EJ610, zapataRigidaSinTraccion, areaEfectivaDas, moduloE, TONF, type ParamsZapataExc } from "../zapata-excentrica/zapataExcentrica";
 
 const LISP_WEB = "https://giorgioburbanelli89.github.io/hekatan-lisp/";
@@ -48,6 +49,18 @@ export interface DatosTutor {
   nodes: number[][];
   vueltas: Array<{ activo: boolean[]; uz: Float64Array }>;
   nodosComp: number[];
+}
+
+
+/** Área en contacto: área tributaria de los nudos que tocan (borde/2, esquina/4), como la suma de los resortes. */
+function areaContacto(d: DatosTutor, activo: boolean[]): number {
+  const xs = d.nodes.map((q) => q[0]), ys = d.nodes.map((q) => q[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), h = (x1 - x0) / d.p.n, hy = (y1 - y0) / d.p.n;
+  let A = 0;
+  activo.forEach((a, i) => { if (!a) return; const q = d.nodes[d.nodosComp[i]];
+    const fx = Math.abs(q[0] - x0) < 1e-9 || Math.abs(q[0] - x1) < 1e-9 ? 0.5 : 1, fy = Math.abs(q[1] - y0) < 1e-9 || Math.abs(q[1] - y1) < 1e-9 ? 0.5 : 1;
+    A += h * hy * fx * fy; });
+  return A;
 }
 
 /** La hoja del tutor con los números del modelo abierto. */
@@ -134,7 +147,7 @@ export function hojaTutorZapata(d: DatosTutor): string {
   L.push("");
   L.push("## e) Comparación: Braja Das (zapata rígida) y SAP2000");
   L.push("#: Das (Principles of Foundation Engineering, 9.ª ed., ec. 6.53, p. 236) supone la zapata RÍGIDA con presión lineal: para excentricidad en una dirección, pasado B/6 la presión es un triángulo de largo 3(B/2 − e) y máximo 4Q/(3L(B − 2e)). Para dos direcciones la zapata rígida se resuelve igual, buscando el plano de asiento que equilibra Q y los dos momentos con el suelo sin tracción.");
-  L.push(`#tabla("Cálculo","q_max [tonf/m²]:3","Área en contacto [m²]:3")({"FEM de este modelo (Hekatan)","Zapata rígida"${esDas ? ',"SAP2000 24 (mismo modelo, juez)","SAFE 20","ETABS 22"' : ""}}; [${f(qFem, 3)}, ${f(rig.qmax, 3)}${esDas ? ", 81.914, 81.915, 81.915" : ""}]; [${f(nC / nodosComp.length * p.Lx * p.Ly, 3)}, ${f(rig.contacto * p.Lx * p.Ly, 3)}${esDas ? ", 1.888, 1.888, 1.888" : ""}])`);
+  L.push(`#tabla("Cálculo","q_max [tonf/m²]:3","Área en contacto [m²]:3")({"FEM de este modelo (Hekatan)","Zapata rígida"${esDas ? ',"SAP2000 24 (mismo modelo, juez)","SAFE 20","ETABS 22"' : ""}}; [${f(qFem, 3)}, ${f(rig.qmax, 3)}${esDas ? ", 81.914, 81.915, 81.915" : ""}]; [${f(areaContacto(d, fin.activo), 3)}, ${f(rig.contacto * p.Lx * p.Ly, 3)}${esDas ? ", 1.888, 1.888, 1.888" : ""}])`);
   L.push(`#: La zapata rígida da ${f((rig.qmax / qFem - 1) * 100, 2)} % de diferencia en la presión máxima: la placa real se flexa y reparte un poco distinto. ` +
     (esDas ? "Con este modelo (el ejemplo 6.10 de Das) SAP2000, SAFE y ETABS dan lo mismo que Hekatan a 4 cifras, con los mismos nudos en contacto." :
       "Los números de SAP2000, SAFE y ETABS están medidos para el ejemplo 6.10 de Das (el modelo por defecto): vuelve a él para verlos."));
@@ -226,7 +239,7 @@ const CSS = `
   min-width:360px; min-height:44px; resize:both; overflow:hidden; display:flex; flex-direction:column;
   background:var(--hk-panel,#232936); color:var(--hk-texto,#C8D4E4); border:1px solid var(--hk-borde,#39445A);
   border-radius:8px; box-shadow:0 18px 60px rgba(0,0,0,.55); font:13px/1.4 "Segoe UI",system-ui,sans-serif; }
-#hk-tutor.plegado{ height:44px !important; resize:none; }
+#hk-tutor[data-plegado="1"]{ height:auto !important; min-height:0; resize:none; }
 #hk-tutor header{ display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:move; user-select:none;
   background:var(--hk-chrome,#1B1F26); border-bottom:1px solid var(--hk-borde,#39445A); }
 #hk-tutor header b{ font-size:14px; }
@@ -266,36 +279,31 @@ function css() {
   const st = document.createElement("style"); st.id = "hk-tutor-css"; st.textContent = CSS; document.head.appendChild(st);
 }
 
+export interface OpcTutor { inicioCadena?: string; hojaInicial?: { texto: string; solo: boolean };
+  pasos?: Array<{ id: string; titulo: [string, string] }>; alExplicar?: (id: string) => void }
+
 export interface EntradaTutor { titulo: string | [string, string]; cadena?: string; usa?: boolean; hoja?: () => string; ej?: string; pronto?: boolean }
 
 /** Abre la ventana del tutor: índice de formulaciones a la izquierda, la hoja LISP a la derecha. */
 export async function abrirTutorFem(entradas: EntradaTutor[], calculadora?: () => string, titulo = "🎓 Tutor FEM",
-  hojaCadena?: (id: string) => string): Promise<HTMLElement> {
+  hojaCadena?: (id: string) => string, opc?: OpcTutor): Promise<HTMLElement> {
   css();
   document.getElementById("hk-tutor")?.remove();
   const w = document.createElement("div");
   w.id = "hk-tutor";
   w.innerHTML = `<header><b></b><span>${tx("sub")} ${tx("hojaEn")}</span>` +
     `<div class="der"><button data-a="lang" title="${tx("idiomaT")}">${tx("idioma")}</button><button data-a="calc" title="${tx("calc")}">🧮</button>` +
-    `<button data-a="plegar" title="${tx("plegar")}">▁</button><button data-a="cerrar" title="${tx("cerrar")}">✕</button></div></header>` +
+    `<button data-plegar="1" title="${tx("plegar")}">▁</button><button data-a="cerrar" title="${tx("cerrar")}">✕</button></div></header>` +
     `<div class="migas"></div><div class="cuerpo"><nav class="indice"></nav><iframe title="Tutor FEM"></iframe></div>`;
   document.body.appendChild(w);
   (w.querySelector("header b") as HTMLElement).textContent = titulo === "🎓 Tutor FEM" ? tx("boton") : titulo;
   w.querySelector('[data-a="lang"]')!.addEventListener("click", () => {
     try { localStorage.setItem("hk_tutor_lang", idioma() === "es" ? "en" : "es"); } catch { /* nada */ }
     const r = w.getBoundingClientRect();
-    abrirTutorFem(entradas, calculadora, titulo, hojaCadena).then((n) => { n.style.left = r.left + "px"; n.style.top = r.top + "px"; });
+    abrirTutorFem(entradas, calculadora, titulo, hojaCadena, opc).then((n) => { n.style.left = r.left + "px"; n.style.top = r.top + "px"; });
     const bt = document.getElementById("hk-tutor-btn"); if (bt) { bt.textContent = tx("boton"); bt.title = tx("botonT"); }
   });
-  const cab = w.querySelector("header") as HTMLElement;
-  let arr: { x: number; y: number; l: number; t: number } | null = null;
-  cab.addEventListener("pointerdown", (e) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    const r = w.getBoundingClientRect(); arr = { x: e.clientX, y: e.clientY, l: r.left, t: r.top }; cab.setPointerCapture(e.pointerId);
-  });
-  cab.addEventListener("pointermove", (e) => { if (!arr) return; w.style.left = arr.l + e.clientX - arr.x + "px"; w.style.top = Math.max(0, arr.t + e.clientY - arr.y) + "px"; });
-  cab.addEventListener("pointerup", () => { arr = null; });
-  w.querySelector('[data-a="plegar"]')!.addEventListener("click", () => w.classList.toggle("plegado"));
+  ventanaFlotante(w);   // arrastrar por la cabecera y plegar con ▁ (menuDiseno.ts, el mismo de las otras ventanas)
   w.querySelector('[data-a="cerrar"]')!.addEventListener("click", () => w.remove());
   const iframe = w.querySelector("iframe") as HTMLIFrameElement;
   const ir = async (hoja: string | null, ej: string | null, solo = true) => {
@@ -314,7 +322,9 @@ export async function abrirTutorFem(entradas: EntradaTutor[], calculadora?: () =
   nav.innerHTML = `<div class="ley"><b style="color:var(--hk-marca,#D3A53C)">●</b> ${tx("ley")}</div>` + entradas.map((e, k) =>
     `<button class="ent${e.usa ? " usa" : ""}${e.pronto ? " pronto" : ""}" data-k="${k}" ${e.pronto ? "disabled" : ""}>` +
     `${e.usa ? "● " : ""}${tit(e)}${e.pronto ? ` <small>${tx("pronto")}</small>` : ""}</button>`).join("") +
-    `<div class="ley">${tx("lab")}</div>`;
+    `<div class="ley">${tx("lab")}</div>` +
+    (opc?.pasos?.length ? `<div class="ley"><b>${idioma() === "es" ? "Pasos del informe" : "Report steps"}</b></div>` + opc.pasos.map((q) =>
+      `<button class="ent paso" data-paso="${q.id}">❓ ${q.titulo[idioma() === "es" ? 0 : 1]} <small>${idioma() === "es" ? "Explícame" : "Explain"}</small></button>`).join("") : "");
   // ── la cadena «¿De dónde sale?»: miga de pan + un botón por término que la hoja usa ──
   const migas = w.querySelector(".migas") as HTMLElement;
   const es = idioma() === "es";
@@ -343,13 +353,19 @@ export async function abrirTutorFem(entradas: EntradaTutor[], calculadora?: () =
   };
   const elegir = (k: number) => {
     const e = entradas[k]; if (!e || e.pronto) return;
-    nav.querySelectorAll(".ent").forEach((b, i) => b.classList.toggle("on", i === k));
+    nav.querySelectorAll(".ent[data-k]").forEach((b, i) => b.classList.toggle("on", i === k));
     if (e.cadena && hojaCadena) { pila = [e.cadena]; mostrarCadena(); return; }
     pila = []; pintarCadena();
     ir(e.hoja ? e.hoja() : null, e.ej ?? null);
   };
-  nav.querySelectorAll<HTMLButtonElement>(".ent").forEach((b) => (b.onclick = () => elegir(+b.dataset.k!)));
-  elegir(entradas.findIndex((e) => !e.pronto));
+  nav.querySelectorAll<HTMLButtonElement>(".ent[data-k]").forEach((b) => (b.onclick = () => elegir(+b.dataset.k!)));
+  nav.querySelectorAll<HTMLButtonElement>("[data-paso]").forEach((b) => (b.onclick = () => opc?.alExplicar?.(b.dataset.paso!)));
+  if (opc?.inicioCadena && hojaCadena) {
+    const k = entradas.findIndex((e) => e.cadena === opc.inicioCadena);
+    nav.querySelectorAll(".ent").forEach((b, i) => b.classList.toggle("on", i === k));
+    pila = [opc.inicioCadena]; mostrarCadena();
+  } else if (opc?.hojaInicial) { pintarCadena(); ir(opc.hojaInicial.texto, null, opc.hojaInicial.solo); }
+  else elegir(entradas.findIndex((e) => !e.pronto));
   window.addEventListener("keydown", function esc(e) {
     if (e.key !== "Escape" || !document.getElementById("hk-tutor")) return;
     e.stopPropagation(); document.getElementById("hk-tutor")?.remove(); window.removeEventListener("keydown", esc, true);
@@ -376,43 +392,185 @@ export function entradasZapata(d: DatosTutor, hojaDas: string): EntradaTutor[] {
   ];
 }
 
-/** El botón «🎓 Tutor FEM» del ejemplo de la zapata: solo visible mientras ese ejemplo está abierto. */
-export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: string, ids: string[] = ["zapata-excentrica"],
-  exportar?: (lenguaje: "py" | "tcl") => string | null) {
-  css();
-  (window as any).__hekatanTutorDatos = leerDatos;
-  (window as any).__hekatanExportarOpenSees = exportar;
-  if (document.getElementById("hk-tutor-btn")) return;
-  const b = document.createElement("button");
-  b.id = "hk-tutor-btn"; b.textContent = tx("boton"); b.title = tx("botonT");
-  b.onclick = async () => {
-    const d = ((window as any).__hekatanTutorDatos ?? leerDatos)();
-    if (!d) { alert(tx("sinSol")); return; }
-    await abrirTutorFem(entradasZapata(d, hojaDas), () => hojaCalculadora(d.p), "🎓 Tutor FEM", (id) =>
-      id === "W" ? hojaWinkler(d.p) : id === "NL" ? hojaTutorZapata(d) : (CADENA[id]?.hoja?.(d.p) ?? "# ⏳"));
-  };
-  document.body.appendChild(b);
-  // exportar a OpenSees (Py y Tcl) el modelo abierto: al lado del botón del tutor
-  const ops: HTMLButtonElement[] = [];
-  for (const [lang, txt, dx] of [["py", "OpenSeesPy (.py)", 150], ["tcl", "OpenSees Tcl (.tcl)", 290]] as const) {
-    const o = document.createElement("button");
-    o.className = "hk-ops-btn"; o.textContent = "⬇ " + txt; o.style.right = 330 + dx + "px";
-    o.title = tx("opsT");
-    o.onclick = () => {
-      const t = ((window as any).__hekatanExportarOpenSees ?? exportar)?.(lang);
-      if (!t) { alert(tx("sinSol")); return; }
-      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t], { type: "text/plain" }));
-      a.download = `zapata_hekatan.${lang}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-      (window as any).__hekatanUltimoOpenSees = t;
-    };
-    document.body.appendChild(o); ops.push(o);
+// ─────────────────────────────────────────────────────────────────────
+// INFORME de la zapata (memoria de cálculo geotécnica + FEM) y «❓ Explícame» por paso
+// ─────────────────────────────────────────────────────────────────────
+const base = () => ((import.meta as any).env?.BASE_URL ?? "./") + "tutor-fem/";
+
+/** Los pasos del informe: cada uno sabe dónde se explica más a fondo, cómo corroborarlo, su libro y su código. */
+export const PASOS: Record<string, { titulo: [string, string]; cadena?: string; calc?: (p: ParamsZapataExc) => string[];
+  libro?: { png: string; cita: string }; codigo?: string }> = {
+  e: { titulo: ["Excentricidades", "Eccentricities"], cadena: "NL",
+       calc: (p) => [`e_x = ${f(p.exL * p.Lx, 4)}`, `e_y = ${f(p.eyB * p.Ly, 4)}`, "r_x = e_x/B_x", "r_y = e_y/L_y"],
+       libro: { png: "das9_p236.png", cita: "Das 9.ª ed., ec. 6.50, p. 235" } },
+  caso: { titulo: ["Caso de Das (dónde cae la resultante)", "Das case (where the resultant falls)"],
+       libro: { png: "das9_p244.png", cita: "Das 9.ª ed., §6.12, casos I–IV, p. 243–246" }, codigo: "examples/src/zapata-excentrica/zapataExcentrica.ts · areaEfectivaDas()" },
+  q: { titulo: ["Presión máxima (zapata rígida)", "Maximum pressure (rigid footing)"], cadena: "NL",
+       calc: (p) => [`e_x = ${f(p.exL * p.Lx, 4)}`, `q_1 = 4*Q/(3*L_y*(B_x - 2*e_x))`],
+       libro: { png: "das9_p236.png", cita: "Das 9.ª ed., ecs. 6.51–6.53, p. 236" }, codigo: "examples/src/zapata-excentrica/zapataExcentrica.ts · zapataRigidaSinTraccion()" },
+  fem: { titulo: ["Resultado FEM (Hekatan)", "FEM result (Hekatan)"], cadena: "K",
+       libro: { png: "das610_presion.png", cita: "Hekatan · SAP2000 · SAFE · ETABS, misma malla (ejemplo 6.10)" }, codigo: "hekatan-fem/src/cpp/utils/shellQ4.cpp:807 getBendingK · deform.cpp:162" },
+  k: { titulo: ["Resorte de Winkler k = ks·A", "Winkler spring k = ks·A"], cadena: "W", calc: () => ["k_int = k_s*h^2", "k_borde = k_s*h^2/2", "k_esq = k_s*h^2/4"],
+       codigo: "hekatan-fem/src/cpp/utils/springsExtra.h:88 addAreaSpringLumped" },
+  nl: { titulo: ["Levantamiento (suelo sin tracción)", "Uplift (tensionless soil)"], cadena: "NL",
+       codigo: "examples/src/shared/muellesSoloCompresion.ts · resolverSoloCompresion()" },
+};
+
+/** Memoria de cálculo de LA zapata abierta, para entregar (Hekatan LISP web; Archivo › PDF para imprimir). */
+export function hojaInforme(d: DatosTutor, q_adm?: number): string {
+  const p = d.p, ex = p.exL * p.Lx, ey = p.eyB * p.Ly, E = moduloE(p.fc) / 98.0665 * 10;
+  const rig = zapataRigidaSinTraccion(p, 200), das = areaEfectivaDas(p.Lx, p.Ly, ex, ey);
+  const fin = d.vueltas[d.vueltas.length - 1];
+  let wmin = 0, nC = 0;
+  fin.activo.forEach((a, i) => { if (a) nC++; wmin = Math.min(wmin, fin.uz[d.nodosComp[i]]); });
+  const qF = -wmin * p.ks, Ac = areaContacto(d, fin.activo);
+  const esDas = Math.abs(p.Lx - DAS_EJ610.Lx) + Math.abs(p.exL - DAS_EJ610.exL) + Math.abs(p.eyB - DAS_EJ610.eyB) + Math.abs(p.P - DAS_EJ610.P) + Math.abs(p.t - DAS_EJ610.t) + Math.abs(p.ks - DAS_EJ610.ks) + Math.abs(p.n - DAS_EJ610.n) < 1e-6;
+  const uni = ex === 0 || ey === 0, e1 = Math.abs(ex) >= Math.abs(ey) ? Math.abs(ex) : Math.abs(ey), B1 = Math.abs(ex) >= Math.abs(ey) ? p.Lx : p.Ly, L1 = Math.abs(ex) >= Math.abs(ey) ? p.Ly : p.Lx;
+  const L: string[] = [];
+  L.push("# Informe: zapata con levantamiento (suelo sin tracción)");
+  L.push("#: Memoria de cálculo generada por Hekatan Struct con el modelo abierto. Para imprimir o guardar en PDF: Archivo › PDF.");
+  L.push("## 1 · Datos");
+  L.push(`#| Dato | Valor |`); L.push("#|---|---:|");
+  L.push(`#| Zapata B × L × t | ${p.Lx} × ${p.Ly} × ${p.t} m |`);
+  L.push(`#| Hormigón | f'c ${p.fc} kgf/cm² (E = ${f(E, 0)} tonf/m²) |`);
+  L.push(`#| Carga Q | ${f(p.P, 3)} tonf (${f(p.P * TONF, 1)} kN) |`);
+  L.push(`#| Excentricidades | e_{x} = ${f(ex, 3)} m · e_{y} = ${f(ey, 3)} m |`);
+  L.push(`#| Suelo | ks = ${p.ks} tonf/m³${q_adm ? ` · q_{adm} = ${q_adm} tonf/m²` : ""} |`);
+  L.push("## 2 · Geotecnia (Braja M. Das, Principles of Foundation Engineering, 9.ª ed.)");
+  L.push("#: Excentricidad relativa (ec. 6.50, p. 235) y núcleo central: la base entera comprime si e/B + e/L ≤ 1/6.");
+  L.push(`r_x = dec(${f(ex, 6)}/${p.Lx}, 4)`); L.push(`r_y = dec(${f(ey, 6)}/${p.Ly}, 4)`);
+  L.push(`#: ${Math.abs(p.exL) + Math.abs(p.eyB) <= 1 / 6 + 1e-9 ? "La resultante cae DENTRO del núcleo: toda la base comprime." : "La resultante cae FUERA del núcleo: parte de la base se levanta (el suelo no tira)."} Caso de Das (§6.12, p. 243–246): **${das.caso}**; área efectiva de capacidad A' = ${f(das.A, 3)} m² (no es el área de contacto).`);
+  if (uni && e1 > B1 / 6) {
+    L.push("#: Presión máxima con zapata rígida, una dirección, e > B/6 (ec. 6.53, p. 236):");
+    L.push("q_max = 4*Q/(3*L*(B - 2*e))");
+    L.push(`q_1 = dec(4*${f(p.P, 4)}/(3*${L1}*(${B1} - 2*${f(e1, 4)})), 3)`);
+  } else if (uni) {
+    L.push("#: Presión máxima y mínima con zapata rígida, una dirección, e ≤ B/6 (ecs. 6.51–6.52, p. 236):");
+    L.push("q_max = Q/(B*L)*(1 + 6*e/B)");
+    L.push(`q_1 = dec(${f(p.P, 4)}/(${B1}*${L1})*(1 + 6*${f(e1, 4)}/${B1}), 3)`);
+    L.push(`q_2 = dec(${f(p.P, 4)}/(${B1}*${L1})*(1 - 6*${f(e1, 4)}/${B1}), 3)`);
+  } else {
+    L.push(`#: Dos direcciones: sin fórmula cerrada para la presión; la zapata RÍGIDA sin tracción (plano de asiento que equilibra Q y los dos momentos) da q_{max} = ${f(rig.qmax, 3)} tonf/m² y ${f(rig.contacto * p.Lx * p.Ly, 3)} m² en contacto.`);
   }
-  const vigila = setInterval(() => {
-    const id = (window as any).__hekatanExample?.();
-    if (id !== undefined && id !== null && !ids.includes(id)) {
-      b.remove(); ops.forEach((o) => o.remove()); document.getElementById("hk-tutor")?.remove(); clearInterval(vigila);
-    }
-  }, 800);
+  if (q_adm) {
+    L.push(`#: Verificación de presión con la máxima del FEM (abajo): q_{max}/q_{adm} = ${f(qF / q_adm, 3)} → ${qF <= q_adm ? "CUMPLE" : "NO CUMPLE"}.`);
+  }
+  if (esDas) L.push("#: Capacidad de carga del ejemplo 6.10 del libro (p. 247–248, caso II): Q_{u} ≈ 606 kN. La carga aplicada es Q = Q_{u} (FS = 1): para diseño, Q ≤ Q_{u}/FS.");
+  else L.push("#: Capacidad de carga (ec. 6.55 de Das) para datos propios: ⏳ pendiente (hace falta φ', c', γ y D_{f} del estudio de suelos).");
+  L.push("## 3 · Resultado FEM (Hekatan Struct)");
+  L.push(`#: Placa Shell-Thick (MITC4) sobre resortes que solo trabajan a compresión, malla ${p.n} × ${p.n}; ${d.vueltas.length} vueltas hasta que el contacto no cambia.`);
+  L.push(`#| Resultado | FEM | Zapata rígida |`); L.push("#|---|---:|---:|");
+  L.push(`#| q_max (tonf/m²) | ${f(qF, 3)} | ${f(rig.qmax, 3)} |`);
+  L.push(`#| Asiento máximo (mm) | ${f(-wmin * 1000, 3)} | ${f(rig.wmax * 1000, 3)} |`);
+  L.push(`#| Área en contacto (m²) | ${f(Ac, 3)} | ${f(rig.contacto * p.Lx * p.Ly, 3)} |`);
+  L.push(`#| Nudos en contacto | ${nC} de ${d.nodosComp.length} | — |`);
+  L.push(`#: Diferencia con la zapata rígida: ${f((rig.qmax / qF - 1) * 100, 2)} % (la placa real se flexa).`);
+  L.push("## 4 · Validación");
+  if (esDas) {
+    L.push("#| Programa | q_max (tonf/m²) | vs SAP2000 |"); L.push("#|---|---:|---:|");
+    L.push("#| SAP2000 24 (juez) | 81.914 | — |"); L.push(`#| Hekatan | ${f(qF, 3)} | ${f((qF / 81.9144 - 1) * 100, 4)} % |`);
+    L.push("#| SAFE 20 | 81.915 | +0.0002 % |"); L.push("#| ETABS 22 | 81.915 | +0.0010 % |"); L.push("#| OpenSeesPy | 81.915 | +0.0006 % |");
+  } else L.push("#: La validación nudo a nudo contra SAP2000, SAFE, ETABS y OpenSees está hecha para el ejemplo 6.10 de Das (test zapata-levantamiento-das). Para estos datos: exporta a SAP2000/SAFE/ETABS/OpenSees desde la app.");
+  L.push("## 5 · Conclusión");
+  L.push(`#: ${q_adm ? (qF <= q_adm ? "CUMPLE la presión admisible" : "NO CUMPLE la presión admisible") : "Presión máxima calculada"} (q_{max} = ${f(qF, 2)} tonf/m²${q_adm ? ` frente a q_{adm} = ${q_adm}` : ""}); ${nC < d.nodosComp.length ? `se levanta ${f((1 - nC / d.nodosComp.length) * 100, 1)} % de la base` : "toda la base en contacto"}. Diseño estructural de la zapata (punzonamiento, cortante, flexión): ⏳ pendiente.`);
+  L.push("#: Hekatan Struct");
+  return L.join("\n") + "\n";
+}
+
+/** Ventanita de imagen (libro) o texto (código) dentro de Struct. */
+function ventanita(id: string, titulo: string, html: string) {
+  document.getElementById(id)?.remove();
+  const v = document.createElement("div"); v.id = id;
+  v.style.cssText = "position:fixed;z-index:2147482500;left:22vw;top:14vh;max-width:70vw;max-height:76vh;overflow:auto;background:var(--hk-panel,#232936);color:var(--hk-texto,#C8D4E4);border:1px solid var(--hk-borde,#39445A);border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.55);font:13px 'Segoe UI',system-ui,sans-serif";
+  v.innerHTML = `<header style="display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--hk-chrome,#1B1F26)"><b>${titulo}</b>` +
+    `<span style="margin-left:auto"></span><button data-plegar="1" style="border:0;background:transparent;color:inherit;cursor:pointer">▁</button>` +
+    `<button data-x style="border:0;background:transparent;color:inherit;cursor:pointer">✕</button></header><div style="padding:10px">${html}</div>`;
+  document.body.appendChild(v); ventanaFlotante(v);
+  v.querySelector("[data-x]")!.addEventListener("click", () => v.remove());
+}
+
+/** «❓ Explícame» de un paso: el mismo componente para el informe, el tutor y el menú Diseño. */
+export function explicame(pasoId: string, ctx: Contexto) {
+  const paso = PASOS[pasoId];
+  document.getElementById("hk-explicame")?.remove();
+  const es = idioma() === "es";
+  const m = document.createElement("div"); m.id = "hk-explicame";
+  m.style.cssText = "position:fixed;z-index:2147483000;left:50%;top:22vh;transform:translateX(-50%);width:340px;background:var(--hk-panel,#232936);color:var(--hk-texto,#C8D4E4);border:1px solid var(--hk-marca,#D3A53C);border-radius:8px;padding:8px;box-shadow:0 18px 60px rgba(0,0,0,.55);font:13px 'Segoe UI',system-ui,sans-serif";
+  if (!paso) { m.innerHTML = `<b>❓ ${pasoId}</b><p>${es ? "⏳ Este paso todavía no tiene explicación más a fondo." : "⏳ No deeper explanation for this step yet."}</p>`; document.body.appendChild(m); setTimeout(() => m.remove(), 3500); return; }
+  const op = (k: string, txt: string, ok: boolean) => `<button data-k="${k}" ${ok ? "" : "disabled"} style="display:block;width:100%;text-align:left;margin:4px 0;padding:7px 9px;border-radius:6px;border:1px solid var(--hk-borde,#39445A);background:var(--hk-panel2,#2E3646);color:inherit;cursor:${ok ? "pointer" : "default"};opacity:${ok ? 1 : .5};font:inherit">${txt}${ok ? "" : " ⏳"}</button>`;
+  m.innerHTML = `<div style="display:flex"><b>❓ ${paso.titulo[es ? 0 : 1]}</b><button data-k="x" style="margin-left:auto;border:0;background:transparent;color:inherit;cursor:pointer">✕</button></div>` +
+    op("tecnico", es ? "¿Qué no entiendes? (más a fondo)" : "What is unclear? (in depth)", !!paso.cadena) +
+    op("calc", es ? "¿Quieres corroborarlo? (calculadora)" : "Want to check it? (calculator)", !!paso.calc) +
+    op("libro", es ? "Ver en el libro" : "See it in the book", !!paso.libro) +
+    op("codigo", es ? "Ver en el código" : "See it in the code", !!paso.codigo) +
+    op("ia", es ? "Pregúntale al asistente (sin IA en este equipo)" : "Ask the assistant (no AI on this machine)", false);
+  document.body.appendChild(m);
+  m.querySelectorAll<HTMLButtonElement>("button[data-k]").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.k; m.remove();
+    if (k === "tecnico") abrirTutorZapata(ctx, { inicioCadena: paso.cadena });
+    else if (k === "calc") abrirTutorZapata(ctx, { hojaInicial: { texto: hojaCalculadora(ctx.leer()!.p) + paso.calc!(ctx.leer()!.p).join("\n") + "\n", solo: false } });
+    else if (k === "libro") ventanita("hk-libro", "📖 " + paso.libro!.cita, `<img src="${base() + paso.libro!.png}" style="max-width:100%;background:#fff">`);
+    else if (k === "codigo") ventanita("hk-codigo", "⌨ " + (es ? "En el motor" : "In the engine"), `<code style="font:13px Consolas,monospace">${paso.codigo}</code>`);
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Las herramientas de la zapata en el menú «📐 Diseño» (menuDiseno.ts): una sola función por acción
+// ─────────────────────────────────────────────────────────────────────
+interface Contexto { leer: () => DatosTutor | null; hojaDas: string; ids: string[]; exportar?: (l: "py" | "tcl") => string | null; q_adm?: () => number | undefined }
+let ctxZapata: Contexto | null = null;
+
+function aplica(ctx: Contexto | null): string | null {
+  if (!ctx) return idioma() === "es" ? "Abre la zapata (ejemplo o plantilla) primero." : "Open the footing (example or template) first.";
+  const id = (window as any).__hekatanExample?.();
+  if (id && !ctx.ids.includes(id)) return idioma() === "es" ? "El modelo abierto no es una zapata con levantamiento." : "The open model is not a footing with uplift.";
+  if (!ctx.leer()) return tx("sinSol");
+  return null;
+}
+
+export async function abrirTutorZapata(ctx: Contexto, opc?: OpcTutor) {
+  const d = ctx.leer(); if (!d) return;
+  return abrirTutorFem(entradasZapata(d, ctx.hojaDas), () => hojaCalculadora(d.p), "🎓 Tutor FEM",
+    (id) => id === "W" ? hojaWinkler(d.p) : id === "NL" ? hojaTutorZapata(d) : (CADENA[id]?.hoja?.(d.p) ?? "# ⏳"), opc);
+}
+
+export async function abrirInformeZapata(ctx: Contexto) {
+  const d = ctx.leer(); if (!d) return;
+  const pasos = Object.entries(PASOS).map(([id, v]) => ({ id, titulo: v.titulo }));
+  return abrirTutorFem([{ titulo: ["📄 Informe de la zapata", "📄 Footing report"], hoja: () => hojaInforme(d, ctx.q_adm?.()) }],
+    () => hojaCalculadora(d.p), "📄 Informe", undefined, { pasos, alExplicar: (id) => explicame(id, ctx) });
+}
+
+function descargar(ctx: Contexto, lang: "py" | "tcl") {
+  const t = ctx.exportar?.(lang); if (!t) { alert(tx("sinSol")); return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t], { type: "text/plain" }));
+  a.download = `zapata_hekatan.${lang}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  (window as any).__hekatanUltimoOpenSees = t;
+}
+
+/** Registra (una vez) las entradas de la zapata en «📐 Diseño» y guarda el contexto del modelo abierto. */
+export function herramientasZapata(leer: () => DatosTutor | null, hojaDas: string, ids: string[],
+  exportar?: (l: "py" | "tcl") => string | null, q_adm?: () => number | undefined) {
+  ctxZapata = { leer, hojaDas, ids, exportar, q_adm };
+  (window as any).__hekatanZapataHerramientas = { tutor: () => abrirTutorZapata(ctxZapata!), informe: () => abrirInformeZapata(ctxZapata!),
+    explicame: (id: string) => explicame(id, ctxZapata!), opensees: (l: "py" | "tcl") => descargar(ctxZapata!, l) };
+  if ((window as any).__hekatanZapataRegistrada) return;
+  (window as any).__hekatanZapataRegistrada = true;
+  const guarda = (f: () => void) => () => { const m = aplica(ctxZapata); if (m) { alert(m); return; } f(); };
+  const es = idioma() === "es";
+  registrarDiseno({ id: "zapata-informe", orden: 10, icono: "📄", titulo: es ? "Informe de la zapata (geotecnia + FEM)" : "Footing report (geotechnics + FEM)",
+    detalle: es ? "Memoria de cálculo de ESTA zapata: Das, presión, contacto, validación. Cada paso con ❓ Explícame; se imprime a PDF." : "Calculation report of THIS footing: Das, pressure, contact, validation. Each step with ❓ Explain; prints to PDF.",
+    abrir: guarda(() => abrirInformeZapata(ctxZapata!)) });
+  registrarDiseno({ id: "zapata-tutor", orden: 11, icono: "🎓", titulo: tx("boton"),
+    detalle: es ? "Cómo funciona el FEM de esta zapata, paso a paso, con «¿De dónde sale?» hasta Gauss y las funciones de forma." : "How the FEM of this footing works, step by step, with «Where does it come from?» down to Gauss and shape functions.",
+    abrir: guarda(() => abrirTutorZapata(ctxZapata!)) });
+  registrarDiseno({ id: "zapata-levantamiento", orden: 12, icono: "⬆", titulo: es ? "Levantamiento: q_max, contacto y caso de Das" : "Uplift: q_max, contact and Das case",
+    detalle: es ? "Las vueltas reales del solver: qué resortes se apagan y cómo queda el contacto; comparado con la zapata rígida de Das." : "The real solver iterations: which springs switch off and the final contact; compared with Das' rigid footing.",
+    abrir: guarda(() => abrirTutorZapata(ctxZapata!, { inicioCadena: "NL" })) });
+  registrarDiseno({ id: "zapata-opensees-py", orden: 13, icono: "⬇", titulo: "OpenSeesPy (.py)",
+    detalle: tx("opsT"), abrir: guarda(() => descargar(ctxZapata!, "py")) });
+  registrarDiseno({ id: "zapata-opensees-tcl", orden: 14, icono: "⬇", titulo: "OpenSees Tcl (.tcl)",
+    detalle: tx("opsT"), abrir: guarda(() => descargar(ctxZapata!, "tcl")) });
 }
 
 if (typeof window !== "undefined") (window as any).__hekatanTutorFem = { abrirTutorFem, hojaTutorZapata, hojaPlacaZapata, hojaWinkler };
