@@ -38,6 +38,8 @@ export interface ParamsZapataExc {
   P: number;                                 // tonf (hacia abajo)
   exL: number; eyB: number;                  // e/L en x y en y
   n: number;                                 // divisiones por lado (mínimo)
+  /** false = Winkler LINEAL (el suelo tira), para comparar. Por defecto true. */
+  sinTraccion?: boolean;
 }
 
 export const DEFECTO: ParamsZapataExc = { Lx: 2, Ly: 2, t: 0.5, fc: 240, ks: 2000, c: 0.4, P: 60, exL: 0.25, eyB: 0, n: 60 };
@@ -97,7 +99,7 @@ export function heksZapataExcentrica(pp: Partial<ParamsZapataExc> = {}, patrones
     s++;
     L.push(`shell ${s} ${id(i, j)} ${id(i + 1, j)} ${id(i + 1, j + 1)} ${id(i, j + 1)} ${p.t} ${+E.toFixed(3)} 0 0`);
     L.push(`shelltype ${s} thick`);
-    L.push(`areaspring ${s} ${+ks.toFixed(6)} nodal compresion`);
+    L.push(`areaspring ${s} ${+ks.toFixed(6)} nodal${p.sinTraccion === false ? "" : " compresion"}`);
     const mx = (X[i] + X[i + 1]) / 2, my = (Y[j] + Y[j + 1]) / 2;
     for (const h of huellas)
       if (Math.abs(mx - h.xc) < p.c / 2 && Math.abs(my - h.yc) < p.c / 2)
@@ -224,7 +226,7 @@ export const zapataExcentrica: ExampleDef = {
     t: F("Zapata", "Espesor (m)", DAS_EJ610.t, 0.25, 1.5, 0.05),
     fc: F("Zapata", "f'c (kgf/cm²)", DAS_EJ610.fc, 180, 420, 10),
     c: F("Columna", "Lado columna (m)", DAS_EJ610.c, 0.2, 0.8, 0.05),
-    P: F("Columna", "Q (tonf)", +DAS_EJ610.P.toFixed(3), 1, 500, 0.001),
+    P: F("Columna", "Q (tonf)", DAS_EJ610.P, 1, 500, 0.001),
     exL: { default: DAS_EJ610.exL, label: "e_B/B (en x)", folder: "Columna",
            options: { "0": 0, "0.1 (Das 6.10)": 0.1, "1/12": 1 / 12, "1/6 (límite)": 1 / 6, "1/4": 0.25, "1/3": 1 / 3 } },
     eyB: { default: DAS_EJ610.eyB, label: "e_L/L (en y)", folder: "Columna",
@@ -242,7 +244,7 @@ export const zapataExcentrica: ExampleDef = {
       const nodes = states?.nodes?.val as number[][] | undefined;
       if (!it?.vueltas?.length || !nodes?.length) return null;
       return { p, nodes, vueltas: it.vueltas, nodosComp: it.nodos };
-    }, hojaDas48);
+    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"]);
   },
   computedLabels(pr: any, states: any) {
     const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;
@@ -327,3 +329,82 @@ export function areaEfectivaDas(B: number, L: number, eB: number, eL: number): A
   const B2 = B - p, L2 = L - q, A = B * L - (p * q) / 2;
   return { caso: "IV", A, Bp: A / L, Lp: L, B2, L2 };
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// PLANTILLA: el usuario pone SUS datos (el ejemplo abre con los de Das 6.10 ya calculado)
+// ─────────────────────────────────────────────────────────────────────
+import { SOIL_TYPES } from "../zapata-aislada/zapataAislada";
+
+/** Parámetros de la plantilla → los del generador. e = posición de la columna + M/P (Mx gira sobre x: mueve en y). */
+export function paramsDePlantilla(pr: Record<string, number>): ParamsZapataExc & { q_adm: number } {
+  const P = pr.P ?? DAS_EJ610.P;
+  const Lx = pr.Lx ?? DAS_EJ610.Lx, Ly = pr.Ly ?? DAS_EJ610.Ly;
+  const ex = (pr.xcol ?? 0) + (P > 0 ? (pr.My ?? 0) / P : 0);
+  const ey = (pr.ycol ?? 0) + (P > 0 ? (pr.Mx ?? 0) / P : 0);
+  return { Lx, Ly, t: pr.t ?? DAS_EJ610.t, fc: pr.fc ?? DAS_EJ610.fc, ks: pr.ks ?? DAS_EJ610.ks, c: pr.c ?? DAS_EJ610.c, P,
+           exL: ex / Lx, eyB: ey / Ly, n: Math.round(pr.n ?? DAS_EJ610.n), sinTraccion: (pr.sinTraccion ?? 1) >= 0.5, q_adm: pr.q_adm ?? 20 };
+}
+
+export const zapataLevantamientoPlantilla: ExampleDef = {
+  id: "zapata-levantamiento",
+  name: "Zapata con levantamiento (suelo sin tracción) · cimentación no lineal por contacto · Footing with uplift (tensionless soil)",
+  category: "4️⃣ Mixtos · 🧰 Cimentaciones",
+  defaultShellResult: "pressure",
+  availableShellResults: ["pressure", "displacementZ", "bendingXX", "bendingYY"],
+  params: {
+    Lx: F("Geometría", "B en x (m)", DAS_EJ610.Lx, 0.8, 8, 0.05),
+    Ly: F("Geometría", "L en y (m)", DAS_EJ610.Ly, 0.8, 8, 0.05),
+    t: F("Geometría", "Espesor (m)", DAS_EJ610.t, 0.25, 2, 0.05),
+    fc: F("Geometría", "f'c (kgf/cm²)", DAS_EJ610.fc, 180, 420, 10),
+    c: F("Columna", "Lado columna (m)", DAS_EJ610.c, 0.2, 1, 0.05),
+    xcol: F("Columna", "Posición x desde el centro (m)", 0.15, -3, 3, 0.05),
+    ycol: F("Columna", "Posición y desde el centro (m)", 0.30, -3, 3, 0.05),
+    P: F("Cargas", "P (tonf, hacia abajo)", DAS_EJ610.P, 0.1, 2000, 0.1),
+    Mx: F("Cargas", "Mx (tonf·m) → mueve la resultante en y", 0, -500, 500, 0.5),
+    My: F("Cargas", "My (tonf·m) → mueve la resultante en x", 0, -500, 500, 0.5),
+    soilType: { default: 0, label: "Tipo de suelo", folder: "Suelo", options: Object.fromEntries(SOIL_TYPES.map((s, i) => [s.name, i])) },
+    q_adm: F("Suelo", "q_adm (tonf/m²)", 20, 1, 300, 1),
+    ks: F("Suelo", "ks (tonf/m³)", DAS_EJ610.ks, 50, 50000, 10),
+    sinTraccion: { default: 1, boolean: true, label: "Suelo sin tracción (no lineal)", folder: "Suelo" },
+    n: F("Malla", "Divisiones por lado", DAS_EJ610.n, 10, 80, 2),
+  },
+  onParamChange(key: string, params: any) {
+    if (key !== "soilType") return;
+    const s = SOIL_TYPES[Math.round(params.soilType)];
+    if (!s || s.name === "Custom") return;
+    params.q_adm = s.q_adm;
+    params.ks = +(s.q_adm * s.ks_factor).toFixed(0);     // la misma correlación de zapata-aislada (kN/m³ = q_adm·9.807·f), en tonf/m³
+  },
+  build(pr: any, states: any, mp: any) {
+    const p = paramsDePlantilla(pr);
+    (window as any).__hekatanCliScript = heksZapataExcentrica(p);
+    cliModeler.build({}, states, mp);
+    if (typeof document !== "undefined" && document.body?.appendChild) botonTutorZapata(() => {
+      const it = (window as any).__hekatanCliContactoIter;
+      const nodes = states?.nodes?.val as number[][] | undefined;
+      if (!it?.vueltas?.length || !nodes?.length) return null;
+      return { p, nodes, vueltas: it.vueltas, nodosComp: it.nodos };
+    }, hojaDas48, ["zapata-excentrica", "zapata-levantamiento"]);
+  },
+  computedLabels(pr: any, states: any) {
+    const p = paramsDePlantilla(pr);
+    const out: Record<string, string> = {};
+    const ex = p.exL * p.Lx, ey = p.eyB * p.Ly;
+    out["Excentricidad"] = `e_x = ${ex.toFixed(3)} m (e/B ${(p.exL).toFixed(3)}) · e_y = ${ey.toFixed(3)} m (e/L ${(p.eyB).toFixed(3)})`;
+    const d = areaEfectivaDas(p.Lx, p.Ly, ex, ey);
+    out["Das: caso / A' (cap. carga)"] = `${d.caso} · ${d.A.toFixed(3)} m²`;
+    const U = states?.deformOutputs?.val?.deformations as Map<number, number[]> | undefined;
+    const nodes = states?.nodes?.val as number[][] | undefined;
+    if (U && nodes?.length) {
+      let wmin = 0, nC = 0, wmax = 0;
+      for (let i = 0; i < nodes.length; i++) { const w = U.get(i)?.[2] ?? 0; wmin = Math.min(wmin, w); wmax = Math.max(wmax, w); if (w < 0) nC++; }
+      const q = -wmin * p.ks;
+      out["q_max"] = `${q.toFixed(2)} tonf/m²`;
+      out["q_max / q_adm"] = `${(q / p.q_adm).toFixed(2)} ${q > p.q_adm ? "⚠️ NO CUMPLE" : "✓"}`;
+      out["Nudos en contacto"] = p.sinTraccion ? `${nC} de ${nodes.length}` : `lineal: ${nodes.length - nC} nudos con el suelo TIRANDO`;
+    }
+    const dentro = Math.abs(p.exL) * 6 + Math.abs(p.eyB) * 6 <= 1 + 1e-9;
+    out["Estado"] = dentro ? "resultante en el núcleo: toda la base comprime" : "resultante fuera del núcleo: parte de la base se LEVANTA";
+    return out;
+  },
+} as ExampleDef;

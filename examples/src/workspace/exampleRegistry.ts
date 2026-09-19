@@ -280,7 +280,7 @@ import { cadDraw } from "../cad-draw/cadDraw";
 import { vigaMedioElastico } from "../viga-medio-elastico/vigaMedioElastico";
 import { zapataVigaAmarre } from "../zapata-viga-amarre/zapataVigaAmarre";
 import { zapataAislada } from "../zapata-aislada/zapataAislada";
-import { zapataExcentrica } from "../zapata-excentrica/zapataExcentrica";
+import { zapataExcentrica, zapataLevantamientoPlantilla } from "../zapata-excentrica/zapataExcentrica";
 import { arco } from "../arco/arco";
 import { burj } from "../burj/burj";
 import { eiffel } from "../eiffel/eiffel";
@@ -446,6 +446,7 @@ export const examplesRegistry: ExampleDef[] = [
   // Cimentaciones (zapataAisladaValidacion va en sección Benchmarks Combinados)
   zapataAislada,
   zapataExcentrica,
+  zapataLevantamientoPlantilla,
   zapataVigaAmarre,
   vigaMedioElastico,
   // SAFE Benchmarks (cross-validation Hekatan vs SAFE 20)

@@ -374,7 +374,7 @@ export function entradasZapata(d: DatosTutor, hojaDas: string): EntradaTutor[] {
 }
 
 /** El botón «🎓 Tutor FEM» del ejemplo de la zapata: solo visible mientras ese ejemplo está abierto. */
-export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: string) {
+export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: string, ids: string[] = ["zapata-excentrica"]) {
   css();
   (window as any).__hekatanTutorDatos = leerDatos;
   if (document.getElementById("hk-tutor-btn")) return;
@@ -389,7 +389,7 @@ export function botonTutorZapata(leerDatos: () => DatosTutor | null, hojaDas: st
   document.body.appendChild(b);
   const vigila = setInterval(() => {
     const id = (window as any).__hekatanExample?.();
-    if (id !== undefined && id !== null && id !== "zapata-excentrica") {
+    if (id !== undefined && id !== null && !ids.includes(id)) {
       b.remove(); document.getElementById("hk-tutor")?.remove(); clearInterval(vigila);
     }
   }, 800);
