@@ -136,8 +136,12 @@ function buildEdificio(p: any, states: any, sys: Sys, opts?: { soloGeometria?: b
     shearAreasY = m<number>(), shearAreasZ = m<number>();
   kinds.forEach((k, e) => {
     elasticities.set(e, E); poissonsRatios.set(e, NU); densities.set(e, RHO); shearModuli.set(e, G);
-    // ETABS: losa/muro = ShellThin DKE → plateFormulation 2 (DKMQ Katili). Frame = Timoshenko (As=5/6·A).
-    if (k === "slab" || k === "wall") { thicknesses.set(e, k === "wall" ? tWall : tSlab); plateFormulations.set(e, 2); drillingTypes.set(e, 2); }
+    // Losa/muro = Shell-Thick MITC4 → plateFormulations 0. Frame = Timoshenko (As=5/6·A).
+    // ⚠️ Era 2 (el comentario decía «DKMQ», que es el 3): en el solver el 2 caía en el MITC4 y los
+    // exportadores lo escribían Membrane. Desde el 19-sep-2026 el 2 ES membrana (sin flexión), así
+    // que pasa al 0: el MISMO elemento que se calculaba y el de la referencia SAP2000 Shell-Thick
+    // del artículo (validation/articulo-revista/sap_dual.json, modo 1 −0.30 %).
+    if (k === "slab" || k === "wall") { thicknesses.set(e, k === "wall" ? tWall : tSlab); plateFormulations.set(e, 0); drillingTypes.set(e, 2); }
     else if (k === "col") { areas.set(e, A_c); momentsOfInertiaZ.set(e, I_c); momentsOfInertiaY.set(e, I_c); torsionalConstants.set(e, J_c); shearAreasY.set(e, 5/6*A_c); shearAreasZ.set(e, 5/6*A_c); }
     else { areas.set(e, A_v); momentsOfInertiaZ.set(e, Iy_v); momentsOfInertiaY.set(e, Iz_v); torsionalConstants.set(e, J_v); shearAreasY.set(e, 5/6*A_v); shearAreasZ.set(e, 5/6*A_v); }
   });

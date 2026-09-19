@@ -221,7 +221,7 @@ function buildEdificio(p, sys) {
     plateFormulations: M(), drillingTypes: M(), shearAreasY: M(), shearAreasZ: M() };
   kinds.forEach((k, e) => {
     ei.elasticities.set(e, E); ei.poissonsRatios.set(e, NU); ei.densities.set(e, RHO); ei.shearModuli.set(e, G);
-    if (k === "slab" || k === "wall") { ei.thicknesses.set(e, k === "wall" ? tWall : tSlab); ei.plateFormulations.set(e, 2); ei.drillingTypes.set(e, 2); }
+    if (k === "slab" || k === "wall") { ei.thicknesses.set(e, k === "wall" ? tWall : tSlab); ei.plateFormulations.set(e, 0);  /* era 2: el 2 es membrana desde el 19-sep-2026; el 0 es el MITC4 que se calculaba */ ei.drillingTypes.set(e, 2); }
     else if (k === "col") { ei.areas.set(e, A_c); ei.momentsOfInertiaY.set(e, I_c); ei.momentsOfInertiaZ.set(e, I_c); ei.torsionalConstants.set(e, J_c); ei.shearAreasY.set(e, 5/6*A_c); ei.shearAreasZ.set(e, 5/6*A_c); }
     else { ei.areas.set(e, A_v); ei.momentsOfInertiaY.set(e, Iy_v); ei.momentsOfInertiaZ.set(e, Iz_v); ei.torsionalConstants.set(e, J_v); ei.shearAreasY.set(e, 5/6*A_v); ei.shearAreasZ.set(e, 5/6*A_v); }
   });

@@ -137,11 +137,13 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
             // Dispatch de la formulacion de placa, segun plateFormulations[idx]:
             //   0 = Mindlin con MITC4   (Shell-Thick, defecto de hoy)
             //   1 = Kirchhoff MZC       (Shell-Thin)
-            //   2 = «Membrane» para los EXPORTADORES (.e2k/.s2k, ver data-model.ts).
-            //       En el solver NO quita la flexion: cae en el MITC4 igual que
-            //       el 0 (medido con el WASM de 6be372b75: mismo w que el 0). La
-            //       membrana del solver es flexion 0 (bendingModifiers = 0 o
-            //       shellModifiers m11=m22=m12=0 -> `sinFlexion` en shellQ4.cpp).
+            //   2 = MEMBRANA, en el solver y en los exportadores (.e2k/.s2k
+            //       Membrane). Va a getLocalStiffnessMatrixShellQ4, que con el 2
+            //       enciende `sinFlexion` (lo mismo que bendingModifiers = 0 o
+            //       shellModifiers m11=m22=m12=0): sin placa, y los giros que se
+            //       quedan sin rigidez los quita getZerosIndices. Hasta el
+            //       19-sep-2026 (rama membrana-2) el 2 caia aqui en el MITC4 CON
+            //       flexion, igual que el 0, y SAP2000 recibia otro elemento.
             //   3 = DKMQ de Katili      (Discrete Kirchhoff-Mindlin)
             //   4 = DSE de Wilson       (Shell-Thick del libro, cap. 8)
             //

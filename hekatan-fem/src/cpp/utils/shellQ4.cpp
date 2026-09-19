@@ -1629,6 +1629,15 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     } else {
         sinFlexion = (std::fabs(bFactor) < 1e-9);
     }
+    // plateFormulations == 2 → MEMBRANA (19-sep-2026, rama membrana-2). Es lo que
+    // escriben los exportadores (.e2k MODELINGTYPE "Membrane", .s2k Type=Membrane),
+    // así que el solver hace lo MISMO que con flexión 0: no arma la placa y los
+    // giros θx/θy de un nudo que solo toca membranas quedan sin rigidez y los saca
+    // `getZerosIndices` (deform.cpp y modal.cpp), como ya pasaba con el zinc del
+    // galpón. Antes el 2 caía en el MITC4 con flexión y SAP2000 recibía OTRO
+    // elemento (registros/2026-09-19_platefomulations_2.md).
+    const int plateForm = getMapVal(elementInputs.plateFormulations, index, 0);
+    if (plateForm == 2) sinFlexion = true;
 
     // ── que membrana se arma ─────────────────────────────────────────────
     //   3 = ITW 1990 (membrana + drilling JUNTOS, 12x12)   [DEFECTO]
@@ -1781,12 +1790,9 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     // El resto de valores los reparte getLocalStiffnessMatrix.cpp (1=Thin, 3=DKMQ).
     //
     // ⚠️ Es el 4, NO el 2 (19-sep-2026). Del 17 al 19-sep estuvo en el 2, que ya
-    // tenía dueño: los exportadores escriben el 2 como `Membrane` (data-model.ts)
-    // y los modelos que lo ponen (Test M, galpón, importador CSI, ITW) lo hacían
-    // para eso. Medido con el WASM de 6be372b75 (16-sep): el 2 daba EXACTAMENTE
-    // lo mismo que el 0 (MITC4), w = -1.032929e-3 en los dos; con el DSE en el 2
-    // pasó a -1.265599e-3. El 2 vuelve a caer aquí como el 0, sin tocar Kb.
-    const int plateForm = getMapVal(elementInputs.plateFormulations, index, 0);
+    // tenía dueño: los exportadores escriben el 2 como `Membrane` (data-model.ts).
+    // El 2 es ahora membrana también aquí: `sinFlexion` (arriba) y Kb = 0.
+    // (`plateForm` se lee arriba, junto a `sinFlexion`.)
 
     Eigen::MatrixXd Kb;
     if (sinFlexion) {

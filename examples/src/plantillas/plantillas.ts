@@ -207,7 +207,9 @@ const PARAMS = {
   // salía **−7.3 %**, porque sobre-rigidiza fuera del plano en paneles
   // alargados (0.5 × 3.5 m). En el propio ETABS, Thin y Thick del muro dan lo
   // mismo (0.1 %) — su «Shell-Thick» no es un MITC4.
-  // Los MISMOS numeros que la OAPI de CSI: 0 Thick · 1 Thin · 2 Membrana.
+  // Numeracion PROPIA de Hekatan (plateFormulations): 0 Thick · 1 Thin · 2 Membrana.
+  // NO es la de la OAPI: ETABS SetSlab 1 Thin / 2 Thick / 3 Membrane; SAP SetShell_1
+  // 1 Thin / 2 Thick / 5 Membrane. El 2 es membrana en el solver desde el 19-sep-2026.
   // «Membrana» es la losa que NO toma flexion: solo reparte su carga a las
   // vigas, como el deck o la maciza declarada membrana en ETABS.
   formLosa: {

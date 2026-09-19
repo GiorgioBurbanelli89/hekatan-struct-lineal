@@ -106,7 +106,7 @@ export const slabBeamsColumns: ExampleDef = {
 
     // ── elementInputs ──
     const thicknesses        = new Map<number, number>();
-    const plateFormulations  = new Map<number, number>();  // 2 = DKMQ Katili (match SAP/PyNite)
+    const plateFormulations  = new Map<number, number>();  // 0 = Shell-Thick MITC4
     const elasticities       = new Map<number, number>();
     const poissons           = new Map<number, number>();
     const densities          = new Map<number, number>();
@@ -120,13 +120,16 @@ export const slabBeamsColumns: ExampleDef = {
 
     const G = p.E / (2 * (1 + p.nu));
 
-    // (a) Shells (losa) — DKMQ Katili (match SAP/PyNite)
+    // (a) Shells (losa) — Shell-Thick MITC4 (plateFormulations 0)
     for (let i = 0; i < nShells; i++) {
       thicknesses.set(i, p.t);
       elasticities.set(i, p.E);
       poissons.set(i, p.nu);
       densities.set(i, 24);
-      plateFormulations.set(i, 2);   // 2 = DKMQ Katili
+      // ⚠️ Era 2 «DKMQ Katili»: el DKMQ es el 3 y el 2 caía en el MITC4 (y el .e2k salía
+      // Membrane). Desde el 19-sep-2026 el 2 es membrana → 0, el MITC4 que ya se calculaba.
+      // No el 3: el .s2k escribe el 3 como Plate-Thin (sin membrana), otro elemento.
+      plateFormulations.set(i, 0);
     }
 
     // (b) Vigas horizontales (Iy = strong para flexion vertical, orientations [0,0,1])

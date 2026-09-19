@@ -316,6 +316,11 @@ export const csiImporter: ExampleDef = {
           ei.poissonsRatios.set(i, nu); ei.densities.set(i, rho);
           (ei.thicknesses ??= new Map()).set(i, tC);
           (ei.plateFormulations ??= new Map()).set(i, p.formaCubierta ?? 2);
+          // Membrana = 2 Y flexión 0, como el galpón: el 2 ya es membrana en el solver
+          // (19-sep-2026) y la flexión 0 la deja explícita para los exportadores.
+          if ((p.formaCubierta ?? 2) === 2) {
+            (ei.membraneModifiers ??= new Map()).set(i, 1); (ei.bendingModifiers ??= new Map()).set(i, 0);
+          }
         }
       }
     }

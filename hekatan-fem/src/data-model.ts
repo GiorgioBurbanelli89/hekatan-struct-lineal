@@ -138,16 +138,19 @@ export type ElementInputs = {
    * 1 Thin / 2 Thick / 5 Membrane):
    *   0 = Shell-Thick, MITC4 (Mindlin)            [defecto]
    *   1 = Shell-Thin, Kirchhoff (MZC/DKQ)
-   *   2 = «Membrane» PARA LOS EXPORTADORES
+   *   2 = Membrane: solo su plano, SIN flexion (solver y exportadores)
    *   3 = DKMQ de Katili
    *   4 = placa DSE de Wilson (cap. 8 de su libro), `shelltype <id> wilson`
    *
-   * ⚠️ El 2 NO es membrana en el solver: ahi cae en el MITC4 igual que el 0
-   * (medido con el WASM de 6be372b75, 16-sep: mismo w que el 0). La membrana
-   * del SOLVER es flexion 0 (`bendingModifiers` = 0, o `shellModifiers` con
-   * m11 = m22 = m12 = 0). Un modelo que quiera ser membrana en los dos sitios
-   * pone las DOS cosas, como el galpon. Del 17 al 19-sep el 2 fue por error
-   * la placa de Wilson; ahora es el 4.
+   * El 2 es membrana en los DOS sitios desde el 19-sep-2026 (rama membrana-2):
+   * el solver hace lo mismo que con flexion 0 (`bendingModifiers` = 0, o
+   * `shellModifiers` con m11 = m22 = m12 = 0 → `sinFlexion` en shellQ4.cpp).
+   * Antes el solver lo calculaba con el MITC4 CON flexion (igual que el 0) y
+   * los exportadores lo escribian Membrane: SAP2000 recibia otro elemento.
+   * Quien quiera cascara con flexion pone 0 (o 1/3/4). Los que ponian 2 por
+   * eso (Test M, losas con vigas) pasaron al 0. Poner ademas flexion 0 (como
+   * el galpon) no cambia nada y deja la intencion explicita.
+   * Del 17 al 19-sep el 2 fue por error la placa de Wilson; ahora es el 4.
    *
    * Por que el exportador lo escribe: ETABS y SAP reciben `MODELINGTYPE
    * "Membrane"` / `Type=Membrane` para que el fichero sea el MISMO elemento que

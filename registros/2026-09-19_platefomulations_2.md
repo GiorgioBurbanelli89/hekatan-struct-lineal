@@ -96,3 +96,67 @@ t/L 0.001 −2.155929e+2 · 0.01 −2.156896e−1 · 0.05 −1.744266e−3 · 0.
   `cliModeler.ts` solo los 2 trozos de `shelltype`/comentario del deck (blob armado desde HEAD).
 - ⏳ Alinear exportador ↔ solver (apartado 1, propuesta a/b/c).
 - ⏳ `deform.wasm` a commitear junto con los fuentes ajenos cuando se validen.
+
+---
+
+## 7) Rama `membrana-2` (worktree `../hekatan-struct-membrana2`, desde `733eb3b4a`): el 2 = MEMBRANA en todo
+Worktree aparte para no tocar los cambios ajenos sin commit de `deform.cpp`/`modal.cpp`/`springsExtra.h`.
+`node_modules` = uniones al del principal (mismo `package.json`), pero `hekatan-fem`/`examples`/`hekatan-ui`/
+`hekatan-mesh`/`website` apuntan al worktree (si no, el bundle cogería el WASM de la otra rama).
+
+### ✅ Paso a — quien quería cáscara con flexión deja el 2
+| sitio | antes → ahora | por qué |
+|---|---|---|
+| `testM.ts:140` | 2 → **0** | la referencia es SAP2000 **Shell-Thick** (`sap_dual.json`); el 2 ya calculaba el MITC4 = 0 |
+| `cli/sweep_case.mjs:230` (+ `time_modal_testm`, `browser_limit/harness.js`, `.cmp_lib`, `.val_nuevo`, `.val_viejo`: copias de testM) | 2 → **0** | idem; mismos números |
+| `slabBeamsColumns.ts:129`, `plateWithBeams.ts:89` | 2 («DKMQ») → **0**, no 3 | nunca fueron DKMQ (en jun-2026 el 2 ya caía en el MITC4) y su `.e2k` de `validation/modelos/roundtrip/*_B.e2k` salía `Membrane`. El 3 tampoco: el `.s2k` escribe el 3 como **Plate-Thin** (sin membrana) |
+### ✅ Paso b — quien quiere membrana pone 2 + flexión 0 (como el galpón)
+- `csiImporter.ts:318`: cubierta «Membrana (solo su plano)» = 2 → ahora también `membraneModifiers 1` + `bendingModifiers 0`.
+- `modeloAHeks.ts`: el 2 se guarda como `shellmod id 1 0` (antes `thick` = flexaba) y avisa.
+- `galpon.ts`: ya lo hacía; solo el comentario.
+- `plantillas.ts` («Membrana (sin flexión)» = 2): no pone flexión 0; con el paso c ya es membrana de verdad.
+### ✅ Paso c — solver
+- `hekatan-fem/src/cpp/utils/shellQ4.cpp:1632-1640`: `plateForm` se lee junto a `sinFlexion` y `if (plateForm == 2) sinFlexion = true;`
+  = lo MISMO que flexión 0 (Kb = 0; los θx/θy huérfanos los quita `getZerosIndices`, deform y modal). No se inventa nada.
+- Comentarios coherentes: `getLocalStiffnessMatrix.cpp:137-147`, `data-model.ts:136-160`.
+- Falso «MISMOS números que la OAPI» corregido en `plantillas.ts:210`, `itwBenchmarks.ts:66`, `banco_shell_escalon_b.mjs:49`
+  (ETABS SetSlab 3 = Membrane; SAP SetShell_1 5 = Membrane).
+### ✅ WASM (`hekatan-fem/build_wasm.sh`, solo fuentes del commit)
+- base limpia `733eb3b4a` → `a9301d0fbba841d88a5571288634902a040231f7` · **nuevo `7dd30a50978bd4052ef37677e2befeda45ac3106`** · `deform.js` igual (`0f28e1da…`).
+
+### ✅ SAP2000 de juez (referencias guardadas; SAP NO se abrió)
+**Membrana ITW** (pf 2, SAP2000 ShellType 5): 1.500000 / 0.600000 / 0.354201 / 23.6021 — iguales antes y después (0.000 %).
+**Placa 4×4, P fuera y dentro de su plano** (`scratchpad/m2/placa.mjs`):
+
+| | w (Pz) base | w (Pz) nuevo | u (Px) base = nuevo |
+|---|---|---|---|
+| pf 0 | −1.032929e−3 | −1.032929e−3 | 3.462703e−6 |
+| **pf 2** | −1.032929e−3 (flexaba) | **0** | 3.462703e−6 |
+| pf 2 + flex 0 | 0 | 0 | 3.462703e−6 |
+| pf 4 | −1.265599e−3 | −1.265599e−3 | 3.462703e−6 |
+
+**Dual del artículo** (ms 1.0, 12 modos) vs SAP2000 24 Shell-Thick (`_v4_sap_modal.json`):
+
+| | T1 | T2 | T3 | ΣUx | ΣUy | ΣUz | ΣRx | ΣRy | ΣRz |
+|---|---|---|---|---|---|---|---|---|---|
+| SAP2000 | 0.4841 | 0.4299 | 0.1546 | 99.14 | 85.38 | 58.57 | 53.24 | 59.66 | 85.68 |
+| Test M nuevo (pf 0) | 0.4826 −0.30 % | 0.4318 +0.44 % | 0.1542 −0.27 % | 99.27 | 85.87 | 58.72 | 53.82 | 60.54 | 86.19 |
+
+= exactamente lo de `733eb3b4a` con pf 2 (no empeora). Con pf 2 y el WASM nuevo el dual es OTRO elemento (losas y muros
+membrana: T1 0.5422, +12 %): no hay referencia SAP Membrane del dual → ⏳ inconcluso, y no se usa.
+**Wilson en el 4**: 14 placas (`pl_*_hard_w`, `pl16_*`) dígito a dígito iguales (−2.253571e−4 en t/L 0.1).
+**Galpón deck** (`galpon-vs-sap2000-oapi`): 0.000 % vs SAP2000, igual que antes.
+
+### ✅ Suite (caso a caso en procesos separados: el runner único revienta con «Fatal process out of memory: Zone»)
+- base `733eb3b4a` + WASM `a9301d0f`: **570/591** (+ `ciclo-csi-ficheros` muerto por OOM Zone).
+- rama: **622/643** = las mismas 570 + 52 de `ciclo-csi-ficheros` (esta vez no reventó; OOM intermitente, no del cambio).
+- Única fila que cambia: `heks-ida-y-vuelta` dual «aviso SÍ» → «aviso NO» (ya no hay pf 2 en el dual), 0.274 % igual.
+- Los 21 FALLA/ERROR son los mismos antes y después (automesh ×6, salud-ejemplos ×3, paridad-py ×3, placa-navier ×2, …).
+- ⚠️ El worktree necesitó copiar del principal 381 ficheros sin seguimiento + 3068 ignorados de `tests/`/`validation/` y 74
+  de `examples/src` (el registro del commit importa `burj`, `eiffel`, `opera`, `talud`, que NO están en ningún commit).
+
+### ⏳ Queda
+- `.s2k`: el 3 sale Plate-Thin y el 4 Plate-Thick, pero en el solver son DKMQ y DSE de Wilson (cáscara completa). Mismo tipo de choque.
+- `f2k`: el 3 sale Shell-Thin. `analyze.ts` da momentos en membranas (flexión 0 o pf 2) a partir de los giros: no los anula.
+- Triángulos (`getLocalStiffnessMatrixShell`) no miran ni flexión 0 ni pf 2.
+- Referencia SAP2000 Membrane del dual (si Jorge la quiere).

@@ -101,8 +101,9 @@ export async function correr() {
   // Regla: o el .heks reconstruye el mismo modelo, o lo DICE en la cabecera. Lo que no
   // puede pasar nunca es un fichero que difiere y calla. El 18-sep difería un 4.4 % porque
   // el 2 del dual era (por error) la placa DSE de Wilson y el lector no la declaraba. Desde
-  // el 19-sep el DSE es el 4 (`shelltype id wilson`) y el 2 vuelve a ser el MITC4 en el
-  // solver, que se relee como `thick` (registros/2026-09-19_platefomulations_2.md).
+  // el 19-sep el DSE es el 4 (`shelltype id wilson`). Y en la rama membrana-2 el dual pasa
+  // del 2 al 0 (el 2 es ya membrana), que se relee como `thick` sin aviso
+  // (registros/2026-09-19_platefomulations_2.md).
   try {
     const dual = await empaquetar(`
 const g = globalThis; g.window = g;

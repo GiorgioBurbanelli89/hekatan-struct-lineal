@@ -79,14 +79,17 @@ export const plateWithBeams: ExampleDef = {
     const torsionalConstants = new Map<number, number>();
     const orientations = new Map<number, [number, number, number]>();
     const sections = new Map<number, [number, number]>();
-    const plateFormulations = new Map<number, number>();   // 2 = DKMQ Katili
+    const plateFormulations = new Map<number, number>();   // 0 = Shell-Thick MITC4
 
     for (let i = 0; i < nShells; i++) {
       thicknesses.set(i, p.t);
       elasticities.set(i, p.E);
       poissons.set(i, p.nu);
       densities.set(i, 24);
-      plateFormulations.set(i, 2);   // DKMQ Katili para match SAP/PyNite
+      // ⚠️ Era 2 «DKMQ Katili»: el DKMQ es el 3 y el 2 caía en el MITC4 (y el .e2k salía
+      // Membrane). Desde el 19-sep-2026 el 2 es membrana → 0, el MITC4 que ya se calculaba.
+      // No el 3: el .s2k escribe el 3 como Plate-Thin (sin membrana), otro elemento.
+      plateFormulations.set(i, 0);
     }
     // Frame section bW (width horizontal) x bH (height vertical) — viga horizontal en XY.
     // Convencion Hekatan-FEM frame horizontal (eje local x a lo largo, sin orientations):

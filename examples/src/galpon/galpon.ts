@@ -186,15 +186,16 @@ export const galpon: ExampleDef = {
       sectionShapes.set(i, forma);
     }
     // Paños de cubierta (nFrames .. fin): membrana delgada, peso via qCub.
-    // ⚠️ (14-sep-2026) `plateFormulations = 2` SOLO lo leen los exportadores (MODELINGTYPE/Type
-    // Membrane): el motor despacha 1 (Thin) y 3 (DKMQ) y el 2 caía en el Q4 grueso CON flexión.
-    // La membrana en el cálculo es flexión 0 (shellQ4.cpp `sinFlexion` no arma la placa).
+    // ⚠️ (14-sep-2026) Hasta el 19-sep-2026 `plateFormulations = 2` SOLO lo leían los exportadores
+    // (MODELINGTYPE/Type Membrane) y en el motor caía en el Q4 grueso CON flexión; por eso aquí va
+    // además flexión 0 (shellQ4.cpp `sinFlexion` no arma la placa). Desde la rama membrana-2 el 2
+    // ya es membrana en el motor; la flexión 0 se deja: da lo mismo y la intención queda explícita.
     const membraneModifiers = new Map<number, number>();
     const bendingModifiers = new Map<number, number>();
     for (let i = nFrames; i < elements.length; i++) {
       elasticities.set(i, Es); shearModuli.set(i, Gs); poissons.set(i, nu_s);
       thicknesses.set(i, tCub); densities.set(i, 0);
-      plateFormulations.set(i, 2);   // Membrane (exportadores)
+      plateFormulations.set(i, 2);   // Membrane (exportadores y motor)
       membraneModifiers.set(i, 1); bendingModifiers.set(i, 0);   // Membrane (motor)
     }
 

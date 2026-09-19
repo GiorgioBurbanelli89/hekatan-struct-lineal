@@ -114,7 +114,7 @@ function build(ms) {
   const ei = { elasticities: M(), poissonsRatios: M(), shearModuli: M(), densities: M(), areas: M(), momentsOfInertiaY: M(), momentsOfInertiaZ: M(), torsionalConstants: M(), thicknesses: M(), plateFormulations: M() };
   kinds.forEach((k, e) => {
     ei.elasticities.set(e, E); ei.poissonsRatios.set(e, NU); ei.densities.set(e, RHO / GRAV); ei.shearModuli.set(e, G);
-    if (k === "slab" || k === "wall") { ei.thicknesses.set(e, k === "wall" ? tWall : tSlab); ei.plateFormulations.set(e, 2); }
+    if (k === "slab" || k === "wall") { ei.thicknesses.set(e, k === "wall" ? tWall : tSlab); ei.plateFormulations.set(e, 0);  /* era 2: el 2 es membrana desde el 19-sep-2026; el 0 es el MITC4 que se calculaba */ }
     else if (k === "col") { ei.areas.set(e, A_c); ei.momentsOfInertiaY.set(e, I_c); ei.momentsOfInertiaZ.set(e, I_c); ei.torsionalConstants.set(e, J_c); }
     else { ei.areas.set(e, A_v); ei.momentsOfInertiaZ.set(e, Iy_v); ei.momentsOfInertiaY.set(e, Iz_v); ei.torsionalConstants.set(e, J_v); }
   });

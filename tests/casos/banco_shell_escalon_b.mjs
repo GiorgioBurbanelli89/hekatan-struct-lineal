@@ -46,7 +46,9 @@ const AQUI = dirname(fileURLToPath(import.meta.url));
 const JSON_BANCO = join(AQUI, "..", "..", "validation", "03-cascaras-muros",
                         "banco_shell_escalonB_8x8.json");
 
-// tipo de cáscara → plateFormulations (los números de la OAPI de CSI)
+// tipo de cáscara → plateFormulations (numeración PROPIA de Hekatan, no la de la OAPI:
+// ETABS SetSlab 3 = Membrane, SAP SetShell_1 5 = Membrane). Desde el 19-sep-2026 el 2
+// es membrana también en el solver (antes flexaba con el MITC4).
 const FORM = { Thick: 0, Thin: 1, Membrane: 2 };
 
 /**

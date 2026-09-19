@@ -150,18 +150,18 @@ export function modeloAHeks(states: any, opts: OpcionesHeks = {}): string {
       L.push(`shell ${e + 1} ${p[0] + 1} ${p[1] + 1} ${p[2] + 1} ${p[3] + 1} ` +
              `${N(t, 0.2)} ${N(E, 25e6)} ${N(q, 0)} ${N(rho, 2.45)}`);
     }
-    // `plateFormulations`: 0 = Thick (MITC4), 1 = Thin (DKQ), 2 = «Membrane» de los
-    // exportadores (en el SOLVER es el MITC4, igual que el 0), 3 = DKMQ, 4 = placa DSE de
-    // Wilson (cap. 8). Del 17 al 19-sep-2026 el DSE estuvo en el 2 y aquí se avisaba de
-    // que no se podía declarar; ahora es el 4 y el lector lo entiende (`shelltype id wilson`).
-    // El 2 se escribe `thick`: en el solver es EXACTO (mismo MITC4). Lo que se pierde es la
-    // etiqueta Membrane de los exportadores, y se avisa.
+    // `plateFormulations`: 0 = Thick (MITC4), 1 = Thin (DKQ), 2 = MEMBRANA (sin flexión, en el
+    // solver y en los exportadores desde el 19-sep-2026), 3 = DKMQ, 4 = placa DSE de Wilson
+    // (cap. 8, `shelltype id wilson`). El `.heks` no tiene palabra para el 2: la membrana se
+    // escribe como la escribe el galpón, `shellmod id 1 0` (flexión 0), que en el solver es
+    // EXACTAMENTE lo mismo (`sinFlexion` en shellQ4.cpp). Se avisa porque el número 2 no vuelve.
     const conTipo = cascaras.filter((e) => g(ei.plateFormulations, e) !== undefined);
     const memb = conTipo.filter((e) => g(ei.plateFormulations, e) === 2);
+    const esMemb = new Set(memb);
     if (memb.length) avisos.push(
-      `# ⚠️ ${memb.length} cáscara(s) con plateFormulations = 2 («Membrane» solo para .e2k/.s2k): ` +
-      "se guardan como `thick`,",
-      "#    que es lo que el solver ya calculaba; al exportar a CSI saldrán Shell-Thick, no Membrane.");
+      `# ⚠️ ${memb.length} cáscara(s) con plateFormulations = 2 (membrana): ` +
+      "se guardan como `shellmod id 1 0` (flexión 0),",
+      "#    que el solver calcula igual; el número 2 no se relee, la flexión 0 sí.");
     const palabra = (f: number | undefined) =>
       f === 1 ? "thin" : f === 3 ? "dkmq" : f === 4 ? "wilson" : "thick";
     if (conTipo.length) {
@@ -174,12 +174,13 @@ export function modeloAHeks(states: any, opts: OpcionesHeks = {}): string {
     if (conDrill.length) avisos.push(
       `# ⚠️ ${conDrill.length} cáscara(s) declaran su tipo de drilling (drillingTypes), que el .heks no guarda:`,
       "#    al releerlo se usa el del lector (en el dual medido: 0.004 % en desplazamientos).");
-    const conMod = cascaras.filter((e) =>
+    const conMod = cascaras.filter((e) => esMemb.has(e) ||
       g(ei.membraneModifiers, e) !== undefined || g(ei.bendingModifiers, e) !== undefined);
     if (conMod.length) {
       L.push("# modificadores: shellmod id membrana flexión");
       for (const e of conMod) {
-        L.push(`shellmod ${e + 1} ${N(g(ei.membraneModifiers, e), 1)} ${N(g(ei.bendingModifiers, e), 1)}`);
+        const flex = esMemb.has(e) ? 0 : g(ei.bendingModifiers, e);   // 2 = membrana → flexión 0
+        L.push(`shellmod ${e + 1} ${N(g(ei.membraneModifiers, e), 1)} ${N(flex, 1)}`);
       }
     }
     const conAngS = cascaras.filter((e) => (g(ei.shellAngles, e) ?? 0) !== 0);
