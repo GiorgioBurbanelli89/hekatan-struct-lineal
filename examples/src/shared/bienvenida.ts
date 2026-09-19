@@ -22,7 +22,10 @@ const P = new URLSearchParams(location.search);
 const FORZAR = P.get("bienvenida") === "1";
 const SALTAR = P.get("sinBienvenida") === "1" || (!FORZAR && !!(navigator as any).webdriver);
 // «Abriste: …» solo cuando se llega a un modelo concreto (el lienzo en blanco es la entrada normal)
-const POR_ENLACE = (P.has("t") && P.get("t") !== "new-blank") || P.has("m") || P.has("heks") || /#h=/.test(location.hash);
+// Jorge (19-sep, Deploy 2j): un enlace a un MODELO (ejemplo ?t=, compartido ?m=, ?heks=, #h=…)
+// abre DIRECTO y limpio, sin pantalla: solo quedan 🙋 y un botón pequeño ES/EN.
+const POR_ENLACE = (P.has("t") && P.get("t") !== "new-blank") || P.has("m") || P.has("heks") || P.has("ejemplo")
+  || location.hash.length > 1;
 
 // Mientras exista este módulo, la guía «Cómo usar» y el aviso de recuperar NO salen solos.
 if (!SALTAR) W().__hekatanConBienvenida = true;
@@ -45,6 +48,7 @@ const TX: Record<string, T2> = {
   manD: ["Pantalla limpia, solo la cinta.", "Clean screen, just the ribbon."],
   manE: ["👋 Explorar solo", "👋 Explore on my own"],
   rec: ["📂 Recuperar mi dibujo", "📂 Recover my drawing"],
+  tienes: ["Tienes un dibujo guardado", "You have a saved drawing"],
   nudos: ["nudos", "nodes"],
   blanco: ["Empezar en blanco", "Start blank"],
   adios: ["Listo, aquí estoy si me necesitas → 🙋", "Done, I'm here if you need me → 🙋"],
@@ -197,7 +201,7 @@ export function mostrarBienvenida() {
     m.append(x, h, sub, tj);
     if (recuperar) {
       const r = document.createElement("div"); r.className = "rec";
-      const s = document.createElement("span"); s.textContent = `${t("rec")} (${recuperar.n} ${t("nudos")})`;
+      const s = document.createElement("span"); s.textContent = `${t("tienes")} (${recuperar.n} ${t("nudos")})`;
       const si = document.createElement("button"); si.className = "si"; si.textContent = t("rec"); si.id = "hk-bienv-recuperar";
       const no = document.createElement("button"); no.className = "no"; no.textContent = t("blanco");
       const R = recuperar;
@@ -235,12 +239,33 @@ function montarAyudo() {
   document.body.appendChild(b);
 }
 
+/** Botón pequeño ES/EN junto al 🙋 (solo con modelo por enlace, donde no hay pantalla). */
+function montarIdioma() {
+  if (document.getElementById("hk-idioma-btn")) return;
+  const b = document.createElement("button");
+  b.id = "hk-idioma-btn";
+  b.textContent = idioma() === "en" ? "ES" : "EN";
+  b.title = idioma() === "en" ? "Español" : "English";
+  b.style.cssText = "position:fixed;z-index:8999;width:34px;height:24px;border-radius:6px;border:1px solid #7f96b3;" +
+    "background:#0b1220;color:#dbe7f3;font:600 11px system-ui,sans-serif;cursor:pointer;opacity:.85";
+  b.onclick = () => { try { localStorage.setItem("hk_lang", idioma() === "en" ? "es" : "en"); } catch {} location.reload(); };
+  document.body.appendChild(b);
+  // pegado a la izquierda del 🙋, que coloca la piel
+  const seguir = () => {
+    const l = document.getElementById("hk-agente-lanzador")?.getBoundingClientRect();
+    if (l && l.width) { b.style.left = `${Math.round(l.left - 42)}px`; b.style.top = `${Math.round(l.top + (l.height - 24) / 2)}px`; b.style.display = ""; }
+    else b.style.display = "none";
+  };
+  seguir(); setInterval(seguir, 800);
+}
+
 /**
  * Gancho para `ofrecerRecuperar` (workspace/main.ts): si la bienvenida está, el dibujo
  * guardado se ofrece DENTRO de ella y no como aviso suelto. Devuelve true si lo tomó.
  */
 function tomarRecuperar(n: number, si: () => void, no: () => void): boolean {
   if (SALTAR) return false;
+  if (POR_ENLACE) return true;            // con un modelo abierto no hay nada que recuperar: ni aviso ni cuadro
   recuperar = { n, si, no };
   const m = document.getElementById("hk-bienv") as any;
   if (m?.__pintar) m.__pintar();
@@ -274,6 +299,7 @@ if (typeof window !== "undefined") {
     const arrancar = () => {
       estilo(); montarAyudo();
       // se espera al visor (la bienvenida va encima de la app ya cargada, no de una página en blanco)
+      if (POR_ENLACE) { montarIdioma(); return; }   // modelo por enlace: directo, sin pantalla
       let n = 0;
       const esperar = () => {
         if ((document.querySelector("#viewer") as any)?.__ctx || n++ > 40) mostrarBienvenida();
