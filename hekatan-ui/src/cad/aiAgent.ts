@@ -143,6 +143,14 @@ const TOOLS = [
 ];
 
 let plantillaEnEstaPeticion = false;
+/** Nombres DIRECTOS para lo que se pide en palabras (un modelo pequeño no adivina «plantillas» + tipo 8:
+ *  abría zapata-viga-amarre, que son 2 zapatas). Salen primero en listar_plantillas. */
+const ALIAS_PLANTILLAS = [
+  { id: "cimentacion-completa", nombre: "Cimentación completa: rejilla de zapatas aisladas + vigas de amarre (varias columnas, zapata cimentacion)",
+    plantilla: "plantillas", parametros: { tipo: 8 } },
+  { id: "losa-cimentacion-rejilla", nombre: "Losa de cimentación (mat) bajo una rejilla de columnas (zapata cimentacion)",
+    plantilla: "plantillas", parametros: { tipo: 9 } },
+];
 const SYSTEM_PROMPT = `Eres el agente de Hekatan Struct, un programa de análisis estructural por elementos finitos.
 No escribes el modelo en el chat: lo CONSTRUYES llamando a las herramientas, y compruebas cada paso.
 
@@ -162,10 +170,11 @@ Cómo trabajar:
      zapatas con viga de amarre → zapata-viga-amarre · viga de cimentación → viga-cim-guerra-ej7
      losa de cimentación → guerra-ej8-losa-cimentacion
      CIMENTACIÓN COMPLETA (rejilla de zapatas aisladas + vigas de amarre, varias columnas)
-       → id "plantillas" con parametros {"tipo": 8}; losa de cimentación en rejilla → {"tipo": 9}
-       (las demás claves: las que devuelva cargar_plantilla)
+       → id "cimentacion-completa"; losa de cimentación en rejilla → id "losa-cimentacion-rejilla"
    Si ya abriste una plantilla, NO uses modelar_heks: ajusta con cambiar_parametros.
    La presión del suelo la devuelve resultados en presion_suelo: NO la calcules a mano.
+   En la respuesta final NO des cantidades ni medidas (número de zapatas, dimensiones) que no hayan
+   devuelto las herramientas.
    Usa SIEMPRE las claves exactas que devuelve la herramienta.
 2. Si es una estructura a medida, usa modelar_heks.
 3. Después de modelar, llama a resultados (y a analisis_modal si preguntan por periodos o sismo).
@@ -343,15 +352,17 @@ async function ejecutar(nombre: string, a: any): Promise<any> {
       return r;
     }
     case "listar_plantillas": {
-      const todas: any[] = W().__hekatanExamples ?? [];
+      const todas: any[] = [...ALIAS_PLANTILLAS.map((x) => ({ id: x.id, name: x.nombre, category: "RECOMENDADA" })), ...(W().__hekatanExamples ?? [])];
       const f = String(a?.filtro ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
       const hit = todas.filter((e) => !f || `${e.id} ${e.name} ${e.category}`.toLowerCase()
         .normalize("NFD").replace(/[̀-ͯ]/g, "").includes(f));
       return { total: hit.length, plantillas: hit.slice(0, 30).map((e) => `${e.id} — ${e.name} [${e.category}]`) };
     }
     case "cargar_plantilla": {
-      const id = String(a?.id ?? "");
+      let id = String(a?.id ?? "");
       plantillaEnEstaPeticion = true;
+      const alias = ALIAS_PLANTILLAS.find((x) => x.id === id);
+      if (alias) { id = alias.plantilla; a = { ...a, parametros: { ...(a?.parametros ?? {}), ...alias.parametros } }; }
       if (!(W().__hekatanExamples ?? []).some((e: any) => e.id === id))
         return { error: `no existe la plantilla '${id}'. Usa listar_plantillas.` };
       historial.push(foto());

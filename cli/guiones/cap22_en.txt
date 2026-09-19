@@ -1,0 +1,10 @@
+Welcome to Hekatan Struct. Today we ask an AI agent for a complete foundation, from scratch, and check it with the program's numbers.
+This is the Hekatan Struct agent. It runs on your own computer with Ollama, no key and no cloud, using the same tools you would use.
+We type the request as we would to a colleague: a grid of isolated footings with tie beams for three by three columns, plus soil pressure and settlement.
+When sent, the agent finds the foundation template, opens it, adjusts its parameters and runs the analysis. Every step is written in the chat so you can review it.
+Look at the last line: maximum soil pressure and settlement are written by the program, read from the analysis. The AI can get a number wrong; the program does not make it up.
+We close the chat and there is the model: nine footings on springs that represent the soil, joined by tie beams, with contact pressure in colors.
+Hovering with the cursor, the program shows the pressure at that exact point. Under the column is where the soil carries the most.
+Now the design. Top bar, Design, slab design. Steel is computed with the design combination, by finite elements, ACI 318-19, and the color bar changes to square centimeters per meter.
+And like SAFE, the cursor shows the steel at each point: top and bottom, both directions, with the bars in millimeters and their spacing.
+That's it. Hekatan Struct: from request to reinforcement, with every number verifiable. The Hekatan watermark runs through the whole video. See you in the next chapter.
