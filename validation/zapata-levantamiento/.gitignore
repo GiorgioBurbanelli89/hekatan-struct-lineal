@@ -6,3 +6,6 @@ csi/*.EDB
 csi/*.FDB
 csi/_*
 hekatan_n*.json
+csi/_sap/
+csi/_etabs/
+csi/_*.log

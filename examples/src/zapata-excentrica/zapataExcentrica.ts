@@ -40,6 +40,18 @@ export interface ParamsZapataExc {
 
 export const DEFECTO: ParamsZapataExc = { Lx: 2, Ly: 2, t: 0.5, fc: 240, ks: 2000, c: 0.4, P: 60, exL: 0.25, eyB: 0, n: 60 };
 
+/**
+ * Braja M. Das, «Principles of Foundation Engineering», 9.ª ed. (2019), EJEMPLO 6.10, p. 247-248
+ * (fig. 6.31): zapata cuadrada 1.5 × 1.5 m, D_f = 0.7 m, arena γ = 18 kN/m³, φ' = 30°, c' = 0,
+ * e_L = 0.3 m y e_B = 0.15 m (dos direcciones). Das obtiene Q_u ≈ 606 kN (caso II, A' = 1.193 m²).
+ * Con e_L/L = 0.2 > 1/6 la resultante sale del núcleo: un borde se levanta.
+ * Notación: B en x (e_B = 0.15), L en y (e_L = 0.3). La carga que se aplica es la del libro, Q = Q_u
+ * = 606 kN (el contacto no depende del valor de Q: todo escala con él).
+ * Lo que Das NO da y hay que elegir para el FEM: espesor t = 0.40 m, columna 0.30 × 0.30, f'c 240,
+ * ks = 2000 tonf/m³ (arena media).
+ */
+export const DAS_EJ610: ParamsZapataExc = { Lx: 1.5, Ly: 1.5, t: 0.4, fc: 240, ks: 2000, c: 0.3, P: 606 / 9.80665, exL: 0.1, eyB: 0.2, n: 30 };
+
 /** E = 15100·√f'c (kgf/cm², ACI 318 en kgf) → kN/m² */
 export const moduloE = (fc: number) => 15100 * Math.sqrt(fc) * KGF_CM2;
 
@@ -200,47 +212,109 @@ const F = (folder: string, label: string, def: number, min: number, max: number,
 
 export const zapataExcentrica: ExampleDef = {
   id: "zapata-excentrica",
-  name: "Cimentaciones con no linealidad: levantamiento de zapatas (suelo sin tracción)",
+  name: "Levantamiento de zapatas (suelo sin tracción) · Das ej. 6.10, p. 247",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
   availableShellResults: ["pressure", "displacementZ", "bendingXX", "bendingYY"],
   params: {
-    Lx: F("Zapata", "L en x (m)", DEFECTO.Lx, 1, 5, 0.1),
-    Ly: F("Zapata", "B en y (m)", DEFECTO.Ly, 1, 5, 0.1),
-    t: F("Zapata", "Espesor (m)", DEFECTO.t, 0.25, 1.5, 0.05),
-    fc: F("Zapata", "f'c (kgf/cm²)", DEFECTO.fc, 180, 420, 10),
-    c: F("Columna", "Lado columna (m)", DEFECTO.c, 0.25, 0.8, 0.05),
-    P: F("Columna", "P (tonf)", DEFECTO.P, 1, 500, 1),
-    exL: { default: DEFECTO.exL, label: "e/L en x", folder: "Columna",
-           options: { "0 (centrada)": 0, "1/12": 1 / 12, "1/6 (límite)": 1 / 6, "1/4 (se levanta)": 0.25, "1/3 (se levanta)": 1 / 3 } },
-    eyB: { default: DEFECTO.eyB, label: "e/B en y", folder: "Columna",
-           options: { "0": 0, "1/12": 1 / 12, "1/6": 1 / 6, "1/4": 0.25 } },
-    ks: F("Suelo", "ks (tonf/m³)", DEFECTO.ks, 200, 20000, 100),
-    n: F("Malla", "Divisiones por lado", 40, 10, 80, 2),
+    Lx: F("Zapata", "B en x (m)", DAS_EJ610.Lx, 1, 5, 0.05),
+    Ly: F("Zapata", "L en y (m)", DAS_EJ610.Ly, 1, 5, 0.05),
+    t: F("Zapata", "Espesor (m)", DAS_EJ610.t, 0.25, 1.5, 0.05),
+    fc: F("Zapata", "f'c (kgf/cm²)", DAS_EJ610.fc, 180, 420, 10),
+    c: F("Columna", "Lado columna (m)", DAS_EJ610.c, 0.2, 0.8, 0.05),
+    P: F("Columna", "Q (tonf)", +DAS_EJ610.P.toFixed(3), 1, 500, 0.001),
+    exL: { default: DAS_EJ610.exL, label: "e_B/B (en x)", folder: "Columna",
+           options: { "0": 0, "0.1 (Das 6.10)": 0.1, "1/12": 1 / 12, "1/6 (límite)": 1 / 6, "1/4": 0.25, "1/3": 1 / 3 } },
+    eyB: { default: DAS_EJ610.eyB, label: "e_L/L (en y)", folder: "Columna",
+           options: { "0": 0, "1/12": 1 / 12, "1/6 (límite)": 1 / 6, "0.2 (Das 6.10)": 0.2, "1/4": 0.25, "1/3": 1 / 3 } },
+    ks: F("Suelo", "ks (tonf/m³)", DAS_EJ610.ks, 200, 20000, 100),
+    n: F("Malla", "Divisiones por lado", DAS_EJ610.n, 10, 80, 2),
   },
   build(pr: any, states: any, mp: any) {
-    const p = { ...DEFECTO, ...pr } as ParamsZapataExc;
+    const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;
     (window as any).__hekatanCliScript = heksZapataExcentrica(p);
     cliModeler.build({}, states, mp);
   },
   computedLabels(pr: any, states: any) {
-    const p = { ...DEFECTO, ...pr } as ParamsZapataExc;
+    const p = { ...DAS_EJ610, ...pr } as ParamsZapataExc;
     const out: Record<string, string> = {};
     const U = states?.deformOutputs?.val?.deformations as Map<number, number[]> | undefined;
     const nodes = states?.nodes?.val as number[][] | undefined;
     const ref = zapataRigidaSinTraccion(p, 200);
     out["Rígida q_max"] = `${ref.qmax.toFixed(2)} tonf/m²`;
-    out["Rígida contacto"] = `${(ref.contacto * 100).toFixed(1)} % del área`;
+    out["Rígida contacto"] = `${(ref.contacto * p.Lx * p.Ly).toFixed(3)} m² (${(ref.contacto * 100).toFixed(1)} %)`;
+    const d = areaEfectivaDas(p.Lx, p.Ly, p.exL * p.Lx, p.eyB * p.Ly);
+    out["Das: caso / A' (cap. carga)"] = `${d.caso} · ${d.A.toFixed(3)} m²`;
     if (U && nodes?.length) {
-      const r = resumenFem(nodes, U, p);
-      out["FEM q_max"] = `${r.qmax.toFixed(2)} tonf/m²`;
-      out["FEM contacto (línea de la columna)"] = `${r.largoContactoX.toFixed(3)} m de ${p.Lx} m`;
-      out["FEM asiento máx"] = `${(r.wmax * 1000).toFixed(2)} mm`;
+      let wmin = 0, nC = 0;
+      for (let i = 0; i < nodes.length; i++) { const w = U.get(i)?.[2] ?? 0; if (w < wmin) wmin = w; if (w < 0) nC++; }
+      out["FEM q_max"] = `${(-wmin * p.ks).toFixed(2)} tonf/m²`;
+      out["FEM asiento máx"] = `${(-wmin * 1000).toFixed(2)} mm`;
+      out["FEM nudos en contacto"] = `${nC} de ${nodes.length}`;
     }
     const k = (window as any).__hekatanCliContacto;
-    if (k) out["Iteraciones (ley Gap)"] = `${k.iteraciones}: ${k.historial.join(" → ")} nudos en contacto`;
-    if (p.exL <= 1 / 6 + 1e-9 && p.eyB === 0) out["Estado"] = "e ≤ L/6: toda la base comprime (lineal)";
-    else out["Estado"] = "resultante fuera del núcleo: parte de la base se LEVANTA";
+    if (k) out["Iteraciones (ley Gap)"] = `${k.iteraciones}: ${k.historial.join(" → ")}`;
+    const dentro = Math.abs(p.exL) * 6 + Math.abs(p.eyB) * 6 <= 1 + 1e-9;
+    out["Estado"] = dentro ? "resultante en el núcleo: toda la base comprime (lineal)" : "resultante fuera del núcleo: parte de la base se LEVANTA";
     return out;
   },
 } as ExampleDef;
+
+// ─────────────────────────────────────────────────────────────────────
+// Braja M. Das, «Principles of Foundation Engineering», 9.ª ed. (2019), §6.11-6.12, p. 236-246
+// (= «Fundamentos de ingeniería de cimentaciones», 7.ª ed., §3.10-3.11, p. 158-167).
+// Área EFECTIVA de Meyerhof / Highter & Anders (1985): es de CAPACIDAD DE CARGA (presión última
+// uniforme sobre A' con su centroide en la carga), NO el área de contacto elástica del Winkler.
+// Notación de Das: B y L lados, e_B en la dirección de B y e_L en la de L (fig. 6.25).
+// ─────────────────────────────────────────────────────────────────────
+export interface AreaEfectivaDas { caso: string; A: number; Bp: number; Lp: number; L1?: number; L2?: number; B1?: number; B2?: number }
+
+/**
+ * Casos I-IV de Das 9.ª ed. p. 243-246 (ecs. 6.71-6.83). Los ábacos 6.27b/6.28b se sustituyen por la
+ * MISMA condición que dibujan (centroide de A' en la carga), que en los casos II y III es cerrada:
+ *   m = (L/2 − e_L) / (1/2 + 6(e_B/B)²),  L1 − L2 = 12·m·e_B/B,  L1 + L2 = 2m   (caso II)
+ * Con el ejemplo 6.10 da L1/L = 0.857 y L2/L = 0.214 (el libro lee 0.85 y 0.21 del ábaco).
+ * Caso IV (pentágono) por Newton sobre la misma condición.
+ */
+export function areaEfectivaDas(B: number, L: number, eB: number, eL: number): AreaEfectivaDas {
+  const rB = eB / B, rL = eL / L;
+  if (rB === 0 || rL === 0) {
+    // una dirección, §6.11 paso 1: la dimensión con excentricidad se reduce en 2e
+    const Bp = B - 2 * eB, Lp = L - 2 * eL;
+    return { caso: "una dirección (Meyerhof)", A: Bp * Lp, Bp: Math.min(Bp, Lp), Lp: Math.max(Bp, Lp) };
+  }
+  if (rL >= 1 / 6 && rB >= 1 / 6) {                 // Caso I, ecs. 6.71-6.74
+    const B1 = B * (1.5 - 3 * rB), L1 = L * (1.5 - 3 * rL), A = 0.5 * B1 * L1, Lp = Math.max(B1, L1);
+    return { caso: "I", A, Bp: A / Lp, Lp, B1, L1 };
+  }
+  const trapecio = (lado: number, otro: number, eOtro: number, eLado: number) => {
+    const m = (lado / 2 - eLado) / (0.5 + 6 * (eOtro / otro) ** 2), u = 12 * m * (eOtro / otro);
+    return [m + u / 2, m - u / 2];
+  };
+  if (rL > 1 / 6 && rL < 0.5 && rB < 1 / 6) {         // Caso II, ecs. 6.75-6.77
+    const [L1, L2] = trapecio(L, B, eB, eL), A = 0.5 * (L1 + L2) * B, Lp = Math.max(L1, L2);
+    return { caso: "II", A, Bp: A / Lp, Lp, L1, L2 };
+  }
+  if (rL < 1 / 6 && rB > 1 / 6 && rB < 0.5) {         // Caso III, ecs. 6.78-6.80
+    const [B1, B2] = trapecio(B, L, eL, eB), A = 0.5 * (B1 + B2) * L;
+    return { caso: "III", A, Bp: A / L, Lp: L, B1, B2 };
+  }
+  // Caso IV (e_L/L < 1/6 y e_B/B < 1/6), ec. 6.81: A' = BL − ½(B − B2)(L − L2); se busca el triángulo
+  // (catetos p = B − B2, q = L − L2) cuyo recorte deja el centroide en (e_B, e_L).
+  let p = 0.5 * B, q = 0.5 * L;
+  const F = (p: number, q: number) => {
+    const At = (p * q) / 2, A = B * L - At;
+    return [-At * (-B / 2 + p / 3) / A - eB, -At * (-L / 2 + q / 3) / A - eL];
+  };
+  for (let it = 0; it < 100; it++) {
+    const f = F(p, q), h = 1e-7;
+    const fp = F(p + h, q), fq = F(p, q + h);
+    const J = [[(fp[0] - f[0]) / h, (fq[0] - f[0]) / h], [(fp[1] - f[1]) / h, (fq[1] - f[1]) / h]];
+    const det = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+    const dp = (f[0] * J[1][1] - f[1] * J[0][1]) / det, dq = (J[0][0] * f[1] - J[1][0] * f[0]) / det;
+    p -= dp; q -= dq;
+    if (Math.abs(dp) + Math.abs(dq) < 1e-13) break;
+  }
+  const B2 = B - p, L2 = L - q, A = B * L - (p * q) / 2;
+  return { caso: "IV", A, Bp: A / L, Lp: L, B2, L2 };
+}
