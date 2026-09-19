@@ -272,7 +272,7 @@ export function ponerModo(m: ModoPiel): void {
   try {
     localStorage.setItem(LLAVE, m);
   } catch {}
-  const b = document.querySelector<HTMLButtonElement>("#hk-cad-tit .piel");
+  const b = document.querySelector<HTMLButtonElement>("#hk-cad-tit .piel:not(.tut)");
   if (b) b.textContent = m === "oscuro" ? "\u25D1 Claro" : "\u25D0 Oscuro";
   // el visor tiene su propio tema, y es el que manda sobre el clear color
   try {
@@ -325,10 +325,15 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     "</span>" +
     `<span class="doc">${doc}</span>` +
     '<span class="der">' +
+    '<button class="piel tut" id="hk-cad-tutorial" title="Videos cortos: cómo se usa Hekatan Struct">🎬 Tutorial</button>' +
     '<button class="piel">\u25D1 Claro</button>' +
     '<span class="marca">Hekatan Struct lineal</span>' +
     "</span>";
   document.body.appendChild(tit);
+  // «🎬 Tutorial»: el panel de clips se trae SOLO al pulsar (import dinámico): cero peso al arrancar
+  tit.querySelector<HTMLButtonElement>("#hk-cad-tutorial")?.addEventListener("click", () => {
+    import("./tutoriales").then((m) => m.abrirTutoriales()).catch((e) => console.error("[tutoriales]", e));
+  });
 
   // La franja de conmutadores de la piel (FORZC · REJILLA · ORTO · POLAR ·
   // REFENT · RASTREO · DIN) era DECORATIVA: sus botones lanzaban un evento
@@ -359,7 +364,7 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     );
   });
 
-  tit.querySelector<HTMLButtonElement>(".piel")!.onclick = () => alternarModo();
+  tit.querySelector<HTMLButtonElement>(".piel:not(.tut)")!.onclick = () => alternarModo();
 
   // El visor ya escribe las coordenadas en #hk-coord-fixed. En vez de duplicar
   // ese calculo —que es de donde salen los numeros que NO cuadran—, se copia su
