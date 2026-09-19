@@ -1,5 +1,5 @@
 // Generado de validation/zapata-levantamiento/lisp/48 Levantamiento de zapatas - Braja Das.lisp
-// (python: el mismo texto que ejemplos/48 de hekatan-lisp). No editar a mano.
+// (el mismo texto que ejemplos/48 de hekatan-lisp). No editar a mano.
 export const HOJA_DAS_48 = `# Cimentaciones con no linealidad: levantamiento de zapatas (suelo sin tracción)
 
 #: Pregunta que llegó de un usuario: «hay situaciones en que las zapatas incurren en rango no lineal, como cuando las columnas son demasiado excéntricas». Sí: el suelo EMPUJA pero no TIRA. Cuando la carga cae lejos del centro, una parte de la zapata se despega del suelo y el problema deja de ser lineal. Esta hoja lo explica con el libro de Braja M. Das, *Principles of Foundation Engineering*, 9.ª ed. (2019), §6.10–6.12, p. 235–249 (en español: *Fundamentos de ingeniería de cimentaciones*, 7.ª ed., §3.9–3.11, p. 157–171), y lo compara con el cálculo por elementos finitos de Hekatan Struct, SAP2000, SAFE y ETABS.
@@ -85,5 +85,7 @@ Ac = dec(0.5*(L1c + L2c)*Bd, 4)
 
 #: Barrido con otra zapata (2 × 2 × 0.5 m, P = 60 tonf, malla 60 × 60) en Hekatan y SAP2000, frente a la fórmula de la zapata rígida:
 #tabla("e/L","Fórmula q_max [tonf/m²]:3","Hekatan [tonf/m²]:3","SAP2000 [tonf/m²]:3","Contacto fórmula [m]:3","Contacto Hekatan [m]:3")({"0","1/12","1/6","1/4","1/3"}; [15.000, 22.500, 30.000, 40.000, 60.000]; [15.180, 22.464, 30.000, 40.055, 60.072]; [15.180, 22.464, 30.000, 40.052, 60.038]; [2.000, 2.000, 2.000, 1.500, 1.000]; [2.000, 2.000, 2.000, 1.502, 1.002])
+#: Lo mismo en una gráfica: la curva es la fórmula de la zapata rígida (Das, ecs. 6.51 y 6.53) en función de e/L; los puntos son el FEM (SAP2000 y Hekatan) con la zapata flexible:
+#fplot(q_max = 15*(1 + 6*x)*(1+sign(1/6-x))/2 + (20/(1-2*x))*(1-sign(1/6-x))/2, SAP2000 = [0 15.180; 1/12 22.464; 1/6 30.000; 1/4 40.052; 1/3 60.038], Hekatan = [0 15.180; 1/12 22.464; 1/6 30.000; 1/4 40.055; 1/3 60.072], [0 0.4])
 #: Hasta e/L = 1/6 el problema es lineal y todo coincide; más allá, el FEM sigue a la fórmula del triángulo con el borde levantado. Hekatan y SAP2000 quedan a menos de 0.06 % (lo que queda es la tolerancia de convergencia de SAP2000, 1e-4).
 `;

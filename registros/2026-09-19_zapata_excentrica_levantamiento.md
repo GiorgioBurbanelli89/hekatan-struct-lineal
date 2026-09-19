@@ -118,3 +118,42 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
 - 🧮 calculadora: abre Hekatan LISP con las variables del modelo definidas (modo editor).
 - Verificado con puppeteer (cli/_shot_tutor_fem.mjs): se abre, carga, navega la cadena, 0 pageerror.
 - ⏳ «De la integral al código» (LISP/MATLAB/Python/C++ del motor + OpenSees), Hekatan Lab (.m; sin web).
+
+## ✅ Plantilla, OpenSees, Informe, menú Diseño, GIF (19-sep, tarde)
+- Plantilla `zapata-levantamiento` («Zapata con levantamiento (suelo sin tracción) · Footing with uplift»):
+  B, L, t, f'c, columna (lado y posición), P, Mx, My, tipo de suelo (SOIL_TYPES de zapata-aislada),
+  q_adm, ks, «Suelo sin tracción» Sí/No, malla. Con los datos de Das 6.10 = el ejemplo (mismo .heks,
+  asientos idénticos); en lineal da 76.670 = SAP2000 lineal. Test `zapata-levantamiento-plantilla`.
+- OpenSees: `examples/src/shared/openseesZapata.ts` (ShellMITC4 + zeroLength; ENT = sin tracción,
+  comprobado con testUniaxialMaterial). Das 6.10 en OpenSeesPy 3.7.1: q_max 81.915 (+0.0006 % vs SAP),
+  mismos 798 nudos, 0.018 % nudo a nudo (su MITC4 sin modos incompatibles). Segundo testigo en el test.
+  ⏳ Tcl: se exporta, pero no hay OpenSees.exe en el PC para correrlo.
+  Inventario: openseesIO.ts = solo barras (elasticBeamColumn); openseesZapata.ts = cáscaras Q4 +
+  resortes verticales; zapata-aislada/opsPyExporter.ts = la suya. Sin exportar a OpenSees: sólidos H8,
+  triángulos, releases, diafragmas, membranas con drilling. ⏳ inventario ejemplo por ejemplo (no corrido).
+- Menú «📐 Diseño» (menuDiseno.ts de la 96, tras fusionar integracion-deploy1): Informe, Tutor FEM,
+  Levantamiento, OpenSeesPy, OpenSees Tcl. Sin botones flotantes; si el modelo no es la zapata, avisa
+  el motivo. Sonda de solapes: 0 en 7 estados.
+- Informe (Hekatan LISP web por #h=): datos, geotecnia Das (caso, A', fórmula rígida, q_adm), FEM,
+  validación, conclusión; «❓ Explícame» por paso (cadena del tutor desde ese término, calculadora con
+  la fórmula, página de Das en PNG, archivo:línea; IA: no hay clave de Gemini → se dice). PNG en
+  `zapata_levantamiento_png/informe_*.png` (Das 6.10 y datos propios). ⏳ imagen del visor dentro del
+  informe; ⏳ diseño estructural (punzonamiento, cortante, flexión); ⏳ capacidad de carga con datos propios.
+- Hoja 48: puntos SAP2000/Hekatan sobre la curva de Das con `fplot(…, SAP2000 = [x y; …])` (la 42 lo
+  añadió al motor, 9aa5434). hekatan-lisp 9c0ea05 (push).
+- GIF `zapata_levantamiento_png/tutor_fem.gif` (11.5 s, 1280 px, cursor virtual, marca de agua; hoja de
+  contacto `tutor_fem_gif_hoja.png`). Se ve en el navegador.
+- PNG del BUILD de deploy: `build_ejemplo_das610.png`, `build_plantilla.png`, `build_menu_diseno.png`
+  (798 nudos en contacto, equilibrio 0 %), 0 pageerror.
+- ⚠️ `animacion_modal_es_el_modo` falla 0/3 («no anima»): falla IGUAL en integracion-deploy1 sin mis
+  cambios (build de esa rama en este worktree, 19-sep). No es de esta rama.
+- ⚠️ Disco lleno dos veces (0 B y 0.68 GB): borré solo lo mío (análisis de SAP/ETABS, hkTest, bash-edit-diff viejos).
+
+## ⏳ Pendiente
+- VÍDEO 1 (Das 6.10 con cursor, voz ES, subtítulo EN, marca de agua, dos versiones) y VÍDEO 2 (Tutor):
+  no grabados. El grabador tarda 28-32 min por toma y hay que coordinar con tutoriales-cinta (RAM).
+- «De la integral al código» (LISP/MATLAB/Python/C++ del motor) y hoja de OpenSees en el tutor.
+- Hojas EN del tutor/informe (la UI sí es ES/EN).
+- Hojas de la cadena para pórtico 3D, DKMQ/DSE, membrana ITW, sólido H8.
+- SAFE y ETABS del barrido e/L (el ejemplo de Das sí tiene los cuatro programas).
+- Paridad del motor de Python (`hekatan-struct-py`) con `compresion`.
