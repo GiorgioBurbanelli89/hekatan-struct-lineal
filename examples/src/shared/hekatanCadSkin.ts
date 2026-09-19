@@ -191,7 +191,22 @@ body.hk-cad #hk-coord-fixed{ display:none !important; }
 /* Tampoco junto al cursor: AutoCAD no pone la caja X= Y= Z= al lado de la cruz
    (se veia amontonada con la entrada dinamica). Quedan en la barra de estado. */
 body.hk-cad #hk-coord-readout{ display:none !important; }
-body.hk-cad #toolbar{ top:38px !important; }
+/* NADA PISA A NADA (Jorge, 19-sep-2026: «mira que no solape ningun boton, no solo esos»).
+   Medido con cli/_sonda_solapes.mjs: 137 solapes en 7 estados de la ventana. Causas y arreglo:
+   · #toolbar (el logo con los creditos + un 2.o boton de tema, DUPLICADO del «Claro» de arriba)
+     flotaba a top:38px: debajo del panel derecho, o debajo de la cinta. Pasa a la barra de
+     arriba (lo mueve vigilarSolapes) y su boton de tema se esconde.
+   · los TIRADORES de los paneles iban pegados al borde de la ventana, ENCIMA del panel abierto
+     (tapaban 24 px de cada fila): van por FUERA del panel, en su borde (--hk-izq / --hk-der).
+   · el lanzador del AGENTE flotaba sobre las filas del panel derecho: se aparta lo que mida.
+   · la CINTA se abria centrada y a todo lo ancho, por encima de los dos paneles: se encaja
+     ENTRE ellos (left/right los pone vigilarSolapes) y sus filas envuelven si no caben. */
+body.hk-cad #toolbar{ position:static !important; top:auto !important; right:auto !important; }
+body.hk-cad #toolbar .btn-theme{ display:none !important; }
+body.hk-cad #toolbar .btn{ padding:2px 8px !important; }
+body.hk-cad #hk-settings-toggle{ left:var(--hk-izq,0px) !important; }
+body.hk-cad #hk-pane-toggle{ right:var(--hk-der,0px) !important; }
+body.hk-cad #hk-agente-lanzador{ right:calc(var(--hk-der,0px) + 34px) !important; }
 body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
 /* La barra de titulo mide 30 px y el ribbon iba a top:8px: la primera fila de
    iconos (Linea, Polilinea...) quedaba DEBAJO de la barra. Se baja el ribbon,
@@ -303,6 +318,77 @@ export function ponerCoordenadas(x: number, y: number, z: number): void {
  *
  * @param doc  nombre del modelo abierto, para la barra de titulo
  */
+/**
+ * Mete un botón en la BARRA DE ARRIBA (a la derecha, después de «Claro»), en vez de dejarlo flotando.
+ *
+ * Por qué (Jorge, 19-sep-2026, viendo el vídeo de la interfaz): «▦ Franjas» y «🧱 Sobrecarga DNE»
+ * iban con `position:fixed; top:60px`, que es justo la franja donde se abre la CINTA (y de 40 a 170):
+ * con la cinta abierta se montaban encima de «?», «▴», «▾» y de Carga / Carga q, y con el panel
+ * derecho abierto tapaban la fila «Categoría». La barra de arriba (y de 0 a 30) es el único sitio al
+ * que no llegan ni la cinta ni los paneles.
+ *
+ * Va DESPUÉS del botón de tema a propósito: el tema se busca con `.piel:not(.tut)` y `querySelector`
+ * devuelve el primero, así que un `.piel` puesto antes le robaría el clic.
+ * La barra puede no existir todavía cuando el panel se monta: se reintenta 40 veces (20 s) y, si no
+ * llega a haber barra (otra app sin piel CAD), el botón se queda donde estaba.
+ */
+export function botonABarraDeArriba(btn: HTMLButtonElement, intentos = 40): void {
+  const der = document.querySelector<HTMLElement>("#hk-cad-tit .der");
+  if (!der) { if (intentos > 0) setTimeout(() => botonABarraDeArriba(btn, intentos - 1), 500); return; }
+  btn.style.cssText = "";               // fuera el position:fixed y los colores a mano: manda la piel
+  btn.classList.add("piel", "ext");
+  der.insertBefore(btn, der.querySelector(".marca"));
+}
+
+/**
+ * NADA PISA A NADA. Encaja la cinta ENTRE los paneles abiertos, saca los tiradores al borde
+ * exterior de su panel, aparta el lanzador del agente y sube a la barra de arriba la barrita
+ * heredada (#toolbar). Ver la nota larga en el CSS. Se comprueba con `node cli/_sonda_solapes.mjs`.
+ *
+ * No toca main.ts ni la cinta: mira el estado real del DOM. Un panel esta PLEGADO cuando lleva
+ * un translateX en su style (asi lo pliegan setPaneHidden / setLeftHidden) o no se ve.
+ */
+function vigilarSolapes(): void {
+  const q = (sel: string) => document.querySelector<HTMLElement>(sel);
+  const abierto = (el: HTMLElement | null) =>
+    !!el && getComputedStyle(el).display !== "none" && !/translateX/.test(el.style.transform || "") && el.offsetWidth > 0;
+  let ultimo = "";
+  const ajustar = () => {
+    const izq = q("#settings"), der = q("#hk-pane-host"), cinta = q("#hk-ribbon");
+    const L = abierto(izq) ? izq!.offsetLeft + izq!.offsetWidth : 0;
+    const R = abierto(der) ? der!.offsetWidth : 0;
+    // la barrita heredada, a la barra de arriba (una vez, en cuanto existan las dos)
+    const tb = q("#toolbar"), barra = q("#hk-cad-tit .der");
+    if (tb && barra && tb.parentElement !== barra) barra.insertBefore(tb, barra.querySelector(".marca"));
+    const alto = cinta && getComputedStyle(cinta).display !== "none" ? Math.round(cinta.getBoundingClientRect().bottom) : 0;
+    const firma = L + "|" + R + "|" + alto + "|" + window.innerWidth;
+    if (firma === ultimo) return;
+    ultimo = firma;
+    document.body.style.setProperty("--hk-izq", L + "px");
+    document.body.style.setProperty("--hk-der", R + "px");
+    if (cinta) {
+      // 30 = los 24 px del tirador + 6 de aire: la cinta tampoco pisa el tirador
+      cinta.style.left = (L + 30) + "px"; cinta.style.right = (R + 30) + "px";
+      cinta.style.transform = "none"; cinta.style.maxWidth = "none";
+      // Las filas envuelven si no caben. Quien rehaga la cinta por dentro (pestañas, etc.) y quiera
+      // mandar en sus filas pone data-hk-filas="propias" en #hk-ribbon y esto no se las toca; lo unico
+      // que la piel exige es que la cinta quepa en el ANCHO que se le deja entre los paneles.
+      if (cinta.dataset.hkFilas !== "propias")
+        for (const fila of Array.from(cinta.children) as HTMLElement[]) { fila.style.flexWrap = "wrap"; fila.style.rowGap = "2px"; }
+      // la linea de estado de la cinta va DEBAJO de ella, mida lo que mida (antes: top fijo de 106 px)
+      const est = q("#hk-ribbon-estado");
+      const b = Math.round(cinta.getBoundingClientRect().bottom);
+      if (est && b > 0) est.style.setProperty("top", (b + 4) + "px", "important");
+      ultimo = L + "|" + R + "|" + b + "|" + window.innerWidth;
+    }
+  };
+  const obs = new MutationObserver(() => ajustar());
+  obs.observe(document.body, { attributes: true, attributeFilter: ["style", "class"], subtree: true, childList: true });
+  window.addEventListener("resize", ajustar);
+  setInterval(ajustar, 800);      // red de seguridad: paneles y cinta nacen tarde y sin avisar
+  ajustar();
+}
+
 export function aplicarPielCad(doc = "sin titulo"): void {
   if (document.getElementById("hk-cad-hoja")) return;
 
@@ -330,6 +416,7 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     '<span class="marca">Hekatan Struct lineal</span>' +
     "</span>";
   document.body.appendChild(tit);
+  vigilarSolapes();
   // «🎬 Tutorial»: el panel de clips se trae SOLO al pulsar (import dinámico): cero peso al arrancar
   tit.querySelector<HTMLButtonElement>("#hk-cad-tutorial")?.addEventListener("click", () => {
     import("./tutoriales").then((m) => m.abrirTutoriales()).catch((e) => console.error("[tutoriales]", e));
