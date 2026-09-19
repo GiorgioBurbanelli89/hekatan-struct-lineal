@@ -103,7 +103,7 @@ van.derive(() => {
   localStorage.setItem(AUTO_MESH_KEY, String(autoMeshShellsEnabled.val));
 });
 import {
-  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, addCadPanel, addCadRibbon, addCadStatusBar,
+  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, addCadPanel, addCadRibbon, addCadStatusBar,
   // 🛠 Orquestador unificado de Herramientas FEM (folder Tweakpane completo)
   attachFemTools,
   // el tema del VISOR: el fondo lo pinta WebGL, no el CSS, asi que la piel
@@ -230,6 +230,10 @@ import {
 // el scaling de sus valores (kN/m² → tonf/m², mm → cm, etc.).
 van.derive(() => { colorMapForceUnit.val = forceUnit.val; });
 van.derive(() => { colorMapDispUnit.val = dispUnit.val; });
+// ⚠️ Faltaba la TENSION. El workspace arranca en tonf/m² y el visor arrancaba
+// en kN/m², y mover «Unidades → Tension» no tocaba la leyenda: la barra de color
+// y el tooltip del raton rotulaban unidades distintas para el mismo valor.
+van.derive(() => { colorMapStressUnit.val = stressUnit.val as any; });
 
 // ── Estado global compartido ──
 const nodes: State<Node[]> = van.state([]);
@@ -239,6 +243,37 @@ const elementInputs: State<ElementInputs> = van.state({});
 const deformOutputs: State<DeformOutputs> = van.state({});
 const analyzeOutputs: State<AnalyzeOutputs> = van.state({});
 const objects3D: State<THREE.Object3D[]> = van.state([]);
+
+// ── EL SELLO DEL CASO ────────────────────────────────────────────────────
+// Identifica el modelo + el caso de carga que se esta MOSTRANDO. El visor lo
+// compara con el `caseId` que traen `deformOutputs`/`analyzeOutputs` y se
+// NIEGA A PINTAR si no coinciden (ver `Mesh.caseId` y `selloDelCasoOk` en
+// `hekatan-ui/src/viewer/getViewer.ts`).
+//
+// Por que hace falta: el bug de la deformada no era una cuenta mal hecha, era
+// un resultado VIEJO pintado sobre un modelo NUEVO. Con el sello, cualquier
+// calculo que llegue tarde (modal diferido, boton asincrono, arrastre de
+// slider) trae el sello de cuando arranco y, si el modelo cambio por debajo,
+// se descarta en vez de mentir.
+const caseId: State<string> = van.state("");
+let __selloSeq = 0;
+/** Emite un sello NUEVO para el modelo que hay ahora en `states` y lo pone en
+ *  pantalla. Lo llama quien acaba de (re)construir el modelo; lo que calcule
+ *  despues se sella con el valor que devuelve esta funcion. */
+function nuevoSello(etiqueta = ""): string {
+  const id = currentExample?.id ?? "(sin ejemplo)";
+  const nN = nodes.rawVal.length, nE = elements.rawVal.length;
+  const caso = activeLoadCase.rawVal ?? "";
+  const s = `${id}#${nN}n/${nE}e#${caso}${etiqueta ? "#" + etiqueta : ""}#${++__selloSeq}`;
+  caseId.val = s;
+  return s;
+}
+/** Estampa unos resultados con el sello dado. */
+function sellarSalidas(sello: string, dout?: DeformOutputs, aout?: AnalyzeOutputs) {
+  if (dout) dout.caseId = sello;
+  if (aout) aout.caseId = sello;
+}
+(window as any).__hekatanCaseId = () => caseId.rawVal;
 // Drawing states (awatif-style) — mouse interactivo + raycaster nativo de
 // hekatan-ui. Solo se usa en el ejemplo cad-draw (otros los ignoran).
 // ── Drawing state — persistido en localStorage ──
@@ -452,6 +487,8 @@ function resetStates() {
   states.elementInputs.val = {};
   states.deformOutputs.val = {};
   states.analyzeOutputs.val = {};
+  // Modelo vacio = nada que sellar. Sin sello, el visor pinta como siempre.
+  caseId.val = "";
 }
 
 /**
@@ -508,6 +545,54 @@ function volverAlAnterior(): void {
   if (ex) loadExample(ex);
 };
 (window as any).__hekatanShowMenu = () => { try { showMenu(); } catch {} };
+
+// ── EL EJEMPLO SE VE AQUI, NO EN OTRA PAGINA ─────────────────────────────
+//
+// Jorge, 18-sep-2026: «entre a SOLIDOS y me llevaba a OTRA PAGINA, y recien
+// alli veia el solido. Puse RBS y me llevaba a otra pagina. Nada puede ser asi:
+// si digo conexion, adentro su ejemplo, ahi debe verse, no enlazarse a otro
+// lado.»
+//
+// Que pasaba: los ejemplos con `standaloneUrl` (los de
+// `ejemplosConPanelPropio.ts`, entre ellos LOS CINCO de la categoria
+// «Solidos») no tienen `build()`. Al elegirlos, `loadExample` limpiaba los
+// states y se iba: el visor quedaba NEGRO y el unico boton del panel hacia
+// `window.location.href = "../<id>/"`. O sea que la app te echaba fuera para
+// enseñarte su propio ejemplo.
+//
+// Ahora se muestran DENTRO: su pagina se monta en un marco que ocupa el
+// lienzo, encima del visor 3D y por debajo de los paneles. La URL del
+// workspace NO cambia, el selector sigue funcionando y se puede volver a otro
+// ejemplo sin perder el sitio.
+//
+// Sigue siendo un parche de arquitectura: lo que toca es graduarlos a
+// `ExampleDef` con `params` + `build` (el visor del workspace ya sabe pintar
+// solidos: `settings.solids` + `analyzeOutputs.solidStress`). Lo que NO puede
+// seguir es que la app te saque de la app.
+const EMBEBIDO_ID = "hk-ejemplo-embebido";
+
+function ocultarEjemploEmbebido() {
+  const f = document.getElementById(EMBEBIDO_ID);
+  if (f) f.remove();
+  if (viewerElm) viewerElm.style.display = "";
+}
+
+function mostrarEjemploEmbebido(url: string, nombre: string) {
+  let f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
+  if (!f) {
+    f = document.createElement("iframe");
+    f.id = EMBEBIDO_ID;
+    // z-index 1: por encima del lienzo 3D, por DEBAJO de los paneles (100+).
+    f.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;" +
+      "z-index:1;background:var(--cad-bg,#15161a)";
+    document.body.appendChild(f);
+  }
+  f.title = nombre;
+  if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+  // El visor 3D del workspace se apaga mientras tanto: el ejemplo trae el suyo
+  // y dos contextos WebGL vivos a la vez es tirar memoria (la maquina tiene 4 GB).
+  if (viewerElm) viewerElm.style.display = "none";
+}
 
 function loadExample(ex: ExampleDef) {
   // Apilar el ejemplo ANTERIOR antes de cambiar (salvo si es una vuelta atrás).
@@ -601,10 +686,9 @@ function loadExample(ex: ExampleDef) {
   if (!loadCases.val.find(c => c.name === activeLoadCase.val)) {
     activeLoadCase.val = loadCases.val[0]?.name ?? "Dead";
   }
-  // ── Ejemplos legacy del upstream awatif (1d-mesh, beams, plate-q4, etc.):
-  // tienen su propia UI VanJS toolbar y no encajan en el flujo Tweakpane del
-  // workspace. El pane solo muestra un botón "Abrir ejemplo →" que navega
-  // al index.html standalone. ──
+  // ── Ejemplos con PANEL PROPIO (1d-mesh, beams, plate-q4, solidos…): traen
+  // su UI VanJS y no encajan en el flujo Tweakpane del workspace. Se muestran
+  // EMBEBIDOS en el lienzo; no se navega a ningun lado. ──
   if (ex.standaloneUrl) {
     // Limpiar animaciones y estado del ejemplo previo
     const animKeys = ["__rbsK3Anim", "__bfpK3Anim", "__endPlateK3Anim"];
@@ -616,9 +700,13 @@ function loadExample(ex: ExampleDef) {
     activeExampleVersion.v++;
     resetStates();
     currentParams = {};
+    // AQUI, no en otra pagina: el ejemplo se monta en el lienzo del workspace.
+    mostrarEjemploEmbebido(ex.standaloneUrl, ex.name);
     buildParamsPane();
     return;
   }
+  // Ejemplo normal: si venia uno embebido, fuera, y vuelve el visor 3D.
+  ocultarEjemploEmbebido();
   // currentParams se almacena en la UNIDAD UI seleccionada. Los p.default
   // están escritos en SI (kN, kN·m) por convención; aquí los convertimos a
   // la unidad UI del usuario para que los sliders muestren valores coherentes.
@@ -655,6 +743,8 @@ function loadExample(ex: ExampleDef) {
   // que cada ejemplo arranque con la superestructura visible.
   ponerFactoresDelCaso();
   ex.build?.(toSIParams(), states, modalPanel);
+  // SELLO del modelo recien cargado (ver `nuevoSello`).
+  sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
 
   // ── Auto-mesh shells ETABS-style (toggle global) ──
   // Si el usuario activó "Auto-mesh shells" en el Tweakpane, detectamos Q4
@@ -705,11 +795,16 @@ function loadExample(ex: ExampleDef) {
           states.nodes.val = fakeModel.nodes;
           states.elements.val = fakeModel.elements;
           states.elementInputs.val = { ...fakeModel.elementInputs };
-          // Re-solve
-          states.deformOutputs.val = deform(fakeModel.nodes, fakeModel.elements,
+          // Re-solve. El auto-mesh CAMBIO la malla (otros nudos, otros
+          // elementos): sello nuevo antes de publicar, si no el visor estaria
+          // pintando resultados de la malla de antes sobre la de ahora.
+          const doutAM = deform(fakeModel.nodes, fakeModel.elements,
             states.nodeInputs.rawVal, fakeModel.elementInputs);
-          states.analyzeOutputs.val = analyze(fakeModel.nodes, fakeModel.elements,
-            fakeModel.elementInputs, states.deformOutputs.rawVal);
+          const aoutAM = analyze(fakeModel.nodes, fakeModel.elements,
+            fakeModel.elementInputs, doutAM);
+          sellarSalidas(nuevoSello("automesh"), doutAM, aoutAM);
+          states.deformOutputs.val = doutAM;
+          states.analyzeOutputs.val = aoutAM;
         }
       }
     } catch (err) {
@@ -945,9 +1040,21 @@ function mountCaseResultsInSettings() {
       __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 2 });
     }
 
+    // El animador modal solo mueve `mesh.nodes`; nunca escribe `analyzeOutputs`, de donde sale el
+    // colormap. Sin esto la malla se movía con el modo pero seguía pintada con el último caso
+    // estático («Pressure (suelo)», paleta SAFE), que no tiene nada que ver con un modo.
+    const limpiarColormapModal = () => {
+      try {
+        const s = (viewerElm as any).__settings ?? (viewerElm as any).__ctx?.settings;
+        if (s?.shellResults && s.shellResults.val !== "none") s.shellResults.val = "none";
+        if (s?.solidResults && s.solidResults.val !== "none") s.solidResults.val = "none";
+      } catch (err) { console.warn("colormap modal", err); }
+    };
+
     // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo
     const mostrarModo = () => {
       if (!modalAnimator || !__lastModalResults?.modeShapes?.length) return;
+      limpiarColormapModal();
       try {
         modalAnimator.stop();
         modalAnimator.setResults(__lastModalResults);
@@ -957,7 +1064,13 @@ function mountCaseResultsInSettings() {
     };
     const animarCaso = () => {
       if (!modalAnimator) return;
-      if (esModal(__casoMostrado)) { mostrarModo(); return; }
+      // ⚠️ GUARDA (18-sep-2026): con el modal ACTIVO aquí no se anima ningún caso.
+      // Medido en el deploy (545 nudos): el «modo 1» dibujado NO era φ, era la deformada del caso
+      // DEAD por una constante — mismo factor 30.427 a cinco cifras en 4 nudos × 3 componentes.
+      // La casilla «animar» se enciende ANTES de que `__casoMostrado` sea el caso modal, así que
+      // `esModal(__casoMostrado)` daba false; por eso hace falta también `__modalActivo`.
+      if (esModal(__casoMostrado) ||
+          (__modalActivo && __lastModalResults?.modeShapes?.length)) { mostrarModo(); return; }
       if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
       // caso de carga / combo: sus desplazamientos reales, como un «modo» de 6 GDL por nudo
       const U = deformOutputs.val?.deformations as Map<number, number[]> | undefined;
@@ -987,7 +1100,8 @@ function mountCaseResultsInSettings() {
         try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
         __modalActivo = false;
         activeLoadCase.val = v.slice(8); rebuild();
-        try { autoScaleDeformedShape(); } catch {}   // cada caso con SU escala, como ETABS
+        try { autoScaleDeformedShape(); }   // cada caso con SU escala, como ETABS
+        catch (e: any) { console.error(`[caso] autoScaleDeformedShape fallo: ${e?.message ?? e}`); }
       } else {
         const selCase = loadCases.val.find((c) => c.name === v);
         if (!selCase?.type?.startsWith("Modal")) {
@@ -998,7 +1112,9 @@ function mountCaseResultsInSettings() {
         try { autoScaleDeformedShape(); } catch {}
         try { __loadPanel?.rebuildCases(); } catch {}
       }
-      if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
+      // 2ª guarda: con el modal activo, este refresco NO puede sustituir el modo por la deformada Dead
+      if (__animar.on && !(__modalActivo && __lastModalResults?.modeShapes?.length)) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
+      else if (__animar.on) setTimeout(mostrarModo, 300);
     };
     __caseResultsBinding?.on("change", (e: any) => {
       const v = String(e.value);
@@ -1342,6 +1458,9 @@ function rebuild() {
   }
   ponerFactoresDelCaso();
   currentExample.build(toSIParams(), states, modalPanel);
+  // SELLO: el modelo ya esta armado y el ejemplo dejo sus resultados. Todo lo
+  // que llegue DESPUES con un sello viejo, el visor lo tira.
+  sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
 
   // ── Active Case dispatcher ──
   // Tras el build() estático, si el case activo es Modal-* y el ejemplo
@@ -2393,7 +2512,8 @@ window.addEventListener("hk:property-applied", (ev: any) => {
     w.__hekatanPropToastT = setTimeout(() => { if (toast) toast.style.opacity = "0"; }, 2400);
   } catch {}
   // Disparar rebuild para que el ejemplo procese los cambios manuales
-  try { (window as any).__hekatanRebuild?.(); } catch {}
+  try { (window as any).__hekatanRebuild?.(); }
+  catch (e: any) { console.error(`[props manuales] el rebuild fallo: ${e?.message ?? e}`); }
 });
 // Primera carga: el CSS media query puede no haber aplicado aún
 // cuando autoFitCamera corre por primera vez en loadExample. Forzamos
@@ -3745,15 +3865,18 @@ function buildParamsPane() {
     if (newEx && newEx.id !== currentExample?.id) setTimeout(() => loadExample(newEx), 0);
   });
 
-  // ── Ejemplos legacy del upstream awatif: solo botón al standalone ──
+  // ── Ejemplos con panel propio: se ven embebidos, no se navega ──
   if (currentExample.standaloneUrl) {
     const url = currentExample.standaloneUrl;
-    const note = pane.addFolder({ title: "ℹ Ejemplo legacy", expanded: true });
-    // Tweakpane no tiene texto multilínea fácil; uso botones consecutivos como labels.
-    note.addButton({ title: "🔗 Abrir ejemplo →" }).on("click", () => {
-      window.location.href = url;
+    // Ya NO hay boton que saque al usuario de la app: el ejemplo esta puesto en
+    // el lienzo (ver `mostrarEjemploEmbebido`). Aqui solo queda recargarlo.
+    const note = pane.addFolder({ title: "ℹ Ejemplo con panel propio", expanded: true });
+    note.addButton({ title: "↻ Recargar el ejemplo" }).on("click", () => {
+      const f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
+      if (f) f.setAttribute("src", url);
+      else mostrarEjemploEmbebido(url, currentExample?.name ?? url);
     });
-    note.addButton({ title: "(usa toolbar VanJS propio)" }).on("click", () => {});
+    note.addButton({ title: "(trae sus propios controles)" }).on("click", () => {});
     currentPane = pane;
     return;
   }
@@ -4111,375 +4234,9 @@ function buildParamsPane() {
       if (!document.getElementById("hk-statusbar")) addCadStatusBar();
     }
   }
-  // ── BLOQUE INLINE LEGACY (será removido al confirmarse el move) ──
-  if (false && currentExample) {
-    const fCad = pane.addFolder({ title: "✏ Herramientas CAD", expanded: !!isModelerCtx });
-    const proxyTool = { v: "node" };
-    const toolBtns: Record<string, any> = {};
-    // Instrucciones por tool — el usuario las ve en el status bar al activar
-    const toolInstructions: Record<string, string> = {
-      select:   "🖱 Seleccionar — click sobre un nodo/elemento para seleccionarlo",
-      node:     "● Nodo — cada click crea un nodo en la posición del plano de trabajo",
-      line:     "／ Línea — click 2 puntos para crear un frame. Continúa clickeando para extender la polilínea, right-click para terminar.",
-      polyline: "⌒ Polilínea — click sucesivos crean segmentos conectados; right-click para terminar.",
-      area:     "▭ Área — 4 clicks crean un Q4 shell (en orden CCW)",
-      col:      "▌ Columna 3D — tipeá altura + Enter, después 1 click en la base. Default = 3m. Ideal para iso.",
-      wall:     "▥ Pared Q4 3D — tipeá altura + Enter, después 2 clicks en las esquinas inferiores. Default = 3m. Crea shell Q4 vertical.",
-      circle:   "○ Círculo — click 2 puntos: 1=centro, 2=radio. Se discretiza en N segmentos (slider 'Segmentos arc/circ').",
-      arc:      "⌒ Arco (3 ptos) — click 3 puntos: 1=inicio, 2=medio, 3=fin. Se discretiza en N segmentos.",
-      rect:     "▭ Rectángulo — click 2 esquinas opuestas. Genera 4 nodos + 4 frames cerrados.",
-      aux:      "┊ Línea auxiliar — referencia visual (no genera FEM)",
-      extend:   "↗ Prolongar — click una línea existente, click en la dirección a extender",
-      chaflan:  "▱ Losa con chaflanes — click 2 esquinas opuestas. Radio del chaflán se ajusta en 'Chaflán r (m)'. Genera 4 lados rectos + 4 cuartos de círculo automáticamente.",
-      "delete": "🗑 Borrar — pasá el mouse sobre una línea/área. Se resalta en rojo. Click para eliminarla. Los nodos huérfanos se limpian automáticamente.",
-    };
-    const setActiveTool = (tool: string) => {
-      proxyTool.v = tool;
-      try { (window as any).__hekatanCadState?.setTool?.(tool); } catch {}
-      // Limpiar clicks pendientes del tool anterior (round-trip)
-      try { (window as any).__hekatanCadResetPending?.(); } catch {}
-      // Mostrar instrucción del tool nuevo
-      const instr = toolInstructions[tool] ?? `Tool ${tool} activo`;
-      const statusEl = document.getElementById("hk-cad-status");
-      if (statusEl) {
-        // Setear texto base; updateStatus interno va a aplicar el sufijo
-        // de modos activos (ORTO, Cota Z, planos) — pero el setText directo
-        // lo hace simple. Usamos refresh helper si está disponible para que
-        // el sufijo se aplique automáticamente.
-        statusEl.textContent = instr;
-        (window as any).__hekatanCadStatusText = instr;
-        (window as any).__hekatanRefreshStatus?.();
-      }
-      console.log(`[CAD] Tool activo: ${tool} — ${instr}`);
-    };
-    fCad.addButton({ title: "🖱 Seleccionar" }).on("click", () => setActiveTool("select"));
-    fCad.addButton({ title: "● Nodo" }).on("click", () => setActiveTool("node"));
-    fCad.addButton({ title: "／ Línea (frame)" }).on("click", () => setActiveTool("line"));
-    fCad.addButton({ title: "▦ Área 4-clics (shell Q4)" }).on("click", () => setActiveTool("area"));
-    fCad.addButton({ title: "▭ Área rectangular (2 clics)" }).on("click", () => setActiveTool("rectarea"));
-    fCad.addButton({ title: "⬡ Área libre (polígono → malla)" }).on("click", () => setActiveTool("polyarea"));
-    fCad.addButton({ title: "◣ Plano inclinado (3 puntos)" }).on("click", () => setActiveTool("plane3"));
-    fCad.addButton({ title: "⬛ Plano XY (reset horizontal)" }).on("click", () => (window as any).__hekatanResetPlaneXY?.());
-    // Tools 3D dedicados — para dibujar SOLO desde vista isométrica sin
-    // tener que cambiar Cota Z entre clicks. Internamente:
-    //   col  → 1 click + altura → frame vertical (columna)
-    //   wall → 2 clicks base + altura → shell Q4 vertical (pared)
-    fCad.addButton({ title: "▌ Columna 3D (1 click + altura)" }).on("click", () => setActiveTool("col"));
-    fCad.addButton({ title: "▥ Pared Q4 3D (2 clicks + altura)" }).on("click", () => setActiveTool("wall"));
-    // Tools CAD adicionales (estilo AutoCAD): polilínea, rectángulo, círculo,
-    // arco, líneas auxiliares/de prolongación. Los elementos no lineales
-    // (arco, círculo) se discretizan en N segmentos al exportarse al FEM.
-    fCad.addButton({ title: "⌒ Polilínea" }).on("click", () => setActiveTool("polyline"));
-    fCad.addButton({ title: "▭ Rectángulo" }).on("click", () => setActiveTool("rect"));
-    fCad.addButton({ title: "○ Círculo" }).on("click", () => setActiveTool("circle"));
-    fCad.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
-    fCad.addButton({ title: "┊ Línea auxiliar" }).on("click", () => setActiveTool("aux"));
-    fCad.addButton({ title: "↗ Prolongar línea" }).on("click", () => setActiveTool("extend"));
-    // ── Tools arquitectónicos (formas irregulares) ──
-    fCad.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
-    // ── 🗑 Borrar — hover-highlight + click para eliminar líneas/áreas ──
-    fCad.addButton({ title: "🗑 Borrar (hover + click)" }).on("click", () => setActiveTool("delete"));
-    // Modos de drawing
-    const fModes = fCad.addFolder({ title: "🎯 Modos de dibujo", expanded: true });
-    const proxyModes = { ortho: false, polar: false, segs: 12 };
-    fModes.addBinding(proxyModes, "ortho", { label: "ORTO (90°)" }).on("change", (ev: any) => {
-      (window as any).__hekatanOrtho = ev.value;
-      console.log(`[CAD] ORTO ${ev.value ? "ON" : "OFF"}`);
-    });
-    fModes.addBinding(proxyModes, "polar", { label: "POLAR (45°)" }).on("change", (ev: any) => {
-      (window as any).__hekatanPolar = ev.value;
-      console.log(`[CAD] POLAR ${ev.value ? "ON" : "OFF"}`);
-    });
-    fModes.addBinding(proxyModes, "segs", { min: 4, max: 64, step: 1, label: "Segmentos arc/círc" }).on("change", (ev: any) => {
-      (window as any).__hekatanArcSegs = ev.value;
-    });
-    // Radio del chaflán para losas arquitectónicas
-    const proxyChaflan = { r: 1.0 };
-    fModes.addBinding(proxyChaflan, "r", { min: 0.1, max: 5, step: 0.1, label: "Chaflán r (m)" }).on("change", (ev: any) => {
-      (window as any).__hekatanChaflanR = ev.value;
-    });
-    (window as any).__hekatanChaflanR = 1.0;  // default
-
-    // ── 🎯 Object Snap (OSNAP) — estilo AutoCAD ──
-    // Endpoint, Midpoint, Center, Node, Perpendicular, Nearest, Intersection.
-    // Cada uno toggle independiente. Marcador con color por tipo aparece
-    // cuando el cursor está cerca de un snap activo.
-    const fOsnap = fCad.addFolder({ title: "🎯 Object Snap (OSNAP)", expanded: false });
-    const osnapState = (window as any).__hekatanOsnap ?? {
-      end: true, mid: true, node: true, cen: true,
-      per: false, nea: false, int: false,
-    };
-    (window as any).__hekatanOsnap = osnapState;
-    fOsnap.addBinding(osnapState, "end",  { label: "🔴 Endpoint" });
-    fOsnap.addBinding(osnapState, "mid",  { label: "🟡 Midpoint" });
-    fOsnap.addBinding(osnapState, "node", { label: "🔵 Node" });
-    fOsnap.addBinding(osnapState, "cen",  { label: "🟢 Center" });
-    fOsnap.addBinding(osnapState, "per",  { label: "🟣 Perpendicular" });
-    fOsnap.addBinding(osnapState, "nea",  { label: "🌸 Nearest" });
-    fOsnap.addBinding(osnapState, "int",  { label: "🟠 Intersection" });
-    // Plano de trabajo — actualiza drawingGridTarget para que el raycaster
-    // del Hekatan Drawing intersecte contra el plano correcto. Sin esto los
-    // botones solo cambiaban una variable lógica sin efecto visual.
-    const fPlane = fCad.addFolder({ title: "📐 Plano de trabajo", expanded: true });
-    const proxyPlane = { workZ: 0 };
-    const setPlane = (kind: "xy" | "xz" | "yz", z?: number, syncCam = true) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.workPlane = kind;
-      // Rotación del plano según orientación:
-      //   xy (planta)   → plano horizontal a Z = workZ → rotX=PI/2
-      //   xz (elevación) → plano vertical X-Z          → rotX=0
-      //   yz (lateral)   → plano vertical Y-Z          → rotZ=PI/2 (sobre Y)
-      const wz = z ?? proxyPlane.workZ;
-      // Grid centrado en el origen mundial (convención CAD).
-      if (kind === "xy") {
-        drawingGridTarget.val = { position: [0, 0, wz], rotation: [Math.PI/2, 0, 0] };
-      } else if (kind === "xz") {
-        drawingGridTarget.val = { position: [0, 0, 0], rotation: [0, 0, 0] };
-      } else {
-        // YZ: rotZ(π/2) — ver setView elevY para detalle. rotY(π/2) NO sirve
-        // porque deja el plano del raycaster horizontal en y=10 y el rayo
-        // de la cámara nunca lo cruza.
-        drawingGridTarget.val = { position: [0, 0, 0], rotation: [0, 0, Math.PI/2] };
-      }
-      console.log(`[CAD] Plano: ${kind.toUpperCase()} @ Z=${wz}m`);
-      // Sincronizar cámara → vista ortográfica real para CAD-feel
-      if (syncCam) {
-        if (kind === "xy") setView("plan");
-        else if (kind === "xz") setView("elevX");
-        else if (kind === "yz") setView("elevY");
-      }
-    };
-    fPlane.addButton({ title: "Plano XY (planta)" }).on("click", () => setPlane("xy"));
-    fPlane.addButton({ title: "Plano XZ (elevación frontal)" }).on("click", () => setPlane("xz"));
-    fPlane.addButton({ title: "Plano YZ (elevación lateral)" }).on("click", () => setPlane("yz"));
-    // Vista 3D — útil para orientarse mientras se dibuja en planta/elevación.
-    fPlane.addButton({ title: "🧊 Vista isométrica (3D)" }).on("click", () => {
-      setView("iso");
-      console.log("[CAD] Vista: ISOMÉTRICA");
-    });
-    // Vista doble: planta dibujable a la izquierda + iso preview a la derecha.
-    // Toggle: 1er click activa, 2do click desactiva. El folder "🔀 Vista doble
-    // (split)" en Vista expone configuración avanzada (otra cámara secundaria).
-    // ⚠️ Al apagarla se quedaba en PLANTA ortográfica (la que puso al
-    // encenderse) en vez de volver a la vista que había: se guarda y se
-    // restaura. Y el encuadre de un lienzo vacío va por la rejilla (diagLienzo).
-    // Se guarda la CÁMARA tal cual (cuál, posición, objetivo, zoom/frustum), no
-    // un nombre de vista: el nombre podía ser «plan» por el plano de trabajo
-    // inicial aunque lo que se veía fuera la iso, y al apagar caía en planta.
-    let camaraAntesDeDoble: any = null;
-    fPlane.addButton({ title: "🔀 Vista doble (planta + iso)" }).on("click", () => {
-      const ctx: any = (viewerElm as any).__ctx;
-      splitState.enabled = !splitState.enabled;
-      if (splitState.enabled) {
-        const cam = ctx?.camera;
-        camaraAntesDeDoble = cam ? {
-          cam, pos: cam.position.clone(), up: cam.up.clone(), target: ctx.controls.target.clone(),
-          zoom: cam.zoom, l: cam.left, r: cam.right, t: cam.top, b: cam.bottom, plano: (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy",
-        } : null;
-        splitState.secondary = 0;  // 0 = iso a la derecha
-        setPlane("xy");            // planta a la izquierda (vista activa, dibujable)
-        console.log("[CAD] Vista doble ACTIVADA — planta (izq, dibujable) + iso (der, preview)");
-        refreshSplit();
-      } else {
-        refreshSplit();            // a pantalla completa (aspect entero)
-        const s = camaraAntesDeDoble;
-        if (s && ctx) {
-          const cam = s.cam;
-          cam.position.copy(s.pos); cam.up.copy(s.up); ctx.controls.target.copy(s.target);
-          if (cam.isOrthographicCamera) {
-            // el frustum vertical de antes, con el ancho de la pantalla entera
-            const w = (viewerElm as HTMLElement).clientWidth || 1, h = (viewerElm as HTMLElement).clientHeight || 1;
-            cam.top = s.t; cam.bottom = s.b; cam.left = -s.t * (w / h); cam.right = s.t * (w / h);
-          }
-          cam.zoom = s.zoom; cam.updateProjectionMatrix(); cam.lookAt(s.target);
-          ctx.setActiveCamera(cam); ctx.controls.update();
-          if (s.plano !== "xy") setPlane(s.plano);
-          ctx.render?.();
-        }
-        console.log("[CAD] Vista doble DESACTIVADA — vuelve a la cámara de antes");
-      }
-    });
-    // Planos de referencia visibles — guías horizontales a Z=0,3,6,9,12 m
-    // (niveles típicos de pisos). Útil para orientarse en iso 3D.
-    let refPlanesVisible = false;
-    // Atenúa los bordes de los planos de referencia (creados con opacidad 0.55
-    // por hekatan-ui) para que queden MÁS TRANSPARENTES que la grilla de
-    // plataforma. Los identificamos por su opacidad inicial 0.55 (única en la
-    // escena). Local a workspace3 — no toca hekatan-ui.
-    const REF_PLANE_OPACITY = 0.14; // < grilla mayor (0.40) → más transparente
-    const REF_LEVELS = [0, 3, 6, 9, 12];
-    const REF_SIZE = 20;
-    const dimRefPlanes = () => {
-      const cx: any = (viewerElm as any).__ctx;
-      if (!cx?.scene) return;
-      cx.scene.traverse((o: any) => {
-        if ((o.isLine || o.isLineSegments) && o.material &&
-            Math.abs((o.material.opacity ?? 0) - 0.55) < 0.02) {
-          o.material.opacity = REF_PLANE_OPACITY;
-          o.material.needsUpdate = true;
-        }
-      });
-      cx.render?.();
-    };
-    // Re-centra los planos de referencia con su CENTRO GEOMÉTRICO en (cx, cy).
-    // Se llama al activar (centro = origen) y en cada CLICK de dibujo (centro =
-    // punto clickeado) → los planos "siguen" donde dibujás.
-    const recenterRefPlanes = (cx: number, cy: number) => {
-      (window as any).__hekatanShowRefPlanes?.(REF_LEVELS, REF_SIZE, cx, cy);
-      dimRefPlanes();
-    };
-    (window as any).__hekatanRecenterRefPlanes = recenterRefPlanes;
-    fPlane.addButton({ title: "📐 Mostrar/ocultar planos de ref. (siguen tu click)" }).on("click", () => {
-      refPlanesVisible = !refPlanesVisible;
-      (window as any).__hekatanRefPlanesOn = refPlanesVisible;
-      if (refPlanesVisible) {
-        recenterRefPlanes(0, 0); // centro inicial en el origen
-        console.log("[CAD] Planos de referencia VISIBLES (atenuados, siguen click)");
-      } else {
-        (window as any).__hekatanHideRefPlanes?.();
-        console.log("[CAD] Planos de referencia OCULTOS");
-      }
-    });
-    // Toggle de planos ORTOGONALES del último punto (XY/XZ/YZ que aparecen
-    // durante el rubber band para guía visual + snap).
-    //
-    // Default OFF. Venían encendidos, y en un lienzo vacío aparecen dos planos
-    // de color atravesando la pantalla sin que nadie los haya pedido: lo
-    // primero que se ve al entrar es un adorno que no se sabe qué es ni cómo
-    // se quita. Son una guía para afinar un punto, así que se encienden cuando
-    // hagan falta, desde este mismo botón.
-    (window as any).__hekatanShowOrthoPlanes = false;
-    let orthoPlanesVisible = false;
-    fPlane.addButton({ title: "▦ Planos ref. ortogonales (XY/XZ/YZ del último pto)" }).on("click", () => {
-      orthoPlanesVisible = !orthoPlanesVisible;
-      // Llamar al setter expuesto para que el cambio se aplique YA, sin
-      // esperar a que el usuario mueva el mouse. Si no existe el setter
-      // (versión vieja), fallback al flag pelado.
-      const fn = (window as any).__hekatanSetOrthoPlanes;
-      if (typeof fn === "function") fn(orthoPlanesVisible);
-      else (window as any).__hekatanShowOrthoPlanes = orthoPlanesVisible;
-      // Refrescar status (sufijo refleja los modos activos)
-      (window as any).__hekatanRefreshStatus?.();
-      console.log(`[CAD] Planos ortogonales ${orthoPlanesVisible ? "ACTIVADOS" : "DESACTIVADOS"}`);
-    });
-    // ── Sliders de dimensión visual ──
-    // 1) Tamaño del área de los planos ortogonales (cuadrado XY/XZ/YZ).
-    //    `ext` es el semi-lado, así que el cuadrado total es 2·ext × 2·ext.
-    //    Default 8m → cuadrado 16×16. Range generoso (1m a 50m) cubre desde
-    //    detalle (zapata) hasta edificio entero.
-    // 2) Tamaño del grid mallado (la "plataforma" que se ve en el viewer).
-    //    Tira de settings.gridSize del viewer interno (default 10).
-    const proxySizes = { orthoExt: 3.2, gridSize: 30 };
-    const orthoExtBinding = fPlane.addBinding(proxySizes, "orthoExt", {
-      min: 1, max: 50, step: 0.5, label: "Tamaño área planos ref. (m)",
-    }).on("change", (ev: any) => {
-      const fn = (window as any).__hekatanSetOrthoExt;
-      if (typeof fn === "function") fn(ev.value);
-      else (window as any).__hekatanOrthoExt = ev.value;
-    });
-    fPlane.addBinding(proxySizes, "gridSize", {
-      min: 1, max: 100, step: 1, label: "Tamaño grid (m)",
-    }).on("change", (ev: any) => {
-      const s = (viewerElm as any).__settings;
-      if (s?.gridSize) s.gridSize.val = ev.value;
-      // Mantener el plano de referencia del mismo tamaño que la grilla.
-      proxySizes.orthoExt = ev.value / 2;
-      try { orthoExtBinding.refresh(); } catch {}
-      (window as any).__hekatanSetOrthoExt?.(ev.value / 2);
-    });
-    // ── Toggle global de grid snap ──
-    // Cuando OFF, el cursor ignora el grid (Snap 2D / Snap 3D) y queda en
-    // la coordenada raw del raycaster. OSnap (endpoint/midpoint/etc.) sigue
-    // funcionando — esto solo controla el snap a la malla cuadriculada.
-    // El toggle de grid snap + atajo F9 vive ahora en getCadPanel.ts (el panel
-    // CAD real). Acá solo dejamos el binding legacy por compatibilidad.
-    // Apagado por defecto, como en AutoCAD: ver la nota larga en getCadPanel.ts
-    (window as any).__hekatanSnapEnabled = false;
-    const proxySnapToggle = { snapEnabled: false };
-    fCad.addBinding(proxySnapToggle, "snapEnabled", { label: "🧲 Grid snap (F9)" }).on("change", (ev: any) => {
-      (window as any).__hekatanSnapEnabled = !!ev.value;
-    });
-    // ── Selector de paso de snap (cuánto salta el cursor) ──
-    // Dropdown con valores discretos comunes en CAD: 0.01 / 0.05 / 0.1 / 0.2 /
-    // 0.25 / 0.5 / 1 / 2 / 5 metros. Bindea a __hekatanSnap2D igual que el
-    // slider continuo, pero más usable porque clava valores "limpios" sin
-    // tener que arrastrar el slider con precisión.
-    const proxySnapStep = { step: 0.5 };
-    fCad.addBinding(proxySnapStep, "step", {
-      label: "Paso snap (m)",
-      options: {
-        "0.01 m (mm)":  0.01,
-        "0.05 m (5cm)": 0.05,
-        "0.10 m":       0.1,
-        "0.20 m":       0.2,
-        "0.25 m":       0.25,
-        "0.50 m":       0.5,
-        "1.00 m":       1.0,
-        "2.00 m":       2.0,
-        "5.00 m":       5.0,
-      },
-    }).on("change", (ev: any) => {
-      const v = Number(ev.value);
-      (window as any).__hekatanSnap2D = v;
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.snap = v;  // legacy
-    });
-    // Snap 2D y 3D separados (más flexibilidad para distintos workflows)
-    const proxyCAD = { snap2D: 0.5, snap3D: 0.25, workZ: 0 };
-    fCad.addBinding(proxyCAD, "snap2D", { min: 0, max: 5, step: 0.05, label: "Snap 2D fino (m)" }).on("change", (ev: any) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.snap = ev.value;  // legacy
-      (window as any).__hekatanSnap2D = ev.value;
-    });
-    fCad.addBinding(proxyCAD, "snap3D", { min: 0, max: 5, step: 0.05, label: "Snap 3D (m)" }).on("change", (ev: any) => {
-      (window as any).__hekatanSnap3D = ev.value;
-    });
-    fCad.addBinding(proxyPlane, "workZ", { min: -10, max: 50, step: 0.1, label: "Cota Z (m)" }).on("change", (ev: any) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.workZ = ev.value;
-      // Re-posicionar el plano XY (si está activo) a esa Z
-      const curPlane = ((window as any).__hekatanCadState?.get?.())?.workPlane ?? "xz";
-      if (curPlane === "xy") setPlane("xy", ev.value, false); // no re-sync cámara en cada tick
-      try { (window as any).__hekatanRebuild?.(); } catch {}
-    });
-    // Acciones
-    const fAcc = fCad.addFolder({ title: "🛠 Acciones", expanded: true });
-    // ⏹ Finalizar dibujo: termina la polilínea actual (próximo click = nuevo
-    // trazo independiente), libera axis lock, oculta rubber band/polar lines.
-    // Equivalente a Esc o click derecho.
-    fAcc.addButton({ title: "⏹ Finalizar dibujo (Esc)" }).on("click", () => {
-      (window as any).__hekatanFinalizeDraw?.();
-      (window as any).__hekatanCadMouse?.cancel?.();
-    });
-    fAcc.addButton({ title: "🗑 Limpiar todo" }).on("click", () => {
-      (window as any).__hekatanCadState?.reset?.();
-      // También limpiar el Drawing nativo (puntos + polylines + áreas + aux)
-      drawingPoints.val = [];
-      drawingPolylines.val = [[]];
-      drawingAreas.val = [];
-      drawingAuxLines.val = [];
-      try { (window as any).__hekatanRebuild?.(); } catch {}
-    });
-    // Botones para cambiar la cota Z del plano de trabajo (planta de cada piso)
-    const fFloors = fCad.addFolder({ title: "🏢 Plantas de pisos", expanded: false });
-    [0, 3, 6, 9, 12].forEach(z => {
-      fFloors.addButton({ title: `Piso a Z=${z}m` }).on("click", () => {
-        drawingGridTarget.val = {
-          position: [0, 0, z],
-          rotation: [Math.PI/2, 0, 0],
-        };
-        const cs = (window as any).__hekatanCadState?.get?.();
-        if (cs) cs.workZ = z;
-        console.log(`[CAD] Plano XY @ Z=${z}m`);
-      });
-    });
-    fAcc.addButton({ title: "📋 Copiar comandos a CLI" }).on("click", () => {
-      const script = (window as any).__hekatanCliScript ?? "";
-      console.log("[CAD] Comandos generados:\n" + script);
-      navigator.clipboard?.writeText(script);
-      alert("Comandos copiados al portapapeles. Pega en cli-modeler para editar/correr el FEM.");
-    });
-  }
+  // (Aqui vivia un bloque `if (false && currentExample) { ... }` de 368 lineas:
+  //  la version INLINE de las Herramientas CAD, que ya vive en `hekatan-ui`.
+  //  Nunca se ejecutaba. Borrado el 18-sep-2026; esta en el historial de git.)
 
   // ── 💻 CLI Modeler (siempre disponible — folder colapsado por default
   //     en ejemplos que no son cli-modeler para no estorbar) ──
@@ -4869,7 +4626,7 @@ solve`;
       //     LECTURA pero el parser los convierte a 1-based (nI = nums[0]+1)
       //     antes de almacenar — así son consistentes con los IDs 1-based de nodes.
       //   • `supports` y `loads` — usan IDs 1-based directamente (igual que inline).
-      ta.value = `# Portico 2D — sintaxis bloque (estilo awatif)
+      ta.value = `# Portico 2D — sintaxis bloque
 nodes
 0 0 0      # se almacena como nodo ID=1
 0 0 3      # nodo ID=2
@@ -4914,7 +4671,11 @@ solve`;
           const ex = examplesRegistry.find((e) => e.id === "ifc-viewer");
           const quedarse = currentExample?.id === "ifc-viewer" || currentExample?.id === "new-blank";
           if (ex && !quedarse) { loadExample(ex); }
-          else { try { rebuild(); } catch {} try { autoFitCamera(); } catch {} }
+          else {
+            try { rebuild(); }
+            catch (e: any) { console.error(`[IFC] el rebuild fallo: ${e?.message ?? e}`); }
+            try { autoFitCamera(); } catch {}
+          }
           console.log(`✅ IFC: ${file.name} — ${M.grupos.length} objetos, ${M.nTri} triángulos.`);
         } catch (e: any) { alert(`Error importando IFC: ${e?.message ?? e}`); console.error(e); }
       };
@@ -5741,8 +5502,11 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
             states.objects3D.val = colObjs;
             try {
               const dout = deform(N2, E2, states.nodeInputs.val, states.elementInputs.val, springsList2);
-              states.deformOutputs.val = dout;
               const aout = analyze(N2, E2, states.elementInputs.val, dout);
+              // Este boton REEMPLAZA el modelo (N2/E2): sello nuevo y las dos
+              // salidas estampadas antes de publicarlas.
+              sellarSalidas(nuevoSello("cimentacion"), dout, aout);
+              states.deformOutputs.val = dout;
               // Override colormap range para pressure (hasta -q_adm)
               const q_adm_kPa = q_adm * 9.80665;  // tonf/m² → kN/m² ≈ kPa
               if (aout.colorMapRanges == null) aout.colorMapRanges = {};
@@ -6625,7 +6389,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     modalAnimator = createModalAnimator({
       mesh: { nodes, elements, deformOutputs, analyzeOutputs },
       viewerElm,
-      scalePercent: 5,
+      // escala única del modo: `shared/modeScale.ts` (3.7 % de la diagonal = SAP2000 medido)
       onStatusChange: () => {
         const s = modalAnimator.getStatus();
         status.mode = s.mode;
@@ -6806,7 +6570,7 @@ const settingsObj: Record<string, any> = {
 let viewerElm: HTMLElement;
 try {
   viewerElm = getViewer({
-    mesh: { nodes, elements, nodeInputs, elementInputs, deformOutputs, analyzeOutputs },
+    mesh: { nodes, elements, nodeInputs, elementInputs, deformOutputs, analyzeOutputs, caseId },
     objects3D,
     settingsObj,
     // Drawing nativo de hekatan-ui (awatif). Mouse handler + raycaster + snap
@@ -8402,7 +8166,7 @@ document.body.appendChild(modalPanel.div);
 modalAnimator = createModalAnimator({
   mesh: { nodes, elements, deformOutputs, analyzeOutputs },
   viewerElm,
-  scalePercent: 5,
+  // escala única del modo: `shared/modeScale.ts` (3.7 % de la diagonal = SAP2000 medido)
 });
 
 // ── Hidratar drawing arrays globales desde localStorage si hay import pendiente ──

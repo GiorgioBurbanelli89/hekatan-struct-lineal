@@ -25,6 +25,11 @@
 import type { State } from "vanjs-core";
 import * as THREE from "three";
 import type { Node, Element, ModalOutputs } from "hekatan-fem";
+import { MODE_SCALE_PERCENT, modelDiagonal } from "./modeScale";
+
+/** Segundos por ciclo de la animación modal de SAP2000, leídos de su binario (18-sep-2026):
+ *  incremento «3 (30 degrees)» → 7 cuadros, ping-pong de 12 ticks × 367 ms = 4.40 s. */
+export const PERIODO_VISIBLE_SAP2000 = 4.4;
 
 export interface ModalAnimatorConfig {
   /** Reactive mesh del viewer (nodes + elements + deformOutputs del workspace) */
@@ -38,6 +43,10 @@ export interface ModalAnimatorConfig {
   viewerElm: HTMLElement;
   /** Amplitud visual como % del diagonal del modelo. Default 5%. */
   scalePercent?: number;
+  /** segundos por ciclo (defecto: los 4.40 s medidos en SAP2000) */
+  periodoVisible?: number;
+  /** true = comportamiento anterior: la velocidad escalaba con la frecuencia del modo */
+  velocidadPorFrecuencia?: boolean;
   /** Factor de tiempo para que la animación sea visualmente agradable (no la
    *  frecuencia REAL que a veces es muy alta o muy baja). Default: escalar
    *  frecuencia a [0.5, 3] Hz para oscilación clara. */
@@ -97,7 +106,7 @@ export interface ModalAnimator {
  */
 export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
   const { mesh, viewerElm, onStatusChange } = cfg;
-  const scalePct = cfg.scalePercent ?? 5;
+  const scalePct = cfg.scalePercent ?? MODE_SCALE_PERCENT;   // ver `shared/modeScale.ts`
   const [visMin, visMax] = cfg.visFrequencyRange ?? [0.5, 3];
 
   // ── State ──────────────────────────────────────────────────────────
@@ -208,10 +217,15 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
 
     const shape = results.modeShapes[mode];
     const freq = results.frequencies?.[mode] || 1;
-    // Mapear frecuencia REAL → frecuencia VISIBLE para que modos altos no oscilen
-    // tan rápido que el ojo no los detecte.
+    // VELOCIDAD = la de SAP2000, leída de su binario (18-sep-2026): incremento por defecto
+    // «3 (30 degrees)» → 7 cuadros por media oscilación, amplitud coseno, ping-pong de 12 ticks
+    // y `Interval = 367 ms` con `m_speed = 0` → 4.40 s por ciclo. Y la frecuencia del modo NO
+    // entra en ese cálculo: SAP anima el modo 1 (T=0.484 s) y el 3 (T=0.155 s) al MISMO ritmo.
+    // Antes aquí se escalaba con freq/baseFreq: el modo 1 iba 4.4 veces más rápido que SAP.
     const baseFreq = results.frequencies?.[0] || 1;
-    const visFreq = Math.max(visMin, Math.min(visMax, freq / baseFreq));
+    const visFreq = cfg.velocidadPorFrecuencia
+      ? Math.max(visMin, Math.min(visMax, freq / baseFreq))   // comportamiento anterior, opcional
+      : 1 / (cfg.periodoVisible ?? PERIODO_VISIBLE_SAP2000);
 
     // BASE de la animación = SIEMPRE los verdaderos originales (no los nodos
     // actuales, que pueden estar mid-animación de otro modo). Sin esto, cambiar
@@ -237,15 +251,9 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
       return;
     }
 
-    // Amplitud = scalePct% del diagonal del modelo / maxDisp del modo
-    let xMin = Infinity, yMin = Infinity, zMin = Infinity;
-    let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity;
-    for (const n of originalNodes) {
-      if (n[0] < xMin) xMin = n[0]; if (n[0] > xMax) xMax = n[0];
-      if (n[1] < yMin) yMin = n[1]; if (n[1] > yMax) yMax = n[1];
-      if (n[2] < zMin) zMin = n[2]; if (n[2] > zMax) zMax = n[2];
-    }
-    const extent = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2) || 1;
+    // Amplitud = scalePct% de la DIAGONAL del modelo / maxDisp del modo.
+    // La diagonal la da `shared/modeScale.ts`: la misma definicion que el CAD y el GIF.
+    const extent = modelDiagonal(originalNodes);
     let maxDisp = 0;
     for (let i = 0; i < nNodes; i++) {
       const dx = shape[i * 6] || 0, dy = shape[i * 6 + 1] || 0, dz = shape[i * 6 + 2] || 0;
@@ -303,9 +311,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
         `${Math.floor(shape.length / 6)} nudos contra ${nNodes} en pantalla. No lo dibujo.`);
       return;
     }
-    let xMin = Infinity, yMin = Infinity, zMin = Infinity, xMax = -Infinity, yMax = -Infinity, zMax = -Infinity;
-    for (const n of base) { if (n[0] < xMin) xMin = n[0]; if (n[0] > xMax) xMax = n[0]; if (n[1] < yMin) yMin = n[1]; if (n[1] > yMax) yMax = n[1]; if (n[2] < zMin) zMin = n[2]; if (n[2] > zMax) zMax = n[2]; }
-    const extent = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2) || 1;
+    const extent = modelDiagonal(base);
     let maxDisp = 0;
     for (let k = 0; k < nNodes; k++) { const dx = shape[k * 6] || 0, dy = shape[k * 6 + 1] || 0, dz = shape[k * 6 + 2] || 0; const m = Math.sqrt(dx * dx + dy * dy + dz * dz); if (m > maxDisp) maxDisp = m; }
     const mScale = maxDisp > 1e-12 ? (extent * scalePct / 100) / maxDisp : 1;
