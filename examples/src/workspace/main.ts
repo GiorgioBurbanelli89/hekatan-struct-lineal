@@ -757,7 +757,7 @@ function loadExample(ex: ExampleDef) {
     }
   }
   // Default activeLoadCase = primer case (Dead) si no hay seleccionado
-  if (!loadCases.val.find(c => c.name === activeLoadCase.val)) {
+  if (!loadCases.val.find(c => c.name === activeLoadCase.val) && !loadCombinations.val.find((c: any) => c.name === activeLoadCase.val)) {
     activeLoadCase.val = loadCases.val[0]?.name ?? "Dead";
   }
   // ── Ejemplos con PANEL PROPIO (1d-mesh, beams, plate-q4, solidos…): traen
@@ -1104,7 +1104,8 @@ function mountCaseResultsInSettings() {
     // (Jorge, 14-sep-2026: «case: modal, dead, live; combo: live más dead; se activa solo el que
     // activo». Antes había un tercer tipo «Mode» que repetía al caso Modal.)
     if (!loadCases.val.length) return;
-    if (!loadCases.val.find((c) => c.name === activeLoadCase.val)) activeLoadCase.val = loadCases.val[0].name;
+    // una COMBINACION activa también vale (antes se pisaba con «Dead» y el diseño leía otro caso)
+    if (!loadCases.val.find((c) => c.name === activeLoadCase.val) && !loadCombinations.val.find((c: any) => c.name === activeLoadCase.val)) activeLoadCase.val = loadCases.val[0].name;
     const freqs: number[] = __lastModalResults?.frequencies ?? [];
     const casosModal = loadCases.val.filter((c) => c.type?.startsWith("Modal"));
     const casoModal = casosModal[0]?.name;
@@ -1825,6 +1826,19 @@ function ribbonPlegadaPara(id?: string | null): boolean {
   return r;
 };
 (window as any).__hekatanAutoFit = autoFitCamera;
+/** Pone un caso o combinación como activo, igual que elegirlo en «Resultados» de Settings
+ *  (lo usa el panel Franjas: el diseño va siempre con una combinación). */
+(window as any).__hekatanPonerCaso = (caso: string) => {
+  const esCombo = loadCombinations.val.some((c: any) => c.name === caso);
+  if (!esCombo && !loadCases.val.some((c) => c.name === caso)) return false;
+  __tipoRes = esCombo ? "combo" : "case";
+  __selRes[__tipoRes] = esCombo ? `__combo_${caso}` : caso;
+  activeLoadCase.val = caso;
+  (window as any).__hekatanRebuild();
+  try { mountCaseResultsInSettings(); } catch { /* no-op */ }
+  return true;
+};
+
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
 (window as any).__hekatanSetView = (p: "iso" | "plan" | "elevX" | "elevY") => { try { setView(p); } catch (e) {} };

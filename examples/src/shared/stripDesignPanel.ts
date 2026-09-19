@@ -176,7 +176,7 @@ export function montarPanelFranjas() {
   const opt = (v: number[], sel: number) => v.map(d => `<option value="${d}"${d === sel ? " selected" : ""}>Ø${d} mm</option>`).join("");
   pan.innerHTML = `
   <div style="display:flex;justify-content:space-between;align-items:center"><b>Diseño de losa (como SAFE)</b><span id="hkf-x" style="cursor:pointer">✕</span></div>
-  <div style="margin:6px 0;color:#9cc">Resultados: <span id="hkf-caso"></span></div>
+  <div style="margin:6px 0;color:#9cc">Combinación de diseño <select id="hkf-combo"></select> <span id="hkf-caso"></span></div>
   <div style="margin:4px 0">Método <select id="hkf-met"><option value="franjas">Franjas (strip based)</option><option value="fe">Elementos finitos (FE based)</option></select>
     <label><input id="hkf-min" type="checkbox"> imponer mínimo</label></div>
   <fieldset id="hkf-fs-franjas" style="border:1px solid #445;padding:4px"><legend>Franjas</legend>
@@ -268,7 +268,27 @@ export function montarPanelFranjas() {
   const grupo = new THREE.Group(); grupo.name = "hk-franjas";
 
   const limpiar = () => { grupo.clear(); quitarLeyendaAs(); viewerCtx()?.render?.(); };
-  const refrescarCaso = () => { $("hkf-caso").textContent = `${W.__hekatanStates?.activeLoadCase?.val ?? "?"} (caso/combinación en pantalla)`; };
+  // El diseño va SIEMPRE con una combinación (1.2D+1.6L…), no con un caso suelto (Jorge, 19-sep-2026).
+  // Por defecto la que se llame «diseño/última/U…»; si no, la de mayor Σ|factor| (la que más carga).
+  const combos = (): any[] => W.__hekatanStates?.loadCombinations?.val ?? [];
+  const comboDefecto = () => {
+    const cs = combos(); if (!cs.length) return "";
+    // primero las del MODELO (.heks/.f2k: combo «DISENO» = la de diseño de SAFE), luego las del workspace
+    const delModelo = new Set(((W.__hekatanStates?.elementInputs?.val?.combos ?? []) as any[]).map(c => c.name));
+    for (const re of [/dise|ultim|últim|resist/i, /^u\d/i, /1\.2\s*d/i]) {
+      const n = cs.find(c => delModelo.has(c.name) && re.test(c.name)) ?? cs.find(c => re.test(c.name));
+      if (n) return n.name;
+    }
+    const peso = (c: any) => (c.cases ?? []).reduce((t: number, x: any) => t + Math.abs(x.scaleFactor ?? 0), 0);
+    return cs.reduce((m, c) => (peso(c) > peso(m) ? c : m), cs[0]).name;
+  };
+  const refrescarCaso = () => {
+    const sel = $("hkf-combo") as HTMLSelectElement, cs = combos(), prev = sel.value;
+    sel.innerHTML = cs.length ? cs.map(c => `<option>${c.name}</option>`).join("") : `<option value="">(el modelo no tiene combinaciones)</option>`;
+    sel.value = cs.some(c => c.name === prev) ? prev : comboDefecto();
+    const act = W.__hekatanStates?.activeLoadCase?.val ?? "?";
+    $("hkf-caso").textContent = cs.length ? (act === sel.value ? "✓ en pantalla" : `(en pantalla: ${act}; al calcular pasa a ${sel.value})`) : `⚠ se usa el caso en pantalla: ${act}`;
+  };
   const lista = () => {
     const nA = franjas.filter(f => f.layer === "A").length, nB = franjas.length - nA;
     $("hkf-lista").textContent = franjas.length ? `${franjas.length} franjas (capa A ${nA}, capa B ${nB}): ${franjas.map(f => f.name).join(" ")}` : "sin franjas";
@@ -370,7 +390,19 @@ export function montarPanelFranjas() {
     cv.addEventListener("click", alClic, true);
   };
 
+  // Si la combinación elegida no es la de pantalla, se activa (rebuild) y se espera a sus resultados.
   const calcular = () => {
+    const s = W.__hekatanStates, cmb = ($("hkf-combo") as HTMLSelectElement).value;
+    const antes = s?.analyzeOutputs.val, t0 = Date.now();   // ANTES de cambiar: el rebuild puede ser síncrono
+    if (cmb && s && s.activeLoadCase.val !== cmb && W.__hekatanPonerCaso?.(cmb)) {
+      $("hkf-caso").textContent = `calculando ${cmb}…`;
+      const esperar = () => (s.analyzeOutputs.val !== antes && s.analyzeOutputs.val?.bendingXXjoint) || Date.now() - t0 > 60000
+        ? setTimeout(calcularYa, 50) : setTimeout(esperar, 200);
+      return void setTimeout(esperar, 200);
+    }
+    calcularYa();
+  };
+  const calcularYa = () => {
     const m = mallaDeLosa(); if (!m) return alert("Calcula el modelo primero.");
     refrescarCaso();
     const cutter = new StripCutter(m.elems, {
