@@ -1144,6 +1144,129 @@ async function cierraCarpeta(titulo) {
   await espera(300);
 }
 
+
+// ══ VÍDEO 0 v2 (19-sep-2026): Jorge — «están mal, no indican nada, solo una voz que dice derecha
+// izquierda, no subraya nada». Ahora lo que se nombra se ENMARCA: marco dorado + rótulo y el resto
+// de la pantalla oscurecido (foco); y dentro de una carpeta un segundo marco (cian) recorre los
+// mandos uno a uno con SU nombre. Una carpeta de fotogramas por PASO, para que en el guion cada
+// paso sea una escena con su voz: marco y voz van juntos por construcción.
+// La lista de pasos vive en hekatan-school/ui_pasos.json (la lee también gen_ui_hs.py).
+async function instalaMarcos() {
+  await pag.evaluate(() => {
+    if (document.getElementById("vd-hl")) return;
+    const mk = (id, css) => { const d = document.createElement("div"); d.id = id; d.style.cssText = css; document.body.appendChild(d); return d; };
+    mk("vd-hl", "position:fixed;z-index:99990;pointer-events:none;display:none;border:3px solid #f5c542;border-radius:7px;" +
+      "box-shadow:0 0 0 9999px rgba(0,0,0,.58),0 0 22px 2px #f5c542;");
+    mk("vd-hl-t", "position:fixed;z-index:99992;pointer-events:none;display:none;background:#f5c542;color:#141414;" +
+      "font:800 21px/1.25 'Segoe UI',system-ui,sans-serif;padding:7px 14px;border-radius:7px;max-width:640px;box-shadow:0 3px 14px #000;");
+    mk("vd-hl2", "position:fixed;z-index:99993;pointer-events:none;display:none;border:2px solid #38e1ff;border-radius:5px;" +
+      "box-shadow:0 0 12px #38e1ff;background:rgba(56,225,255,.10);");
+    mk("vd-hl2-t", "position:fixed;z-index:99994;pointer-events:none;display:none;background:#0b2a33;color:#aef3ff;border:1px solid #38e1ff;" +
+      "font:700 17px/1.2 'Segoe UI',system-ui,sans-serif;padding:4px 10px;border-radius:5px;white-space:nowrap;box-shadow:0 2px 10px #000;");
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+    window.__vdMarco = (r, texto, arriba) => {
+      const d = document.getElementById("vd-hl"), t = document.getElementById("vd-hl-t");
+      const x = Math.max(2, r.x), y = Math.max(2, r.y), x2 = Math.min(W() - 2, r.x + r.w), y2 = Math.min(H() - 2, r.y + r.h);
+      Object.assign(d.style, { display: "block", left: x + "px", top: y + "px", width: (x2 - x) + "px", height: (y2 - y) + "px" });
+      t.textContent = texto; t.style.display = "block";
+      const tw = t.offsetWidth, th = t.offsetHeight;
+      // el rótulo: fuera del marco si cabe (arriba o abajo), si no dentro, arriba
+      let ty = (arriba || y2 + th + 10 > H()) ? y - th - 8 : y2 + 8;
+      if (ty < 4) ty = y + 8;
+      let tx = Math.min(Math.max(6, x + (x2 - x) / 2 - tw / 2), W() - tw - 6);
+      Object.assign(t.style, { left: tx + "px", top: ty + "px" });
+    };
+    window.__vdMando = (r, texto, lado) => {
+      const d = document.getElementById("vd-hl2"), t = document.getElementById("vd-hl2-t");
+      Object.assign(d.style, { display: "block", left: (r.x - 2) + "px", top: (r.y - 1) + "px", width: (r.w + 4) + "px", height: (r.h + 2) + "px" });
+      t.textContent = texto; t.style.display = "block";
+      const tw = t.offsetWidth, th = t.offsetHeight;
+      const tx = lado === "der" ? Math.min(r.x + r.w + 12, W() - tw - 6) : Math.max(6, r.x - tw - 12);
+      Object.assign(t.style, { left: tx + "px", top: Math.max(4, r.y + r.h / 2 - th / 2) + "px" });
+    };
+    window.__vdMandoOff = () => { for (const id of ["vd-hl2", "vd-hl2-t"]) document.getElementById(id).style.display = "none"; };
+    window.__vdMarcoOff = () => { for (const id of ["vd-hl", "vd-hl-t", "vd-hl2", "vd-hl2-t"]) document.getElementById(id).style.display = "none"; };
+  });
+}
+const rectDe = (fnTxt, ...args) => pag.evaluate((fnTxt, args) => {
+  const e = eval(fnTxt)(...args); if (!e) return null;
+  const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height };
+}, fnTxt, args);
+async function marco(r, etiqueta, arriba = false, fotos = 8, margen = 4) {
+  const q = { x: r.x - margen, y: r.y - margen, w: r.w + 2 * margen, h: r.h + 2 * margen };
+  await mover(q.x + q.w / 2, q.y + Math.min(q.h / 2, 60), 4, true);
+  await pag.evaluate((q, e, a) => window.__vdMarco(q, e, a), q, etiqueta, arriba);
+  await espera(120); await foto(fotos);
+}
+/** Un PASO del vídeo de la interfaz: deja sus fotogramas en frames_struct_ui<video>_<id>/ */
+async function pasoUI(video, p, estado) {
+  abre(`ui${video}_${p.id}`);
+  await pag.evaluate(() => window.__vdMarcoOff());
+  await foto(2);
+  if (p.tipo === "panel") {
+    const r = await rectDe(`(t) => Array.from(document.querySelectorAll(".tp-rotv")).find((x) => (x.querySelector(".tp-rotv_t")?.textContent || "").includes(t) && x.getBoundingClientRect().width > 0)`, p.texto);
+    if (r) await marco(r, p.etiqueta, false, 10);
+  } else if (p.tipo === "sel") {
+    const r = await rectDe(`(s) => Array.from(document.querySelectorAll(s)).find((x) => x.getBoundingClientRect().width > 0)`, p.sel);
+    if (r) await marco(r, p.etiqueta, false, 10, p.margen ?? 4);
+  } else if (p.tipo === "id") {
+    const r = await rectDe(`(i) => document.getElementById(i)`, p.el);
+    if (r) await marco(r, p.etiqueta, !!p.arriba, 10);
+    else console.log(`   [!] no hay #${p.el}`);
+  } else if (p.tipo === "ribbon") {
+    if (p.abrir && !estado.ribbon) { await pag.evaluate(() => window.__vdMarcoOff()); await clic("button", "Dibujar", 1200, 3); estado.ribbon = true; }
+    const r = await pag.evaluate((de, a) => {
+      const bs = [...document.querySelectorAll("#hk-ribbon button")].filter((b) => b.getBoundingClientRect().width > 0).slice(de, a + 1);
+      if (!bs.length) return null;
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const b of bs) { const q = b.getBoundingClientRect(); x0 = Math.min(x0, q.left); y0 = Math.min(y0, q.top); x1 = Math.max(x1, q.right); y1 = Math.max(y1, q.bottom); }
+      return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, n: bs.length, cajas: bs.map((b) => { const q = b.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height, t: (b.title || b.textContent || "").trim().replace(/\s+/g, " ").slice(0, 46) }; }) };
+    }, p.de, p.a);
+    if (!r) { console.log("   [!] ribbon: sin botones", p.de, p.a); return; }
+    await marco(r, p.etiqueta, false, 4, 5);
+    // y botón a botón, con su nombre
+    for (const c of r.cajas) {
+      await mover(c.x + c.w / 2, c.y + c.h / 2, 2, false);
+      await pag.evaluate((c) => window.__vdMando(c, c.t, "abajo"), c);
+      await pag.evaluate((c) => { const t = document.getElementById("vd-hl2-t"); t.style.left = Math.max(6, Math.min(c.x + c.w / 2 - t.offsetWidth / 2, window.innerWidth - t.offsetWidth - 6)) + "px"; t.style.top = (c.y + c.h + 40) + "px"; }, c);
+      await foto(3);
+    }
+    await pag.evaluate(() => window.__vdMandoOff()); await foto(3);
+  } else if (p.tipo === "carpeta") {
+    if (!(await verCarpeta(p.titulo))) return;
+    await espera(300);
+    const rf = await rectDe(`(t) => Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t))`, p.titulo);
+    if (!rf) return;
+    await marco(rf, p.etiqueta, false, 5, 3);
+    const n = await pag.evaluate((t) => {
+      const f = Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+      return Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv")).filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")) && m.getBoundingClientRect().width > 0).length;
+    }, p.titulo);
+    const hasta = Math.min(n, p.max ?? 10);
+    for (let i = 0; i < hasta; i++) {
+      const c = await pag.evaluate((t, i) => {
+        const f = Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+        const m = Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv")).filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")) && m.getBoundingClientRect().width > 0)[i];
+        if (!m) return null;
+        const q = m.getBoundingClientRect();
+        if (q.top < 30 || q.bottom > window.innerHeight - 90) return null;        // fuera de la vista: no se enmarca a ciegas
+        const et = (m.querySelector(".tp-lblv_l")?.textContent || m.querySelector(".tp-btnv_b")?.textContent || "").trim().replace(/\s+/g, " ");
+        const sel = m.querySelector("select"); const inp = m.querySelector("input");
+        const val = sel ? sel.options[sel.selectedIndex]?.textContent : (inp && inp.type !== "checkbox" ? inp.value : "");
+        return { x: q.left, y: q.top, w: q.width, h: q.height, t: (et || "botón") + (val ? "  =  " + String(val).slice(0, 24) : "") };
+      }, p.titulo, i);
+      if (!c) continue;
+      await mover(c.x + c.w - 30, c.y + c.h / 2, 2, false);
+      await pag.evaluate((c, lado) => window.__vdMando(c, c.t, lado), c, p.lado || "izq");
+      await foto(3);
+    }
+    await pag.evaluate(() => window.__vdMandoOff()); await foto(2);
+    await pag.evaluate(() => window.__vdMarcoOff());
+    if (!p.dejarAbierta) await cierraCarpeta(p.titulo);
+  }
+  console.log(`   paso ${video}_${p.id}: ${nf} fotogramas · ${p.etiqueta.slice(0, 50)}`);
+}
+
 async function centroInput(titulo) {
   return pag.evaluate((t) => {
     const e = Array.from(document.querySelectorAll("#hk-ribbon input"))
@@ -1186,7 +1309,21 @@ async function rejillaRapida() {
 // ------------------------------------------------------------------ main
 const pedidas = process.argv.slice(2);
 try {
-  if (!pedidas.length || pedidas.includes("inventario")) { await navegador(); await inventario(); }
+  if (pedidas[0] !== "ui2" && (!pedidas.length || pedidas.includes("inventario"))) { await navegador(); await inventario(); }
+  // «ui2 0a 0b …»: los vídeos de la interfaz con marcos, paso a paso desde ui_pasos.json
+  if (pedidas[0] === "ui2") {
+    const PASOS = JSON.parse(readFileSync(join(SCHOOL, "ui_pasos.json"), "utf-8")).videos;
+    for (const v of pedidas.slice(1)) {
+      const def = PASOS[v]; if (!def) { console.log("no hay vídeo", v); continue; }
+      await navegador();
+      await cargar(def.query || "?t=plantillas"); await autofit(); await instalaMarcos();
+      const estado = {};
+      for (const p of def.pasos) {
+        try { await pasoUI(v, p, estado); } catch (err) { console.log(`   [!] paso ${v}_${p.id} falló: ${String(err).slice(0, 160)}`); }
+      }
+    }
+    pedidas.length = 0; pedidas.push("__nada__");
+  }
   const lista = pedidas.includes("todas") ? Object.keys(ESCENAS).filter((e) => e !== "sonda") : pedidas.filter((e) => ESCENAS[e]);
   for (const e of lista) {
     await navegador();

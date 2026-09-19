@@ -1,0 +1,20 @@
+Hekatan Struct, la interfaz. Primera parte: la ventana, los menús y la cinta. Todo lo que se nombra, se enmarca.
+Un aviso antes de empezar: esta ventana está en desarrollo y se actualiza constantemente. Lo que ves es la versión del diecinueve de septiembre; los menús pueden cambiar de sitio.
+Arriba a la izquierda, el archivo: nuevo, abrir, guardar, guardar como, deshacer y rehacer.
+El botón Menú vuelve al menú principal: modelo nuevo, modelo existente, o ejemplos.
+Nuevo, y en desarrollo: el menú Análisis. Desde aquí se analiza en estático, se corre el modal con su animación, y se para la animación.
+También nuevo y en desarrollo: el menú Diseño. Hoy trae el diseño de losa como en SAFE, por franjas o por elementos finitos. Irán llegando más.
+A la derecha, Tutorial: vídeos cortos de cómo se usa, uno por paso. Y al lado, el tema claro u oscuro.
+A la izquierda, Settings: qué se dibuja, y qué resultado se ve.
+A la derecha, el modelo: la plantilla con sus parámetros, las herramientas, las cargas, exportar, y las unidades.
+En el centro, el visor: la estructura en tres dimensiones y la escala de colores. Y abajo, el agente: se le pide una estructura, y la modela.
+El botón Dibujar abre la cinta, que es el acceso rápido. Y los dos tiradores de los lados pliegan los paneles, para verla entera.
+En la cinta, primero la ayuda: el signo de interrogación. Tocas un botón, y te enseña un ejemplo animado de cómo se usa.
+Dibujo: línea, polilínea, rectángulo, círculo, arco, parábola y cúbica. Debajo de cada botón está su atajo de teclado.
+Estructura: columna, muro, losa, revolución y barrido.
+Apoyo, carga puntual, y carga repartida.
+Las vistas: planta, frente, lado y tres dimensiones. Y la precisión: snap, orto y osnap.
+Estas dos flechas: la de arriba pliega la cinta. La de abajo es el acceso rápido: añade a la cinta cualquier botón o mando de los paneles.
+Segunda fila, modificar: anterior y rehacer; seleccionar, mover, copiar, replicar, desfase, recortar, alargar, remodelar, borrar, medir y línea auxiliar.
+Y la rejilla: crea los ejes, los niveles y las columnas de una vez, con las casillas de vanos y de pisos.
+Recuerda: está en desarrollo. La cinta va a pasar a pestañas y llegarán más herramientas. Este vídeo se regraba con cada cambio.

@@ -1,0 +1,20 @@
+Hekatan Struct, the interface. Part one: the window, the menus and the ribbon. Everything we name gets framed.
+A note before we start: this window is under development and is updated constantly. This is the September 19 version; menus may move.
+Top left, the file buttons: new, open, save, save as, undo and redo.
+The Menu button goes back to the main menu: new model, existing model, or examples.
+New, and under development: the Analysis menu. Run the static analysis, run the modal analysis with its animation, and stop the animation.
+Also new and under development: the Design menu. Today it has slab design as in SAFE, by strips or by finite elements. More will come.
+On the right, Tutorial: short how-to videos, one per step. Next to it, the light or dark theme.
+On the left, Settings: what is drawn, and which result you see.
+On the right, the model: the template and its parameters, tools, loads, export, and units.
+In the middle, the viewer: the structure in 3D and the color scale. And below, the AI agent: ask it for a structure, and it models it.
+The Draw button opens the ribbon, which is the quick access bar. The two side handles fold the panels away, so the whole ribbon shows.
+On the ribbon, help comes first: the question mark. Tap a button, and it plays an animated example of how to use it.
+Drawing: line, polyline, rectangle, circle, arc, parabola and cubic. Under each button is its keyboard shortcut.
+Structure: column, wall, slab, revolve and sweep.
+Support, point load, and distributed load.
+The views: plan, front, side and 3D. And precision: snap, ortho and object snap.
+These two arrows: the upper one folds the ribbon. The lower one is quick access: it adds any button or control from the panels to the ribbon.
+Second row, modify: undo and redo; select, move, copy, replicate, offset, trim, extend, reshape, erase, measure and construction line.
+And Grid: it creates axes, levels and columns at once, from the span and story boxes.
+Remember: this is under development. The ribbon is moving to tabs and more tools are coming. This video is re-recorded with every change.

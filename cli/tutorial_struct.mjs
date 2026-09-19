@@ -98,7 +98,11 @@ const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
 // misma al arrancar, sobre todo con la máquina cargada). No es un fallo: se sigue
 // esperando al visor.
 try {
-  await pag.goto("http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+  // HK_ORIGEN=https://giorgioburbanelli89.github.io → graba el DEPLOY PÚBLICO en vez del bundle local.
+  // Hace falta cuando la rama local va por detrás de lo publicado (19-sep-2026: los menús «Análisis» y
+  // «Diseño» estaban en el deploy y no en sin-binario, y el vídeo de la interfaz salió sin ellos).
+  const ORIGEN = process.env.HK_ORIGEN || ("http://localhost:" + PUERTO);
+  await pag.goto(ORIGEN + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
 } catch (e) {
   // (13-sep-2026) Un modelo por ENLACE con `&modal=N` anima sin parar y la red nunca queda
   // «idle»: `networkidle2` agotaba los 180 s y abortaba la toma sin un fotograma. No es un
