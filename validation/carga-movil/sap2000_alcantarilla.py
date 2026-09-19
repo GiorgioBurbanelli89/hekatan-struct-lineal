@@ -45,7 +45,8 @@ try:
         sm.PointObj.SetSpring(nom[s["nudo"]], [0.0, 0.0, float(s["k"]), 0.0, 0.0, 0.0])
     for n in M["apoyoUx"]:
         sm.PointObj.SetRestraint(nom[n], [True, False, False, False, False, False])
-    for c in M["casos"]:
+    todos = M["casos"] + M.get("casosIL", [])   # los unitarios: para rehacer la envolvente de pantalla
+    for c in todos:
         sm.LoadPatterns.Add(c["nombre"], 8, 0.0, True)
         for nd, P in c["cargas"]:
             sm.PointObj.SetLoadForce(nom[nd], c["nombre"], [0.0, 0.0, -float(P), 0.0, 0.0, 0.0])
@@ -57,10 +58,10 @@ try:
     print("modelo", len(nom), "nudos", len(M["barras"]), "barras", len(M["casos"]), "casos", f"{time.time() - t0:.0f} s", flush=True)
     print("run", sm.Analyze.RunAnalysis(), f"{time.time() - t0:.0f} s", flush=True)
     sm.Results.Setup.DeselectAllCasesAndCombosForOutput()
-    for c in M["casos"]:
+    for c in todos:
         sm.Results.Setup.SetCaseSelectedForOutput(c["nombre"])
     idx = {n: i for i, n in enumerate(nom)}
-    res = {c["nombre"]: {"U": [[0, 0, 0] for _ in nom], "F": [[0] * 6 for _ in M["barras"]]} for c in M["casos"]}
+    res = {c["nombre"]: {"U": [[0, 0, 0] for _ in nom], "F": [[0] * 6 for _ in M["barras"]]} for c in todos}
     r = sm.Results.JointDispl("ALL", 2, 0, [], [], [], [], [], [], [], [], [], [], [])
     nR, obj, caso, U1, U3, R2 = r[0], r[1], r[3], r[6], r[8], r[10]
     for k in range(nR):

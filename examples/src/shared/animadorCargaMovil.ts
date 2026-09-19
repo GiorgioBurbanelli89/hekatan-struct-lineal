@@ -38,6 +38,8 @@ export interface DatosCargaMovil {
   fija?: { U: Float64Array; F: Float64Array; R: Float64Array } | null;
   /** canto de cada barra (m) para dibujarla extruida */
   canto: (e: number) => number;
+  /** largo dibujado de la estructura a lo largo de la vía (m, el ancho de la calzada); solo dibujo */
+  fondo?: number;
   /** alargar (+) o recortar (−) el DIBUJO de la barra en su nudo i / j (m), para que la sección
    *  extruida cierre las esquinas sin cruzarse: el muro va de cara a cara de losa y la losa llega
    *  hasta la cara exterior del muro. Solo dibujo; el cálculo es a ejes. */
@@ -180,6 +182,10 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   const geoBordes = new THREE.BufferGeometry();
   const bordes = new THREE.LineSegments(geoBordes, new THREE.LineBasicMaterial({ color: 0x0b0f14, transparent: true, opacity: 0.55 }));
   grupo.add(bordes);
+  const geoFranja = new THREE.BufferGeometry();
+  const franja = new THREE.LineSegments(geoFranja, new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true, opacity: 0.95 }));
+  franja.renderOrder = 5;
+  grupo.add(franja);
   const geoM = new THREE.BufferGeometry();
   const diagM = new THREE.Mesh(geoM, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
   grupo.add(diagM);
@@ -201,7 +207,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   let nVert = 0;
   let pos: Float32Array = new Float32Array(0), col: Float32Array = new Float32Array(0);
   let posB: Float32Array = new Float32Array(0);
-  const FONDO = 3.0;
+  let FONDO = 9.0;   // largo DIBUJADO a lo largo de la vía (ancho de la calzada); el cálculo es la franja de 1 m
   const ESCALA_DEFORMADA = 0.015;   // fracción de la diagonal (ver escalas())   // la franja de 1 m se DIBUJA con 3 m de fondo para que se vea (solo dibujo)
   const SOMBRA = [1.0, 0.82, 0.62, 0.7];   // cara frontal, superior, trasera, inferior
 
@@ -237,6 +243,8 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   function pintarCuerpo(U: Float64Array | null, esc: number, uRef: number, colorDe?: (n: number) => number) {
     if (!D) return;
     let kb = 0;
+    const franjaPos: number[] = [];
+    let prevF: number[][] = [];
     for (const tr of tramos) {
       const el = D.elements[tr.e];
       const A = D.nodes[el[0]], B = D.nodes[el[1]];
@@ -279,6 +287,12 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
           col[k0] = tmpC[0] * sh; col[k0 + 1] = tmpC[1] * sh; col[k0 + 2] = tmpC[2] * sh;
           col[k1] = col[k0]; col[k1 + 1] = col[k0 + 1]; col[k1 + 2] = col[k0 + 2];
         }
+        // la FRANJA DE CÁLCULO de 1 m (y = ±0.5): sus dos contornos, sobre la sección deformada
+        const Pf = [[X - tx * h, Z - tz * h], [X + tx * h, Z + tz * h]];
+        if (s > 0) for (const yF of [-0.5, 0.5]) for (let c = 0; c < 2; c++) {
+          franjaPos.push(prevF[c][0], yF, prevF[c][1], Pf[c][0], yF, Pf[c][1]);
+        }
+        prevF = Pf;
         if (s > 0) for (let f = 0; f < 4; f++) {
           const kPrev = (base - 8 + f * 2) * 3, kNow = (base + f * 2) * 3;
           posB.set(pos.subarray(kPrev, kPrev + 3), kb); posB.set(pos.subarray(kNow, kNow + 3), kb + 3); kb += 6;
@@ -289,6 +303,8 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     (geoCuerpo.attributes.color as THREE.BufferAttribute).needsUpdate = true;
     (geoBordes.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     geoCuerpo.computeBoundingSphere(); geoBordes.computeBoundingSphere();
+    geoFranja.setAttribute("position", new THREE.BufferAttribute(new Float32Array(franjaPos), 3));
+    geoFranja.computeBoundingSphere();
   }
 
   /** Diagrama de M3 (valores del diagrama de CSI, positivo del lado traccionado −2). */
@@ -364,6 +380,15 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   function armarCalzada() {
     calzada.clear();
     if (!D) return;
+    {
+      const c = document.createElement("canvas"); c.width = 512; c.height = 64;
+      const g = c.getContext("2d")!; g.font = "bold 34px sans-serif"; g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(t("franja de cálculo 1 m", "1 m design strip"), 256, 32);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }));
+      let xmin = Infinity, zmin = Infinity; for (const n of D.nodes) { xmin = Math.min(xmin, n[0]); zmin = Math.min(zmin, n[2]); }
+      sp.scale.set(4.8, 0.6, 1); sp.position.set(xmin + 1.2, -0.5, zmin - 0.7); sp.renderOrder = 6;
+      calzada.add(sp);
+    }
     const s = D.IL.camino.s, L = s[s.length - 1] - s[0], largo = largoVehiculo(D.vehiculo) + 4;
     const mat = new THREE.MeshBasicMaterial({ color: 0x4a4f57 });
     for (const [x0, x1] of [[D.x0 - largo, D.x0 - 0.3], [D.x0 + L + 0.3, D.x0 + L + largo]]) {
@@ -548,19 +573,28 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     g.textAlign = "right"; g.fillText(`${((r ?? 0) * 1000).toFixed(2)} mm  ${ref === null ? t("(Uz mín., envolvente)", "(min Uz, envelope)") : "|u|"}`, cv.width - 2, 28);
   }
 
-  function textoEnvolvente() {
-    if (!env || !D) { $("hkcm-envtxt").textContent = t("Envolvente: calculando…", "Envelope: computing…"); return; }
-    let mx = -Infinity, mn = Infinity, eMx = -1, eMn = -1, uz = 0, nUz = -1;
-    for (let e = 0; e < D.elements.length; e++) for (const k of [4, 5]) {
-      const a = env.Fmax[e * F_POR_BARRA + k] + (D.fija?.F[e * F_POR_BARRA + k] ?? 0), b = env.Fmin[e * F_POR_BARRA + k] + (D.fija?.F[e * F_POR_BARRA + k] ?? 0);
+  /** Resumen de una envolvente {Fmax, Fmin, Umin} (+ carga permanente si la hay). */
+  function resumen(E: { Fmax: Float64Array; Fmin: Float64Array; Umin: Float64Array }) {
+    let mx = -Infinity, mn = Infinity, eMx = -1, eMn = -1, uz = 0;
+    for (let e = 0; e < D!.elements.length; e++) for (const k of [4, 5]) {
+      const f = D!.fija?.F[e * F_POR_BARRA + k] ?? 0;
+      const a = E.Fmax[e * F_POR_BARRA + k] + f, b = E.Fmin[e * F_POR_BARRA + k] + f;
       if (a > mx) { mx = a; eMx = e; } if (b < mn) { mn = b; eMn = e; }
     }
-    for (let nd = 0; nd < D.nodes.length; nd++) { const u = env.Umin[nd * 6 + 2] + (D.fija?.U[nd * 6 + 2] ?? 0); if (u < uz) { uz = u; nUz = nd; } }
-    const donde = (e: number) => { const el = D!.elements[e]; const a = D!.nodes[el[0]], b = D!.nodes[el[1]]; return `x≈${((a[0] + b[0]) / 2).toFixed(2)} z≈${((a[2] + b[2]) / 2).toFixed(2)}`; };
+    for (let nd = 0; nd < D!.nodes.length; nd++) uz = Math.min(uz, E.Umin[nd * 6 + 2] + (D!.fija?.U[nd * 6 + 2] ?? 0));
+    return { mx, mn, eMx, eMn, uz };
+  }
+  function textoEnvolvente() {
+    if (!env || !D) { $("hkcm-envtxt").textContent = t("Envolvente: calculando…", "Envelope: computing…"); return; }
+    const donde = (e: number) => { const el = D!.elements[e]; const a = D!.nodes[el[0]], b = D!.nodes[el[1]]; return `x≈${((a[0] + b[0]) / 2).toFixed(2)}`; };
+    const sep = env.separaciones.length > 1 ? `${env.separaciones[0]}–${env.separaciones[env.separaciones.length - 1]} m` : t("fija", "fixed");
+    const c = resumen(env.soloCamion), tot = resumen(env);
+    const bloque = (tit: string, r: ReturnType<typeof resumen>) =>
+      `${tit}\n  M3 máx ${fmtF(r.mx)} (${donde(r.eMx)})\n  M3 mín ${fmtF(r.mn)} (${donde(r.eMn)})\n  Uz mín ${(r.uz * 1000).toFixed(3)} mm`;
     $("hkcm-envtxt").textContent =
-      `${t("Envolvente", "Envelope")} (${env.nPosiciones} ${t("pos.", "pos.")}` + (env.separaciones.length > 1 ? `, ${t("sep. trasera", "rear spacing")} ${env.separaciones[0]}–${env.separaciones[env.separaciones.length - 1]} m` : "") + `)\n` +
-      `M3 máx = ${fmtF(mx)}  (${donde(eMx)})\nM3 mín = ${fmtF(mn)}  (${donde(eMn)})\n` +
-      `Uz mín = ${(uz * 1000).toFixed(3)} mm` + (nUz >= 0 ? `  (x=${D.nodes[nUz][0].toFixed(2)}, z=${D.nodes[nUz][2].toFixed(2)})` : "");
+      `${t("ENVOLVENTES", "ENVELOPES")} · ${env.nPosiciones} ${t("posiciones", "positions")} · ${t("trasera", "rear")} ${sep}\n` +
+      bloque(t("① Camión solo", "① Truck only"), c) +
+      (env.carril > 0 ? "\n" + bloque(t(`② Camión + carril ${(env.carril).toFixed(2)} kN/m (la del dibujo)`, `② Truck + lane ${(env.carril).toFixed(2)} kN/m (drawn)`), tot) : "");
   }
 
   /** Cámara de frente y algo desde arriba, con el camión dentro del cuadro. */
@@ -571,7 +605,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     // el camión entra en el cuadro: medio camión por delante y por detrás, y su alto
     const Lv = largoVehiculo(D.vehiculo) + 2.5;
     xmin -= Lv * 0.5; xmax += Lv * 0.5; zmax += 5.5;
-    const cx = (xmin + xmax) / 2, cz = (zmin + zmax) / 2, ext = Math.hypot(xmax - xmin, zmax - zmin);
+    const cx = (xmin + xmax) / 2, cz = (zmin + zmax) / 2, ext = Math.hypot(xmax - xmin, zmax - zmin, FONDO);
     const dir = new THREE.Vector3(0.28, -1, 0.42).normalize();
     const cam = ctx.camera as THREE.PerspectiveCamera;
     // el centro de la vista, un poco a la izquierda del modelo: la ventana 🚚 tapa la esquina izquierda
@@ -628,6 +662,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
       $("hkcm-notas").innerHTML = (d.notas ?? []).map((s) => `<div>${s}</div>`).join("");
       const ex = $("hkcm-exp"); ex.innerHTML = "";
       for (const b of d.exportar ?? []) { const bb = document.createElement("button"); bb.textContent = b.etiqueta; bb.style.cssText = btn; bb.onclick = b.accion; ex.appendChild(bb); }
+      FONDO = d.fondo ?? 9;
       prepararCuerpo(); escalas(); armarCamion(); armarCalzada(); textoEnvolvente();
       if (d.encuadrar) encuadrar();
       dibujar();

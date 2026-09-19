@@ -24,3 +24,21 @@ Error = |dif| / máximo del campo en todas las posiciones.
 | |P| máx (kN) | 128.9331 | 128.9331 (0.0000 %) |
 | Uz mín (mm) | -5.8512 | -5.8512 (0.0000 %) |
 | asiento máx losa inf. (mm) | -5.8075 | -5.8075 (0.0000 %) |
+
+## La envolvente QUE ENSEÑA LA APP (8184 posiciones: separación trasera 4.3–9 m, cada una recorriendo su largo)
+
+Los programas resuelven 61 casos UNITARIOS (1 kN en cada nudo del tablero); la envolvente se rehace con código aparte (no el de la app) y se compara componente a componente con la de la app.
+
+### OpenSeesPy (8184 posiciones)
+
+| envolvente | valor | Hekatan (app) | OpenSeesPy | dif |
+|---|---|---|---|---|
+| ① camión solo | M3 máx (kN·m) | 71.5127 | 71.5127 | 0.0000 % |
+| ① camión solo | M3 mín (kN·m) | -80.0564 | -80.0564 | 0.0000 % |
+| ① camión solo | Uz mín (mm) | -5.8512 | -5.8512 | 0.0000 % |
+| ① camión solo | peor componente P/V2/M3 (87 barras × 2 extremos) | | | 0.0000 % |
+| ② camión + carril (la del dibujo) | M3 máx (kN·m) | 77.3201 | 77.3201 | 0.0000 % |
+| ② camión + carril (la del dibujo) | M3 mín (kN·m) | -89.6117 | -89.6117 | 0.0000 % |
+| ② camión + carril (la del dibujo) | Uz mín (mm) | -6.5198 | -6.5198 | 0.0000 % |
+| ② camión + carril (la del dibujo) | peor componente P/V2/M3 (87 barras × 2 extremos) | | | 0.0000 % |
+

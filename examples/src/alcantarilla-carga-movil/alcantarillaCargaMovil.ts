@@ -54,6 +54,7 @@ function params(def: { nC: number; L: number; H: number; tS: number; tI: number;
     carril: { default: 1, boolean: true, label: "Carga de carril 9.3 kN/m en la envolvente", folder: "Camión HL-93" },
     paso: { default: def.paso, options: { "0.10 m": 0.1, "0.05 m": 0.05 }, label: "Paso del camión = malla del tablero", folder: "Malla" },
     dxInf: P("Malla", "Malla losa inferior y muros (m)", 0.5, 0.1, 1.0, 0.05),
+    fondo: P("Dibujo", "Ancho de calzada dibujado (m)", 9, 2, 20, 0.5, "Solo dibujo: largo de la alcantarilla a lo largo de la vía. El cálculo es la franja de 1 m, marcada en blanco."),
   } as Record<string, any>;
 }
 
@@ -183,7 +184,7 @@ function crear(id: string, name: string, def: Parameters<typeof params>[0], guia
           return f.join("\n") + "\n";
         };
         anim.cargar({
-          nodes, elements, IL, vehiculo: veh, xs, fija, canto: idxElem, zRodadura: pm.H + pm.tSup / 2 + (pm.hRelleno || 0), extremos, x0: nodes[cam.nudos[0]][0],
+          nodes, elements, IL, vehiculo: veh, xs, fija, canto: idxElem, zRodadura: pm.H + pm.tSup / 2 + (pm.hRelleno || 0), extremos, fondo: p.fondo ?? 9, x0: nodes[cam.nudos[0]][0],
           titulo: `${t("Alcantarilla", "Box culvert")} ${pm.nCeldas}×${pm.L} m × ${pm.H} m · ${veh.nombre}`,
           exportar,
           encuadrar: primera,

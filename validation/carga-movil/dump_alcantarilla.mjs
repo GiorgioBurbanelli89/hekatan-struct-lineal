@@ -40,7 +40,7 @@ export async function armar(cual = "ejemplo") {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const cual = process.argv[2] ?? "ejemplo";
-  const { m: M, pm, modelo, cam, veh, xs, IL } = await armar(cual);
+  const { m: M, p, pm, modelo, cam, veh, xs, IL } = await armar(cual);
   const ei = modelo.elementInputs;
   const casos = M.casosPorPosicion(cam, veh, xs);
   const out = {
@@ -52,6 +52,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     muelles: modelo.springs.map((s) => ({ nudo: s.node, k: s.k })),
     apoyoUx: [...modelo.nodeInputs.supports].filter(([, s]) => s[0]).map(([n]) => n),
     casos: casos.map((c) => ({ nombre: c.nombre, xF: c.xF, cargas: c.cargas })),
+    // casos UNITARIOS (1 kN hacia abajo en cada nudo del tablero): con ellos otro programa rehace la
+    // envolvente que enseña la app sin usar el código de Hekatan (comparar.mjs, `envolventeIndependiente`)
+    casosIL: cam.nudos.map((n, k) => ({ nombre: `IL${String(k).padStart(3, "0")}`, xF: cam.s[k], cargas: [[n, 1]] })),
+    camino: { nudos: cam.nudos, s: cam.s },
+    vehiculo: { ejesKN: [35, 145, 145], sepDelantera: 4.3, sepTraseras: M.separacionesHL93(0.1), ancho: p.ancho, IM: p.IM,
+      carril: p.carril ? 9.3 : 0, paso: pm.dx },
   };
   writeFileSync(join(AQUI, `modelo_${cual}.json`), JSON.stringify(out));
   const hk = {};
@@ -64,5 +70,13 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     };
   }
   writeFileSync(join(AQUI, `hekatan_${cual}.json`), JSON.stringify(hk));
+  // la envolvente EXACTAMENTE como la calcula la app (mismas opciones que el ejemplo)
+  const env = M.envolvente(IL, veh, xs, { carril: !!p.carril,
+    separacionesTraseras: p.varSep ? M.separacionesHL93(0.1) : undefined,
+    vehiculoCon: (sp) => M.camionHL93({ sepTrasera: sp, IM: p.IM, ancho: p.ancho, conCarril: !!p.carril }) });
+  const arr = (a) => Array.from(a);
+  writeFileSync(join(AQUI, `hekatan_${cual}_env.json`), JSON.stringify({ nPosiciones: env.nPosiciones,
+    total: { Fmax: arr(env.Fmax), Fmin: arr(env.Fmin), Umin: arr(env.Umin), Umax: arr(env.Umax) },
+    camion: { Fmax: arr(env.soloCamion.Fmax), Fmin: arr(env.soloCamion.Fmin), Umin: arr(env.soloCamion.Umin), Umax: arr(env.soloCamion.Umax) } }));
   console.log(`${cual}: ${out.nudos.length} nudos, ${out.barras.length} barras, ${out.muelles.length} muelles, ${casos.length} posiciones`);
 }

@@ -330,6 +330,10 @@ export interface Envolvente {
   Rmax: Float64Array; Rmin: Float64Array;
   /** abscisa del eje delantero que da cada máximo / mínimo del camión (NaN si lo da solo el carril) */
   xFUmax: Float64Array; xFUmin: Float64Array; xFFmax: Float64Array; xFFmin: Float64Array;
+  /** la envolvente del camión solo, antes de sumar el carril */
+  soloCamion: { Umin: Float64Array; Umax: Float64Array; Fmax: Float64Array; Fmin: Float64Array };
+  /** carga de carril sumada (kN/m); 0 = sin carril */
+  carril: number;
   /** separaciones traseras probadas (m) */
   separaciones: number[];
   nPosiciones: number;
@@ -362,9 +366,13 @@ export function envolvente(IL: LineasInfluencia, v: Vehiculo, xs: number[], o: O
   const seps = o.separacionesTraseras?.length && o.vehiculoCon ? o.separacionesTraseras : [NaN];
   const U = new Float64Array(nU), F = new Float64Array(nF), R = new Float64Array(nR);
   let nPos = 0;
+  // paso de las posiciones dadas: cada separación trasera recorre SU propio largo (un camión de 13.3 m
+  // tarda más en salir que uno de 8.6 m; con las `xs` del corto, el largo se quedaba a medio salir)
+  const paso = xs.length > 1 ? xs[1] - xs[0] : 0.1;
   for (const sep of seps) {
     const veh = Number.isFinite(sep) ? o.vehiculoCon!(sep) : v;
-    for (const xF of xs) {
+    const xsVeh = Number.isFinite(sep) ? posiciones(IL.camino, veh, paso) : xs;
+    for (const xF of xsVeh) {
       const p = pesosEnPosicion(IL.camino, veh, xF);
       U.fill(0); F.fill(0); R.fill(0);
       p.w.forEach((wk, k) => { if (wk) { acumular(U, IL.U[k], wk); acumular(F, IL.F[k], wk); acumular(R, IL.R[k], wk); } });
@@ -377,6 +385,8 @@ export function envolvente(IL: LineasInfluencia, v: Vehiculo, xs: number[], o: O
   // Sin posiciones dentro, el camión no aporta: la envolvente parte de 0.
   const cero = (a: Float64Array, s: number) => { for (let i = 0; i < a.length; i++) if (!Number.isFinite(a[i])) a[i] = 0; void s; };
   cero(Umax, 0); cero(Umin, 0); cero(Fmax, 0); cero(Fmin, 0); cero(Rmax, 0); cero(Rmin, 0);
+  // la del camión SOLO (sin carril), para poder enseñar y validar las dos por separado
+  const soloCamion = { Umin: Umin.slice(), Umax: Umax.slice(), Fmax: Fmax.slice(), Fmin: Fmin.slice() };
   const wCarril = (o.carril ?? true) ? v.carril : 0;
   if (wCarril > 0) {
     const trib = tributario(IL.camino);
@@ -391,7 +401,7 @@ export function envolvente(IL: LineasInfluencia, v: Vehiculo, xs: number[], o: O
   }
   return {
     Umax, Umin, Fmax, Fmin, Rmax, Rmin, xFUmax, xFUmin, xFFmax, xFFmin,
-    separaciones: seps.filter(Number.isFinite), nPosiciones: nPos,
+    separaciones: seps.filter(Number.isFinite), nPosiciones: nPos, soloCamion, carril: wCarril,
     ms: (globalThis.performance ?? Date).now() - t0,
   };
 }

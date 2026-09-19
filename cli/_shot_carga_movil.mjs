@@ -36,6 +36,15 @@ await pg.evaluate((k) => {
 }, Math.round(0.45 * (a.n - 1)));
 await new Promise((r) => setTimeout(r, 500));
 await pg.screenshot({ path: `${out}/alzado_xz.png` });
+// planta XY (desde arriba): la franja de 1 m bajo las ruedas
+await pg.evaluate(() => {
+  const v = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__settings); const c = v.__ctx;
+  const t = c.controls.target; const dist = c.camera.position.distanceTo(t);
+  c.camera.position.set(t.x, t.y - 0.001, t.z + dist); c.camera.up.set(0, 1, 0); c.camera.lookAt(t); c.controls.update(); c.render();
+});
+await new Promise((r) => setTimeout(r, 500));
+await pg.screenshot({ path: `${out}/planta_xy.png` });
+await pg.evaluate(() => { const v = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__settings); v.__ctx.camera.up.set(0, 0, 1); });
 await pg.evaluate(() => { document.querySelector("#hkcm-env")?.click(); });
 await new Promise((r) => setTimeout(r, 500));
 await pg.screenshot({ path: `${out}/envolvente.png` });

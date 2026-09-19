@@ -28,7 +28,7 @@ def modelo():
 
 t0 = time.time()
 res = {}
-for c in M["casos"]:
+for c in M["casos"] + M.get("casosIL", []):
     modelo()
     ops.timeSeries("Linear", 1); ops.pattern("Plain", 1, 1)
     for nd, P in c["cargas"]:

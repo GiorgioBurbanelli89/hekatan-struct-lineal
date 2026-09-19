@@ -16,7 +16,7 @@ export const nombre = "alcantarilla-carga-movil";
 export const descripcion = "alcantarilla 2 celdas + HL-93: equilibrio en cada posición y M3/Uz contra SAP2000 y OpenSeesPy";
 
 export async function correr() {
-  const { m, modelo, veh, xs, IL } = await armar("ejemplo");
+  const { m, p, modelo, veh, xs, IL } = await armar("ejemplo");
   const filas = [];
   let peorEq = 0, repartido = 0;
   const est = new Map();
@@ -46,7 +46,25 @@ export async function correr() {
       for (let n = 0; n < IL.nN; n++) Uz = Math.min(Uz, s.U[n * 6 + 2]); }
     for (const [k, v] of [["Mmax", Mmax], ["Mmin", Mmin], ["Uz", Uz]]) {
       const e = Math.abs(v - R.envolvente[k]) / Math.abs(R.envolvente[k]) * 100;
-      filas.push({ que: `envolvente camión ${k} vs ${prog} (%)`, medido: +e.toFixed(5), limite: 0.01, ok: e < 0.01, detalle: `${v.toFixed(4)} vs ${R.envolvente[k].toFixed(4)}` });
+      filas.push({ que: `envolvente de la animación (trasera 4.3, sin carril) ${k} vs ${prog} (%)`, medido: +e.toFixed(5), limite: 0.01, ok: e < 0.01, detalle: `${v.toFixed(4)} vs ${R.envolvente[k].toFixed(4)}` });
+    }
+  }
+  // la envolvente QUE SE VE EN PANTALLA (todas las separaciones traseras + carril), contra la que cada
+  // programa rehace con sus respuestas unitarias (validation/carga-movil/comparar.mjs)
+  const env = m.envolvente(IL, veh, xs, { carril: !!p.carril, separacionesTraseras: p.varSep ? m.separacionesHL93(0.1) : undefined,
+    vehiculoCon: (sp) => m.camionHL93({ sepTrasera: sp, IM: p.IM, ancho: p.ancho, conCarril: !!p.carril }) });
+  for (const prog of ["sap2000", "opensees"]) {
+    const f = join(AQUI, "..", "datos", `alcantarilla_${prog}_env.json`);
+    if (!existsSync(f)) { filas.push({ que: `envolvente de pantalla vs ${prog}`, medido: "falta", limite: "-", ok: prog === "sap2000", detalle: "⏳" }); continue; }
+    const R = JSON.parse(readFileSync(f, "utf-8"));
+    filas.push({ que: `nº de posiciones de la envolvente vs ${prog}`, medido: env.nPosiciones, limite: R.nPos, ok: env.nPosiciones === R.nPos });
+    for (const [tit, A, B] of [["camión", env.soloCamion, R.camion], ["camión + carril", env, R.total]]) {
+      let d = 0, pk = 0;
+      for (let q = 0; q < A.Fmax.length; q++) { pk = Math.max(pk, Math.abs(B.Fmax[q]), Math.abs(B.Fmin[q])); d = Math.max(d, Math.abs(A.Fmax[q] - B.Fmax[q]), Math.abs(A.Fmin[q] - B.Fmin[q])); }
+      let du = 0, pu = 0;
+      for (let n = 0; n < B.Umin.length; n++) { pu = Math.max(pu, Math.abs(B.Umin[n])); du = Math.max(du, Math.abs(A.Umin[n * 6 + 2] - B.Umin[n])); }
+      filas.push({ que: `envolvente ${tit} P/V2/M3 vs ${prog} (% del máx)`, medido: +(d / pk * 100).toFixed(5), limite: 0.01, ok: d / pk * 100 < 0.01 });
+      filas.push({ que: `envolvente ${tit} Uz vs ${prog} (% del máx)`, medido: +(du / pu * 100).toFixed(5), limite: 0.01, ok: du / pu * 100 < 0.01 });
     }
   }
   void modelo;
