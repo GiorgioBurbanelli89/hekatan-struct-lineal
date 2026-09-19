@@ -1,8 +1,8 @@
 A two-cell box culvert with the HL-93 design truck crossing it step by step, in Hekatan Struct.
-The model is a one-metre plane frame: two 9.5 m cells, 6 m high, a 50 cm top slab, and the bottom slab on linear soil springs.
+The model is a typical culvert, a one-metre plane frame: two 3 m cells, 2.5 m high, 30 cm slabs and walls, the bottom slab on linear soil springs. The whole axle acts on that metre: the AASHTO distribution width is left as a user input.
 The HL-93 truck has three axles, 35, 145 and 145 kN, 4.3 m apart. The numbers come from the SAP2000 reference manual, page 515.
 The truck moves 10 cm per step. At each position the structure is solved: the coloured deformed shape and the moment diagram change with the truck.
 Paused at the maximum-moment position. At every step the spring reactions equal the axle loads on the slab: equilibrium holds at all positions.
 At the end, the envelope: the truck with a 4.3 to 9.0 m rear spacing, plus the 9.3 kN/m lane load wherever it makes each result worse.
-Checked against OpenSeesPy with the same model, node by node: across all 277 positions the difference is zero in displacements, axial, shear and moment.
+Checked against OpenSeesPy with the same model, node by node: across all 147 positions the difference is zero in displacements, axial, shear and moment.
 And the same model exports to SAP2000 with one case per position, to ETABS and to OpenSeesPy, to check it in another program.
