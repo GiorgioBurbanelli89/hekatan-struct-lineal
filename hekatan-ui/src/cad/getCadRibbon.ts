@@ -1714,6 +1714,14 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     setTimeout(aplicarASeleccion, 120);
   }, true);
 
+  // Enter en una casilla de la cinta: se aplica y el foco SALE de la casilla. Si no, el
+  // foco se quedaba en ella (el lienzo no lo toma al clicar) y Supr no borraba lo
+  // designado —drawing.ts respeta un campo en edición—: medido en el tutorial de la
+  // cúpula, la ventana designaba 129 nudos y Supr no hacía nada.
+  barra.addEventListener("keydown", (e) => {
+    const t = e.target as HTMLElement | null;
+    if (e.key === "Enter" && t?.tagName === "INPUT") setTimeout(() => (t as HTMLInputElement).blur(), 0);
+  });
   if (getComputedStyle(host).position === "static") host.style.position = "relative";
   host.appendChild(barra);
   host.appendChild(bAbrir);

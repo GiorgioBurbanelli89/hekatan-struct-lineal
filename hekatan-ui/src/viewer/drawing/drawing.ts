@@ -4884,6 +4884,18 @@ export function drawing({
         if (cur.length >= 2) polysAfterPtDel.push(cur);
       }
       newPolys = polysAfterPtDel;
+      // Lo asignado a NUDOS (apoyos, cargas, masa, muelles, diafragma) va por índice de
+      // punto: sin renumerarlo se quedaba en el índice viejo y caía en OTRO nudo. Medido
+      // en el tutorial de la cúpula (19-sep-2026): se borró la cúpula entera con sus 16
+      // apoyos y el Allianz dibujado después nació con 16 apoyos en nudos cualquiera.
+      for (const g of ["__hekatanManualSupports", "__hekatanManualLoads", "__hekatanManualMass",
+                       "__hekatanManualSprings", "__hekatanManualDiaphragm"]) {
+        const m = (window as any)[g] as Map<number, any> | undefined;
+        if (!m || typeof m.forEach !== "function" || m.size === 0) continue;
+        const viejo = [...m.entries()];
+        m.clear();
+        for (const [k, v] of viejo) { const nk = ptRemap.get(k); if (nk !== undefined) m.set(nk, v); }
+      }
       drawingObj.points.val = newPts;
     }
 
