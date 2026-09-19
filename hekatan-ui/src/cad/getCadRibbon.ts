@@ -1011,6 +1011,109 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
     filaV.appendChild(b);
   }
+  // ── ⛶ ENCUADRAR: el «Zoom Extensión» de AutoCAD (ZE) ──────────────────────
+  // Jorge (19-sep-2026): «no se ve ninguna línea». Una cercha de 12 m en la rejilla de
+  // 30 m salía de 580 px, y una cúpula de 5 m de radio, de 70 px. Esto lleva TODO lo
+  // dibujado al hueco LIBRE de la pantalla (debajo de la cinta, entre los paneles y
+  // encima de la ventana de comandos), sin girar la vista: la dirección de mirada se
+  // queda, solo cambian el centro y la escala. Vale para cámara ortogonal y perspectiva.
+  const encuadrar = (margen = 1.12): string => {
+    const W = window as any;
+    const v: any = document.querySelector("#viewer");
+    const ctx = v?.__ctx; const cam = ctx?.camera;
+    if (!cam) return "El visor no responde.";
+    const P: number[][] = [];
+    for (const n of (W.__hekatanStates?.nodes?.rawVal ?? []) as number[][]) if (n && n.length >= 3) P.push(n);
+    for (const n of (W.__hekatanDrawingPoints?.rawVal ?? []) as any[]) {
+      const q = Array.isArray(n) ? n : (n && typeof n === "object" ? [n.x, n.y, n.z] : null);
+      if (q && q.every((x: any) => isFinite(x))) P.push(q as number[]);
+    }
+    if (!P.length) return "No hay nada dibujado que encuadrar.";
+    const canvas: HTMLCanvasElement | null = v.querySelector("canvas");
+    const cr = (canvas ?? v).getBoundingClientRect();
+    // hueco libre: debajo de la cinta, entre paneles abiertos, encima de la línea de órdenes
+    let izq = cr.left, der = cr.right, arr = cr.top, aba = cr.bottom;
+    const rb = barra.getBoundingClientRect(); if (rb.height > 0) arr = Math.max(arr, rb.bottom + 26);
+    const est = document.getElementById("hk-ribbon-estado")?.getBoundingClientRect(); if (est && est.height > 0) arr = Math.max(arr, est.bottom + 6);
+    for (const [id, lado] of [["settings", "i"], ["hk-pane-host", "d"]] as const) {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      if (!r || r.width < 40 || r.right <= cr.left + 2 || r.left >= cr.right - 2) continue;
+      if (lado === "i") izq = Math.max(izq, r.right); else der = Math.min(der, r.left);
+    }
+    const cmd = document.getElementById("hk3-cmdline")?.getBoundingClientRect(); if (cmd && cmd.height > 0) aba = Math.min(aba, cmd.top - 8);
+    // la barra de colores (#legend) también ocupa la derecha
+    const lg = document.getElementById("legend")?.getBoundingClientRect();
+    if (lg && lg.width > 0 && lg.height > 0 && lg.left > (izq + der) / 2) der = Math.min(der, lg.left - 8);
+    const fw = Math.max(80, der - izq), fh = Math.max(80, aba - arr);
+    cam.updateMatrixWorld();
+    const V = cam.position.constructor;
+    const ex = new V().setFromMatrixColumn(cam.matrixWorld, 0).normalize();
+    const ey = new V().setFromMatrixColumn(cam.matrixWorld, 1).normalize();
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const C = new V(0, 0, 0);
+    for (const p of P) C.add(new V(p[0], p[1], p[2]));
+    C.multiplyScalar(1 / P.length);
+    for (const p of P) { const d = new V(p[0], p[1], p[2]).sub(C); const a = d.dot(ex), b2 = d.dot(ey);
+      x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b2); y1 = Math.max(y1, b2); }
+    const w = Math.max(x1 - x0, 0.5), h = Math.max(y1 - y0, 0.5);
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;             // centro de la caja en ejes de pantalla
+    const ppw = Math.min(fw / (w * margen), fh / (h * margen)); // píxeles por metro
+    const target = ctx.controls?.target ?? C.clone();
+    const dir = cam.position.clone().sub(target);
+    // el centro de la caja tiene que caer en el centro del HUECO, no del lienzo
+    const dxp = (izq + der) / 2 - (cr.left + cr.right) / 2, dyp = (arr + aba) / 2 - (cr.top + cr.bottom) / 2;
+    const T = C.clone().add(ex.clone().multiplyScalar(cx - dxp / ppw)).add(ey.clone().multiplyScalar(cy + dyp / ppw));
+    if (cam.isOrthographicCamera) {
+      cam.zoom = ppw * (cam.right - cam.left) / cr.width;
+      cam.position.copy(T.clone().add(dir));
+    } else {
+      const fov = (cam.fov ?? 45) * Math.PI / 180;
+      const dist = cr.height / (2 * Math.tan(fov / 2) * ppw);
+      cam.position.copy(T.clone().add(dir.normalize().multiplyScalar(dist)));
+    }
+    ctx.controls?.target?.copy(T);
+    cam.updateProjectionMatrix?.();
+    ctx.controls?.update?.();
+    // En perspectiva lo cercano sale más grande que la cuenta de arriba: se CORRIGE
+    // midiendo dónde caen de verdad los puntos proyectados (tres pasadas bastan).
+    for (let it = 0; it < 4; it++) {
+      cam.updateMatrixWorld(); cam.updateProjectionMatrix?.();
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+      for (const p of P) { const q = new V(p[0], p[1], p[2]).project(cam);
+        const sx = (q.x * 0.5 + 0.5) * cr.width + cr.left, sy = (-q.y * 0.5 + 0.5) * cr.height + cr.top;
+        a0 = Math.min(a0, sx); a1 = Math.max(a1, sx); b0 = Math.min(b0, sy); b1 = Math.max(b1, sy); }
+      const f = Math.max((a1 - a0) * margen / fw, (b1 - b0) * margen / fh, 1e-6);
+      const tgt = ctx.controls?.target ?? T;
+      const d0 = cam.position.distanceTo(tgt);
+      const ppwT = cam.isOrthographicCamera ? cam.zoom * cr.width / (cam.right - cam.left)
+                                            : cr.height / (2 * Math.tan(((cam.fov ?? 45) * Math.PI / 180) / 2) * d0);
+      const mx = ((izq + der) / 2 - (a0 + a1) / 2) / ppwT, my = ((arr + aba) / 2 - (b0 + b1) / 2) / ppwT;
+      const mov = ex.clone().multiplyScalar(-mx).add(ey.clone().multiplyScalar(my));
+      cam.position.add(mov); tgt.add(mov);
+      if (cam.isOrthographicCamera) cam.zoom /= f;
+      else { const u = cam.position.clone().sub(tgt).normalize(); cam.position.copy(tgt.clone().add(u.multiplyScalar(d0 * f))); }
+      cam.updateProjectionMatrix?.(); ctx.controls?.update?.();
+      if (Math.abs(f - 1) < 0.01 && Math.abs(mx * ppwT) < 3 && Math.abs(my * ppwT) < 3) break;
+    }
+    ctx.render?.();
+    return `Encuadrado: ${P.length} puntos, ${(w).toFixed(1)} × ${(h).toFixed(1)} m a ${ppw.toFixed(0)} px/m.`;
+  };
+  (window as any).__hekatanEncuadrar = encuadrar;
+  {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "hk-ribbon-encuadrar";
+    b.title = "Encuadrar (ZE) — lleva todo lo dibujado al hueco libre de la pantalla, sin girar la vista (el Zoom Extensión de AutoCAD)";
+    b.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;" +
+      "gap:0;width:50px;height:48px;cursor:pointer;background:transparent;border:1px solid transparent;" +
+      "border-radius:7px;color:#cbd5e1;font-family:inherit;";
+    b.innerHTML = `<span style="font-size:15px;line-height:1">⛶</span>` +
+      `<span style="font-size:10px;line-height:1.15">Encuadrar</span>` +
+      `<span style="font-size:8px;opacity:.5;line-height:1">ZE</span>`;
+    b.addEventListener("click", () => decir(encuadrar()));
+    b.addEventListener("mouseenter", () => { b.style.background = "rgba(34,211,238,.13)"; });
+    b.addEventListener("mouseleave", () => { b.style.background = "transparent"; });
+    filaV.appendChild(b);
+  }
   // ── SNAP · ORTO · OSNAP también aquí (13-sep-2026): viven en la barra de abajo, que
   // en el vídeo queda fuera del cuadro y a la vista se le escapa; en la cinta se ven y
   // se pulsan. Llaman a los MISMOS conmutadores (F9 / F8 / F3) y se repintan solos.
