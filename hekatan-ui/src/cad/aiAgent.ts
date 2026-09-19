@@ -156,7 +156,7 @@ Cómo trabajar:
      galpón curvo → galpon-curvo · galpón a un agua → galpon-agua1
      puente de losa sobre vigas → puente-losa-vigas · puente reticular → puente
      estribo de puente (áreas) → estribo-puente
-     muro de contención con áreas → muro-contencion-areas · con sólidos → muro-contencion-solido
+     muro de contención con áreas → muro-contencion-areas · con sólidos → muro-contencion-solido-winkler (o muro-contencion-solido, empotrado)
      placa base (áreas) → placa-base · zapata aislada → zapata-aislada
      zapatas con viga de amarre → zapata-viga-amarre · viga de cimentación → viga-cim-guerra-ej7
      losa de cimentación → guerra-ej8-losa-cimentacion

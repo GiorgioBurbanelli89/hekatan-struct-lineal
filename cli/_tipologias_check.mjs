@@ -34,7 +34,7 @@ for (const t of tipologiasHeks) {
   if (t.id.startsWith("muro")) {
     const E = Ka(p.phi) * (p.gamma * p.H ** 2 / 2 + p.q * p.H) * p.Lm;
     esperado = `empuje Rankine ${E.toFixed(2)} kN → apoyos ${Rt[1].toFixed(2)} (${(100 * (Rt[1] - E) / E).toFixed(4)} %)`;
-    if (t.id.endsWith("solido")) {
+    if (t.id.includes("solido")) {
       const W = 2.4 * 9.80665 * p.Lm * (p.t * p.H + (p.puntera + p.talon) * p.tz) + (p.gamma * p.H + p.q) * (p.talon - p.t / 2) * p.Lm;
       esperado += `\n   peso ρgV + tierra ${W.toFixed(2)} kN → muelles ${Rt[2].toFixed(2)} (${(100 * (Rt[2] - W) / W).toFixed(4)} %)`;
     }
