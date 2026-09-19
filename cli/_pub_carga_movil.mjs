@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer";
+const [W, H, out, base] = [+process.argv[2], +process.argv[3], process.argv[4], process.argv[5] ?? "https://giorgioburbanelli89.github.io/hekatan-struct-lineal"];
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const pg = await nav.newPage(); await pg.setViewport({ width: W, height: H });
+const err = []; pg.on("pageerror", (e) => err.push(e.message));
+await pg.goto(`${base}/workspace/?t=alcantarilla-carga-movil&sinBienvenida=1`, { waitUntil: "networkidle2", timeout: 180000 });
+await pg.waitForFunction(() => !!window.__hekatanCargaMovilDatos, { timeout: 180000 });
+await new Promise((r) => setTimeout(r, 2500));
+await pg.evaluate(() => { const A = window.__hekatanCargaMovil; A.pausa(); A.ir(Math.round(0.45 * (A.estado().n - 1))); });
+await new Promise((r) => setTimeout(r, 600));
+const cam = await pg.evaluate(() => { const v = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__settings); const c = v.__ctx.camera; return [c.position.x, c.position.y, c.position.z].map((x) => +x.toFixed(2)); });
+await pg.screenshot({ path: out });
+console.log(W, H, "cam", cam, "err", err.slice(0, 3));
+await nav.close();

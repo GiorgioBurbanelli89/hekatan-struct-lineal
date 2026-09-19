@@ -613,22 +613,47 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
   }
 
   /** Cámara de frente y algo desde arriba, con el camión dentro del cuadro. */
+  /**
+   * Encuadre inicial: que quepan la alcantarilla, la calzada dibujada y el camión, medido contra la
+   * parte del lienzo que de verdad se ve (la ventana 🚚 tapa la izquierda). Antes era un «×1.55 de
+   * la diagonal» a ojo: a 1400×850 se veía media losa (sonda contra la web pública, 19-sep-2026).
+   */
   function encuadrar() {
     if (!D || !ctx?.camera || !ctx?.controls) return;
+    const cam = ctx.camera as THREE.PerspectiveCamera;
     let xmin = Infinity, xmax = -Infinity, zmin = Infinity, zmax = -Infinity;
     for (const n of D.nodes) { xmin = Math.min(xmin, n[0]); xmax = Math.max(xmax, n[0]); zmin = Math.min(zmin, n[2]); zmax = Math.max(zmax, n[2]); }
-    // el camión entra en el cuadro: medio camión por delante y por detrás, y su alto
-    const Lv = largoVehiculo(D.vehiculo) + 2.5;
-    xmin -= Lv * 0.5; xmax += Lv * 0.5; zmax += 5.5;
-    const cx = (xmin + xmax) / 2, cz = (zmin + zmax) / 2, ext = Math.hypot(xmax - xmin, zmax - zmin, FONDO);
+    const Lv = largoVehiculo(D.vehiculo) + 2.5;               // el camión, con cabina y voladizo
+    xmin -= Lv * 0.6; xmax += Lv * 0.6; zmax += 4.8;          // + su alto (~4.1 m) y las flechas
+    const C = new THREE.Vector3((xmin + xmax) / 2, 0, (zmin + zmax) / 2);
+    const R = 0.5 * Math.hypot(xmax - xmin, FONDO, zmax - zmin);   // esfera que lo abarca todo
+    // lienzo VISIBLE: el canvas va por debajo de los paneles laterales; lo que se ve es la franja
+    // entre el borde derecho de lo que hay a la izquierda (Settings, la ventana 🚚) y el izquierdo
+    // del panel de la derecha
+    const lienzo = (ctx.rendererElm ?? ctx.renderer?.domElement) as HTMLElement | undefined;
+    const cr = lienzo?.getBoundingClientRect();
+    const W = cr?.width || innerWidth, H = cr?.height || innerHeight, x0c = cr?.left ?? 0;
+    const visible = (el: Element | null) => { const r = el?.getBoundingClientRect(); return r && r.width > 20 && r.height > 20 ? r : null; };
+    const izq = [visible(document.getElementById("settings")), pan.dataset.plegado !== "1" ? visible(pan) : null]
+      .filter((r): r is DOMRect => !!r && r.left < x0c + W / 2);
+    const derEl = visible(document.getElementById("hk-pane-host")?.parentElement ?? null) ?? visible(document.getElementById("hk-pane-host"));
+    let L0 = Math.max(x0c, ...izq.map((r) => r.right));
+    let R0 = derEl && derEl.left > x0c + W / 2 ? Math.min(x0c + W, derEl.left) : x0c + W;
+    if (R0 - L0 < W * 0.3) { L0 = x0c; R0 = x0c + W; }
+    const libre = R0 - L0, dpx = (L0 + R0) / 2 - (x0c + W / 2);   // el centro visible, en px desde el centro del canvas
+    const vfov = ((cam.fov ?? 50) * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * libre / H);
+    const dist = (1.05 * R) / Math.sin(Math.min(vfov, hfov) / 2);
     const dir = new THREE.Vector3(0.28, -1, 0.42).normalize();
-    const cam = ctx.camera as THREE.PerspectiveCamera;
-    // el centro de la vista, un poco a la izquierda del modelo: la ventana 🚚 tapa la esquina izquierda
-    const tx = cx - 0.22 * ext, k = 1.55 * ext;
-    ctx.controls.target.set(tx, 0, cz);
-    cam.position.set(tx + dir.x * k, dir.y * k, cz + dir.z * k);
+    // centrar en la parte libre: el objeto tiene que aparecer `tapa/2` px a la derecha del centro
+    const anchoMundo = 2 * dist * Math.tan(vfov / 2) * (W / H);
+    const derecha = new THREE.Vector3().crossVectors(dir.clone().negate(), new THREE.Vector3(0, 0, 1)).normalize();
+    const T = C.clone().addScaledVector(derecha, -dpx / W * anchoMundo);
+    ctx.controls.target.copy(T);
+    cam.position.copy(T).addScaledVector(dir, dist);
     cam.up.set(0, 0, 1);
-    cam.lookAt(tx, 0, cz);
+    cam.near = Math.max(0.01, dist / 1000); cam.far = dist * 50;
+    cam.lookAt(T);
     cam.updateProjectionMatrix?.();
     ctx.controls.update();
   }

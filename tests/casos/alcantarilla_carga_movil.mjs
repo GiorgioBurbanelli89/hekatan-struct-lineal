@@ -68,5 +68,7 @@ export async function correr() {
     }
   }
   void modelo;
+  // el runner pinta «x.xxx %» salvo `crudo`: las filas en kN, en cuentas o sin referencia van tal cual
+  for (const f of filas) if (typeof f.medido !== "number" || typeof f.limite !== "number" || /kN|nº/.test(f.que)) f.crudo = true;
   return filas;
 }
