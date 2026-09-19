@@ -76,6 +76,27 @@ interface Herr {
 // globales que usa el Tweakpane): el mismo mando con otra entrada, sin copiar lógica.
 const W_ = () => window as any;
 const ajustes = () => W_().__hekatanSettings?.();
+/** La fila REAL de Tweakpane cuyo rótulo casa con `re` (el mando del panel). */
+const filaTp = (re: RegExp) => [...document.querySelectorAll<HTMLElement>(".tp-lblv")]
+  .find((f) => re.test((f.querySelector(".tp-lblv_l")?.textContent || "").replace(/\s+/g, " ")));
+/** Escribe en el mando del panel y dispara su `change`: corre la MISMA función del panel. */
+const ponerMando = (re: RegExp, v: string): boolean => {
+  const i = filaTp(re)?.querySelector<HTMLInputElement>("input[type=text], input:not([type])");
+  if (!i) return false;
+  i.value = v; i.dispatchEvent(new Event("change", { bubbles: true }));
+  return true;
+};
+const leerMando = (re: RegExp): string | null =>
+  filaTp(re)?.querySelector<HTMLInputElement>("input[type=text], input:not([type])")?.value ?? null;
+/** Casilla del panel: la pulsa (su `change` es el del panel) si no está como se pide. */
+const casillaMando = (re: RegExp, on?: boolean): boolean | null => {
+  const c = filaTp(re)?.querySelector<HTMLInputElement>("input[type=checkbox]");
+  if (!c) return null;
+  if (on === undefined || c.checked !== on) c.click();
+  return c.checked;
+};
+const casillaVal = (re: RegExp) => !!filaTp(re)?.querySelector<HTMLInputElement>("input[type=checkbox]")?.checked;
+
 /** Resultados de BARRA: el mismo State `frameResults` del desplegable «Resultados de barra». */
 const verBarra = (val: string, nom: string) => () => {
   const st = ajustes(); if (!st?.frameResults) return "El visor todavía no tiene resultados.";
@@ -128,8 +149,6 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> 
       { id: "col",  icono: "▌", nombre: "Columna", tecla: "COL", ayuda: "teclea la altura + Enter, luego clic en la base." },
       { id: "wall", icono: "▥", nombre: "Muro",    tecla: "MU",  ayuda: "teclea la altura + Enter, luego 2 clics en la base." },
       { id: "area", icono: "▦", nombre: "Losa",    tecla: "LO",  ayuda: "4 clics en orden, antihorario." },
-      { id: "revolve", icono: "⟳", nombre: "Revoluc.", tecla: "REV", ayuda: "designá el meridiano (guía) y hacé 1 clic en el eje: cúpula en paños Q4." },
-      { id: "loft",    icono: "⟲", nombre: "Barrido",  tecla: "BAR", ayuda: "designá contorno de planta + perfil de alzado y 1 clic en el centro: la piel en paños Q4." },
     ],
   },
   {
@@ -175,6 +194,27 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; pest: Pest; items: Herr[] }> 
       { id: "delete", icono: "🗑", nombre: "Borrar",   tecla: "E",  ayuda: "pasa por encima (se pone rojo) y haz clic; o Supr con algo seleccionado." },
       { id: "medir",  icono: "📏", nombre: "Medir",    tecla: "DI", ayuda: "2 clics: distancia y Δx Δy Δz (acotar)." },
       { id: "aux",    icono: "┊", nombre: "Auxiliar",  tecla: "AUX", ayuda: "línea de construcción (cian, sin FEM): 2 clics." },
+    ],
+  },
+  // ── Pestaña ÁREAS: lo del panel derecho › Áreas (shells) y › Modos de dibujo ──
+  {
+    titulo: "Superficies", fila: 1, pest: "areas",
+    items: [
+      { id: "fillarea", icono: "▦", nombre: "Rellenar", tecla: "", ayuda: "clic DENTRO de una celda cerrada por 4 barras: se vuelve área (paño Q4). Al pasar el ratón la celda se resalta." },
+      { id: "llenartodas", icono: "▦▦", nombre: "Llenar todas", tecla: "", ayuda: "un clic: todas las celdas cerradas por barras se vuelven áreas (el «Llenar TODAS» del panel).",
+        accion: () => { const n = W_().__hekatanFillClosedAreas?.() ?? 0; try { W_().__hekatanRebuild?.(); } catch {}
+          return n > 0 ? `${n} área(s) creada(s) en las celdas cerradas.` : "No hay celdas cerradas por 4 barras."; } },
+      { id: "chaflan", icono: "▱", nombre: "Chaflanes", tecla: "", ayuda: "losa con esquinas redondeadas: 2 clics en esquinas opuestas; el radio es la casilla «Chaflán r»." },
+      { id: "revolve", icono: "⟳", nombre: "Revoluc.", tecla: "REV", ayuda: "designá el meridiano (guía) y hacé 1 clic en el eje: cúpula en paños Q4. Sectores: la casilla de abajo." },
+      { id: "loft",    icono: "⟲", nombre: "Barrido",  tecla: "BAR", ayuda: "designá contorno de planta + perfil de alzado y 1 clic en el centro: la piel en paños Q4." },
+    ],
+  },
+  {
+    titulo: "Curvas", fila: 2, pest: "areas",
+    items: [
+      { id: "a-guia", icono: "┄", nombre: "Guía aux.", tecla: "", ayuda: "Arco, Círculo, Parábola y Chaflanes salen como GUÍA auxiliar (cian): se borran al usarlas en Revolución o Barrido. Es la casilla «Curvas como guía auxiliar» del panel.",
+        accion: () => { const on = casillaMando(/Curvas como gu/i); return on === null ? "Falta el panel de dibujo." : on ? "Curvas como guía auxiliar: SÍ (se borran al usarlas)." : "Curvas como barras (frames)."; },
+        activo: () => casillaVal(/Curvas como gu/i) },
     ],
   },
   // ── Pestaña RESULTADOS: antes había que plegar la cinta e ir al panel Settings ──
@@ -1331,6 +1371,41 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     paneles: () => [["Panel", document.getElementById("hk-pane-host")], ["Settings", document.getElementById("settings")]],
     decir,
   });
+
+  // ── Casillas de la pestaña Áreas: escriben en el mando REAL del panel (su `change`) ──
+  {
+    const caja = document.createElement("div");
+    caja.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;";
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:flex;gap:5px;align-items:center;";
+    const MANDOS: Array<[string, RegExp, string, string]> = [
+      ["Tramos", /Segmentos arc/i, "12", "Tramos rectos por arco, círculo o parábola (ETABS no admite curvas)"],
+      ["Sectores", /Sectores \(revoluci/i, "16", "Sectores de la Revolución alrededor del eje"],
+      ["Chaflán r", /Chafl[aá]n r/i, "1", "Radio de las esquinas de «Chaflanes», en metros"],
+    ];
+    for (const [nom, re, def, ayuda] of MANDOS) {
+      const lab = document.createElement("span");
+      lab.textContent = nom;
+      lab.style.cssText = "font-size:10px;color:#94a3b8;margin-left:4px;";
+      const i = document.createElement("input");
+      i.type = "text"; i.value = def; i.title = ayuda + " (el mismo mando del panel)";
+      i.dataset.mando = nom;
+      i.style.cssText = "width:44px;height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+        "color:#cdeefb;font:12px Consolas,monospace;text-align:center;outline:none;";
+      const aplicar = () => { if (ponerMando(re, i.value)) decir(`${nom} = ${leerMando(re) ?? i.value}.`); else decir(`Falta el mando «${nom}» en el panel.`); };
+      i.addEventListener("change", aplicar);
+      i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aplicar(); } });
+      // la casilla dice lo que tiene el panel (si alguien lo cambió allí)
+      setInterval(() => { if (document.activeElement !== i) { const v = leerMando(re); if (v !== null && v !== i.value) i.value = v; } }, 800);
+      fila.append(lab, i);
+    }
+    const rot = document.createElement("div");
+    rot.textContent = "Tramos · sectores · radio";
+    rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+    caja.append(fila, rot);
+    caja.dataset.pest = "areas";
+    filaB.appendChild(caja);
+  }
 
   // ── PESTAÑAS ──────────────────────────────────────────────────────────────
   // Como las fichas de la cinta de AutoCAD: un clic y la cinta enseña otras dos filas,
