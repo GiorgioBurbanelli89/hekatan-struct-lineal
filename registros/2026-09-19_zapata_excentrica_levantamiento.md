@@ -169,3 +169,12 @@ Elegido (Das no lo da): t = 0.40 m, columna 0.30, f'c 240, ks = 2000 tonf/m³. M
   (dueña del motor): ancho por defecto ~540 px, `ancho=`, `#fila`. No toco el motor.
 - ⏳ VÍDEO (3 partes): guiones ES/EN escritos (`cli/guiones/zapata_p1..3_{es,en}.txt`). No grabado:
   532 MB de RAM libre (regla: ≥ 2.5 GB) y SAP2000 abierto por otra sesión.
+
+## ✅ Vídeo corto «¿Qué es una cimentación no lineal?» (54 s)
+- `registros/QUE_ES_CIMENTACION_NO_LINEAL.mp4` (YouTube, sin subtítulo quemado + .en.srt/.es.srt) y
+  `registros/QUE_ES_CIMENTACION_NO_LINEAL_REDES_EN.mp4` (inglés quemado). Voz ES, marca de agua.
+- Fotogramas con matplotlib (`cli/video_no_lineal.py`, sin navegador: la RAM estaba en 0.5–3 GB):
+  resorte normal → suelo que se despega → «codo» → zapata centrada → columna que se corre (presión
+  de Das 6.51–6.53, q_max subiendo) → las 4 vueltas REALES del solver (Das 6.10) → −6.4 %.
+  Guion `cli/guiones/no_lineal_{es,en}.txt`. Revisados los PNG antes y los fotogramas del MP4 después.
+- ⏳ Partes 2 (Struct con cursor) y 3 (comparación): guiones escritos, sin grabar.

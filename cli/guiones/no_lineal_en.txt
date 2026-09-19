@@ -1,0 +1,7 @@
+A normal spring: squeeze it and it pushes; stretch it and it pulls. Always the same rule: a straight line.
+Soil is different: if the footing presses, the soil pushes back; but if the footing lifts, the soil cannot pull it: it separates.
+That is nonlinear: the rule changes depending on what happens.
+With the column at the centre, all the soil springs press equally.
+If the column moves off-centre, one side presses more and the other less. Beyond B over six, the edge springs let go, the edge lifts, and the maximum pressure rises.
+Which springs let go? The computer does not know in advance: it solves, releases those pulling, and solves again, until nothing changes. In Braja Das's example, four passes.
+If you skip this, the analysis gives 6.4 percent less pressure: on the unsafe side.
