@@ -6,7 +6,7 @@ const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 950 })
 p.on("pageerror", e => errs.push(e.message)); p.on("dialog", async d => { errs.push("dialog " + d.message()); await d.dismiss(); });
 const dormir = ms => new Promise(r => setTimeout(r, ms));
 await p.goto(BASE + "/workspace/?m=cNdgGBOgjQDYiic4", { waitUntil: "networkidle2", timeout: 180000 }); await dormir(30000);
-await p.click("#hk-franjas-btn"); await dormir(800);
+await p.evaluate(() => document.getElementById("hk-franjas-btn").click()); await dormir(800);
 const antes = await p.evaluate(() => ({ act: window.__hekatanStates.activeLoadCase.val, sel: document.getElementById("hkf-combo").value, opts: [...document.getElementById("hkf-combo").options].map(o => o.text), txt: document.getElementById("hkf-caso").textContent }));
 console.log("antes", JSON.stringify(antes)); await p.screenshot({ path: "cli/shots/franjas_combo_antes.png" });
 await p.evaluate(() => { document.getElementById("hkf-met").value = "fe"; document.getElementById("hkf-met").onchange(); document.getElementById("hkf-calc").click(); });

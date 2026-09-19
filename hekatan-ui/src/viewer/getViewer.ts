@@ -651,7 +651,7 @@ export function getViewer({
       elements(mesh, settings, derivedNodes),
       nodesIndexes(settings, derivedNodes, derivedDisplayScale),
       elementsIndexes(mesh, settings, derivedNodes, derivedDisplayScale),
-      supports(mesh, settings, derivedNodes, derivedDisplayScale),
+      supports(mesh, settings, derivedNodes, derivedDisplayScale, objects3D),
       loads(mesh, settings, derivedNodes, derivedDisplayScale),
       orientations(mesh, settings, derivedNodes, derivedDisplayScale),
       sections(mesh, settings, derivedNodes, derivedDisplayScale),

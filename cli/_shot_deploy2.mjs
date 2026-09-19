@@ -9,6 +9,6 @@ for (const [n,m] of [["servicio","cNdgGBOgjQDYiic4"],["diseno","e3qQ74c6C2sEmWPq
   const ban = await p.evaluate(()=>document.getElementById("hk-banner-sin-rigidez")?.innerText||"(sin banner)");
   console.log(n, ban.slice(0,200));
   await p.screenshot({path:"cli/shots/deploy2_"+n+".png"});
-  if (n==="diseno") { await p.click("#hk-franjas-btn").catch(e=>errs.push("btn "+e.message)); await new Promise(r=>setTimeout(r,1500)); await p.screenshot({path:"cli/shots/deploy2_diseno_franjas.png"}); }
+  if (n==="diseno") { await p.evaluate(() => document.getElementById("hk-franjas-btn").click()).catch(e=>errs.push("btn "+e.message)); await new Promise(r=>setTimeout(r,1500)); await p.screenshot({path:"cli/shots/deploy2_diseno_franjas.png"}); }
 }
 console.log("errores", errs); await nav.close();

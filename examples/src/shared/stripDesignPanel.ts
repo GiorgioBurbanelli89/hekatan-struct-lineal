@@ -11,6 +11,7 @@
  *
  * Usa los resultados que están en pantalla (el caso/combinación activo). Unidades internas kN, m.
  */
+import { registrarDiseno } from "./menuDiseno";
 import * as THREE from "three";
 import { colorMapPalette, isDiscreteCsiPalette, legendGradientCss } from "hekatan-ui/src/color-map/getColorMap";
 import {
@@ -167,8 +168,10 @@ export function montarPanelFranjas() {
   const btn = document.createElement("button");
   btn.id = "hk-franjas-btn"; btn.textContent = "▦ Franjas";
   btn.title = "Diseño de losas por franjas (como SAFE: franjas A/B, acero arriba/abajo, armado)";
-  btn.style.cssText = "position:fixed;top:60px;right:12px;z-index:950;padding:4px 10px;background:#1f3b5a;color:#fff;border:1px solid #4a7fb0;border-radius:4px;font:12px sans-serif;cursor:pointer";
+  btn.style.display = "none";   // se abre desde el menú «📐 Diseño» de la barra de arriba
   document.body.appendChild(btn);
+  registrarDiseno({ id: "franjas", orden: 2, icono: "▦", titulo: "Diseño de losa (como SAFE)",
+    detalle: "Acero de losas y cimentaciones con la combinación de diseño: por franjas o por elementos finitos, ACI 318-19, varillas en mm.", abrir: () => btn.click() });
 
   const pan = document.createElement("div");
   pan.id = "hk-franjas";

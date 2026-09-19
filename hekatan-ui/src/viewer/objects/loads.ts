@@ -4,6 +4,7 @@ import { Node } from "hekatan-fem";
 import { Structure } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
 import { Text } from "./Text";
+import { ESCALA_DEFECTO } from "./supports";
 
 export function loads(
   structure: Structure,
@@ -26,8 +27,11 @@ export function loads(
       }
     }
     const extent = Math.max(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2], 0.1);
-    return 0.08 * extent;
+    // La flecha de la carga MAYOR mide el 12 % del modelo con el slider por defecto (antes 4 %:
+    // no se veía ninguna; Jorge 19-sep-2026). Un campo de carga de área (submuestreado) va a la mitad.
+    return (0.12 / ESCALA_DEFECTO) * extent * (campo ? 0.5 : 1);
   }
+  let campo = false;
 
   // on settings.loads & deformedShape, and model clear and create visuals
   van.derive(() => {
@@ -39,7 +43,6 @@ export function loads(
     group.clear();
 
     const nodes = derivedNodes.val;
-    const size = getArrowSize(nodes);
 
     // ── Cuántas flechas dibujar, y por qué NO una por nudo ──────────────────
     //
@@ -73,6 +76,7 @@ export function loads(
     });
 
     let dibujar: number[] = cargados;
+    campo = cargados.length > MAX_FLECHAS;
     if (cargados.length > MAX_FLECHAS) {
       // Rejilla en planta con ~MAX_FLECHAS celdas; una flecha por celda ocupada.
       const xs = cargados.map((i) => nodes[i][0]), ys = cargados.map((i) => nodes[i][1]);
@@ -133,7 +137,7 @@ export function loads(
         const dir = new THREE.Vector3(c === 0 ? Math.sign(v) : 0, c === 1 ? Math.sign(v) : 0, c === 2 ? Math.sign(v) : 0);
         const rel = 0.45 + 0.55 * (maxAbs ? Math.abs(v) / maxAbs : 1);
         const arrow = new THREE.ArrowHelper(dir, new THREE.Vector3(...position), 1,
-          c === 2 ? 0xee9b00 : 0xe5382b, 0.3, 0.3);
+          c === 2 ? 0xee9b00 : 0xe5382b, 0.22, 0.1);
         arrow.userData = { nudo: position, dir, rel };
         group.add(arrow);
         if (conValor) {
@@ -143,7 +147,7 @@ export function loads(
         }
       }
     }
-    colocar(size * derivedDisplayScale.rawVal);
+    colocar(getArrowSize(nodes) * derivedDisplayScale.rawVal);
   });
 
   /** Tamaño y sitio de cada flecha y su valor: la punta en el nudo, la cola hacia fuera. */
@@ -154,7 +158,7 @@ export function loads(
       const largo = escala * u.rel;
       const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -largo * (u.texto ? 1.12 : 1));
       o.position.copy(cola);
-      if (u.texto) o.updateScale(escala * 0.38);
+      if (u.texto) o.updateScale(escala * 0.22);
       else o.scale.set(largo, largo, largo);
     });
   }

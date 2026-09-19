@@ -8,6 +8,7 @@
  * Uso (cuando se autorice conectarlo, un solo `<script>` en `workspace/index.html`, igual que
  * `franjasEntry.ts`): NO se toca esa página desde este módulo.
  */
+import { registrarDiseno } from "./menuDiseno";
 import {
   TABLA_NEC15, TABLA_NEC22_BORRADOR, tablaDe, sumarSobrecarga, lineaHeksSugerida, kNaTonf,
   type Normativa, type PesoMaterial, type ComponenteSeleccionado, type TipoComponente,
@@ -54,12 +55,14 @@ export function montarPanelSobrecarga() {
   const btn = document.createElement("button");
   btn.id = "hk-dne-btn"; btn.textContent = "🧱 Sobrecarga DNE";
   btn.title = "Asistente de sobrecarga muerta (enlucido, piso, mampostería...) con pesos de la NEC-SE-CG";
-  btn.style.cssText = "position:fixed;top:60px;right:130px;z-index:950;padding:4px 10px;background:#5a3b1f;color:#fff;border:1px solid #b0834a;border-radius:4px;font:12px sans-serif;cursor:pointer";
+  btn.style.display = "none";   // se abre desde el menú «📐 Diseño» de la barra de arriba
   document.body.appendChild(btn);
+  registrarDiseno({ id: "dne", orden: 1, icono: "🧱", titulo: "Sobrecarga muerta DNE (NEC-15)",
+    detalle: "Enlucido, masillado, piso, paredes de bloque… con los pesos de la NEC-SE-CG; se aplica como carga de área.", abrir: () => btn.click() });
 
   const pan = document.createElement("div");
   pan.id = "hk-dne";
-  pan.style.cssText = "position:fixed;top:90px;right:130px;z-index:950;width:560px;max-height:80vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #b0834a;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
+  pan.style.cssText = "position:fixed;top:90px;right:12px;z-index:950;width:560px;max-height:80vh;overflow:auto;background:rgba(24,28,34,.96);color:#e8e8e8;border:1px solid #b0834a;border-radius:6px;font:12px sans-serif;padding:8px;display:none";
   document.body.appendChild(pan);
   const $ = (id: string) => pan.querySelector("#" + id) as any;
 
