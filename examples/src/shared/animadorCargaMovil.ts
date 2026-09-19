@@ -636,7 +636,7 @@ export function crearAnimadorCargaMovil(vigente?: () => boolean): AnimadorCargaM
     const visible = (el: Element | null) => { const r = el?.getBoundingClientRect(); return r && r.width > 20 && r.height > 20 ? r : null; };
     const izq = [visible(document.getElementById("settings")), pan.dataset.plegado !== "1" ? visible(pan) : null]
       .filter((r): r is DOMRect => !!r && r.left < x0c + W / 2);
-    const derEl = visible(document.getElementById("hk-pane-host")?.parentElement ?? null) ?? visible(document.getElementById("hk-pane-host"));
+    const derEl = visible(document.getElementById("hk-pane-host"));   // (su padre es el body)
     let L0 = Math.max(x0c, ...izq.map((r) => r.right));
     let R0 = derEl && derEl.left > x0c + W / 2 ? Math.min(x0c + W, derEl.left) : x0c + W;
     if (R0 - L0 < W * 0.3) { L0 = x0c; R0 = x0c + W; }

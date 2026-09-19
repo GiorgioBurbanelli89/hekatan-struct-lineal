@@ -21,7 +21,7 @@ try:
     sm.InitializeNewModel(6)          # kN, m, C
     sm.File.NewBlank()
     sm.SetPresentUnits(6)
-    sm.SetActiveDOF([True, False, True, False, True, False])
+    sm.Analyze.SetActiveDOF([True, False, True, False, True, False])
     sm.PropMaterial.SetMaterial("HORM", 2)
     sm.PropMaterial.SetMPIsotropic("HORM", float(M["E"]), float(M["nu"]), 1e-5)
     secs = {}
