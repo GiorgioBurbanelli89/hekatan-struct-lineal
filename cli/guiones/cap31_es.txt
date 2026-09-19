@@ -1,0 +1,8 @@
+Una alcantarilla cajón de dos celdas, con el camión de diseño HL-93 cruzándola paso a paso, en Hekatan Struct.
+El modelo es un pórtico plano de un metro de ancho: dos celdas de nueve y medio metros de luz y seis de alto, losa superior de cincuenta centímetros, y la losa inferior apoyada en muelles de suelo lineales.
+El camión HL-93 tiene tres ejes: treinta y cinco, ciento cuarenta y cinco y ciento cuarenta y cinco kilonewtons, separados cuatro coma tres metros. Los números salen del manual de referencia de SAP2000, página quinientos quince.
+El camión avanza diez centímetros por paso. En cada posición se resuelve la estructura: la deformada con su mapa de color y el diagrama de momento cambian con el camión.
+Paro en la posición del momento máximo. En cada paso la suma de reacciones de los muelles iguala al peso de los ejes que están sobre la losa: el equilibrio se cumple en todas las posiciones.
+Al terminar se dibuja la envolvente: el camión con la separación trasera de cuatro coma tres a nueve metros, más la carga de carril de nueve coma tres kilonewtons por metro donde empeora cada resultado.
+Comprobado contra OpenSeesPy con el mismo modelo, nudo a nudo: en las doscientas setenta y siete posiciones la diferencia es cero, en desplazamientos, axiles, cortantes y momentos.
+Y el mismo modelo se exporta a SAP2000 con un caso por posición, a ETABS y a OpenSeesPy, para comprobarlo en otro programa.

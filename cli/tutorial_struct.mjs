@@ -57,7 +57,10 @@ const ZW = 960, ZH = 480;                // primer plano en CSS; ×2 = 1920×960
 
 const BASE = "/hekatan-struct-lineal/";
 const raiz = join(__dirname, "..", "website", "src", "examples");
-if (!existsSync(raiz)) { console.error("no hay bundle: npm run build:deploy"); process.exit(2); }
+// HK_URL=http://localhost:4633/ graba contra un servidor YA levantado (p. ej. `vite` de un worktree) sin
+// hacer el build de producción (8 GB de heap): con la RAM justa es la única forma de grabar.
+const URL_EXT = process.env.HK_URL || "";
+if (!URL_EXT && !existsSync(raiz)) { console.error("no hay bundle: npm run build:deploy (o HK_URL=<servidor>)"); process.exit(2); }
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
   ".wasm": "application/wasm", ".json": "application/json", ".svg": "image/svg+xml",
   ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2" };
@@ -100,7 +103,7 @@ const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
 // misma al arrancar, sobre todo con la máquina cargada). No es un fallo: se sigue
 // esperando al visor.
 try {
-  await pag.goto("http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+  await pag.goto(URL_EXT ? URL_EXT.replace(/\/?$/, "/") + RUTA : "http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
 } catch (e) {
   // (13-sep-2026) Un modelo por ENLACE con `&modal=N` anima sin parar y la red nunca queda
   // «idle»: `networkidle2` agotaba los 180 s y abortaba la toma sin un fotograma. No es un
