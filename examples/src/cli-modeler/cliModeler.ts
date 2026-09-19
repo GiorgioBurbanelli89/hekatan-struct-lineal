@@ -297,7 +297,7 @@ export function parseCliCommands(text: string): ParsedModel {
   //   node 1 0 0 0
   //   frame 1 1 2 25e6 0.16 0.001
   let blockMode: "nodes" | "elements" | "areas" | "supports" | "loads" | "springs" | null = null;
-  let autoNodeIdx = 0;  // 0-based para modo bloque (awatif compatible)
+  let autoNodeIdx = 0;  // 0-based para modo bloque
   let autoFrameIdx = 0;
   let autoShellIdx = 0;
 
