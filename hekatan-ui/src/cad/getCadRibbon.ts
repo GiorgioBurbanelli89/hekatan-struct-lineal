@@ -65,7 +65,17 @@ import { montarExtras } from "./ribbonExtras";
 
 interface Herr {
   id: string; icono: string; nombre: string; tecla: string; ayuda: string;
+  /** Si está, el botón no es una herramienta del motor sino una ACCIÓN (devuelve el aviso). */
+  accion?: () => string | void;
+  /** Encendido del botón para las acciones que son interruptores (deformada, axil…). */
+  activo?: () => boolean;
 }
+
+// ── Acciones de la cinta que no son herramientas de dibujo ───────────────────
+// Llaman a lo MISMO que el control del panel (los States del visor o los ganchos
+// globales que usa el Tweakpane): el mismo mando con otra entrada, sin copiar lógica.
+const W_ = () => window as any;
+const ajustes = () => W_().__hekatanSettings?.();
 
 /** Botones que no son herramientas del motor: se APLICAN al nudo o barra que se clica. */
 const APLICA = new Set(["apoyo", "apoyoart", "carga", "cargaq"]);
@@ -152,13 +162,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   const barra = document.createElement("div");
   barra.id = "hk-ribbon";
   barra.style.cssText = [
-    "position:absolute", "top:8px", "left:50%", "transform:translateX(-50%)",
+    "position:absolute", "top:8px", "left:8px", "right:8px",
     "z-index:60", "display:flex", "flex-direction:column", "align-items:stretch", "gap:2px",
     "background:rgba(15,23,42,.94)", "border:1px solid #1e3a4a",
     "border-radius:10px", "padding:4px 5px", "backdrop-filter:blur(6px)",
     "box-shadow:0 6px 20px rgba(0,0,0,.45)",
     "font-family:system-ui,-apple-system,Segoe UI,sans-serif",
-    "max-width:calc(100% - 24px)",
   ].join(";") + ";";
   // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
   // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.
@@ -170,17 +179,25 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     f.style.cssText = "display:flex;align-items:stretch;gap:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;"; return f; };
   const filaA = mkFila(), filaB = mkFila();
   filaB.style.borderTop = "1px solid #1e3a4a"; filaB.style.paddingTop = "2px";
-  barra.append(filaA, filaB);
+  // Fila de PESTAÑAS (las fichas de AutoCAD): cada pestaña enseña sus dos filas.
+  const filaT = document.createElement("div");
+  filaT.id = "hk-ribbon-pestanas";
+  filaT.style.cssText = "display:flex;align-items:center;gap:2px;border-bottom:1px solid #1e3a4a;padding:0 2px 2px;";
+  barra.append(filaT, filaA, filaB);
   const enFila = (n: 1 | 2) => (n === 1 ? filaA : filaB);
 
   const botones = new Map<string, HTMLButtonElement>();
+  const HERR = new Map<string, Herr>(GRUPOS.flatMap((g) => g.items.map((h) => [h.id, h] as [string, Herr])));
 
   const pintarActivo = () => {
     const t = hooks.getTool();
     for (const [id, b] of botones) {
       // Apoyo y carga no son un tool del motor (van por seleccion), asi que su
       // boton se enciende con el modo, no con `getTool()`.
-      const on = APLICA.has(id) ? modoAplicar === id
+      const h = HERR.get(id);
+      const on = h?.activo ? h.activo()
+               : h?.accion ? false
+               : APLICA.has(id) ? modoAplicar === id
                : (modoAplicar === null && id === t);
       b.style.background = on ? "#0e7490" : "transparent";
       b.style.borderColor = on ? "#22d3ee" : "transparent";
@@ -210,6 +227,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // Ahora la cinta se centra en el HUECO LIBRE entre los dos paneles y se limita
   // a su ancho. Es lo que hace la cinta de AutoCAD cuando se acopla un panel.
   const encajarEntrePaneles = () => {
+    // Desde el 19-sep-2026 dónde va la cinta (entre los paneles, + 30 px) y la línea de
+    // estado debajo los decide la piel del CAD (hekatanCadSkin.ts, vigilarSolapes): aquí
+    // ya no se toca nada. Con las pestañas cada una cabe en ~1220 px (paneles plegados
+    // a 1280); con los paneles abiertos la piel envuelve las filas.
+    return;
     const hostR = host.getBoundingClientRect();
     if (!hostR.width) return;
     let izq = hostR.left, der = hostR.right;
@@ -223,7 +245,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
         else der = Math.min(der, r.left);
       }
     }
-    const libre = Math.max(320, der - izq - 12);
+    const libre = Math.max(320, der - izq - 12);   // (código viejo, ya no se alcanza)
     barra.style.left = `${izq - hostR.left + (der - izq) / 2}px`;
     barra.style.maxWidth = `${libre}px`;
   };
@@ -333,6 +355,13 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       decir(h.id === "deshacer" ? "Deshecho (Ctrl+Z)." : "Rehecho (Ctrl+Y).");
       return;
     }
+    if (h.accion) {
+      let m: string | void = "";
+      try { m = h.accion(); } catch (e) { m = String(e); }
+      decir(m || `${h.nombre} — ${h.ayuda}`);
+      pintarActivo();
+      return;
+    }
     // Pulsar OTRA VEZ el botón activo lo apaga (vuelve a Selec.), como un interruptor
     const yaActivo = APLICA.has(h.id)
       ? modoAplicar === h.id
@@ -434,10 +463,12 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     rot.textContent = g.titulo;
     rot.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
     caja.appendChild(fila); caja.appendChild(rot);
+    caja.dataset.pest = g.pest;
     enFila(g.fila).appendChild(caja);
 
     const sep = document.createElement("div");
     sep.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
+    sep.dataset.pest = g.pest; sep.dataset.disp = "block";
     enFila(g.fila).appendChild(sep);
   }
 
@@ -479,7 +510,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotG.textContent = "Rejilla  X × Y × pisos";
   rotG.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaG.append(filaG, rotG);
-  filaB.appendChild(cajaG);
+  cajaG.dataset.pest = "rejilla";
+  filaA.appendChild(cajaG);
 
   // ── EN ALTURA: lo que permite trabajar en 3D sin cambiar de vista ─────────
   //
@@ -774,9 +806,11 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
   rotZ.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaZ.append(filaZ, rotZ);
+  cajaZ.dataset.pest = "rejilla";
   filaB.appendChild(cajaZ);
   const sepZ = document.createElement("div");
   sepZ.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
+  sepZ.dataset.pest = "rejilla"; sepZ.dataset.disp = "block";
   filaB.appendChild(sepZ);
 
   // Cuanta carga pone el boton Carga. Sin la casilla habria que adivinar el
@@ -803,11 +837,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   filaC.append(inC, inQ);
   rotC.textContent = "Carga  kN · kN/m";
   cajaC.append(filaC, rotC);
+  cajaC.dataset.pest = "dibujo";
   filaB.appendChild(cajaC);
-
-  const sep2 = document.createElement("div");
-  sep2.style.cssText = "width:1px;background:#1e3a4a;margin:4px 0;";
-  filaA.appendChild(sep2);
 
   // ── Vistas ────────────────────────────────────────────────────────────────
   const cajaV = document.createElement("div");
@@ -853,6 +884,8 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // en el vídeo queda fuera del cuadro y a la vista se le escapa; en la cinta se ven y
   // se pulsan. Llaman a los MISMOS conmutadores (F9 / F8 / F3) y se repintan solos.
   const W2: any = window as any;
+  const filaP = document.createElement("div");
+  filaP.style.cssText = "display:flex;gap:3px;";
   const conmutadores: Array<{ el: HTMLButtonElement; on: () => boolean }> = [];
   const mkConm = (txt: string, tecla: string, tip: string, on: () => boolean, toggle: () => void) => {
     const b = document.createElement("button"); b.type = "button"; b.title = tip;
@@ -860,7 +893,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       "background:transparent;border:1px solid transparent;border-radius:7px;color:#cbd5e1;font-family:inherit;";
     b.innerHTML = `<span style="font-size:10px;line-height:1.1;font-weight:700;letter-spacing:.3px">${txt}</span><span style="font-size:8px;opacity:.55;line-height:1">${tecla}</span>`;
     b.addEventListener("click", () => { try { toggle(); } catch {} pintarConm(); decir(`${txt} ${on() ? "ON" : "OFF"} — ${tip}`); });
-    conmutadores.push({ el: b, on }); filaV.appendChild(b);
+    conmutadores.push({ el: b, on }); filaP.appendChild(b);
   };
   const pintarConm = () => { for (const c of conmutadores) { const v = c.on(); c.el.style.background = v ? "rgba(34,211,238,.22)" : "transparent"; c.el.style.borderColor = v ? "#22d3ee" : "transparent"; c.el.style.color = v ? "#e0fbff" : "#64748b"; } };
   mkConm("SNAP", "F9", "Engancha a los cruces de la rejilla", () => W2.__hekatanSnapEnabled === true, () => W2.__hekatanToggleSnap?.());
@@ -868,10 +901,19 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   mkConm("OSNAP", "F3", "Referencias a objetos: extremo, medio, nudo, intersección…", () => W2.__hekatanOsnapOn !== false, () => W2.__hekatanToggleOsnap?.());
   setInterval(pintarConm, 600); setTimeout(pintarConm, 300);
   const rotV = document.createElement("div");
-  rotV.textContent = "Vista · plano de trabajo · precisión";
+  rotV.textContent = "Vista · plano de trabajo";
   rotV.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
   cajaV.append(filaV, rotV);
-  filaA.appendChild(cajaV);
+  // En TODAS las pestañas y pegado a la derecha, como la barra de estado de AutoCAD.
+  cajaV.dataset.pest = "*"; cajaV.style.marginLeft = "auto";
+  const cajaP = document.createElement("div");
+  cajaP.style.cssText = "display:flex;flex-direction:column;align-items:center;padding:0 7px;margin-left:auto;";
+  const rotP = document.createElement("div");
+  rotP.textContent = "Precisión";
+  rotP.style.cssText = "font-size:9px;color:#64748b;margin-top:2px;letter-spacing:.4px";
+  cajaP.append(filaP, rotP);
+  cajaP.dataset.pest = "*";
+  (window as any).__hekatanCintaFijos = () => { filaA.appendChild(cajaV); filaB.appendChild(cajaP); };
 
   // ── GUÍA dentro del programa (botón ? y F1) ───────────────────────────────
   //
@@ -1186,7 +1228,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // panel de propiedades, y la ayuda es lo último que puede permitirse no responder.
   bAyuda.style.marginLeft = "2px"; bAyuda.style.marginRight = "6px";
   bAyuda.style.flex = "0 0 auto";
-  filaA.insertBefore(bAyuda, filaA.firstChild);
+  filaT.appendChild(bAyuda);
 
   // ── Barra de estado: qué se espera AHORA (el Dynamic Prompt) ──────────────
   const estado = document.createElement("div");
@@ -1223,14 +1265,57 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   bPlegar.style.cssText = "width:26px;height:26px;margin-left:4px;cursor:pointer;" +
     "background:transparent;border:1px solid #475569;border-radius:6px;color:#94a3b8;" +
     "font:600 13px inherit;align-self:center;";
-  filaA.appendChild(bPlegar);
+  filaT.appendChild(bPlegar);
   // «▾ Añadir a la cinta»: todos los botones y mandos de los paneles, a elegir (Jorge,
   // 13-sep-2026: «todo ese menú son acceso rápido»). Ver ribbonExtras.ts.
   montarExtras({
-    filaBoton: filaA, filaGrupo: filaB, barra,
+    filaBoton: filaT, filaGrupo: filaB, barra,
     paneles: () => [["Panel", document.getElementById("hk-pane-host")], ["Settings", document.getElementById("settings")]],
     decir,
   });
+
+  // ── PESTAÑAS ──────────────────────────────────────────────────────────────
+  // Como las fichas de la cinta de AutoCAD: un clic y la cinta enseña otras dos filas,
+  // sin desplegables que abrir y cerrar. Vistas y precisión quedan fijas a la derecha.
+  (window as any).__hekatanCintaFijos?.();
+  const PESTANAS: Array<[Pest, string, string]> = [
+    ["dibujo", "✏ Dibujo", "dibujar, estructura, apoyos, cargas y modificar"],
+    ["rejilla", "🏗 Rejilla y planos", "rejilla de ejes, cota del plano, grillas auxiliares y subir pisos"],
+    ["areas", "▦ Áreas", "rellenar celdas, cúpula (revolución), piel (barrido), chaflanes"],
+    ["resultados", "📊 Resultados", "deformada, axil, cortante, momento, desplazamientos, reacciones, 2D"],
+    ["ifc", "🏛 IFC y cortes", "importar un IFC, copiar sus líneas y caras, cortes X/Y/Z"],
+  ];
+  const tabs = new Map<Pest, HTMLButtonElement>();
+  let pestActual: Pest = "dibujo";
+  const verPestana = (p: Pest) => {
+    pestActual = p;
+    for (const el of barra.querySelectorAll<HTMLElement>("[data-pest]")) {
+      const v = el.dataset.pest;
+      el.style.display = v === "*" || v === p ? (el.dataset.disp || "flex") : "none";
+    }
+    for (const [q, b] of tabs) {
+      const on = q === p;
+      b.style.background = on ? "#0e7490" : "transparent";
+      b.style.color = on ? "#ecfeff" : "#94a3b8";
+      b.style.borderColor = on ? "#22d3ee" : "transparent";
+    }
+    refrescar();
+  };
+  for (const [p, nom, ayuda] of PESTANAS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = `hk-ribbon-tab-${p}`; b.textContent = nom;
+    b.title = `${nom.replace(/^\S+\s/, "")}: ${ayuda}`;
+    b.style.cssText = "height:22px;padding:0 10px;cursor:pointer;background:transparent;border:1px solid transparent;" +
+      "border-radius:6px;color:#94a3b8;font:600 11px system-ui,-apple-system,Segoe UI,sans-serif;white-space:nowrap;";
+    b.addEventListener("click", () => { verPestana(p); decir(`Pestaña ${nom.replace(/^\S+\s/, "")}: ${ayuda}.`); });
+    b.addEventListener("mouseenter", () => { if (pestActual !== p) b.style.background = "rgba(34,211,238,.13)"; });
+    b.addEventListener("mouseleave", () => { if (pestActual !== p) b.style.background = "transparent"; });
+    tabs.set(p, b);
+    filaT.insertBefore(b, bAyuda);
+  }
+  const hueco = document.createElement("div"); hueco.style.flex = "1";
+  filaT.insertBefore(hueco, bAyuda);
+  verPestana("dibujo");
 
   // El botón que queda cuando está plegada. Va en el MISMO sitio que la barra,
   // para que abrir y cerrar no mueva nada de lo que hay debajo.
@@ -1427,6 +1512,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     marcar: (tool: string) => { if (tool !== "select" || modoAplicar) { modoAplicar = null; (window as any).__hekatanBloquearVentana = false; } pintarActivo(); },
     estado: () => estado.textContent,
     herramientas: () => [...botones.keys()],
+    pestana: (p?: Pest) => { if (p) verPestana(p); return pestActual; },
   };
   pintarActivo();
   return barra;

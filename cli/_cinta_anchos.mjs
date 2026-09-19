@@ -18,6 +18,12 @@ for (const [w, h] of [[1280, 720], [1366, 768], [1920, 1080]]) {
   await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 });
   await new Promise((r) => setTimeout(r, 2500));
   await pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); window.__hekatanRibbonPlegar?.(false); } catch (e) {} });
+  if (process.env.PLEGAR) {
+    for (const id of ["hk-settings-toggle", "hk-pane-toggle"]) {
+      const abierto = await pag.evaluate((id) => { const p = document.getElementById(id === "hk-settings-toggle" ? "settings" : "hk-pane-host"); const t = p ? getComputedStyle(p).transform : "none"; const m = t && t !== "none" ? Math.abs(+t.split(",")[4]) : 0; return m <= 40; }, id);
+      if (abierto) { await pag.click("#" + id); await new Promise((r) => setTimeout(r, 900)); }
+    }
+  }
   if (PEST) await pag.evaluate((p) => window.__hekatanRibbon?.pestana?.(p), PEST);
   await new Promise((r) => setTimeout(r, 800));
   const m = await pag.evaluate(() => {
@@ -43,7 +49,8 @@ for (const [w, h] of [[1280, 720], [1366, 768], [1920, 1080]]) {
     }
     // filas con desplazamiento interno (botones escondidos por overflow)
     const filas = [...cinta.children].filter((f) => f.scrollWidth > f.clientWidth + 2).map((f) => `${f.scrollWidth}>${f.clientWidth}`);
-    return { cinta: [Math.round(rc.left), Math.round(rc.right), Math.round(rc.bottom)], n: R.length, fuera, tapados, solapes, filasConScroll: filas };
+    const anchos = [...cinta.children].map((f) => [...f.children].filter((c) => c.offsetParent !== null).reduce((a, c) => a + c.getBoundingClientRect().width, 0) | 0);
+    return { anchos, cinta: [Math.round(rc.left), Math.round(rc.right), Math.round(rc.bottom)], n: R.length, fuera, tapados, solapes, filasConScroll: filas };
   });
   const ok = !m.error && !m.fuera.length && !m.tapados.length && !m.solapes.length && !m.filasConScroll.length;
   if (!ok) fallos++;
