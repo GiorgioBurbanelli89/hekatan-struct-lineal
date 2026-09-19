@@ -1663,6 +1663,23 @@ export const cliModeler: ExampleDef = {
       elasticities.set(eIdx, so.E); poissons.set(eIdx, so.nu);
       shearModuli.set(eIdx, so.E / (2 * (1 + so.nu))); densities.set(eIdx, so.rho);
       solidIdx.push(eIdx);
+      // Peso propio del H8: ρ·g·V a partes iguales en los 8 nudos (el reparto de su masa en el
+      // modal). Faltaba: con `selfweight 1` un muro de solidos no pesaba nada (19-sep-2026).
+      // V exacto para caras planas: 6 tetraedros sobre la diagonal 0-6.
+      if (m.selfWeight && so.rho) {
+        const P = (idxs as number[]).map(i => nodes[i]);
+        const tet = (a: number, b: number, c: number, d: number) => {
+          const u = [0, 1, 2].map(k => P[b][k] - P[a][k]), v = [0, 1, 2].map(k => P[c][k] - P[a][k]), w = [0, 1, 2].map(k => P[d][k] - P[a][k]);
+          return Math.abs(u[0] * (v[1] * w[2] - v[2] * w[1]) - u[1] * (v[0] * w[2] - v[2] * w[0]) + u[2] * (v[0] * w[1] - v[1] * w[0])) / 6;
+        };
+        const V = tet(0, 1, 2, 6) + tet(0, 2, 3, 6) + tet(0, 3, 7, 6) + tet(0, 7, 4, 6) + tet(0, 4, 5, 6) + tet(0, 5, 1, 6);
+        const W = V * so.rho * 9.80665 * m.selfWeight;
+        for (const n of idxs as number[]) {
+          const prev = loads.get(n) ?? [0, 0, 0, 0, 0, 0];
+          prev[2] -= W / 8;
+          loads.set(n, prev as [number, number, number, number, number, number]);
+        }
+      }
     }
 
     states.nodes.val = nodes;
@@ -1747,9 +1764,10 @@ export const cliModeler: ExampleDef = {
       })).filter(o => o.nodes.length === 4 && o.cells.length > 0),
     } as any;
 
-    if (m.doSolve && solidIdx.length > 0 && solidIdx.length === elements.length) {
+    if (m.doSolve && solidIdx.length > 0 && solidIdx.length === elements.length && springsList.length === 0) {
       // Un modelo de SOLO solidos va por hex8Solve (da ademas tensiones y von Mises
-      // por elemento). Si hay barras o cascaras mezcladas, todo va por `deform`,
+      // por elemento) — salvo que lleve MUELLES: hex8Solve no los lee y un muro de solidos
+      // sobre Winkler flotaba (19-sep-2026); ese va por `deform`, que si los ensambla. Si hay barras o cascaras mezcladas, todo va por `deform`,
       // que desde el 3-sep-2026 ensambla el H8 en la misma K (sin tensiones de solido).
       {
         try {

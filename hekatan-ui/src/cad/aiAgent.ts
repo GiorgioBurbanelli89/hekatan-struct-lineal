@@ -114,7 +114,7 @@ const TOOLS = [
   },
   {
     name: "resultados",
-    description: "Resultados del análisis estático: desplazamientos máximos (mm) con su nudo y suma de reacciones (kN). Úsala para comprobar el modelo.",
+    description: "Resultados del análisis estático: desplazamientos máximos (mm), suma de reacciones (kN) y, si hay un mapa de colores a la vista, su mínimo y máximo en texto. Úsala para comprobar el modelo.",
     parameters: { type: "object", properties: {}, required: [] },
   },
   {
@@ -150,8 +150,17 @@ Unidades: kN, m, s. Ejes: Z hacia arriba, gravedad = -Z.
 Cómo trabajar:
 1. Si piden una tipología estándar (edificio, pórtico, galpón, zapata, losa, muro…), busca con
    listar_plantillas, ábrela con cargar_plantilla y ajusta los parámetros que devuelve.
-   Edificio de pórticos de hormigón → edificio-aporticado; claves: nPisos, nVanosX, nVanosY,
-   spanX, spanY (luces en m), hPiso (m). Usa SIEMPRE las claves exactas que devuelve la herramienta.
+   Plantillas por tipología (id):
+     edificio de pórticos → edificio-aporticado (claves nPisos, nVanosX, nVanosY, spanX, spanY, hPiso)
+     edificio con losas → edificio-hormigon · galpón a dos aguas → galpon
+     galpón curvo → galpon-curvo · galpón a un agua → galpon-agua1
+     puente de losa sobre vigas → puente-losa-vigas · puente reticular → puente
+     estribo de puente (áreas) → estribo-puente
+     muro de contención con áreas → muro-contencion-areas · con sólidos → muro-contencion-solido
+     placa base (áreas) → placa-base · zapata aislada → zapata-aislada
+     zapatas con viga de amarre → zapata-viga-amarre · viga de cimentación → viga-cim-guerra-ej7
+     losa de cimentación → guerra-ej8-losa-cimentacion
+   Usa SIEMPRE las claves exactas que devuelve la herramienta.
 2. Si es una estructura a medida, usa modelar_heks.
 3. Después de modelar, llama a resultados (y a analisis_modal si preguntan por periodos o sismo).
    Si hay errores, flecha absurda o la suma de reacciones no equilibra la carga, corrige y repite.
@@ -259,7 +268,22 @@ function leerResultados() {
   const R = [0, 0, 0];
   for (const [, v] of (d.reactions ?? new Map()) as Map<number, number[]>) for (let k = 0; k < 3; k++) R[k] += v[k] || 0;
   const mm = (x: number) => +(x * 1000).toFixed(3);
+  // El mapa de colores EN TEXTO: una IA sin visión no lee una captura, y una con visión no saca
+  // números de una escala de colores. Se le da el máx/mín del campo que está a la vista.
+  let campo: any = undefined;
+  const nombre = W().__hekatanSettings?.()?.shellResults?.val;
+  const vals = nombre && nombre !== "none" ? W().__hekatanStates?.analyzeOutputs?.val?.[nombre] : null;
+  if (vals instanceof Map && vals.size) {
+    let lo = Infinity, hi = -Infinity, eLo = -1, eHi = -1;
+    for (const [e, v] of vals as Map<number, number | number[]>)
+      for (const x of (Array.isArray(v) ? v : [v])) if (Number.isFinite(x)) {
+        if (x < lo) { lo = x; eLo = e; } if (x > hi) { hi = x; eHi = e; }
+      }
+    if (Number.isFinite(lo)) campo = { campo: nombre, minimo: +lo.toPrecision(5), elemento_min: eLo, maximo: +hi.toPrecision(5), elemento_max: eHi,
+      unidades: "kN, m (momentos kN·m/m, fuerzas kN/m, tensiones kN/m²)" };
+  }
   return {
+    ...(campo ? { mapa_de_colores: campo } : {}),
     // el nudo es el índice interno (0, 1, 2…), no el id del .heks
     ux_max_mm: mm(max[0]), indice_nudo_ux: nudo[0],
     uy_max_mm: mm(max[1]), indice_nudo_uy: nudo[1],
@@ -475,7 +499,8 @@ function resumenResultado(nombre: string, r: any): string {
     case "modelar_heks":
       return `${r.nudos} nudos · ${r.barras} barras · ${r.cascaras} cáscaras · Uz ${r.uz_max_mm} mm · ΣRz ${r.suma_Rz_kN} kN`
         + (r.errores?.length ? ` · ⚠ ${r.errores.length} errores` : "");
-    case "resultados": return `Uz ${r.uz_max_mm} mm · Ux ${r.ux_max_mm} mm · ΣFz ${r.suma_reacciones_kN?.Fz} kN`;
+    case "resultados": return `Uz ${r.uz_max_mm} mm · Ux ${r.ux_max_mm} mm · ΣFz ${r.suma_reacciones_kN?.Fz} kN`
+      + (r.mapa_de_colores ? ` · ${r.mapa_de_colores.campo} ${r.mapa_de_colores.minimo}…${r.mapa_de_colores.maximo}` : "");
     case "analisis_modal": return r.modos?.slice(0, 3).map((m: any) => `T${m.modo} = ${m.T_s} s`).join(" · ");
     case "obtener_modelo": return `${r.plantilla ?? "vacío"} · ${r.nudos ?? 0} nudos`;
     default: return "✓";
