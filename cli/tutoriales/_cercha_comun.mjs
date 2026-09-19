@@ -76,174 +76,220 @@ const terminar = async (a, p) => { const [q] = await proj(a, [p]); await mover(a
 const acercar = async (a, p, n) => { const [q] = await proj(a, [p]); await mover(a, q.x, q.y, 10); for (let i = 0; i < n; i++) { await a.pag.mouse.wheel({ deltaY: -120 }); await a.quieto(1, 120); } await a.quieto(2, 260); };
 const modelo = (a) => a.pag.evaluate(() => { const S = window.__hekatanStates; const D = S.deformOutputs.rawVal; const A = S.analyzeOutputs.rawVal; const u = D?.deformations ? Math.max(...[...D.deformations.values()].map((v) => Math.abs(v[2]))) : 0; const N = A?.normals ? Math.max(...[...A.normals.values()].map((v) => Math.max(...v.map(Math.abs)))) : 0; return { nudos: S.nodes.rawVal.length, barras: S.elements.rawVal.length, apoyos: S.nodeInputs.rawVal.supports?.size ?? 0, cargas: S.nodeInputs.rawVal.loads?.size ?? 0, uz_mm: +(u * 1000).toFixed(3), N_kN: +N.toFixed(2) }; });
 
+// ── Herramientas de la cinta de acceso rápido (19-sep-2026) ─────────────────
+// Jorge: «debes usar solo acceso rápido». Todo por la cinta: pestañas, botones, casillas.
+const pestana = async (a, id, txt) => {
+  const b = await rect(a, (id) => document.getElementById("hk-ribbon-tab-" + id), id);
+  if (!b) { console.log("  x no está la pestaña " + id); return false; }
+  await mover(a, b.x, b.y, 12);
+  if (txt) await caja(a, { x: b.rx, y: b.ry, w: b.rw, h: b.rh }, txt, 5);
+  await clicRojo(a, b.x, b.y, false); return true;
+};
+// botón VISIBLE de la cinta cuyo texto casa con la expresión (anclada: «Carga» no es «Carga q»)
+const botonRect = (a, re) => rect(a, (re) => [...document.querySelectorAll("#hk-ribbon button")].find((b) => b.offsetParent !== null && new RegExp(re).test((b.textContent || "").replace(/\s+/g, " ").trim())), re);
+const boton = async (a, re, txt, lento = false) => {
+  const b = await botonRect(a, re);
+  if (!b) { console.log("  x no está en la cinta: " + re); return false; }
+  await mover(a, b.x, b.y, 12);
+  if (txt) await caja(a, { x: b.rx, y: b.ry, w: b.rw, h: b.rh }, txt, 5);
+  await clicRojo(a, b.x, b.y, lento); return true;
+};
+const senalar = async (a, re, txt, frames = 6) => {
+  const b = await botonRect(a, re);
+  if (!b) { console.log("  x no está en la cinta: " + re); return false; }
+  await mover(a, b.x, b.y, 12); await caja(a, { x: b.rx, y: b.ry, w: b.rw, h: b.rh }, txt, frames); return true;
+};
+// Hueco libre del lienzo: debajo de la cinta y su línea de estado, encima de la línea de órdenes
+const hueco = (a) => a.pag.evaluate(() => {
+  const rb = document.getElementById("hk-ribbon")?.getBoundingClientRect();
+  const es = document.getElementById("hk-ribbon-estado")?.getBoundingClientRect();
+  const cmd = document.getElementById("hk3-cmdline")?.getBoundingClientRect();
+  const arr = Math.max(rb?.bottom ?? 0, es?.bottom ?? 0) + 20, aba = Math.min(cmd?.top ?? 630, 630) - 10;
+  return { x: innerWidth / 2, y: (arr + aba) / 2, alto: aba - arr };
+});
+const pxm = async (a) => { const [p, q] = await proj(a, [[0, 0, 0], [1, 0, 0]]); return Math.hypot(q.x - p.x, q.y - p.y); };
+// ACERCAR con la rueda, con el cursor, hasta que el vano L ocupe `ancho` px, centrado en el hueco.
+// La rueda acerca hacia el cursor (el punto bajo él se queda quieto): se mide cuánto acerca una
+// muesca y se elige DÓNDE poner el cursor para que la cercha acabe en el centro del hueco.
+const acercarA = async (a, centro, Lm, ancho) => {
+  const [s0] = await proj(a, [centro]);
+  await mover(a, s0.x, s0.y, 10);
+  const m0 = await pxm(a);
+  for (let i = 0; i < 3; i++) { await a.pag.mouse.wheel({ deltaY: -120 }); await a.quieto(1, 140); }
+  const m1 = await pxm(a); const k1 = Math.pow(m1 / m0, 1 / 3);
+  if (!(k1 > 1.001)) { console.log("  x la rueda no acerca"); return; }
+  const N = Math.max(0, Math.round(Math.log((ancho / Lm) / m1) / Math.log(k1)));
+  const K = Math.pow(k1, N);
+  const [s1] = await proj(a, [centro]); const T = await hueco(a);
+  const c = { x: (T.x - K * s1.x) / (1 - K), y: (T.y - K * s1.y) / (1 - K) };
+  if (N > 0) {
+    await mover(a, c.x, c.y, 10);
+    for (let i = 0; i < N; i++) { await a.pag.mouse.wheel({ deltaY: -120 }); await a.quieto(1, 120); }
+  }
+  const [s2] = await proj(a, [centro]);
+  console.log(`   acercar: ${N + 3} muescas, ${(await pxm(a)).toFixed(0)} px/m, centro (${s2.x.toFixed(0)}, ${s2.y.toFixed(0)}) objetivo (${T.x.toFixed(0)}, ${T.y.toFixed(0)})`);
+};
+
 const pasos = [
   { rotulo: "Portada", hacer: async (a) => { await a.portada(`Cercha ${NOMBRE[tipo]}: dibujar, apoyar, cargar y calcular`, `Tutorial ${NUM[tipo]}`, 16); } },
   {
-    rotulo: "1 · La cinta de acceso rápido (dos filas): Frente XZ y SNAP (en la cinta)",
+    rotulo: "1 · La cinta de acceso rápido y sus pestañas; los paneles laterales se cierran",
     hacer: async (a) => {
       await a.pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo", "0"); } catch (e) {} try { window.__hekatanDrawingPoints.val = []; window.__hekatanDrawingPolylines.val = [[]]; window.__hekatanDrawingAreas.val = []; } catch (e) {} });
       await a.general(); await a.quieto(2, 320);
       await panel(a, "izq", false); await panel(a, "der", false);
+      const t = await rect(a, () => document.getElementById("hk-ribbon-tab-dibujo"));
+      const t2 = await rect(a, () => document.getElementById("hk-ribbon-tab-ifc"));
+      if (t && t2) await caja(a, { x: t.rx, y: t.ry, w: t2.rx + t2.rw - t.rx, h: t.rh }, "Pestañas, como en AutoCAD: Dibujo · Rejilla · Áreas · Resultados · IFC.", 8);
       const r = await rect(a, () => document.getElementById("hk-ribbon"));
-      if (r) { await caja(a, { x: r.rx, y: r.ry, w: r.rw, h: r.rh / 2 }, "Fila 1: Dibujar · Estructura · Analizar · Vista.", 6); await caja(a, { x: r.rx, y: r.ry + r.rh / 2, w: r.rw, h: r.rh / 2 }, "Fila 2: Modificar · Rejilla · Cota Z · Carga.", 6); }
-      await cinta(a, "Frente", "Frente: alzado X-Z, el clic cae en Y = 0.");
-      await cinta(a, "SNAP", "SNAP (F9): el clic cae en la rejilla, coordenadas exactas.");
-      await acercar(a, [0, 0, 1], 24);   // ~5 % por muesca: 24 muescas ≈ ×3
+      if (r) await caja(a, { x: r.rx, y: r.ry + 28, w: r.rw * 0.62, h: r.rh - 28 }, "Pestaña Dibujo: dibujar, apoyos, cargas y modificar.", 6);
+    },
+  },
+  {
+    rotulo: "2 · Frente (alzado XZ), SNAP y acercar con la rueda",
+    hacer: async (a) => {
+      await boton(a, "^➡ ?Frente", "Frente: alzado X-Z, el clic cae en Y = 0.");
+      await boton(a, "^SNAP", "SNAP: el clic cae en la rejilla, coordenadas exactas.");
+      await acercarA(a, [0, 0, H / 2], L, 880);
       await a.quieto(3, 320);
     },
   },
   {
-    rotulo: "2 · Cordón inferior: Polilínea, 7 clics de −6 a 6 m cada 2 m, Enter para terminar",
+    rotulo: "3 · Cordón inferior: Polilínea, 7 clics de −6 a 6 m cada 2 m, Enter",
     hacer: async (a) => {
-      await cinta(a, "Polilínea", "Polilínea: clics seguidos, Enter termina.");
+      await boton(a, "^⌒ ?Polilínea", "Polilínea: clics seguidos, Enter termina.");
       for (let i = 0; i <= n; i++) await clicMundo(a, inf[i], i === 0 ? "(−6, 0)" : i === n ? "(6, 0)" : "");
       await terminar(a, inf[n]); await a.quieto(3, 320);
     },
   },
   {
-    rotulo: tipo === "warren" ? "3 · Cordón superior: 6 clics a 2 m de altura, sobre los centros de los paneles" : "3 · Cordón superior: 7 clics a 2 m de altura, sobre los nudos",
+    rotulo: tipo === "warren" ? "4 · Cordón superior: 6 clics a 2 m de altura, sobre los centros de los paneles" : "4 · Cordón superior: 7 clics a 2 m de altura, sobre los nudos",
     hacer: async (a) => {
-      await cinta(a, "Polilínea");
+      await boton(a, "^⌒ ?Polilínea");
       for (let i = 0; i < sup.length; i++) await clicMundo(a, sup[i], i === 0 ? (tipo === "warren" ? "(−5, 2)" : "(−6, 2)") : "");
       await terminar(a, sup[sup.length - 1]); await a.quieto(3, 320);
     },
   },
   tipo === "warren" ? {
-    rotulo: "4 · Diagonales: una polilínea en zigzag, 13 clics; el clic sobre un nudo lo reusa",
+    rotulo: "5 · Diagonales: una polilínea en zigzag, 13 clics; el clic sobre un nudo lo reusa",
     hacer: async (a) => {
-      await cinta(a, "Polilínea");
-      for (let i = 0; i < zig.length; i++) await clicMundo(a, zig[i], i === 1 ? "Sobre un nudo existente: se reusa, no se duplica." : "");
+      await boton(a, "^⌒ ?Polilínea");
+      for (let i = 0; i < zig.length; i++) await clicMundo(a, zig[i], i === 1 ? "Sobre un nudo que ya existe: se reusa." : "");
       await terminar(a, zig[zig.length - 1]);
       console.log("   modelo:", JSON.stringify(await modelo(a)));
       await a.quieto(4, 320);
     },
   } : {
-    rotulo: `4 · Verticales y diagonales con Línea (2 clics + Esc cada una): ${tipo === "howe" ? "las diagonales caen hacia el apoyo" : "las diagonales suben hacia el apoyo"}`,
+    rotulo: "5 · Verticales y diagonales con Línea (2 clics + Esc cada una)",
     hacer: async (a) => {
-      for (let i = 1; i < n; i++) { await cinta(a, "Línea", i === 1 ? "Línea: dos clics, Esc termina." : ""); await clicMundo(a, inf[i]); await clicMundo(a, sup[i]); await a.pag.keyboard.press("Escape"); await a.quieto(1, 200); }
-      for (let i = 0; i < n; i++) { const [p1, p2] = diagonales[i]; await cinta(a, "Línea"); await clicMundo(a, p1, i === 0 ? "Diagonal: del nudo inferior al superior del panel." : ""); await clicMundo(a, p2); await a.pag.keyboard.press("Escape"); await a.quieto(1, 200); }
+      for (let i = 1; i < n; i++) { await boton(a, "^／ ?Línea", i === 1 ? "Línea: dos clics, Esc termina." : ""); await clicMundo(a, inf[i]); await clicMundo(a, sup[i]); await a.pag.keyboard.press("Escape"); await a.quieto(1, 200); }
+      for (let i = 0; i < n; i++) { const [p1, p2] = diagonales[i]; await boton(a, "^／ ?Línea"); await clicMundo(a, p1, i === 0 ? "Diagonal: del nudo inferior al superior del panel." : ""); await clicMundo(a, p2); await a.pag.keyboard.press("Escape"); await a.quieto(1, 200); }
       console.log("   modelo:", JSON.stringify(await modelo(a)));
       await a.quieto(4, 320);
     },
   },
   {
-    rotulo: "5 · Apoyos: «Apoyo» de la cinta y un clic en cada extremo",
+    rotulo: "6 · Apoyos: «Empotr.» y un clic en cada extremo; «Articul.» al lado",
     hacer: async (a) => {
-      await cinta(a, "Apoyo", "Apoyo: clic sobre un nudo, lo empotra.");
-      await clicMundo(a, inf[0], "Apoyo izquierdo: EMPOTRADO por defecto (Ux Uy Uz Rx Ry Rz).", true);
+      await boton(a, "^▲ ?Empotr", "Empotr.: clic sobre un nudo, lo empotra (6 grados de libertad).");
+      await clicMundo(a, inf[0], "Apoyo izquierdo.", true);
       await clicMundo(a, inf[n], "Apoyo derecho.", true);
       await a.quieto(2, 320);
-      // ¿qué se puso y cómo se cambia? Un clic en el nudo con Selec. abre su panel: Restraints
-      await cinta(a, "Selec\\.", "Seleccionar: un clic en el apoyo enseña lo que tiene.");
-      await clicMundo(a, inf[0], "", true);
-      await a.quieto(2, 320);
-      const fr = await rect(a, () => [...document.querySelectorAll(".tp-fldv_b")].find((b) => /Restraints/.test(b.textContent || "")));
-      if (fr) { await mover(a, fr.x, fr.y, 12); await caja(a, { x: fr.rx, y: fr.ry, w: fr.rw, h: fr.rh + 190 }, "Restraints: las seis casillas marcadas = empotrado. «△ Articular» lo cambia; con clic derecho: Assign ▸ Joint ▸ Restraints.", 8); }
-      await a.pag.keyboard.press("Escape"); await a.quieto(2, 320);
+      await senalar(a, "^△ ?Articul", "Articul.: el apoyo articulado, giros libres. Se usa igual.", 7);
+      await a.quieto(1, 300);
     },
   },
   {
-    rotulo: "6 · Cargas: casilla −10 kN, «Carga» y un clic en cada nudo superior; la app calcula sola",
+    rotulo: "7 · Cargas: casilla −10 kN, «Carga» y un clic en cada nudo superior",
     hacer: async (a) => {
-      const c = await rect(a, () => [...document.querySelectorAll("#hk-ribbon input")].find((i) => i.value === "-10"));
+      const c = await rect(a, () => [...document.querySelectorAll("#hk-ribbon input")].find((i) => i.offsetParent !== null && i.value === "-10"));
       if (c) { await mover(a, c.x, c.y, 12); await caja(a, { x: c.rx, y: c.ry, w: c.rw, h: c.rh }, "−10 kN por nudo (negativa = hacia abajo).", 5); }
-      await cinta(a, "Carga", "Carga: clic sobre un nudo, le pone la carga de la casilla.");
+      await boton(a, "^↓ ?Carga ?CG", "Carga: clic sobre un nudo.");
       for (let i = 0; i < cargados.length; i++) await clicMundo(a, cargados[i], i === 0 ? "−10 kN" : "");
       await a.pag.evaluate(() => { const s = window.__hekatanSettings?.(); if (s?.supports) s.supports.val = true; if (s?.loads) s.loads.val = true; });
-      const m = await modelo(a); console.log("   modelo:", JSON.stringify(m));
+      console.log("   modelo:", JSON.stringify(await modelo(a)));
       await a.quieto(5, 360);
     },
   },
   {
-    rotulo: "6b · Carga distribuida: casilla −5 kN/m, «Carga q» y un clic en cada tramo del cordón superior",
+    rotulo: "8 · Carga distribuida: casilla −5 kN/m, «Carga q» y un clic en cada tramo del cordón superior",
     hacer: async (a) => {
-      const c = await rect(a, () => [...document.querySelectorAll("#hk-ribbon input")].find((i) => i.value === "-5"));
-      if (c) { await mover(a, c.x, c.y, 12); await caja(a, { x: c.rx, y: c.ry, w: c.rw, h: c.rh }, "−5 kN/m por barra: la carga distribuida, como Frame Distributed Load de ETABS.", 6); }
-      await cinta(a, "Carga q", "Carga q: clic sobre una barra, le pone la distribuida de la casilla.");
+      const c = await rect(a, () => [...document.querySelectorAll("#hk-ribbon input")].find((i) => i.offsetParent !== null && i.value === "-5"));
+      if (c) { await mover(a, c.x, c.y, 12); await caja(a, { x: c.rx, y: c.ry, w: c.rw, h: c.rh }, "−5 kN/m sobre la barra.", 5); }
+      await boton(a, "^⇊ ?Carga q", "Carga q: clic sobre una barra.");
       for (let i = 0; i + 1 < sup.length; i++) await clicMundo(a, [(sup[i][0] + sup[i + 1][0]) / 2, 0, H], i === 0 ? "En medio del tramo." : "");
-      const m = await modelo(a); console.log("   modelo:", JSON.stringify(m));
+      console.log("   modelo:", JSON.stringify(await modelo(a)));
       await a.quieto(5, 360);
     },
   },
   {
-    rotulo: "7 · Resultados: se pliega la cinta, Settings a la vista: deformada, Frame results (axiles) y Node results (desplazamientos)",
+    rotulo: "9 · Pestaña Resultados: Deformada y Axil",
     hacer: async (a) => {
-      // la cinta plegada: el panel de Settings (sliders) queda a la vista, sin tapar
-      const pl = await rect(a, () => document.getElementById("hk-ribbon-plegar"));
-      if (pl) { await mover(a, pl.x, pl.y, 12); await caja(a, { x: pl.rx - 6, y: pl.ry - 6, w: pl.rw + 12, h: pl.rh + 12 }, "Pliego la cinta: ya está dibujado, ahora toca mirar resultados.", 5); await clicRojo(a, pl.x, pl.y, false); }
-      await panel(a, "izq", true);
-      await a.abrir("Analyze").catch(() => {});
-      const ok = await a.marcar("fila", "Deformed shape", "La deformada, amplificada.").catch(() => false);
-      if (!ok) await a.ajuste("deformedShape", true);
-      await a.elegir("Frame results", "Axial Force (diagram)");
-      await a.quieto(5, 360);
-      await a.elegir("Node results", "U (deformations)");
-      await a.quieto(5, 360);
-      await a.elegir("Node results", "R (reactions)");
-      await a.quieto(5, 360);
-      await a.elegir("Frame results", "Moment 3-3 (diagram)");
-      await a.quieto(4, 360);
-      await a.elegir("Frame results", "Axial Force (diagram)");
-      await a.quieto(2, 300);
-      await panel(a, "izq", false);
-      // la cinta otra vez, para medir
-      const ab = await rect(a, () => document.getElementById("hk-ribbon-abrir"));
-      if (ab) await clicRojo(a, ab.x, ab.y, false);
+      await pestana(a, "resultados", "Pestaña Resultados.");
+      await boton(a, "^〰 ?Deformada", "Deformada, amplificada.");
       await a.quieto(3, 360);
+      await boton(a, "^N ?Axil", "Axil: el diagrama con su valor en cada barra.");
+      console.log("   modelo:", JSON.stringify(await modelo(a)));
+      await a.quieto(6, 360);
     },
   },
   {
-    rotulo: "8 · Medir: «Medir» de la cinta, del apoyo izquierdo al derecho: 12.000 m",
+    rotulo: "10 · Momento y reacciones",
     hacer: async (a) => {
-      await cinta(a, "Medir", "Medir / acotar: dos clics.");
+      await boton(a, "^M ?Momento", "Momento M3.");
+      await a.quieto(5, 360);
+      await boton(a, "^⤒ ?Reacción", "Reacciones en los apoyos.");
+      await a.quieto(6, 360);
+      await boton(a, "^⤒ ?Reacción"); await boton(a, "^N ?Axil"); await a.quieto(2, 300);
+    },
+  },
+  {
+    rotulo: "11 · Diagrama 2D: el alzado con el diagrama y sus valores",
+    hacer: async (a) => {
+      await boton(a, "^📐 ?Diagrama 2D", "Diagrama 2D: sin perspectiva, con los valores.");
+      await a.quieto(9, 360);
+      const x = await rect(a, () => [...document.querySelectorAll("#hk-diagrama-2d button")].find((b) => /✕|×/.test(b.textContent || "")));
+      if (x) await clicRojo(a, x.x, x.y, false); else { console.log("  x no está la ✕ del 2D"); await a.pag.keyboard.press("Escape"); }
+      await a.quieto(2, 300);
+    },
+  },
+  {
+    rotulo: "12 · Medir: pestaña Dibujo, «Medir», del apoyo izquierdo al derecho: 12.000 m",
+    hacer: async (a) => {
+      await pestana(a, "dibujo", "Pestaña Dibujo.");
+      await boton(a, "^📏 ?Medir", "Medir: dos clics.");
       await clicMundo(a, inf[0], "Del apoyo…", true); await clicMundo(a, inf[n], "…al apoyo: 12.000 m.", true);
       await a.quieto(4, 360);
-      await a.pag.keyboard.press("Escape"); await a.quieto(1, 200);   // suelta la regla
-      // (un clic en vacío abre una VENTANA de selección, clic-clic: no sirve para soltar)
+      await a.pag.keyboard.press("Escape"); await a.quieto(1, 200);
       await a.pag.evaluate(() => { try { window.__hekatanClearSelection?.(); } catch (e) {} });
       await a.quieto(1, 200);
     },
   },
   {
-    rotulo: "9 · 3D con la deformada y los axiles; = ETABS 22",
+    rotulo: "13 · 3D, Encuadrar y girar; = ETABS 22",
     hacer: async (a) => {
-      await cinta(a, "3D", "Vista 3D.");
+      await boton(a, "^🧊 ?3D", "Vista 3D.");
+      await boton(a, "^⛶ ?Encuadrar", "Encuadrar: todo el modelo en el hueco libre.");
       await a.quieto(3, 360);
       await orbita(a, [0, 0], 16, 6, [0, 0, 1], 24);
-      await vista(a, [0, -18, 7], [0, 0, 1]); await a.quieto(8, 360);
+      await vista(a, [0, -18, 7], [0, 0, 1]);
+      await boton(a, "^⛶ ?Encuadrar");
+      await a.quieto(6, 360);
     },
   },
   {
-    rotulo: "10 · Guardar en formato Hekatan Struct (.heks): texto, para guardar y compartir",
+    rotulo: "14 · Guardar como… (barra de arriba): pide el nombre y descarga el .heks",
     hacer: async (a) => {
-      // el botón vive en el panel, abajo del todo: se trae a la CINTA con la flecha «▾»
-      { const ab = await rect(a, () => document.getElementById("hk-ribbon-abrir")); if (ab) { await clicRojo(a, ab.x, ab.y, false); await a.quieto(2, 300); } }
-      const mas = await rect(a, () => document.getElementById("hk-ribbon-mas"));
-      if (mas) { await mover(a, mas.x, mas.y, 12); await caja(a, { x: mas.rx - 4, y: mas.ry - 4, w: mas.rw + 8, h: mas.rh + 8 }, "▾ Añadir a la cinta: cualquier botón o mando de los paneles.", 5); await clicRojo(a, mas.x, mas.y, false); }
-      const bus = await rect(a, () => document.querySelector("#hk-ribbon-extras-lista input[type=text]"));
-      if (bus) { await clicRojo(a, bus.x, bus.y, false); await a.pag.keyboard.type("heks", { delay: 80 }); await a.quieto(3, 300); }
-      const ck = await rect(a, () => [...document.querySelectorAll("#hk-ribbon-extras-lista label")].find((l) => /Guardar \.heks/.test(l.textContent || ""))?.querySelector("input"));
-      if (ck) { await mover(a, ck.x, ck.y, 10); await caja(a, { x: ck.rx - 4, y: ck.ry - 4, w: 300, h: ck.rh + 8 }, "Marco «💾 Guardar .heks»: ya está en la cinta.", 5); await clicRojo(a, ck.x, ck.y, false); }
-      await a.pag.keyboard.press("Escape"); await a.quieto(2, 300);
-      const bg = await rect(a, () => [...document.querySelectorAll("#hk-ribbon-extras button")].find((b) => /Guardar/.test(b.textContent || "")));
-      if (bg) { await mover(a, bg.x, bg.y, 12); await caja(a, { x: bg.rx, y: bg.ry, w: bg.rw, h: bg.rh }, "Guardar .heks, desde la cinta.", 4); await clicRojo(a, bg.x, bg.y, false); }
-      await a.archivo("El modelo en .heks: nudos, barras, apoyos y cargas en texto. Se guarda y se comparte.", { lineas: 16, marcas: ["frame", "support", "load", "frameload"] }).catch(() => null);
-      await a.quieto(8, 360);
+      const gc = await rect(a, () => document.querySelector('#hk-cad-tit button[title="Guardar como"]'));
+      if (!gc) { console.log("  x no está Guardar como"); return; }
+      await mover(a, gc.x, gc.y, 12);
+      await caja(a, { x: gc.rx - 4, y: gc.ry - 4, w: gc.rw + 8, h: gc.rh + 8 }, "Guardar como…: pide el nombre. Aquí «" + ARCHIVO[tipo] + ".heks».", 6);
+      a.responder(ARCHIVO[tipo]);
+      await clicRojo(a, gc.x, gc.y, false);
+      await a.archivo("El modelo en .heks: nudos, barras, apoyos y cargas, en texto.", { lineas: 16, marcas: ["support", "load", "frameload"] }).catch(() => null);
+      await a.quieto(7, 360);
       await a.sinArchivo().catch(() => {});
       await a.quieto(2, 300);
-      // «Guardar como…» de la barra de arriba: pide el NOMBRE (diálogo del sistema; aquí el
-      // cuadro del navegador, que se contesta con el nombre de la cercha)
-      const gc = await rect(a, () => document.querySelector('#hk-cad-tit button[title="Guardar como"]'));
-      if (gc) {
-        await mover(a, gc.x, gc.y, 12);
-        await caja(a, { x: gc.rx - 4, y: gc.ry - 4, w: gc.rw + 8, h: gc.rh + 8 }, "Guardar como…: pide el nombre. Aquí «" + ARCHIVO[tipo] + ".heks».", 6);
-        a.responder(ARCHIVO[tipo]);
-        await clicRojo(a, gc.x, gc.y, false);
-        await a.archivo("Con el nombre elegido: «" + ARCHIVO[tipo] + ".heks». La barra de arriba lo muestra; Guardar lo reescribe.", { lineas: 12, marcas: ["support", "load"] }).catch(() => null);
-        await a.quieto(6, 360);
-        await a.sinArchivo().catch(() => {});
-        await a.quieto(2, 300);
-      }
     },
   },
 ];
