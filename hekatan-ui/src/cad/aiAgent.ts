@@ -720,6 +720,52 @@ export function montarLanzadorAgente() {
     else abrirAgenteIA();
   };
   document.body.appendChild(b);
+  montarBotonExplicar();
+}
+
+/**
+ * Botón «💬 Explícame» AL LADO del 🤖, y solo cuando el modelo YA ESTÁ CORRIDO
+ * (hay `deformOutputs.deformations`). Con el modelo vacío no hay nada que
+ * explicar, así que se esconde en vez de dar un error después del clic.
+ */
+function montarBotonExplicar() {
+  if (document.getElementById("hk-agente-explicar")) return;
+  const e = document.createElement("button");
+  e.id = "hk-agente-explicar";
+  e.textContent = "💬 Explícame";
+  e.title = "Que el agente lea el modelo y sus resultados y te los explique";
+  e.style.cssText = [
+    "position:fixed", "left:0", "top:0", "z-index:8999", "height:44px", "padding:0 14px",
+    "border-radius:22px", "border:1px solid #22d3ee", "background:#0b1220", "color:#e2e8f0",
+    "font:13px system-ui,sans-serif", "cursor:pointer", "box-shadow:0 4px 14px rgba(0,0,0,.4)",
+    "display:none",
+  ].join(";");
+  e.onclick = () => {
+    void pedirAlAgente(
+      "Explícame este modelo ya calculado. Usa obtener_modelo y resultados, y dime en pocas " +
+      "líneas: qué estructura es, qué cargas y apoyos tiene, cuánto se desplaza (dónde y cuánto), " +
+      "si las reacciones equilibran la carga y si el resultado es razonable.",
+    );
+  };
+  document.body.appendChild(e);
+  // El workspace no avisa cuando termina de resolver: se mira el estado, que es
+  // lo mismo que lee `leerResultados()` para el agente.
+  const mirar = () => {
+    const d = W().__hekatanStates?.deformOutputs?.val;
+    const hay = !!d?.deformations?.size;
+    e.style.display = hay ? "block" : "none";
+    if (!hay) return;
+    // Pegado a la IZQUIERDA del 🤖, midiendo su caja: el panel de parámetros de
+    // la derecha se mueve (se pliega, cambia de ancho) y con `right:` fijo el
+    // botón caía encima de los sliders.
+    const b = document.getElementById("hk-agente-lanzador");
+    if (!b) return;
+    const r = b.getBoundingClientRect();
+    e.style.top = `${r.top}px`;
+    e.style.left = `${Math.max(8, r.left - e.offsetWidth - 8)}px`;
+  };
+  mirar();
+  setInterval(mirar, 1200);
 }
 
 /** Para pruebas y tutoriales: manda un pedido como si lo escribiera el usuario. */
