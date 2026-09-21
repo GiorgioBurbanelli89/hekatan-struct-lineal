@@ -215,6 +215,7 @@ import { parseS2k } from "../shared/s2kParser";
 import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
 import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
+import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -8487,6 +8488,7 @@ if (initialEx) {
 function montarAgenteSiempre() {
   try {
     arrancarCajaNegra();     // caja negra: anota comandos, clics y TODOS los errores
+    montarBotonGrabar();     // el boton rojo: graba en video lo que se hace
     montarLanzadorAgente();
   } catch (e) {
     console.warn("[agente] no se pudo montar el lanzador:", e);
