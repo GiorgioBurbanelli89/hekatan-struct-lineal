@@ -361,6 +361,13 @@ van.derive(() => {
  */
 function ofrecerRecuperar(): void {
   if (URL_HEKS) return;                                   // modelo por enlace: no hay nada que recuperar encima
+  // Ni cuando el enlace trae un EJEMPLO (?t=zapata-levantamiento, galpon...):
+  // se abre un modelo concreto y preguntar por «un dibujo guardado de antes»
+  // solo estorba — y encima tapa la vista (Jorge, 21-sep-2026).
+  try {
+    const t = new URLSearchParams(window.location.search).get("t");
+    if (t && t !== "new-blank") return;
+  } catch { /* sin URL utilizable */ }
   if (drawingPoints.rawVal.length > 0) return;            // ya hay algo dibujado
   let pts: [number, number, number][] = [], polys: number[][] = [], areas: number[] = [];
   try {
