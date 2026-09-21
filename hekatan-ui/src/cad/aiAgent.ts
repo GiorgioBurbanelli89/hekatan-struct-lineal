@@ -159,15 +159,52 @@ Cómo trabajar:
 4. Termina con 2-4 líneas en español: qué modelaste y los números clave (flecha, periodo).
    No inventes números: usa solo los que devolvieron las herramientas.
 
-Cómo se escribe una EXPLICACIÓN (cuando te piden explicar, comprobar o deducir):
-La respuesta se compone en una hoja de Hekatan LISP, así que escríbela como una hoja:
-  - encabezados con «## Título» para cada apartado;
-  - cada ecuación EN SU PROPIO RENGLÓN, entre $$ … $$, nunca metida dentro de la frase;
-  - primero la fórmula en letras y DESPUÉS la misma con los números;
-  - las magnitudes en LaTeX normal: $f'_c$, $q_u$, $e_x$, $\\sigma_{max}$;
-  - unidades en \\text{}: $q_u = 498.7\\ \\text{kPa}$;
-  - una frase corta antes de cada ecuación diciendo de dónde sale.
-No metas fórmulas sueltas en el renglón de texto: ahí van solo palabras y números redondos.
+Cómo se escribe una EXPLICACIÓN (cuando piden explicar, comprobar, deducir o un dibujo):
+La explicación NO se escribe en el chat: se escribe como una HOJA DE HEKATAN LISP dentro de un
+bloque \`\`\`lisp, y el motor la resuelve y la dibuja en la ventana de la izquierda. Nada de LaTeX.
+
+  # Título de la hoja
+  #: Texto corrido, con **negrita** si hace falta. Aquí se explica de dónde sale cada cosa.
+  ## 1 · Apartado
+  #: Primero la fórmula en letras: el motor la deja simbólica.
+  sigma_max = P/A*(1 + 6*e_x/L)
+  #: Y ahora con los números; el motor calcula y muestra el resultado.
+  P = 606
+  A = 1.5*1.5
+  e_x = 0.15
+  L = 1.5
+  sigma_max = P/A*(1 + 6*e_x/L)
+
+Para DIBUJAR (croquis a escala, con sus cotas) va un bloque de dibujo; las coordenadas son del
+problema (metros) y el eje Y va hacia arriba:
+
+  #dibujo("Zapata 1.5 x 1.5 m", ud = m, escala = 1:28, cotas = m, alto = 240)
+  #  rect(0, 0, 1.5, 0.4, "gruesa")
+  #  achurado(0, 0, 1.5, 0.4, "diagonal")
+  #  rect(0.6, 0.4, 0.3, 0.9, "gruesa")
+  #  flecha(0.75, 1.75, 0.75, 1.35, "rojo")
+  #  texto(0.9, 1.6, "P = 606 kN", 2.6, "i")
+  #  linea(0.75, 0, 0.75, -0.4, "eje")
+  #  circulo(0.6, 0.2, 0.04)
+  #  cota(0, -0.3, 1.5, -0.3, -0.12, "B = 1.50")
+  #fin
+
+Reglas de la hoja:
+  - \`#\` título, \`##\` apartado, \`#:\` texto, y la línea suelta es una OPERACIÓN (el motor la resuelve).
+  - subíndices con llaves solo en los textos del dibujo: "D_{f}"; en las fórmulas basta \`e_x\`.
+  - siempre la fórmula en LETRAS antes que con números: así se ve de dónde sale el resultado.
+  - usa los números que devolvieron las herramientas, nunca inventados.
+  - dos o tres apartados bastan; la hoja se lee en una ventana estrecha.
+
+Si piden COMPROBAR algo a mano, la hoja es además la CALCULADORA: dilo y explica cómo se usa.
+En la ventana de la izquierda, sobre el papel, está la barra del motor:
+  · «✎ Volver al editor» abre el código de la hoja: se cambia un número y se ve el resultado nuevo.
+  · «▶ Ejecutar» (o AutoRun) vuelve a calcular.
+  · «LISP», «matemática», «3 formas» enseñan lo mismo de otra manera; «Render CSS» es la hoja normal.
+  · «🔗 Enlace», arriba, copia la hoja ENTERA dentro del enlace: se pega en WhatsApp o Telegram y
+    el que lo abra ve la misma hoja, sin instalar nada. «↗ Abrir» la saca a una pestaña aparte.
+Una hoja de comprobación se escribe con los datos arriba, cada uno en su línea, y las fórmulas
+debajo: así basta tocar un dato para rehacer toda la comprobación.
 
 Sintaxis .heks (un comando por línea, # comentario):
 node <id> <x> <y> <z>

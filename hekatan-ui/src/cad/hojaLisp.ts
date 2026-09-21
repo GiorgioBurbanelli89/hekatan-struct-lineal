@@ -202,11 +202,25 @@ function crear(): HTMLDivElement {
   titulo.textContent = "📄 Hoja · Hekatan LISP";
   cab.appendChild(titulo);
 
+  const fuera = document.createElement("button");
+  fuera.textContent = "↗ Abrir";
+  fuera.title = "Abrir la hoja en Hekatan LISP web, en una pestaña aparte";
+  fuera.style.cssText = "background:#1e4468;border:1px solid #2f5f8d;border-radius:4px;color:#dbe7f3;" +
+    "cursor:pointer;font:11px system-ui,Segoe UI,sans-serif;padding:2px 7px;";
+  fuera.onclick = () => { if (enlaceHoja) window.open(enlaceHoja, "_blank", "noopener"); };
+  cab.appendChild(fuera);
+
   const copiar = document.createElement("button");
-  copiar.textContent = "⧉";
-  copiar.title = "Copiar la explicación";
-  copiar.style.cssText = "background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;";
-  copiar.onclick = () => navigator.clipboard?.writeText(ultimoTexto).catch(() => {});
+  copiar.textContent = "🔗 Enlace";
+  copiar.title = "Copiar el enlace: la hoja viaja DENTRO del enlace, se comparte tal cual";
+  copiar.style.cssText = "background:#1e4468;border:1px solid #2f5f8d;border-radius:4px;color:#dbe7f3;" +
+    "cursor:pointer;font:11px system-ui,Segoe UI,sans-serif;padding:2px 7px;";
+  copiar.onclick = () => {
+    navigator.clipboard?.writeText(enlaceHoja || ultimoTexto).catch(() => {});
+    const antes = copiar.textContent;
+    copiar.textContent = "✓ Copiado";
+    setTimeout(() => { copiar.textContent = antes; }, 1800);
+  };
   cab.appendChild(copiar);
 
   const cerrar = document.createElement("button");
@@ -244,18 +258,37 @@ function crear(): HTMLDivElement {
 }
 
 let ultimoTexto = "";
+let enlaceHoja = "";
 
-/** Abre la hoja (o la reutiliza) y compone ahí la explicación. */
+/**
+ * Abre la hoja (o la reutiliza) y pone ahi la explicacion.
+ *
+ * Dos caminos, y el bueno es el primero:
+ *   1. si la respuesta trae un bloque de codigo Hekatan LISP, lo ejecuta el
+ *      MOTOR de verdad en un iframe: simbolico, #dibujo, #graf, unidades;
+ *   2. si solo trae LaTeX suelto, se compone aqui con KaTeX.
+ */
 export function abrirHoja(tit: string, texto: string): void {
-  pedirKatex();
   if (!ventana || !document.body.contains(ventana)) ventana = crear();
   ventana.style.display = "flex";
-  titulo.textContent = "📄 " + (tit || "Hoja · Hekatan LISP");
+  titulo.textContent = "\ud83d\udcc4 " + (tit || "Hoja \u00b7 Hekatan LISP");
   ultimoTexto = texto;
-  cuerpo.innerHTML = aHtml(texto);
-  cuerpo.scrollTop = 0;
   colocar();
   setTimeout(colocar, 60);
+
+  const codigo = sacarLisp(texto);
+  if (codigo) {
+    enlaceHoja = "";
+    montarMotor(cuerpo, codigo).then((u) => {
+      enlaceHoja = u;
+      if (!u) { cuerpo.style.padding = ""; pedirKatex(); cuerpo.innerHTML = aHtml(texto); }
+    });
+    return;
+  }
+  pedirKatex();
+  cuerpo.style.padding = "";
+  cuerpo.innerHTML = aHtml(texto);
+  cuerpo.scrollTop = 0;
 }
 
 /** Vuelve a componer lo que ya está puesto (se llama al llegar KaTeX). */
@@ -268,6 +301,58 @@ export function hojaVisible(): boolean {
 }
 
 export function recolocarHoja(): void { colocar(); }
+
+// para probarla sin el agente (y para la consola del navegador)
+(window as any).__hkHoja = abrirHoja;
+
+// ── El MOTOR de verdad: Hekatan LISP web dentro de la hoja ────────────
+//
+// Jorge, 21-sep-2026: «para eso tenemos Hekatan LISP web, integrada en Hekatan
+// Struct». Y tiene razon: componer LaTeX a mano es reinventar lo que el motor
+// ya hace — simbolico, #dibujo, #graf, unidades, tablas.
+//
+// La hoja viaja DENTRO del enlace, igual que el boton «compartir» de la web:
+// deflate-raw + base64url en el #hash. No pasa por ningun servidor, no hay que
+// guardar nada. `solo=1` muestra el resultado y esconde el editor.
+
+const LISP_WEB = "https://giorgioburbanelli89.github.io/hekatan-lisp/";
+
+async function comprimir(t: string): Promise<string> {
+  const s = new Blob([t]).stream().pipeThrough(new (window as any).CompressionStream("deflate-raw"));
+  const b = new Uint8Array(await new Response(s).arrayBuffer());
+  let bin = "";
+  for (const x of b) bin += String.fromCharCode(x);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Saca el bloque de codigo Hekatan LISP de la respuesta, si lo hay. */
+export function sacarLisp(t: string): string | null {
+  const m = t.match(/```(?:lisp|hekatan|hoja)?\s*\n([\s\S]*?)```/i);
+  if (!m) return null;
+  const cuerpo = m[1].trim();
+  // que de verdad sea una hoja: titulo, comentario de texto, dibujo o grafica
+  return /^\s*#|#dibujo|#graf|#:/m.test(cuerpo) ? cuerpo : null;
+}
+
+/** Pinta la hoja en un iframe del motor. Devuelve el enlace para abrirla aparte. */
+export async function montarMotor(destino: HTMLElement, codigo: string): Promise<string> {
+  destino.innerHTML = '<p style="color:#5a6673;font:13px system-ui">Abriendo el motor de Hekatan LISP…</p>';
+  let url: string;
+  try {
+    url = LISP_WEB + "#h=" + (await comprimir(codigo)) + "&solo=1&embed=1";
+  } catch {
+    // sin CompressionStream (navegador viejo): se queda el compositor propio
+    return "";
+  }
+  const f = document.createElement("iframe");
+  f.src = url;
+  f.style.cssText = "width:100%;height:100%;border:none;background:#fbfaf7;";
+  f.setAttribute("loading", "eager");
+  destino.innerHTML = "";
+  destino.style.padding = "0";
+  destino.appendChild(f);
+  return url;
+}
 
 // para probarla sin el agente (y para la consola del navegador)
 (window as any).__hkHoja = abrirHoja;
