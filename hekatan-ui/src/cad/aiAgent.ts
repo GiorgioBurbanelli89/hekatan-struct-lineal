@@ -21,6 +21,7 @@
  */
 
 import { aiStorage } from "./aiAssistant";
+import { abrirHoja, tieneFormulas } from "./hojaLisp";
 
 const W = () => window as any;
 
@@ -157,6 +158,16 @@ Cómo trabajar:
    Si hay errores, flecha absurda o la suma de reacciones no equilibra la carga, corrige y repite.
 4. Termina con 2-4 líneas en español: qué modelaste y los números clave (flecha, periodo).
    No inventes números: usa solo los que devolvieron las herramientas.
+
+Cómo se escribe una EXPLICACIÓN (cuando te piden explicar, comprobar o deducir):
+La respuesta se compone en una hoja de Hekatan LISP, así que escríbela como una hoja:
+  - encabezados con «## Título» para cada apartado;
+  - cada ecuación EN SU PROPIO RENGLÓN, entre $$ … $$, nunca metida dentro de la frase;
+  - primero la fórmula en letras y DESPUÉS la misma con los números;
+  - las magnitudes en LaTeX normal: $f'_c$, $q_u$, $e_x$, $\\sigma_{max}$;
+  - unidades en \\text{}: $q_u = 498.7\\ \\text{kPa}$;
+  - una frase corta antes de cada ecuación diciendo de dónde sale.
+No metas fórmulas sueltas en el renglón de texto: ahí van solo palabras y números redondos.
 
 Sintaxis .heks (un comando por línea, # comentario):
 node <id> <x> <y> <z>
@@ -573,7 +584,7 @@ async function enviar() {
       }
       if (!calls.length) {
         pensando.remove();
-        burbuja("ia", (msg.content ?? "").trim() || "(sin respuesta)");
+        responder((msg.content ?? "").trim() || "(sin respuesta)");
         return;
       }
       for (const c of calls) {
@@ -602,6 +613,35 @@ async function enviar() {
     control = null;
     btnEnviar.textContent = "Enviar ▶";
   }
+}
+
+/**
+ * La respuesta final. Si trae formulas NO se vuelca en la burbuja: ahi se leia
+ * el LaTeX en crudo («$f'_c = 240\text{ kgf/cm}^2$»). Va a la HOJA de la
+ * izquierda, compuesta, y en el chat queda solo el aviso y la primera linea.
+ * Jorge, 21-sep-2026: «que no explique asi, siempre en Hekatan LISP».
+ */
+function responder(texto: string) {
+  if (!tieneFormulas(texto)) { burbuja("ia", texto); return; }
+  abrirHoja(tituloHoja(texto), texto);
+  const primera = texto.split("\n").map((l) => l.trim())
+    .find((l) => l && !/^[#*\-]/.test(l) && !l.includes("$")) ?? "";
+  const d = burbuja("ia", (primera ? primera + "\n" + "\n" : "") +
+                          "\ud83d\udcc4 La explicaci\u00f3n, con las f\u00f3rmulas, est\u00e1 en la hoja de la izquierda.");
+  const b = document.createElement("button");
+  b.textContent = "Abrir la hoja \u25b8";
+  b.style.cssText = "margin-top:6px;background:#13314f;color:#e8eef5;border:1px solid #2b5480;" +
+                    "border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;display:block;";
+  b.onclick = () => abrirHoja(tituloHoja(texto), texto);
+  d.appendChild(b);
+}
+
+/** El titulo de la hoja: el primer encabezado, o algo corto de la primera linea. */
+function tituloHoja(t: string): string {
+  const h = t.match(/^\s*#{1,3}\s+(.+)$/m);
+  if (h) return h[1].replace(/[*`$]/g, "").trim().slice(0, 60);
+  const l = t.split("\n").map((x) => x.trim()).find(Boolean) ?? "";
+  return l.replace(/[*`$]/g, "").slice(0, 60) || "Hoja \u00b7 Hekatan LISP";
 }
 
 function crearVentana() {
@@ -643,7 +683,25 @@ function crearVentana() {
     inK.addEventListener(ev, (e) => e.stopPropagation()));
   inK.type = "password";
   inK.placeholder = "API key";
-  inK.style.cssText = ctrl + "flex:1 1 100%;";
+  inK.style.cssText = ctrl + "flex:1;";
+  const ojo = document.createElement("button");
+  ojo.type = "button";
+  ojo.textContent = "👁";
+  ojo.title = "Ver la clave un momento (se vuelve a ocultar sola a los 8 s)";
+  ojo.style.cssText = "background:#1e293b;color:#94a3b8;border:1px solid #334155;" +
+                      "border-radius:4px;padding:2px 8px;cursor:pointer;";
+  let ocultarLuego: any = null;
+  ojo.onclick = () => {
+    const ver = inK.type === "password";
+    inK.type = ver ? "text" : "password";
+    ojo.textContent = ver ? "🙈" : "👁";
+    clearTimeout(ocultarLuego);
+    // se vuelve a tapar sola: una clave a la vista en una grabacion es un regalo
+    if (ver) ocultarLuego = setTimeout(() => { inK.type = "password"; ojo.textContent = "👁"; }, 8000);
+  };
+  const filaK = document.createElement("div");
+  filaK.style.cssText = "display:flex;gap:4px;flex:1 1 100%;";
+  filaK.append(inK, ojo);
   const pista = document.createElement("div");
   pista.style.cssText = "flex:1 1 100%;color:#64748b;font-size:11px;";
   const refrescar = () => {
@@ -651,6 +709,8 @@ function crearVentana() {
     dl.innerHTML = p.modelos.map((m) => `<option value="${m}">`).join("");
     inM.value = aiStorage.getModel(`agente_${p.id}`) || p.modelos[0];
     inK.style.display = p.clave ? "" : "none";
+    ojo.style.display = p.clave ? "" : "none";
+    filaK.style.display = p.clave ? "flex" : "none";
     inK.value = aiStorage.getKey(p.id);
     pista.textContent = p.pista;
   };
@@ -658,8 +718,17 @@ function crearVentana() {
   selP.value = PROVEEDORES.some((p) => p.id === pidGuardado) ? pidGuardado : "ollama";
   selP.onchange = () => { aiStorage.setProvider(selP.value); refrescar(); };
   inM.onchange = () => aiStorage.setModel(`agente_${selP.value}`, inM.value.trim());
-  inK.onchange = () => aiStorage.setKey(selP.value, inK.value.trim());
-  conf.append(selP, inM, dl, inK, pista);
+  const guardarClave = () => {
+    const v = inK.value.trim();
+    aiStorage.setKey(selP.value, v);
+    if (!v) { pista.textContent = "Falta la clave."; pista.style.color = "#f59e0b"; return; }
+    pista.textContent = "✓ Clave guardada en este navegador (no se envía a ningún sitio).";
+    pista.style.color = "#5ecb92";
+  };
+  inK.onchange = guardarClave;
+  inK.oninput = guardarClave;          // al pegar tambien, sin esperar al foco
+  inK.addEventListener("paste", () => setTimeout(guardarClave, 0));
+  conf.append(selP, inM, dl, filaK, pista);
   refrescar();
 
   lista = document.createElement("div");
