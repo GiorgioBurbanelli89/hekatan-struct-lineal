@@ -926,6 +926,26 @@ let __caseResultsBinding: any = null;
 // la animación es para cualquier desplazamiento».
 let __casoMostrado = "";
 const __animar = { on: false };
+// Las flechas de carga se dibujan UNA vez (van.derive sobre settings.loads), no
+// por fotograma. Al animar un modo, el modelo se mueve y ellas se quedan donde
+// estaban: se ven sueltas, flotando fuera de la estructura (Jorge, 21-sep-2026).
+// Redibujar 240 flechas por fotograma seria carisimo, y ademas una carga no
+// pinta nada en un modo de vibracion: CSI tampoco las muestra. Se apagan
+// mientras anima y se restaura lo que hubiera al parar.
+let __cargasAntesDeAnimar: boolean | null = null;
+function __cargasDuranteAnimacion(animando: boolean) {
+  try {
+    const s = (viewerElm as any)?.__settings;
+    if (!s?.loads) return;
+    if (animando) {
+      if (__cargasAntesDeAnimar === null) __cargasAntesDeAnimar = !!s.loads.val;
+      s.loads.val = false;
+    } else if (__cargasAntesDeAnimar !== null) {
+      s.loads.val = __cargasAntesDeAnimar;
+      __cargasAntesDeAnimar = null;
+    }
+  } catch { /* el visor aun no esta montado */ }
+}
 let __animarBinding: any = null;
 // «Modo» aparte de «Case results» (como Mode Number de ETABS): el modo elegido y su control
 let __modoSel = 0;
@@ -1103,6 +1123,7 @@ function mountCaseResultsInSettings() {
         modalAnimator.stop();
         modalAnimator.setResults(__lastModalResults);
         modalAnimator.setMode(__modoSel);
+        __cargasDuranteAnimacion(__animar.on);
         if (__animar.on) modalAnimator.play(); else modalAnimator.showStatic(__modoSel);
       } catch (err) { console.warn("modo", err); }
     };
@@ -1115,7 +1136,7 @@ function mountCaseResultsInSettings() {
       // `esModal(__casoMostrado)` daba false; por eso hace falta también `__modalActivo`.
       if (esModal(__casoMostrado) ||
           (__modalActivo && __lastModalResults?.modeShapes?.length)) { mostrarModo(); return; }
-      if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
+      if (!__animar.on) { __cargasDuranteAnimacion(false); try { modalAnimator.stop(); } catch {} return; }
       // caso de carga / combo: sus desplazamientos reales, como un «modo» de 6 GDL por nudo
       const U = deformOutputs.val?.deformations as Map<number, number[]> | undefined;
       const n = nodes.val.length;
