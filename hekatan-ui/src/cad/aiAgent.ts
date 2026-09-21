@@ -430,13 +430,27 @@ async function llamarModelo(p: AgentProvider, modelo: string, clave: string, se�
     method: "POST", headers: cab, signal: señal, body: JSON.stringify(cuerpo),
   }).catch((e) => {
     if (e?.name === "AbortError") throw e;
-    throw new Error(p.id === "ollama"
-      ? "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b"
-      : `sin conexión con ${p.nombre}: ${e?.message ?? e}`);
+    if (p.id === "ollama") {
+      // Ollama solo acepta peticiones del PROPIO localhost. Desde el sitio
+      // publico (github.io) contesta 403 y el navegador lo da como fallo de red:
+      // parece «no responde» cuando en realidad esta corriendo y rechaza el
+      // origen (medido el 21-sep-2026: localhost 200, github.io 403).
+      const fuera = location.protocol !== "file:" &&
+                    !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      throw new Error(fuera
+        ? "Ollama esta en tu PC pero RECHAZA a " + location.origin + " (403). " +
+          "Dale permiso y reinicialo:  setx OLLAMA_ORIGINS \"" + location.origin + "\"  " +
+          "(o usa el agente desde la version local, que si tiene permiso)."
+        : "Ollama no responde en localhost:11434. Abrelo o instala: ollama.com → ollama pull qwen2.5:7b");
+    }
+    throw new Error(`sin conexión con ${p.nombre}: ${e?.message ?? e}`);
   });
   if (!r.ok) {
     const txt = (await r.text()).slice(0, 400);
     if (p.id === "ollama" && r.status === 404) throw new Error(`Modelo «${modelo}» no instalado: ollama pull ${modelo}`);
+    if (p.id === "ollama" && r.status === 403)
+      throw new Error("Ollama rechaza a " + location.origin + ". Dale permiso: " +
+                      "setx OLLAMA_ORIGINS \"" + location.origin + "\" y reinicia Ollama.");
     throw new Error(`${p.nombre} ${r.status}: ${txt}`);
   }
   const j = await r.json();
@@ -600,7 +614,7 @@ function crearVentana() {
   cerrar.textContent = "✕";
   cerrar.title = "Cerrar";
   cerrar.style.cssText = "background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;";
-  cerrar.onclick = () => { v.style.display = "none"; };
+  cerrar.onclick = () => { v.style.display = "none"; sincronizarBotonesFlotantes(); };
   cab.appendChild(cerrar);
 
   // Proveedor · modelo · clave (compartidos con el panel de IA por localStorage)
@@ -694,10 +708,25 @@ function crearVentana() {
 }
 
 /** Abre (o trae al frente) la ventana del agente. Idempotente. */
+/**
+ * Los botones flotantes (🤖 y 📋) viven en la misma esquina que el panel del
+ * agente y le caian ENCIMA de «Enviar»: con el panel abierto no se podia
+ * enviar nada (Jorge, 21-sep-2026). Mientras el panel este abierto, se esconden.
+ */
+export function sincronizarBotonesFlotantes() {
+  const abierto = !!ventana && ventana.style.display !== "none" &&
+                  document.body.contains(ventana);
+  for (const id of ["hk-agente-lanzador", "hk-caja-negra-btn"]) {
+    const el = document.getElementById(id);
+    if (el) (el as HTMLElement).style.display = abierto ? "none" : "block";
+  }
+}
+
 export function abrirAgenteIA(textoInicial?: string) {
   reenganchar();
   if (!ventana) ventana = crearVentana();
   ventana.style.display = "flex";
+  sincronizarBotonesFlotantes();
   if (textoInicial) entrada.value = textoInicial;
   entrada.focus();
 }
@@ -771,7 +800,10 @@ export function montarLanzadorAgente() {
   ].join(";");
   subirSobreLaBarraInferior(b);
   b.onclick = () => {
-    if (ventana && ventana.style.display !== "none" && document.body.contains(ventana)) ventana.style.display = "none";
+    if (ventana && ventana.style.display !== "none" && document.body.contains(ventana)) {
+      ventana.style.display = "none";
+      sincronizarBotonesFlotantes();
+    }
     else abrirAgenteIA();
   };
   document.body.appendChild(b);
