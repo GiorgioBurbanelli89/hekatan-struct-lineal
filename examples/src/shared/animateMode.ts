@@ -29,7 +29,12 @@ import { MODE_SCALE_PERCENT, modelDiagonal } from "./modeScale";
 
 /** Segundos por ciclo de la animación modal de SAP2000, leídos de su binario (18-sep-2026):
  *  incremento «3 (30 degrees)» → 7 cuadros, ping-pong de 12 ticks × 367 ms = 4.40 s. */
-export const PERIODO_VISIBLE_SAP2000 = 4.4;
+export const PERIODO_SAP2000 = 4.4;
+/** Jorge, 21-sep-2026: «aumenta un 10 % la velocidad de la animación». Se deja
+ *  aparte el valor MEDIDO de SAP2000 (4.4 s) y el factor, para no perder el
+ *  oráculo: quitando el 1.10 se vuelve a ir exactamente como SAP. */
+export const HK_VELOCIDAD = 1.10;
+export const PERIODO_VISIBLE_SAP2000 = PERIODO_SAP2000 / HK_VELOCIDAD;   // 4.00 s por ciclo
 
 export interface ModalAnimatorConfig {
   /** Reactive mesh del viewer (nodes + elements + deformOutputs del workspace) */

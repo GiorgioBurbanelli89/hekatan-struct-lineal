@@ -22,22 +22,37 @@ let reloj: number | undefined;
 
 const dos = (n: number) => String(n).padStart(2, "0");
 
-function nombreArchivo(): string {
+function nombreArchivo(ext: string): string {
   const d = new Date();
   return `hekatan_struct_${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}` +
-         `_${dos(d.getHours())}-${dos(d.getMinutes())}-${dos(d.getSeconds())}.webm`;
+         `_${dos(d.getHours())}-${dos(d.getMinutes())}-${dos(d.getSeconds())}.${ext}`;
 }
 
-/** El primer formato de la lista que el navegador sepa grabar. */
+/**
+ * El primer formato de la lista que el navegador sepa grabar.
+ *
+ * MP4 PRIMERO. Jorge, 21-sep-2026: «solo guarda mp4, Hekatan no guarda gifs».
+ * Chrome sabe grabar MP4 (H.264) desde hace unas cuantas versiones, y es el
+ * que se abre en cualquier sitio y el que aceptan WhatsApp, LinkedIn y YouTube
+ * sin convertir. El WebM se queda solo de repuesto, por si el navegador no
+ * trae el codificador de H.264.
+ */
 function formato(): string {
   const opciones = [
-    "video/webm;codecs=vp9,opus",
+    "video/mp4;codecs=avc1.42E01E",     // H.264 base — el mas compatible
+    "video/mp4;codecs=avc1",
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",       // de repuesto
     "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8,opus",
     "video/webm",
   ];
   for (const m of opciones) if (MediaRecorder.isTypeSupported(m)) return m;
   return "";
+}
+
+/** La extension que le toca al archivo, segun lo que se pudo grabar. */
+function extension(mime: string): string {
+  return /mp4/i.test(mime) ? "mp4" : "webm";
 }
 
 function aviso(texto: string, error = false) {
@@ -102,10 +117,10 @@ async function arrancar(b: HTMLButtonElement) {
   grabadora.ondataavailable = (ev) => { if (ev.data.size) trozos.push(ev.data); };
   grabadora.onstop = () => {
     for (const p of flujo.getTracks()) p.stop();
-    const blob = new Blob(trozos, { type: mime || "video/webm" });
+    const blob = new Blob(trozos, { type: mime || "video/mp4" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = nombreArchivo();
+    a.download = nombreArchivo(extension(mime || "video/mp4"));
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
@@ -134,35 +149,69 @@ export function pararGrabacion() {
 }
 
 /**
- * Coloca el botón en la fila del 🤖 y el 📋.
+ * Busca un HUECO de verdad para el botón.
  *
- * A la DERECHA del 📋 solo si cabe: el 21-sep-2026 el 📋 ya estaba pegado al
- * borde y el ⏺ se salía de la pantalla (Jorge: «no hay grabar»). Si no cabe,
- * se va al otro extremo de la fila, a la izquierda del 🤖.
+ * Jorge, 21-sep-2026: «estás juntando los botones». La primera versión lo puso
+ * a la derecha del 📋 y se salía de la pantalla; la segunda lo mandó a la
+ * izquierda del 🤖 y cayó ENCIMA de «Explícame». El fallo de las dos fue el
+ * mismo: mirar solo a dos vecinos en vez de a todos.
+ *
+ * Aquí se prueban varios sitios en orden y se acepta el primero que no pise a
+ * NINGUNO de los flotantes ni se salga del borde.
  */
+const VECINOS = ["hk-agente-explicar", "hk-agente-lanzador", "hk-caja-negra-btn"];
+
+function rects(): DOMRect[] {
+  return VECINOS.map((id) => document.getElementById(id))
+    .filter((e): e is HTMLElement => !!e && e.style.display !== "none")
+    .map((e) => e.getBoundingClientRect())
+    .filter((r) => r.width > 0 && r.height > 0);
+}
+
+const pisa = (a: DOMRect, b: { l: number; t: number; w: number; h: number }, m = 6) =>
+  a.left < b.l + b.w + m && b.l < a.right + m && a.top < b.t + b.h + m && b.t < a.bottom + m;
+
 function colocar(b: HTMLElement) {
   const recolocar = () => {
-    const caja = document.getElementById("hk-caja-negra-btn")?.getBoundingClientRect();
-    const ag = document.getElementById("hk-agente-lanzador")?.getBoundingClientRect();
-    const ancho = b.offsetWidth || 34;
-    const r = caja && caja.width > 0 ? caja : (ag && ag.width > 0 ? ag : null);
-    if (!r) return;
-    b.style.right = "auto";
-    b.style.bottom = "auto";
-    b.style.top = Math.round(r.top) + "px";
-    const derecha = Math.round(r.right + 8);
-    if (derecha + ancho <= window.innerWidth - 6) {
-      b.style.left = derecha + "px";
-      return;
+    const vs = rects();
+    if (!vs.length) return;
+    const w = b.offsetWidth || 34, h = b.offsetHeight || 34;
+    const fila = Math.round(vs.reduce((s, r) => s + r.top + r.height / 2, 0) / vs.length - h / 2);
+    const izq = Math.min(...vs.map((r) => r.left));
+    const der = Math.max(...vs.map((r) => r.right));
+    const arr = Math.min(...vs.map((r) => r.top));
+
+    // La IZQUIERDA primero, y a proposito: a la derecha de la fila esta el panel
+    // de propiedades, que aunque no sea un flotante tapa igual (21-sep-2026, se
+    // vio en el deploy publico). A la izquierda esta el visor, que es campo libre.
+    const sitios = [
+      { l: Math.round(izq - w - 10), t: fila },
+      { l: Math.round(der + 10), t: fila },
+      { l: Math.round(izq - w - 10), t: Math.round(arr - h - 10) },
+    ];
+    for (const s of sitios) {
+      const cabe = s.l >= 6 && s.l + w <= window.innerWidth - 6 &&
+                   s.t >= 6 && s.t + h <= window.innerHeight - 6;
+      if (!cabe) continue;
+      if (vs.some((r) => pisa(r, { ...s, w, h }))) continue;
+      b.style.right = "auto"; b.style.bottom = "auto";
+      b.style.left = s.l + "px"; b.style.top = s.t + "px";
+      // y que ademas SE VEA: no basta con no pisar a los otros flotantes, el
+      // panel de la derecha tambien lo tapa (medido el 21-sep-2026). Se le
+      // pregunta al navegador quien manda en ese punto.
+      const cx = s.l + w / 2, cy = s.t + h / 2;
+      const quien = document.elementFromPoint(cx, cy);
+      if (quien === b || b.contains(quien)) return;
     }
-    // no cabe: al otro extremo, antes del primero de la fila
-    const primero = ag && ag.width > 0 ? ag : r;
-    b.style.left = Math.max(6, Math.round(primero.left - ancho - 8)) + "px";
+    // ningún sitio limpio: arriba del todo, lejos de la fila
+    b.style.right = "auto"; b.style.bottom = "auto";
+    b.style.left = Math.max(6, Math.round(der - w)) + "px";
+    b.style.top = Math.max(6, Math.round(arr - h - 10)) + "px";
   };
   recolocar();
   window.addEventListener("resize", recolocar);
   for (const ms of [700, 2000, 5000]) setTimeout(recolocar, ms);
-  setInterval(recolocar, 4000);           // el 📋 se recoloca solo; hay que seguirlo
+  setInterval(recolocar, 3000);
 }
 
 export function montarBotonGrabar() {

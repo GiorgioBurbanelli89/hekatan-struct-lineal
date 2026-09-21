@@ -22,6 +22,7 @@
 
 import { aiStorage } from "./aiAssistant";
 import { abrirHoja, tieneFormulas } from "./hojaLisp";
+import { leerArchivos, mensajeCon, pedirArchivos, type Adjunto } from "./adjuntos";
 
 const W = () => window as any;
 
@@ -46,7 +47,7 @@ const PROVEEDORES: AgentProvider[] = [
   },
   {
     id: "gemini", nombre: "✨ Gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    clave: true, modelos: ["gemini-3.6-flash", "gemini-flash-latest", "gemini-2.0-flash"],
+    clave: true, modelos: ["gemini-3.6-flash", "gemini-flash-latest", "gemini-flash-lite-latest"],
     pista: "Clave gratis: aistudio.google.com/apikey",
   },
   {
@@ -179,9 +180,13 @@ NO se escribe en el chat: se escribe como HOJA DE HEKATAN LISP en un bloque de c
   A = 1.5m*1.5m|m^2
   sigma_max = dec(606kN/2.25m^2*(1 + 6*0.15/1.5), 1)|kPa
 
-UNIDADES (el motor las calcula de verdad, no son adorno):
-  · se pegan al número: 606kN, 1.5m, 20000kN/m^3, 240kgf/cm^2, 2h;
-  · la BARRA dice en qué unidad se quiere LEER: 606kN/2.25m^2|kPa, o |tonf/m2, o |kgf/cm2;
+UNIDADES — OBLIGATORIAS en TODA línea que tenga un número. El motor las calcula de verdad.
+  MAL:   Lx = 1.5          P = 606.2         s = sigma_max/ks      → sale «≈ 0.0» y no dice nada
+  BIEN:  L_x = 1.5m        P = 606.2kN       s = dec(754.3kPa/20000kN/m^3, 1)|mm   → «37.7 mm»
+  · se pegan al número, sin espacio: 606kN, 1.5m, 20000kN/m^3, 240kgf/cm^2;
+  · la BARRA dice en qué unidad se quiere LEER: |kPa, |mm, |tonf/m2, |kgf/cm2;
+  · sin la barra el resultado sale en la unidad base (metros) y un asiento de 37 mm
+    se convierte en «0.0»: por eso la barra NO es opcional;
   · si las dimensiones no cuadran el motor avisa, así que no hay que inventar factores.
 DECIMALES: el motor es exacto y escribe 9/4 en vez de 2.25. Para leerlo en decimal: dec(expr, 2).
   Nunca metas un dec() dentro de otro dec(): deja de evaluar.
@@ -202,6 +207,12 @@ Para DIBUJAR (croquis a escala, con cotas); coordenadas del problema en metros, 
 
 Y para una GRÁFICA: #fplot(...). Dos o tres apartados bastan; la ventana es estrecha.
 Usa los números que devolvieron las herramientas, nunca inventados.
+
+Si te falta un dato para contestar bien — una fórmula, una tabla de la norma, un plano, el
+enunciado de un ejercicio — NO lo inventes ni te disculpes: PÍDELO. Di exactamente esto:
+  «Eso no lo sé de memoria. Adjúntame la página con el botón ' + chr(0x1F4CE) + ' de abajo: vale una FOTO o una
+   captura (la leo yo), un PDF (le saco el texto) o un .txt. Dime también qué parte miro.»
+Cuando llegue, trabaja SOLO con lo que ponga ahí, y cita de dónde sale cada número.
 
 Si piden COMPROBAR algo a mano, la hoja es además la CALCULADORA: dilo y explica cómo se usa.
 En la ventana de la izquierda, sobre el papel, está la barra del motor:
@@ -453,6 +464,10 @@ type Msg = { role: string; content?: string | null; tool_calls?: any[]; tool_cal
 const MAX_PASOS = 14;
 const conversacion: Msg[] = [];
 
+// Lo que el usuario adjunto para el PROXIMO mensaje (se vacia al enviarlo).
+let bandeja: Adjunto[] = [];
+let pintarBandeja: () => void = () => {};
+
 /**
  * El modelo se satura y contesta 503 «high demand» (o 429, que es la cuota por
  * minuto). No es culpa de la clave ni del programa, y se arregla esperando o
@@ -657,7 +672,10 @@ async function enviar() {
 
   entrada.value = "";
   burbuja("user", texto);
-  conversacion.push({ role: "user", content: texto });
+  const adj = bandeja;
+  bandeja = [];
+  pintarBandeja();
+  conversacion.push(mensajeCon(texto, adj) as Msg);
   control = new AbortController();
   btnEnviar.textContent = "■ Parar";
   const pensando = burbuja("ia", "…");
@@ -856,10 +874,43 @@ function crearVentana() {
     const r = await ejecutar("deshacer", {});
     burbuja("paso", `↶ deshacer → ${resumenResultado("deshacer", r)}`);
   };
-  col.append(btnEnviar, btnDeshacer);
+  const btnClip = document.createElement("button");
+  btnClip.textContent = "📎";
+  btnClip.title = "Adjuntar una imagen, un PDF o un texto: una página del libro, un plano, " +
+                  "la formulación. El modelo LEE la imagen (no hace falta pasarla a texto).";
+  btnClip.style.cssText = "background:#334155;color:#e5e7eb;border:none;border-radius:4px;" +
+                          "padding:4px 8px;cursor:pointer;font-size:13px;";
+  btnClip.onclick = async () => {
+    const fs = await pedirArchivos();
+    if (!fs.length) return;
+    const nuevos = await leerArchivos(fs, (m) => burbuja("paso", "📎 " + m));
+    bandeja = [...bandeja, ...nuevos];
+    pintarBandeja();
+  };
+  col.append(btnEnviar, btnDeshacer, btnClip);
+
+  // la tira con lo adjuntado, para saber qué va a viajar y poder quitarlo
+  const tira = document.createElement("div");
+  tira.style.cssText = "display:none;flex-wrap:wrap;gap:4px;padding:4px 10px;" +
+                       "border-top:1px solid #1e293b;flex-shrink:0;";
+  pintarBandeja = () => {
+    tira.innerHTML = "";
+    tira.style.display = bandeja.length ? "flex" : "none";
+    bandeja.forEach((a, i) => {
+      const c = document.createElement("span");
+      c.style.cssText = "background:#1e293b;border:1px solid #334155;border-radius:4px;" +
+                        "padding:1px 6px;font-size:11px;color:#cbd5e1;cursor:pointer;";
+      c.textContent = (a.tipo === "imagen" ? "🖼 " : "📄 ") +
+                      a.nombre.slice(0, 26) + " ×";
+      c.title = "Quitar";
+      c.onclick = () => { bandeja.splice(i, 1); pintarBandeja(); };
+      tira.appendChild(c);
+    });
+  };
+
   pie.append(entrada, col);
 
-  v.append(cab, conf, lista, pie);
+  v.append(cab, conf, lista, tira, pie);
   document.body.appendChild(v);
 
   // Arrastrar por la cabecera

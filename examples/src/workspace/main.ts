@@ -216,6 +216,9 @@ import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
 import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
 import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
+import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
+import { montarBotonSeccion } from "hekatan-ui/src/cad/cuadroSeccion";
+import { montarMenusBarra } from "../shared/menuDiseno";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -3219,9 +3222,34 @@ function makePaneDraggable(host: HTMLElement) {
 // existente / 🧪 Ejemplos. Recién al elegir se cargan las herramientas del
 // pane (loadExample → buildParamsPane).
 function showMenu() {
+  // SALIR AL MENU = EMPEZAR LIMPIO.
+  //
+  // Jorge, 21-sep-2026: «puse menú y ahora está así» — el galpon se quedaba en una
+  // nube de PUNTOS SUELTOS y con la tabla modal abierta encima del menu.
+  //
+  // Se intento limpiar por partes (resetStates, y otra vez a los 60 y 400 ms) y NO
+  // basta: quedaban 214 nudos con 0 elementos y las ventanas de la sesion anterior.
+  // Hay demasiadas capas con estado propio —visor, CAD, paneles, tabla modal— para
+  // ir apagandolas una a una y acertar siempre.
+  //
+  // Asi que se recarga la pagina en la direccion limpia. Es lo que hace cualquier
+  // programa al cerrar un documento, y deja el menu igual que recien abierto. No se
+  // pierde nada que no se estuviera perdiendo ya: salir del modelo ES cerrarlo.
+  try {
+    const u = new URL(location.href);
+    for (const k of ["m", "modal", "t", "cb", "v"]) u.searchParams.delete(k);
+    const limpia = u.pathname + (u.searchParams.toString() ? "?" + u.searchParams : "");
+    if (location.href !== location.origin + limpia) { location.replace(limpia); return; }
+  } catch {}
   currentExample = null;
   activeExampleVersion.v++;
   resetStates();
+  // Y otra vez en el siguiente turno: algo repone los nudos DESPUES del reset y
+  // el visor se queda con una nube de puntos sueltos sin barras (medido
+  // 21-sep-2026: 214 nudos con 0 elementos). Mientras no se sepa quien los
+  // devuelve, se vuelve a vaciar cuando ya han pasado todos.
+  setTimeout(() => { try { if (!currentExample) resetStates(); } catch {} }, 60);
+  setTimeout(() => { try { if (!currentExample) resetStates(); } catch {} }, 400);
   if (currentPane) { currentPane.dispose(); currentPane = null; }
   lastFolderMap = null;
   paneHost.innerHTML = "";
@@ -5915,8 +5943,13 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   // edificios, pórticos, placas, cáscaras, mezzanines, galpones, etc.
   // Permite roundtrip Hekatan ↔ ETABS/SAP para validación cruzada de
   // edificios duales, modal y participación de masa.
-  // Se excluyen cimentaciones puras (zapata*, guerra-ej*, safe-bench-*).
-  if (currentExample && !isFoundation) {
+  // ANTES se excluian las cimentaciones puras (zapata*, guerra-ej*, safe-bench-*)
+  // porque «F2K ya cubre las zapatas». Jorge, 21-sep-2026: «que exporte a ETABS, SAP
+  // y SAFE». Y tiene razon: el argumento del programa es que el mismo modelo se abre
+  // en los tres y da lo mismo — dejar la zapata sin ETABS ni SAP es quitarle la
+  // comprobacion justo al ejemplo que mas se mira. Los muelles de area viajan en los
+  // tres ficheros (ver reference_csi_tres_ficheros_leyes_safe_f2k).
+  if (currentExample) {
     const fEtabs = pane.addFolder({ title: "ETABS", expanded: false });
     const fSap   = pane.addFolder({ title: "SAP",   expanded: false });
     // Columnas CFT al .s2k: SAP2000 no tiene "Filled Steel Tube" (ETABS si). Por defecto
@@ -8489,6 +8522,9 @@ function montarAgenteSiempre() {
   try {
     arrancarCajaNegra();     // caja negra: anota comandos, clics y TODOS los errores
     montarBotonGrabar();     // el boton rojo: graba en video lo que se hace
+    montarBotonGif();        // y el 🎞 de al lado: lo mismo pero en GIF
+    montarBotonSeccion();    // 📐 la seccion de la barra designada, dibujada y acotada
+    montarMenusBarra();      // Analisis / Diseno / Exportar: siempre, no solo si hay diseno
     montarLanzadorAgente();
   } catch (e) {
     console.warn("[agente] no se pudo montar el lanzador:", e);

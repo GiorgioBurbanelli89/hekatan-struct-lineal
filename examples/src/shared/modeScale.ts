@@ -18,7 +18,11 @@
  * corriendo (ver la nota larga en `animateMode.ts` y
  * `registros/2026-09-18_escala_velocidad_sap2000.md`).
  */
-export const MODE_SCALE_PERCENT = 3.7;
+export const MODE_SCALE_SAP2000 = 3.7;
+/** Jorge, 21-sep-2026: «y 10 % más de deformación visual, la escala». Igual que
+ *  con la velocidad: el 3.7 % es lo MEDIDO contra SAP2000 y el factor va aparte. */
+export const HK_ESCALA = 1.10;
+export const MODE_SCALE_PERCENT = MODE_SCALE_SAP2000 * HK_ESCALA;        // 4.07 %
 
 /**
  * El "tamaño del modelo" que acompaña a `MODE_SCALE_PERCENT`: la DIAGONAL de la

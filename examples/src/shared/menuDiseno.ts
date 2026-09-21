@@ -17,12 +17,63 @@ const menus: Record<string, Entrada[]> = {
       abrir: () => (window as any).__hekatanModalStop?.() },
   ],
   diseno: [],
+  // EXPORTAR — Jorge, 21-sep-2026: «no veo un boton para exportar modelos ya hechos a
+  // s2k e2k f2k». Los botones existian, pero repartidos en carpetas plegadas del panel
+  // derecho (ETABS, SAP, SAFE, CLI) y distintas segun el ejemplo: estaban, pero no se
+  // encontraban. Aqui quedan los cuatro juntos, al lado de Analisis y Diseno.
+  //
+  // Cada entrada pulsa el MISMO boton de su carpeta: no se duplica el exportador, se le
+  // da un camino corto. Si el ejemplo no trae ese exportador, se dice, en vez de no
+  // hacer nada.
+  exportar: [
+    { id: "e2k", orden: 1, icono: "🏗", titulo: "ETABS (.e2k)",
+      detalle: "El modelo entero, para abrirlo en ETABS.", abrir: () => pulsarExport("E2K", "ETABS") },
+    { id: "s2k", orden: 2, icono: "📐", titulo: "SAP2000 (.s2k)",
+      detalle: "El modelo entero, para abrirlo en SAP2000.", abrir: () => pulsarExport("S2K", "SAP2000") },
+    { id: "f2k", orden: 3, icono: "🪨", titulo: "SAFE (.f2k) — cimentación",
+      detalle: "La cimentación con sus muelles, para SAFE.", abrir: () => pulsarExport("F2K", "SAFE") },
+    { id: "tcl", orden: 4, icono: "🧮", titulo: "OpenSees (.tcl)",
+      detalle: "El guion de OpenSees, para comprobarlo aparte.", abrir: () => pulsarExport(".tcl", "OpenSees") },
+  ],
 };
-const NOMBRE: Record<string, string> = { analisis: "▶ Análisis", diseno: "📐 Diseño" };
+
+/**
+ * Pulsa el boton de exportar que vive en el panel derecho.
+ *
+ * Se busca por su TEXTO porque cada ejemplo monta los suyos: la zapata trae SAFE y
+ * OpenSees; el galpon trae ademas ETABS y SAP. Lo que no existe se dice claro, que
+ * es mejor que un boton que no hace nada.
+ */
+function pulsarExport(clave: string, nombre: string): void {
+  const cands = Array.from(document.querySelectorAll<HTMLElement>("button,.tp-btnv_b"));
+  const b = cands.find((e) => {
+    const t = (e.textContent || "").replace(/\s+/g, " ").trim();
+    return t.includes("Exportar") && t.includes(clave) && t.length < 60;
+  });
+  if (b) { b.click(); return; }
+  alert("Este ejemplo todavía no exporta a " + nombre + ".\n\n" +
+        "Los que sí: el galpón curvo (ETABS, SAP2000, SAFE y OpenSees) y\n" +
+        "la zapata (SAFE y OpenSees).");
+}
+
+const NOMBRE: Record<string, string> = { analisis: "▶ Análisis", diseno: "📐 Diseño", exportar: "📤 Exportar" };
 const AYUDA: Record<string, string> = {
   analisis: "Análisis — elige qué calcular:",
   diseno: "Diseño — elige qué hacer:",
+  exportar: "Exportar el modelo a otro programa:",
 };
+
+/**
+ * Monta la barra de menus SIN esperar a que nadie registre nada.
+ *
+ * Jorge, 21-sep-2026: «no veo el menú análisis y diseño» y «exportar tampoco está».
+ * Medido con su URL: abriendo un modelo por enlace (?m=…&t=new-blank) no aparecia
+ * ninguno. La razon: `montar()` solo corria desde `registrarDiseno`, o sea, solo si
+ * algun panel registraba una entrada de Diseño. En esa ruta nadie la registra, asi
+ * que la barra entera no llegaba a existir — y con ella se iban tambien Analisis y
+ * Exportar, que no tienen nada que ver con el diseño.
+ */
+export function montarMenusBarra(): void { montar(); }
 
 export function registrarDiseno(e: Entrada): void {
   const l = menus.diseno;
@@ -52,16 +103,43 @@ function montar(): void {
     b.removeAttribute("style"); b.className = "piel"; if (!visible) b.style.display = "none";
     barra.appendChild(b); return true;
   };
-  const traer = () => { const a = mover("hk-home-btn"), v = mover("hk-back-btn"); if (!a || !v) setTimeout(traer, 400); else ponerMenus(); };
+  // Los MENUS no dependen de «Menú» ni de «Volver».
+  //
+  // Jorge, 21-sep-2026: «no veo el menú análisis y diseño, ¿qué pasó?». Medido: con
+  // un modelo abierto por enlace (?m=…&t=new-blank) esos dos botones no existen, y
+  // como el montaje esperaba a los DOS para seguir, se quedaba reintentando para
+  // siempre y no aparecia ningun menu. En la zapata si existian, y por eso alli si
+  // salian: el fallo estaba, pero solo se veia en unas rutas.
+  //
+  // Ahora se montan los menus de entrada, y lo de mover Menú/Volver se reintenta
+  // aparte y con final: si a los 20 intentos no estan, es que esa vista no los tiene.
+  let intentos = 0;
+  const traer = () => {
+    const a = mover("hk-home-btn"), v = mover("hk-back-btn");
+    if ((!a || !v) && ++intentos < 20) setTimeout(traer, 400);
+  };
   const ponerMenus = () => {
-    for (const k of ["analisis", "diseno"]) {
+    for (const k of ["analisis", "diseno", "exportar"]) {
       const b = document.createElement("button");
       b.id = `hk-${k}-btn`; b.className = "piel"; b.textContent = NOMBRE[k] + " ▾";
       b.onclick = (ev) => { ev.stopPropagation(); abrirMenu(k, b); };
       barra.appendChild(b);
     }
   };
+  ponerMenus();   // los menus, siempre; no dependen de Menu/Volver
   traer();
+  // Orden de la barra: Menu · Volver · Analisis · Diseno · Exportar.
+  // Como los menus se montan primero (ya no esperan a nadie), Menu y Volver
+  // llegan despues y hay que adelantarlos. Jorge, 21-sep-2026: quedaban al final.
+  const ordenar = () => {
+    const primero = barra.querySelector("#hk-analisis-btn");
+    // al reves: el ultimo insertado queda el primero
+    for (const id of ["hk-back-btn", "hk-home-btn"]) {
+      const e = document.getElementById(id);
+      if (e && primero && e.parentElement === barra) barra.insertBefore(e, primero);
+    }
+  };
+  for (const ms of [500, 1200, 2500, 5000]) setTimeout(ordenar, ms);
   // «← Volver» se enciende/apaga desde main.ts: que lo haga con display inline, no block
   const w = window as any, orig = w.__hekatanActualizarBotonVolver;
   w.__hekatanActualizarBotonVolver = (hay: boolean) => {

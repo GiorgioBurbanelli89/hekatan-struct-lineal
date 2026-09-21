@@ -83,6 +83,7 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
   const titleEl = document.createElement("span");
   titleEl.textContent = "📈 Modal — —";
   Object.assign(titleEl.style, { flex: "1", fontWeight: "600", color: "#a5b4fc", fontSize: "12px" });
+  titleEl.setAttribute("data-hk-modal-tit", "1");
   header.appendChild(titleEl);
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "×";
@@ -200,6 +201,9 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
 
   // Append to DOM
   document.body.appendChild(el);
+  // la piel de la aplicacion manda: se pinta ahora y se sigue escuchando
+  aplicarPiel(el);
+  window.addEventListener("hk-piel", () => aplicarPiel(el));
 
   const api: ModalPanelApi = {
     el,
@@ -358,20 +362,75 @@ function renderTable(
   const ascePassed = achieved90Ux >= 0 && achieved90Uy >= 0;
   if (ascePassed) {
     asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ✓ 90% alcanzado en X (modo ${achieved90Ux + 1}) e Y (modo ${achieved90Uy + 1}) de ${n}<br><span style="color:#94a3b8">${seis}</span>`;
-    asceEl.style.color = "#86efac";
+    asceEl.style.color = PAL.ok;
   } else {
     asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ⚠ con ${n} modos NO se llega al 90 % en las dos direcciones. Considera aumentar.<br><span style="color:#94a3b8">${seis}</span>`;
-    asceEl.style.color = "#fcd34d";
+    asceEl.style.color = PAL.aviso;
   }
+}
+
+/**
+ * La tabla modal en MODO CLARO.
+ *
+ * Jorge, 21-sep-2026: «en modo claro puede cambiar la forma de la tabla». El
+ * panel estaba pintado a mano en oscuro (fondo casi negro, letra verde y
+ * ámbar) y sobre el fondo blanco de la aplicación quedaba un recuadro de
+ * terminal en medio de la hoja.
+ *
+ * La piel de la aplicación se guarda en `data-hk-piel` del <html> y avisa de
+ * los cambios con el evento `hk-piel` (ver examples/src/shared/hekatanCadSkin).
+ * Aquí se leen los dos y se cambia la paleta entera, sin tocar los datos.
+ */
+type Paleta = {
+  fondo: string; borde: string; letra: string; titulo: string; suave: string;
+  cabecera: string; fila: string; activa: string; sombra: string;
+  ok: string; medio: string; nada: string; aviso: string;
+};
+
+const OSCURA: Paleta = {
+  fondo: "rgba(20,24,30,0.94)", borde: "rgba(255,255,255,0.15)", letra: "#e2e8f0",
+  titulo: "#a5b4fc", suave: "#94a3b8", cabecera: "rgba(165,180,252,0.1)",
+  fila: "rgba(255,255,255,0.03)", activa: "rgba(165,180,252,0.18)",
+  sombra: "0 6px 24px rgba(0,0,0,0.5)",
+  ok: "#86efac", medio: "#fde68a", nada: "#475569", aviso: "#fcd34d",
+};
+const CLARA: Paleta = {
+  fondo: "rgba(252,252,253,0.97)", borde: "rgba(15,23,42,0.18)", letra: "#1e293b",
+  titulo: "#3730a3", suave: "#475569", cabecera: "#e8eaf6",
+  fila: "rgba(15,23,42,0.03)", activa: "#c7d2fe",
+  sombra: "0 6px 24px rgba(15,23,42,0.18)",
+  // en blanco el verde claro y el ámbar no se leen: se bajan de tono
+  ok: "#15803d", medio: "#a16207", nada: "#94a3b8", aviso: "#b45309",
+};
+
+let PAL: Paleta = OSCURA;
+
+function esClaro(): boolean {
+  try { return document.documentElement.getAttribute("data-hk-piel") === "claro"; }
+  catch { return false; }
+}
+
+/** Repinta un panel ya montado con la paleta que toque. */
+function aplicarPiel(el: HTMLElement) {
+  PAL = esClaro() ? CLARA : OSCURA;
+  el.style.background = PAL.fondo;
+  el.style.border = "1px solid " + PAL.borde;
+  el.style.color = PAL.letra;
+  el.style.boxShadow = PAL.sombra;
+  el.querySelectorAll<HTMLElement>("[data-hk-modal-tit]").forEach((x) => { x.style.color = PAL.titulo; });
+  el.querySelectorAll<HTMLElement>("[data-hk-modal-suave]").forEach((x) => { x.style.color = PAL.suave; });
+  el.querySelectorAll<HTMLElement>("th").forEach((x) => {
+    x.style.color = PAL.titulo; x.style.background = PAL.cabecera;
+  });
 }
 
 function pct(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 function cmpColor(v: number): string {
-  if (v > 0.5) return "#86efac";    // verde — dominante
-  if (v > 0.1) return "#fde68a";    // amarillo — significativo
-  return "#475569";                  // gris — irrelevante
+  if (v > 0.5) return PAL.ok;       // dominante
+  if (v > 0.1) return PAL.medio;    // significativo
+  return PAL.nada;                   // irrelevante
 }
 
 

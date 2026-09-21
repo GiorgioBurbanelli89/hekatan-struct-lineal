@@ -1,6 +1,6 @@
 import van, { State } from "vanjs-core";
 import { fixedColorMapRange, colorMapUnit } from "../viewer/getViewer";
-import { colorMapPalette, legendGradientCss, robustRange } from "./getColorMap";
+import { colorMapPalette, legendGradientCss, robustRange, isDiscreteCsiPalette } from "./getColorMap";
 
 import "./styles.css";
 
@@ -10,15 +10,6 @@ export function getLegend(
 ): HTMLDivElement {
   const legendElm = document.createElement("div");
   legendElm.id = "legend";
-  // Nº de intervalos → CSS var, para que los markers se espacien contra la
-  // ALTURA REAL de la barra (--legend-h, que cambia en móvil) y no contra un
-  // 50vh hardcodeado. Ver styles.css.
-  legendElm.style.setProperty("--legend-n", String(numMarkerIntervals));
-  // La barra de color usa la PALETA ACTIVA (no el gradiente hardcodeado del CSS) y se
-  // actualiza al cambiar la paleta desde Settings — así la leyenda coincide con la malla.
-  setTimeout(() => {
-    van.derive(() => { void colorMapPalette.val; legendElm.style.background = legendGradientCss(); });
-  });
 
   // Etiqueta de unidad arriba del legend (mm, kN/m², etc.).
   const unitLabel = document.createElement("div");
@@ -29,36 +20,43 @@ export function getLegend(
     van.derive(() => { unitLabel.textContent = colorMapUnit.val ? `[${colorMapUnit.val}]` : ""; });
   });
 
-  const markerRatios = Array.from(
-    { length: numMarkerIntervals + 1 },
-    (_, i) => i / numMarkerIntervals
-  ).reverse();
+  // Host de los markers: se RECONSTRUYE cuando cambia el nº de bandas — las paletas CSI
+  // (safe/etabs/sap2000) usan 15 bandas discretas (16 valores, en los BORDES de cada banda,
+  // como la barra real de SAFE/ETABS/SAP2000); las demás (jet/jet_r/viridis) mantienen el
+  // nº de intervalos que pida el llamador (8 por defecto).
+  const markersHost = document.createElement("div");
+  legendElm.appendChild(markersHost);
 
-  let markerElem: HTMLElement;
-  let markerText: HTMLElement;
-  markerRatios.forEach((_, i) => {
-    markerElem = document.createElement("div");
-    markerElem.id = `marker-${i}`;
-    markerElem.className = "marker";
-    markerElem.style.marginTop =
-      i == 0 ? `0px` : `calc(var(--legend-h) / var(--legend-n) - 1px)`;
+  let textElements: HTMLElement[] = [];
+  let currentN = -1;
+  function rebuildMarkers(n: number) {
+    if (n === currentN) return;
+    currentN = n;
+    legendElm.style.setProperty("--legend-n", String(n));
+    markersHost.innerHTML = "";
+    textElements = [];
+    for (let i = 0; i <= n; i++) {
+      const markerElem = document.createElement("div");
+      markerElem.className = "marker";
+      markerElem.style.marginTop = i === 0 ? `0px` : `calc(var(--legend-h) / var(--legend-n) - 1px)`;
+      const markerText = document.createElement("p");
+      markerElem.append(markerText);
+      markersHost.append(markerElem);
+      textElements.push(markerText);
+    }
+  }
 
-    markerText = document.createElement("p");
-    markerText.id = `marker-text-${i}`;
-
-    markerElem.append(markerText);
-    legendElm.append(markerElem);
-  });
-
-  // Collect text elements for direct reference (avoid getElementById collisions)
-  const textElements: HTMLElement[] = [];
-  legendElm.querySelectorAll("p").forEach((p) => textElements.push(p as HTMLElement));
-
-  // update marker values
+  // La barra de color usa la PALETA ACTIVA (no el gradiente hardcodeado del CSS), reconstruye
+  // los markers si hace falta (discreta ↔ continua) y recalcula sus valores — todo junto para
+  // que quede sincronizado al cambiar de paleta desde Settings.
   setTimeout(() => {
     van.derive(() => {
-      // ensure update is done after all DOM elements are created
-      markerRatios.forEach((ratio, i) => {
+      const discrete = isDiscreteCsiPalette(colorMapPalette.val);
+      rebuildMarkers(discrete ? 15 : numMarkerIntervals);
+      legendElm.style.background = legendGradientCss();
+      legendElm.classList.toggle("legend-discrete", discrete);
+      const ratios = Array.from({ length: currentN + 1 }, (_, i) => i / currentN).reverse();
+      ratios.forEach((ratio, i) => {
         const el = textElements[i];
         if (el) el.innerText = getMarkerValue(values.val, ratio).toString();
       });
@@ -70,9 +68,18 @@ export function getLegend(
 
 // Utils
 function getMarkerValue(values: number[], ratio: number) {
-  // Si hay override fijo (ej. zapata: [0, 1.5×q_adm]), usarlo para el legend también
+  // Si hay override fijo (ej. zapata: [0, -q_adm]), usarlo para el legend también
   const rng = fixedColorMapRange.val;
   if (rng) {
+    // Paletas CSI: el ORDEN de rng (puede venir invertido, p.ej. [0, -q_adm]) fija los
+    // EXTREMOS del rango, no qué extremo es magenta y cuál azul — eso lo decide SIEMPRE
+    // el signo algebraico (mín → magenta, máx → azul), igual que getColorMap.ts. Sin este
+    // ordenamiento el marcador de arriba (banda azul) mostraba el valor más NEGATIVO.
+    if (isDiscreteCsiPalette(colorMapPalette.val)) {
+      const lo = Math.min(rng[0], rng[1]);
+      const hi = Math.max(rng[0], rng[1]);
+      return fmtLegend(lo + ratio * (hi - lo));
+    }
     return fmtLegend(rng[0] + ratio * (rng[1] - rng[0]));
   }
   const valid = values.filter((v) => Number.isFinite(v));
