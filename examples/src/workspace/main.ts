@@ -7287,6 +7287,22 @@ try {
   const input = document.createElement("input");
   input.type = "text";
   input.id = "hk3-cmd-input";
+  // Red de seguridad: una API key pegada aqui por error queda ESCRITA A LA VISTA
+  // (paso el 21-sep-2026 con la clave de Gemini, y la captura ya habia salido del
+  // equipo). Si el texto parece una clave, se borra al momento y se avisa.
+  {
+    const PARECE_CLAVE = /(AIza[0-9A-Za-z_-]{20,}|AQ\.[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z_-]{20,}|ghp_[0-9A-Za-z_-]{20,})/;
+    const revisar = () => {
+      if (!PARECE_CLAVE.test(input.value)) return;
+      input.value = "";
+      const g = document.getElementById("hk3-cmd-ghost");
+      if (g) g.innerHTML = "";
+      const st = document.getElementById("hk-cad-status");
+      if (st) st.textContent = "🔒 Eso parecia una API key: se borro de aqui. Pegala en el panel del agente (boton 🤖).";
+      console.warn("[seguridad] posible API key en la linea de ordenes: borrada");
+    };
+    ["input", "paste"].forEach((ev) => input.addEventListener(ev, () => setTimeout(revisar, 0)));
+  }
   input.placeholder = "L línea · PL · REC · C · COL · MU · LO · M mover · CO copiar · O desfase · TR recortar · EX alargar · E borrar · ? ayuda";
   input.autocomplete = "off";
   input.spellcheck = false;

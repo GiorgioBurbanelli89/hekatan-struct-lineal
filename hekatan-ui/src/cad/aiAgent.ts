@@ -45,7 +45,7 @@ const PROVEEDORES: AgentProvider[] = [
   },
   {
     id: "gemini", nombre: "✨ Gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    clave: true, modelos: ["gemini-2.5-flash", "gemini-2.0-flash"],
+    clave: true, modelos: ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"],
     pista: "Clave gratis: aistudio.google.com/apikey",
   },
   {
@@ -637,6 +637,10 @@ function crearVentana() {
   const dl = document.createElement("datalist");
   dl.id = "hk-agente-modelos";
   const inK = document.createElement("input");
+  // ⚠️ Las teclas NO pueden llegar a los atajos del CAD: si el foco se escapa,
+  // la clave acaba escrita en la linea de ordenes, a la vista de todos.
+  ["keydown", "keyup", "keypress", "paste"].forEach((ev) =>
+    inK.addEventListener(ev, (e) => e.stopPropagation()));
   inK.type = "password";
   inK.placeholder = "API key";
   inK.style.cssText = ctrl + "flex:1 1 100%;";
@@ -738,6 +742,13 @@ export function abrirAgenteIA(textoInicial?: string) {
   if (!ventana) ventana = crearVentana();
   ventana.style.display = "flex";
   sincronizarBotonesFlotantes();
+  setTimeout(() => {
+    try {
+      const k = ventana!.querySelector('input[type="password"]') as HTMLInputElement | null;
+      if (k && !k.value) { k.focus(); return; }
+      entrada?.focus();
+    } catch { /* el panel aun no esta listo */ }
+  }, 60);
   if (textoInicial) entrada.value = textoInicial;
   entrada.focus();
 }
