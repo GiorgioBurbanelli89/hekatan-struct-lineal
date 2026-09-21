@@ -615,7 +615,7 @@ function crearVentana() {
   ].join(";");
 
   const cab = document.createElement("div");
-  cab.style.cssText = "display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid #1e293b;cursor:move;";
+  cab.style.cssText = "display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid #1e293b;cursor:move;flex-shrink:0;";
   cab.innerHTML = `<b style="flex:1">🤖 Agente IA · Hekatan Struct</b>`;
   const cerrar = document.createElement("button");
   cerrar.textContent = "✕";
@@ -626,7 +626,7 @@ function crearVentana() {
 
   // Proveedor · modelo · clave (compartidos con el panel de IA por localStorage)
   const conf = document.createElement("div");
-  conf.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid #1e293b;";
+  conf.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid #1e293b;flex-shrink:0;";
   const ctrl = "background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:4px;padding:3px 5px;font-size:12px;";
   const selP = document.createElement("select");
   selP.style.cssText = ctrl + "flex:1 1 120px;";
@@ -659,10 +659,10 @@ function crearVentana() {
   refrescar();
 
   lista = document.createElement("div");
-  lista.style.cssText = "flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;";
+  lista.style.cssText = "flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;";
 
   const pie = document.createElement("div");
-  pie.style.cssText = "display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1e293b;";
+  pie.style.cssText = "display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1e293b;flex-shrink:0;";
   entrada = document.createElement("textarea");
   entrada.rows = 2;
   entrada.placeholder = "Ej.: edificio de 4 pisos, 3×2 vanos de 5 m; dime la flecha y el periodo";
