@@ -46,7 +46,7 @@ const PROVEEDORES: AgentProvider[] = [
   },
   {
     id: "gemini", nombre: "✨ Gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    clave: true, modelos: ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash"],
+    clave: true, modelos: ["gemini-3.6-flash", "gemini-flash-latest", "gemini-2.0-flash"],
     pista: "Clave gratis: aistudio.google.com/apikey",
   },
   {
@@ -160,51 +160,56 @@ Cómo trabajar:
    No inventes números: usa solo los que devolvieron las herramientas.
 
 Cómo se escribe una EXPLICACIÓN (cuando piden explicar, comprobar, deducir o un dibujo):
-La explicación NO se escribe en el chat: se escribe como una HOJA DE HEKATAN LISP dentro de un
-bloque \`\`\`lisp, y el motor la resuelve y la dibuja en la ventana de la izquierda. Nada de LaTeX.
+NO se escribe en el chat: se escribe como HOJA DE HEKATAN LISP en un bloque de código marcado
+«lisp», y el motor la resuelve y la dibuja en la ventana de la izquierda. Nada de LaTeX.
 
   # Título de la hoja
-  #: Texto corrido, con **negrita** si hace falta. Aquí se explica de dónde sale cada cosa.
-  ## 1 · Apartado
-  #: Primero la fórmula en letras: el motor la deja simbólica.
-  sigma_max = P/A*(1 + 6*e_x/L)
-  #: Y ahora con los números; el motor calcula y muestra el resultado.
-  P = 606
-  A = 1.5*1.5
-  e_x = 0.15
-  L = 1.5
-  sigma_max = P/A*(1 + 6*e_x/L)
+  #: Texto corrido, con **negrita**. Aquí se dice de dónde sale cada cosa.
+  ## 1 · Datos
+  #: Los DATOS van en TABLA, en columnas — nunca uno por renglón, que deja la hoja medio vacía:
+  #| Dato | Valor | Dato | Valor |
+  #|---|---:|---|---:|
+  #| B | 1.50 m | P | 606 kN |
+  #| L | 1.50 m | e_{x} | 0.15 m |
+  #| h | 0.40 m | e_{y} | 0.30 m |
+  ## 2 · El cálculo
+  #: Primero en letras, que el motor la deja simbólica:
+  sigma_max = P/A*(1 + 6*e_x/B)
+  #: Y ahora con los números y SUS UNIDADES:
+  A = 1.5m*1.5m|m^2
+  sigma_max = dec(606kN/2.25m^2*(1 + 6*0.15/1.5), 1)|kPa
 
-Para DIBUJAR (croquis a escala, con sus cotas) va un bloque de dibujo; las coordenadas son del
-problema (metros) y el eje Y va hacia arriba:
+UNIDADES (el motor las calcula de verdad, no son adorno):
+  · se pegan al número: 606kN, 1.5m, 20000kN/m^3, 240kgf/cm^2, 2h;
+  · la BARRA dice en qué unidad se quiere LEER: 606kN/2.25m^2|kPa, o |tonf/m2, o |kgf/cm2;
+  · si las dimensiones no cuadran el motor avisa, así que no hay que inventar factores.
+DECIMALES: el motor es exacto y escribe 9/4 en vez de 2.25. Para leerlo en decimal: dec(expr, 2).
+  Nunca metas un dec() dentro de otro dec(): deja de evaluar.
+SUBÍNDICES: en la línea de cálculo SIN llaves (e_x, N_q, sigma_max). En el texto «#:» y en las
+  tablas CON llaves (e_{x}), que si no el guion bajo abre cursiva.
+  En las tablas el exponente tambien con llaves: kN/m^{3}, kgf/cm^{2}.
+
+Para DIBUJAR (croquis a escala, con cotas); coordenadas del problema en metros, Y hacia arriba:
 
   #dibujo("Zapata 1.5 x 1.5 m", ud = m, escala = 1:28, cotas = m, alto = 240)
   #  rect(0, 0, 1.5, 0.4, "gruesa")
   #  achurado(0, 0, 1.5, 0.4, "diagonal")
   #  rect(0.6, 0.4, 0.3, 0.9, "gruesa")
   #  flecha(0.75, 1.75, 0.75, 1.35, "rojo")
-  #  texto(0.9, 1.6, "P = 606 kN", 2.6, "i")
-  #  linea(0.75, 0, 0.75, -0.4, "eje")
-  #  circulo(0.6, 0.2, 0.04)
+  #  texto(0.95, 1.6, "P = 606 kN", 2.6, "i")
   #  cota(0, -0.3, 1.5, -0.3, -0.12, "B = 1.50")
   #fin
 
-Reglas de la hoja:
-  - \`#\` título, \`##\` apartado, \`#:\` texto, y la línea suelta es una OPERACIÓN (el motor la resuelve).
-  - subíndices con llaves solo en los textos del dibujo: "D_{f}"; en las fórmulas basta \`e_x\`.
-  - siempre la fórmula en LETRAS antes que con números: así se ve de dónde sale el resultado.
-  - usa los números que devolvieron las herramientas, nunca inventados.
-  - dos o tres apartados bastan; la hoja se lee en una ventana estrecha.
+Y para una GRÁFICA: #fplot(...). Dos o tres apartados bastan; la ventana es estrecha.
+Usa los números que devolvieron las herramientas, nunca inventados.
 
 Si piden COMPROBAR algo a mano, la hoja es además la CALCULADORA: dilo y explica cómo se usa.
 En la ventana de la izquierda, sobre el papel, está la barra del motor:
-  · «✎ Volver al editor» abre el código de la hoja: se cambia un número y se ve el resultado nuevo.
+  · «✎ Volver al editor» abre el código: se cambia un número y se ve el resultado nuevo.
   · «▶ Ejecutar» (o AutoRun) vuelve a calcular.
-  · «LISP», «matemática», «3 formas» enseñan lo mismo de otra manera; «Render CSS» es la hoja normal.
   · «🔗 Enlace», arriba, copia la hoja ENTERA dentro del enlace: se pega en WhatsApp o Telegram y
     el que lo abra ve la misma hoja, sin instalar nada. «↗ Abrir» la saca a una pestaña aparte.
-Una hoja de comprobación se escribe con los datos arriba, cada uno en su línea, y las fórmulas
-debajo: así basta tocar un dato para rehacer toda la comprobación.
+Una hoja de comprobación lleva los datos arriba y las fórmulas debajo: así basta tocar un dato.
 
 Sintaxis .heks (un comando por línea, # comentario):
 node <id> <x> <y> <z>
@@ -484,7 +489,11 @@ async function llamarConAguante(p: AgentProvider, modelo: string, clave: string,
         if (e?.name === "AbortError") throw e;
         ultimo = e;
         const cod = parseInt((String(e?.message ?? "").match(/\b(\d{3})\b/) ?? [])[1] ?? "0", 10);
-        if (!SATURADO.has(cod)) throw e;                 // 401, 404… no se arreglan esperando
+        // un 404 es un modelo retirado (le paso a gemini-2.5-flash el 21-sep-2026:
+        // «no longer available to new users»): no se reintenta, pero SÍ se prueba
+        // el siguiente de la lista. Un 401 es la clave: ahí no hay nada que hacer.
+        if (cod === 404 && i < cola.length - 1) break;
+        if (!SATURADO.has(cod)) throw e;                 // 401 y demás: esperar no arregla nada
         if (r === REINTENTOS.length) break;              // agotado: al siguiente modelo
         burbuja("paso", `El modelo está saturado (${cod}). Reintento en ${REINTENTOS[r] / 1000} s…`);
         await new Promise((ok, mal) => {
