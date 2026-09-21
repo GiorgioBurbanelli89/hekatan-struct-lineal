@@ -437,11 +437,18 @@ async function llamarModelo(p: AgentProvider, modelo: string, clave: string, se�
       // origen (medido el 21-sep-2026: localhost 200, github.io 403).
       const fuera = location.protocol !== "file:" &&
                     !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      // Desde un sitio PUBLICO no se puede llegar a Ollama aunque este corriendo
+      // y aunque se le den permisos: Chrome/Edge bloquean que una web publica
+      // alcance la red local si el servidor no devuelve
+      // `Access-Control-Allow-Private-Network: true`, y Ollama no la envia
+      // (medido el 21-sep-2026: CORS 204 correcto y aun asi «Failed to fetch»).
+      // Es Private Network Access, una proteccion del navegador, no un ajuste.
       throw new Error(fuera
-        ? "Ollama esta en tu PC pero RECHAZA a " + location.origin + " (403). " +
-          "Dale permiso y reinicialo:  setx OLLAMA_ORIGINS \"" + location.origin + "\"  " +
-          "(o usa el agente desde la version local, que si tiene permiso)."
-        : "Ollama no responde en localhost:11434. Abrelo o instala: ollama.com → ollama pull qwen2.5:7b");
+        ? "Desde el sitio público el navegador NO deja llegar a Ollama de tu PC " +
+          "(protección de red privada de Chrome/Edge), aunque Ollama esté abierto. " +
+          "Opciones: abre Hekatan Struct en local, o elige aquí arriba un proveedor " +
+          "en la nube (Gemini tiene clave gratis en aistudio.google.com/apikey)."
+        : "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b");
     }
     throw new Error(`sin conexión con ${p.nombre}: ${e?.message ?? e}`);
   });
@@ -720,6 +727,10 @@ export function sincronizarBotonesFlotantes() {
     const el = document.getElementById(id);
     if (el) (el as HTMLElement).style.display = abierto ? "none" : "block";
   }
+  // El de «Explícame» solo se esconde: quien decide si debe verse es `mirar()`,
+  // que mira si hay resultados.
+  const ex = document.getElementById("hk-agente-explicar") as HTMLElement | null;
+  if (ex && abierto) ex.style.display = "none";
 }
 
 export function abrirAgenteIA(textoInicial?: string) {
@@ -848,6 +859,10 @@ function montarBotonExplicar() {
     const b = document.getElementById("hk-agente-lanzador");
     if (!b) return;
     const r = b.getBoundingClientRect();
+    // ⚠️ Con el 🤖 oculto (panel del agente abierto) su rect es 0×0 en la esquina:
+    // sin esta guarda, «Explícame» saltaba arriba a la izquierda y tapaba la
+    // barra de herramientas (Jorge, 21-sep-2026).
+    if (r.width <= 0 || r.height <= 0) { e.style.display = "none"; return; }
     e.style.top = `${r.top}px`;
     e.style.left = `${Math.max(8, r.left - e.offsetWidth - 8)}px`;
   };

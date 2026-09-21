@@ -207,6 +207,11 @@ body.hk-cad #toolbar .btn{ padding:2px 8px !important; }
 body.hk-cad #hk-settings-toggle{ left:var(--hk-izq,0px) !important; }
 body.hk-cad #hk-pane-toggle{ right:var(--hk-der,0px) !important; }
 body.hk-cad #hk-agente-lanzador{ right:calc(var(--hk-der,0px) + 34px) !important; }
+/* Lo de ABAJO (ventana de comandos + barra de estado) crece con su historial: el agente y el boton de
+   idioma nacen con un bottom fijo (100 y 20 px) y quedaban medio tapados. Van siempre por ENCIMA de lo
+   que haya abajo, medido (--hk-abajo lo pone vigilarSolapes), y el idioma a la izquierda del agente. */
+body.hk-cad #hk-agente-lanzador{ bottom:calc(var(--hk-abajo,86px) + 14px) !important; }
+body.hk-cad #lang-toggle-btn{ bottom:calc(var(--hk-abajo,86px) + 12px) !important; right:calc(var(--hk-der,0px) + 90px) !important; z-index:8999 !important; }
 body.hk-cad #hk-ribbon-abrir{ top:40px !important; }
 /* La barra de titulo mide 30 px y el ribbon iba a top:8px: la primera fila de
    iconos (Linea, Polilinea...) quedaba DEBAJO de la barra. Se baja el ribbon,
@@ -374,6 +379,13 @@ function vigilarSolapes(): void {
       if (fb && barra && fb.parentElement !== barra) botonABarraDeArriba(fb, 0);
     }
     const alto = cinta && getComputedStyle(cinta).display !== "none" ? Math.round(cinta.getBoundingClientRect().bottom) : 0;
+    // alto de lo que esta pegado abajo: desde el borde superior mas alto de la ventana de comandos / barra de estado
+    let abajo = 0;
+    for (const sel of ["#hk3-cmdline", "#hk-statusbar"]) {
+      const el = q(sel); if (!el || getComputedStyle(el).display === "none") continue;
+      const r = el.getBoundingClientRect(); if (r.height > 0 && r.bottom > window.innerHeight - 60) abajo = Math.max(abajo, Math.round(window.innerHeight - r.top));
+    }
+    document.body.style.setProperty("--hk-abajo", abajo + "px");
     const firma = L + "|" + R + "|" + alto + "|" + window.innerWidth;
     if (firma === ultimo) return;
     ultimo = firma;

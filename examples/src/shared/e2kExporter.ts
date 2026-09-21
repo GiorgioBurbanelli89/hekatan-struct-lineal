@@ -8,6 +8,7 @@
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
 import type { E2kModel } from "./e2kParser";
+import { muellesParaExportar } from "./muellesParaExportar";
 
 export interface ExportE2kInput {
   nodes: Node[];
@@ -962,12 +963,8 @@ function exportFromScratch(input: ExportE2kInput): string {
   const springDeNudo = new Map<number, string>();
   const springProps: string[] = [];
   {
-    const kNudo = new Map<number, number[]>();
-    for (const sp of (nodeInputs as any).springs ?? []) {
-      if (!(sp.k > 0)) continue;
-      const v = kNudo.get(sp.node) ?? [0, 0, 0, 0, 0, 0];
-      v[sp.dof] += sp.k; kNudo.set(sp.node, v);
-    }
+    // muelles de AREA -> nodales (int N_i dA); los nudos colgados no son muelles (muellesParaExportar.ts)
+    const kNudo = muellesParaExportar(nodes as any, elements as any, (nodeInputs as any).springs).nodales;
     const nombrePorK = new Map<string, string>();
     for (const [ni, v] of kNudo) {
       const enFichero = v.map((k, i) => i < 3 ? k * forceFactor / lengthFactor : k * forceFactor * lengthFactor);
