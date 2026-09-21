@@ -121,6 +121,8 @@ import {
   DEFAULT_LOAD_PATTERNS, DEFAULT_LOAD_CASES, DEFAULT_LOAD_COMBINATIONS,
 } from "./exampleRegistry";
 import { attachLoadPatternsPanel, loadPersistedLoadPatterns } from "./loadPatternsPanel";
+import { modeloAHeks, hayModelo, avisosHeks } from "./modeloAHeks";
+import { autoEjecutar, etiquetaTipo } from "./autoEjecutar";
 import { downloadZapataF2k } from "../zapata-aislada/f2kExporter";
 import { parseZapataF2k } from "../zapata-aislada/f2kImporter";
 import { exportF2k as exportF2kModelo } from "../shared/f2kExporter";
@@ -211,6 +213,8 @@ import { parseE2k } from "../shared/e2kParser";
 import { exportS2k } from "../shared/s2kExporter";
 import { parseS2k } from "../shared/s2kParser";
 import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
+import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
+import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -356,6 +360,7 @@ van.derive(() => {
  * «Archivo nuevo» abriera con el modelo de la ultima vez.
  */
 function ofrecerRecuperar(): void {
+  if (URL_HEKS) return;                                   // modelo por enlace: no hay nada que recuperar encima
   if (drawingPoints.rawVal.length > 0) return;            // ya hay algo dibujado
   let pts: [number, number, number][] = [], polys: number[][] = [], areas: number[] = [];
   try {
@@ -453,6 +458,17 @@ const states: BuildStates = {
 // apoyos quedaron aplicados: solo se ve el dibujo, y el dibujo no dice si el
 // modelo se puede calcular.
 (window as any).__hekatanStates = states;
+
+// ── El modelo de la pantalla, escrito como .heks ─────────────────────────────
+// `__hekatanModeloAHeks` lo usan «Guardar», «Guardar como…», «Compartir enlace» y
+// «Exportar .tcl». Hasta el 18-sep-2026 SOLO lo definia `new-blank`, asi que con una
+// plantilla cargada los cuatro se quedaban con el cuadro CLI vacio y bajaban un
+// fichero de 0 KB (o un .tcl de 93 bytes con un edificio de tres plantas). Ahora se
+// escribe desde los states, que es lo que el solver tiene de verdad, y vale para
+// cualquier modelo. Comprobado por ida y vuelta en `tests/casos/heks_ida_y_vuelta.mjs`.
+(window as any).__hekatanModeloAHeks = () =>
+  modeloAHeks(states, { nombre: currentExample?.name ?? "Modelo de Hekatan Struct" });
+(window as any).__hekatanHayModelo = () => hayModelo(states);
 
 // ── Example runner ──
 let currentExample: ExampleDef | null = null;
@@ -613,7 +629,9 @@ function loadExample(ex: ExampleDef) {
   // empezar. Se puede apagar desde la propia ventana («no volver a mostrar»).
   // (NO si el modelo llega por enlace ?heks= / ?m=: eso es para mirarlo, y la guía
   // tapaba la bóveda del enlace compartido — medido en el PNG, 13-sep-2026.)
-  if (ex.id === "new-blank" && !_qs.get("heks") && !_qs.get("m")) {
+  // (Y tampoco con el enlace #h= — modelo DENTRO del hash —: la condicion solo miraba ?heks y ?m, y la
+  // guia salia encima del radier compartido por #h=, 18-sep-2026. URL_HEKS cubre los tres.)
+  if (ex.id === "new-blank" && !URL_HEKS) {
     let mostrar = true;
     try { mostrar = localStorage.getItem("hk_guia_nuevo") !== "0"; } catch {}
     if (mostrar) setTimeout(() => { try { (window as any).__hekatanRibbon?.guia?.(true); } catch {} }, 700);
@@ -863,6 +881,32 @@ function loadExample(ex: ExampleDef) {
   autoFitCamera();
   buildParamsPane();
   mountCaseResultsInSettings();   // "Case results" (Dead/Live/Modal) junto a Frame/Shell results
+
+  // El `.heks` de lo que hay en pantalla. `new-blank` define su PROPIO gancho en su build
+  // (escribe el dibujo con sus unidades: ρ en kN/m³ → t/m³); con cualquier otro modelo se
+  // repone el genérico. Sin esto, tras pasar por el lienzo en blanco el gancho de new-blank
+  // se quedaba pegado y «Guardar» escribía el dibujo viejo en vez del modelo cargado.
+  if (ex.id !== "new-blank") {
+    (window as any).__hekatanModeloAHeks = () =>
+      modeloAHeks(states, { nombre: ex.name ?? "Modelo de Hekatan Struct" });
+  }
+
+  // ── EJEMPLO ≠ PLANTILLA (regla de Jorge, 18-sep-2026) ──
+  // Un EJEMPLO se abre ya resuelto y, si tiene modal, con los modos corridos y animando
+  // —también cuando llega por `?t=<id>`, que es como se comparte—. Una PLANTILLA no se
+  // ejecuta sola: es una herramienta, y el usuario calcula cuando quiere. El freno por
+  // tamaño (la animación cuesta 50-80 ms por fotograma con 6600 nudos) vive en
+  // `autoEjecutar.ts` junto con la clasificación, para poder probarlo sin navegador.
+  try {
+    autoEjecutar(ex, states, {
+      correrModalAnimar: () => (window as any).__hekatanRunModalAnimate?.(),
+      pararAnimacion: () => (window as any).__hekatanModalStop?.(),
+      avisar: (msg: string) => {
+        const el = document.getElementById("hk-cad-status");
+        if (el) el.textContent = msg; else console.log("[auto]", msg);
+      },
+    });
+  } catch (e) { console.warn("[auto] no se pudo arrancar el ejemplo:", e); }
   // Si el lienzo esta vacio pero hay un dibujo guardado de otra sesion, se
   // ofrece recuperarlo (no se impone: ver `ofrecerRecuperar`).
   try { setTimeout(ofrecerRecuperar, 1200); } catch {}
@@ -1442,6 +1486,45 @@ function ponerFactoresDelCaso() {
   (window as any).__hekatanFactoresPatron = factores;
 }
 
+/**
+ * Enlace ?m= / #h= / ?heks=: el modelo abre YA con resultados (Jorge, 19-sep-2026).
+ *  - Patrones y combinaciones del .heks (`load … <patron>`, `combo …`) pasan a los casos y combos del
+ *    workspace; sin eso el selector solo tenia «Dead» y una combinacion del modelo no se podia mirar.
+ *  - Caso activo: `&case=` > `vista … <caso>` del .heks > primera combinacion del .heks > el que habia.
+ *  - Campo de cascara: `&ver=` > `vista <campo>` > «pressure» si hay muelles de area > «displacementZ».
+ */
+function abrirConResultados() {
+  const ei: any = states.elementInputs.val ?? {};
+  const ni: any = states.nodeInputs.val ?? {};
+  const vista = (window as any).__hekatanCliVista as { campo?: string; caso?: string } | null;
+  const pats = Object.keys(ni.cargasPorPatron ?? {});
+  const combos = (ei.combos ?? []) as Array<{ name: string; items: Array<[string, number]> }>;
+  const tipo = (p: string) => (/^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? "Super Dead" : /^(live|viva)$/i.test(p) ? "Live" : "Other");
+  for (const p of pats) {
+    if (!loadPatterns.val.find((x) => x.name === p))
+      loadPatterns.val = [...loadPatterns.val, { name: p, type: tipo(p) as any, selfWeightMultiplier: /^dead$/i.test(p) ? 1 : 0 }];
+    if (!loadCases.val.find((x) => x.name === p))
+      loadCases.val = [...loadCases.val, { name: p, type: "Linear Static", patterns: [{ pattern: p, scaleFactor: 1 }], initialCondition: "Zero" }];
+  }
+  for (const c of combos)
+    if (!loadCombinations.val.find((x: any) => x.name === c.name))
+      loadCombinations.val = [...loadCombinations.val, { name: c.name, type: "Linear Add", cases: c.items.map(([p, f]) => ({ case: p, scaleFactor: f })) } as any];
+  const caso = _qs.get("case") || vista?.caso || combos[0]?.name || null;
+  const hayMuelleArea = (ni.springs ?? []).some((s: any) => s.node < 0 && (s.dof === -1 || s.dof === -3));
+  const campo = _qs.get("ver") || vista?.campo || (hayMuelleArea ? "pressure" : "displacementZ");
+  if (caso && (loadCases.val.some((c) => c.name === caso) || loadCombinations.val.some((c: any) => c.name === caso))) {
+    const esCombo = loadCombinations.val.some((c: any) => c.name === caso);
+    __tipoRes = esCombo ? "combo" : "case";
+    __selRes[__tipoRes] = esCombo ? `__combo_${caso}` : caso;
+    activeLoadCase.val = caso;
+    rebuild();
+  }
+  try { mountCaseResultsInSettings(); } catch { /* no-op */ }
+  const s = (viewerElm as any).__settings;
+  if (s?.shellResults) s.shellResults.val = campo;
+  // paleta: la del visor ya es SAFE por defecto (colorMapPalette = "safe" en hekatan-ui/getColorMap.ts)
+}
+
 function rebuild() {
   if (!currentExample) return;
   resetStates();
@@ -1611,8 +1694,24 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 (window as any).__hekatanParamDefs = () => currentExample?.params ?? {};
 (window as any).__hekatanModalResults = () => __lastModalResults;
 
+// ── Ganchos del test `animacion-modal-es-el-modo` (repuestos el 19-sep-2026) ──
+// El test compara lo DIBUJADO al animar un modo contra φ, el modo que calculó el solver:
+// si la animación pintara la deformada de Dead en vez del modo, el coseno lo delata. Los
+// añadió el agente que escribió el test y se PERDIERON cuando dos sesiones pisaron este
+// fichero (`git log -S` no los encuentra en ningún commit): desde entonces el test no podía
+// pasar nunca. Se reponen aquí, con el nombre que el test pide.
+//   · `__hekatanModalResultados()` → { frequencies, modeShapes, massParticipation } (φ)
+//   · `__hekatanModalAnimator`     → el animador ACTUAL (se reasigna en buildParamsPane y al
+//     arrancar, por eso va con getter: una referencia fija apuntaría a uno ya desechado).
+(window as any).__hekatanModalResultados = () => __lastModalResults;
+Object.defineProperty(window, "__hekatanModalAnimator", {
+  get: () => modalAnimator, configurable: true,
+});
+
+// `hasModal` va en la lista: `cli/check_animacion_modal.mjs` recorre solo los ejemplos con
+// modal (la mayoría no tiene) y lo da por hecho. También se había perdido.
 (window as any).__hekatanExamples = examplesRegistry.map(
-  (e) => ({ id: e.id, name: e.name, category: e.category }));
+  (e) => ({ id: e.id, name: e.name, category: e.category, hasModal: !!e.hasModal }));
 
 // ── Auto re-fit camera al cambiar de tamaño (mobile rotation) ──
 // El #viewer cambia de tamaño con CSS media queries (ej. en mobile
@@ -1872,12 +1971,11 @@ const openMaterialEditor = (existingName: string | null) => {
   });
   fGen.addBinding(m, "color", { label: "Display Color", view: "color" });
 
-  // ── Weight and Mass ──
-  const fWM = fGen.addBlade ? fGen : editorPane.addFolder({ title: "Material Weight and Mass" });
-  if (fWM === fGen) {
-    // (no addBlade; skip)
-  }
-  const fWeight = editorPane.addFolder({ title: "Weight and Mass" });
+  // ── Peso y masa ──
+  // Aquí había un `const fWM = fGen.addBlade ? fGen : editorPane.addFolder({ title:
+  // "Material Weight and Mass" })`: `addBlade` SIEMPRE existe, así que esa carpeta no se
+  // creaba nunca y la variable no se usaba. Código muerto con nombre de CSI, fuera.
+  const fWeight = editorPane.addFolder({ title: "Peso y masa" });
   fWeight.addBinding(m, "weightDensity", { label: "Weight (kN/m³)", min: 0, step: 0.1 });
   fWeight.addBinding(m, "massDensity", { label: "Mass (kg/m³)", min: 0, step: 1 });
 
@@ -1912,7 +2010,7 @@ const openMaterialEditor = (existingName: string | null) => {
     });
   } else {
     const ph = { msg: "(sin propiedades de diseño)" };
-    fDesign.addBinding(ph, "msg", { readonly: true, label: "" });
+    fDesign.addBinding(ph, "msg", { readonly: true, label: "Sin datos" });
   }
 
   // ── Standards reference ──
@@ -2314,7 +2412,7 @@ const openDisplayUnitsDialog = () => {
       if (filter.category === "All" && def.category !== lastCat) {
         _duPaneInstance.addBlade({ view: "separator" });
         const catLabel = { name: `── ${def.category} ──` };
-        _duPaneInstance.addBinding(catLabel, "name", { readonly: true, label: "" });
+        _duPaneInstance.addBinding(catLabel, "name", { readonly: true, label: "Grupo" });
         lastCat = def.category;
       }
       // Item: 1 binding compacto que muestra el label dinámico, click expande controles
@@ -3834,7 +3932,10 @@ function buildParamsPane() {
           if (cat === ALL_ITW) return !!e.category?.includes("🌀 Drilling ITW");
           return matchesCategory(e.category, cat);
         })
-        .map((e) => [`${e.benchmark ? "🏁 " : ""}${e.name}`, e.id])
+        // ▶ = ejemplo (se abre resuelto) · 📐 = plantilla (se ajusta y se calcula).
+        // Sin esta marca los dos estaban mezclados en la misma lista y no había forma de
+        // saber cuál se iba a ejecutar solo.
+        .map((e) => [`${etiquetaTipo(e)} ${e.benchmark ? "🏁 " : ""}${e.name}`, e.id])
     );
 
   let exBinding = selHost.addBinding(selectorObj, "id", {
@@ -3880,7 +3981,9 @@ function buildParamsPane() {
       if (f) f.setAttribute("src", url);
       else mostrarEjemploEmbebido(url, currentExample?.name ?? url);
     });
-    note.addButton({ title: "(trae sus propios controles)" }).on("click", () => {});
+    // Era un BOTÓN con el clic vacío: se podía pulsar y no pasaba nada. Es un cartel,
+    // así que va como texto de solo lectura.
+    note.addBinding({ v: "trae sus propios controles" }, "v", { readonly: true, label: "Ojo" });
     currentPane = pane;
     return;
   }
@@ -4101,7 +4204,8 @@ function buildParamsPane() {
     } catch {}
     const ns = states.nodes.rawVal ?? [];
     if (!ns.length) {
-      fAxes.addButton({ title: "(modelo vacío — dibujá nodos)" }).on("click", () => {});
+      // Ídem: cartel, no botón (el clic estaba vacío).
+      fAxes.addBinding({ v: "dibujá nodos primero" }, "v", { readonly: true, label: "Modelo vacío" });
       return;
     }
     // Recolectar X únicos + Y únicos (ordenados)
@@ -4400,7 +4504,20 @@ function buildParamsPane() {
     // Chrome/Edge, o un cuadro con el nombre donde no lo hay).
     const guardarHeks = async (pedirNombre: boolean) => {
       const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
-      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
+      const texto = ta.value.trim() ? ta.value : (gen?.() ?? "");
+      // NO se descarga un fichero vacío diciendo que se guardó. Es la regla de Jorge
+      // (18-sep-2026): ningún control puede decir que hizo algo sin comprobar que lo hizo.
+      if (!texto.trim()) {
+        alert("No hay modelo que guardar: el lienzo está vacío y el cuadro de comandos también.");
+        return;
+      }
+      // Lo que el formato .heks no sabe guardar fiel (p. ej. la placa DSE del dual) va
+      // avisado en la cabecera del fichero; aquí se le dice también a quien guarda.
+      const avisos = avisosHeks(texto);
+      if (avisos.length) {
+        alert("El .heks se guarda, pero OJO — el fichero no reproduce exactamente este modelo:\n\n" +
+              avisos.map((l) => l.replace(/^#\s*/, "")).join("\n"));
+      }
       let nombre: string = (window as any).__hekatanHeksNombre || "modelo.heks";
       const ponerNombre = (n: string) => {
         (window as any).__hekatanHeksNombre = n;
@@ -4494,6 +4611,16 @@ function buildParamsPane() {
           ta.value = txt;
           setTimeout(() => {
             applyCliScript();
+            // ENCUADRE: el `autoFitCamera` de loadExample corrio con el lienzo vacio (el modelo llega
+            // despues), y la camara se quedaba en la del lienzo nuevo: el radier MOD_002 salia medio
+            // fuera de cuadro. Se re-encuadra con el modelo ya puesto.
+            userCameraInteracted = false;
+            // ABRIR CON RESULTADOS (Jorge, 19-sep-2026): el enlace es para MIRAR el modelo, asi que abre ya
+            // mostrando resultados. Caso: `&case=` del enlace, o `vista <campo> <caso>` del .heks, o la
+            // primera combinacion del modelo. Campo: `&ver=`, o la `vista`, o presion de suelo si hay
+            // muelles de area (cimentacion) y si no el asiento Uz. Paleta SAFE (el defecto del visor).
+            try { abrirConResultados(); } catch (e) { console.warn("[enlace] resultados por defecto:", e); }
+            setTimeout(() => { try { autoScaleDeformedShape(); autoFitCamera(); } catch { /* no-op */ } }, 300);
             // recien ahora se destapa: hasta aca solo se veian las ayudas de
             // dibujo del CAD (planos de trabajo, triada de ejes, rejilla) y
             // parecia que la pagina cargaba algo antes del modelo.
@@ -4544,18 +4671,10 @@ function buildParamsPane() {
           alert("No se pudo abrir «" + urlHeks + "»: " + e.message);
         });
     }
-    fCli.addButton({ title: "💾 Guardar .heks" }).on("click", () => {
-      // Cuadro CLI vacío = el modelo se dibujó con el mouse: se genera el .heks del dibujo
-      // (Tutorial 9: salía un archivo de 0 KB).
-      const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
-      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
-      const blob = new Blob([texto], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "modelo.heks";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    });
+    // 💾 Guardar (sin preguntar el nombre): reusa `guardarHeks`, que ya comprueba que
+    // haya modelo. Antes esto era un SEGUNDO botón con su propio código, que bajaba
+    // `modelo.heks` aunque estuviera vacío — el fichero de 0 KB del Tutorial 9.
+    fCli.addButton({ title: "💾 Guardar .heks" }).on("click", () => guardarHeks(false));
     // ── OpenSees Tcl: importar / exportar ──
     const tclInput = document.createElement("input");
     tclInput.type = "file";
@@ -4576,7 +4695,16 @@ function buildParamsPane() {
     fCli.addButton({ title: "📂 Importar .tcl (OpenSees)" }).on("click", () => tclInput.click());
     fCli.addButton({ title: "💾 Exportar .tcl (OpenSees)" }).on("click", () => {
       try {
-        const blob = new Blob([exportTclFromCli(ta.value)], { type: "text/plain" });
+        // Exportaba el CUADRO DE COMANDOS, no el modelo: con el edificio de 3 plantas
+        // cargado bajaba 93 bytes (medido 18-sep-2026). Ahora, si el cuadro está vacío,
+        // se escribe el .heks del modelo real y de ahí sale el .tcl.
+        const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
+        const fuente = ta.value.trim() ? ta.value : (gen?.() ?? "");
+        if (!fuente.trim()) {
+          alert("No hay modelo que exportar: el lienzo está vacío y el cuadro de comandos también.");
+          return;
+        }
+        const blob = new Blob([exportTclFromCli(fuente)], { type: "text/plain" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "modelo.tcl";
@@ -4630,23 +4758,35 @@ solve`;
       //     LECTURA pero el parser los convierte a 1-based (nI = nums[0]+1)
       //     antes de almacenar — así son consistentes con los IDs 1-based de nodes.
       //   • `supports` y `loads` — usan IDs 1-based directamente (igual que inline).
+      // ⚠️ La CABECERA de un bloque tiene que ir SOLA en su línea: el lector solo la
+      // reconoce si la línea trae UN token (`cmd === "elements" && tokens.length === 1`).
+      // Este ejemplo llevaba «elements    # pares 0-based…» y el comentario al lado la
+      // convertía en dos tokens: el bloque no se abría y el lector escupía
+      // «L8: comando desconocido "elements" · L9: "0" · L10: "1"» (medido 18-sep-2026).
+      // O sea: el botón pegaba un ejemplo que el propio programa no sabe leer.
       ta.value = `# Portico 2D — sintaxis bloque
+# La cabecera de cada bloque va SOLA en su linea (sin comentario al lado).
+
+# nudos: x y z, con ID automatico 1, 2, 3, 4
 nodes
-0 0 0      # se almacena como nodo ID=1
-0 0 3      # nodo ID=2
-5 0 3      # nodo ID=3
-5 0 0      # nodo ID=4
+0 0 0
+0 0 3
+5 0 3
+5 0 0
 
-elements    # pares 0-based → parser convierte a 1-based
-0 1         # frame ID=1: nodos 1→2 (columna izq)
-1 2         # frame ID=2: nodos 2→3 (viga sup)
-2 3         # frame ID=3: nodos 3→4 (columna der)
+# barras: pares de nudos, 0-based (0 1 = del nudo 1 al 2)
+elements
+0 1
+1 2
+2 3
 
-supports    # IDs 1-based
+# apoyos: ID del nudo (1-based) + tipo
+supports
 1 fixed
 4 fixed
 
-loads       # IDs 1-based
+# cargas: ID del nudo (1-based) + fx fy fz mx my mz
+loads
 2 10 0 -50 0 0 0
 3 10 0 -50 0 0 0
 
@@ -8295,3 +8435,22 @@ if (initialEx) {
   }
   }
 }
+
+// El boton del agente 🤖 vivia dentro de getCadPanel(), asi que en la pantalla
+// de inicio NO EXISTIA: se pulsaba «Agente IA» y no pasaba nada porque no habia
+// nada que pulsar (Jorge, 20-sep-2026). Ahora se monta siempre, en cuanto hay
+// DOM, y el propio boton se coloca por encima de la barra inferior del CAD.
+function montarAgenteSiempre() {
+  try {
+    arrancarCajaNegra();     // caja negra: anota comandos, clics y TODOS los errores
+    montarLanzadorAgente();
+  } catch (e) {
+    console.warn("[agente] no se pudo montar el lanzador:", e);
+  }
+}
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", montarAgenteSiempre);
+else montarAgenteSiempre();
+// el panel de la derecha se monta despues: se vuelve a intentar (es idempotente)
+setTimeout(montarAgenteSiempre, 1200);
+setTimeout(montarAgenteSiempre, 4000);

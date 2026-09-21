@@ -702,6 +702,46 @@ export function abrirAgenteIA(textoInicial?: string) {
   entrada.focus();
 }
 
+/**
+ * Sube el botón por encima de la barra inferior del CAD (consola + línea de
+ * órdenes + estado). Con `bottom` fijo el icono salía cortado por la mitad:
+ * esa barra cambia de alto según las líneas de la consola y según la pantalla.
+ *
+ * No se busca por id — la barra la montan varios módulos — sino midiendo: se
+ * mira qué elementos fijos tocan el fondo de la ventana y se deja el botón
+ * encima del más alto de ellos.
+ */
+function subirSobreLaBarraInferior(b: HTMLElement) {
+  const recolocar = () => {
+    // No se busca la barra por id ni por `position`: se PREGUNTA al navegador
+    // quien esta encima del boton. Buscar elementos fijos fallaba porque la barra
+    // del CAD no es `fixed`, y el boton quedaba debajo, cortado por la mitad.
+    const alto = window.innerHeight;
+    const ex = document.getElementById("hk-agente-explicar") as HTMLElement | null;
+    const mio = (el: Element | null) => !!el && (el === b || el === ex || b.contains(el));
+    for (let px = 18; px < alto * 0.7; px += 12) {
+      b.style.bottom = px + "px";
+      if (ex) ex.style.bottom = px + "px";
+      const r = b.getBoundingClientRect();
+      // se comprueban tres puntos: si en alguno manda otro, sigue tapado
+      const arriba = document.elementFromPoint(r.x + r.width / 2, r.y + 4);
+      const medio = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      const abajo = document.elementFromPoint(r.x + r.width / 2, r.bottom - 4);
+      if (mio(arriba) && mio(medio) && mio(abajo)) return;   // libre
+    }
+    b.style.bottom = "120px";   // no se encontro hueco: valor de emergencia
+  };
+  recolocar();
+  // la consola crece y encoge sola: hay que volver a medir
+  window.addEventListener("resize", recolocar);
+  try {
+    const ro = new ResizeObserver(recolocar);
+    ro.observe(document.body);
+  } catch { /* navegador sin ResizeObserver: basta con el resize */ }
+  setTimeout(recolocar, 400);
+  setTimeout(recolocar, 1500);
+}
+
 /** Botón redondo 🤖 siempre a mano (el panel de IA queda plegado dentro del CAD). Idempotente. */
 export function montarLanzadorAgente() {
   reenganchar();
@@ -711,10 +751,11 @@ export function montarLanzadorAgente() {
   b.textContent = "🤖";
   b.title = "Agente IA: pídele una estructura y la modela";
   b.style.cssText = [
-    "position:fixed", "right:16px", "bottom:100px", "z-index:8999", "width:44px", "height:44px",
+    "position:fixed", "right:16px", "bottom:100px", "z-index:9600", "width:44px", "height:44px",
     "border-radius:50%", "border:1px solid #22d3ee", "background:#0b1220", "font-size:22px",
     "cursor:pointer", "box-shadow:0 4px 14px rgba(0,0,0,.4)",
   ].join(";");
+  subirSobreLaBarraInferior(b);
   b.onclick = () => {
     if (ventana && ventana.style.display !== "none" && document.body.contains(ventana)) ventana.style.display = "none";
     else abrirAgenteIA();
