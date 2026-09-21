@@ -5418,6 +5418,26 @@ export function drawing({
     "Inputs: 5 (DDE) · 5,3,2 (abs) · @5,3,2 (rel) · @5<45 (polar) · @5<45<30 (esférico) + Enter";
   document.body.appendChild(statusBar);
 
+  // Con `bottom: 8px` fijo, esta barra CHOCA con la linea de ordenes (#hk3-cmdline),
+  // que tambien esta pegada abajo y cambia de alto con las lineas de la consola:
+  // se solapaban 12 px y el texto quedaba ilegible (Jorge, 20-sep-2026).
+  // Se ancla ENCIMA de ella, midiendo su alto.
+  const subirStatus = () => {
+    const linea = document.getElementById("hk3-cmdline");
+    if (!linea) { statusBar.style.bottom = "8px"; return; }
+    const r = linea.getBoundingClientRect();
+    if (r.height <= 0) { statusBar.style.bottom = "8px"; return; }
+    const desdeAbajo = Math.max(0, window.innerHeight - r.top);
+    statusBar.style.bottom = Math.round(desdeAbajo + 8) + "px";
+  };
+  subirStatus();
+  // sin ResizeObserver sobre el body: mover la barra cambia el layout y se monta
+  // un bucle que deja la pagina pegada (pasó con el boton del agente)
+  window.addEventListener("resize", subirStatus);
+  setTimeout(subirStatus, 500);
+  setTimeout(subirStatus, 2000);
+  setTimeout(subirStatus, 5000);
+
   // Helper de status — el usuario VE en pantalla qué paso del tool va.
   // El sufijo automático muestra modos activos: ⊥ ORTO ON, Cota Z, axisLock.
   const buildStatusSuffix = (): string => {

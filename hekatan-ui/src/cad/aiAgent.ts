@@ -719,11 +719,25 @@ function subirSobreLaBarraInferior(b: HTMLElement) {
     const alto = window.innerHeight;
     const ex = document.getElementById("hk-agente-explicar") as HTMLElement | null;
     const mio = (el: Element | null) => !!el && (el === b || el === ex || b.contains(el));
+    // ⚠️ `elementFromPoint` NO ve los elementos con `pointer-events: none`
+    // (la barra «CAD listo» y la leyenda del colormap lo llevan): los atraviesa
+    // y devuelve lo de debajo. Con esas hay que cruzar RECTANGULOS.
+    const invisiblesAlRaton = ["#hk-cad-status", "#legend", "#hk3-cmdline"];
+    const chocaConBarra = (r: DOMRect) => invisiblesAlRaton.some((sel) => {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      if (!el) return false;
+      const q = el.getBoundingClientRect();
+      if (q.width <= 0 || q.height <= 0) return false;
+      const m = 6;   // un poco de aire, que no queden pegados
+      return !(r.right + m < q.left || q.right < r.left - m ||
+               r.bottom + m < q.top || q.bottom < r.top - m);
+    });
     for (let px = 18; px < alto * 0.7; px += 12) {
       b.style.bottom = px + "px";
       if (ex) ex.style.bottom = px + "px";
       const r = b.getBoundingClientRect();
-      // se comprueban tres puntos: si en alguno manda otro, sigue tapado
+      if (chocaConBarra(r)) continue;
+      // y los que SI responden al raton, por punto
       const arriba = document.elementFromPoint(r.x + r.width / 2, r.y + 4);
       const medio = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
       const abajo = document.elementFromPoint(r.x + r.width / 2, r.bottom - 4);
@@ -732,14 +746,14 @@ function subirSobreLaBarraInferior(b: HTMLElement) {
     b.style.bottom = "120px";   // no se encontro hueco: valor de emergencia
   };
   recolocar();
-  // la consola crece y encoge sola: hay que volver a medir
+  // ⚠️ NADA de ResizeObserver sobre el body: `recolocar` mueve el boton, eso
+  // cambia el layout, el observer vuelve a disparar y se monta un bucle que come
+  // CPU y deja la pagina pegada — con el visor 3D eso es «no se puede girar»
+  // (Jorge, 20-sep-2026). Basta con el resize de ventana y unos reintentos.
   window.addEventListener("resize", recolocar);
-  try {
-    const ro = new ResizeObserver(recolocar);
-    ro.observe(document.body);
-  } catch { /* navegador sin ResizeObserver: basta con el resize */ }
   setTimeout(recolocar, 400);
   setTimeout(recolocar, 1500);
+  setTimeout(recolocar, 4000);
 }
 
 /** Botón redondo 🤖 siempre a mano (el panel de IA queda plegado dentro del CAD). Idempotente. */

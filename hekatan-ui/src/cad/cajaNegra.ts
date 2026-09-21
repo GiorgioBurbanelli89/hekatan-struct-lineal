@@ -199,20 +199,71 @@ export function descargarInforme() {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
 
+/**
+ * Sube el botón hasta que no lo tape nada. Con `bottom` fijo quedaba DEBAJO de
+ * la barra de estado del CAD (Jorge, 20-sep-2026: «abajo hay algo que está
+ * solapando»). La barra no es `position: fixed`, así que no vale buscarla por
+ * ahí: se pregunta con elementFromPoint quién manda en el botón.
+ *
+ * Si el botón del agente ya se colocó, se alinea con él y listo.
+ */
+function colocar(b: HTMLElement) {
+  const recolocar = () => {
+    const agente = document.getElementById("hk-agente-lanzador");
+    if (agente) {
+      // Se ancla al RECT REAL del 🤖, no a su `bottom`: los dos son `fixed`
+      // pero cuelgan de contenedores distintos (uno tiene un ancestro con
+      // `transform`, que cambia el origen del fixed), asi que el mismo
+      // `right: 70px` los dejaba a 300 px de distancia y este caia sobre la
+      // linea de ordenes.
+      const r = agente.getBoundingClientRect();
+      if (r.width > 0) {
+        b.style.right = "auto";
+        b.style.bottom = "auto";
+        // a la DERECHA del agente: a la izquierda cae donde acaba la barra
+        // «CAD listo», que esta centrada y llega hasta ahi.
+        b.style.left = Math.round(r.right + 8) + "px";
+        b.style.top = Math.round(r.top + 5) + "px";
+        return;
+      }
+    }
+    const alto = window.innerHeight;
+    for (let px = 18; px < alto * 0.7; px += 12) {
+      b.style.bottom = px + "px";
+      const r = b.getBoundingClientRect();
+      const a = document.elementFromPoint(r.x + r.width / 2, r.y + 3);
+      const m = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      const z = document.elementFromPoint(r.x + r.width / 2, r.bottom - 3);
+      if (a === b && m === b && z === b) return;
+    }
+    b.style.bottom = "120px";
+  };
+  recolocar();
+  window.addEventListener("resize", recolocar);
+  setTimeout(recolocar, 600);
+  setTimeout(recolocar, 2000);
+  setTimeout(recolocar, 5000);
+}
+
 function montarBotonInforme() {
   if (document.getElementById("hk-caja-negra-btn")) return;
   const b = document.createElement("button");
   b.id = "hk-caja-negra-btn";
   b.textContent = "📋";
   b.title = "Informe de la sesión: lo que hiciste y los errores (se descarga un .txt)";
+  // A la IZQUIERDA del 🤖 (right 70 vs 16) para que no se pisen entre ellos.
   b.style.cssText = [
-    "position:fixed", "right:16px", "bottom:18px", "z-index:9600",
+    "position:fixed", "right:70px", "bottom:18px", "z-index:9600",
     "width:34px", "height:34px", "border-radius:50%",
     "border:1px solid #64748b", "background:#0b1220", "font-size:15px",
     "cursor:pointer", "opacity:.75", "box-shadow:0 3px 10px rgba(0,0,0,.35)",
   ].join(";");
   b.onclick = descargarInforme;
-  const poner = () => document.body && document.body.appendChild(b);
+  const poner = () => {
+    if (!document.body) return;
+    document.body.appendChild(b);
+    colocar(b);
+  };
   if (document.body) poner();
   else document.addEventListener("DOMContentLoaded", poner);
 }
