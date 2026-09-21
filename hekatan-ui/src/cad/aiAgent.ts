@@ -448,6 +448,55 @@ type Msg = { role: string; content?: string | null; tool_calls?: any[]; tool_cal
 const MAX_PASOS = 14;
 const conversacion: Msg[] = [];
 
+/**
+ * El modelo se satura y contesta 503 «high demand» (o 429, que es la cuota por
+ * minuto). No es culpa de la clave ni del programa, y se arregla esperando o
+ * cambiando de modelo — asi que lo hace el agente solo.
+ *
+ * Jorge, 21-sep-2026: «Gemini 503 UNAVAILABLE» en mitad de la demostracion.
+ *
+ *   1. reintenta el MISMO modelo, esperando cada vez mas (2 s, 5 s, 12 s);
+ *   2. si sigue caido, pasa al siguiente de la lista del proveedor y avisa.
+ */
+const REINTENTOS = [2000, 5000, 12000];
+const SATURADO = new Set([429, 500, 502, 503, 504]);
+
+let modeloActual = "";
+
+async function llamarConAguante(p: AgentProvider, modelo: string, clave: string, señal: AbortSignal) {
+  const cola = [modelo, ...p.modelos.filter((m) => m !== modelo)];
+  let ultimo: any = null;
+  for (let i = 0; i < cola.length; i++) {
+    for (let r = 0; r <= REINTENTOS.length; r++) {
+      try {
+        const msg = await llamarModelo(p, cola[i], clave, señal);
+        if (cola[i] !== modeloActual) {
+          modeloActual = cola[i];
+          if (i > 0) {
+            burbuja("paso", `El modelo estaba saturado; sigo con ${cola[i]}.`);
+            aiStorage.setModel(`agente_${p.id}`, cola[i]);
+            const caja = document.getElementById("hk-agente-modelo") as HTMLInputElement | null;
+            if (caja) caja.value = cola[i];
+          }
+        }
+        return msg;
+      } catch (e: any) {
+        if (e?.name === "AbortError") throw e;
+        ultimo = e;
+        const cod = parseInt((String(e?.message ?? "").match(/\b(\d{3})\b/) ?? [])[1] ?? "0", 10);
+        if (!SATURADO.has(cod)) throw e;                 // 401, 404… no se arreglan esperando
+        if (r === REINTENTOS.length) break;              // agotado: al siguiente modelo
+        burbuja("paso", `El modelo está saturado (${cod}). Reintento en ${REINTENTOS[r] / 1000} s…`);
+        await new Promise((ok, mal) => {
+          const t = setTimeout(ok, REINTENTOS[r]);
+          señal.addEventListener("abort", () => { clearTimeout(t); mal(new DOMException("", "AbortError")); }, { once: true });
+        });
+      }
+    }
+  }
+  throw ultimo ?? new Error("sin respuesta");
+}
+
 async function llamarModelo(p: AgentProvider, modelo: string, clave: string, señal: AbortSignal) {
   const cab: Record<string, string> = { "content-type": "application/json" };
   if (p.clave) cab["Authorization"] = `Bearer ${clave}`;
@@ -608,7 +657,7 @@ async function enviar() {
   let modifico = false, verifico = false, empujones = 0;
   try {
     for (let paso = 0; paso < MAX_PASOS; paso++) {
-      const msg = await llamarModelo(p, modelo, clave, control.signal);
+      const msg = await llamarConAguante(p, modelo, clave, control.signal);
       let calls: any[] = msg.tool_calls ?? [];
       if (!calls.length && msg.content) calls = llamadasEnTexto(msg.content);
       conversacion.push({ role: "assistant", content: calls.length ? (msg.content ?? "") : msg.content, tool_calls: calls.length ? calls : undefined });
@@ -709,6 +758,7 @@ function crearVentana() {
   selP.style.cssText = ctrl + "flex:1 1 120px;";
   for (const p of PROVEEDORES) selP.add(new Option(p.nombre, p.id));
   const inM = document.createElement("input");
+  inM.id = "hk-agente-modelo";
   inM.style.cssText = ctrl + "flex:1 1 140px;";
   inM.setAttribute("list", "hk-agente-modelos");
   const dl = document.createElement("datalist");
