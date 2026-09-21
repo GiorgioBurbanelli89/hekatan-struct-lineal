@@ -1080,3 +1080,45 @@ también escribe `disp_nudos`).
 + `PointObj.SetDiaphragm(n, 3, "D1")`, SAP con `ConstraintDef.SetDiaphragm` + `PointObj.SetConstraint`;
 600–800 nudos tardan 5–6 min por programa; los prints de Python se pierden con la salida
 redirigida (el resultado va al JSON). Si SAP2000 «no vuelve», es un diálogo: `taskkill //F //IM SAP2000.exe`.
+
+## Caja negra: ver qué hizo el usuario y qué falló (20-sep-2026)
+
+`hekatan-ui/src/cad/cajaNegra.ts`, arrancada desde `examples/src/workspace/main.ts`.
+Jorge: «¿hay posibilidad de que puedas ver cada recorrido que hago y si algo no me funciona
+tú saberlo?».
+
+Anota sola, sin que el usuario haga nada:
+
+| se anota | de dónde sale |
+|---|---|
+| **errores** de JS y promesas rechazadas, con traza | `window.onerror`, `unhandledrejection` |
+| `console.error` / `console.warn` | consola parcheada (sin romper la de siempre) |
+| **comandos** tecleados | `keydown` Enter sobre input/textarea |
+| **clics** en botones, Tweakpane, selects | delegación en `document`, fase de captura |
+| cálculos y modelos | `hk:solved`, `hk:model-loaded`, `hk:property-applied` |
+
+Se saca con el botón **📋** (al lado del 🤖) o con `hkInforme()` en la consola: descarga un
+`.txt` con **los errores primero** y después todo en orden cronológico. `hkEventos()` da el
+array en crudo.
+
+- Persiste en `localStorage` (`hk_caja_negra_v1`) y **conserva la sesión ANTERIOR**
+  (`..._anterior`), que es la que interesa cuando la app se cuelga.
+- **Las claves de API se ocultan antes de anotar** (`limpiar()`). El orden de las dos reglas
+  importa: primero lo que va tras `key/token/...` y luego los patrones `sk-`/`AIza`, o sale
+  el churro `<oculto> oculta>`.
+- Buffer circular de 4000 eventos; guarda a los 1.5 s de un error y cada 20 s.
+
+### El bug que lo motivó: el botón del agente
+
+Tres fallos encadenados, y ninguno daba error en pantalla:
+
+1. `montarLanzadorAgente()` vivía **dentro de `getCadPanel()`**: en la pantalla de inicio el
+   botón no existía. Pulsar «Agente IA» no hacía nada porque no había nada que pulsar.
+2. Quedaba **cortado por la barra inferior** del CAD. Buscar la barra por `position: fixed`
+   no vale: no lo es. Ahora se pregunta con `elementFromPoint` quién está encima del botón en
+   tres puntos y se sube hasta que manda él.
+3. `z-index` 8999 → **9600**.
+
+⚠️ El botón usa `position: fixed` pero hay un ancestro con `transform`, así que se posiciona
+respecto a ESE ancestro, no a la ventana: aparece en x≈1301 y no en la esquina derecha. Por
+eso «no estaba» al buscarlo por coordenadas.
