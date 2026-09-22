@@ -7,5 +7,5 @@ await p.goto(`http://localhost:4600/workspace/?t=${id}`, { waitUntil: "networkid
 await new Promise(r => setTimeout(r, 12000));
 await p.evaluate(() => window.__hekatanTutorTest(false));
 for (let k = 1; k < +paso; k++) { await new Promise(r => setTimeout(r, 1500)); await p.evaluate(() => document.querySelector("[data-sig]").click()); }
-await new Promise(r => setTimeout(r, 9000));
+await new Promise(r => setTimeout(r, +(process.env.ESPERA || 9000)));
 await p.screenshot({ path: png }); console.log("errores", errs); await b.close();

@@ -259,7 +259,11 @@ async function senalar(b: Blanco | undefined, globo?: string) {
   } else Object.assign(aro!.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", opacity: "1" });
   if (globo) {
     glo!.textContent = globo;
-    Object.assign(glo!.style, { left: Math.min(cx + 30, innerWidth - 280) + "px", top: Math.max(r.top - 40, 40) + "px", opacity: "1" });
+    // el globo no pasa del borde derecho del MODELO (ahí está la barra de colores): si no cabe, va a la izquierda
+    const borde = (w().__hekatanViewerCtx?.()?.rendererElm?.getBoundingClientRect()?.right ?? innerWidth) - 10;
+    const ancho = glo!.offsetWidth || 260;
+    const x = cx + 30 + ancho > borde ? cx - 30 - ancho : cx + 30;
+    Object.assign(glo!.style, { left: Math.max(x, 8) + "px", top: Math.max(r.top - 40, 40) + "px", opacity: "1" });
   } else glo!.style.opacity = "0";
   await volar(cx, cy);
   rodeo = typeof b === "string" ? r : new DOMRect(cx - 20, cy - 14, 40, 28);
@@ -354,6 +358,8 @@ function partir(si: boolean) {
 
 export function abrirTutorTest(titulo: string, lista: PasoTutor[], reproducir = false) {
   pasos = lista; nombre = titulo; i = 0; auto = reproducir;
+  // Los tests comparan FLECHAS: el colormap pasa a desplazamiento Z (von Mises es una tensión, no la flecha)
+  try { const st = w().__hekatanSettings?.(); if (st?.shellResults) st.shellResults.val = "displacementZ"; } catch { /* nada */ }
   pan?.remove();
   pan = document.createElement("div");
   pan.style.cssText = `position:fixed;top:32px;left:0;width:${ANCHO};bottom:92px;overflow-y:auto;overflow-x:hidden;z-index:9500;` +
