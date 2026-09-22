@@ -19,7 +19,7 @@
  * Se abre desde «📐 Diseño», con `window.__hekatanTutorTest()` o con `?tutor=1` en la URL.
  */
 import * as THREE from "three";
-import { registrarDiseno, ventanaFlotante } from "./menuDiseno";
+import { registrarDiseno } from "./menuDiseno";
 
 /** Qué señala el cursor: rótulo de control, selector CSS, «modelo», o nudos del modelo. */
 export type Blanco = string | { nudos: number[] };
@@ -231,10 +231,15 @@ async function senalar(b: Blanco | undefined, globo?: string) {
   if (typeof b === "string" && b !== "modelo" && !/^[#.[]/.test(b) && document.body.classList.contains("hk-pane-oculto")) {
     const t = document.getElementById("hk-pane-toggle");
     if (t) { const r = t.getBoundingClientRect(); aro!.style.opacity = "0"; glo!.style.opacity = "0";
-      await volar(r.left + r.width / 2, r.top + r.height / 2); t.click(); await espera(450); }
+      await volar(r.left + r.width / 2, r.top + r.height / 2); t.click(); panelLoAbriTutor = true; await espera(450); }
+  } else if (panelLoAbriTutor && (b === undefined || typeof b !== "string" || b === "modelo" || b.startsWith("[data-cuerpo]"))) {
+    pulsarPanel(); panelLoAbriTutor = false; await espera(300);   // de vuelta al modelo: el panel se recoge otra vez
   }
   const r = b === undefined ? null : typeof b === "string" ? rectControl(b) : rectNudos(b.nudos);
   rodeo = null;
+  // señalando un control del PANEL (que tapa parte del lienzo): las cotas del modelo se apagan
+  const enPanel = typeof b === "string" && b !== "modelo" && !b.startsWith("[data-cuerpo]");
+  if (capa) { capa.style.transition = "opacity .3s"; capa.style.opacity = enPanel ? "0" : "1"; }
   if (!r) {
     aro!.style.opacity = "0"; glo!.style.opacity = "0";
     if (pan) { const p = pan.getBoundingClientRect(); await volar(p.right - 50, p.bottom - 70); }
@@ -274,7 +279,7 @@ function pintarFicha() {
   cuerpo.innerHTML =
     `<div style="color:#94a3b8;font-size:12px;margin-bottom:2px">${nombre.replace(/^Tutor · /, "")}</div>` +
     `<div style="font-weight:700;color:#7dd3fc;margin-bottom:6px">${i + 1}/${pasos.length} · ${p.titulo}</div>` +
-    (p.fig ? `<img src="${BASE}img/itw/${p.fig}" style="width:100%;background:#fff;border-radius:6px;margin:4px 0 8px">` : "") +
+    (p.fig ? `<img src="${BASE}img/itw/${p.fig}" style="width:100%;max-height:44vh;object-fit:contain;background:#fff;border-radius:6px;margin:6px 0 12px">` : "") +
     `<div style="line-height:1.5">${p.texto()}</div>`;
   pan.querySelector<HTMLButtonElement>("[data-ant]")!.disabled = i === 0;
   pan.querySelector<HTMLButtonElement>("[data-sig]")!.disabled = i === pasos.length - 1;
@@ -310,29 +315,66 @@ function botonAuto() {
   const b = pan?.querySelector<HTMLButtonElement>("[data-auto]"); if (b) b.textContent = auto ? "⏸ Pausa" : "▶ Reproducir";
 }
 
+// ── Pantalla PARTIDA: el tutor a la izquierda (paper legible), el modelo a la derecha ──
+// Jorge: «muestra de mayor tamaño el paper, no se entiende; que se divida la ventana».
+const ANCHO = "min(44vw, 720px)";
+let vistaAntes: string | null = null;
+let panelLoAbriTutor = false, panelAntes = false;
+const panelOculto = () => document.body.classList.contains("hk-pane-oculto");
+const pulsarPanel = () => document.getElementById("hk-pane-toggle")?.click();
+
+/** Reencuadra el modelo en SU franja y lo aleja un poco: las cotas van por fuera y necesitan sitio. */
+function encuadrar() {
+  w().__hekatanAutoFit?.();
+  setTimeout(() => {
+    const ctx = w().__hekatanViewerCtx?.(); if (!ctx) return;
+    const t = ctx.controls.target, c = ctx.camera;
+    if (c.isOrthographicCamera) c.zoom /= 1.3;
+    else c.position.sub(t).multiplyScalar(1.3).add(t);
+    c.updateProjectionMatrix(); ctx.controls.update?.(); ctx.render();
+  }, 120);
+}
+
+function partir(si: boolean) {
+  const v = w().__hekatanViewerElm?.() as HTMLElement | undefined; if (!v) return;
+  if (si) {
+    if (vistaAntes === null) { vistaAntes = v.style.cssText; panelAntes = panelOculto(); }
+    if (!panelOculto()) pulsarPanel();                 // el panel de la derecha se recoge
+    document.body.classList.add("hk-tutor");
+    // franja del modelo: entre el tutor y la barra de colores (que queda en su propia franja a la derecha)
+    v.style.marginLeft = ANCHO; v.style.width = `calc(100% - ${ANCHO} - 130px)`;
+  } else if (vistaAntes !== null) {
+    v.style.cssText = vistaAntes; vistaAntes = null;
+    document.body.classList.remove("hk-tutor");
+    if (panelOculto() !== panelAntes) pulsarPanel();
+  }
+  setTimeout(() => { window.dispatchEvent(new Event("resize")); encuadrar(); }, 400);
+  setTimeout(encuadrar, 1100);
+}
+
 export function abrirTutorTest(titulo: string, lista: PasoTutor[], reproducir = false) {
   pasos = lista; nombre = titulo; i = 0; auto = reproducir;
   pan?.remove();
   pan = document.createElement("div");
-  pan.style.cssText = "position:fixed;top:60px;left:6px;width:400px;max-height:88vh;overflow-y:auto;overflow-x:hidden;z-index:9500;" +
-    "background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:10px;font:13px system-ui;box-shadow:0 10px 30px #0008";
+  pan.style.cssText = `position:fixed;top:32px;left:0;width:${ANCHO};bottom:92px;overflow-y:auto;overflow-x:hidden;z-index:9500;` +
+    "background:#0f172a;color:#e2e8f0;border-right:2px solid #334155;font:16px system-ui;box-shadow:6px 0 20px #0008";
   pan.innerHTML =
     `<div style="padding:8px 10px;background:#1e3a8a;border-radius:10px 10px 0 0;display:flex;gap:8px;align-items:center;cursor:move">` +
     `<b style="flex:1">🎓 Tutor</b>` +
     `<button data-voz title="Voz sí / no" style="background:none;border:0;color:#fff;cursor:pointer">🔊</button>` +
     `<button data-x title="Cerrar" style="background:none;border:0;color:#fff;cursor:pointer">✕</button></div>` +
     `<div style="height:3px;background:#1e293b"><div data-barra style="height:3px;background:#fbbf24;width:0;transition:width .5s"></div></div>` +
-    `<div data-cuerpo style="padding:10px 12px"></div>` +
-    `<div style="display:flex;gap:6px;padding:8px 12px 12px">` +
+    `<div data-cuerpo style="padding:12px 18px;line-height:1.55"></div>` +
+    `<div style="display:flex;gap:8px;padding:10px 18px 16px;position:sticky;bottom:0;background:#0f172a;font-size:16px">` +
     `<button data-ant style="padding:6px 10px">◀</button>` +
     `<button data-auto style="flex:1;padding:6px;background:#16a34a;color:#fff;border:0;border-radius:4px;font-weight:600">▶ Reproducir</button>` +
     `<button data-rep style="padding:6px 10px" title="Repetir este paso">↻</button>` +
     `<button data-sig style="flex:1;padding:6px;background:#2563eb;color:#fff;border:0;border-radius:4px">Siguiente ▶</button></div>`;
   document.body.appendChild(pan);
-  ventanaFlotante(pan);
+  partir(true);
   botonAuto();
   const q = (s: string) => pan!.querySelector(s)!;
-  q("[data-x]").addEventListener("click", () => { turno++; auto = false; window.speechSynthesis?.cancel(); pan?.remove(); pan = null; quitarCursor(); });
+  q("[data-x]").addEventListener("click", () => { turno++; auto = false; window.speechSynthesis?.cancel(); pan?.remove(); pan = null; quitarCursor(); partir(false); });
   q("[data-voz]").addEventListener("click", (e) => {
     hablar = !hablar; (e.target as HTMLElement).textContent = hablar ? "🔊" : "🔇"; if (!hablar) window.speechSynthesis?.cancel();
   });

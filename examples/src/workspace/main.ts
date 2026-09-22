@@ -1705,6 +1705,7 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // `cli/shot_plantillas_colormap.mjs`.
 (window as any).__hekatanSettings = () => (viewerElm as any).__settings;
 (window as any).__hekatanViewerCtx = () => (viewerElm as any).__ctx;   // cámara y escena: el tutor proyecta nudos a pantalla
+(window as any).__hekatanViewerElm = () => viewerElm;          // el tutor lo estrecha para partir la pantalla
 // La lista de ejemplos, para que los barridos de la CLI no lleven una copia
 // que se queda vieja en cuanto se anade uno.
 /**

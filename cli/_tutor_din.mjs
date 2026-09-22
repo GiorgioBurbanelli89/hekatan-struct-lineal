@@ -11,7 +11,7 @@ let k = 0; const t0 = Date.now();
 while (Date.now() - t0 < 200000) {
   await new Promise(r => setTimeout(r, 1500));
   const n = await p.evaluate(() => parseInt(document.querySelector("[data-cuerpo] div:nth-child(2)")?.textContent || "0"));
-  if (n > +hasta) break;
+  if (n > +hasta || n === 0) { console.log("fin en k=", k, "n=", n); break; }
   await p.screenshot({ path: `${dir}/f_${String(++k).padStart(3,"0")}_p${n}.png` });
 }
 console.log("fotogramas", k, "errores", errs); await b.close();

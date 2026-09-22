@@ -144,3 +144,9 @@ body.hk-pane-oculto #legend,
 body.hk-pane-oculto #frame-legend {
   right: calc(12px + var(--legend-num-w));
 }
+
+/* Tutor abierto (tutorTest.ts): la barra de colores en su franja, al borde derecho, sin pisar el modelo. */
+body.hk-tutor #legend,
+body.hk-tutor #frame-legend {
+  right: calc(8px + var(--legend-num-w)) !important;
+}

@@ -294,20 +294,28 @@ function pasosTest2(): PasoTutor[] {
       e.push([[nudo(i, j), nudo(i + 1, j), nudo(i + 1, j + 1), nudo(i, j + 1)], `${j * na + i + 1}`]);
     return e; };
 
+  // Tabla II del paper con la columna de Hekatan, que se LLENA a medida que el tutor resuelve cada malla
+  const FILAS: Array<[string, number]> = [["4×1", 0.3445], ["8×2", 0.3504], ["16×4", 0.3543], ["4×1*", 0.3066]];
+  const hk: Record<string, number> = {};
+  const tablaII = (actual?: string) => `<div style="margin-top:12px;font-weight:700;color:#7dd3fc">Tabla II · paper vs Hekatan Struct</div>` +
+    `<table style="width:100%;border-collapse:collapse;margin-top:4px;font-size:15px">` +
+    `<tr style="color:#94a3b8"><td>Malla</td><td>Paper (M-type)</td><td>Hekatan</td><td>dif.</td></tr>` +
+    FILAS.map(([m, pa]) => { const h = hk[m]; const on = m === actual;
+      return `<tr style="${on ? "background:#1e3a8a;font-weight:700" : ""}border-top:1px solid #334155"><td>${m}</td><td>${pa}</td>` +
+        `<td>${h === undefined ? "—" : f4(h)}</td><td>${h === undefined ? "" : pct(h, pa)}</td></tr>`; }).join("") +
+    `<tr style="border-top:1px solid #334155;color:#94a3b8"><td>exacto</td><td colspan="3">0.3553 (Timoshenko)</td></tr></table>`;
+
   const malla = (na: number, nb: number, paper: number, porque: string): PasoTutor => ({
     titulo: `Malla ${na}×${nb}`, params: { malla: 0, na, nb },
-    texto: () => { const d = flechaPunta();
-      return `Ahora el voladizo con <b>${na}×${nb}</b> elementos. ${porque}<br><br>` +
-        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f4(d)}</b></td></tr>` +
-        `<tr><td>Paper (M-type)</td><td>${paper}</td><td>${pct(d, paper)}</td></tr>` +
-        `<tr><td>Exacto</td><td>0.3553</td><td>${pct(d, 0.3553)}</td></tr></table>`; },
+    texto: () => { const d = flechaPunta(); hk[`${na}×${nb}`] = d;
+      return `Ahora el voladizo con <b>${na}×${nb}</b> elementos. ${porque}` + tablaII(`${na}×${nb}`); },
     tiempos: [
       { voz: `Cambiamos la malla a ${na} por ${nb} elementos.`, senalar: "divisiones X" },
       { voz: `Así queda: ${na} elementos a lo largo, de ${V(48 / na, 2)} cada uno, y ${nb} en el canto, de ${V(12 / nb, 2)}. En total ${na * nb} elementos, numerados aquí.`,
         senalar: todo, cotas: cotasMalla, etiquetas: numeros },
       { voz: () => `Medimos la flecha en la punta: Hekatan da ${V(flechaPunta())}.`, senalar: punta, globo: () => `δ = ${f4(flechaPunta())}`, cotas: cotasMalla, etiquetas: numeros },
       { voz: () => `El paper da ${V(paper)}. La diferencia es de ${V(Math.abs(flechaPunta() / paper - 1) * 100, 2)} por ciento. ${porque}`,
-        senalar: "[data-cuerpo] table", globo: () => `paper ${paper} · ${pct(flechaPunta(), paper)}` },
+        senalar: "[data-cuerpo] table tr[style*='1e3a8a']", globo: () => `paper ${paper} · Hekatan ${f4(flechaPunta())}` },
     ],
   });
   return [
@@ -349,10 +357,7 @@ function pasosTest2(): PasoTutor[] {
       texto: () => { const d = flechaPunta();
         return `Los mismos 4 elementos, pero <b>torcidos</b>: arriba x = 0, 12, 24, 36, 48; abajo 0, 16, 20, 28, 48.<br>` +
           `<b>Por qué:</b> en un modelo real los elementos nunca son rectángulos perfectos. Este caso mide si el ` +
-          `elemento aguanta trapecios.<br><br>` +
-          `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f4(d)}</b></td></tr>` +
-          `<tr><td>Paper (M-type)</td><td>0.3066</td><td>${pct(d, 0.3066)}</td></tr>` +
-          `<tr><td>MacNeal-Harder</td><td>0.2978</td><td>${pct(d, 0.2978)}</td></tr></table>`; },
+          `elemento aguanta trapecios.` + (hk["4×1*"] = d, tablaII("4×1*")); },
       tiempos: [
         { voz: "Ahora la malla distorsionada de la figura cuatro.", senalar: "malla" },
         { voz: "Arriba los nudos van cada 12. Abajo van a 16, 20 y 28: los elementos quedan torcidos.",
@@ -361,14 +366,14 @@ function pasosTest2(): PasoTutor[] {
           etiquetas: [[[0, 1, 6, 5], "1"], [[1, 2, 7, 6], "2"], [[2, 3, 8, 7], "3"], [[3, 4, 9, 8], "4"]] },
         { voz: () => `La flecha en la punta baja a ${V(flechaPunta())}.`, senalar: { nudos: [4, 9] }, globo: () => `δ = ${f4(flechaPunta())}` },
         { voz: "El paper da 0,3066. Los dos pierden un diez por ciento al torcer los elementos: la forma del elemento importa.",
-          senalar: "[data-cuerpo] table", globo: () => `paper 0.3066 · ${pct(flechaPunta(), 0.3066)}` },
+          senalar: "[data-cuerpo] table tr[style*='1e3a8a']", globo: () => `paper 0.3066 · Hekatan ${f4(flechaPunta())}` },
       ] },
     { titulo: "Conclusión", fig: "tabla2_cantilever.png",
       texto: () => `Hekatan reproduce la <b>Tabla II</b> del paper en las cuatro mallas (≤ 0.6 %) y converge al exacto ` +
         `(32×8 → 0.3552). El elemento es el mismo ITW 1990 con drilling, así que las tendencias coinciden: ` +
-        `refinar sube la flecha y distorsionar la baja.`,
+        `refinar sube la flecha y distorsionar la baja.` + tablaII(),
       tiempos: [
-        { voz: "En resumen: Hekatan reproduce la tabla dos del paper en las cuatro mallas, con menos de 0,6 por ciento.", senalar: "[data-cuerpo] img" },
+        { voz: "En resumen: esta es la tabla dos del paper, con la columna de Hekatan al lado. Las cuatro mallas quedan a menos de 0,6 por ciento.", senalar: "[data-cuerpo] table" },
         { voz: "Al refinar sube hacia el exacto, y al distorsionar baja, igual que en el paper.", senalar: "[data-cuerpo] b" },
       ] },
   ];
