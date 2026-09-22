@@ -1,0 +1,135 @@
+File ITW Test II · Voladizo corto a cortante (δ = 0.3553).$2k was saved on m/d/yy at h:mm:ss
+ 
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes
+ 
+TABLE:  "CONNECTIVITY - AREA"
+   Area=1   NumJoints=4   Joint1=1   Joint2=2   Joint3=11   Joint4=10
+   Area=2   NumJoints=4   Joint1=2   Joint2=3   Joint3=12   Joint4=11
+   Area=3   NumJoints=4   Joint1=3   Joint2=4   Joint3=13   Joint4=12
+   Area=4   NumJoints=4   Joint1=4   Joint2=5   Joint3=14   Joint4=13
+   Area=5   NumJoints=4   Joint1=5   Joint2=6   Joint3=15   Joint4=14
+   Area=6   NumJoints=4   Joint1=6   Joint2=7   Joint3=16   Joint4=15
+   Area=7   NumJoints=4   Joint1=7   Joint2=8   Joint3=17   Joint4=16
+   Area=8   NumJoints=4   Joint1=8   Joint2=9   Joint3=18   Joint4=17
+   Area=9   NumJoints=4   Joint1=10   Joint2=11   Joint3=20   Joint4=19
+   Area=10   NumJoints=4   Joint1=11   Joint2=12   Joint3=21   Joint4=20
+   Area=11   NumJoints=4   Joint1=12   Joint2=13   Joint3=22   Joint4=21
+   Area=12   NumJoints=4   Joint1=13   Joint2=14   Joint3=23   Joint4=22
+   Area=13   NumJoints=4   Joint1=14   Joint2=15   Joint3=24   Joint4=23
+   Area=14   NumJoints=4   Joint1=15   Joint2=16   Joint3=25   Joint4=24
+   Area=15   NumJoints=4   Joint1=16   Joint2=17   Joint3=26   Joint4=25
+   Area=16   NumJoints=4   Joint1=17   Joint2=18   Joint3=27   Joint4=26
+ 
+TABLE:  "COORDINATE SYSTEMS"
+   Name=GLOBAL   Type=Cartesian   X=0   Y=0   Z=0   AboutZ=0   AboutY=0   AboutX=0
+ 
+TABLE:  "DATABASE FORMAT TYPES"
+   UnitsCurr=Yes   OverrideE=No
+ 
+TABLE:  "AREA SECTION ASSIGNMENTS"
+   Area=1   Section=SSEC1   MatProp=Default
+   Area=2   Section=SSEC1   MatProp=Default
+   Area=3   Section=SSEC1   MatProp=Default
+   Area=4   Section=SSEC1   MatProp=Default
+   Area=5   Section=SSEC1   MatProp=Default
+   Area=6   Section=SSEC1   MatProp=Default
+   Area=7   Section=SSEC1   MatProp=Default
+   Area=8   Section=SSEC1   MatProp=Default
+   Area=9   Section=SSEC1   MatProp=Default
+   Area=10   Section=SSEC1   MatProp=Default
+   Area=11   Section=SSEC1   MatProp=Default
+   Area=12   Section=SSEC1   MatProp=Default
+   Area=13   Section=SSEC1   MatProp=Default
+   Area=14   Section=SSEC1   MatProp=Default
+   Area=15   Section=SSEC1   MatProp=Default
+   Area=16   Section=SSEC1   MatProp=Default
+ 
+TABLE:  "AREA SECTION PROPERTIES"
+   Section=SSEC1   Material=MAT_30000_n0.2500_r0   MatAngle=0   AreaType=Shell   Type=Shell-Thick   DrillDOF=Yes   Thickness=1   BendThick=1   Color=Cyan
+ 
+TABLE:  "JOINT COORDINATES"
+   Joint=1   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=0   SpecialJt=No
+   Joint=2   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=0   SpecialJt=No
+   Joint=3   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=0   SpecialJt=No
+   Joint=4   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=0   SpecialJt=No
+   Joint=5   CoordSys=GLOBAL   CoordType=Cartesian   XorR=24   Y=0   Z=0   SpecialJt=No
+   Joint=6   CoordSys=GLOBAL   CoordType=Cartesian   XorR=30   Y=0   Z=0   SpecialJt=No
+   Joint=7   CoordSys=GLOBAL   CoordType=Cartesian   XorR=36   Y=0   Z=0   SpecialJt=No
+   Joint=8   CoordSys=GLOBAL   CoordType=Cartesian   XorR=42   Y=0   Z=0   SpecialJt=No
+   Joint=9   CoordSys=GLOBAL   CoordType=Cartesian   XorR=48   Y=0   Z=0   SpecialJt=No
+   Joint=10   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=6   SpecialJt=No
+   Joint=11   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=6   SpecialJt=No
+   Joint=12   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=6   SpecialJt=No
+   Joint=13   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=6   SpecialJt=No
+   Joint=14   CoordSys=GLOBAL   CoordType=Cartesian   XorR=24   Y=0   Z=6   SpecialJt=No
+   Joint=15   CoordSys=GLOBAL   CoordType=Cartesian   XorR=30   Y=0   Z=6   SpecialJt=No
+   Joint=16   CoordSys=GLOBAL   CoordType=Cartesian   XorR=36   Y=0   Z=6   SpecialJt=No
+   Joint=17   CoordSys=GLOBAL   CoordType=Cartesian   XorR=42   Y=0   Z=6   SpecialJt=No
+   Joint=18   CoordSys=GLOBAL   CoordType=Cartesian   XorR=48   Y=0   Z=6   SpecialJt=No
+   Joint=19   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=12   SpecialJt=No
+   Joint=20   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=12   SpecialJt=No
+   Joint=21   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=12   SpecialJt=No
+   Joint=22   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=12   SpecialJt=No
+   Joint=23   CoordSys=GLOBAL   CoordType=Cartesian   XorR=24   Y=0   Z=12   SpecialJt=No
+   Joint=24   CoordSys=GLOBAL   CoordType=Cartesian   XorR=30   Y=0   Z=12   SpecialJt=No
+   Joint=25   CoordSys=GLOBAL   CoordType=Cartesian   XorR=36   Y=0   Z=12   SpecialJt=No
+   Joint=26   CoordSys=GLOBAL   CoordType=Cartesian   XorR=42   Y=0   Z=12   SpecialJt=No
+   Joint=27   CoordSys=GLOBAL   CoordType=Cartesian   XorR=48   Y=0   Z=12   SpecialJt=No
+ 
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=1   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=2   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=3   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=4   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=5   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=6   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=7   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=8   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=9   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=10   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=11   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=12   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=13   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=14   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=15   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=16   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=17   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=18   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=19   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=20   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=21   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=22   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=23   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=24   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=25   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=26   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+   Joint=27   U1=No   U2=Yes   U3=No   R1=Yes   R2=No   R3=Yes
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=0
+ 
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+ 
+TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1
+ 
+TABLE:  "JOINT LOADS - FORCE"
+   Joint=9   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-10   M1=0   M2=0   M3=0
+   Joint=18   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-20   M1=0   M2=0   M3=0
+   Joint=27   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-10   M1=0   M2=0   M3=0
+ 
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=MAT_30000_n0.2500_r0   Type=Concrete   SymType=Isotropic   TempDepend=No   Color=Green
+ 
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=MAT_30000_n0.2500_r0   UnitWeight=0   UnitMass=0   E1=30000   G12=12000   U12=0.25   A1=9.9E-06
+ 
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=MAT_30000_n0.2500_r0   Fc=27579   eFc=27579   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0   CoupModType="Modified Darwin-Pecknold"
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=24.1.0   CurrUnits="KN, m, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+ 
+END TABLE DATA

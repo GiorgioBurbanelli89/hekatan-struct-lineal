@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const b = await puppeteer.connect({ browserURL: "http://localhost:9222", defaultViewport: null });
+const p = (await b.pages()).find(x => !x.url().startsWith("devtools"));
+await p.bringToFront();
+const ok = await p.evaluate(() => !!window.__hekatanGuiaFem && (window.__hekatanGuiaFem(), true));
+await new Promise(r => setTimeout(r, 1200));
+await p.evaluate(() => document.querySelectorAll("#hk-guia-fem details").forEach((d,i)=>{ if(i<3) d.open=true; }));
+await new Promise(r => setTimeout(r, 600));
+await p.screenshot({ path: "cli/shots/en_vivo/publico_guia.png" });
+console.log("guia en el deploy publico:", ok);
+b.disconnect();
