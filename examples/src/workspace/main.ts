@@ -219,6 +219,7 @@ import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
 import { montarBotonSeccion } from "hekatan-ui/src/cad/cuadroSeccion";
 import { montarMenusBarra } from "../shared/menuDiseno";
+import { registrarGuiaFem } from "../shared/guiaFem";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -602,6 +603,7 @@ function ocultarEjemploEmbebido() {
   const f = document.getElementById(EMBEBIDO_ID);
   if (f) f.remove();
   if (viewerElm) viewerElm.style.display = "";
+  document.body.classList.remove("hk-embebido");
 }
 
 function mostrarEjemploEmbebido(url: string, nombre: string) {
@@ -610,12 +612,19 @@ function mostrarEjemploEmbebido(url: string, nombre: string) {
     f = document.createElement("iframe");
     f.id = EMBEBIDO_ID;
     // z-index 1: por encima del lienzo 3D, por DEBAJO de los paneles (100+).
-    f.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;" +
+    // El ejemplo trae SU panel pegado al borde derecho. Con el iframe a pantalla completa ese
+    // panel queda DEBAJO del selector del workspace y se ven dos columnas de controles encimadas
+    // (Jorge, 22-sep: «los sólidos… hay errores»). Se le reserva la franja del selector.
+    f.style.cssText = "position:fixed;left:0;top:0;bottom:0;width:calc(100% - 352px);height:100%;border:0;" +
       "z-index:1;background:var(--cad-bg,#15161a)";
     document.body.appendChild(f);
   }
   f.title = nombre;
   if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+  // Los controles del visor del WORKSPACE sobran mientras se ve un ejemplo embebido: mandan
+  // sobre un lienzo que está apagado, y encima tapan los del ejemplo (Jorge, 22-sep: «los sólidos
+  // … hay errores»). Se esconden ellos y su lengüeta; el selector de ejemplo se queda.
+  document.body.classList.add("hk-embebido");
   // El visor 3D del workspace se apaga mientras tanto: el ejemplo trae el suyo
   // y dos contextos WebGL vivos a la vez es tirar memoria (la maquina tiene 4 GB).
   if (viewerElm) viewerElm.style.display = "none";
@@ -3009,6 +3018,12 @@ if (window.innerWidth > 600) {
       html.hk-enlace #hk-settings-toggle, html.hk-enlace #hk-pane-toggle {
         display: none !important;
       }
+      /* Ejemplo EMBEBIDO (trae su propio visor y sus propios controles): los del workspace
+         mandarían sobre un lienzo apagado y taparían los suyos. */
+      body.hk-embebido #settings, body.hk-embebido #hk-settings-toggle,
+      body.hk-embebido #hk-nav-camara, body.hk-embebido #legend {
+        display: none !important;
+      }
       html.hk-enlace #settings {
         position: fixed !important; top: 50vh !important; left: 0 !important; right: 0 !important; bottom: auto !important;
         width: 100vw !important; max-width: 100vw !important;
@@ -4034,15 +4049,13 @@ function buildParamsPane() {
     const url = currentExample.standaloneUrl;
     // Ya NO hay boton que saque al usuario de la app: el ejemplo esta puesto en
     // el lienzo (ver `mostrarEjemploEmbebido`). Aqui solo queda recargarlo.
-    const note = pane.addFolder({ title: "ℹ Ejemplo con panel propio", expanded: true });
-    note.addButton({ title: "↻ Recargar el ejemplo" }).on("click", () => {
+    // Sin carteles: el ejemplo ya está en el lienzo con sus controles a la vista. Solo el botón
+    // de recargar, que es lo único que hace falta (22-sep-2026, Jorge: «nada de awatif»).
+    pane.addButton({ title: "↻ Recargar el ejemplo" }).on("click", () => {
       const f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
       if (f) f.setAttribute("src", url);
       else mostrarEjemploEmbebido(url, currentExample?.name ?? url);
     });
-    // Era un BOTÓN con el clic vacío: se podía pulsar y no pasaba nada. Es un cartel,
-    // así que va como texto de solo lectura.
-    note.addBinding({ v: "trae sus propios controles" }, "v", { readonly: true, label: "Ojo" });
     currentPane = pane;
     return;
   }
@@ -8526,6 +8539,7 @@ function montarAgenteSiempre() {
     montarBotonGrabar();     // el boton rojo: graba en video lo que se hace
     montarBotonGif();        // y el 🎞 de al lado: lo mismo pero en GIF
     montarBotonSeccion();    // 📐 la seccion de la barra designada, dibujada y acotada
+    registrarGuiaFem();      // 📘 Guía de elementos finitos: guion escrito, no IA
     montarMenusBarra();      // Analisis / Diseno / Exportar: siempre, no solo si hay diseno
     montarLanzadorAgente();
   } catch (e) {

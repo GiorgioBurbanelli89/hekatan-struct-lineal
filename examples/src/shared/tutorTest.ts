@@ -23,8 +23,8 @@ import { registrarDiseno } from "./menuDiseno";
 
 /** Qué señala el cursor: rótulo de control, selector CSS, «modelo», o nudos del modelo. */
 export type Blanco = string | { nudos: number[] };
-/** Cota entre dos nudos del modelo: [nudo a, nudo b, texto, separación en px hacia fuera]. */
-export type Cota = [number, number, string, number?];
+/** Cota entre dos nudos: [nudo a, nudo b, NOMBRE opcional («l =»), separación en px]. El VALOR lo mide el modelo. */
+export type Cota = [number, number, (string | undefined)?, number?, TipoCota?];
 
 export interface Tiempo {
   voz: string | (() => string);
@@ -180,6 +180,80 @@ function rectControl(q: string): DOMRect | null {
   return fila.getBoundingClientRect();
 }
 
+/**
+ * Mide de verdad entre dos nudos del modelo ABIERTO. La cota que se dibuja no puede salir del
+ * parámetro que el guion creía (si la malla está distorsionada, ese número miente): sale de
+ * `states.nodes`, que es la geometría que el solver tiene delante.
+ */
+export function medirNudos(a: number, b: number, tipo: TipoCota = "alineada"): number | null {
+  const N = w().__hekatanStates?.nodes?.val;
+  const p = N?.[a], q = N?.[b];
+  if (!p || !q) return null;
+  const d = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+  // Como en AutoCAD: DIMALIGNED mide la distancia verdadera; DIMLINEAR mide la PROYECCIÓN
+  // (horizontal = en planta, vertical = el desnivel).
+  if (tipo === "vertical") return Math.abs(d[2]);
+  if (tipo === "horizontal") return Math.hypot(d[0], d[1]);
+  return Math.hypot(d[0], d[1], d[2]);
+}
+
+/** Número de la cota: medida real, con los decimales justos (48, 12.5, 0.375). */
+const medida = (d: number) => (+d.toFixed(DIMSTYLE.DIMDEC + (Math.abs(d) < 10 ? 1 : 0))).toString();
+
+/**
+ * Texto de una cota. El rótulo que trae el guion solo aporta el NOMBRE («l =», «h =»);
+ * el valor es siempre el medido. Si el guion traía un número y no coincide, se avisa por
+ * consola (lo recoge la caja negra) en vez de dibujar una cota falsa.
+ */
+function textoCota(a: number, b: number, dado?: string, tipo: TipoCota = "alineada"): string {
+  const d = medirNudos(a, b, tipo);
+  if (d === null) return dado ?? "";
+  const nombre = dado && dado.includes("=") ? dado.split("=")[0].trim() + " = " : "";
+  const suelto = dado && !dado.includes("=") ? dado.trim() : dado?.split("=")[1]?.trim();
+  const n = suelto === undefined ? NaN : parseFloat(suelto.replace(",", "."));
+  if (Number.isFinite(n) && Math.abs(n - d) > Math.max(5e-3, 0.005 * Math.abs(d)))
+    console.warn(`[tutor] cota ${a}-${b}: el guion decía ${suelto} y el modelo mide ${medida(d)}; se dibuja la del modelo`);
+  return nombre + medida(d);
+}
+
+/**
+ * Estilo de acotación, con los NOMBRES y los valores por defecto de AutoCAD (estilo ISO-25 de
+ * `acadiso.dwt`, leídos de un DXF real y del lector DWG `acadrust`; ver
+ * registros/2026-09-22_cotas_autocad.md). Aquí van en píxeles de pantalla, no en unidades de
+ * dibujo, porque la cota se pinta encima del lienzo 3D.
+ *
+ *   DIMEXO  hueco entre el punto acotado y el arranque de la línea de extensión
+ *   DIMEXE  cuánto sobresale la extensión por encima de la línea de cota
+ *   DIMASZ  tamaño de la flecha
+ *   DIMTXT  altura del texto
+ *   DIMGAP  hueco entre la línea de cota y el texto
+ *   DIMTAD  1 = el texto va ENCIMA de la línea (ISO); 0 = partiéndola
+ *   DIMTIH  0 = el texto va alineado con la cota, no horizontal
+ *   DIMDEC  decimales de la medida
+ */
+export const DIMSTYLE = { DIMEXO: 5, DIMEXE: 6, DIMASZ: 9, DIMTXT: 14, DIMGAP: 4, DIMTAD: 1, DIMTIH: 0, DIMDEC: 2 };
+
+/** Tipos de cota, como las órdenes de AutoCAD (DIMLINEAR, DIMALIGNED, DIMANGULAR, DIMRADIUS). */
+export type TipoCota = "alineada" | "horizontal" | "vertical";
+
+/** Dibuja una cota al estilo AutoCAD: extensiones con hueco y remate, línea con flechas y el texto encima. */
+function unaCota(p: number[], q: number[], texto: string, nx: number, ny: number, sep: number) {
+  const S = DIMSTYLE;
+  const A = [p[0] + nx * sep, p[1] + ny * sep], B = [q[0] + nx * sep, q[1] + ny * sep];
+  // extensión: arranca a DIMEXO del punto y termina DIMEXE más allá de la línea de cota
+  const ext = (o: number[], f: number[]) =>
+    `<line x1="${o[0] + nx * S.DIMEXO}" y1="${o[1] + ny * S.DIMEXO}" x2="${f[0] + nx * S.DIMEXE}" y2="${f[1] + ny * S.DIMEXE}" stroke="#fbbf24" stroke-width="1"/>`;
+  // texto ENCIMA de la línea (DIMTAD 1) y girado con ella (DIMTIH 0), nunca cabeza abajo
+  let ang = (Math.atan2(B[1] - A[1], B[0] - A[0]) * 180) / Math.PI;
+  if (ang > 90 || ang < -90) ang += 180;
+  const cx = (A[0] + B[0]) / 2 + nx * (S.DIMGAP + S.DIMTXT * 0.35);
+  const cy = (A[1] + B[1]) / 2 + ny * (S.DIMGAP + S.DIMTXT * 0.35);
+  return ext(p, A) + ext(q, B) +
+    `<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#fbbf24" stroke-width="1.6" marker-start="url(#hk-fl)" marker-end="url(#hk-fl)"/>` +
+    `<text x="${cx}" y="${cy}" transform="rotate(${ang.toFixed(1)} ${cx} ${cy})" fill="#fde68a" font-family="system-ui" ` +
+    `font-weight="700" font-size="${S.DIMTXT}" text-anchor="middle" paint-order="stroke" stroke="#0b1020" stroke-width="4">${texto}</text>`;
+}
+
 /** Dibuja cotas entre nudos: línea con flechas, líneas de referencia y la medida, separadas hacia fuera. */
 function dibujarCotas(lista?: Cota[]) {
   if (!capa) return;
@@ -189,21 +263,19 @@ function dibujarCotas(lista?: Cota[]) {
   let sx = 0, sy = 0, sn = 0;
   for (let k = 0; k < N.length; k++) { const q = aPantalla(k); if (q) { sx += q[0]; sy += q[1]; sn++; } }
   const mx = sx / (sn || 1), my = sy / (sn || 1);
-  for (const [a, b, texto, sepIn = 36] of lista ?? []) {
+  for (const [a, b, dado, sepIn = 36, tipo = "alineada"] of lista ?? []) {
     const p = aPantalla(a), q = aPantalla(b); if (!p || !q) continue;
+    const texto = textoCota(a, b, dado, tipo);
     const sep = Math.abs(sepIn);
-    const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
-    let nx = -(q[1] - p[1]) / L, ny = (q[0] - p[0]) / L;
-    if (nx * ((p[0] + q[0]) / 2 - mx) + ny * ((p[1] + q[1]) / 2 - my) < 0) { nx = -nx; ny = -ny; }
-    nx *= sep; ny *= sep;
-    const A = [p[0] + nx, p[1] + ny], B = [q[0] + nx, q[1] + ny];
+    // DIMLINEAR mide la proyección sobre el eje; DIMALIGNED, la distancia verdadera. Al dibujar,
+    // la horizontal lleva la línea de cota horizontal y la vertical, vertical.
+    const P = tipo === "horizontal" ? [p[0], Math.max(p[1], q[1])] : tipo === "vertical" ? [Math.max(p[0], q[0]), p[1]] : p;
+    const Q = tipo === "horizontal" ? [q[0], Math.max(p[1], q[1])] : tipo === "vertical" ? [Math.max(p[0], q[0]), q[1]] : q;
+    const L = Math.hypot(Q[0] - P[0], Q[1] - P[1]) || 1;
+    let nx = -(Q[1] - P[1]) / L, ny = (Q[0] - P[0]) / L;
+    if (nx * ((P[0] + Q[0]) / 2 - mx) + ny * ((P[1] + Q[1]) / 2 - my) < 0) { nx = -nx; ny = -ny; }
     const g = document.createElementNS(NS, "g");
-    g.innerHTML =
-      `<line x1="${p[0]}" y1="${p[1]}" x2="${A[0] + nx * 0.15}" y2="${A[1] + ny * 0.15}" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3 3"/>` +
-      `<line x1="${q[0]}" y1="${q[1]}" x2="${B[0] + nx * 0.15}" y2="${B[1] + ny * 0.15}" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3 3"/>` +
-      `<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#fbbf24" stroke-width="2" marker-start="url(#hk-fl)" marker-end="url(#hk-fl)"/>` +
-      `<rect x="${(A[0] + B[0]) / 2 - texto.length * 4.6 - 6}" y="${(A[1] + B[1]) / 2 - 12}" width="${texto.length * 9.2 + 12}" height="22" rx="5" fill="#111827" stroke="#fbbf24"/>` +
-      `<text x="${(A[0] + B[0]) / 2}" y="${(A[1] + B[1]) / 2 + 5}" fill="#fde68a" font-family="system-ui" font-weight="700" font-size="15" text-anchor="middle">${texto}</text>`;
+    g.innerHTML = unaCota(P, Q, texto, nx, ny, sep);
     g.style.opacity = "0"; g.style.transition = "opacity .5s";
     capa.appendChild(g); requestAnimationFrame(() => (g.style.opacity = "1"));
   }
@@ -274,6 +346,10 @@ async function ponerParams(p?: Record<string, number>) {
   Object.assign(w().__hekatanParams(), p);
   w().__hekatanRebuild();
   await espera(500);
+  // El rebuild reencuadra en isométrica: hay que volver a mirar el plano de frente, o las cotas
+  // salen escorzadas y no se pueden comprobar contra el paper.
+  encuadrar();
+  await espera(250);
 }
 
 function pintarFicha() {
@@ -327,10 +403,34 @@ let panelLoAbriTutor = false, panelAntes = false;
 const panelOculto = () => document.body.classList.contains("hk-pane-oculto");
 const pulsarPanel = () => document.getElementById("hk-pane-toggle")?.click();
 
+/**
+ * Si el modelo es PLANO (una membrana, una placa, un pórtico), mira de frente a su plano.
+ * Jorge: «explicar en 2D, el 3D solo de referencia». En isométrica una cota de 48 se dibuja
+ * escorzada y el que mira no puede comprobarla contra el paper; de frente, sí.
+ * El plano se saca de la caja del modelo: la dirección en la que no tiene espesor es la normal.
+ */
+function vistaPlana() {
+  const ctx = w().__hekatanViewerCtx?.(); const N = w().__hekatanStates?.nodes?.val;
+  if (!ctx || !N?.length) return;
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (const p of N) for (let k = 0; k < 3; k++) { if (p[k] < mn[k]) mn[k] = p[k]; if (p[k] > mx[k]) mx[k] = p[k]; }
+  const d = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]];
+  const may = Math.max(...d);
+  const n = d.indexOf(Math.min(...d));                       // la dirección más delgada
+  if (d[n] > 0.02 * may) return;                             // no es plano: se deja la isométrica
+  const c = ctx.camera, t = ctx.controls.target;
+  t.set((mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2);
+  const r = Math.hypot(...d) * 1.6 + 1;
+  c.position.set(t.x + (n === 0 ? r : 0), t.y + (n === 1 ? r : 0), t.z + (n === 2 ? r : 0));
+  c.up.set(n === 2 ? 0 : 0, n === 2 ? 1 : 0, n === 2 ? 0 : 1);   // arriba = Z, salvo si se mira desde Z
+  c.lookAt(t); c.updateProjectionMatrix(); ctx.controls.update?.(); ctx.render();
+}
+
 /** Reencuadra el modelo en SU franja y lo aleja un poco: las cotas van por fuera y necesitan sitio. */
 function encuadrar() {
   w().__hekatanAutoFit?.();
   setTimeout(() => {
+    vistaPlana();                                    // después del autoFit, que mueve la cámara él también
     const ctx = w().__hekatanViewerCtx?.(); if (!ctx) return;
     const t = ctx.controls.target, c = ctx.camera;
     if (c.isOrthographicCamera) c.zoom /= 1.3;
