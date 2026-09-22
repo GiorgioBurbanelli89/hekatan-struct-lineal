@@ -1,0 +1,10 @@
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
+const p = await b.newPage();
+await p.setViewport({ width: 1400, height: 950 });
+await p.goto("https://giorgioburbanelli89.github.io/hekatan-lisp/conferencia/?v=" + Date.now(), { waitUntil: "networkidle0" });
+await new Promise(r => setTimeout(r, 2500));
+console.log("pestana:", await p.title());
+console.log("h1     :", (await p.evaluate(() => document.querySelector("h1").innerText)).replace(/\n/g, " "));
+await p.screenshot({ path: process.argv[2] });
+await b.close();

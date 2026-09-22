@@ -48,8 +48,12 @@ export const edificioAporticado: ExampleDef = {
   defaultShellResult: "none",
   availableShellResults: [
     "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
     "bendingXX", "bendingYY", "bendingXY",
-    "displacementZ", "vonMises",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
   ],
   hasModal: true,
   params: {

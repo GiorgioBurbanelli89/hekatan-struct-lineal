@@ -62,6 +62,9 @@ class NodeInputs:
     area_springs_nodal: set[int] = field(default_factory=set)
     # (elemento, nudo) de los nudos COLGADOS sobre una arista que hay que atar; `edge etabs`
     hanging_nodes: list[tuple[int, int]] = field(default_factory=list)
+    # `edge lineal`: el nudo colgado sigue LINEAL a su arista en los 6 GDL (Line Constraint de SAFE/SAP2000);
+    # False = `edge etabs` (flecha por Hermite con los giros de los extremos)
+    hanging_linear: bool = False
     # Diafragma RIGIDO: nudo -> grupo (0 = ninguno). ux, uy, rz atados a un maestro
     # virtual en el centro del grupo; uz, rx, ry libres (el "Rigid" de ETABS).
     diaphragms: dict[int, int] = field(default_factory=dict)

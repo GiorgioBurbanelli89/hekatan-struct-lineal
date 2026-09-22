@@ -757,6 +757,34 @@ function tituloHoja(t: string): string {
   return l.replace(/[*`$]/g, "").slice(0, 60) || "Hoja \u00b7 Hekatan LISP";
 }
 
+/**
+ * Ollama SOLO si de verdad esta corriendo aqui.
+ *
+ * Jorge, 21-sep-2026: «no pongas Ollama por defecto, sino si esta local».
+ * Y tiene razon: Ollama era el primero de la lista, asi que un ingeniero que
+ * abria el agente se encontraba un proveedor que no tiene instalado, veia un
+ * fallo de red y se iba pensando que el agente no funciona.
+ *
+ * Se le pregunta a Ollama si esta ahi (una peticion corta a su puerto). Si
+ * contesta, se deja elegido; si no, se pasa a Gemini, que es el que cualquiera
+ * puede usar con una clave gratis.
+ *
+ * Desde el sitio PUBLICO no se puede llegar a Ollama aunque este corriendo
+ * (Chrome bloquea publico -> localhost), asi que alli ni se intenta.
+ */
+async function ollamaEstaAqui(): Promise<boolean> {
+  const local = location.protocol === "file:" ||
+                /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if (!local) return false;
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 900);
+    const r = await fetch("http://localhost:11434/api/tags", { signal: c.signal });
+    clearTimeout(t);
+    return r.ok;
+  } catch { return false; }
+}
+
 function crearVentana() {
   const v = document.createElement("div");
   v.id = "hk-agente-ia";
@@ -829,7 +857,14 @@ function crearVentana() {
     pista.textContent = p.pista;
   };
   const pidGuardado = aiStorage.getProvider();
-  selP.value = PROVEEDORES.some((p) => p.id === pidGuardado) ? pidGuardado : "ollama";
+  // Si el usuario ya eligio, se respeta. Si no, Gemini — y solo se cambia a
+  // Ollama cuando se comprueba que esta corriendo en esta misma maquina.
+  selP.value = PROVEEDORES.some((p) => p.id === pidGuardado) ? pidGuardado : "gemini";
+  if (!PROVEEDORES.some((p) => p.id === pidGuardado)) {
+    ollamaEstaAqui().then((hay) => {
+      if (hay && selP.value === "gemini") { selP.value = "ollama"; refrescar(); }
+    });
+  }
   selP.onchange = () => { aiStorage.setProvider(selP.value); refrescar(); };
   inM.onchange = () => aiStorage.setModel(`agente_${selP.value}`, inM.value.trim());
   const guardarClave = () => {

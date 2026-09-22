@@ -45,7 +45,15 @@ export const membranaCSI: ExampleDef = {
   name: "Membrana CSI (Shell-Membrane + tri/trap load)",
   category: "4️⃣ Mixtos · 🔀 Losas con vigas",
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "membraneXX", "membraneYY", "membraneXY", "displacementX", "displacementY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     Lx: { default: 5.0,  min: 2, max: 10, step: 0.25, label: "Lx (m)" },

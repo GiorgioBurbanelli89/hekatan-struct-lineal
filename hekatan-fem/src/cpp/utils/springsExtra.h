@@ -14,6 +14,11 @@
 //              HERMITE con w y el giro sobre la arista de los dos extremos (0.11 %),
 //              in-plano y giros lineales. Se impone por PENALIZACION: K += a C^T C
 //              con a = 1e6 * max diagonal de los GDL implicados (por tipo).
+//   gdl = -4 : NUDO COLGADO con interpolacion LINEAL en los 6 GDL (`edge lineal`): el AUTO EDGE
+//              CONSTRAINT de SAFE / SAP2000 (sus `@LC`, Line Constraint). Medido en el f2k del radier
+//              MOD_002 (SAFE 22.6): la carga de un punto a t = 0.189 de su arista llega 0.8108/0.1892
+//              a los extremos (lineal; Hermite daria 0.906). Tolerancia de "esta en la arista" 1e-4*L:
+//              SAFE escribe los nudos de su malla con ~1e-6 m de ruido fuera de la recta.
 #include <Eigen/Sparse>
 #include <array>
 #include <cmath>
@@ -125,7 +130,8 @@ inline void addAreaSpringLumped(Eigen::SparseMatrix<double> &K, const std::vecto
  * Devuelve false si h no esta sobre ninguna arista de en (con tolerancia).
  */
 inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::vector<Node> &nodes,
-                                     const std::vector<int> &en, int h, int numNodes) {
+                                     const std::vector<int> &en, int h, int numNodes, bool lineal = false,
+                                     double escala = 0.0) {
     const int nn = (int)en.size();
     if ((nn != 3 && nn != 4) || h < 0 || h >= numNodes) return false;
     const std::array<double, 3> n = normalDe(nodes, en);
@@ -141,14 +147,15 @@ inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::
         const double tk = (p[0] * d[0] + p[1] * d[1] + p[2] * d[2]) / (Lk * Lk);
         if (tk <= 1e-6 || tk >= 1 - 1e-6) continue;
         const double q[3] = { p[0] - tk * d[0], p[1] - tk * d[1], p[2] - tk * d[2] };
-        if (std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]) > 1e-6 * Lk) continue;
+        if (std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]) > (lineal ? 1e-4 : 1e-6) * Lk) continue;
         ia = i; ib = j; t = tk; L = Lk; s = { d[0] / Lk, d[1] / Lk, d[2] / Lk };
         break;
     }
     if (ia < 0) return false;
     const std::array<double, 3> m = { s[1] * n[2] - s[2] * n[1], s[2] * n[0] - s[0] * n[2], s[0] * n[1] - s[1] * n[0] };
-    const double H1 = 1 - 3 * t * t + 2 * t * t * t, H2 = (t - 2 * t * t + t * t * t) * L;
-    const double H3 = 3 * t * t - 2 * t * t * t,    H4 = (-t * t + t * t * t) * L;
+    // `edge lineal` (gdl -4): la flecha tambien lineal, sin los giros de los extremos
+    const double H1 = lineal ? 1 - t : 1 - 3 * t * t + 2 * t * t * t, H2 = lineal ? 0.0 : (t - 2 * t * t + t * t * t) * L;
+    const double H3 = lineal ? t : 3 * t * t - 2 * t * t * t,        H4 = lineal ? 0.0 : (-t * t + t * t * t) * L;
     // penalizacion por tipo de GDL: traslacion y giro, con la diagonal de K
     double kT = 0.0, kR = 0.0;
     for (int nd : { h, ia, ib }) for (int p = 0; p < 3; ++p) {
@@ -157,7 +164,11 @@ inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::
     }
     if (kT <= 0.0) kT = 1.0;
     if (kR <= 0.0) kR = kT * L * L;
-    const double aT = 1e6 * kT, aR = 1e6 * kR;
+    // `escala` > 0: penalizacion FIJA = 1e6 * max|diag K| antes de atar ningun nudo (como el Python).
+    // Con la diagonal LOCAL, un nudo colgado de otro colgado (624 -> ~202 -> arista, en el radier
+    // MOD_002) leia la diagonal ya penalizada y la penalizacion crecia 1e6 por eslabon: la LDLT
+    // fallaba y la LU devolvia basura (reaccion -77 %).
+    const double aT = 1e6 * (escala > 0 ? escala : kT), aR = 1e6 * (escala > 0 ? escala : kR);
     // cada restriccion: fila C (indice gdl -> coeficiente); K += a * C^T C
     std::vector<std::pair<int, double>> C;
     auto aplicar = [&](double a) {
@@ -194,18 +205,40 @@ inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::
     return true;
 }
 
-/** Despacha un registro de la lista de muelles. Devuelve true si lo consumio (nudo negativo). */
+/** Registros de nudo colgado (-2/-4) que se aplican AL FINAL, con una sola escala de penalizacion. */
+struct Colgado { int elem; int h; bool lineal; };
+
+/** Despacha un registro de la lista de muelles. Devuelve true si lo consumio (nudo negativo).
+ *  Con `pendientes`, los nudos colgados no se aplican aqui: se guardan para aplicarColgados(). */
 inline bool despacharMuelleExtra(Eigen::SparseMatrix<double> &K, const std::vector<Node> &nodes,
                                  const std::vector<unsigned int> &idx, const std::vector<unsigned int> &sizes,
-                                 int nodo, int d, double k) {
+                                 int nodo, int d, double k, std::vector<Colgado> *pendientes = nullptr) {
     if (nodo >= 0) return false;
+    if (pendientes && (d == -2 || d == -4)) { pendientes->push_back({ -nodo - 1, (int)std::llround(k), d == -4 }); return true; }
     std::vector<int> en;
     nodosDeElemento(idx, sizes, -nodo - 1, en);
     if (en.empty()) return true;
     if (d == -1) addAreaSpringConsistent(K, nodes, en, k);
     else if (d == -3) addAreaSpringLumped(K, nodes, en, k);
     else if (d == -2) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size());
+    else if (d == -4) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), true);
     return true;
+}
+
+/** Aplica los nudos colgados guardados con penalizacion 1e6 * max|diag K| (K SIN penalizar), igual que
+ *  `solver.py` del motor de Python. */
+inline void aplicarColgados(Eigen::SparseMatrix<double> &K, const std::vector<Node> &nodes,
+                            const std::vector<unsigned int> &idx, const std::vector<unsigned int> &sizes,
+                            const std::vector<Colgado> &pendientes) {
+    if (pendientes.empty()) return;
+    double escala = 0.0;
+    for (int i = 0; i < K.rows(); ++i) escala = std::max(escala, std::abs(K.coeff(i, i)));
+    if (escala <= 0.0) escala = 1.0;
+    std::vector<int> en;
+    for (const Colgado &c : pendientes) {
+        nodosDeElemento(idx, sizes, c.elem, en);
+        if (!en.empty()) addHangingNodeConstraint(K, nodes, en, c.h, (int)nodes.size(), c.lineal, escala);
+    }
 }
 
 } // namespace springsExtra

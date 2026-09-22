@@ -90,8 +90,15 @@ export const estructuraMixta: ExampleDef = {
   name: "🧬 Estructura mixta — hormigón + acero + CFT + madera (modelo real)",
   category: "4️⃣ Mixtos · 🏢 Edificios",
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "vonMises", "bendingXX", "bendingYY",
-                          "membraneXX", "membraneYY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     // El modelo viene dado: no hay luces ni pisos que tocar. Lo único que se
     // ofrece es CÓMO mirarlo, y un factor para escalar sus cargas.

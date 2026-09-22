@@ -1,0 +1,21 @@
+import puppeteer from "puppeteer";
+import { createServer } from "http";
+import { readFileSync, existsSync, statSync } from "fs";
+import { join, extname, dirname } from "path"; import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const BASE = "/hekatan-struct-lineal/"; const raiz = join(__dirname, "..", "website", "src", "examples");
+const MIME = {".html":"text/html",".js":"text/javascript",".css":"text/css",".wasm":"application/wasm",".json":"application/json",".png":"image/png",".svg":"image/svg+xml",".woff2":"font/woff2"};
+const srv = createServer((req,res)=>{ let p=decodeURIComponent((req.url||"/").split("?")[0]); if(p.startsWith(BASE))p=p.slice(BASE.length-1); let f=join(raiz,p); if(existsSync(f)&&statSync(f).isDirectory())f=join(f,"index.html"); if(!existsSync(f)){res.writeHead(404);return res.end("404");} res.writeHead(200,{"content-type":MIME[extname(f)]||"application/octet-stream"}); res.end(readFileSync(f)); });
+await new Promise(r=>srv.listen(4783,r));
+const nav=await puppeteer.launch({headless:"new",args:["--no-sandbox","--enable-unsafe-swiftshader","--use-angle=swiftshader","--enable-webgl","--ignore-gpu-blocklist"]});
+const pag=await nav.newPage(); await pag.setViewport({width:1280,height:800,deviceScaleFactor:2});
+pag.on("pageerror",e=>console.log("pageerror:",e.message.slice(0,140)));
+pag.on("console",m=>{ const t=m.text(); if(/IFC|error/i.test(t)) console.log("  console:",t.slice(0,140)); });
+await pag.goto("http://localhost:4783"+BASE+"workspace/?t=ifc-viewer",{waitUntil:"networkidle2",timeout:180000});
+await new Promise(r=>setTimeout(r,4000));
+// inyectar la malla (la sirve el server) y reconstruir
+await pag.evaluate(async (base)=>{ const M=await fetch(base+"ifc_church.json").then(r=>r.json()); window.__hekatanIfcMesh=M; try{window.__hekatanRebuild&&window.__hekatanRebuild();}catch(e){} try{window.__hekatanAutoFit&&window.__hekatanAutoFit();}catch(e){} }, BASE);
+await new Promise(r=>setTimeout(r,5000));
+await pag.screenshot({path: process.env.OUT});
+console.log("shot ->", process.env.OUT);
+await nav.close(); srv.close();

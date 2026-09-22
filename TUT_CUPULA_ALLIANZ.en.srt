@@ -1,0 +1,40 @@
+1
+00:00:00,050 --> 00:00:15,602
+We are going to draw two curved surfaces in Hekatan Struct, from the menu and with the cursor: a dome and the skin of the Allianz Arena. Both are built on auxiliary lines, which are the guide and delete themselves when done, and both were checked against ETABS node by node.
+
+2
+00:00:15,850 --> 00:00:32,434
+New file. I press Plane X Z, a true orthographic elevation. In Precision I turn on grid snap, so every click lands exactly on the grid, set eight segments per arc and tick Curves as auxiliary guide: whatever I draw now is construction, not structure.
+
+3
+00:00:32,680 --> 00:00:58,408
+The meridian of the dome: I press Arc by three points and click three times: the springing at five zero, the middle point at three four, and the crown at zero five, on the axis. Next to the cursor you see the coordinates of the snapped point; with Line or Polyline, also the length and angle of the segment, as in AutoCAD. The arc appears in cyan, in eight segments. And with Measure, two clicks from the centre to the springing: five metres, the radius.
+
+4
+00:00:58,660 --> 00:01:10,396
+Now I select it with a window: press Select, one click at a corner, move the cursor and another click at the opposite corner, as in AutoCAD. The eight auxiliary lines are selected.
+
+5
+00:01:10,650 --> 00:01:24,762
+In Areas I set sixteen sectors and press Revolve selection. A single click on the vertical axis, and the meridian spins: every point of the guide becomes a ring of sixteen nodes, the panels appear between rings and the guide deletes itself.
+
+6
+00:01:25,010 --> 00:01:48,410
+Isometric view. One hundred twenty panels and one hundred twenty-nine nodes, all on the sphere of radius five, and not a single loose bar. Look at the pole from above: the node on the axis cannot give quadrilaterals, so the cap is closed with kites, convex four-node panels, no collapsed triangles. Against ETABS, the deflection is zero point zero forty millimetres in both programs.
+
+7
+00:01:48,660 --> 00:02:07,956
+Now the Allianz, at one to ten scale. I clear everything and switch to plan. Four segments per corner, a five metre fillet, still as auxiliary guide, and Slab with fillets: two clicks at the corners, minus thirteen minus twelve and thirteen twelve, and the twenty-six by twenty-four outline with rounded corners appears, in cyan.
+
+8
+00:02:08,210 --> 00:02:30,674
+Back to the elevation, I draw the bulge with Parabola by three points: at the foot sixteen zero, at mid height it bulges one metre, seventeen two, and at the top it returns to sixteen four. Twelve segments in height. I draw it away from the outline, because in the elevation all its vertices fall on the same pixel and the snap would grab any of them. With Measure I check the bulge: exactly one metre.
+
+9
+00:02:30,920 --> 00:02:50,528
+A single window selects the outline and the profile, fifty-two auxiliary lines. I press Sweep in elevation and click once at the centre of the plan: at every height of the profile, the outline moves outward by the bulge, the panels appear between rings and the guides are deleted. Four hundred eighty panels and five hundred twenty nodes.
+
+10
+00:02:50,780 --> 00:03:09,428
+In isometric you see the skin of the Allianz, clean: the rounded plan and the bulge in height, with no construction line left. Against ETABS the deflection is one point sixty-three millimetres in both programs, worst node at zero point zero eleven percent. The revolution is the same sweep with a circular outline.
+

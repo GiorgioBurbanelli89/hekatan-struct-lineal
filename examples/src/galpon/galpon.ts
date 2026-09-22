@@ -24,7 +24,15 @@ export const galpon: ExampleDef = {
   name: "Galpón (nave industrial)",
   category: "4️⃣ Mixtos · 🏢 Edificios",
   defaultShellResult: "none",
-  availableShellResults: ["none", "membraneXX", "membraneYY", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     span:     P("Geometría", "Luz (m)", 12, 6, 30, 0.5),

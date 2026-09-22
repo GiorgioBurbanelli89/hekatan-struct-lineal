@@ -355,7 +355,16 @@ export const plantillas: ExampleDef = {
   // desplazamiento se ven los paños hundiéndose entre vigas, que es lo que hay
   // que ver al abrir una plantilla.
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "vonMises"],
+  // los 17 campos del visor: recortarlos escondia M12 (la torsion de la losa)
+  availableShellResults: [
+    "none",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: PARAMS,
 

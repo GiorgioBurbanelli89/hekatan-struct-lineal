@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
+const p = await b.newPage();
+const errs = [], cons = [];
+p.on("pageerror", (e) => errs.push(String(e).slice(0, 200)));
+p.on("console", (m) => { if (m.type() === "error") cons.push(m.text().slice(0, 200)); });
+await p.setViewport({ width: 1500, height: 900 });
+await p.goto(process.argv[2], { waitUntil: "networkidle2", timeout: 120000 });
+await new Promise((r) => setTimeout(r, 16000));
+const bs = await p.evaluate(() => Array.from(document.querySelectorAll("#hk-cad-tit button")).map((e) => (e.textContent || "").trim()));
+console.log("botones:", JSON.stringify(bs));
+console.log("pageerror:", errs.slice(0, 3));
+console.log("console.error:", cons.slice(0, 3));
+await b.close();

@@ -43,7 +43,15 @@ export const zapataAisladaValidacion: ExampleDef = {
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   benchmark: true,  // 🏁 Validación Bowles 1996 — referencia Winkler clásica
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   guide: [
     "Geometría: ajustá Lz, Bz (m) — dimensiones de la zapata en planta",
     "Material suelo: q_adm (tonf/m²) presión admisible · ks (tonf/m³) módulo Bowles",

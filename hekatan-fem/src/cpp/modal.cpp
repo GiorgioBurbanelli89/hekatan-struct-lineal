@@ -525,14 +525,16 @@ extern "C"
             nodes, element_indices, element_sizes, elementInputs, dof);
 
         // Resortes a la diagonal de K, ANTES de reducir por diafragma.
+        std::vector<springsExtra::Colgado> colgados;   // nudos colgados: al final, con UNA escala
         for (int i = 0; i < num_springs; ++i) {
             const int nodo = (int)springs_flat_ptr[3 * i];
             const int d    = (int)springs_flat_ptr[3 * i + 1];
             const double k = springs_flat_ptr[3 * i + 2];
-            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, nodo, d, k)) continue;
+            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, nodo, d, k, &colgados)) continue;
             if (nodo < 0 || nodo >= num_nodes || d < 0 || d > 5 || k == 0.0) continue;
             K_global.coeffRef(nodo * 6 + d, nodo * 6 + d) += k;
         }
+        springsExtra::aplicarColgados(K_global, nodes, element_indices, element_sizes, colgados);
         if (etabs_wall_joint) addEtabsWallJoint(K_global, nodes, element_indices, element_sizes, elementInputs);
 
         // La masa se arma en ensamblarMasa() (arriba): los mismos pasos 2a,

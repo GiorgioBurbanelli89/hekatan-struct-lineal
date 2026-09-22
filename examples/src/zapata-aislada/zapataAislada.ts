@@ -114,7 +114,15 @@ export const zapataAislada: ExampleDef = {
   name: "Zapata Aislada (Ecuador q_adm tonf/m²)",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     // Zapata aislada con defaults que permiten ver deformación cóncava (flexible footing).

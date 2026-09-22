@@ -60,7 +60,15 @@ export const edificioComparativaFem: ExampleDef = {
   category: "1️⃣ Frames · 🎯 n GDL Sistemas",
   benchmark: true,  // 🏁 Comparativa cruzada Hekatan vs OpenSees / CalculiX / Code Aster
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "bendingXX", "bendingYY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params,
   build: edificioAporticado.build,

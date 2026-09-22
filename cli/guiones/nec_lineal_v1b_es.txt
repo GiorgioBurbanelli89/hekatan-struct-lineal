@@ -1,0 +1,16 @@
+Se encienden dos cosas: la tabla de modos y el espectro. Sin marcarlas, el análisis corre pero no se ve.
+Y se lanza el análisis con un solo botón. Tarda algo más de un minuto: está resolviendo el problema de valores propios de quinientos cuarenta y cinco nudos.
+Este es el espectro de la Nec{nec} quince, dibujado por el motor, no copiado: sube hasta te cero, se mantiene plano, y cae desde te ce.
+Te cero vale cero coma diez por Fs{efe ese} por Fd{efe de} entre Fa{efe a}: cero coma trescientos cuatro. Te ce, con cero coma cincuenta y cinco: uno coma seiscientos setenta y dos.
+La meseta es eta por Z{zeta} por Fa{efe a}: uno coma ocho por cero coma cuarenta por uno, cero coma setenta y dos veces la gravedad. Ahí cae este edificio.
+Ahora el cortante estático. La fórmula es I{i} por Sa{ese a} de te a, entre R{erre} por fi pe por fi e, por el peso. Capítulo seis punto tres punto dos, página sesenta y uno.
+Primero el periodo aproximado: te a igual a Ce te por la altura elevada a ene. Para un dual con muros, cero coma cero cincuenta y cinco por doce elevado a cero coma setenta y cinco: cero coma trescientos cincuenta y cinco segundos.
+Con ese periodo se entra al espectro y sale Sa{ese a}: cero coma setenta y dos, porque cae dentro de la meseta.
+El coeficiente de cortante es Sa{ese a} entre erre: cero coma setenta y dos entre ocho, cero coma cero nueve. Y el peso sísmico del modelo, trescientos cincuenta y seis coma veintiocho toneladas fuerza.
+Multiplicando: treinta y dos coma cero siete toneladas fuerza. Ese es el cortante basal estático, y SAP dos mil con la misma malla da lo mismo.
+El dinámico empieza por los modos. Aquí están, con su frecuencia, su periodo y las seis participaciones de masa.
+Modo uno, modo dos y modo tres: se ven moverse. El primero traslada en equis, el segundo mezcla ye con torsión, el tercero es el segundo modo en equis.
+Las seis sumatorias son la prueba: la norma pide al menos noventa por ciento de masa en cada dirección horizontal. Capítulo seis punto dos punto dos e, página cincuenta y ocho.
+Cada modo aporta su propio cortante, y no se suman a pelo: se combinan con la Ce cu ce, porque cada modo llega a su máximo en otro instante.
+Y el control: el dinámico no puede bajar del ochenta por ciento del estático si la estructura es regular, ni del ochenta y cinco si es irregular. Aquí da ochenta y dos coma seis: pasa.
+Hasta aquí la Nec{nec} quince. En el capítulo seis, el borrador de veintitrés: qué cambia, y cuánto sube el cortante de este mismo edificio.

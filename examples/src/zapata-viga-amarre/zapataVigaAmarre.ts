@@ -28,7 +28,15 @@ export const zapataVigaAmarre: ExampleDef = {
   name: "Zapata + Viga de Amarre + Pedestal",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     // ── 📐 Geometría zapatas ─────────────────────────────────────

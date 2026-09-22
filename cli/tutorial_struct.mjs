@@ -384,6 +384,17 @@ const api = {
              y: Math.max(0, Math.min(ALTO_UTIL - ZH, Math.round(r.y + r.h / 2 - ZH / 2))) };
     return true;
   },
+  /**
+   * PRIMER PLANO DE LA PARTE DE ABAJO de la ventana: la ventana de comandos y la barra de estado.
+   * La vista general se graba recortada a 640 de los 720 px (abajo va la franja del subtítulo), así
+   * que esas dos zonas NUNCA salían en un vídeo (Jorge, 19-sep-2026: «esa no es la ventana principal»;
+   * en la de verdad la ventana de comandos está a la vista). El primer plano es un recorte 1:1 de la
+   * ventana entera, y aquí se le deja bajar hasta el borde: y de 240 a 720.
+   */
+  cercaAbajo: async (xCentro = ANCHO / 2) => {
+    zona = { x: Math.max(0, Math.min(ANCHO - ZW, Math.round(xCentro - ZW / 2))), y: ALTO - ZH };
+    return true;
+  },
   /** Cuadro + nota sobre un mando (y el cursor va hasta él). */
   marcar: async (que, texto, nota) => {
     const r = await rect(que, texto);

@@ -30,7 +30,7 @@
  */
 import puppeteer from "puppeteer";
 import { createServer } from "http";
-import { readFileSync, existsSync, statSync } from "fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join, extname } from "path";
 
@@ -45,6 +45,42 @@ const MIME = {
 
 export const hayBundle = () => existsSync(join(RAIZ_BUNDLE, "workspace", "index.html"));
 
+/**
+ * ¿El bundle es del código de HOY? Este arnés prueba el bundle construido, no las fuentes:
+ * si alguien cambia el código y no reconstruye, el test sigue midiendo la versión de ayer y
+ * da un veredicto sobre un programa que ya no existe (19-sep-2026: el caso de la animación
+ * fallaba contra un bundle de las 19:41 mientras el código ya era otro). Se compara la fecha
+ * del bundle con la del fichero fuente más nuevo que entra en él; si hay uno posterior, se
+ * NIEGA a probar y dice cuál — mejor una fila roja que diga la verdad que una verde de otro día.
+ */
+const FUENTES = [
+  ["examples", "src"], ["hekatan-ui", "src"], ["hekatan-fem", "src"],
+].map((p) => join(AQUI, "..", "..", ...p));
+function masNuevo(dir, mejor = { t: 0, f: "" }) {
+  let ents = [];
+  try { ents = readdirSync(dir, { withFileTypes: true }); } catch { return mejor; }
+  for (const e of ents) {
+    if (e.name === "node_modules" || e.name.startsWith(".")) continue;
+    const f = join(dir, e.name);
+    if (e.isDirectory()) masNuevo(f, mejor);
+    else if (/\.(ts|js|mjs|wasm|html|css)$/.test(e.name)) {
+      const t = statSync(f).mtimeMs;
+      if (t > mejor.t) { mejor.t = t; mejor.f = f; }
+    }
+  }
+  return mejor;
+}
+export function bundleDesactualizado() {
+  if (process.env.HK_BUNDLE_VIEJO_OK === "1") return null;   // escape explícito, para depurar
+  const tBundle = statSync(join(RAIZ_BUNDLE, "workspace", "index.html")).mtimeMs;
+  let mejor = { t: 0, f: "" };
+  for (const d of FUENTES) mejor = masNuevo(d, mejor);
+  if (mejor.t <= tBundle) return null;
+  const hhmm = (t) => new Date(t).toISOString().slice(0, 16).replace("T", " ");
+  return `bundle desactualizado: ${mejor.f.split(/[\\/]/).slice(-3).join("/")} (${hhmm(mejor.t)}) ` +
+         `es más nuevo que el bundle (${hhmm(tBundle)}) — corré: npm run build:deploy`;
+}
+
 const CHROME = process.env.PUPPETEER_EXECUTABLE_PATH ||
   "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
@@ -55,6 +91,8 @@ export async function abrirVisor({ puerto: puertoPedido = 4793, ancho = 1100, al
   let puerto = puertoPedido;
   if (!hayBundle())
     throw new Error("no hay bundle en website/src/examples — corré: npm run build:deploy");
+  const viejo = bundleDesactualizado();
+  if (viejo) throw new Error(viejo);
   const srv = createServer((req, res) => {
     let p = decodeURIComponent((req.url || "/").split("?")[0]);
     if (p.startsWith(BASE)) p = p.slice(BASE.length - 1);

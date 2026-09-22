@@ -29,7 +29,15 @@ export const edificioConLosa: ExampleDef = {
   name: "Edificio con Losa (sin muros)",
   category: "4️⃣ Mixtos · 🏢 Edificios",
   defaultShellResult: "bendingXX",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params,
   build: edificioAporticado.build,        // reutilizar lógica existente

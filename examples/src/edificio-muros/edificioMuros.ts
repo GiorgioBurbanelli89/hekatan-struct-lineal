@@ -51,8 +51,15 @@ export const edificioMuros: ExampleDef = {
   // ⚠️ `membraneYY` NO estaba en esta lista, y `filterShellResultOptions` la usa
   // para PODAR el desplegable: el campo por defecto del propio ejemplo quedaba
   // fuera de sus propias opciones.
-  availableShellResults: ["membraneXX", "membraneYY", "membraneXY",
-                          "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params,
   build: edificioAporticado.build,

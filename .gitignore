@@ -108,3 +108,30 @@ assets/*.js
 # minuto desde el .e2k con `e2k_a_edb.py`. Ver validation/modelos/LEEME.md.
 validation/modelos/edb/**
 !validation/modelos/edb/.gitignore
+
+# Capturas, vídeos y salidas de las pruebas: no son código y engordan el repo (22-sep-2026)
+ScreenShoot/
+cli/shots/
+presentacion/
+*.mp4
+
+# Salidas pesadas de validación y de los vídeos (22-sep-2026). Son RESULTADOS, se regeneran:
+# los modelos de CSI (.EDB/.FDB), los fotogramas, los vídeos y los entornos de python.
+frames_*/
+_testm_png/
+torsion_anim/
+cad_mouse_test_out/
+examples/public/_local/
+hekatan-fem-py/
+validacion/
+validation/opensees/**/*.png
+validation/opensees/**/*.mp4
+**/*.EDB
+**/*.FDB
+**/*.Y$$
+**/*.Y_*
+**/*.K_[0-9IJLM]
+**/__pycache__/
+# Modelos de CLIENTE y cachés binarios: NUNCA a un repo público (22-sep-2026)
+validation/04-cimentaciones-safe/radier-mod002/
+**/*.pkl

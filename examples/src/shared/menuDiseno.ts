@@ -154,7 +154,16 @@ function abrirMenu(k: string, btn: HTMLButtonElement) {
   const m = document.createElement("div");
   m.dataset.menu = k; m.id = `hk-${k}-menu`;
   m.style.cssText = "position:fixed;z-index:1000;width:360px;background:rgba(24,28,34,.98);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:6px;box-shadow:0 6px 18px rgba(0,0,0,.4)";
-  m.innerHTML = `<div style="padding:2px 6px 6px;color:#9cc">${AYUDA[k]}</div>` + menus[k].map((e) =>
+  // Un menu VACIO no se explica solo: se abria «Diseño — elige qué hacer:» y debajo,
+  // nada. Las entradas de Diseño las registra cada panel (zapata, cimentacion...), asi
+  // que sin un modelo con esos paneles la lista esta vacia. Se dice, en vez de dejar
+  // el hueco en blanco. (Visto haciendo el manual de la interfaz, 21-sep-2026.)
+  const vacio = menus[k].length === 0
+    ? `<div style="padding:8px;opacity:.8;line-height:1.5">Todavía no hay nada aquí.<br>` +
+      `Las opciones de diseño las trae el modelo: abre una plantilla o un ejemplo ` +
+      `con cimentación o zapata y volverán a aparecer en este menú.</div>`
+    : "";
+  m.innerHTML = `<div style="padding:2px 6px 6px;color:#9cc">${AYUDA[k]}</div>` + vacio + menus[k].map((e) =>
     `<div data-id="${e.id}" style="padding:6px 8px;border-radius:4px;cursor:pointer"><b>${e.icono} ${e.titulo}</b><div style="opacity:.75;margin-top:2px">${e.detalle}</div></div>`).join("");
   m.querySelectorAll<HTMLDivElement>("[data-id]").forEach((d) => {
     d.onmouseenter = () => (d.style.background = "#1f3b5a"); d.onmouseleave = () => (d.style.background = "");

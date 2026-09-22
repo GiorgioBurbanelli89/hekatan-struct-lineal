@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 1000 });
+const errs = []; p.on("pageerror", e => errs.push(e.message));
+await p.goto("https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=new-blank", { waitUntil: "networkidle2", timeout: 120000 }).catch(() => {});
+await new Promise(r => setTimeout(r, 6000));
+await p.evaluate(() => window.__hekatanSetParam?.("formaPlaca", 3));
+await new Promise(r => setTimeout(r, 3000));
+const txt = await p.evaluate(() => [...document.querySelectorAll(".tp-rotv_t,.tp-fldv_t,.tp-lblv_l")].map(e => e.textContent.trim()).filter(t => /Deck|Rib|Slab Depth|lámina|Nervios|Formulación/.test(t)));
+await p.evaluate(() => { const f = [...document.querySelectorAll(".tp-fldv_t")].find(e => /Deck/.test(e.textContent)); f?.scrollIntoView(); });
+await new Promise(r => setTimeout(r, 800));
+await p.screenshot({ path: "cli/shots/deck_etabs/panel_deck_publico.png" });
+console.log(JSON.stringify({ txt, errs: errs.slice(0, 3) }));
+await nav.close();

@@ -41,9 +41,13 @@ export const mesaTorsion: ExampleDef = {
   benchmark: true,
   defaultShellResult: "displacementZ",
   availableShellResults: [
-    "none", "displacementZ", "vonMises",
+    "none", "pressure",
     "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
     "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
   ],
   hasModal: true,
   guide: [

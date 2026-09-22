@@ -47,7 +47,15 @@ export const edificioDual: ExampleDef = {
   // F22 (tensión vertical de membrana): el campo con el que se LEE un muro de corte. Con M11 los muros
   // salían uniformes y "sin colormap" (Jorge, 6-sep-2026).
   defaultShellResult: "membraneYY",
-  availableShellResults: ["bendingXX", "bendingYY", "membraneXX", "membraneYY", "membranePrincipalMin", "membranePrincipalMax", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params,
   build: edificioAporticado.build,

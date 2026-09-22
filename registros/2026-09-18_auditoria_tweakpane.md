@@ -640,3 +640,38 @@ probar con el modelo DUAL, y eso destapó un hueco.
 - Queda para una decisión de Jorge: la plantilla sigue resolviendo el ESTÁTICO en vivo (los
   sliders dan respuesta inmediata, como siempre); lo que ya no hace sola es lanzar modal ni
   animación.
+
+---
+
+# 19-sep, 05:55 UTC — ganchos del test de animación, y PARADA por disco
+
+## Suite completa (antes de estos cambios): 617/640
+23 filas rojas, **ninguna en mis ficheros**: `animacion` (gancho perdido, ver abajo), automallado
+(transfinito, pavimentador, vs ETABS), muelles de área (`paridad-py-areaspring-edge`,
+`muelle-area-y-nudo-colgado`), `placa-momentos-navier`, `col-placa` (salud/modal),
+`listas-de-ids` — motor, lector y registro, que otra sesión tiene sin commitear — y
+`zapata-winkler-sap2000`, que **no es un fallo: se quedó sin disco** («There is not enough
+space on the disk» al escribir su bundle en `hkTest-*`).
+
+## Repuesto en `main.ts` (se había perdido al pisarse el fichero)
+- `window.__hekatanModalResultados()` → φ, frecuencias y participación (lo que pide el test).
+- `window.__hekatanModalAnimator` → con *getter*, porque el animador se reasigna en
+  `buildParamsPane` y al arrancar: una referencia fija apuntaría a uno ya desechado.
+- `hasModal` en `window.__hekatanExamples` (lo da por hecho `cli/check_animacion_modal.mjs`).
+- Compila (esbuild en memoria, 0 errores, sin escribir en disco).
+
+## `tests/lib/visor_modal.mjs`: ya no prueba código de ayer
+`bundleDesactualizado()` compara la fecha del bundle con la del fuente más nuevo de
+`examples/src`, `hekatan-ui/src` y `hekatan-fem/src`. Si hay uno posterior, el caso se
+**niega** y lo dice. Medido: «bundle desactualizado: src/workspace/main.ts (05:55) es más
+nuevo que el bundle (05:04) — corré: npm run build:deploy», en 0.3 s (antes gastaba ~10 min
+probando la versión vieja y daba un veredicto sobre otro programa). Escape explícito para
+depurar: `HK_BUNDLE_VIEJO_OK=1`.
+
+## ⛔ PARADO: disco por debajo de 3 GB
+Durante la suite el disco llegó a **303 MB**; ahora está en **2.4 GB** y bajando (hace unos
+minutos, 3.3). No es de esta sesión: mi scratch ocupaba 183 MB y lo dejé en 61. Por la regla,
+**no se lanzó `npm run build -w examples`**, y sin bundle nuevo no se puede hacer el punto 4
+(`animacion` 21/21 con el gancho, y que FALLE quitando la guarda de `animarCaso`).
+En cuanto haya disco: `npm run build:deploy` → `node tests/run.mjs animacion` (21/21) → quitar
+la guarda de `animarCaso` → volver a correr (tiene que fallar) → reponer la guarda.

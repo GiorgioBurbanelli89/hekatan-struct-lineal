@@ -36,7 +36,15 @@ export const guerraEj2ZapataRectangular: ExampleDef = {
   category: "2️⃣ Shells · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "EJ.2 Guerra MDI - pag. 42-58. Zapata rectangular bajo carga sísmica.",

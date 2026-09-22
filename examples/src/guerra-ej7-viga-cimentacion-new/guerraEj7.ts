@@ -28,7 +28,15 @@ export const guerraEj7VigaCimentacion: ExampleDef = {
   category: "2️⃣ Shells · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "EJ.7 pag.135-148. Viga de cimentación con 4 columnas.",

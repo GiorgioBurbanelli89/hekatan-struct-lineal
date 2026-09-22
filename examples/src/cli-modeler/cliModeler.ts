@@ -1196,7 +1196,15 @@ export const cliModeler: ExampleDef = {
   defaultShellResult: "none",
   // Con `areaspring` (Winkler) se calcula la presión de contacto del suelo, así que
   // el mapa de presión se puede ver aquí también, no solo en los ejemplos param.
-  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY", "membraneXX"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {},
   // ── MODAL de un .heks ──
   // Masa 3D de los elementos, sin «solo lateral» ni agrupar por pisos: es la de

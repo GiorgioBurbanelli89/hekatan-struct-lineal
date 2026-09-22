@@ -1,0 +1,11 @@
+Linear analysis under NEC-15: how the static and the dynamic base shear are computed, click by click.
+The building: dual system, two by two bays, four storeys, 545 nodes. The same one from the paper.
+Linear means the stiffness does not change: K is the same before and after loading, which is why superposition and mode shapes are valid.
+The code asks for two routes: static, with an equivalent lateral force; and dynamic, adding up the modes. Both are done here.
+The seismic data goes in this folder. Six inputs, each one taken from a table of the code.
+First is Z, the zone factor: 0.40, zone V — Table 1, page 27.
+It is typed in, the way anyone would: clear it, enter another value, and the model updates.
+The soil type sets Fa, Fd and Fs. Soil E, zone V: 1.0, 1.6, 1.9 — Tables 3, 4 and 5, pages 31-32.
+The region gives eta: 1.80 on the Coast, 2.48 in the Highlands, 2.60 in the Amazon. Section 3.3.1, page 34.
+R reduces the force because the structure deforms without breaking. Concrete dual with walls: R = 8, Table 15, page 64.
+I raises the force for buildings that must not fail; here it is 1.0. And phi-P times phi-E penalise irregularity: if regular, both are 1.

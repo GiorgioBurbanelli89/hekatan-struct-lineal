@@ -88,7 +88,15 @@ export const vigaCimGuerraEj7Tinv: ExampleDef = {
   // con frames sobre resortes, no con placas.
   category: "1️⃣ Frames · 🎯 2 GDL Flexión",
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "Ejercicio 7 Guerra MDI — variante VIGA T INVERTIDA (Hetényi sobre Winkler)",

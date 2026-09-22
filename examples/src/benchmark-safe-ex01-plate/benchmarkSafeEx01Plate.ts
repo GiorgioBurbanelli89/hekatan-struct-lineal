@@ -64,8 +64,15 @@ export const benchmarkSafeEx01Plate: ExampleDef = {
   category: "2️⃣ Shells · 🧱 Placas",
   benchmark: true,
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "bendingXY",
-                          "shearX", "shearY", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     // Solo UL (uniform load) implementado en V1; PL/LL en futuro

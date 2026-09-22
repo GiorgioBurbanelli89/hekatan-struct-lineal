@@ -63,7 +63,15 @@ export const newBlank: ExampleDef = {
   name: "📄 Archivo nuevo (lienzo CAD 2D/3D)",
   category: "🧪 Utilidades",
   defaultShellResult: "none",
-  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   params: {
     // ── Modo dimensión ──
