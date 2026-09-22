@@ -14,8 +14,15 @@ export const plateWithBeams: ExampleDef = {
   category: "4️⃣ Mixtos · 🔀 Losas con vigas",
   benchmark: true,
   defaultShellResult: "bendingXX",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY",
-                          "shearX", "shearY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     Lx: { default: 6.0, min: 2, max: 12, step: 0.5, label: "Lx (m)" },
     Ly: { default: 4.0, min: 2, max: 12, step: 0.5, label: "Ly (m)" },
@@ -85,7 +92,7 @@ export const plateWithBeams: ExampleDef = {
       thicknesses.set(i, p.t);
       elasticities.set(i, p.E);
       poissons.set(i, p.nu);
-      densities.set(i, 24);
+      densities.set(i, 24 / 9.80665);
       plateFormulations.set(i, 2);   // DKMQ Katili para match SAP/PyNite
     }
     // Frame section bW (width horizontal) x bH (height vertical) — viga horizontal en XY.
@@ -114,7 +121,7 @@ export const plateWithBeams: ExampleDef = {
       const idx = nShells + i;
       elasticities.set(idx, p.E);
       poissons.set(idx, p.nu);
-      densities.set(idx, 24);
+      densities.set(idx, 24 / 9.80665);
       areas.set(idx, A_b);
       momentsOfInertiaZ.set(idx, Iy_b);
       momentsOfInertiaY.set(idx, Iz_b);

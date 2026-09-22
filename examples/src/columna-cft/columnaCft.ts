@@ -113,7 +113,7 @@ export const columnaCft: ExampleDef = {
       J.set(i, J_effective);
       elasticities.set(i, E_effective);
       shearModuli.set(i, G_effective);
-      densities.set(i, 24);   // peso promedio concreto + acero
+      densities.set(i, 24 / 9.80665);   // peso promedio concreto + acero
       thicknesses.set(i, p.t_tube);
       poissons.set(i, 0.20);
     }

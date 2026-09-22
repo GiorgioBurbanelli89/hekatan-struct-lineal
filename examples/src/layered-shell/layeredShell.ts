@@ -103,7 +103,15 @@ export const layeredShell: ExampleDef = {
   category: "2️⃣ Shells · 🥞 Layered",
   benchmark: true,
   defaultShellResult: "bendingXX",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY", "displacementZ", "membraneXX", "membraneYY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "Elegí Laminado: 5 presets (Iso, CLT 3, CLT 5, Sandwich, Bimetálico)",
@@ -221,7 +229,7 @@ export const layeredShell: ExampleDef = {
       thicknesses.set(i, t_total);
       elasticities.set(i, E_avg);
       poissons.set(i, nu_avg);
-      densities.set(i, rho_avg);
+      densities.set(i, rho_avg / 9.80665);   // los ρ del panel son PESO (kN/m³); densities es MASA (t/m³)
     });
     states.elementInputs.val = { thicknesses, elasticities, poissonsRatios: poissons, densities };
 

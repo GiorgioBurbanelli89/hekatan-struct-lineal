@@ -2,8 +2,8 @@
  * Ej.5 Guerra MDI (pag.93-112) - ZAPATA COMBINADA TRAPEZOIDAL
  * L=5m, B1=3.75m → B2=1.60m. Cols 50×50 en x=0.25 (Col1) y x=4.75 (Col2).
  * f'c=210, q_adm=20.
- * IMPL: aproximamos trapecio con mesh rectangular sobre bounding box B1×L,
- * y filtramos elementos fuera del trapezoide (ks=0 fuera).
+ * IMPL: malla trapezoidal (nudos de −B(x)/2 a +B(x)/2 en cada x); muelles ks·A_trib con el área
+ * tributaria de cada nudo sacada de sus elementos.
  */
 import * as THREE from "three";
 import { plateQ4Solve } from "hekatan-fem";
@@ -24,15 +24,22 @@ function buildColumnFrame(x: number, y: number, h: number, s: number): THREE.Obj
   return [lines];
 }
 
-/** Bounding-box mesh: B = max(B1, B2). Y "trapezoidal" se simula
- *  enmascarando los nodos fuera del trapecio (springs k=0). */
+/** Malla TRAPEZOIDAL: cada columna de nudos abarca el ancho B(x) de esa sección. */
 export const guerraEj5ZapataTrapezoidal: ExampleDef = {
   id: "guerra-ej5-zapata-combinada-trapezoidal",
   name: "Ej.5 · Zapata Trapezoidal (L=5, B1=3.75→B2=1.60)",
   category: "2️⃣ Shells · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "EJ.5 pag.93-112. Zapata combinada TRAPEZOIDAL.",
@@ -79,24 +86,32 @@ export const guerraEj5ZapataTrapezoidal: ExampleDef = {
     const E_kNm2 = E_kgcm2 * 98.0665;
     const nu = 0.20;
 
-    // Trapecio centrado en Y: ancho B(x) varía linealmente de B1 a B2
-    // y_min(x) = (Bmax - B(x))/2,  y_max(x) = (Bmax + B(x))/2
+    // TRAPECIO de verdad (22-sep-2026, Jorge: «debe ser trapezoidal»). Antes se mallaba el
+    // rectángulo B1 × L y se apagaban los muelles fuera del trapecio: la PLACA seguía siendo
+    // rectangular (pesaba, rigidizaba y se dibujaba entera). SAFE recibía esa misma malla, así que
+    // el 0.86 % del test comparaba dos veces el mismo modelo equivocado.
+    // Ahora cada columna de nudos va de −B(x)/2 a +B(x)/2 alrededor del eje: elementos trapezoidales.
+    const yc = Bmax / 2;
     const halfB_at = (x: number) => (B1 + (B2 - B1) * (x / Lz)) / 2;
-    const inTrapezoid = (x: number, y: number) => {
-      const hb = halfB_at(x);
-      const yc = Bmax / 2;
-      return Math.abs(y - yc) <= hb + 1e-6;
-    };
-
     const nodes: [number, number][] = [];
     for (let j = 0; j < nyn; ++j)
-      for (let i = 0; i < nxn; ++i) nodes.push([i * dx, j * dy]);
+      for (let i = 0; i < nxn; ++i) {
+        const x = i * dx, hb = halfB_at(x);
+        nodes.push([x, yc - hb + (2 * hb) * j / ny]);
+      }
     const elements: [number, number, number, number][] = [];
     for (let j = 0; j < ny; ++j)
       for (let i = 0; i < nx; ++i) {
         const n0 = j * nxn + i;
         elements.push([n0, n0 + 1, n0 + nxn + 1, n0 + nxn]);
       }
+    // área tributaria = ¼ del área de cada elemento que toca el nudo (los elementos ya no son iguales)
+    const A_trib = new Array(nodes.length).fill(0);
+    for (const el of elements) {
+      let A2 = 0;
+      for (let k = 0; k < 4; k++) { const [x1, y1] = nodes[el[k]], [x2, y2] = nodes[el[(k + 1) % 4]]; A2 += x1 * y2 - x2 * y1; }
+      for (const n of el) A_trib[n] += Math.abs(A2) / 2 / 4;
+    }
 
     const GAMMA_C_KN_M3 = 2.4 * TONF_TO_KN;
     const sw_pressure_kN_m2 = GAMMA_C_KN_M3 * tz;
@@ -107,17 +122,9 @@ export const guerraEj5ZapataTrapezoidal: ExampleDef = {
       for (let i = 0; i < nxn; ++i) {
         const eI = (i === 0 || i === nxn - 1);
         const eJ = (j === 0 || j === nyn - 1);
-        const factor = eI && eJ ? 0.25 : (eI || eJ ? 0.5 : 1.0);
-        const A_trib = dx * dy * factor;
         const nodeIdx = j * nxn + i;
-        const x = i * dx, y = j * dy;
-        const inside = inTrapezoid(x, y);
-        // Resorte: k=0 fuera del trapecio (zapata no existe ahí)
-        const k_eff = inside ? ks_kNm3 * A_trib : 0;
-        springs.push({ node: nodeIdx, dof: 0, k: Math.max(k_eff, 1e-6) });
-        if (inside) {
-          selfWeightLoads.push({ node: nodeIdx, dof: 0, value: -sw_pressure_kN_m2 * A_trib });
-        }
+        springs.push({ node: nodeIdx, dof: 0, k: ks_kNm3 * A_trib[nodeIdx] });
+        selfWeightLoads.push({ node: nodeIdx, dof: 0, value: -sw_pressure_kN_m2 * A_trib[nodeIdx] });
         if (eI && eJ) {
           const k_theta = 1e-6 * ks_kNm3 * dx * dy;
           springs.push({ node: nodeIdx, dof: 1, k: k_theta });
@@ -227,7 +234,7 @@ export const guerraEj5ZapataTrapezoidal: ExampleDef = {
       "📊 σ_max Hekatan":        `${sMax.toFixed(3)} t/m²`,
       "📊 σ_min Hekatan":        `${sMin.toFixed(3)} t/m²`,
       "📘 σ uniforme libro p.95": sigUnif ? `${sigUnif.toFixed(2)} t/m²` : "—",
-      "⚠️ Trapezoidal":          "Geometria aproximada con mesh rect + mask",
+      "📐 Geometría":            "trapecio real (malla trapezoidal)",
     };
   },
 };

@@ -33,7 +33,15 @@ export const placaBase: ExampleDef = {
   category: "2️⃣ Shells · 🔩 Conexiones",
   hasModal: false,
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "bendingXX", "bendingYY", "bendingXY", "membraneXX", "membraneYY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     // ── Placa ──
     B: { default: 0.50, min: 0.25, max: 1.20, step: 0.02, label: "B placa (m, eje X)", folder: "Placa" },
@@ -89,7 +97,7 @@ export const placaBase: ExampleDef = {
     const shearModuli = new Map<number, number>();
 
     const G_steel = p.E_steel / 2.6;
-    const rho_steel = 77;
+    const rho_steel = 7.85;   // MASA t/m³ (antes 77: el PESO kN/m³, metido ×9.81)
 
     const addNode = (x: number, y: number, z: number): number => {
       nodes.push([x, y, z]);

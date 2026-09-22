@@ -51,9 +51,13 @@ export const conexionRbs: ExampleDef = {
   hasModal: false,
   defaultShellResult: "vonMises",
   availableShellResults: [
-    "vonMises",
+    "none", "pressure",
     "membraneXX", "membraneYY", "membraneXY",
-    "bendingXX", "bendingYY", "displacementZ",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
   ],
   params: {
     // ── Viga W-shape ──
@@ -144,7 +148,7 @@ export const conexionRbs: ExampleDef = {
     const shearModuli = new Map<number, number>();
 
     const G_steel = p.E_steel / 2.6;
-    const rho_steel = 77;
+    const rho_steel = 7.85;   // MASA t/m³ (antes 77: el PESO kN/m³, metido ×9.81)
 
     // ── Node merging: nodos coincidentes se fusionan (une patines con alma) ──
     const NODE_EPS = 1e-4;

@@ -24,7 +24,15 @@ export const triangularPlate: ExampleDef = {
   name: "Placa Triangular MITC3 (Bathe)",
   category: "2️⃣ Shells · 🧱 Placas",
   defaultShellResult: "displacementZ",
-  availableShellResults: ["bendingXX", "bendingYY", "bendingXY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   params: {
     // Geometría
@@ -123,7 +131,7 @@ export const triangularPlate: ExampleDef = {
         thicknesses.set(i, p.t);
         elasticities.set(i, p.E);
         poissons.set(i, p.nu);
-        densities.set(i, 24);
+        densities.set(i, 24 / 9.80665);
       });
       states.elementInputs.val = { thicknesses, elasticities, poissonsRatios: poissons, densities };
 

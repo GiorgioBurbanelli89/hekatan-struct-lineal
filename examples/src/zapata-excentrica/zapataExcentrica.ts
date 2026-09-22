@@ -24,7 +24,11 @@
  */
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { cliModeler } from "../cli-modeler/cliModeler";
-import { herramientasZapata } from "../shared/tutorFem";
+// tutorFem se carga AL USARLO, no al importar: tutorFem y tutorCadena importan de este mismo fichero, y el
+// ciclo (con el await del WASM por medio) dejaba el import colgado para siempre en Node — los tests que
+// cargan el registro de ejemplos no terminaban nunca (22-sep-2026).
+const herramientasZapata = (...a: Parameters<typeof import("../shared/tutorFem").herramientasZapata>) =>
+  { import("../shared/tutorFem").then((m) => m.herramientasZapata(...a)); };
 import { opensees, datosOpenSeesDeStates } from "../shared/openseesZapata";
 import { HOJA_DAS_48 as hojaDas48 } from "./das48";
 
@@ -220,7 +224,15 @@ export const zapataExcentrica: ExampleDef = {
   name: "Levantamiento de zapatas (suelo sin tracción) · Das ej. 6.10, p. 247",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "displacementZ", "bendingXX", "bendingYY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     Lx: F("Zapata", "B en x (m)", DAS_EJ610.Lx, 1, 5, 0.05),
     Ly: F("Zapata", "L en y (m)", DAS_EJ610.Ly, 1, 5, 0.05),

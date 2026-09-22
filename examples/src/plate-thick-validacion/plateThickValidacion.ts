@@ -19,7 +19,15 @@ export const plateThickValidacion: ExampleDef = {
   name: "Rectangular Slab — Mindlin (Calcpad validation)",
   category: "2️⃣ Shells · 🧱 Placas",
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "bendingXY", "shearX", "shearY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   params: {
     // ── Geometry (Calcpad case: 6 × 4 × 0.10 m) ──
@@ -138,7 +146,7 @@ export const plateThickValidacion: ExampleDef = {
     const elasticities = new Map<number, number>();
     const poissons = new Map<number, number>();
     const densities = new Map<number, number>();
-    elems.forEach((_, i) => { elasticities.set(i, E); poissons.set(i, p.nu); densities.set(i, 24); });
+    elems.forEach((_, i) => { elasticities.set(i, E); poissons.set(i, p.nu); densities.set(i, 24 / 9.80665); });
     states.elementInputs.val = { thicknesses, elasticities, poissonsRatios: poissons, densities };
     states.objects3D.val = [];
 

@@ -231,9 +231,9 @@ async function senalar(b: Blanco | undefined, globo?: string) {
   if (typeof b === "string" && b !== "modelo" && !/^[#.[]/.test(b) && document.body.classList.contains("hk-pane-oculto")) {
     const t = document.getElementById("hk-pane-toggle");
     if (t) { const r = t.getBoundingClientRect(); aro!.style.opacity = "0"; glo!.style.opacity = "0";
-      await volar(r.left + r.width / 2, r.top + r.height / 2); t.click(); panelLoAbriTutor = true; await espera(450); }
+      await volar(r.left + r.width / 2, r.top + r.height / 2); t.click(); panelLoAbriTutor = true; anchoVista(true); await espera(700); }
   } else if (panelLoAbriTutor && (b === undefined || typeof b !== "string" || b === "modelo" || b.startsWith("[data-cuerpo]"))) {
-    pulsarPanel(); panelLoAbriTutor = false; await espera(300);   // de vuelta al modelo: el panel se recoge otra vez
+    pulsarPanel(); panelLoAbriTutor = false; anchoVista(false); await espera(700);   // de vuelta al modelo: el panel se recoge otra vez
   }
   const r = b === undefined ? null : typeof b === "string" ? rectControl(b) : rectNudos(b.nudos);
   rodeo = null;
@@ -337,6 +337,16 @@ function encuadrar() {
     else c.position.sub(t).multiplyScalar(1.3).add(t);
     c.updateProjectionMatrix(); ctx.controls.update?.(); ctx.render();
   }, 120);
+}
+
+/** Ancho de la franja del modelo: con el panel de parámetros abierto se le quita su ancho, para que no lo tape. */
+function anchoVista(conPanel: boolean) {
+  const v = w().__hekatanViewerElm?.() as HTMLElement | undefined; if (!v || vistaAntes === null) return;
+  const pane = document.getElementById("hk-pane-toggle")?.previousElementSibling as HTMLElement | null;
+  const derecha = conPanel ? 450 : 130;      // panel (≈320) + barra de colores (≈130)
+  v.style.width = `calc(100% - ${ANCHO} - ${derecha}px)`;
+  setTimeout(() => { window.dispatchEvent(new Event("resize")); encuadrar(); }, 300);
+  void pane;
 }
 
 function partir(si: boolean) {

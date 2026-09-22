@@ -498,41 +498,81 @@ const f6 = (x: number) => x.toFixed(6);
 
 /** Guion del tutor del Test IV: hemisferio pinchado, Tabla IV (mallas) y Tabla V (γ/μ). */
 function pasosTest4(): PasoTutor[] {
+  const dims = () => { const P = (window as any).__hekatanParams?.() ?? {}; return { na: Math.round(P.na ?? 8), nb: Math.round(P.nb ?? 8) }; };
+  const nudo = (i: number, j: number) => { const { na } = dims(); return j * (na + 1) + i; };
+  const cargaX = () => { const { nb } = dims(); return { nudos: [nudo(0, nb)] }; };           // ecuador, φ = 0 (la que se mide)
+  const cargaY = () => { const { na, nb } = dims(); return { nudos: [nudo(na, nb)] }; };      // ecuador, φ = 90°
+  const hueco = () => { const { na } = dims(); return { nudos: Array.from({ length: na + 1 }, (_, i) => nudo(i, 0)) }; };
+  const simX = () => { const { nb } = dims(); return { nudos: Array.from({ length: nb + 1 }, (_, j) => nudo(0, j)) }; };
+  const simY = () => { const { na, nb } = dims(); return { nudos: Array.from({ length: nb + 1 }, (_, j) => nudo(na, j)) }; };
+  const V = numVoz;
+  const hkIV: Record<number, number> = {}, hkV: Record<string, number> = {};
+  const IV: Array<[number, number]> = [[4, 0.087548], [8, 0.093714], [12, 0.093587], [16, 0.093488]];
+  const TV: Array<[number, number]> = [[0.001, 0.093967], [0.05, 0.093813], [1, 0.093714], [50, 0.0937], [1000, 0.0937]];
+  const fila = (on: boolean) => on ? "background:#1e3a8a;font-weight:700;" : "";
+  const tablaIV = (act?: number) => `<div style="margin-top:12px;font-weight:700;color:#7dd3fc">Tabla IV · paper vs Hekatan Struct</div>` +
+    `<table style="width:100%;border-collapse:collapse;margin-top:4px;font-size:15px"><tr style="color:#94a3b8"><td>Malla</td><td>Paper (M-type)</td><td>Hekatan</td><td>dif.</td></tr>` +
+    IV.map(([n, pa]) => `<tr style="${fila(n === act)}border-top:1px solid #334155"><td>${n}×${n}</td><td>${pa}</td>` +
+      `<td>${hkIV[n] === undefined ? "—" : f6(hkIV[n])}</td><td>${hkIV[n] === undefined ? "" : pct(hkIV[n], pa)}</td></tr>`).join("") +
+    `<tr style="border-top:1px solid #334155;color:#94a3b8"><td>referencia</td><td colspan="3">0.094 (MacNeal-Harder)</td></tr></table>`;
+  const tablaV = (act?: number) => `<div style="margin-top:12px;font-weight:700;color:#7dd3fc">Tabla V · 8×8 · paper vs Hekatan Struct</div>` +
+    `<table style="width:100%;border-collapse:collapse;margin-top:4px;font-size:15px"><tr style="color:#94a3b8"><td>γ/μ</td><td>Paper (M-type)</td><td>Hekatan</td></tr>` +
+    TV.map(([g, pa]) => `<tr style="${fila(g === act)}border-top:1px solid #334155"><td>${g}</td><td>${pa}</td>` +
+      `<td>${hkV[g] === undefined ? "—" : f6(hkV[g])}</td></tr>`).join("") + `</table>`;
+
   const malla = (n: number, paper: number): PasoTutor => ({
-    titulo: `Malla ${n}×${n}`, params: { na: n, nb: n, gam: 0 }, senalar: "divisiones φ",
-    texto: () => { const d = flechaHemi();
-      return `El cuarto de hemisferio con <b>${n}×${n}</b> elementos.<br><br>` +
-        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f6(d)}</b></td></tr>` +
-        `<tr><td>Paper (M-type)</td><td>${paper}</td><td>${pct(d, paper)}</td></tr>` +
-        `<tr><td>MacNeal-Harder</td><td>0.094</td><td>${pct(d, 0.094)}</td></tr></table>`; },
-    voz: () => `Malla de ${n} por ${n}. Hekatan da ${f6(flechaHemi())}; el paper da ${paper}.`,
+    titulo: `Malla ${n}×${n}`, params: { na: n, nb: n, gam: 0 },
+    texto: () => { hkIV[n] = flechaHemi(); return `El cuarto de hemisferio con <b>${n}×${n}</b> elementos.` + tablaIV(n); },
+    tiempos: [
+      { voz: `Cambiamos la malla a ${n} por ${n} elementos.`, senalar: "divisiones φ" },
+      { voz: () => `Medimos el desplazamiento en el punto cargado: Hekatan da ${V(flechaHemi(), 6)}.`, senalar: cargaX,
+        globo: () => `Ux = ${(flechaHemi() * 1000).toFixed(2)} mm  →  δ = ${f6(flechaHemi())}` },
+      { voz: () => `El paper da ${V(paper, 6)}. La diferencia es de ${V(Math.abs(flechaHemi() / paper - 1) * 100, 2)} por ciento.`,
+        senalar: "[data-cuerpo] table tr[style*='1e3a8a']", globo: () => `paper ${paper} · Hekatan ${f6(flechaHemi())}` },
+    ],
   });
   const gama = (g: number, paper: number): PasoTutor => ({
-    titulo: `Tabla V · γ/μ = ${g}`, params: { na: 8, nb: 8, gam: g }, senalar: "γ/μ (Tabla V)",
-    texto: () => { const d = flechaHemi();
-      return `Misma malla 8×8, cambiando solo <b>γ/μ = ${g}</b> (el peso del término que ata el giro de drilling ` +
-        `a la rotación de la membrana).<br><br>` +
-        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f6(d)}</b></td></tr>` +
-        `<tr><td>Paper (M-type)</td><td>${paper}</td></tr></table>`; },
-    voz: () => `Gamma sobre mu igual a ${g}. Hekatan da ${f6(flechaHemi())}.`,
+    titulo: `Tabla V · γ/μ = ${g}`, params: { na: 8, nb: 8, gam: g },
+    texto: () => { hkV[g] = flechaHemi();
+      return `Misma malla 8×8, cambiando solo <b>γ/μ = ${g}</b>: el peso del término que ata el giro de drilling a la rotación de la membrana.` + tablaV(g); },
+    tiempos: [
+      { voz: `Ponemos gamma sobre mu igual a ${V(g, 3)}.`, senalar: "γ/μ (Tabla V)" },
+      { voz: () => `El desplazamiento queda en ${V(flechaHemi(), 6)}.`, senalar: cargaX, globo: () => `δ = ${f6(flechaHemi())}` },
+      { voz: `El paper da ${V(paper, 6)}.`, senalar: "[data-cuerpo] table tr[style*='1e3a8a']" },
+    ],
   });
   return [
-    { titulo: "El problema", fig: "fig6_hemisferio.png", params: { na: 8, nb: 8, gam: 0 }, senalar: "modelo",
+    { titulo: "El problema", fig: "fig6_hemisferio.png", params: { na: 8, nb: 8, gam: 0 },
       texto: () => `Una semiesfera de radio <b>R = 10</b>, espesor t = 0.04, con un hueco de 18° arriba. Dos pares de ` +
         `cargas P = 1 la <b>pinchan</b>: dos hacia dentro y dos hacia fuera. Por simetría se modela un cuarto.<br><br>` +
         `<b>Por qué este test:</b> es una cáscara CURVA muy delgada (R/t = 250). Si la membrana se «bloquea» ` +
         `(membrane locking), la flecha sale mucho menor que 0.094.`,
-      voz: () => "Una semiesfera de radio 10 y espesor 0 punto 0 4, pinchada por dos pares de cargas. Es una cáscara curva muy delgada: si la membrana se bloquea, la flecha sale mucho menor que 0 punto 0 9 4." },
+      tiempos: [
+        { voz: "Este es el test cuatro del paper: una semiesfera pinchada, con un hueco de 18 grados arriba.", senalar: "[data-cuerpo] img" },
+        { voz: "Por simetría se modela solo un cuarto. Radio 10, espesor 0,04: muy delgada, 250 veces más radio que espesor.", senalar: "modelo",
+          globo: "R = 10 · t = 0.04 · R/t = 250" },
+        { voz: "Este es el borde del hueco de 18 grados: está libre.", senalar: hueco, globo: "hueco 18°, libre" },
+        { voz: "Estos dos bordes son planos de simetría.", senalar: simX, globo: "simetría" },
+        { voz: "Y este es el otro.", senalar: simY, globo: "simetría" },
+        { voz: "En el ecuador van las cargas. Aquí una carga P igual a uno hacia fuera: en este nudo se mide el desplazamiento.", senalar: cargaX, globo: "P = 1 · aquí se mide δ" },
+        { voz: "Y aquí la otra, hacia dentro. Si la membrana se bloquea, la cáscara sale demasiado rígida y el desplazamiento muy pequeño.", senalar: cargaY, globo: "P = 1" },
+      ] },
     malla(4, 0.087548), malla(8, 0.093714), malla(12, 0.093587), malla(16, 0.093488),
-    { titulo: "Tabla V: ¿importa γ?", fig: "tabla5_gamma.png", params: { na: 8, nb: 8, gam: 0 }, senalar: "γ/μ (Tabla V)",
-      texto: () => `El paper repite la malla 8×8 cambiando <b>γ</b> de 0.001·μ a 1000·μ y la flecha casi no se mueve. ` +
-        `Es la prueba de que la formulación es <b>insensible a γ</b>. Lo hacemos igual con el selector «γ/μ».`,
-      voz: () => "El paper repite la malla de 8 por 8 cambiando gamma de 0 punto 0 0 1 a mil veces mu, y la flecha casi no se mueve. Lo repetimos con el selector gamma sobre mu." },
+    { titulo: "Tabla V: ¿importa γ?", fig: "tabla5_gamma.png", params: { na: 8, nb: 8, gam: 0 },
+      texto: () => `El paper repite la malla 8×8 cambiando <b>γ</b> de 0.001·μ a 1000·μ y el desplazamiento casi no se mueve: ` +
+        `la formulación es <b>insensible a γ</b>. Lo repetimos con el selector «γ/μ».` + tablaV(),
+      tiempos: [
+        { voz: "Ahora la tabla cinco. El paper deja la malla de 8 por 8 y cambia gamma, de 0,001 a mil veces mu.", senalar: "[data-cuerpo] img" },
+        { voz: "Si el elemento es bueno, el resultado casi no debería moverse. Lo hacemos con este selector.", senalar: "γ/μ (Tabla V)" },
+      ] },
     gama(0.001, 0.093967), gama(0.05, 0.093813), gama(1, 0.093714), gama(50, 0.0937), gama(1000, 0.0937),
     { titulo: "Conclusión", fig: "tabla4_hemisferio.png", params: { na: 8, nb: 8, gam: 0 },
-      texto: () => `Con γ/μ de 0.001 a 1000 la flecha de Hekatan cambia menos de 0.01 %: igual de insensible que el ` +
-        `paper. En valor absoluto, a 8×8 Hekatan queda ~1 % bajo el paper (0.0927 contra 0.0937).`,
-      voz: () => "Con gamma de 0 punto 0 0 1 a mil, la flecha de Hekatan cambia menos de 0 punto 0 1 por ciento: igual de insensible que el paper." },
+      texto: () => `Al refinar, Hekatan converge igual que el paper (−2.6 % a 4×4, −0.4 % a 16×16), y con γ/μ de 0.001 a 1000 ` +
+        `el desplazamiento cambia menos de 0.01 %: igual de insensible que el paper.` + tablaIV() + tablaV(),
+      tiempos: [
+        { voz: "En resumen: al refinar la malla, Hekatan se acerca al paper igual que el elemento del paper.", senalar: "[data-cuerpo] table" },
+        { voz: "Y al cambiar gamma de 0,001 a mil, el desplazamiento cambia menos de 0,01 por ciento: igual de insensible.", senalar: "[data-cuerpo] table:last-of-type" },
+      ] },
   ];
 }
 
@@ -602,10 +642,14 @@ export const itwTest4: ExampleDef = {
   },
   computedLabels(p, states) {
     const na = Math.round(p.na), nb = Math.round(p.nb);
-    return { ...fila(Math.abs(u(states, nb * (na + 1) + 0, 0)), 0.094),
-             "⚠️ paper (Tabla IV)": "4×4 = 0.087548 · 8×8 = 0.093714",
-             "⚠️ SAP2000 8×8": "0.093751",
-             "estado": "DEFICIT ABIERTO nuestro: el paper NO bloquea aquí" };
+    // Medido el 22-sep-2026 con el defecto (drill 0): 4×4 0.085249 · 8×8 0.092723 · 12×12 0.092999 ·
+    // 16×16 0.093139 → −2.6 / −1.1 / −0.6 / −0.4 % del paper. El «−36 %» de antes era el ITW puro (drill 3).
+    const TABLA_IV: Record<number, number> = { 4: 0.087548, 8: 0.093714, 12: 0.093587, 16: 0.093488 };
+    const d = Math.abs(u(states, nb * (na + 1) + 0, 0)), pap = na === nb ? TABLA_IV[na] : undefined;
+    return { ...fila(d, 0.094),
+             "paper (Tabla IV, M-type)": pap ? `${pap} (${na}×${na}) · ${((d / pap - 1) * 100).toFixed(2)} %` : "4×4 · 8×8 · 12×12 · 16×16",
+             "SAP2000 8×8": "0.093751",
+             "estado": "converge como el paper; con γ/μ de 0.001 a 1000 cambia < 0.01 % (Tabla V)" };
   },
 };
 
