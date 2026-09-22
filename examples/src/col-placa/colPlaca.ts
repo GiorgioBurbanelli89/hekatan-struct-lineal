@@ -35,9 +35,10 @@ export const colPlaca = makeSimpleExample({
     // Nodo tope columna
     const topIdx = nodes.length;
     nodes.push([0, 0, p.Hc]);
-    // Nodo centro placa
-    const centerIdx = nodes.length;
-    nodes.push([0, 0, 0]);
+    // Nodo centro placa: el de la PROPIA malla (con nx, ny impares, el más cercano al centro).
+    // Antes se añadía un nudo NUEVO en (0,0,0) encima del de la placa, sin unirlo: la columna
+    // colgaba suelta y la K salía singular («Matrix decomposition failed», barrido 22-sep-2026).
+    const centerIdx = Math.round(ny / 2) * (nx + 1) + Math.round(nx / 2);
     // Elements: placa Q4 + columna
     const elements: Element[] = [];
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {

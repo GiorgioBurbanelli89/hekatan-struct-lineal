@@ -490,6 +490,10 @@ export function sections(
 
       const shape = shapes?.get(idx);
       if (!shape) return;
+      // Sección sin cotas (p. ej. una «SD Section» de Section Designer: el .e2k no trae su dibujo)
+      // → no se extruye. Antes se dibujaba con b/h undefined: geometría NaN y la consola llena de
+      // «computeBoundingSphere(): radius is NaN» (estructura-mixta, 64 barras, 22-sep-2026).
+      if (!(shape.h! > 0 || shape.d! > 0 || shape.b! > 0)) return;
 
       const mid: [number, number, number] = [
         (node1[0] + node2[0]) / 2,
