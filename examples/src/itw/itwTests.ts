@@ -48,6 +48,7 @@
  * `states.elements` normales. Así el mismo modelo se puede abrir en el programa
  * de CSI y comparar nudo a nudo, que es la única forma de arbitrar de verdad.
  */
+import { registrarTutorTest, type PasoTutor } from "../shared/tutorTest";
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
@@ -237,6 +238,7 @@ export const itwTest2: ExampleDef = {
     }
     resolver(states, nodes, elements, supports, loads,
              props(elements, p.t, p.E, p.nu, (p as any).drill));
+    registrarTutorTest("itw-test-2", "Tutor · ITW Test II (voladizo corto)", pasosTest2);
   },
   computedLabels(p, states) {
     const dist = Math.round((p as any).malla ?? 0) === 1;
@@ -252,6 +254,69 @@ export const itwTest2: ExampleDef = {
                              : "4:1 y malla gruesa: donde un Q4 sin drilling se queda corto" };
   },
 };
+
+/** Flecha de la punta (nudo del borde libre a media altura) del modelo ABIERTO. */
+function flechaPunta(): number {
+  const S = (window as any).__hekatanStates, P = (window as any).__hekatanParams?.();
+  const d = S?.deformOutputs?.val?.deformations; if (!d || !P) return NaN;
+  const dist = Math.round(P.malla ?? 0) === 1;
+  const na = dist ? 4 : Math.round(P.na), nb = dist ? 1 : Math.round(P.nb);
+  return Math.abs(d.get(Math.round(nb / 2) * (na + 1) + na)?.[2] ?? NaN);
+}
+const f4 = (x: number) => x.toFixed(4);
+const pct = (a: number, b: number) => `${((a / b - 1) * 100).toFixed(2)} %`;
+
+/** Guion del tutor del Test II (Ibrahimbegović, Taylor & Wilson 1990, Fig. 4 y Tabla II). */
+function pasosTest2(): PasoTutor[] {
+  const malla = (na: number, nb: number, paper: number, etiqueta: string, porque: string): PasoTutor => ({
+    titulo: `Malla ${etiqueta}`, params: { malla: 0, na, nb },
+    texto: () => { const d = flechaPunta();
+      return `Ahora el voladizo con <b>${na}×${nb}</b> elementos. ${porque}<br><br>` +
+        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f4(d)}</b></td></tr>` +
+        `<tr><td>Paper (M-type)</td><td>${paper}</td><td>${pct(d, paper)}</td></tr>` +
+        `<tr><td>Exacto</td><td>0.3553</td><td>${pct(d, 0.3553)}</td></tr></table>`; },
+    voz: () => { const d = flechaPunta();
+      return `Malla de ${na} por ${nb}. Hekatan da ${f4(d)}; el paper da ${paper}. La diferencia es ${pct(d, paper)}. ${porque}`; },
+  });
+  return [
+    { titulo: "El problema", fig: "fig4_cantilever_corto.png", params: { malla: 0, na: 4, nb: 1 },
+      texto: () => `Un <b>voladizo corto</b>: largo l = 48 y canto h = 12 (relación 4 a 1). Está empotrado a la ` +
+        `izquierda y en la punta lleva un cortante <b>P = 40</b> repartido en todo el borde. E = 30000, ν = 0.25, t = 1.<br><br>` +
+        `<b>Por qué este test:</b> al ser corto, la flecha no es solo flexión: el <b>cortante</b> pesa. ` +
+        `Un elemento de membrana pobre (Q4 sin drilling) se queda muy rígido aquí.`,
+      voz: () => "Un voladizo corto, de largo 48 y canto 12, empotrado a la izquierda, con un cortante de 40 en la punta. " +
+        "Al ser corto, el cortante pesa tanto como la flexión, y ahí es donde un elemento de membrana pobre se queda rígido." },
+    { titulo: "La solución exacta", params: { malla: 0, na: 4, nb: 1 },
+      texto: () => { const I = 1 * 12 ** 3 / 12, fl = 40 * 48 ** 3 / (3 * 30000 * I), co = (4 + 5 * 0.25) * 40 * 48 / (2 * 30000 * 12);
+        return `Timoshenko y Goodier: flexión + cortante.<br><br>` +
+          `<code>u = P·l³/(3·E·I) + (4+5ν)·P·l/(2·E·h)</code><br><br>` +
+          `I = t·h³/12 = ${I}<br>` +
+          `flexión = 40·48³/(3·30000·${I}) = <b>${f4(fl)}</b><br>` +
+          `cortante = (4+5·0.25)·40·48/(2·30000·12) = <b>${f4(co)}</b><br>` +
+          `u = <b>${f4(fl + co)}</b> ≈ 0.3553<br><br>` +
+          `El cortante es el ${((co / (fl + co)) * 100).toFixed(0)} % de la flecha: por eso es un test de cortante.`; },
+      voz: () => "La solución exacta suma la flecha por flexión, 0 punto 3 4 1 3, y la de cortante, 0 punto 0 1 4. " +
+        "Da 0 punto 3 5 5 3. Esa es la referencia." },
+    malla(4, 1, 0.3445, "4×1", "Es la malla más gruesa: un solo elemento en el canto."),
+    malla(8, 2, 0.3504, "8×2", "Al refinar, la flecha sube hacia el exacto."),
+    malla(16, 4, 0.3543, "16×4", "Ya casi convergido."),
+    { titulo: "Malla distorsionada 4×1*", params: { malla: 1 }, fig: "fig4_cantilever_corto.png",
+      texto: () => { const d = flechaPunta();
+        return `Los mismos 4 elementos, pero <b>torcidos</b>: arriba x = 0, 12, 24, 36, 48; abajo 0, 16, 20, 28, 48.<br>` +
+          `<b>Por qué:</b> en un modelo real los elementos nunca son rectángulos perfectos. Este caso mide si el ` +
+          `elemento aguanta trapecios.<br><br>` +
+          `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f4(d)}</b></td></tr>` +
+          `<tr><td>Paper (M-type)</td><td>0.3066</td><td>${pct(d, 0.3066)}</td></tr>` +
+          `<tr><td>MacNeal-Harder</td><td>0.2978</td><td>${pct(d, 0.2978)}</td></tr></table>`; },
+      voz: () => { const d = flechaPunta();
+        return `Malla distorsionada. Hekatan da ${f4(d)}, el paper 0 punto 3 0 6 6. Al torcer los elementos la flecha baja un diez por ciento en los dos: la forma del elemento importa.`; } },
+    { titulo: "Conclusión", fig: "tabla2_cantilever.png",
+      texto: () => `Hekatan reproduce la <b>Tabla II</b> del paper en las cuatro mallas (≤ 0.6 %) y converge al exacto ` +
+        `(32×8 → 0.3552). El elemento es el mismo ITW 1990 con drilling, así que las tendencias coinciden: ` +
+        `refinar sube la flecha y distorsionar la baja.`,
+      voz: () => "Hekatan reproduce la tabla dos del paper en las cuatro mallas, con menos de 0 punto 6 por ciento, y converge al exacto." },
+  ];
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Test III — Membrana de Cook
