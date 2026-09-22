@@ -24,6 +24,10 @@ export interface PasoTutor {
   fig?: string;
   /** Parámetros a poner antes de mostrar el paso (se resuelve el modelo con ellos). */
   params?: Record<string, number>;
+  /** Qué SEÑALA el cursor virtual: el rótulo de un control («divisiones X»), un selector CSS
+   *  («#legend») o «modelo» (el centro del visor 3D). Jorge: «tienes que señalar con un mouse
+   *  virtual, si no, no se entiende». */
+  senalar?: string;
 }
 
 const w = () => window as any;
@@ -42,6 +46,47 @@ function decir(t: string) {
   s.speak(u);
 }
 
+
+// ── Cursor virtual: una flecha que VIAJA hasta lo que se explica y lo encierra en un círculo ──
+let cur: HTMLDivElement | null = null, aro: HTMLDivElement | null = null;
+function buscar(q: string): DOMRect | null {
+  if (q === "modelo") {
+    const c = [...document.querySelectorAll("canvas")].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
+    if (!c) return null; const r = c.getBoundingClientRect();
+    return new DOMRect(r.left + r.width * 0.45, r.top + r.height * 0.45, r.width * 0.1, r.height * 0.1);
+  }
+  if (/^[#.\[]/.test(q)) return document.querySelector(q)?.getBoundingClientRect() ?? null;
+  // por rótulo: el elemento visible más pequeño cuyo texto es EXACTAMENTE ese; se señala su fila entera
+  const t = q.trim().toLowerCase();
+  let mejor: HTMLElement | null = null;
+  for (const e of document.querySelectorAll<HTMLElement>("body *")) {
+    if (pan?.contains(e) || e.children.length > 2) continue;
+    if ((e.textContent || "").trim().toLowerCase() !== t) continue;
+    const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    if (!mejor || r.width * r.height < mejor.getBoundingClientRect().width * mejor.getBoundingClientRect().height) mejor = e;
+  }
+  if (!mejor) return null;
+  const fila = (mejor.closest(".tp-lblv, .tp-rotv, tr, li") as HTMLElement) || mejor;
+  fila.scrollIntoView({ block: "center" });      // si está más abajo en el panel, primero se trae a la vista
+  return fila.getBoundingClientRect();
+}
+function senalar(q?: string) {
+  if (!cur) {
+    cur = document.createElement("div");
+    cur.innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24"><path d="M3 2l7 19 2.5-7.5L20 11z" fill="#fff" stroke="#000" stroke-width="1.4"/></svg>`;
+    cur.style.cssText = "position:fixed;z-index:9700;pointer-events:none;transition:left .9s ease,top .9s ease;left:200px;top:200px;filter:drop-shadow(0 2px 3px #000a)";
+    aro = document.createElement("div");
+    aro.style.cssText = "position:fixed;z-index:9690;pointer-events:none;border:3px solid #fbbf24;border-radius:10px;" +
+      "box-shadow:0 0 0 4px #fbbf2455;transition:all .9s ease;opacity:0";
+    document.body.append(aro, cur);
+  }
+  const r = q ? buscar(q) : null;
+  if (!r) { aro!.style.opacity = "0"; if (pan) { const p = pan.getBoundingClientRect(); cur.style.left = p.right - 40 + "px"; cur.style.top = p.bottom - 40 + "px"; } return; }
+  cur.style.left = r.left + r.width * 0.5 + "px"; cur.style.top = r.top + r.height * 0.5 + "px";
+  Object.assign(aro!.style, { left: r.left - 6 + "px", top: r.top - 4 + "px", width: r.width + 12 + "px", height: r.height + 8 + "px", opacity: "1" });
+}
+function quitarCursor() { cur?.remove(); aro?.remove(); cur = aro = null; }
+
 async function mostrar() {
   if (!pan) return;
   const p = pasos[i];
@@ -59,6 +104,7 @@ async function mostrar() {
   pan.querySelector<HTMLButtonElement>("[data-ant]")!.disabled = i === 0;
   pan.querySelector<HTMLButtonElement>("[data-sig]")!.disabled = i === pasos.length - 1;
   decir(p.voz ? p.voz() : cuerpo.innerText.replace(/\s+/g, " "));
+  senalar(p.senalar);
 }
 
 export function abrirTutorTest(titulo: string, lista: PasoTutor[]) {
@@ -79,7 +125,7 @@ export function abrirTutorTest(titulo: string, lista: PasoTutor[]) {
     `<button data-sig style="flex:1;padding:6px;background:#2563eb;color:#fff;border:0;border-radius:4px">Siguiente ▶</button></div>`;
   document.body.appendChild(pan);
   ventanaFlotante(pan);
-  pan.querySelector("[data-x]")!.addEventListener("click", () => { window.speechSynthesis?.cancel(); pan?.remove(); pan = null; });
+  pan.querySelector("[data-x]")!.addEventListener("click", () => { window.speechSynthesis?.cancel(); pan?.remove(); pan = null; quitarCursor(); });
   pan.querySelector("[data-voz]")!.addEventListener("click", (e) => {
     hablar = !hablar; (e.target as HTMLElement).textContent = hablar ? "🔊" : "🔇"; if (!hablar) window.speechSynthesis?.cancel();
   });
@@ -93,6 +139,10 @@ export function abrirTutorTest(titulo: string, lista: PasoTutor[]) {
 export function registrarTutorTest(id: string, titulo: string, lista: () => PasoTutor[]) {
   if (typeof window === "undefined" || !w().__hekatanRebuild) return;
   w().__hekatanTutorTest = () => abrirTutorTest(titulo, lista());
+  // ?tutor=1 en la URL: el tutor arranca solo (una vez), para mandar el enlace y que se vea directo
+  if (!w().__hekatanTutorAuto && new URLSearchParams(location.search).get("tutor") === "1") {
+    w().__hekatanTutorAuto = true; setTimeout(() => abrirTutorTest(titulo, lista()), 2500);
+  }
   registrarDiseno({ id: "tutor-" + id, orden: 5, icono: "🎓", titulo: "Tutor del test (paso a paso, con voz)",
     detalle: "Explica este banco: el problema del paper, la solución exacta y cada malla con los números de Hekatan.",
     abrir: () => abrirTutorTest(titulo, lista()) });

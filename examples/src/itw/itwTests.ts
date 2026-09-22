@@ -79,7 +79,7 @@ function mallaXZ(L: number, H: number, na: number, nb: number) {
 
 /** Propiedades de cáscara iguales en todos los elementos. */
 function props(elements: Element[], t: number, E: number, nu: number,
-               drill?: number) {
+               drill?: number, gam?: number) {
   const m = <T,>(v: T) => new Map<number, T>(elements.map((_, i) => [i, v]));
   const o: any = { thicknesses: m(t), elasticities: m(E), poissonsRatios: m(nu),
                    densities: m(0) };
@@ -92,6 +92,8 @@ function props(elements: Element[], t: number, E: number, nu: number,
   //  10  proyeccion + SRI del volumetrico
   //  11  **la receta de Wilson**: Gauss 2x2 + K0 de rango uno (k0 = 0.025 G)
   if (drill) o.drillingTypes = m(Math.round(drill));
+  // γ/μ del término de penalización del drilling (Tabla V del paper). 0 = el defecto del motor (0.4).
+  if (gam) o.drillingPenaltyScales = m(gam);
   return o;
 }
 
@@ -269,7 +271,7 @@ const pct = (a: number, b: number) => `${((a / b - 1) * 100).toFixed(2)} %`;
 /** Guion del tutor del Test II (Ibrahimbegović, Taylor & Wilson 1990, Fig. 4 y Tabla II). */
 function pasosTest2(): PasoTutor[] {
   const malla = (na: number, nb: number, paper: number, etiqueta: string, porque: string): PasoTutor => ({
-    titulo: `Malla ${etiqueta}`, params: { malla: 0, na, nb },
+    titulo: `Malla ${etiqueta}`, params: { malla: 0, na, nb }, senalar: "divisiones X",
     texto: () => { const d = flechaPunta();
       return `Ahora el voladizo con <b>${na}×${nb}</b> elementos. ${porque}<br><br>` +
         `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f4(d)}</b></td></tr>` +
@@ -279,7 +281,7 @@ function pasosTest2(): PasoTutor[] {
       return `Malla de ${na} por ${nb}. Hekatan da ${f4(d)}; el paper da ${paper}. La diferencia es ${pct(d, paper)}. ${porque}`; },
   });
   return [
-    { titulo: "El problema", fig: "fig4_cantilever_corto.png", params: { malla: 0, na: 4, nb: 1 },
+    { titulo: "El problema", fig: "fig4_cantilever_corto.png", params: { malla: 0, na: 4, nb: 1 }, senalar: "modelo",
       texto: () => `Un <b>voladizo corto</b>: largo l = 48 y canto h = 12 (relación 4 a 1). Está empotrado a la ` +
         `izquierda y en la punta lleva un cortante <b>P = 40</b> repartido en todo el borde. E = 30000, ν = 0.25, t = 1.<br><br>` +
         `<b>Por qué este test:</b> al ser corto, la flecha no es solo flexión: el <b>cortante</b> pesa. ` +
@@ -300,7 +302,7 @@ function pasosTest2(): PasoTutor[] {
     malla(4, 1, 0.3445, "4×1", "Es la malla más gruesa: un solo elemento en el canto."),
     malla(8, 2, 0.3504, "8×2", "Al refinar, la flecha sube hacia el exacto."),
     malla(16, 4, 0.3543, "16×4", "Ya casi convergido."),
-    { titulo: "Malla distorsionada 4×1*", params: { malla: 1 }, fig: "fig4_cantilever_corto.png",
+    { titulo: "Malla distorsionada 4×1*", params: { malla: 1 }, fig: "fig4_cantilever_corto.png", senalar: "malla",
       texto: () => { const d = flechaPunta();
         return `Los mismos 4 elementos, pero <b>torcidos</b>: arriba x = 0, 12, 24, 36, 48; abajo 0, 16, 20, 28, 48.<br>` +
           `<b>Por qué:</b> en un modelo real los elementos nunca son rectángulos perfectos. Este caso mide si el ` +
@@ -424,6 +426,55 @@ export const itwTest3: ExampleDef = {
  *
  * Se deja el caso en el deploy **con el número que da**, no con el que gustaría.
  */
+/** Flecha radial en el punto cargado (ux en φ = 0, ecuador) del hemisferio ABIERTO. */
+function flechaHemi(): number {
+  const S = (window as any).__hekatanStates, P = (window as any).__hekatanParams?.();
+  const d = S?.deformOutputs?.val?.deformations; if (!d || !P) return NaN;
+  const na = Math.round(P.na), nb = Math.round(P.nb);
+  return Math.abs(d.get(nb * (na + 1))?.[0] ?? NaN);
+}
+const f6 = (x: number) => x.toFixed(6);
+
+/** Guion del tutor del Test IV: hemisferio pinchado, Tabla IV (mallas) y Tabla V (γ/μ). */
+function pasosTest4(): PasoTutor[] {
+  const malla = (n: number, paper: number): PasoTutor => ({
+    titulo: `Malla ${n}×${n}`, params: { na: n, nb: n, gam: 0 }, senalar: "divisiones φ",
+    texto: () => { const d = flechaHemi();
+      return `El cuarto de hemisferio con <b>${n}×${n}</b> elementos.<br><br>` +
+        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f6(d)}</b></td></tr>` +
+        `<tr><td>Paper (M-type)</td><td>${paper}</td><td>${pct(d, paper)}</td></tr>` +
+        `<tr><td>MacNeal-Harder</td><td>0.094</td><td>${pct(d, 0.094)}</td></tr></table>`; },
+    voz: () => `Malla de ${n} por ${n}. Hekatan da ${f6(flechaHemi())}; el paper da ${paper}.`,
+  });
+  const gama = (g: number, paper: number): PasoTutor => ({
+    titulo: `Tabla V · γ/μ = ${g}`, params: { na: 8, nb: 8, gam: g }, senalar: "γ/μ (Tabla V)",
+    texto: () => { const d = flechaHemi();
+      return `Misma malla 8×8, cambiando solo <b>γ/μ = ${g}</b> (el peso del término que ata el giro de drilling ` +
+        `a la rotación de la membrana).<br><br>` +
+        `<table style="width:100%"><tr><td>Hekatan</td><td><b>${f6(d)}</b></td></tr>` +
+        `<tr><td>Paper (M-type)</td><td>${paper}</td></tr></table>`; },
+    voz: () => `Gamma sobre mu igual a ${g}. Hekatan da ${f6(flechaHemi())}.`,
+  });
+  return [
+    { titulo: "El problema", fig: "fig6_hemisferio.png", params: { na: 8, nb: 8, gam: 0 }, senalar: "modelo",
+      texto: () => `Una semiesfera de radio <b>R = 10</b>, espesor t = 0.04, con un hueco de 18° arriba. Dos pares de ` +
+        `cargas P = 1 la <b>pinchan</b>: dos hacia dentro y dos hacia fuera. Por simetría se modela un cuarto.<br><br>` +
+        `<b>Por qué este test:</b> es una cáscara CURVA muy delgada (R/t = 250). Si la membrana se «bloquea» ` +
+        `(membrane locking), la flecha sale mucho menor que 0.094.`,
+      voz: () => "Una semiesfera de radio 10 y espesor 0 punto 0 4, pinchada por dos pares de cargas. Es una cáscara curva muy delgada: si la membrana se bloquea, la flecha sale mucho menor que 0 punto 0 9 4." },
+    malla(4, 0.087548), malla(8, 0.093714), malla(12, 0.093587), malla(16, 0.093488),
+    { titulo: "Tabla V: ¿importa γ?", fig: "tabla5_gamma.png", params: { na: 8, nb: 8, gam: 0 }, senalar: "γ/μ (Tabla V)",
+      texto: () => `El paper repite la malla 8×8 cambiando <b>γ</b> de 0.001·μ a 1000·μ y la flecha casi no se mueve. ` +
+        `Es la prueba de que la formulación es <b>insensible a γ</b>. Lo hacemos igual con el selector «γ/μ».`,
+      voz: () => "El paper repite la malla de 8 por 8 cambiando gamma de 0 punto 0 0 1 a mil veces mu, y la flecha casi no se mueve. Lo repetimos con el selector gamma sobre mu." },
+    gama(0.001, 0.093967), gama(0.05, 0.093813), gama(1, 0.093714), gama(50, 0.0937), gama(1000, 0.0937),
+    { titulo: "Conclusión", fig: "tabla4_hemisferio.png", params: { na: 8, nb: 8, gam: 0 },
+      texto: () => `Con γ/μ de 0.001 a 1000 la flecha de Hekatan cambia menos de 0.01 %: igual de insensible que el ` +
+        `paper. En valor absoluto, a 8×8 Hekatan queda ~1 % bajo el paper (0.0927 contra 0.0937).`,
+      voz: () => "Con gamma de 0 punto 0 0 1 a mil, la flecha de Hekatan cambia menos de 0 punto 0 1 por ciento: igual de insensible que el paper." },
+  ];
+}
+
 export const itwTest4: ExampleDef = {
   id: "itw-test-4-hemisferio",
   name: "ITW Test IV · Hemisferio pinchado (δ = 0.094)",
@@ -440,6 +491,8 @@ export const itwTest4: ExampleDef = {
     na: { default: 8,        min: 2,   max: 24,   step: 1,    label: "divisiones φ" },
     nb: { default: 8,        min: 2,   max: 24,   step: 1,    label: "divisiones polar" },
     drill: { default: 0, min: 0, max: 11, step: 1, label: "variante drilling (0=defecto, 11=Wilson)" },
+    // Tabla V del paper: la misma malla 8×8 con γ/μ = 0.001 … 1000 → la flecha casi no cambia.
+    gam: { default: 0, options: { "defecto (0.4)": 0, "0.001": 0.001, "0.05": 0.05, "1.0 (paper)": 1, "50": 50, "1000": 1000 }, label: "γ/μ (Tabla V)" },
   },
   build(p, states) {
     const na = Math.round(p.na), nb = Math.round(p.nb);
@@ -483,7 +536,8 @@ export const itwTest4: ExampleDef = {
       [eq + na, [0, -p.P, 0, 0, 0, 0]],
     ]);
     resolver(states, nodes, elements, supports, loads,
-             props(elements, p.t, p.E, p.nu, (p as any).drill));
+             props(elements, p.t, p.E, p.nu, (p as any).drill, (p as any).gam));
+    registrarTutorTest("itw-test-4", "Tutor · ITW Test IV (hemisferio, Tablas IV y V)", pasosTest4);
   },
   computedLabels(p, states) {
     const na = Math.round(p.na), nb = Math.round(p.nb);
