@@ -211,10 +211,22 @@ export const itwTest2: ExampleDef = {
     V:  { default: 40,    min: 5,  max: 200, step: 5,    label: "V cortante total" },
     na: { default: 8,     min: 2,  max: 32,  step: 1,    label: "divisiones X" },
     nb: { default: 3,     min: 1,  max: 12,  step: 1,    label: "divisiones Z" },
+    // Fig. 4 del paper: la malla distorsionada es SIEMPRE 4×1 (fila «4×1*» de la Tabla II).
+    // Arriba x = 12·i; abajo x = 0, 16, 20, 28, 48 (tramos 16-4-8-20).
+    malla: { default: 0, options: { "regular": 0, "distorsionada (Fig. 4, 4×1)": 1 }, label: "malla" },
   },
   build(p, states) {
-    const na = Math.round(p.na), nb = Math.round(p.nb);
+    const dist = Math.round((p as any).malla ?? 0) === 1;
+    const na = dist ? 4 : Math.round(p.na), nb = dist ? 1 : Math.round(p.nb);
     const { nodes, elements, idx } = mallaXZ(p.L, p.H, na, nb);
+    if (dist) {
+      const abajo = [0, 16, 20, 28, 48].map((x) => x * p.L / 48);
+      for (let i = 0; i <= 4; i++) nodes[idx(i, 0)][0] = abajo[i];
+    }
+    // Borde x = 0 EMPOTRADO. Medido (22-sep-2026): es el apoyo con el que el paper sacó la
+    // Tabla II — 4×1 0.3425 / 8×2 0.3498 / 16×4 0.3538 / 4×1* 0.3080 contra 0.3445 / 0.3504 /
+    // 0.3543 / 0.3066, y a 32×8 da 0.3552 (−0.02 % del exacto). Con el apoyo mínimo del dibujo
+    // (ux en el borde, uz en un nudo) converge a 0.359: es otro problema.
     const supports = planoXZ(nodes, (n) => n % (na + 1) === 0);
     // Cortante repartido en el borde libre; las esquinas se llevan la mitad,
     // que es el vector consistente de una carga uniforme sobre ese borde.
@@ -227,10 +239,17 @@ export const itwTest2: ExampleDef = {
              props(elements, p.t, p.E, p.nu, (p as any).drill));
   },
   computedLabels(p, states) {
-    const na = Math.round(p.na), nb = Math.round(p.nb);
+    const dist = Math.round((p as any).malla ?? 0) === 1;
+    const na = dist ? 4 : Math.round(p.na), nb = dist ? 1 : Math.round(p.nb);
     const medio = Math.round(nb / 2);
+    // Tabla II del paper (M-type, apoyo mínimo): la fila con la que comparar esta malla
+    const tabla: Record<string, number> = { "4x1": 0.3445, "8x2": 0.3504, "16x4": 0.3543, "4x1*": 0.3066 };
+    const clave = dist ? "4x1*" : `${na}x${nb}`;
+    const paper = tabla[clave];
     return { ...fila(Math.abs(u(states, medio * (na + 1) + na, 2)), 0.3553),
-             "por qué": "4:1 y malla 8×3: donde un Q4 sin drilling se queda corto" };
+             "paper M-type": paper ? `${paper} (${clave})` : "— (usa 4×1, 8×2, 16×4 o la distorsionada)",
+             "por qué": dist ? "malla distorsionada: mide si el elemento aguanta trapecios"
+                             : "4:1 y malla gruesa: donde un Q4 sin drilling se queda corto" };
   },
 };
 
