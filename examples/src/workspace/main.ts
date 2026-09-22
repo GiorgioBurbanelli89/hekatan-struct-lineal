@@ -1704,6 +1704,7 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // devuelve `undefined` sin decir por que. Lo usa
 // `cli/shot_plantillas_colormap.mjs`.
 (window as any).__hekatanSettings = () => (viewerElm as any).__settings;
+(window as any).__hekatanViewerCtx = () => (viewerElm as any).__ctx;   // cámara y escena: el tutor proyecta nudos a pantalla
 // La lista de ejemplos, para que los barridos de la CLI no lleven una copia
 // que se queda vieja en cuanto se anade uno.
 /**
