@@ -34,6 +34,17 @@ const menus: Record<string, Entrada[]> = {
       detalle: "La cimentación con sus muelles, para SAFE.", abrir: () => pulsarExport("F2K", "SAFE") },
     { id: "tcl", orden: 4, icono: "🧮", titulo: "OpenSees (.tcl)",
       detalle: "El guion de OpenSees, para comprobarlo aparte.", abrir: () => pulsarExport(".tcl", "OpenSees") },
+    // DWG / DXF (23-sep-2026): la GEOMETRIA de ida y vuelta con AutoCAD y el visor DWG.
+    // Cada familia en su capa; al importar, las lineas pasan a barras y solo faltan
+    // apoyos, secciones y cargas.
+    { id: "dwg", orden: 5, icono: "📐", titulo: "AutoCAD (.dwg) — geometría",
+      detalle: "Barras y áreas en capas COLUMNAS, VIGAS, DIAGONALES, LOSAS, MUROS.", abrir: () => pulsar("Exportar DWG", "DWG") },
+    { id: "dxf", orden: 6, icono: "📄", titulo: "DXF — geometría",
+      detalle: "Lo mismo en DXF de texto: lo abre cualquier CAD.", abrir: () => pulsar("Exportar DXF", "DXF") },
+    { id: "idwg", orden: 7, icono: "📥", titulo: "Importar DWG / DXF (3D o planta)",
+      detalle: "Líneas → barras con sus nudos; 3DFACE → áreas. Salta ejes, cotas y textos.", abrir: () => pulsar("Importar DWG/DXF (3D", "DWG") },
+    { id: "idwgxz", orden: 8, icono: "📥", titulo: "Importar DWG / DXF como alzado (XZ)",
+      detalle: "Un pórtico dibujado en 2D: la Y del plano pasa a ser la altura Z.", abrir: () => pulsar("como alzado (XZ)", "DWG") },
   ],
 };
 
@@ -54,6 +65,14 @@ function pulsarExport(clave: string, nombre: string): void {
   alert("Este ejemplo todavía no exporta a " + nombre + ".\n\n" +
         "Los que sí: el galpón curvo (ETABS, SAP2000, SAFE y OpenSees) y\n" +
         "la zapata (SAFE y OpenSees).");
+}
+
+/** Pulsa el boton del panel derecho cuyo texto contiene `texto` (DWG / DXF). */
+function pulsar(texto: string, nombre: string): void {
+  const b = Array.from(document.querySelectorAll<HTMLElement>("button,.tp-btnv_b"))
+    .find((e) => (e.textContent || "").replace(/\s+/g, " ").includes(texto));
+  if (b) { b.click(); return; }
+  alert("Abrí un modelo o un archivo nuevo para usar " + nombre + ".");
 }
 
 const NOMBRE: Record<string, string> = { analisis: "▶ Análisis", diseno: "📐 Diseño", exportar: "📤 Exportar" };

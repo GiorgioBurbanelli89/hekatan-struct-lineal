@@ -4591,6 +4591,66 @@ function buildParamsPane() {
     taContainer.appendChild(heksInput);
     fCli.addButton({ title: "📂 Abrir .heks" }).on("click", () => heksInput.click());
 
+    // ── 📐 DWG / DXF ⇄ geometría (el motor del visor DWG, en public/dwg/) ──
+    // Importar: líneas → barras, 3DFACE/polilínea cerrada de 3-4 lados → áreas,
+    // partiendo en las uniones en T. Entra por el mismo camino que el S2K
+    // (new-blank), así que después solo faltan apoyos, secciones y cargas.
+    // Exportar: cada familia en su capa (COLUMNAS, VIGAS, DIAGONALES, LOSAS, MUROS).
+    const fDwg = pane.addFolder({ title: "📐 DWG / DXF", expanded: false });
+    const importarPlano = (plano: "auto" | "xz") => {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = ".dwg,.dxf";
+      input.onchange = async (ev: any) => {
+        const file = ev.target.files?.[0]; if (!file) return;
+        try {
+          const { leerPlano, docAGeometria } = await import("../shared/dwgGeometria");
+          const doc = await leerPlano(file, import.meta.env.BASE_URL);
+          const g = docAGeometria(doc, { plano });
+          if (!g.nodes.length) {
+            alert(`No se encontró geometría estructural en ${file.name}.` +
+              (g.capasSaltadas.length ? `\nCapas saltadas (ejes, cotas, textos…): ${g.capasSaltadas.join(", ")}` : ""));
+            return;
+          }
+          (window as any).__hekatanDwgImport = g;
+          localStorage.setItem("__hekatan_pending_import__", JSON.stringify({
+            source: "DWG", filename: file.name,
+            nodes: g.nodes, polylines: g.polylines, areas: g.areas, timestamp: Date.now(),
+          }));
+          console.log(`✅ ${file.name}: ${g.resumen}\n   capas usadas: ${g.capasUsadas.join(", ")}` +
+            `\n   capas saltadas:${g.capasSaltadas.join(", ") || "—"}`);
+          const u = new URL(window.location.href);
+          u.searchParams.set("t", "new-blank");
+          window.location.href = u.toString();
+        } catch (e: any) {
+          alert(`Error importando ${file.name}: ${e?.message ?? e}`); console.error(e);
+        }
+      };
+      input.click();
+    };
+    fDwg.addButton({ title: "📥 Importar DWG/DXF (3D o planta)" }).on("click", () => importarPlano("auto"));
+    fDwg.addButton({ title: "📥 Importar DWG/DXF como alzado (XZ)" }).on("click", () => importarPlano("xz"));
+    const nombreBase = () => ((window as any).__hekatanHeksNombre || currentExample?.id || "modelo")
+      .replace(/\.(heks|txt|dwg|dxf)$/i, "");
+    fDwg.addButton({ title: "📤 Exportar DWG" }).on("click", async () => {
+      try {
+        const { escribirDwg } = await import("../shared/dwgGeometria");
+        const bytes = await escribirDwg(states.nodes.val as any, states.elements.val as any,
+                                        import.meta.env.BASE_URL);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([bytes], { type: "image/vnd.dwg" }));
+        a.download = nombreBase() + ".dwg"; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      } catch (e: any) { alert(`Error exportando DWG: ${e?.message ?? e}`); console.error(e); }
+    });
+    fDwg.addButton({ title: "📤 Exportar DXF" }).on("click", async () => {
+      const { modeloAEntidades, entidadesADxf } = await import("../shared/dwgGeometria");
+      const txt = entidadesADxf(modeloAEntidades(states.nodes.val as any, states.elements.val as any));
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([txt], { type: "application/dxf" }));
+      a.download = nombreBase() + ".dxf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+
     // ── Guardar / Guardar como… un .heks, y la barra de arriba ──
     // Los botones Nuevo · Abrir · Guardar de la barra superior eran DIBUJO: no tenían
     // acción. Y no había «Guardar como» (Jorge, 13-sep-2026). Guardar reescribe con el
