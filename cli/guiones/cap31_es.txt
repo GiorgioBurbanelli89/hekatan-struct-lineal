@@ -1,0 +1,20 @@
+Mesa de torsión en Hekatan Struct: la torsión de la viga depende de la malla de la losa.
+La mesa: una losa de cáscara Shell-Thin de diez centímetros, cuatro vigas de treinta por cincuenta y cuatro columnas de cuarenta por cuarenta, articuladas en la base.
+Elijo la combinación UDCon2, uno punto dos muerta más uno punto seis viva más uno punto dos sobrecarga, y el diagrama de torsión de las barras.
+En el alzado: la losa flexiona y gira en su borde. En cada nudo compartido el giro de la losa es el giro de la viga, y la viga lo recibe como torsión, T igual a G J por la derivada del giro. Junto a la columna la torsión es máxima.
+Wilson, sección siete punto siete, figura siete punto seis: la losa y la viga se conectan con una restricción de cuerpo rígido, y para mantener la compatibilidad podría ser necesario aplicarla en varias secciones a lo largo del eje de la viga.
+Y en la sección ocho punto nueve punto cinco advierte que los elementos placa no deben modelar la torsión de vigas. La torsión la lleva la barra con su rigidez G J; la losa solo le impone el giro.
+Con la losa en un solo elemento, la viga comparte solo sus extremos: los dos giran igual y la torsión es cero. ETABS con la misma malla también da cero.
+Malla dos por dos: aparece un nudo compartido a media luz y la torsión sube a dos punto seis dos toneladas metro. ETABS da dos punto cinco tres.
+Malla cuatro por cuatro: cinco nudos compartidos y la torsión llega a cinco punto cero cuatro.
+Malla ocho por ocho: cinco punto ocho cinco.
+Malla dieciséis por dieciséis: seis punto cero seis. Entre ocho y dieciséis cambia menos de cuatro por ciento: ya convergió.
+La tabla completa: la torsión crece al refinar, en Hekatan y en ETABS, y converge. La malla gruesa la subestima.
+Si la viga se une a la losa solo en sus extremos, la torsión vuelve a ser cero y el borde de la losa queda libre: la flecha central pasa de treinta y tres a doscientos diez milímetros.
+Equilibrio de la media viga: la derivada de la torsión es el momento de borde de la losa. Integrado sobre media luz da la torsión del apoyo; a treinta y dos por treinta y dos cierra al uno por ciento.
+Con la malla fina, la torsión en la viga es seis punto cero seis toneladas metro, mayor que la torsión de fisuración de dos punto cinco: la viga se fisura. Fisurada, su rigidez torsional cae del orden de ochenta y cinco a noventa por ciento. El giro que la viga ya no restringe lo toma la losa: el momento se redistribuye y el equilibrio del paño se conserva. Esta es torsión de compatibilidad, que se puede reducir; la torsión de equilibrio, la que sostiene la carga, no se reduce. Reducir J e iterar es una aproximación secante del comportamiento no lineal.
+ACI trescientos dieciocho, sección veintidós punto siete punto tres punto dos: en torsión de compatibilidad la torsión de diseño puede reducirse a fi T c r, uno punto ocho ocho toneladas metro. Se reduce la J de la viga hasta que la torsión baja a ese valor.
+En tres dimensiones, como referencia: la losa coloreada por el momento M22 con la viga sin fisurar. En el borde, menos tres punto tres cinco toneladas metro por metro; al centro, más dos punto dos seis.
+Con la J al cuatro por ciento, la torsión baja a uno punto nueve cuatro. El momento de borde baja a menos cero punto ocho siete y el del centro sube a tres punto tres cuatro. En el corte central, losa más vigas más el empuje del pórtico suman sesenta y cinco punto seis ocho toneladas metro en todos los casos: el momento se redistribuye, no desaparece.
+Consecuencia para el armado: el positivo al centro de la losa sube cuarenta y ocho por ciento; el acero inferior se diseña con el momento después de fisurar la viga. La viga lleva estribos cerrados y acero longitudinal para fi T c r.
+Conclusión: la torsión de la viga sube al refinar la malla. La viga no cambia; cambia en cuántos nudos la losa le impone su giro. Con malla gruesa la torsión se subestima.
