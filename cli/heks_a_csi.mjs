@@ -2,12 +2,14 @@
 /**
  * Un .heks a los textos de CSI (.e2k, .s2k y .f2k) por el MISMO camino que la app (cliModeler +
  * exportE2k/exportS2k), sin navegador. Cargas en modo manual (nodales, sin peso propio de CSI).
- *   node cli/heks_a_csi.mjs modelo.heks salida-sin-extension [cftas=general] [meshtype=NONE] [patrones=1]
+ *   node cli/heks_a_csi.mjs modelo.heks salida-sin-extension [cftas=general] [meshtype=NOAUTOMESH] [patrones=1]
  * `patrones=1`: s2k y f2k con TODOS los patrones, combinaciones (`combo`), peso propio calculado por CSI,
  * muelle de AREA (con «Compression Only» si el .heks dice `compresion`), losa Mat/Footing y Stiff, y
  * ademas `salida_SAFE20.f2k` (nombres de campo de SAFE 20; el .f2k normal va con los de SAFE 22).
- * `meshtype=X` reemplaza OBJMESHTYPE de todas las areas del e2k (p.ej. NONE para que ETABS
- * no remalle los panos).
+ * `meshtype=X` reemplaza OBJMESHTYPE de todas las areas del e2k. Para que ETABS NO remalle una
+ * malla que ya viene hecha: **NOAUTOMESH**. ⚠️ `NONE` NO es un valor de ETABS (validos, del binario:
+ * DEFAULT | DIAPHRAGMONLY | NOAUTOMESH | MESHN1XN2 | AUTOMESH): lo ignora sin avisar y remalla con
+ * DEFAULT. Medido 22-sep-2026 en losas de malla irregular: DEFAULT/NONE 2.5 %, NOAUTOMESH 0.004 %.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { empaquetar, R } from "../tests/lib/bundle.mjs";

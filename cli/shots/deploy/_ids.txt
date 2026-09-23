@@ -160,3 +160,4 @@ zapata-aislada
 zapata-aislada-validacion
 zapata-viga-amarre
 col-placa
+validacion-losas-csi

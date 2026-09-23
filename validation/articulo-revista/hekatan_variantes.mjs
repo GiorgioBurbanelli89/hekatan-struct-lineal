@@ -5,7 +5,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const HS = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct";
-const S = "C:/Users/j-b-j/AppData/Local/Temp/claude/C--Users-j-b-j-Documents-Hekatan-Calc-1-0-0/ec728c25-30db-4d6e-8bb8-a562b1b16aed/scratchpad/dual";
+const S = (process.env.HK_TMP || (process.env.TEMP || "/tmp") + "/hk_art_dual").replace(/\\/g, "/");
+(await import("node:fs")).mkdirSync(S, { recursive: true });
 
 // 1) buildEdificio: la copia fiel de testM.ts que usa cli/sweep_case.mjs
 const src = readFileSync(HS + "/cli/sweep_case.mjs", "utf8").replace(/\r\n/g, "\n");

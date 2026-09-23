@@ -28,7 +28,10 @@ const HOJAS = {
   // membrana pura (Shells) y los dos MUROS llevan viga, o sea barras + cascaras
   // (Mixtos). El caso de abajo cuenta los elementos y no deja mentir.
   "2️⃣ Shells": ["🧱 Placas", "🕸 Membranas", "🌀 Drilling ITW", "🐚 Cáscaras",
-                 "🥞 Layered", "🧰 Cimentaciones", "🔩 Conexiones"],
+                 "🥞 Layered", "🧰 Cimentaciones", "🔩 Conexiones",
+                 // pedido de Jorge (22-sep-2026): los ejemplos que se validan contra ETABS,
+                 // SAP2000, OpenSees y numpy sobre la MISMA malla, juntos y a la vista
+                 "✅ Validación CSI"],
   "3️⃣ Sólidos": [],
   "4️⃣ Mixtos": ["🏢 Edificios", "🧰 Cimentaciones", "🔩 Conexiones",
                  "🔀 Losas con vigas", "🌉 Puentes e icónicos", "🌀 Drilling ITW"],

@@ -173,6 +173,7 @@ export default defineConfig({
         "pergola-parametrica": "src/pergola-parametrica/index.html",
         "col-placa": "src/col-placa/index.html",
         "placa-orificios": "src/placa-orificios/index.html",
+        "validacion-losas-csi": "src/validacion-losas-csi/index.html",
         "placa-xy": "src/placa-xy/index.html",
         "losa-plana": "src/losa-plana/index.html",
         "talud": "src/talud/index.html",

@@ -170,17 +170,20 @@ export function legendGradientCss(): string {
   return `linear-gradient(${stops.join(",")})`;
 }
 
-/** Rango del colormap ROBUSTO: percentiles 1 y 99 de los valores finitos, no el min/max crudo.
- *  Con el min/max crudo, un pico en la base de un muro (vonMises 126 en un nudo de esquina contra
- *  5-20 en el resto) dejaba el 90 % del edificio en la banda de abajo de la paleta y el muro "sin
- *  colormap" (Jorge, deploy público, 6-sep-2026). Lo que queda fuera se satura al color del extremo,
- *  como el contour de ETABS/SAFE cuando se le fija el rango. Si todo es positivo, el mínimo es 0. */
+/** Rango del colormap: MIN/MAX REAL de los valores finitos (como SAFE/ETABS/SAP2000), salvo que el
+ *  selector «Rango colormap» diga «todas, recortando picos»: entonces percentiles 1 y 99 (lo que se puso
+ *  el 6-sep-2026 para un pico de vonMises en la base de un muro; lo que queda fuera se satura al color
+ *  del extremo). Si todo es positivo, el mínimo es 0; si todo es negativo, el máximo es 0. */
 export function robustRange(valid: number[]): [number, number] {
   if (!valid.length) return [0, 1];
   const s = [...valid].sort((a, b) => a - b);
   const q = (f: number) => s[Math.min(s.length - 1, Math.max(0, Math.round(f * (s.length - 1))))];
-  let vMin = s.length >= 20 ? q(0.01) : s[0];
-  let vMax = s.length >= 20 ? q(0.99) : s[s.length - 1];
+  // Por defecto el MIN/MAX REAL, como SAFE/ETABS/SAP2000: la barra tiene que llegar al pico (Jorge,
+  // 22-sep-2026: la losa con ductos marcaba −4.01 mm con la flecha real en −4.78). El recorte p1–p99
+  // queda como opción del selector «Rango colormap» → «todas, recortando picos».
+  const recortar = colorMapScope.val === "robusto" && s.length >= 20;
+  let vMin = recortar ? q(0.01) : s[0];
+  let vMax = recortar ? q(0.99) : s[s.length - 1];
   if (vMin >= 0 && vMax > 0) vMin = 0;
   if (vMax <= 0 && vMin < 0) vMax = 0;
   return [vMin, vMax];

@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const HS = join(AQUI, "..", "..");
-const S = process.env.HK_TMP || "C:/Users/j-b-j/AppData/Local/Temp/claude/C--Users-j-b-j-Documents-Hekatan-Calc-1-0-0/ec728c25-30db-4d6e-8bb8-a562b1b16aed/scratchpad/dual6";
+const S = (process.env.HK_TMP || (process.env.TEMP || "/tmp") + "/hk_art_dual6").replace(/\\/g, "/");
+(await import("node:fs")).mkdirSync(S, { recursive: true });
 mkdirSync(S, { recursive: true });
 
 // 1) buildEdificio: la copia fiel de testM.ts que usa cli/sweep_case.mjs

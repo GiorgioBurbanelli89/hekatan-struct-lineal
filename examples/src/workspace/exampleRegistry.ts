@@ -292,6 +292,7 @@ import { losaPlana } from "../losa-plana/losaPlana";
 import { losaRect } from "../losa-rect/losaRect";
 import { placaXY } from "../placa-xy/placaXY";
 import { placaOrificios } from "../placa-orificios/placaOrificios";
+import { validacionLosasCsi } from "../validacion-losas-csi/validacionLosasCsi";
 import { colPlaca } from "../col-placa/colPlaca";
 import { vigaAlta } from "../viga-alta/vigaAlta";
 import { muroContencion } from "../muro-contencion/muroContencion";
@@ -437,7 +438,7 @@ export const examplesRegistry: ExampleDef[] = [
   //    esta ya en SU carpeta con su `index.html`; aqui se registran para que el
   //    selector los ofrezca y `categorias-arbol` los pueda mirar (18-sep-2026).
   arco, burj, eiffel, opera, talud, twisted,
-  muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios,
+  muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios, validacionLosasCsi,
   colPlaca, vigaAlta, muroContencion, puenteReticular,
   diagridParam, pergolaParam,
   edifMuros, edifMixto, edifAceroDiag,

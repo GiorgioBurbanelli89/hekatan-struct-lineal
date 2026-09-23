@@ -1,3 +1,4 @@
+#include "plateDKT.h"
 #include "../data-model.h"
 #include <vector>
 #include <cmath>
@@ -803,6 +804,20 @@ Eigen::MatrixXd getLocalStiffnessMatrixShell(
     Eigen::MatrixXd bendingTerm = bendingStrainDisplacementMatrix.transpose() * bendingStiffnessMatrix * bendingStrainDisplacementMatrix;
 
     Eigen::MatrixXd Kp = (shearTerm + bendingTerm) * Ae;
+
+    // Shell-Thin (plateFormulations = 1): la flexion del triangulo es la DKT, no la
+    // placa gruesa de arriba. Antes el `shelltype thin` no llegaba a los triangulos.
+    auto itPF = elementInputs.plateFormulations.find(index);
+    if (itPF != elementInputs.plateFormulations.end() && itPF->second == 1)
+    {
+        const double xd[3] = {x1, x2, x3}, yd[3] = {y1, y2, y3};
+        const Eigen::Matrix<double, 9, 9> Kb = dktK(xd, yd, bendingStiffnessMatrix);
+        const int map[9] = {2, 3, 4, 8, 9, 10, 14, 15, 16};   // w, thx, thy de cada nudo
+        Kp = Eigen::MatrixXd::Zero(18, 18);
+        for (int r = 0; r < 9; ++r)
+            for (int c = 0; c < 9; ++c)
+                Kp(map[r], map[c]) = Kb(r, c);
+    }
 
     Eigen::MatrixXd localStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18);
 

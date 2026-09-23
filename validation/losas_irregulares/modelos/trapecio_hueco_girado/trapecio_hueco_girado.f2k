@@ -1,0 +1,886 @@
+File "Hekatan heks.f2k" exportado desde Hekatan Struct Lineal
+File contains the same model that goes to .e2k (ETABS) and .s2k (SAP2000): nodes, frames, shells, restraints, point springs, joint loads.
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAFE   Version=20.3.0   ProgLevel="Post Tensioning"   CurrUnits="kN, m, C"   CompBmCode="AISC 360-16"   ConcFrmCode="ACI 318-19"   ConcSlbCode="ACI 318-19"
+ 
+TABLE:  "MATERIAL PROPERTIES - GENERAL"
+   Material=MAT_25000000_n0.2000   Type=Concrete   SymType=Isotropic   Grade="Hekatan"   Color=Gray8Dark
+   Material=A615Gr60   Type=Rebar   SymType=Uniaxial   Grade="Grade 60"   Color=Green
+ 
+TABLE:  "MATERIAL PROPERTIES - BASIC MECHANICAL PROPERTIES"
+   Material=MAT_25000000_n0.2000   DensityType=Weight   UnitWeight=24.0262925   UnitMass=2.45   E1=2.50000000e+7   G12=1.04166667e+7   U12=0.2   A1=1E-05
+   Material=A615Gr60   DensityType=Weight   UnitWeight=76.9729   UnitMass=7.849047   E1=199947978.8   A1=1.17E-05
+ 
+TABLE:  "MATERIAL PROPERTIES - REBAR DATA"
+   Material=A615Gr60   Fy=413685.5   Fu=620528.2   Fye=455054   Fue=682581   SSCurveOpt=Simple   SSHysType=Kinematic   SHard=0.01   SCap=0.09   FinalSlope=-0.1
+ 
+TABLE:  "MATERIAL PROPERTIES - CONCRETE DATA"
+   Material=MAT_25000000_n0.2000   Fc=27579.03   LtWtConc=No   IsUserFr=No   SSCurveOpt=Mander   SSHysType=Concrete   SFc=0.002219   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0
+ 
+TABLE:  "AREA SECTION PROPERTY DEFINITIONS - SUMMARY"
+   Name=LOSA1   Type=Slab   "Element Type"=Shell-Thin   Material=MAT_25000000_n0.2000   "Total Thickness"=0.2
+ 
+TABLE:  "SLAB PROPERTY DEFINITIONS"
+   Name=LOSA1   "Modeling Type"=Shell-Thin   "Property Type"=Slab   Material=MAT_25000000_n0.2000   "Slab Thickness"=0.2   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   Orthotropic?=No
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   Name=Dead   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=0
+ 
+TABLE:  "LOAD CASE DEFINITIONS - SUMMARY"
+   Name=Dead   Type="Linear Static"
+ 
+TABLE:  "LOAD CASE DEFINITIONS - LINEAR STATIC"
+   Name=Dead   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=Dead   "Load SF"=1   "Design Type"="Program Determined"
+ 
+TABLE:  "MASS SOURCE DEFINITION"
+   Name=MsSrc1   "Is Default"=Yes   "Include Lateral Mass?"=No   "Include Vertical Mass?"=Yes   "Lump Mass?"=Yes   "Source Self Mass?"=Yes   "Source Added Mass?"=Yes   "Source Load Patterns?"=No   "Move Mass Centroid?"=No
+ 
+TABLE:  "POINT OBJECT CONNECTIVITY"
+   UniqueName=1   "Is Auto Point"=No   IsSpecial=Yes   X=0   Y=0   Z=0
+   UniqueName=2   "Is Auto Point"=No   IsSpecial=Yes   X=12   Y=0   Z=0
+   UniqueName=3   "Is Auto Point"=No   IsSpecial=Yes   X=10   Y=7   Z=0
+   UniqueName=4   "Is Auto Point"=No   IsSpecial=Yes   X=1   Y=8   Z=0
+   UniqueName=5   "Is Auto Point"=No   IsSpecial=Yes   X=6   Y=2.8   Z=0
+   UniqueName=6   "Is Auto Point"=No   IsSpecial=Yes   X=7.2   Y=4   Z=0
+   UniqueName=7   "Is Auto Point"=No   IsSpecial=Yes   X=6   Y=5.2   Z=0
+   UniqueName=8   "Is Auto Point"=No   IsSpecial=Yes   X=4.8   Y=4   Z=0
+   UniqueName=9   "Is Auto Point"=No   IsSpecial=Yes   X=7   Y=2.333333   Z=0
+   UniqueName=10   "Is Auto Point"=No   IsSpecial=Yes   X=7.2   Y=2.9   Z=0
+   UniqueName=11   "Is Auto Point"=No   IsSpecial=Yes   X=6.6   Y=3.4   Z=0
+   UniqueName=12   "Is Auto Point"=No   IsSpecial=Yes   X=11.666667   Y=1.166667   Z=0
+   UniqueName=13   "Is Auto Point"=No   IsSpecial=Yes   X=11   Y=1.225   Z=0
+   UniqueName=14   "Is Auto Point"=No   IsSpecial=Yes   X=11   Y=0.466667   Z=0
+   UniqueName=15   "Is Auto Point"=No   IsSpecial=Yes   X=9.3   Y=6.25   Z=0
+   UniqueName=16   "Is Auto Point"=No   IsSpecial=Yes   X=9.725   Y=5.5625   Z=0
+   UniqueName=17   "Is Auto Point"=No   IsSpecial=Yes   X=10.333333   Y=5.833333   Z=0
+   UniqueName=18   "Is Auto Point"=No   IsSpecial=Yes   X=7.934088   Y=1.934087   Z=0
+   UniqueName=19   "Is Auto Point"=No   IsSpecial=Yes   X=8.15   Y=2.48125   Z=0
+   UniqueName=20   "Is Auto Point"=No   IsSpecial=Yes   X=11.333333   Y=2.333333   Z=0
+   UniqueName=21   "Is Auto Point"=No   IsSpecial=Yes   X=10.68125   Y=2.309375   Z=0
+   UniqueName=22   "Is Auto Point"=No   IsSpecial=Yes   X=8.487892   Y=5.408348   Z=0
+   UniqueName=23   "Is Auto Point"=No   IsSpecial=Yes   X=9.09375   Y=4.896875   Z=0
+   UniqueName=24   "Is Auto Point"=No   IsSpecial=Yes   X=8.883108   Y=1.511713   Z=0
+   UniqueName=25   "Is Auto Point"=No   IsSpecial=Yes   X=9.071604   Y=2.080917   Z=0
+   UniqueName=26   "Is Auto Point"=No   IsSpecial=Yes   X=11   Y=3.5   Z=0
+   UniqueName=27   "Is Auto Point"=No   IsSpecial=Yes   X=10.3829   Y=3.39879   Z=0
+   UniqueName=28   "Is Auto Point"=No   IsSpecial=Yes   X=7.815585   Y=4.698662   Z=0
+   UniqueName=29   "Is Auto Point"=No   IsSpecial=Yes   X=8.409818   Y=4.214   Z=0
+   UniqueName=30   "Is Auto Point"=No   IsSpecial=Yes   X=10   Y=0.933333   Z=0
+   UniqueName=31   "Is Auto Point"=No   IsSpecial=Yes   X=10.05   Y=1.64375   Z=0
+   UniqueName=32   "Is Auto Point"=No   IsSpecial=Yes   X=10.666667   Y=4.666667   Z=0
+   UniqueName=33   "Is Auto Point"=No   IsSpecial=Yes   X=10.04375   Y=4.478125   Z=0
+   UniqueName=34   "Is Auto Point"=No   IsSpecial=Yes   X=7.83125   Y=3.565625   Z=0
+   UniqueName=35   "Is Auto Point"=No   IsSpecial=Yes   X=8.385938   Y=3.085156   Z=0
+   UniqueName=36   "Is Auto Point"=No   IsSpecial=Yes   X=10.048438   Y=2.352344   Z=0
+   UniqueName=37   "Is Auto Point"=No   IsSpecial=Yes   X=9.490625   Y=4.25   Z=0
+   UniqueName=38   "Is Auto Point"=No   IsSpecial=Yes   X=9.202211   Y=2.687059   Z=0
+   UniqueName=39   "Is Auto Point"=No   IsSpecial=Yes   X=9.806207   Y=3.307738   Z=0
+   UniqueName=40   "Is Auto Point"=No   IsSpecial=Yes   X=8.897312   Y=3.694744   Z=0
+   UniqueName=41   "Is Auto Point"=No   IsSpecial=Yes   X=9.30191   Y=3.229847   Z=0
+   UniqueName=42   "Is Auto Point"=No   IsSpecial=Yes   X=6.625   Y=7.375   Z=0
+   UniqueName=43   "Is Auto Point"=No   IsSpecial=Yes   X=5.5   Y=7.5   Z=0
+   UniqueName=44   "Is Auto Point"=No   IsSpecial=Yes   X=5.485856   Y=6.870901   Z=0
+   UniqueName=45   "Is Auto Point"=No   IsSpecial=Yes   X=6.408956   Y=6.800483   Z=0
+   UniqueName=46   "Is Auto Point"=No   IsSpecial=Yes   X=4.375   Y=7.625   Z=0
+   UniqueName=47   "Is Auto Point"=No   IsSpecial=Yes   X=4.451403   Y=6.713033   Z=0
+   UniqueName=48   "Is Auto Point"=No   IsSpecial=Yes   X=3.25   Y=7.75   Z=0
+   UniqueName=49   "Is Auto Point"=No   IsSpecial=Yes   X=3.289669   Y=6.778248   Z=0
+   UniqueName=50   "Is Auto Point"=No   IsSpecial=Yes   X=2.125   Y=7.875   Z=0
+   UniqueName=51   "Is Auto Point"=No   IsSpecial=Yes   X=2.131493   Y=6.608958   Z=0
+   UniqueName=52   "Is Auto Point"=No   IsSpecial=Yes   X=0.857143   Y=6.857143   Z=0
+   UniqueName=53   "Is Auto Point"=No   IsSpecial=Yes   X=0.714286   Y=5.714286   Z=0
+   UniqueName=54   "Is Auto Point"=No   IsSpecial=Yes   X=1.744908   Y=5.527767   Z=0
+   UniqueName=55   "Is Auto Point"=No   IsSpecial=Yes   X=0.571429   Y=4.571429   Z=0
+   UniqueName=56   "Is Auto Point"=No   IsSpecial=Yes   X=1.650887   Y=4.417685   Z=0
+   UniqueName=57   "Is Auto Point"=No   IsSpecial=Yes   X=0.428571   Y=3.428571   Z=0
+   UniqueName=58   "Is Auto Point"=No   IsSpecial=Yes   X=1.253517   Y=3.361801   Z=0
+   UniqueName=59   "Is Auto Point"=No   IsSpecial=Yes   X=0.285714   Y=2.285714   Z=0
+   UniqueName=60   "Is Auto Point"=No   IsSpecial=Yes   X=1.10962   Y=2.362722   Z=0
+   UniqueName=61   "Is Auto Point"=No   IsSpecial=Yes   X=0.142857   Y=1.142857   Z=0
+   UniqueName=62   "Is Auto Point"=No   IsSpecial=Yes   X=1.001188   Y=1.208927   Z=0
+   UniqueName=63   "Is Auto Point"=No   IsSpecial=Yes   X=2.171821   Y=1.833677   Z=0
+   UniqueName=64   "Is Auto Point"=No   IsSpecial=Yes   X=1.960198   Y=2.658128   Z=0
+   UniqueName=65   "Is Auto Point"=No   IsSpecial=Yes   X=3.107067   Y=2.48484   Z=0
+   UniqueName=66   "Is Auto Point"=No   IsSpecial=Yes   X=2.740732   Y=3.18199   Z=0
+   UniqueName=67   "Is Auto Point"=No   IsSpecial=Yes   X=4.000712   Y=3.138935   Z=0
+   UniqueName=68   "Is Auto Point"=No   IsSpecial=Yes   X=3.513427   Y=3.704866   Z=0
+   UniqueName=69   "Is Auto Point"=No   IsSpecial=Yes   X=4.212518   Y=4.307065   Z=0
+   UniqueName=70   "Is Auto Point"=No   IsSpecial=Yes   X=5.4   Y=4.6   Z=0
+   UniqueName=71   "Is Auto Point"=No   IsSpecial=Yes   X=4.790918   Y=4.829858   Z=0
+   UniqueName=72   "Is Auto Point"=No   IsSpecial=Yes   X=5.232231   Y=5.371077   Z=0
+   UniqueName=73   "Is Auto Point"=No   IsSpecial=Yes   X=6.457265   Y=5.579699   Z=0
+   UniqueName=74   "Is Auto Point"=No   IsSpecial=Yes   X=5.725953   Y=5.854745   Z=0
+   UniqueName=75   "Is Auto Point"=No   IsSpecial=Yes   X=6.6   Y=4.6   Z=0
+   UniqueName=76   "Is Auto Point"=No   IsSpecial=Yes   X=7.151256   Y=5.165721   Z=0
+   UniqueName=77   "Is Auto Point"=No   IsSpecial=Yes   X=7.722221   Y=5.777709   Z=0
+   UniqueName=78   "Is Auto Point"=No   IsSpecial=Yes   X=8.313634   Y=6.450991   Z=0
+   UniqueName=79   "Is Auto Point"=No   IsSpecial=Yes   X=8.875   Y=7.125   Z=0
+   UniqueName=80   "Is Auto Point"=No   IsSpecial=Yes   X=7.75   Y=7.25   Z=0
+   UniqueName=81   "Is Auto Point"=No   IsSpecial=Yes   X=7.351024   Y=6.645942   Z=0
+   UniqueName=82   "Is Auto Point"=No   IsSpecial=Yes   X=2.424846   Y=3.918851   Z=0
+   UniqueName=83   "Is Auto Point"=No   IsSpecial=Yes   X=1.87952   Y=3.312927   Z=0
+   UniqueName=84   "Is Auto Point"=No   IsSpecial=Yes   X=5.037971   Y=6.152805   Z=0
+   UniqueName=85   "Is Auto Point"=No   IsSpecial=Yes   X=5.563826   Y=6.442827   Z=0
+   UniqueName=86   "Is Auto Point"=No   IsSpecial=Yes   X=6.15756   Y=6.295088   Z=0
+   UniqueName=87   "Is Auto Point"=No   IsSpecial=Yes   X=6.922018   Y=6.074609   Z=0
+   UniqueName=88   "Is Auto Point"=No   IsSpecial=Yes   X=4.397256   Y=5.583837   Z=0
+   UniqueName=89   "Is Auto Point"=No   IsSpecial=Yes   X=4.060294   Y=6.112193   Z=0
+   UniqueName=90   "Is Auto Point"=No   IsSpecial=Yes   X=3.336263   Y=6.034996   Z=0
+   UniqueName=91   "Is Auto Point"=No   IsSpecial=Yes   X=3.350692   Y=5.242356   Z=0
+   UniqueName=92   "Is Auto Point"=No   IsSpecial=Yes   X=2.795579   Y=4.531603   Z=0
+   UniqueName=93   "Is Auto Point"=No   IsSpecial=Yes   X=2.513026   Y=5.387331   Z=0
+   UniqueName=94   "Is Auto Point"=No   IsSpecial=Yes   X=2.31983   Y=4.778873   Z=0
+   UniqueName=95   "Is Auto Point"=No   IsSpecial=Yes   X=2.66026   Y=6.010429   Z=0
+   UniqueName=96   "Is Auto Point"=No   IsSpecial=Yes   X=3.118853   Y=4.212112   Z=0
+   UniqueName=97   "Is Auto Point"=No   IsSpecial=Yes   X=4.309912   Y=5.035608   Z=0
+   UniqueName=98   "Is Auto Point"=No   IsSpecial=Yes   X=3.747994   Y=4.699285   Z=0
+   UniqueName=99   "Is Auto Point"=No   IsSpecial=Yes   X=5.4   Y=3.4   Z=0
+   UniqueName=100   "Is Auto Point"=No   IsSpecial=Yes   X=4.616977   Y=2.383814   Z=0
+   UniqueName=101   "Is Auto Point"=No   IsSpecial=Yes   X=5.607946   Y=1.936752   Z=0
+   UniqueName=102   "Is Auto Point"=No   IsSpecial=Yes   X=3.596395   Y=1.837623   Z=0
+   UniqueName=103   "Is Auto Point"=No   IsSpecial=Yes   X=2.720154   Y=1.05891   Z=0
+   UniqueName=104   "Is Auto Point"=No   IsSpecial=Yes   X=1.640447   Y=0.755946   Z=0
+   UniqueName=105   "Is Auto Point"=No   IsSpecial=Yes   X=1.2   Y=0   Z=0
+   UniqueName=106   "Is Auto Point"=No   IsSpecial=Yes   X=2.4   Y=0   Z=0
+   UniqueName=107   "Is Auto Point"=No   IsSpecial=Yes   X=3.6   Y=0   Z=0
+   UniqueName=108   "Is Auto Point"=No   IsSpecial=Yes   X=3.820289   Y=0.88701   Z=0
+   UniqueName=109   "Is Auto Point"=No   IsSpecial=Yes   X=4.8   Y=0   Z=0
+   UniqueName=110   "Is Auto Point"=No   IsSpecial=Yes   X=5.00546   Y=1.04735   Z=0
+   UniqueName=111   "Is Auto Point"=No   IsSpecial=Yes   X=6   Y=0   Z=0
+   UniqueName=112   "Is Auto Point"=No   IsSpecial=Yes   X=6.286421   Y=0.791765   Z=0
+   UniqueName=113   "Is Auto Point"=No   IsSpecial=Yes   X=7.2   Y=0   Z=0
+   UniqueName=114   "Is Auto Point"=No   IsSpecial=Yes   X=7.319849   Y=0.605607   Z=0
+   UniqueName=115   "Is Auto Point"=No   IsSpecial=Yes   X=8.4   Y=0   Z=0
+   UniqueName=116   "Is Auto Point"=No   IsSpecial=Yes   X=8.301884   Y=0.522778   Z=0
+   UniqueName=117   "Is Auto Point"=No   IsSpecial=Yes   X=9.6   Y=0   Z=0
+   UniqueName=118   "Is Auto Point"=No   IsSpecial=Yes   X=9.38194   Y=0.575704   Z=0
+   UniqueName=119   "Is Auto Point"=No   IsSpecial=Yes   X=10.395968   Y=0.346125   Z=0
+   UniqueName=120   "Is Auto Point"=No   IsSpecial=Yes   X=10.8   Y=0   Z=0
+   UniqueName=121   "Is Auto Point"=No   IsSpecial=Yes   X=8.51672   Y=1.102275   Z=0
+   UniqueName=122   "Is Auto Point"=No   IsSpecial=Yes   X=7.688811   Y=1.415372   Z=0
+   UniqueName=123   "Is Auto Point"=No   IsSpecial=Yes   X=6.814202   Y=1.517311   Z=0
+   UniqueName=124   "Is Auto Point"=No   IsSpecial=Yes   X=7.482152   Y=1.112022   Z=0
+   UniqueName=125   "Is Auto Point"=No   IsSpecial=Yes   X=8.100252   Y=0.912358   Z=0
+   UniqueName=126   "Is Auto Point"=No   IsSpecial=Yes   X=4.528413   Y=1.624298   Z=0
+   UniqueName=127   "Is Auto Point"=No   IsSpecial=Yes   X=3.981699   Y=1.449644   Z=0
+ 
+TABLE:  "FLOOR OBJECT CONNECTIVITY"
+   "Unique Name"=A1   UniquePt1=9   UniquePt2=10   UniquePt3=11   UniquePt4=5   Perimeter=3.334008463   Area=0.6600002
+   "Unique Name"=A2   UniquePt1=12   UniquePt2=13   UniquePt3=14   UniquePt4=2   Perimeter=3.744428895   Area=0.7583335375
+   "Unique Name"=A3   UniquePt1=15   UniquePt2=16   UniquePt3=17   UniquePt4=3   Perimeter=3.713421816   Area=0.7999998062
+   "Unique Name"=A4   UniquePt1=9   UniquePt2=18   UniquePt3=19   UniquePt4=10   Perimeter=3.243177545   Area=0.6096920223
+   "Unique Name"=A5   UniquePt1=12   UniquePt2=20   UniquePt3=21   UniquePt4=13   Perimeter=3.665340841   Area=0.7365362328
+   "Unique Name"=A6   UniquePt1=15   UniquePt2=22   UniquePt3=23   UniquePt4=16   Perimeter=3.688067059   Area=0.8210839562
+   "Unique Name"=A7   UniquePt1=18   UniquePt2=24   UniquePt3=25   UniquePt4=19   Perimeter=3.231391946   Area=0.6052530489
+   "Unique Name"=A8   UniquePt1=20   UniquePt2=26   UniquePt3=27   UniquePt4=21   Perimeter=3.620749337   Area=0.7356118547
+   "Unique Name"=A9   UniquePt1=22   UniquePt2=28   UniquePt3=29   UniquePt4=23   Perimeter=3.503757172   Area=0.7555492648
+   "Unique Name"=A10   UniquePt1=24   UniquePt2=30   UniquePt3=31   UniquePt4=25   Perimeter=3.64116386   Area=0.7308446058
+   "Unique Name"=A11   UniquePt1=26   UniquePt2=32   UniquePt3=33   UniquePt4=27   Perimeter=3.620886862   Area=0.7449834891
+   "Unique Name"=A12   UniquePt1=28   UniquePt2=6   UniquePt3=34   UniquePt4=29   Perimeter=3.333231249   Area=0.6870604336
+   "Unique Name"=A13   UniquePt1=30   UniquePt2=14   UniquePt3=13   UniquePt4=31   Perimeter=3.612233067   Area=0.727083325
+   "Unique Name"=A14   UniquePt1=32   UniquePt2=17   UniquePt3=16   UniquePt4=33   Perimeter=3.660326619   Area=0.7677863297
+   "Unique Name"=A15   UniquePt1=6   UniquePt2=11   UniquePt3=10   UniquePt4=34   Perimeter=3.313166783   Area=0.6771875
+   "Unique Name"=A16   UniquePt1=19   UniquePt2=35   UniquePt3=34   UniquePt4=10   Perimeter=3.337751853   Area=0.6725099969
+   "Unique Name"=A17   UniquePt1=21   UniquePt2=36   UniquePt3=31   UniquePt4=13   Perimeter=3.511313675   Area=0.6725096781
+   "Unique Name"=A18   UniquePt1=23   UniquePt2=37   UniquePt3=33   UniquePt4=16   Perimeter=3.404843233   Area=0.6725097656
+   "Unique Name"=A19   UniquePt1=19   UniquePt2=25   UniquePt3=38   UniquePt4=35   Perimeter=3.181386584   Area=0.5988937781
+   "Unique Name"=A20   UniquePt1=21   UniquePt2=27   UniquePt3=39   UniquePt4=36   Perimeter=3.333259168   Area=0.6247998664
+   "Unique Name"=A21   UniquePt1=23   UniquePt2=29   UniquePt3=40   UniquePt4=37   Perimeter=3.250237697   Area=0.6460999159
+   "Unique Name"=A22   UniquePt1=25   UniquePt2=31   UniquePt3=36   UniquePt4=38   Perimeter=3.310290029   Area=0.6246262643
+   "Unique Name"=A23   UniquePt1=27   UniquePt2=33   UniquePt3=37   UniquePt4=39   Perimeter=3.307227936   Area=0.6232530187
+   "Unique Name"=A24   UniquePt1=29   UniquePt2=34   UniquePt3=35   UniquePt4=40   Perimeter=3.110738616   Area=0.6001671653
+   "Unique Name"=A25   UniquePt1=35   UniquePt2=38   UniquePt3=41   UniquePt4=40   Perimeter=2.872022796   Area=0.483563693
+   "Unique Name"=A26   UniquePt1=36   UniquePt2=39   UniquePt3=41   UniquePt4=38   Perimeter=2.957787495   Area=0.4966812772
+   "Unique Name"=A27   UniquePt1=37   UniquePt2=40   UniquePt3=41   UniquePt4=39   Perimeter=2.932891009   Area=0.5001228991
+   "Unique Name"=A28   UniquePt1=42   UniquePt2=43   UniquePt3=44   UniquePt4=45   Perimeter=3.300758518   Area=0.627527202
+   "Unique Name"=A29   UniquePt1=43   UniquePt2=46   UniquePt3=47   UniquePt4=44   Perimeter=3.722772775   Area=0.8324764814
+   "Unique Name"=A30   UniquePt1=46   UniquePt2=48   UniquePt3=49   UniquePt4=47   Perimeter=4.183209363   Area=1.071371412
+   "Unique Name"=A31   UniquePt1=48   UniquePt2=50   UniquePt3=51   UniquePt4=49   Perimeter=4.541026269   Area=1.277830517
+   "Unique Name"=A32   UniquePt1=4   UniquePt2=52   UniquePt3=51   UniquePt4=50   Perimeter=4.848025356   Area=1.457670204
+   "Unique Name"=A33   UniquePt1=52   UniquePt2=53   UniquePt3=54   UniquePt4=51   Perimeter=4.64563298   Area=1.33912973
+   "Unique Name"=A34   UniquePt1=53   UniquePt2=55   UniquePt3=56   UniquePt4=54   Perimeter=4.403523034   Area=1.208620586
+   "Unique Name"=A35   UniquePt1=55   UniquePt2=57   UniquePt3=58   UniquePt4=56   Perimeter=4.197929167   Area=1.076605224
+   "Unique Name"=A36   UniquePt1=57   UniquePt2=59   UniquePt3=60   UniquePt4=58   Perimeter=3.816280224   Area=0.8821999175
+   "Unique Name"=A37   UniquePt1=61   UniquePt2=62   UniquePt3=60   UniquePt4=59   Perimeter=3.998997028   Area=0.9568897607
+   "Unique Name"=A38   UniquePt1=62   UniquePt2=63   UniquePt3=64   UniquePt4=60   Perimeter=4.237383579   Area=1.023351098
+   "Unique Name"=A39   UniquePt1=63   UniquePt2=65   UniquePt3=66   UniquePt4=64   Perimeter=3.718356875   Area=0.8224619157
+   "Unique Name"=A40   UniquePt1=65   UniquePt2=67   UniquePt3=68   UniquePt4=66   Perimeter=3.574780768   Area=0.7773520946
+   "Unique Name"=A41   UniquePt1=67   UniquePt2=8   UniquePt3=69   UniquePt4=68   Perimeter=3.507257629   Area=0.7201866832
+   "Unique Name"=A42   UniquePt1=8   UniquePt2=70   UniquePt3=71   UniquePt4=69   Perimeter=2.942083168   Area=0.4940509366
+   "Unique Name"=A43   UniquePt1=70   UniquePt2=7   UniquePt3=72   UniquePt4=71   Perimeter=2.984474874   Area=0.4971968373
+   "Unique Name"=A44   UniquePt1=7   UniquePt2=73   UniquePt3=74   UniquePt4=72   Perimeter=2.853436981   Area=0.4296285598
+   "Unique Name"=A45   UniquePt1=7   UniquePt2=75   UniquePt3=76   UniquePt4=73   Perimeter=3.04086032   Area=0.5614957694
+   "Unique Name"=A46   UniquePt1=6   UniquePt2=28   UniquePt3=76   UniquePt4=75   Perimeter=3.381666153   Area=0.7109210712
+   "Unique Name"=A47   UniquePt1=28   UniquePt2=22   UniquePt3=77   UniquePt4=76   Perimeter=3.476738535   Area=0.7324728466
+   "Unique Name"=A48   UniquePt1=22   UniquePt2=15   UniquePt3=78   UniquePt4=77   Perimeter=3.922458962   Area=0.8636803575
+   "Unique Name"=A49   UniquePt1=3   UniquePt2=79   UniquePt3=78   UniquePt4=15   Perimeter=4.041638831   Area=0.8544495375
+   "Unique Name"=A50   UniquePt1=79   UniquePt2=80   UniquePt3=81   UniquePt4=78   Perimeter=3.715167028   Area=0.7438419583
+   "Unique Name"=A51   UniquePt1=80   UniquePt2=42   UniquePt3=45   UniquePt4=81   Perimeter=3.42430354   Area=0.6520294935
+   "Unique Name"=A52   UniquePt1=82   UniquePt2=56   UniquePt3=58   UniquePt4=83   Perimeter=3.492059855   Area=0.710697548
+   "Unique Name"=A53   UniquePt1=58   UniquePt2=60   UniquePt3=64   UniquePt4=83   Perimeter=3.197462219   Area=0.6066248312
+   "Unique Name"=A54   UniquePt1=64   UniquePt2=66   UniquePt3=82   UniquePt4=83   Perimeter=3.216684231   Area=0.5732946957
+   "Unique Name"=A55   UniquePt1=44   UniquePt2=47   UniquePt3=84   UniquePt4=85   Perimeter=2.893197703   Area=0.4599238605
+   "Unique Name"=A56   UniquePt1=84   UniquePt2=74   UniquePt3=86   UniquePt4=85   Perimeter=2.578734228   Area=0.3407390271
+   "Unique Name"=A57   UniquePt1=45   UniquePt2=44   UniquePt3=85   UniquePt4=86   Perimeter=2.537205712   Area=0.3634379033
+   "Unique Name"=A58   UniquePt1=74   UniquePt2=73   UniquePt3=87   UniquePt4=86   Perimeter=2.872453496   Area=0.4607730422
+   "Unique Name"=A59   UniquePt1=73   UniquePt2=76   UniquePt3=77   UniquePt4=87   Perimeter=3.177488193   Area=0.5975473727
+   "Unique Name"=A60   UniquePt1=86   UniquePt2=87   UniquePt3=81   UniquePt4=45   Perimeter=3.029215084   Area=0.5231571712
+   "Unique Name"=A61   UniquePt1=87   UniquePt2=77   UniquePt3=78   UniquePt4=81   Perimeter=3.446276138   Area=0.6739794019
+   "Unique Name"=A62   UniquePt1=88   UniquePt2=84   UniquePt3=47   UniquePt4=89   Perimeter=3.011580345   Area=0.5508949699
+   "Unique Name"=A63   UniquePt1=47   UniquePt2=49   UniquePt3=90   UniquePt4=89   Perimeter=3.353329306   Area=0.6326284179
+   "Unique Name"=A64   UniquePt1=90   UniquePt2=91   UniquePt3=88   UniquePt4=89   Perimeter=3.248432447   Area=0.6215171484
+   "Unique Name"=A65   UniquePt1=92   UniquePt2=91   UniquePt3=93   UniquePt4=94   Perimeter=2.926525941   Area=0.5065479948
+   "Unique Name"=A66   UniquePt1=93   UniquePt2=54   UniquePt3=56   UniquePt4=94   Perimeter=3.293524875   Area=0.6015607709
+   "Unique Name"=A67   UniquePt1=56   UniquePt2=82   UniquePt3=92   UniquePt4=94   Perimeter=2.933358349   Area=0.498211758
+   "Unique Name"=A68   UniquePt1=90   UniquePt2=49   UniquePt3=51   UniquePt4=95   Perimeter=3.390286964   Area=0.6431510725
+   "Unique Name"=A69   UniquePt1=51   UniquePt2=54   UniquePt3=93   UniquePt4=95   Perimeter=3.367976575   Area=0.6511850993
+   "Unique Name"=A70   UniquePt1=93   UniquePt2=91   UniquePt3=90   UniquePt4=95   Perimeter=2.95959639   Area=0.5397373768
+   "Unique Name"=A71   UniquePt1=96   UniquePt2=92   UniquePt3=82   Perimeter=1.924111302   Area=0.1582663235
+   "Unique Name"=A72   UniquePt1=96   UniquePt2=82   UniquePt3=66   UniquePt4=68   Perimeter=3.130763269   Area=0.6011417295
+   "Unique Name"=A73   UniquePt1=72   UniquePt2=74   UniquePt3=84   UniquePt4=88   Perimeter=3.159461941   Area=0.5456531182
+   "Unique Name"=A74   UniquePt1=88   UniquePt2=97   UniquePt3=71   UniquePt4=72   Perimeter=2.638299387   Area=0.4137352774
+   "Unique Name"=A75   UniquePt1=88   UniquePt2=91   UniquePt3=98   UniquePt4=97   Perimeter=2.983772441   Area=0.4913567947
+   "Unique Name"=A76   UniquePt1=91   UniquePt2=92   UniquePt3=96   UniquePt4=98   Perimeter=2.824950599   Area=0.471172306
+   "Unique Name"=A77   UniquePt1=97   UniquePt2=98   UniquePt3=69   UniquePt4=71   Perimeter=2.565657381   Area=0.3735489765
+   "Unique Name"=A78   UniquePt1=98   UniquePt2=96   UniquePt3=68   UniquePt4=69   Perimeter=2.969012915   Area=0.5326442076
+   "Unique Name"=A79   UniquePt1=61   UniquePt2=1   UniquePt3=62   Perimeter=3.582296792   Area=0.4857555148
+   "Unique Name"=A80   UniquePt1=5   UniquePt2=99   UniquePt3=100   UniquePt4=101   Perimeter=4.166649597   Area=1.055124926
+   "Unique Name"=A81   UniquePt1=8   UniquePt2=67   UniquePt3=100   UniquePt4=99   Perimeter=4.280933217   Area=1.106864388
+   "Unique Name"=A82   UniquePt1=67   UniquePt2=65   UniquePt3=102   UniquePt4=100   Perimeter=4.051044932   Area=1.002855266
+   "Unique Name"=A83   UniquePt1=65   UniquePt2=63   UniquePt3=103   UniquePt4=102   Perimeter=4.072415259   Area=1.014908023
+   "Unique Name"=A84   UniquePt1=63   UniquePt2=62   UniquePt3=104   UniquePt4=103   Perimeter=4.180975622   Area=0.9661490398
+   "Unique Name"=A85   UniquePt1=62   UniquePt2=1   UniquePt3=105   UniquePt4=104   Perimeter=4.428056414   Area=1.066735903
+   "Unique Name"=A86   UniquePt1=105   UniquePt2=106   UniquePt3=103   UniquePt4=104   Perimeter=4.302556088   Area=0.9767263015
+   "Unique Name"=A87   UniquePt1=106   UniquePt2=107   UniquePt3=108   UniquePt4=103   Perimeter=4.333689096   Area=1.142195213
+   "Unique Name"=A88   UniquePt1=107   UniquePt2=109   UniquePt3=110   UniquePt4=108   Perimeter=4.377235466   Area=1.136378695
+   "Unique Name"=A89   UniquePt1=109   UniquePt2=111   UniquePt3=112   UniquePt4=110   Perimeter=4.415501616   Area=1.172122499
+   "Unique Name"=A90   UniquePt1=111   UniquePt2=113   UniquePt3=114   UniquePt4=112   Perimeter=3.709392266   Area=0.7991400405
+   "Unique Name"=A91   UniquePt1=113   UniquePt2=115   UniquePt3=116   UniquePt4=114   Perimeter=3.334779607   Area=0.6159939215
+   "Unique Name"=A92   UniquePt1=115   UniquePt2=117   UniquePt3=118   UniquePt4=116   Perimeter=3.428875394   Area=0.6303336015
+   "Unique Name"=A93   UniquePt1=119   UniquePt2=118   UniquePt3=117   Perimeter=2.523277208   Area=0.2668589895
+   "Unique Name"=A94   UniquePt1=14   UniquePt2=119   UniquePt3=120   Perimeter=1.655680053   Area=0.1288867007
+   "Unique Name"=A95   UniquePt1=119   UniquePt2=14   UniquePt3=30   Perimeter=2.427711797   Area=0.2012115987
+   "Unique Name"=A96   UniquePt1=30   UniquePt2=24   UniquePt3=121   UniquePt4=118   Perimeter=3.534129252   Area=0.6520448769
+   "Unique Name"=A97   UniquePt1=24   UniquePt2=18   UniquePt3=122   UniquePt4=121   Perimeter=3.047120369   Area=0.5247809628
+   "Unique Name"=A98   UniquePt1=18   UniquePt2=9   UniquePt3=123   UniquePt4=122   Perimeter=3.307052104   Area=0.6575457829
+   "Unique Name"=A99   UniquePt1=9   UniquePt2=5   UniquePt3=101   UniquePt4=123   Perimeter=4.165641659   Area=1.054234698
+   "Unique Name"=A100   UniquePt1=124   UniquePt2=114   UniquePt3=116   UniquePt4=125   Perimeter=2.605524586   Area=0.355650698
+   "Unique Name"=A101   UniquePt1=116   UniquePt2=118   UniquePt3=121   UniquePt4=125   Perimeter=2.990603916   Area=0.4075298748
+   "Unique Name"=A102   UniquePt1=121   UniquePt2=122   UniquePt3=124   UniquePt4=125   Perimeter=2.359464808   Area=0.2581959363
+   "Unique Name"=A103   UniquePt1=124   UniquePt2=122   UniquePt3=123   Perimeter=2.028875845   Area=0.143189626
+   "Unique Name"=A104   UniquePt1=124   UniquePt2=123   UniquePt3=112   UniquePt4=114   Perimeter=3.260341566   Area=0.6260448635
+   "Unique Name"=A105   UniquePt1=101   UniquePt2=100   UniquePt3=126   UniquePt4=110   Perimeter=3.674689982   Area=0.7820700293
+   "Unique Name"=A106   UniquePt1=110   UniquePt2=112   UniquePt3=123   UniquePt4=101   Perimeter=4.554766811   Area=1.194921433
+   "Unique Name"=A107   UniquePt1=126   UniquePt2=100   UniquePt3=102   UniquePt4=127   Perimeter=3.042938792   Area=0.5030919672
+   "Unique Name"=A108   UniquePt1=102   UniquePt2=103   UniquePt3=108   UniquePt4=127   Perimeter=3.417869526   Area=0.6433620376
+   "Unique Name"=A109   UniquePt1=108   UniquePt2=110   UniquePt3=126   UniquePt4=127   Perimeter=3.103858326   Area=0.5198403683
+   "Unique Name"=A110   UniquePt1=117   UniquePt2=120   UniquePt3=119   Perimeter=2.599986642   Area=0.207675
+   "Unique Name"=A111   UniquePt1=120   UniquePt2=2   UniquePt3=14   Perimeter=2.811248345   Area=0.2800002
+   "Unique Name"=A112   UniquePt1=30   UniquePt2=118   UniquePt3=119   Perimeter=2.462002413   Area=0.2522697082
+ 
+TABLE:  "JOINT ASSIGNMENTS - RESTRAINTS"
+   UniqueName=1   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=2   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=3   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=4   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=5   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=6   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=7   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+   UniqueName=8   UX=Yes   UY=Yes   UZ=Yes   RX=No   RY=No   RZ=No
+ 
+TABLE:  "JOINT LOADS ASSIGNMENTS - FORCE"
+   UniqueName=1   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.606005222   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=2   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.039816137   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=3   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.422346115   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=4   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.515759715   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=5   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.848423094   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=6   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.238905276   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=7   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.676564149   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=8   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.772031312   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=9   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.476045928   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=10   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.593785813   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=11   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.328646167   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=12   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.755339138   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=13   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.179917129   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=14   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.773244769   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=15   "Load Pattern"=Dead   FX=0   FY=0   FZ=-8.556937651   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=16   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.513030401   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=17   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.946309299   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=18   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.983857607   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=19   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.247621409   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=20   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.734829138   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=21   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.933562898   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=22   "Load Pattern"=Dead   FX=0   FY=0   FZ=-8.15066759   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=23   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.221758079   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=24   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.335781352   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=25   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.349701297   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=26   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.723803637   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=27   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.807418376   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=28   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.308511975   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=29   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.737707586   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=30   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.955754765   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=31   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.906668159   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=32   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.837255966   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=33   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.029836884   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=34   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.615806218   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=35   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.858737607   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=36   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.00521717   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=37   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.053286266   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=38   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.405330959   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=39   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.52941657   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=40   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.488530321   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=41   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.132181545   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=42   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.254823034   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=43   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.615846764   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=44   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.534820546   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=45   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.3763964   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=46   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.867100656   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=47   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.226429444   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=48   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.729107174   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=49   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.364662992   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=50   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.93164391   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=51   "Load Pattern"=Dead   FX=0   FY=0   FZ=-14.0638823   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=52   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.147757861   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=53   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.253749047   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=54   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.749716087   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=55   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.901426608   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=56   "Load Pattern"=Dead   FX=0   FY=0   FZ=-10.78525054   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=57   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.8518991   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=58   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.997079861   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=59   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.61615881   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=60   "Load Pattern"=Dead   FX=0   FY=0   FZ=-8.707594525   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=61   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.023593842   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=62   "Load Pattern"=Dead   FX=0   FY=0   FZ=-11.9928028   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=63   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.992614579   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=64   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.253133636   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=65   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.008930233   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=66   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.07496249   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=67   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.269186839   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=68   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.528578191   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=69   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.264741863   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=70   "Load Pattern"=Dead   FX=0   FY=0   FZ=-2.491019623   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=71   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.300938258   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=72   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.81163342   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=73   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.983970708   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=74   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.496118637   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=75   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.237671734   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=76   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.494415026   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=77   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.101981635   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=78   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.795144964   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=79   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.044537285   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=80   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.54218117   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=81   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.428442095   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=82   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.664316247   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=83   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.16593616   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=84   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.908750573   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=85   "Load Pattern"=Dead   FX=0   FY=0   FZ=-2.557039619   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=86   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.093501727   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=87   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.534695794   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=88   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.730207611   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=89   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.027149192   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=90   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.85881583   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=91   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.267287355   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=92   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.042200921   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=93   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.560698225   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=94   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.520311597   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=95   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.100784345   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=96   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.31714794   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=97   "Load Pattern"=Dead   FX=0   FY=0   FZ=-2.829188767   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=98   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.634284664   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=99   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.402524524   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=100   "Load Pattern"=Dead   FX=0   FY=0   FZ=-11.75073832   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=101   "Load Pattern"=Dead   FX=0   FY=0   FZ=-10.73786705   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=102   "Load Pattern"=Dead   FX=0   FY=0   FZ=-7.87568467   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=103   "Load Pattern"=Dead   FX=0   FY=0   FZ=-12.39067956   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=104   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.722918099   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=105   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.917662341   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=106   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.649355857   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=107   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.57164318   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=108   "Load Pattern"=Dead   FX=0   FY=0   FZ=-8.500704333   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=109   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.94220199   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=110   "Load Pattern"=Dead   FX=0   FY=0   FZ=-12.53214625   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=111   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.868967565   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=112   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.546477994   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=113   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.569770603   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=114   "Load Pattern"=Dead   FX=0   FY=0   FZ=-5.925661219   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=115   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.122768538   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=116   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.90951504   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=117   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.208039967   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=118   "Load Pattern"=Dead   FX=0   FY=0   FZ=-6.115886781   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=119   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.523006657   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=120   "Load Pattern"=Dead   FX=0   FY=0   FZ=-2.055206336   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=121   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.464356471   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=122   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.962145654   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=123   "Load Pattern"=Dead   FX=0   FY=0   FZ=-9.356878775   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=124   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.358970995   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=125   "Load Pattern"=Dead   FX=0   FY=0   FZ=-2.203646731   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=126   "Load Pattern"=Dead   FX=0   FY=0   FZ=-4.018283392   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+   UniqueName=127   "Load Pattern"=Dead   FX=0   FY=0   FZ=-3.475679155   MX=0   MY=0   MZ=0   "X Dimension"=0   "Y Dimension"=0
+ 
+TABLE:  "AREA ASSIGNMENTS - SECTION PROPERTIES"
+   UniqueName=A1   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A2   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A3   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A4   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A5   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A6   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A7   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A8   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A9   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A10   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A11   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A12   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A13   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A14   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A15   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A16   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A17   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A18   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A19   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A20   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A21   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A22   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A23   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A24   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A25   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A26   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A27   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A28   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A29   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A30   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A31   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A32   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A33   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A34   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A35   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A36   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A37   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A38   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A39   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A40   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A41   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A42   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A43   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A44   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A45   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A46   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A47   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A48   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A49   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A50   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A51   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A52   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A53   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A54   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A55   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A56   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A57   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A58   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A59   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A60   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A61   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A62   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A63   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A64   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A65   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A66   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A67   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A68   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A69   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A70   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A71   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A72   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A73   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A74   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A75   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A76   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A77   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A78   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A79   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A80   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A81   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A82   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A83   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A84   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A85   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A86   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A87   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A88   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A89   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A90   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A91   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A92   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A93   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A94   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A95   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A96   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A97   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A98   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A99   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A100   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A101   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A102   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A103   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A104   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A105   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A106   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A107   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A108   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A109   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A110   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A111   "Section Property"=LOSA1   "Property Type"=Slab
+   UniqueName=A112   "Section Property"=LOSA1   "Property Type"=Slab
+ 
+TABLE:  "AREA ASSIGNMENTS - INSERTION POINT"
+   UniqueName=A1   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A2   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A3   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A4   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A5   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A6   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A7   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A8   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A9   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A10   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A11   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A12   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A13   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A14   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A15   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A16   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A17   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A18   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A19   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A20   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A21   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A22   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A23   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A24   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A25   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A26   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A27   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A28   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A29   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A30   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A31   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A32   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A33   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A34   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A35   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A36   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A37   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A38   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A39   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A40   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A41   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A42   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A43   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A44   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A45   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A46   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A47   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A48   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A49   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A50   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A51   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A52   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A53   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A54   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A55   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A56   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A57   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A58   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A59   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A60   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A61   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A62   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A63   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A64   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A65   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A66   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A67   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A68   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A69   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A70   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A71   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A72   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A73   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A74   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A75   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A76   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A77   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A78   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A79   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A80   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A81   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A82   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A83   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A84   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A85   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A86   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A87   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A88   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A89   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A90   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A91   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A92   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A93   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A94   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A95   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A96   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A97   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A98   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A99   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A100   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A101   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A102   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A103   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A104   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A105   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A106   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A107   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A108   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A109   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A110   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A111   "Cardinal Point"=Middle   Transform=No
+   UniqueName=A112   "Cardinal Point"=Middle   Transform=No
+ 
+TABLE:  "AREA ASSIGNMENTS - FLOOR AUTO MESH OPTIONS"
+   UniqueName=A1   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A2   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A3   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A4   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A5   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A6   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A7   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A8   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A9   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A10   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A11   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A12   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A13   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A14   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A15   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A16   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A17   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A18   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A19   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A20   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A21   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A22   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A23   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A24   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A25   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A26   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A27   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A28   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A29   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A30   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A31   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A32   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A33   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A34   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A35   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A36   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A37   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A38   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A39   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A40   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A41   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A42   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A43   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A44   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A45   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A46   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A47   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A48   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A49   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A50   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A51   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A52   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A53   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A54   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A55   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A56   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A57   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A58   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A59   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A60   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A61   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A62   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A63   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A64   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A65   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A66   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A67   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A68   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A69   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A70   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A71   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A72   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A73   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A74   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A75   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A76   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A77   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A78   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A79   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A80   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A81   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A82   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A83   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A84   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A85   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A86   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A87   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A88   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A89   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A90   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A91   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A92   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A93   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A94   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A95   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A96   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A97   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A98   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A99   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A100   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A101   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A102   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A103   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A104   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A105   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A106   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A107   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A108   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A109   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A110   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A111   "Mesh Option"=Default   "Add Restraints"=No
+   UniqueName=A112   "Mesh Option"=Default   "Add Restraints"=No
+ 
+TABLE:  "AREA ASSIGNMENTS - AUTO EDGE CONSTRAINTS"
+   UniqueName=A1   Constraint=No
+   UniqueName=A2   Constraint=No
+   UniqueName=A3   Constraint=No
+   UniqueName=A4   Constraint=No
+   UniqueName=A5   Constraint=No
+   UniqueName=A6   Constraint=No
+   UniqueName=A7   Constraint=No
+   UniqueName=A8   Constraint=No
+   UniqueName=A9   Constraint=No
+   UniqueName=A10   Constraint=No
+   UniqueName=A11   Constraint=No
+   UniqueName=A12   Constraint=No
+   UniqueName=A13   Constraint=No
+   UniqueName=A14   Constraint=No
+   UniqueName=A15   Constraint=No
+   UniqueName=A16   Constraint=No
+   UniqueName=A17   Constraint=No
+   UniqueName=A18   Constraint=No
+   UniqueName=A19   Constraint=No
+   UniqueName=A20   Constraint=No
+   UniqueName=A21   Constraint=No
+   UniqueName=A22   Constraint=No
+   UniqueName=A23   Constraint=No
+   UniqueName=A24   Constraint=No
+   UniqueName=A25   Constraint=No
+   UniqueName=A26   Constraint=No
+   UniqueName=A27   Constraint=No
+   UniqueName=A28   Constraint=No
+   UniqueName=A29   Constraint=No
+   UniqueName=A30   Constraint=No
+   UniqueName=A31   Constraint=No
+   UniqueName=A32   Constraint=No
+   UniqueName=A33   Constraint=No
+   UniqueName=A34   Constraint=No
+   UniqueName=A35   Constraint=No
+   UniqueName=A36   Constraint=No
+   UniqueName=A37   Constraint=No
+   UniqueName=A38   Constraint=No
+   UniqueName=A39   Constraint=No
+   UniqueName=A40   Constraint=No
+   UniqueName=A41   Constraint=No
+   UniqueName=A42   Constraint=No
+   UniqueName=A43   Constraint=No
+   UniqueName=A44   Constraint=No
+   UniqueName=A45   Constraint=No
+   UniqueName=A46   Constraint=No
+   UniqueName=A47   Constraint=No
+   UniqueName=A48   Constraint=No
+   UniqueName=A49   Constraint=No
+   UniqueName=A50   Constraint=No
+   UniqueName=A51   Constraint=No
+   UniqueName=A52   Constraint=No
+   UniqueName=A53   Constraint=No
+   UniqueName=A54   Constraint=No
+   UniqueName=A55   Constraint=No
+   UniqueName=A56   Constraint=No
+   UniqueName=A57   Constraint=No
+   UniqueName=A58   Constraint=No
+   UniqueName=A59   Constraint=No
+   UniqueName=A60   Constraint=No
+   UniqueName=A61   Constraint=No
+   UniqueName=A62   Constraint=No
+   UniqueName=A63   Constraint=No
+   UniqueName=A64   Constraint=No
+   UniqueName=A65   Constraint=No
+   UniqueName=A66   Constraint=No
+   UniqueName=A67   Constraint=No
+   UniqueName=A68   Constraint=No
+   UniqueName=A69   Constraint=No
+   UniqueName=A70   Constraint=No
+   UniqueName=A71   Constraint=No
+   UniqueName=A72   Constraint=No
+   UniqueName=A73   Constraint=No
+   UniqueName=A74   Constraint=No
+   UniqueName=A75   Constraint=No
+   UniqueName=A76   Constraint=No
+   UniqueName=A77   Constraint=No
+   UniqueName=A78   Constraint=No
+   UniqueName=A79   Constraint=No
+   UniqueName=A80   Constraint=No
+   UniqueName=A81   Constraint=No
+   UniqueName=A82   Constraint=No
+   UniqueName=A83   Constraint=No
+   UniqueName=A84   Constraint=No
+   UniqueName=A85   Constraint=No
+   UniqueName=A86   Constraint=No
+   UniqueName=A87   Constraint=No
+   UniqueName=A88   Constraint=No
+   UniqueName=A89   Constraint=No
+   UniqueName=A90   Constraint=No
+   UniqueName=A91   Constraint=No
+   UniqueName=A92   Constraint=No
+   UniqueName=A93   Constraint=No
+   UniqueName=A94   Constraint=No
+   UniqueName=A95   Constraint=No
+   UniqueName=A96   Constraint=No
+   UniqueName=A97   Constraint=No
+   UniqueName=A98   Constraint=No
+   UniqueName=A99   Constraint=No
+   UniqueName=A100   Constraint=No
+   UniqueName=A101   Constraint=No
+   UniqueName=A102   Constraint=No
+   UniqueName=A103   Constraint=No
+   UniqueName=A104   Constraint=No
+   UniqueName=A105   Constraint=No
+   UniqueName=A106   Constraint=No
+   UniqueName=A107   Constraint=No
+   UniqueName=A108   Constraint=No
+   UniqueName=A109   Constraint=No
+   UniqueName=A110   Constraint=No
+   UniqueName=A111   Constraint=No
+   UniqueName=A112   Constraint=No
+ 
+TABLE:  "ANALYSIS OPTIONS - AUTOMATIC MESH SETTINGS FOR FLOORS"
+   "Mesh Option"=Rectangular   "Use Localized Meshing"=Yes   "Merge Joints"=Yes   "Maximum Mesh Size"=100
+ 
+TABLE:  "ANALYSIS MODELING OPTIONS"
+   "Two Dimensional Only"=No   "Rigid Diaphragm At Top"=No   "Ignore Vertical Offsets"=Yes
+ 
+TABLE:  "ANALYSIS OPTIONS - SAPFIRE OPTIONS"
+   "Solver Option"=Advanced   "Analysis Process"=Auto   "Number Analysis Threads"=0   "Max File Size"=0
+ 
+END TABLE DATA

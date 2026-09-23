@@ -1099,13 +1099,22 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       resultMap: Map<number, number[]> | undefined,
       nodeMap: Map<number, number[]>
     ) => {
+      // MEDIA en el nudo de los valores (joint) de TODOS los elementos que lo tocan, como el
+      // «nodal average» de CSI. Antes hacia `set` y el nudo se quedaba con el ULTIMO elemento
+      // que lo tocaba: el campo salia corrido un elemento (Jorge, 22-sep-2026: en plate-thick
+      // 6x4 el maximo de M11 no quedaba centrado aunque el solver da un campo simetrico).
+      const suma = new Map<number, number>(), cuenta = new Map<number, number>();
       resultMap?.forEach((vals, elementIndex) => {
         const elem = mesh.elements.val[elementIndex];
         if (!elem) return;
         for (let i = 0; i < elem.length; i++) {
-          nodeMap.set(elem[i], [vals[i] ?? vals[0]]);
+          const v = vals[i] ?? vals[0];
+          if (!Number.isFinite(v)) continue;
+          suma.set(elem[i], (suma.get(elem[i]) ?? 0) + v);
+          cuenta.set(elem[i], (cuenta.get(elem[i]) ?? 0) + 1);
         }
       });
+      suma.forEach((s, n) => nodeMap.set(n, [s / (cuenta.get(n) as number)]));
     };
 
     // El sello, otra vez: un colormap de otro modelo pinta colores plausibles
@@ -1300,7 +1309,7 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     // ── Rango por familia (Settings → "Rango colormap") ──
     // Solo si el ejemplo no fija su propio rango. Clasifica cada Q4 por su plano (los 4 nudos con la
     // misma z = losa; la misma x o y = muro) y saca el rango robusto de los nudos de esa familia.
-    if (!fixedColorMapRange.val && scopeSel !== "auto") {
+    if (!fixedColorMapRange.val && scopeSel !== "auto" && scopeSel !== "robusto") {
       const N = mesh.nodes.val, sel = new Set<number>();
       const same = (e: number[], c: number) => { const v = N[e[0]]?.[c]; return e.every((i) => Math.abs((N[i]?.[c] ?? NaN) - v) < 1e-6); };
       for (const e of mesh.elements.val) {

@@ -1,0 +1,206 @@
+# losa_T: malla de ETABS (Shell-Thin), q = -10.0 kN/m2, E = 25000000.0, nu = 0.2, t = 0.2. kN, m
+wipe
+model basic -ndm 3 -ndf 6
+section ElasticMembranePlateSection 1 25000000.0 0.2 0.2 0.0
+node 1 0.0 0.0 0.0
+node 2 4.0 0.0 0.0
+node 3 4.0 6.0 0.0
+node 4 8.0 6.0 0.0
+node 5 8.0 8.0 0.0
+node 6 -4.0 8.0 0.0
+node 7 -4.0 6.0 0.0
+node 8 0.0 6.0 0.0
+node 9 4.0 1.2 0.0
+node 10 3.0 1.2 0.0
+node 11 3.0 0.0 0.0
+node 12 4.0 2.4 0.0
+node 13 3.0 2.4 0.0
+node 14 4.0 3.6 0.0
+node 15 3.000803 3.591322 0.0
+node 16 4.0 4.8 0.0
+node 17 3.003975 4.733821 0.0
+node 18 3.01289 5.755132 0.0
+node 19 2.0 1.2 0.0
+node 20 2.0 0.0 0.0
+node 21 2.0 2.4 0.0
+node 22 2.000582 3.584971 0.0
+node 23 2.000478 4.699648 0.0
+node 24 1.999609 5.690868 0.0
+node 25 1.0 1.2 0.0
+node 26 1.0 0.0 0.0
+node 27 1.0 2.4 0.0
+node 28 0.999433 3.581577 0.0
+node 29 0.996508 4.712038 0.0
+node 30 0.986542 5.738675 0.0
+node 31 0.0 1.2 0.0
+node 32 0.0 2.4 0.0
+node 33 0.0 3.6 0.0
+node 34 0.0 4.8 0.0
+node 35 0.951461 6.524658 0.0
+node 36 -0.044781 6.553684 0.0
+node 37 1.999199 6.507868 0.0
+node 38 3.046724 6.521732 0.0
+node 39 4.044133 6.555088 0.0
+node 40 5.0 6.0 0.0
+node 41 4.852422 6.498012 0.0
+node 42 6.0 6.0 0.0
+node 43 5.510546 6.935574 0.0
+node 44 7.0 6.0 0.0
+node 45 6.827637 6.983893 0.0
+node 46 6.8 8.0 0.0
+node 47 5.6 8.0 0.0
+node 48 4.4 8.0 0.0
+node 49 4.270966 7.187218 0.0
+node 50 3.2 8.0 0.0
+node 51 3.12901 7.244162 0.0
+node 52 2.0 8.0 0.0
+node 53 1.998902 7.251582 0.0
+node 54 0.8 8.0 0.0
+node 55 0.868339 7.241563 0.0
+node 56 -0.4 8.0 0.0
+node 57 -0.272536 7.182889 0.0
+node 58 -1.6 8.0 0.0
+node 59 -1.510908 6.933407 0.0
+node 60 -2.8 8.0 0.0
+node 61 -2.827727 6.983352 0.0
+node 62 -3.0 6.0 0.0
+node 63 -2.0 6.0 0.0
+node 64 -1.0 6.0 0.0
+node 65 -0.851897 6.495697 0.0
+node 66 8.0 7.0 0.0
+node 67 -4.0 7.0 0.0
+element ShellDKGQ 1 2 9 10 11 1
+element ShellDKGQ 2 9 12 13 10 1
+element ShellDKGQ 3 12 14 15 13 1
+element ShellDKGQ 4 14 16 17 15 1
+element ShellDKGQ 5 16 3 18 17 1
+element ShellDKGQ 6 11 10 19 20 1
+element ShellDKGQ 7 10 13 21 19 1
+element ShellDKGQ 8 13 15 22 21 1
+element ShellDKGQ 9 15 17 23 22 1
+element ShellDKGQ 10 17 18 24 23 1
+element ShellDKGQ 11 20 19 25 26 1
+element ShellDKGQ 12 19 21 27 25 1
+element ShellDKGQ 13 21 22 28 27 1
+element ShellDKGQ 14 22 23 29 28 1
+element ShellDKGQ 15 23 24 30 29 1
+element ShellDKGQ 16 26 25 31 1 1
+element ShellDKGQ 17 25 27 32 31 1
+element ShellDKGQ 18 27 28 33 32 1
+element ShellDKGQ 19 28 29 34 33 1
+element ShellDKGQ 20 29 30 8 34 1
+element ShellDKGQ 21 8 30 35 36 1
+element ShellDKGQ 22 30 24 37 35 1
+element ShellDKGQ 23 24 18 38 37 1
+element ShellDKGQ 24 18 3 39 38 1
+element ShellDKGQ 25 3 40 41 39 1
+element ShellDKGQ 26 40 42 43 41 1
+element ShellDKGQ 27 44 45 43 42 1
+element ShellDKGQ 28 46 47 43 45 1
+element ShellDKGQ 29 47 48 49 43 1
+element ShellDKGQ 30 48 50 51 49 1
+element ShellDKGQ 31 50 52 53 51 1
+element ShellDKGQ 32 52 54 55 53 1
+element ShellDKGQ 33 54 56 57 55 1
+element ShellDKGQ 34 56 58 59 57 1
+element ShellDKGQ 35 60 61 59 58 1
+element ShellDKGQ 36 62 63 59 61 1
+element ShellDKGQ 37 63 64 65 59 1
+element ShellDKGQ 38 64 8 36 65 1
+element ShellDKGT 39 41 43 49 1
+element ShellDKGQ 40 49 51 38 39 1
+element ShellDKGQ 41 51 53 37 38 1
+element ShellDKGQ 42 36 35 55 57 1
+element ShellDKGT 43 65 36 57 1
+element ShellDKGQ 44 35 37 53 55 1
+element ShellDKGQ 45 45 44 4 66 1
+element ShellDKGQ 46 45 66 5 46 1
+element ShellDKGQ 47 61 60 6 67 1
+element ShellDKGQ 48 61 67 7 62 1
+element ShellDKGT 49 49 39 41 1
+element ShellDKGT 50 57 59 65 1
+fix 1 1 1 1 0 0 0
+fix 2 1 1 1 0 0 0
+fix 3 1 1 1 0 0 0
+fix 4 1 1 1 0 0 0
+fix 5 1 1 1 0 0 0
+fix 6 1 1 1 0 0 0
+fix 7 1 1 1 0 0 0
+fix 8 1 1 1 0 0 0
+timeSeries Linear 1
+pattern Plain 1 1 {
+load 1 0 0 -3.0 0 0 0
+load 2 0 0 -3.0000000000000004 0 0 0
+load 3 0 0 -5.606461039581667 0 0 0
+load 4 0 0 -2.6302133333333364 0 0 0
+load 5 0 0 -2.9930761666666696 0 0 0
+load 6 0 0 -2.9935421666666673 0 0 0
+load 7 0 0 -2.6296874999999997 0 0 0
+load 8 0 0 -5.6165102934008315 0 0 0
+load 9 0 0 -6.000000000000001 0 0 0
+load 10 0 0 -11.999999999999998 0 0 0
+load 11 0 0 -5.999999999999999 0 0 0
+load 12 0 0 -5.991965333333333 0 0 0
+load 13 0 0 -11.957961318590833 0 0 0
+load 14 0 0 -5.937679372239167 0 0 0
+load 15 0 0 -11.692689609389165 0 0 0
+load 16 0 0 -5.773697791397499 0 0 0
+load 17 0 0 -10.961398442290832 0 0 0
+load 18 0 0 -8.937141039355836 0 0 0
+load 19 0 0 -11.999999999999996 0 0 0
+load 20 0 0 -5.999999999999998 0 0 0
+load 21 0 0 -11.928667282233329 0 0 0
+load 22 0 0 -11.549234442472496 0 0 0
+load 23 0 0 -10.669548973758333 0 0 0
+load 24 0 0 -9.17404503119667 0 0 0
+load 25 0 0 -12.0 0 0 0
+load 26 0 0 -6.0 0 0 0
+load 27 0 0 -11.926631796975833 0 0 0
+load 28 0 0 -11.625516524021666 0 0 0
+load 29 0 0 -10.942604795608329 0 0 0
+load 30 0 0 -9.015386727969998 0 0 0
+load 31 0 0 -6.0 0 0 0
+load 32 0 0 -5.984080499999999 0 0 0
+load 33 0 0 -5.920926284448331 0 0 0
+load 34 0 0 -5.769350579701665 0 0 0
+load 35 0 0 -7.555939310905836 0 0 0
+load 36 0 0 -5.3057010860666685 0 0 0
+load 37 0 0 -8.114804365425833 0 0 0
+load 38 0 0 -7.516024348933335 0 0 0
+load 39 0 0 -5.313736327100001 0 0 0
+load 40 0 0 -2.7276071948866694 0 0 0
+load 41 0 0 -4.606116899263334 0 0 0
+load 42 0 0 -4.532357664486666 0 0 0
+load 43 0 0 -12.286072462660004 0 0 0
+load 44 0 0 -5.303184185883336 0 0 0
+load 45 0 0 -11.997059666666674 0 0 0
+load 46 0 0 -6.206083480783336 0 0 0
+load 47 0 0 -6.240720433663336 0 0 0
+load 48 0 0 -5.092067947620001 0 0 0
+load 49 0 0 -8.988718322495 0 0 0
+load 50 0 0 -4.5077772583266675 0 0 0
+load 51 0 0 -8.343832465259998 0 0 0
+load 52 0 0 -4.421047678980003 0 0 0
+load 53 0 0 -8.390767152251664 0 0 0
+load 54 0 0 -4.521933861110835 0 0 0
+load 55 0 0 -8.334317706516668 0 0 0
+load 56 0 0 -5.112075076500835 0 0 0
+load 57 0 0 -8.98836628558667 0 0 0
+load 58 0 0 -6.252883320555832 0 0 0
+load 59 0 0 -12.286877978598337 0 0 0
+load 60 0 0 -6.210203023105834 0 0 0
+load 61 0 0 -11.9969365 0 0 0
+load 62 0 0 -5.299363976894169 0 0 0
+load 63 0 0 -4.523853926725004 0 0 0
+load 64 0 0 -2.7178982258233333 0 0 0
+load 65 0 0 -4.590076355625002 0 0 0
+load 66 0 0 -5.743894500000005 0 0 0
+load 67 0 0 -5.743684666666668 0 0 0
+}
+system UmfPack
+numberer RCM
+constraints Plain
+integrator LoadControl 1.0
+algorithm Linear
+analysis Static
+analyze 1

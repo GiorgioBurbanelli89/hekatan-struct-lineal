@@ -706,6 +706,23 @@ export function parseCliCommands(text: string): ParsedModel {
           }
           break;
         }
+        // ── cascara TRIANGULAR: tri ID n1 n2 n3 t E [q] [rho] ──
+        // Hace falta para resolver la malla GENERAL de ETABS (Quad_Build mete triangulos
+        // entre los cuadrilateros). El motor ya ensambla la cascara de 3 nudos.
+        case "tri": {
+          const id = parseInt(tokens[1], 10);
+          const pts = [parseInt(tokens[2], 10), parseInt(tokens[3], 10), parseInt(tokens[4], 10)];
+          const t = parseFloat(tokens[5] ?? "0.20");
+          const E = parseFloat(tokens[6] ?? "25e6");
+          const rhoTok = tokens[8] !== undefined ? parseFloat(tokens[8]) : undefined;
+          const rho = rhoTok !== undefined && isFinite(rhoTok) ? rhoTok : undefined;
+          m.shells.push({ id, pts, t, E, rho });
+          if (tokens[7] !== undefined) {
+            const q = parseFloat(tokens[7]);
+            if (isFinite(q) && q !== 0) m.shellLoads.set(id, q);
+          }
+          break;
+        }
         // ── carga de SUPERFICIE sobre un area: areaload shellID q ──
         // q en kN/m2, positivo hacia +z. Antes solo existia `load` nodal, asi
         // que una losa habia que repartirla a mano entre sus nudos: eso ignora
@@ -1586,6 +1603,18 @@ export const cliModeler: ExampleDef = {
         continue;
       }
       const P = idx.map((i) => nodes[i as number]);
+      if (idx.length === 3) {
+        // triangulo lineal: el vector consistente es exacto, q·A/3 a cada nudo
+        const u = [0, 1, 2].map((k) => P[1][k] - P[0][k]), v = [0, 1, 2].map((k) => P[2][k] - P[0][k]);
+        const A = Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]) / 2;
+        for (const i of idx as number[]) {
+          const prev = loads.get(i) ?? [0, 0, 0, 0, 0, 0];
+          prev[2] += q * A / 3;
+          loads.set(i, prev as [number,number,number,number,number,number]);
+          cargaDeArea.set(i, (cargaDeArea.get(i) ?? 0) + q * A / 3);
+        }
+        continue;
+      }
       const f = [0, 0, 0, 0];
       for (const [xi, eta] of GAUSS) {
         const N = [0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
@@ -1657,18 +1686,18 @@ export const cliModeler: ExampleDef = {
           };
           acumSW(e[0], [0, 0, wz * L / 2,  c * txw[0],  c * txw[1], 0]);
           acumSW(e[1], [0, 0, wz * L / 2, -c * txw[0], -c * txw[1], 0]);
-        } else if (e.length === 4) {
+        } else if (e.length === 4 || e.length === 3) {
           const t = thicknesses.get(i) ?? 0;
           const P = e.map(n => nodes[n]);
           let area2 = 0;
-          for (let k = 1; k < 3; k++) {
+          for (let k = 1; k < e.length - 1; k++) {
             const u = [P[k][0]-P[0][0], P[k][1]-P[0][1], P[k][2]-P[0][2]];
             const v = [P[k+1][0]-P[0][0], P[k+1][1]-P[0][1], P[k+1][2]-P[0][2]];
             const cr = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
             area2 += Math.hypot(cr[0], cr[1], cr[2]) / 2;
           }
           const W = area2 * t * rho * G * m.selfWeight;
-          for (const n of e) addFz(n, -W / 4);
+          for (const n of e) addFz(n, -W / e.length);
         }
       });
     }

@@ -1,4 +1,4 @@
-// Uso: node tests/lib/hekatan_sobre_malla_etabs.mjs malla_etabs.json [q=-10] [t=0.20] [E=25e6]
+// Uso: node tests/lib/hekatan_sobre_malla_etabs.mjs malla_etabs.json [q=-10] [t=0.20] [E=25e6] [tipo=thin]
 // Resuelve en Hekatan LA MALLA QUE HIZO ETABS (nudos + cascaras de analisis de malla_etabs_poligono.py)
 // con los mismos apoyos que ETABS puso y la misma carga de area, y compara desplazamientos nudo a nudo.
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
@@ -15,6 +15,7 @@ let k = 0;
 for (const e of EL) {
   if (e.length !== 4 && e.length !== 3) continue;
   k++; lineas.push(`${e.length === 4 ? "shell" : "tri"} ${k} ${e.map((i) => i + 1).join(" ")} ${t} ${E}`, `areaload ${k} ${q}`);
+  if (kv.tipo === "thin") lineas.push(`shelltype ${k} thin`);
 }
 const tri = EL.filter((e) => e.length === 3).length;
 let nap = 0;
@@ -46,4 +47,4 @@ console.log(`peor nudo ${peor.toFixed(3)} % del máximo (nudo ${peorI} en ${N[pe
 const hist = [0, 0, 0, 0]; for (const f of filas) hist[f.e < 0.5 ? 0 : f.e < 2 ? 1 : f.e < 5 ? 2 : 3]++;
 console.log(`<0.5 %: ${hist[0]} · 0.5–2 %: ${hist[1]} · 2–5 %: ${hist[2]} · >5 %: ${hist[3]}`);
 console.table(filas.slice(0, 6).map((f) => ({ ...f, hk: f.hk.toExponential(3), etabs: f.etabs.toExponential(3), e: f.e.toFixed(2) })));
-writeFileSync(process.argv[2].replace(/\.json$/, "_vs_hekatan.json"), JSON.stringify({ sumRz, sumRzEtabs: J.etabs.sumRz, wH, wE, peor, peorI, n, filas }, null, 1));
+writeFileSync(process.argv[2].replace(/\.json$/, kv.tipo === "thin" ? "_vs_hekatan_thin.json" : "_vs_hekatan.json"), JSON.stringify({ sumRz, sumRzEtabs: J.etabs.sumRz, wH, wE, peor, peorI, n, filas }, null, 1));
