@@ -1263,6 +1263,13 @@ function mountCaseResultsInSettings() {
 // finalmente manda.
 const OBJETIVO_DEFORMADA = 0.07;
 
+// La ULTIMA escala que puso el automatico. En cada rebuild se recalcula (como el «Automatic» de
+// ETABS) SOLO si el usuario no ha movido los deslizadores desde entonces: si la escala sigue siendo
+// la que puso el automatico, es automatica; si no, manda la del usuario (Jorge, 22-sep-2026: al bajar
+// t de 0.30 a 0.10 la flecha se multiplico x27 con la escala de 2650 fija, la losa se salia de la
+// pantalla y hubo que bajar los deslizadores al minimo, donde ya no se ve nada).
+let escalaAuto: { xy: number; z: number } | null = null;
+
 function autoScaleDeformedShape() {
   const s = (viewerElm as any).__settings;
   if (!s?.deformScale) return;
@@ -1298,12 +1305,12 @@ function autoScaleDeformedShape() {
     // axialmente RÍGIDAS: EA de una col 40×40 hormigón ≈ 4 MN/m, carga típica
     // 400 kN → acortamiento elástico ~0.1 mm/m, totalmente imperceptible en la
     // realidad. Amplificar Uz con el mismo factor XY las hace ver como 'alfeñique'.
-    if (maxUh > 1e-9) {
-      scale = Math.min(5000, Math.max(1, (OBJETIVO_DEFORMADA * diag) / maxUh));
-    } else {
-      scale = 10;  // caso gravitacional puro, scale fijo conservador
-    }
     scaleZfactor = 0.15;  // Uz visible = 15% del Ux/Uy visible — refleja rigidez axial real
+    // Lo que se VE mas grande (horizontal x escala, o vertical x escala x 0.15) = 7 % de la diagonal.
+    // Antes solo miraba Ux/Uy: con solo gravedad el sway es ~0 y la escala se iba a 13000-20000,
+    // y Uz x 0.15 x 13000 dejaba las losas colgando metros (22-sep-2026).
+    const refVis = Math.max(maxUh, scaleZfactor * maxUz);
+    scale = refVis > 1e-12 ? Math.min(50000, Math.max(1, (OBJETIVO_DEFORMADA * diag) / refVis)) : 10;
   } else {
     // PLACA / ZAPATA / SHELL / MURO A CORTE (Δz pequeña): la deformación
     // principal ES Uz (bending out-of-plane de una placa plana, o sag de zapata
@@ -1316,6 +1323,10 @@ function autoScaleDeformedShape() {
   }
   s.deformScale.val = Math.max(1, scale);
   if (s.deformScaleZ) s.deformScaleZ.val = scaleZfactor;
+  escalaAuto = { xy: s.deformScale.val, z: s.deformScaleZ?.val ?? 1 };
+  // Tweakpane no ve un cambio hecho por codigo: sin refresh el deslizador seguia diciendo «1.0»
+  // con la escala real en 78.9, y el usuario veia un numero que no era el que se aplicaba.
+  for (const pn of ((window as any).__hekatanPanes ?? [])) { try { pn?.refresh?.(); } catch { /* no-op */ } }
   // Display scale: −1.5 default (flechas pequeñas) pero −6 para conexiones
   // (modelo de orden 0.5–4 m, evitar que markers tapen geometría).
   const isConexion = currentExample?.id?.startsWith("conexion-") ||
@@ -1645,7 +1656,15 @@ function rebuild() {
   // El auto-scale solo se llama en loadExample (primer build) para dar
   // una escala inicial razonable; después el usuario puede ajustarla
   // manualmente desde el slider "Deform scale".
-  // autoScaleDeformedShape();   ← REMOVIDO
+  // autoScaleDeformedShape();   ← REMOVIDO (hasta el 22-sep-2026)
+  // Ahora SI, pero solo si la escala sigue siendo la automatica (el usuario no la ha tocado):
+  {
+    const sv = (viewerElm as any).__settings;
+    // tolerancia = medio paso del deslizador: Tweakpane redondea al refrescar (2650.16 -> 2650.2)
+    const esAuto = escalaAuto && sv?.deformScale && Math.abs(sv.deformScale.val - escalaAuto.xy) <= 0.051
+                   && Math.abs((sv.deformScaleZ?.val ?? 1) - escalaAuto.z) <= 0.0051;
+    if (esAuto) { try { autoScaleDeformedShape(); } catch { /* no-op */ } }
+  }
   // Sólo recentrar cámara si el usuario NO ha tocado los OrbitControls.
   // Esto permite mover sliders (nVanos, q, secciones, etc.) en modo "live
   // calc" sin que la vista se resetee a iso en cada drag.

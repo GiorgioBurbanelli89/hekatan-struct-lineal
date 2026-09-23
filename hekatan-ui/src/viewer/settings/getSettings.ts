@@ -491,7 +491,7 @@ export function getSettings(
     outputs.addBinding(settings.deformScale, "val", {
       label: "  Escala XY",
       min: 0.1,
-      max: 5000,
+      max: 50000,   // el automatico llega a 50000 (placas delgadas, edificios casi rigidos)
       step: 0.1,
     });
     outputs.addBinding(settings.deformScaleZ, "val", {
