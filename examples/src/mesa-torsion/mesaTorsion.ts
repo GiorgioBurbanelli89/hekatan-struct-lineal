@@ -90,6 +90,9 @@ export const mesaTorsion: ExampleDef = {
     q_Live:    { default: 0.5, min: 0, max: 5, step: 0.1, label: "Live (tonf/m²)", folder: "Cargas" },
     // ─── Modal ───
     nModos:    { default: 12, min: 3, max: 24, step: 1, label: "N modos modal", folder: "Modal" },
+    masaModal: { default: 0, label: "Masa modal",
+                 options: { "ETABS (K_M: viga en esquinas, lateral, por piso)": 0,
+                            "Por elemento (viga repartida)": 1 }, folder: "Modal" },
   },
 
   computedLabels(p, states) {
@@ -270,6 +273,11 @@ export const mesaTorsion: ExampleDef = {
       // ETABS Shell-Thin (DKE Kirchhoff) — matchea ETABS exacto < 1.5%
       plateFormulations,
     };
+    // Índices que necesita runModal para montar la masa como ETABS.
+    (states as any)._mesaTorsionIdx = {
+      beamStart, beamEnd, RHO,
+      topCorners: [ix(0, 0), ix(nMesh, 0), ix(nMesh, nMesh), ix(0, nMesh)],
+    };
 
     // ─── Helper para construir cargas por caso ────────────────────────
     // CSI mass source INCLUDELOADS=No → patrones SCP/Live no contribuyen a masa,
@@ -409,10 +417,32 @@ export const mesaTorsion: ExampleDef = {
     if (!states.nodes.val.length) return;
     const nModos = Math.round(p.nModos);
     try {
+      // ── Masa: la de ETABS, leída de su matriz ensamblada (Mesa torsiónT.K_M) ──
+      // ETABS pone la masa de cada viga (solo la LUZ LIBRE L − b_col: el tramo
+      // dentro del brazo rígido no pesa) mitad y mitad en las 2 ESQUINAS, no a lo
+      // largo de los nudos de borde de la losa (esos llevan solo losa, 0.173 t).
+      // Masa solo lateral (INCLUDEVERTICALMASS No) y por piso (LUMPATSTORIES Yes).
+      // Con esto: M = 19.798 t y MMI = 256.72 t·m², igual que ETABS (19.80 / 256.7).
+      // Repartida por elemento, la MMI baja a ~215 y T₃ sale −8.6 %.
+      let ni = states.nodeInputs.val, ei = states.elementInputs.val;
+      let lateral = 0, lump = 0;
+      const idx = (states as any)._mesaTorsionIdx;
+      if (Math.round(p.masaModal ?? 0) === 0 && idx) {
+        const dens = new Map(ei.densities);
+        for (let e = idx.beamStart; e < idx.beamEnd; e++) dens.set(e, 0);
+        const mV = (L: number) => idx.RHO * p.bViga * p.hViga * (L - p.bCol) / 2;
+        const mCorner = mV(p.Lx) + mV(p.Ly);   // media viga X + media viga Y
+        const masses = new Map<number, number>(ni.masses ?? []);
+        for (const n of idx.topCorners) masses.set(n, (masses.get(n) ?? 0) + mCorner);
+        ei = { ...ei, densities: dens };
+        ni = { ...ni, masses };
+        lateral = 1; lump = 1;
+      }
       const out = modalAnalysis(
-        states.nodes.val, states.elements.val,
-        states.nodeInputs.val, states.elementInputs.val, nModos,
+        states.nodes.val, states.elements.val, ni, ei, nModos, lateral, lump,
       );
+      // Lo que entró al modal, para que el test lo pese (tests/casos/mesa_torsion_modal.mjs).
+      (states as any)._mesaTorsionModal = { nodeInputs: ni, elementInputs: ei, lateral, lump, out };
       const lines: string[] = [];
       lines.push(`[Mesa torsión Modal Hekatan FEM 3D] ${nModos} modos:`);
       for (let i = 0; i < Math.min(nModos, 6); i++) {
