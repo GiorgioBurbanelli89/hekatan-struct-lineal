@@ -34,6 +34,10 @@ export interface Tiempo {
   /** Rótulos sobre el modelo: [nudos (se pone en su centro), texto] — p. ej. el número de cada elemento. */
   etiquetas?: Array<[number[], string]> | (() => Array<[number[], string]>);
   params?: Record<string, number>;
+  /** Acción sobre la app ANTES de señalar (cambiar vista, resultado del visor, iterar un parámetro). */
+  accion?: () => void | Promise<void>;
+  /** Con `audio` en el paso: cuánto dura este tiempo (ms). La voz grabada manda; los tiempos la acompañan. */
+  ms?: number;
 }
 
 export interface PasoTutor {
@@ -46,6 +50,12 @@ export interface PasoTutor {
   tiempos?: Tiempo[];
   voz?: () => string;
   senalar?: Blanco;
+  /**
+   * Voz GRABADA del paso (mp3, relativo a BASE_URL). Con ella no se sintetiza nada: suena el
+   * fichero y los tiempos avanzan por su `ms`. El audio arranca con un clic del usuario
+   * (política de reproducción automática de los navegadores): ▶ Reproducir, Siguiente o ↻.
+   */
+  audio?: string;
 }
 
 const w = () => window as any;
@@ -55,6 +65,17 @@ const espera = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 let pan: HTMLDivElement | null = null;
 let i = 0, pasos: PasoTutor[] = [], nombre = "", hablar = true, auto = false, turno = 0;
+let sonido: HTMLAudioElement | null = null;
+const callar = () => { window.speechSynthesis?.cancel(); if (sonido) { sonido.pause(); sonido = null; } };
+
+/** Reproduce el mp3 del paso. Devuelve la promesa de su final, o null si el navegador no lo deja sonar. */
+async function sonar(url: string, mio: number): Promise<{ fin: Promise<void> } | null> {
+  callar();
+  const a = new Audio(BASE + url); sonido = a;
+  const fin = new Promise<void>((ok) => { a.onended = () => ok(); a.onerror = () => ok(); });
+  try { await a.play(); } catch { if (sonido === a) sonido = null; return null; }
+  return mio === turno ? { fin } : null;
+}
 
 /** Número para la VOZ: coma decimal y sin ceros de cola, que es como lo lee bien una voz en español. */
 export const numVoz = (x: number, d = 4) => (+x.toFixed(d)).toString().replace(".", ",");
@@ -88,15 +109,15 @@ function montarCursor() {
   cur.innerHTML = `<svg width="34" height="34" viewBox="0 0 24 24"><path d="M3 2l7 19 2.5-7.5L20 11z" fill="#fff" stroke="#000" stroke-width="1.4"/></svg>`;
   cur.style.cssText = "position:fixed;z-index:9700;pointer-events:none;left:0;top:0;filter:drop-shadow(0 3px 4px #000c)";
   aro = document.createElement("div");
-  aro.style.cssText = "position:fixed;z-index:9690;pointer-events:none;border:3px solid #fbbf24;border-radius:12px;" +
-    "box-shadow:0 0 0 5px #fbbf2440;transition:all .7s ease;opacity:0";
+  aro.style.cssText = "position:fixed;z-index:9690;pointer-events:none;border:3px solid #22d3ee;border-radius:12px;" +
+    "box-shadow:0 0 0 5px #22d3ee40;transition:all .7s ease;opacity:0";
   glo = document.createElement("div");
-  glo.style.cssText = "position:fixed;z-index:9710;pointer-events:none;background:#111827;color:#fde68a;border:1px solid #fbbf24;" +
+  glo.style.cssText = "position:fixed;z-index:9710;pointer-events:none;background:#111827;color:#cffafe;border:1px solid #22d3ee;" +
     "border-radius:8px;padding:5px 9px;font:600 14px system-ui;transition:left .7s ease,top .7s ease,opacity .3s;opacity:0;white-space:nowrap";
   capa = document.createElementNS(NS, "svg");
   capa.setAttribute("style", "position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:9680;pointer-events:none");
   capa.innerHTML = `<defs><marker id="hk-fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
-    `<path d="M0,0 L10,5 L0,10 z" fill="#fbbf24"/></marker></defs>`;
+    `<path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/></marker></defs>`;
   document.body.append(capa, aro, cur, glo);
   const st = document.createElement("style"); st.id = "hk-tutor-st";
   st.textContent = "@keyframes hkOnda{from{transform:translate(-50%,-50%) scale(.2);opacity:.9}to{transform:translate(-50%,-50%) scale(2.4);opacity:0}}";
@@ -121,7 +142,7 @@ function volar(x1: number, y1: number): Promise<void> {
 }
 function onda(x: number, y: number) {
   const o = document.createElement("div");
-  o.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:46px;height:46px;border:3px solid #fbbf24;border-radius:50%;` +
+  o.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:46px;height:46px;border:3px solid #22d3ee;border-radius:50%;` +
     "z-index:9695;pointer-events:none;animation:hkOnda .7s ease-out forwards";
   document.body.appendChild(o); setTimeout(() => o.remove(), 750);
 }
@@ -242,15 +263,15 @@ function unaCota(p: number[], q: number[], texto: string, nx: number, ny: number
   const A = [p[0] + nx * sep, p[1] + ny * sep], B = [q[0] + nx * sep, q[1] + ny * sep];
   // extensión: arranca a DIMEXO del punto y termina DIMEXE más allá de la línea de cota
   const ext = (o: number[], f: number[]) =>
-    `<line x1="${o[0] + nx * S.DIMEXO}" y1="${o[1] + ny * S.DIMEXO}" x2="${f[0] + nx * S.DIMEXE}" y2="${f[1] + ny * S.DIMEXE}" stroke="#fbbf24" stroke-width="1"/>`;
+    `<line x1="${o[0] + nx * S.DIMEXO}" y1="${o[1] + ny * S.DIMEXO}" x2="${f[0] + nx * S.DIMEXE}" y2="${f[1] + ny * S.DIMEXE}" stroke="#22d3ee" stroke-width="1"/>`;
   // texto ENCIMA de la línea (DIMTAD 1) y girado con ella (DIMTIH 0), nunca cabeza abajo
   let ang = (Math.atan2(B[1] - A[1], B[0] - A[0]) * 180) / Math.PI;
   if (ang > 90 || ang < -90) ang += 180;
   const cx = (A[0] + B[0]) / 2 + nx * (S.DIMGAP + S.DIMTXT * 0.35);
   const cy = (A[1] + B[1]) / 2 + ny * (S.DIMGAP + S.DIMTXT * 0.35);
   return ext(p, A) + ext(q, B) +
-    `<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#fbbf24" stroke-width="1.6" marker-start="url(#hk-fl)" marker-end="url(#hk-fl)"/>` +
-    `<text x="${cx}" y="${cy}" transform="rotate(${ang.toFixed(1)} ${cx} ${cy})" fill="#fde68a" font-family="system-ui" ` +
+    `<line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#22d3ee" stroke-width="1.6" marker-start="url(#hk-fl)" marker-end="url(#hk-fl)"/>` +
+    `<text x="${cx}" y="${cy}" transform="rotate(${ang.toFixed(1)} ${cx} ${cy})" fill="#cffafe" font-family="system-ui" ` +
     `font-weight="700" font-size="${S.DIMTXT}" text-anchor="middle" paint-order="stroke" stroke="#0b1020" stroke-width="4">${texto}</text>`;
 }
 
@@ -325,7 +346,7 @@ async function senalar(b: Blanco | undefined, globo?: string) {
     for (const id of b.nudos) { const q = aPantalla(id); if (!q) continue;
       const c = document.createElementNS(NS, "circle");
       c.setAttribute("data-punto", "1"); c.setAttribute("cx", `${q[0]}`); c.setAttribute("cy", `${q[1]}`); c.setAttribute("r", "7");
-      c.setAttribute("fill", "#fbbf24"); c.setAttribute("stroke", "#000"); c.setAttribute("stroke-width", "1.5");
+      c.setAttribute("fill", "#22d3ee"); c.setAttribute("stroke", "#000"); c.setAttribute("stroke-width", "1.5");
       c.innerHTML = `<animate attributeName="r" values="5;10;5" dur="1.2s" repeatCount="indefinite"/>`;
       capa!.appendChild(c); }
   } else Object.assign(aro!.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", opacity: "1" });
@@ -370,7 +391,7 @@ function pintarFicha() {
 async function mostrar() {
   if (!pan) return;
   const mio = ++turno;
-  window.speechSynthesis?.cancel();
+  callar();
   const p = pasos[i];
   await ponerParams(p.params);
   if (mio !== turno) return;
@@ -378,15 +399,29 @@ async function mostrar() {
   await pan?.querySelector<HTMLImageElement>("[data-cuerpo] img")?.decode().catch(() => {});
   dibujarCotas([]);
   const tiempos: Tiempo[] = p.tiempos ?? [{ voz: p.voz ?? (() => pan!.querySelector<HTMLElement>("[data-cuerpo]")!.innerText), senalar: p.senalar }];
+  // Voz grabada: suena el mp3 y los tiempos avanzan por su duración. Si el navegador no deja
+  // sonar (todavía sin clic) se sigue por tiempos y la ficha avisa.
+  const grabada = p.audio && hablar ? await sonar(p.audio, mio) : null;
+  if (p.audio && hablar && !grabada && pan) {
+    const av = document.createElement("div");
+    av.style.cssText = "margin-top:10px;color:#fca5a5;font-size:13px";
+    av.textContent = "Pulsa ▶ Reproducir o ↻ para oír la voz (el navegador pide un clic).";
+    pan.querySelector("[data-cuerpo]")?.appendChild(av);
+    // Sin voz no se avanza solo: el tutor espera en este paso a que el usuario pulse ▶ (un clic).
+    if (auto) { auto = false; botonAuto(); return; }
+  }
   for (const t of tiempos) {
     if (mio !== turno || !pan) return;
-    if (t.params) { await ponerParams(t.params); pintarFicha(); }
+    if (t.params) await ponerParams(t.params);
+    if (t.accion) { await t.accion(); await espera(300); }
+    if (t.params || t.accion) pintarFicha();
     if (t.cotas || t.etiquetas) { dibujarCotas(t.cotas ? val(t.cotas) : []); dibujarEtiquetas(t.etiquetas ? val(t.etiquetas) : []); }
-    const voz = decir(val(t.voz), mio);                 // habla MIENTRAS el cursor vuela
+    const voz = p.audio ? espera(t.ms ?? 2500) : decir(val(t.voz), mio);   // habla MIENTRAS el cursor vuela
     await senalar(t.senalar === undefined ? undefined : val(t.senalar as any), t.globo === undefined ? undefined : val(t.globo));
     await voz;
     await espera(250);
   }
+  if (grabada && mio === turno) await grabada.fin;
   if (auto && mio === turno && i < pasos.length - 1) { await espera(500); if (mio === turno) { i++; mostrar(); } }
   else if (auto && i === pasos.length - 1) { auto = false; botonAuto(); }
 }
@@ -479,7 +514,7 @@ export function abrirTutorTest(titulo: string, lista: PasoTutor[], reproducir = 
     `<b style="flex:1">🎓 Tutor</b>` +
     `<button data-voz title="Voz sí / no" style="background:none;border:0;color:#fff;cursor:pointer">🔊</button>` +
     `<button data-x title="Cerrar" style="background:none;border:0;color:#fff;cursor:pointer">✕</button></div>` +
-    `<div style="height:3px;background:#1e293b"><div data-barra style="height:3px;background:#fbbf24;width:0;transition:width .5s"></div></div>` +
+    `<div style="height:3px;background:#1e293b"><div data-barra style="height:3px;background:#22d3ee;width:0;transition:width .5s"></div></div>` +
     `<div data-cuerpo style="padding:12px 18px;line-height:1.55"></div>` +
     `<div style="display:flex;gap:8px;padding:10px 18px 16px;position:sticky;bottom:0;background:#0f172a;font-size:16px">` +
     `<button data-ant style="padding:6px 10px">◀</button>` +
@@ -490,16 +525,16 @@ export function abrirTutorTest(titulo: string, lista: PasoTutor[], reproducir = 
   partir(true);
   botonAuto();
   const q = (s: string) => pan!.querySelector(s)!;
-  q("[data-x]").addEventListener("click", () => { turno++; auto = false; window.speechSynthesis?.cancel(); pan?.remove(); pan = null; quitarCursor(); partir(false); });
+  q("[data-x]").addEventListener("click", () => { turno++; auto = false; callar(); pan?.remove(); pan = null; quitarCursor(); partir(false); });
   q("[data-voz]").addEventListener("click", (e) => {
-    hablar = !hablar; (e.target as HTMLElement).textContent = hablar ? "🔊" : "🔇"; if (!hablar) window.speechSynthesis?.cancel();
+    hablar = !hablar; (e.target as HTMLElement).textContent = hablar ? "🔊" : "🔇"; if (!hablar) callar();
   });
   q("[data-ant]").addEventListener("click", () => { if (i > 0) { auto = false; botonAuto(); i--; mostrar(); } });
   q("[data-sig]").addEventListener("click", () => { if (i < pasos.length - 1) { i++; mostrar(); } });
   q("[data-rep]").addEventListener("click", () => mostrar());
   q("[data-auto]").addEventListener("click", () => {
     auto = !auto; botonAuto();
-    if (auto) mostrar(); else { turno++; window.speechSynthesis?.cancel(); }
+    if (auto) mostrar(); else { turno++; callar(); }
   });
   mostrar();
 }

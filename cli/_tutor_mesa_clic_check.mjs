@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--use-angle=swiftshader","--enable-unsafe-swiftshader"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 900 });
+await pag.goto("http://localhost:4600/workspace/?t=mesa-torsion&tutor=1", { waitUntil: "networkidle2", timeout: 180000 });
+await new Promise(r => setTimeout(r, 9000));
+const est = await pag.evaluate(() => ({ boton: document.querySelector("[data-auto]")?.textContent, aviso: document.querySelector("[data-cuerpo]")?.innerText.slice(-80) }));
+console.log(JSON.stringify(est));
+await pag.click("[data-auto]"); await new Promise(r => setTimeout(r, 6000));
+console.log(await pag.evaluate(() => ({ boton: document.querySelector("[data-auto]")?.textContent, titulo: document.querySelector("[data-cuerpo] > div:nth-child(2)")?.textContent })));
+await pag.screenshot({ path: "cli/shots/tutor_mesa/sin_autoplay_tras_clic.png" });
+await nav.close();

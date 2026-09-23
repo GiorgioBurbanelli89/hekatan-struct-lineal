@@ -20,6 +20,8 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element, type DeformOutputs, type AnalyzeOutputs } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { registrarTutorTest } from "../shared/tutorTest";
+import { pasosMesaTorsion } from "./tutorMesaTorsion";
 
 const G = 9.80665;                  // m/s²
 const RHO_CONC = 23.57 / 9.81;      // ton/m³ — γ_c=23.57 kN/m³ / g (consistent mass)
@@ -58,7 +60,7 @@ export const mesaTorsion: ExampleDef = {
     "ETABS periodos modal: T1=T2=0.34337s lateral, T3=0.28756s torsión Rz.",
     "Rigid offsets ETABS: col flexible=3.5m (auto -h_viga/2), viga flexible=5.6m (auto -b_col/2).",
     "T_u vs malla (Wilson §7.7): cambia 'Subdiv losa' 1→16 y 'Unión viga–losa'; T_u = 0 / 2.61 / 5.04 / 5.85 / 6.06 tonf·m (UDCon2).",
-    "🎬 Tutorial (botón de la barra superior) → «Mesa de torsión: T_u vs malla»: paso a paso con Wilson y ACI §22.7.3.2.",
+    "🎓 Tutor con voz: menú «📐 Diseño» → «Tutor del test», o abre ?t=mesa-torsion&tutor=1 (Wilson §7.7, malla, ACI §22.7.3.2).",
   ],
   params: {
     // ─── Caso a visualizar ───
@@ -85,7 +87,7 @@ export const mesaTorsion: ExampleDef = {
     tLosa:     { default: 0.10, min: 0.08, max: 0.30, step: 0.01, label: "t losa (m)", folder: "Secciones" },
     // Multiplica la J de las vigas (ACI 318-19 §22.7.3.2, torsión de compatibilidad:
     // la viga fisurada pierde rigidez torsional y T_u baja hasta φT_cr).
-    factorJ:   { default: 1.0, min: 0.01, max: 1, step: 0.01, label: "Factor J vigas", folder: "Secciones" },
+    factorJ:   { default: 1.0, min: 0.001, max: 1, step: 0.0001, label: "Factor J vigas", folder: "Secciones" },
     // ─── Material concreto 4000Psi ───
     E_GPa:     { default: 24.85, min: 15, max: 35, step: 0.5, label: "E (GPa)", folder: "Material" },
     nu:        { default: 0.20, min: 0.10, max: 0.30, step: 0.01, label: "ν", folder: "Material" },
@@ -425,6 +427,8 @@ export const mesaTorsion: ExampleDef = {
     console.log(lines.join("\n"));
 
     states.objects3D.val = [];
+    // Tutor en vivo con voz (📐 Diseño → Tutor, o ?t=mesa-torsion&tutor=1). Solo en el navegador.
+    registrarTutorTest("mesa-torsion", "Tutor · Mesa de torsión: T_u, malla y fisuración", pasosMesaTorsion);
   },
 
   runModal(p, states, modalPanel) {
