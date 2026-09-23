@@ -174,6 +174,9 @@ export function legendGradientCss(): string {
  *  selector «Rango colormap» diga «todas, recortando picos»: entonces percentiles 1 y 99 (lo que se puso
  *  el 6-sep-2026 para un pico de vonMises en la base de un muro; lo que queda fuera se satura al color
  *  del extremo). Si todo es positivo, el mínimo es 0; si todo es negativo, el máximo es 0. */
+/** Lo fija el visor antes de pintar: ¿el campo es un DESPLAZAMIENTO (Ux/Uy/Uz, ux/uy/uz de sólido)? */
+let campoEsDesplazamiento = false;
+export function setCampoEsDesplazamiento(v: boolean) { campoEsDesplazamiento = v; }
 export function robustRange(valid: number[]): [number, number] {
   if (!valid.length) return [0, 1];
   const s = [...valid].sort((a, b) => a - b);
@@ -181,7 +184,11 @@ export function robustRange(valid: number[]): [number, number] {
   // Por defecto el MIN/MAX REAL, como SAFE/ETABS/SAP2000: la barra tiene que llegar al pico (Jorge,
   // 22-sep-2026: la losa con ductos marcaba −4.01 mm con la flecha real en −4.78). El recorte p1–p99
   // queda como opción del selector «Rango colormap» → «todas, recortando picos».
-  const recortar = colorMapScope.val === "robusto" && s.length >= 20;
+  // Desplazamientos: campo suave, sin singularidades -> min/max real. Esfuerzos/fuerzas (von Mises, presion,
+  // momentos): una carga puntual o una esquina crean un pico SINGULAR que se come la escala (bulbo de presiones,
+  // conexiones, placas base: todo magenta, revision por fotogramas 23-sep-2026) -> p1-p99.
+  const sc = colorMapScope.val;
+  const recortar = s.length >= 20 && (sc === "robusto" || (sc !== "real" && !campoEsDesplazamiento));
   let vMin = recortar ? q(0.01) : s[0];
   let vMax = recortar ? q(0.99) : s[s.length - 1];
   if (vMin >= 0 && vMax > 0) vMin = 0;

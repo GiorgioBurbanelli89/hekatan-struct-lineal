@@ -858,7 +858,9 @@ function loadExample(ex: ExampleDef) {
   const resetViewerVis = () => {
     const sR = (viewerElm as any).__settings;
     if (!sR) return;
-    if (sR.elements?.val !== undefined)    sR.elements.val = true;
+    // malla muy fina (> 1500 cascaras): aristas apagadas, si no tapan el colormap (placa-base se veia blanca)
+    if (sR.elements?.val !== undefined)    sR.elements.val =
+      (states.elements.rawVal ?? []).filter((e: number[]) => e.length === 3 || e.length === 4).length <= 1500;
     if (sR.nodes?.val !== undefined)       sR.nodes.val = true;
     if (sR.elemColumns?.val !== undefined) sR.elemColumns.val = true;
     if (sR.elemBeams?.val !== undefined)   sR.elemBeams.val = true;
@@ -892,6 +894,7 @@ function loadExample(ex: ExampleDef) {
     // Encender Loads y Supports por default para que el usuario vea la condición del modelo.
     if (s?.loads) s.loads.val = true;
     if (s?.supports) s.supports.val = true;
+
   }
   // Filtra el dropdown Shell results según lo que el ejemplo declara soportar.
   // "pressure" solo se ofrece en zapatas (con resortes Winkler); "bending*" solo

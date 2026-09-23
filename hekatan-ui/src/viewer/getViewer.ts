@@ -29,7 +29,7 @@ import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
 import { getLegend } from "../color-map/getLegend";
-import { colorMapScope, robustRange } from "../color-map/getColorMap";
+import { colorMapScope, robustRange, setCampoEsDesplazamiento } from "../color-map/getColorMap";
 import { getTheme, onThemeChange, ThemeColors } from "../theme";
 
 export interface ViewerContext3D {
@@ -1274,6 +1274,7 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       isShear       ? `${fUnit}/m` :
       "";
     colorMapUnit.val = unit;
+    setCampoEsDesplazamiento(isDisp || isSolidDisp);
 
     // ── Aplicar scale al rango fijo ──
     // El rango fijo viene de analyzeOutputs.colorMapRanges en unidades INTERNAS
@@ -1309,7 +1310,7 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     // ── Rango por familia (Settings → "Rango colormap") ──
     // Solo si el ejemplo no fija su propio rango. Clasifica cada Q4 por su plano (los 4 nudos con la
     // misma z = losa; la misma x o y = muro) y saca el rango robusto de los nudos de esa familia.
-    if (!fixedColorMapRange.val && scopeSel !== "auto" && scopeSel !== "robusto") {
+    if (!fixedColorMapRange.val && scopeSel !== "auto" && scopeSel !== "robusto" && scopeSel !== "real") {
       const N = mesh.nodes.val, sel = new Set<number>();
       const same = (e: number[], c: number) => { const v = N[e[0]]?.[c]; return e.every((i) => Math.abs((N[i]?.[c] ?? NaN) - v) < 1e-6); };
       for (const e of mesh.elements.val) {
