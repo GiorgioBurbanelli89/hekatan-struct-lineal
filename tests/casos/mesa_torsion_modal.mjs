@@ -8,8 +8,8 @@
  * MMI de ETABS = 256.7 t·m² (réplica Python hekatan-py/Examples-Py/05 Mesa Torsion).
  *
  * Periodos ETABS: T1 = T2 = 0.34337 s (traslación), T3 = 0.28756 s (torsión Rz).
- * Brazos rígidos OFF en Hekatan (en ETABS el factor de zona rígida es 0: solo
- * quitan el peso de la viga dentro del brazo, que ya va en la masa de arriba).
+ * Brazos rígidos ON, como el .e2k (automáticos, factor de zona rígida 0): en
+ * ETABS solo quitan el peso de la viga dentro del brazo.
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
 import { masaEnsamblada } from "../lib/wasm.mjs";
@@ -28,7 +28,7 @@ export async function correr() {
   const st = { nodes: van([]), elements: van([]), nodeInputs: van({}), elementInputs: van({}),
                deformOutputs: van({}), analyzeOutputs: van({}), objects3D: van([]) };
   const p = Object.fromEntries(Object.entries(mesaTorsion.params).map(([k, d]) => [k, d.default]));
-  p.rigidOffsets = 0; p.nModos = 6;
+  p.rigidOffsets = 1; p.nModos = 6;   // ETABS trae brazos automáticos
   const log = console.log; console.log = () => {};
   try { mesaTorsion.build(p, st); mesaTorsion.runModal(p, st, { render() {}, set() {} }); }
   finally { console.log = log; }

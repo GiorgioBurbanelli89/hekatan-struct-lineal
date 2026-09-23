@@ -68,13 +68,22 @@ export const mesaTorsion: ExampleDef = {
     Lx:        { default: 6.0,  min: 4, max: 12, step: 0.5, label: "Lx (m)", folder: "Geometría" },
     Ly:        { default: 6.0,  min: 4, max: 12, step: 0.5, label: "Ly (m)", folder: "Geometría" },
     H:         { default: 4.0,  min: 2.5, max: 6, step: 0.25, label: "H piso (m)", folder: "Geometría" },
-    nMesh:     { default: 5,    min: 2, max: 12, step: 1, label: "Subdiv losa (n×n)", folder: "Geometría" },
+    nMesh:     { default: 5,    min: 1, max: 32, step: 1, label: "Subdiv losa (n×n)", folder: "Geometría" },
+    // Compatibilidad viga–losa (Wilson §7.7): la viga solo gira con la losa en los
+    // nudos que COMPARTEN. "Solo extremos" = viga de una pieza esquina a esquina,
+    // la losa no le entrega giro en ningún punto intermedio.
+    vigaNudos: { default: 1, label: "Unión viga–losa",
+                 options: { "Nudos compartidos (viga partida en la malla)": 1,
+                            "Solo en los extremos (viga de una pieza)": 0 }, folder: "Geometría" },
     // ─── Secciones ───
     bCol:      { default: 0.40, min: 0.25, max: 0.80, step: 0.05, label: "b col (m)", folder: "Secciones" },
     hCol:      { default: 0.40, min: 0.25, max: 0.80, step: 0.05, label: "h col (m)", folder: "Secciones" },
     bViga:     { default: 0.30, min: 0.20, max: 0.60, step: 0.05, label: "b viga (m)", folder: "Secciones" },
     hViga:     { default: 0.50, min: 0.30, max: 0.90, step: 0.05, label: "h viga (m)", folder: "Secciones" },
     tLosa:     { default: 0.10, min: 0.08, max: 0.30, step: 0.01, label: "t losa (m)", folder: "Secciones" },
+    // Multiplica la J de las vigas (ACI 318-19 §22.7.3.2, torsión de compatibilidad:
+    // la viga fisurada pierde rigidez torsional y T_u baja hasta φT_cr).
+    factorJ:   { default: 1.0, min: 0.01, max: 1, step: 0.01, label: "Factor J vigas", folder: "Secciones" },
     // ─── Material concreto 4000Psi ───
     E_GPa:     { default: 24.85, min: 15, max: 35, step: 0.5, label: "E (GPa)", folder: "Material" },
     nu:        { default: 0.20, min: 0.10, max: 0.30, step: 0.01, label: "ν", folder: "Material" },
@@ -154,10 +163,13 @@ export const mesaTorsion: ExampleDef = {
     elements.push([3, ix(0, nMesh)]);              // NO
     const colStart = shellCount, colEnd = elements.length;
     // 4 vigas perimetrales subdivididas
-    for (let i = 0; i < nMesh; i++) elements.push([ix(i, 0), ix(i + 1, 0)]);            // S
-    for (let j = 0; j < nMesh; j++) elements.push([ix(nMesh, j), ix(nMesh, j + 1)]);    // E
-    for (let i = 0; i < nMesh; i++) elements.push([ix(i, nMesh), ix(i + 1, nMesh)]);    // N
-    for (let j = 0; j < nMesh; j++) elements.push([ix(0, j), ix(0, j + 1)]);            // W
+    // nSegV = tramos por viga: los de la malla, o 1 si la viga solo se une en las esquinas.
+    const nSegV = Math.round(p.vigaNudos ?? 1) === 0 ? 1 : nMesh;
+    const kV = nMesh / nSegV;   // salto en índices de malla por tramo de viga
+    for (let i = 0; i < nSegV; i++) elements.push([ix(i * kV, 0), ix((i + 1) * kV, 0)]);              // S
+    for (let j = 0; j < nSegV; j++) elements.push([ix(nMesh, j * kV), ix(nMesh, (j + 1) * kV)]);      // E
+    for (let i = 0; i < nSegV; i++) elements.push([ix(i * kV, nMesh), ix((i + 1) * kV, nMesh)]);      // N
+    for (let j = 0; j < nSegV; j++) elements.push([ix(0, j * kV), ix(0, (j + 1) * kV)]);              // W
     const beamStart = colEnd, beamEnd = elements.length;
 
     // ─── Supports ───
@@ -229,15 +241,15 @@ export const mesaTorsion: ExampleDef = {
     const Av = p.bViga * p.hViga;
     const Izv = (p.bViga * Math.pow(p.hViga, 3)) / 12;
     const Iyv = (p.hViga * Math.pow(p.bViga, 3)) / 12;
-    const Jv = stVenantJ(p.bViga, p.hViga);
-    const beamSegL = Lx / nMesh;  // long de cada segmento de viga = dx (= dy)
+    const Jv = stVenantJ(p.bViga, p.hViga) * (p.factorJ ?? 1);
+    const beamSegL = Lx / nSegV;  // long de cada segmento de viga = dx (= dy)
     // Rigid offset solo en los segmentos EXTREMOS (los que tocan col):
     //   - primer segmento de cada lado: offset I = b_col/2 / segLen
     //   - último segmento de cada lado: offset J = b_col/2 / segLen
     const offsetEnd = p.rigidOffsets > 0.5 ? (p.bCol / 2) / beamSegL : 0;
     let bIdx = beamStart;
     for (let side = 0; side < 4; side++) {
-      for (let s = 0; s < nMesh; s++) {
+      for (let s = 0; s < nSegV; s++) {
         elasticities.set(bIdx, E_kNm2);
         poissons.set(bIdx, p.nu);
         Gm.set(bIdx, Gmod);
@@ -256,7 +268,7 @@ export const mesaTorsion: ExampleDef = {
         sections.set(bIdx, { type: "rect", b: p.bViga, h: p.hViga });
         if (offsetEnd > 0) {
           const offI = s === 0          ? offsetEnd : 0;
-          const offJ = s === nMesh - 1  ? offsetEnd : 0;
+          const offJ = s === nSegV - 1  ? offsetEnd : 0;
           if (offI + offJ > 0) rigidOffsets.set(bIdx, [offI, offJ]);
         }
         bIdx++;
@@ -308,7 +320,7 @@ export const mesaTorsion: ExampleDef = {
         // Selfweight vigas (lumped a los segmentos × dos extremos)
         let bi = beamStart;
         for (let side = 0; side < 4; side++) {
-          for (let s = 0; s < nMesh; s++) {
+          for (let s = 0; s < nSegV; s++) {
             const [nI, nJ] = elements[bi];
             const Wseg = Av * beamSegL * p.gamma_kNm3 * scaleSW;
             addLoad(nI, -Wseg / 2);
@@ -430,7 +442,10 @@ export const mesaTorsion: ExampleDef = {
       if (Math.round(p.masaModal ?? 0) === 0 && idx) {
         const dens = new Map(ei.densities);
         for (let e = idx.beamStart; e < idx.beamEnd; e++) dens.set(e, 0);
-        const mV = (L: number) => idx.RHO * p.bViga * p.hViga * (L - p.bCol) / 2;
+        // Con brazos rígidos (defecto de ETABS) no pesa el tramo dentro del brazo;
+        // sin ellos (ETABS con SetEndLengthOffset = 0) pesa la viga entera.
+        const libre = p.rigidOffsets > 0.5 ? p.bCol : 0;
+        const mV = (L: number) => idx.RHO * p.bViga * p.hViga * (L - libre) / 2;
         const mCorner = mV(p.Lx) + mV(p.Ly);   // media viga X + media viga Y
         const masses = new Map<number, number>(ni.masses ?? []);
         for (const n of idx.topCorners) masses.set(n, (masses.get(n) ?? 0) + mCorner);
