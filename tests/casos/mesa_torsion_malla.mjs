@@ -47,6 +47,13 @@ export async function correr() {
   const crece = Tus.every((t, i) => i === 0 || t > Tus[i - 1]);
   filas.push({ que: "T_u crece al refinar (1→32)", medido: crece ? 1 : 0, limite: 1, ok: crece,
                detalle: Tus.map((t) => t.toFixed(3)).join(" → ") });
+  // Estática del corte x = L/2: M_losa + M_vigas + H·h = momento estático, sea cual sea la J.
+  for (const fJ of [1, 0.1]) {
+    const r = correrMesa(mesa, 16, { factorJ: fJ, modal: false });
+    const tot = r.Mlosa + r.Mvigas + r.Mportico, d = Math.abs(tot / r.Mest - 1) * 100;
+    filas.push({ que: `J·${fJ}: M_losa + M_vigas + H·h = M estático (corte x = L/2)`, medido: d, limite: 0.01,
+                 ok: d <= 0.01, detalle: `${r.Mlosa.toFixed(3)} + ${r.Mvigas.toFixed(3)} + ${r.Mportico.toFixed(3)} = ${tot.toFixed(3)} vs ${r.Mest.toFixed(3)} tonf·m` });
+  }
   const se = correrMesa(mesa, 16, { vigaNudos: 0, modal: false });
   filas.push({ que: "viga unida solo en los extremos: T_u = 0", medido: se.Tu, limite: 1e-6,
                ok: se.Tu < 1e-6, detalle: `flecha centro ${se.flecha_mm.toFixed(1)} mm` });

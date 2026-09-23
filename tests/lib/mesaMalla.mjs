@@ -108,11 +108,40 @@ export function correrMesa(mesaTorsion, n, { vigaNudos = 1, factorJ = 1, modal =
     if (c) mCentro = sum / c / G;
   }
 
+  // ── Estática del corte x = L/2 (ancho completo) ──
+  // M_losa = ∫_0^Ly m_xx(L/2, y) dy (joints promediados en el nudo, trapecios)
+  // M_vigas = M3 de las vigas S y N en x = L/2 (fuerza de extremo j del tramo que llega ahí)
+  const bxx = ana.bendingXXjoint ?? ana.bendingXX;
+  const colX = new Map();
+  for (let e = 0; e < nSh; e++) els[e].forEach((nd, k) => {
+    if (Math.abs(nodes[nd][0] - L / 2) > 1e-9) return;
+    const a = colX.get(nd) ?? [0, 0];
+    colX.set(nd, [a[0] + bxx.get(e)[k], a[1] + 1]);
+  });
+  const perfX = [...colX.entries()].map(([nd, [s2, c]]) => ({ y: nodes[nd][1], m: s2 / c / G })).sort((a, b) => a.y - b.y);
+  let Mlosa = NaN;
+  if (perfX.length > 1) { Mlosa = 0; for (let k = 0; k < perfX.length - 1; k++) Mlosa += 0.5 * (perfX[k].m + perfX[k + 1].m) * (perfX[k + 1].y - perfX[k].y); }
+  let Mvigas = 0;
+  for (let e = beamStart; e < els.length; e++) {
+    const [i, j] = els[e];
+    if (Math.abs(nodes[j][0] - L / 2) < 1e-9 && Math.abs(nodes[i][1] - nodes[j][1]) < 1e-9)
+      Mvigas += ana.bendingsZ.get(e)[1] / G;
+  }
+  // Momento estático del medio modelo: reacciones de las 2 columnas de x = 0 por L/2
+  // menos las cargas nodales de x < L/2 por su brazo (las de x = L/2, mitad a cada lado: brazo 0).
+  const loads = st.nodeInputs.val.loads;
+  let Mest = 0;
+  for (const [nd, f] of loads) { const x = nodes[nd][0]; if (x < L / 2 - 1e-9) Mest -= (-f[2] / G) * (L / 2 - x); }
+  // + el empuje horizontal H de las bases articuladas (pórtico): brazo = altura H de columna
+  let Hx = 0;
+  for (const nd of [0, 3]) { const r = def.reactions.get(nd); Mest += (r[2] / G) * (L / 2); Hx += r[0] / G; }
+  const Mporitco = Hx * p.H;
+
   const out = st._mesaTorsionModal?.out;
   const T3 = out?.frequencies?.[2] ? 1 / out.frequencies[2] : NaN;
   const T1 = out?.frequencies?.[0] ? 1 / out.frequencies[0] : NaN;
   return { n, vigaNudos, factorJ, Tu, mBorde, integral, flecha_mm: flecha * 1000,
-           flechaNudo, mCentro, T1, T3, perfilT, borde, p };
+           flechaNudo, mCentro, Mlosa, Mvigas, Mest, Hx, Mportico: Mporitco, T1, T3, perfilT, borde, p };
 }
 
 /** φT_cr de ACI 318-19 §22.7.5.1(a) para la viga rectangular b×h (sin alas), en tonf·m. */

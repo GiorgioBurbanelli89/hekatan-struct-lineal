@@ -52,3 +52,25 @@ f'c = 4000 psi · Acp = 232.5 in² · pcp = 62.99 in · T_cr = 2.501 · **φT_cr
 | 3 | 0.0607 | 2.538 | 0.739 | -1.190 | 3.189 | -50.83 |
 | 4 | 0.0448 | 2.094 | 0.896 | -0.951 | 3.301 | -53.02 |
 | 5 | 0.0402 | 1.943 | 0.965 | -0.873 | 3.339 | -53.75 |
+
+## 5. Viga no agrietada vs agrietada (malla 16×16, UDCon2)
+
+| caso | factor J | T_u | m_borde (−) | m_centro (+) | −m_borde + m_centro | flecha | T3 |
+|---|---|---|---|---|---|---|---|
+| no agrietada (J bruta) | 1.0000 | 6.059 | -3.354 | 2.257 | 5.612 | -32.67 | 0.2893 |
+| fisurada típica J·0.15 | 0.1500 | 3.993 | -2.033 | 2.812 | 4.845 | -43.46 | 0.2955 |
+| SAFE J·0.10 | 0.1000 | 3.337 | -1.642 | 2.984 | 4.626 | -46.81 | 0.2959 |
+| iteración ACI φT_cr/T_u | 0.0402 | 1.944 | -0.874 | 3.339 | 4.212 | -53.75 | 0.2964 |
+
+Estática del corte x = L/2 a ancho completo (tonf·m): M_losa = ∫ m_xx dy, M_vigas = M3 de las vigas S y N, M_pórtico = H·h (empuje horizontal de las bases articuladas × 4 m). Su suma es el momento estático del medio modelo (reacciones y cargas), que NO depende de la rigidez:
+
+| caso | M_losa | M_vigas | M_pórtico | suma | estático |
+|---|---|---|---|---|---|
+| no agrietada (J bruta) | 8.115 | 32.791 | 24.775 | 65.681 | 65.681 |
+| fisurada típica J·0.15 | 10.947 | 31.775 | 22.959 | 65.681 | 65.681 |
+| SAFE J·0.10 | 11.811 | 31.479 | 22.390 | 65.681 | 65.681 |
+| iteración ACI φT_cr/T_u | 13.568 | 30.911 | 21.202 | 65.681 | 65.681 |
+
+- El positivo al centro de la losa sube 48 % (2.257 → 3.339 tonf·m/m) y el negativo de borde baja 74 %. La losa toma 5.45 tonf·m más en el corte central (8.11 → 13.57).
+- −m_borde + m_centro en UN punto NO se conserva (5.61 → 4.21): no es una franja sobre apoyos rígidos, las vigas flechan y el reparto es bidireccional. Lo que se conserva exacto es el momento del corte completo (tabla de arriba).
+- Consecuencia para el armado: el acero inferior al centro de la losa se diseña con el m_centro DESPUÉS de fisurar la viga; el negativo de borde baja en la misma proporción (las dos cosas salen del MISMO análisis con J reducida). La viga lleva estribos cerrados y longitudinal para φT_cr.

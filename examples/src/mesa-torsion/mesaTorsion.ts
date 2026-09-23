@@ -57,6 +57,8 @@ export const mesaTorsion: ExampleDef = {
     "Tabla 📊 Comparación ETABS muestra picks ETABS vs Hekatan por componente y diferencia %.",
     "ETABS periodos modal: T1=T2=0.34337s lateral, T3=0.28756s torsión Rz.",
     "Rigid offsets ETABS: col flexible=3.5m (auto -h_viga/2), viga flexible=5.6m (auto -b_col/2).",
+    "T_u vs malla (Wilson §7.7): cambia 'Subdiv losa' 1→16 y 'Unión viga–losa'; T_u = 0 / 2.61 / 5.04 / 5.85 / 6.06 tonf·m (UDCon2).",
+    "🎬 Tutorial (botón de la barra superior) → «Mesa de torsión: T_u vs malla»: paso a paso con Wilson y ACI §22.7.3.2.",
   ],
   params: {
     // ─── Caso a visualizar ───

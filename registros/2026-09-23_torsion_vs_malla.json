@@ -869,5 +869,75 @@
    "m_centro": 3.3389,
    "flecha": -53.754
   }
+ ],
+ "agrietada_vs_no": [
+  {
+   "nombre": "no agrietada (J bruta)",
+   "factor_J": 1,
+   "fuente": "Saint-Venant de la sección 30×50",
+   "n": 16,
+   "Tu": 6.059,
+   "m_borde": -3.3542,
+   "m_centro": 2.2574,
+   "suma_borde_centro": 5.6116,
+   "flecha": -32.6676,
+   "T3": 0.2893,
+   "M_losa": 8.1148,
+   "M_vigas": 32.7908,
+   "M_portico": 24.7752,
+   "M_total": 65.6809,
+   "M_estatico": 65.6809
+  },
+  {
+   "nombre": "fisurada típica J·0.15",
+   "factor_J": 0.15,
+   "fuente": "valor de práctica pedido; SIN fuente verificada en referencias/ (no hay ACI 318 en el repo)",
+   "n": 16,
+   "Tu": 3.9929,
+   "m_borde": -2.0329,
+   "m_centro": 2.8119,
+   "suma_borde_centro": 4.8447,
+   "flecha": -43.4614,
+   "T3": 0.2955,
+   "M_losa": 10.9466,
+   "M_vigas": 31.7752,
+   "M_portico": 22.9591,
+   "M_total": 65.6809,
+   "M_estatico": 65.6809
+  },
+  {
+   "nombre": "SAFE J·0.10",
+   "factor_J": 0.1,
+   "fuente": "SAFE analiza las vigas con 0.1·J: medido en este repo (CLAUDE.md, «torsion safe», 20 importaciones f2k)",
+   "n": 16,
+   "Tu": 3.3372,
+   "m_borde": -1.6419,
+   "m_centro": 2.9837,
+   "suma_borde_centro": 4.6256,
+   "flecha": -46.813,
+   "T3": 0.2959,
+   "M_losa": 11.8111,
+   "M_vigas": 31.4794,
+   "M_portico": 22.3904,
+   "M_total": 65.6809,
+   "M_estatico": 65.6809
+  },
+  {
+   "nombre": "iteración ACI φT_cr/T_u",
+   "factor_J": 0.0402,
+   "fuente": "ACI 318-19 §22.7.3.2, iteración de la sección 4",
+   "n": 16,
+   "Tu": 1.9439,
+   "m_borde": -0.8735,
+   "m_centro": 3.3387,
+   "suma_borde_centro": 4.2122,
+   "flecha": -53.7506,
+   "T3": 0.2964,
+   "M_losa": 13.568,
+   "M_vigas": 30.911,
+   "M_portico": 21.2018,
+   "M_total": 65.6809,
+   "M_estatico": 65.6809
+  }
  ]
 }
