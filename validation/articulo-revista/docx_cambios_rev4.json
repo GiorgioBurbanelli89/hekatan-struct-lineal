@@ -1,0 +1,26 @@
+{
+ "tablas": {
+  "104": [
+   ["Concepto", "Hekatan Struct", "SAP2000", "Diferencia (%)"],
+   ["Carga sísmica reactiva, W", "356.28", "356.28", "0.00"],
+   ["Estático (FLE NEC), Vest", "32.07", "32.07", "0.00"],
+   ["Dinámico espectral en X, Vdin,X", "26.99", "26.52", "+1.77"],
+   ["Dinámico espectral en Y, Vdin,Y", "16.69", "16.34", "+2.14"],
+   ["Vdin,X / Vest", "84.2 %", "82.7 %", "≥ 80 % (NEC §6.2.2.b)"]
+  ],
+  "108": [
+   ["Piso", "Hekatan Struct", "SAP2000", "Diferencia (%)", "NEC"],
+   ["4", "0.269", "0.271", "−0.42", "ok"],
+   ["3", "0.443", "0.445", "−0.50", "ok"],
+   ["2 (máx)", "0.548", "0.550", "−0.41", "ok"],
+   ["1", "0.403", "0.408", "−1.05", "ok"]
+  ]
+ },
+ "parrafos": {
+  "102": "El cortante basal se calculó conforme a la NEC-15-SE-DS con los parámetros indicados (Z = 0.40, Fa = 1.0, Sa = 0.72, R = 8, I = 1.0), obteniendo un coeficiente sísmico Cs = 0.09; para una carga sísmica reactiva W = 356.28 tonf, el cortante estático de diseño resultó V = 32.07 tonf. La Tabla 3 compara los cortantes basales estático y dinámico frente a SAP2000, sobre el mismo modelo y la misma malla de 1.0 m (545 nudos) empleados en la validación modal. En ambos programas la fuerza lateral equivalente se aplicó como cargas nodales idénticas, distribuidas en altura según la NEC-15-SE-DS (§6.3.5), y el análisis dinámico se resolvió con el mismo espectro elástico de la NEC-15 introducido como función de usuario, combinación modal CQC y amortiguamiento del 5 %.",
+  "105": "La carga sísmica reactiva y el cortante estático coincidieron con SAP2000 hasta el segundo decimal (356.28 tonf y 32.07 tonf), lo que confirma que ambos programas pesan la misma estructura. El cortante dinámico difirió en 1.77 % en la dirección X y en 2.14 % en la dirección Y, diferencias del mismo orden que las observadas en los periodos y atribuibles a la combinación modal sobre doce modos. En los dos programas la relación Vdin/Vest supera el 80 % que la NEC-15-SE-DS exige para estructuras regulares (§6.2.2.b).",
+  "106": "Las derivas de piso inelásticas, calculadas como ΔM = 0.75·R·Δe (NEC-SE-DS §6.3.9) para la dirección X, se resumen en la Tabla 4. Todas se mantienen por debajo del límite del 2 % establecido por la norma, y las diferencias respecto a SAP2000 no superan el 1.05 % en ningún piso (0.41 % en el piso crítico), consistentes con la coincidencia observada en los periodos sobre la misma malla nodo a nodo. La deriva máxima se produce en el segundo piso y vale 0.548 % en Hekatan Struct frente a 0.550 % en SAP2000, muy por debajo del límite normativo.",
+  "124": "Conviene señalar que las diferencias observadas en las derivas frente a SAP2000 (inferiores al 1.05 %, y del 0.41 % en el piso crítico) son del mismo orden que las de los periodos, lo que resulta coherente con el hecho de que ambos programas resuelvan la misma malla nodo a nodo con la misma formulación de placa gruesa. Ambas soluciones satisfacen con holgura el límite normativo del 2 %, por lo que la diferencia carece de implicaciones prácticas en la verificación del diseño.",
+  "131": "La validación numérica mediante un sistema dual sometido a análisis modal arrojó diferencias inferiores al 0.45 % en los periodos de los cuatro primeros modos respecto a SAP2000, programa tomado como referencia sobre la misma malla nodo a nodo —y del 1.26 % en el quinto modo—, con un cortante basal estático idéntico al de SAP2000, un cortante dinámico dentro del 2.2 % y derivas de piso que difieren menos del 1.05 % y se mantienen dentro de los límites normativos, lo que demuestra la precisión de la plataforma."
+ }
+}

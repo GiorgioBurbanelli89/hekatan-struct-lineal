@@ -69,11 +69,26 @@ export async function correr() {
       let peor = 0;
       for (let n = 0; n < m3.nodes.length; n++) { const u = r.displacements.get(n) ?? [0, 0, 0]; for (let c = 0; c < 3; c++) peor = Math.max(peor, Math.abs(u[c] - S.u[n][c]) / mx * 100); }
       const uxH = (r.displacements.get(m3.nudoCoronacion) ?? [0])[0], uxS = S.u[m3.nudoCoronacion][0];
-      // Límite 1e-4 %, no el 1e-6 de los rectangulares: con H8 TRAPECIALES SAP2000 y Hekatan difieren
-      // 5.8e-5 % del máximo (coronación −3.542782 vs −3.542780 mm, 14-sep-2026). ⏳ se mide si viene de los
-      // modos incompatibles en elementos distorsionados (SAP con inc=0 → sap_inclinado_noinc.json).
+      // Límite 1e-4 %, no el 1e-6 de los rectangulares: con H8 TRAPECIALES y MODOS INCOMPATIBLES SAP2000 y
+      // Hekatan difieren 5.8e-5 % del máximo (coronación −3.542782 vs −3.542780 mm, 14-sep-2026). MEDIDO de dónde
+      // sale: el mismo muro SIN modos incompatibles da 4e-9 % (fila de abajo) → es la corrección de los modos
+      // incompatibles en elementos distorsionados, que cada programa evalúa distinto; no es el elemento base.
       filas.push({ que: "pantalla inclinada (t 0.40 -> 0.20): nudo a nudo vs SAP2000", medido: peor, limite: 1e-4, ok: S.nodes.length === m3.nodes.length && peor <= 1e-4,
         detalle: `u_x coronacion ${(uxH * 1000).toFixed(4)} vs ${(uxS * 1000).toFixed(4)} mm; ${m3.nodes.length} nudos, ${m3.elements.length} hexaedros; empuje ${m3.info.empujeTotal.toFixed(2)} kN` });
+    }
+  }
+  // la misma pantalla inclinada con el H8 CLÁSICO (sin modos incompatibles): SAP2000 = Hekatan a 4e-9 %
+  {
+    const pi = { ...p, tTop: 0.2 }; const m4 = mod.mallaMuroSolido(pi);
+    const ref = join(AQUI, "..", "datos", "muro_solido_inclinado_sap_noinc.json");
+    if (existsSync(ref)) {
+      const S = JSON.parse(readFileSync(ref, "utf-8"));
+      const r = mod.hex8Solve({ nodes: m4.nodes, elements: m4.elements, E: pi.E, nu: pi.nu, supports: m4.supports, loads: m4.loads, incompatible: false });
+      let mx = 0; for (let n = 0; n < m4.nodes.length; n++) for (let c = 0; c < 3; c++) mx = Math.max(mx, Math.abs((r.displacements.get(n) ?? [0, 0, 0])[c]));
+      let peor = 0;
+      for (let n = 0; n < m4.nodes.length; n++) { const u = r.displacements.get(n) ?? [0, 0, 0]; for (let c = 0; c < 3; c++) peor = Math.max(peor, Math.abs(u[c] - S.u[n][c]) / mx * 100); }
+      filas.push({ que: "pantalla inclinada, H8 clasico (sin modos incompatibles): nudo a nudo vs SAP2000", medido: peor, limite: 1e-6, ok: peor <= 1e-6,
+        detalle: `u_x coronacion ${((r.displacements.get(m4.nudoCoronacion) ?? [0])[0] * 1000).toFixed(6)} vs ${(S.u[m4.nudoCoronacion][0] * 1000).toFixed(6)} mm` });
     }
   }
   return filas;

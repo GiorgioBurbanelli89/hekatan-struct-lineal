@@ -70,5 +70,5 @@ export type {
 export { getLocalStiffnessMatrix } from "./utils/getLocalStiffnessMatrix";
 export { getTransformationMatrix } from "./utils/getTransformationMatrix";
 
-export { kPanoQ4, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
+export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
 export type { KPano } from "./utils/shellElementK";

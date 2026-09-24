@@ -37,7 +37,7 @@ como una opción con nombre, no ajustando el motor.
 | u_max | 7.98·10⁻⁴ m | 4.07·10⁻⁴ m |
 
 Con `comparar = 0` (sin unión especial, el modo SAP2000): **el mismo número en todos los nudos**, en
-las dos variantes. El elemento de cáscara (Shell-Thick de CSI, membrana tipo 12) y el ensamble son
+las dos variantes. El elemento de cáscara (el defecto de entonces, 8-sep-2026) y el ensamble son
 los de SAP2000.
 
 ### 2 · Después, ETABS  ⚠️ (HISTÓRICO: el estado de la mañana del 8-sep, antes de arreglar el `.e2k` y de `offsets`)
@@ -117,8 +117,8 @@ importador de ETABS (`DIAPH` en áreas, `ADDRESTRAINT`, objetos de piso), no el 
   muelles nodales: SAP2000 = Hekatan exacto (−2.223793484e-2 los dos).
 - Fuerzas de cáscara (8-sep-2026, tarde): las 4 plantillas con losa Thin contra ETABS **0.0000 % joint a
   joint** (`cli/_joints_vs_csi.mjs`) y contra SAP2000 también 0.0000 % con el `.s2k` con diafragma;
-  membrana F11/F22/F12 de la dual (muros) 0.0000 % contra los dos; la gruesa 0.075 %. Ver
-  `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md` y `validation/modelos/plantillas/COMPARACION.md` capa 5.
+  membrana F11/F22/F12 de la dual (muros) 0.0000 % contra los dos. Ver
+  `validation/modelos/plantillas/COMPARACION.md` capa 5.
 
 ## 5 · El `.e2k` arreglado (8-sep-2026): ETABS = Hekatan también por fichero
 

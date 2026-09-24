@@ -3,7 +3,7 @@ import { html } from "lit-html";
 import "./template.css";
 
 //@ts-ignore
-import logo from "./awatif-logo.png";
+import logo from "./logo.png";
 //@ts-ignore
 import bending_stress_image from "./clt-bending-stress.png";
 
@@ -13,8 +13,8 @@ export const getTemplate = ({ designMomentInput, designOutputs }) =>
       <header class="header">
         <div class="header-left">
           <p class="header-title">Report</p>
-          <a href="https://awatif.co" class="header-link" target="_blank"
-            >https://awatif.co</a
+          <a href="https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal" class="header-link" target="_blank"
+            >Hekatan Struct</a
           >
         </div>
         <div class="header-right">

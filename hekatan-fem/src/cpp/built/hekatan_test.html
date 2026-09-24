@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf-8"></head>
+<body style="font-family:Consolas,monospace;font-size:16px;padding:24px;line-height:1.6">
+<h2>Hekatan Struct — solver real deform.wasm corriendo en el navegador</h2>
+<div id="out">Cargando solver FEM (deform.wasm)...</div>
+<script type="module">
+try{
+const createModule = (await import("./deform.js")).default;
+const mod = await createModule();
+function alloc(data, Ctor, heap){ const b=new Ctor(data); const p=mod._malloc(Math.max(1,b.length)*b.BYTES_PER_ELEMENT); if(b.length) heap.set(b, p/b.BYTES_PER_ELEMENT); return p; }
+function pei(map){ const keys=[...map.keys()], vals=[...map.values()]; return {k:alloc(keys,Uint32Array,mod.HEAPU32), v:alloc(vals,Float64Array,mod.HEAPF64), s:keys.length}; }
+
+// Voladizo: 2 nodos (0,0,0)-(2,0,0), 1 elemento frame. Empotrado en 0, carga Fz=-1000 N en 1.
+const nodes=[[0,0,0],[2,0,0]];
+const elements=[[0,1]];
+const supports=new Map([[0,[1,1,1,1,1,1]]]);
+const loads=new Map([[1,[0,0,-1000,0,0,0]]]);
+const E=2.1e11, A=0.01, I=1e-5, G=8.08e10, J=2e-5;
+
+const nodesPtr=alloc(nodes.flat(),Float64Array,mod.HEAPF64);
+const elemIdx=elements.flat(); const elementsPtr=alloc(elemIdx,Uint32Array,mod.HEAPU32);
+const elemSizes=elements.map(e=>e.length); const elemSizesPtr=alloc(elemSizes,Uint32Array,mod.HEAPU32);
+const supKeys=[...supports.keys()]; const supKeysPtr=alloc(supKeys,Uint32Array,mod.HEAPU32);
+const supVals=[...supports.values()].flat().map(b=>b?1:0); const supValsPtr=alloc(supVals,Uint8Array,mod.HEAPU8);
+const ldKeys=[...loads.keys()]; const ldKeysPtr=alloc(ldKeys,Uint32Array,mod.HEAPU32);
+const ldVals=[...loads.values()].flat(); const ldValsPtr=alloc(ldVals,Float64Array,mod.HEAPF64);
+const el=pei(new Map([[0,E]])), ar=pei(new Map([[0,A]])), mz=pei(new Map([[0,I]])), my=pei(new Map([[0,I]])), sm=pei(new Map([[0,G]])), to=pei(new Map([[0,J]]));
+const em=()=>pei(new Map());
+const th=em(),po=em(),eo=em(),say=em(),saz=em(),pf=em(),dt=em(),ds=em(),ro=em();
+const springsPtr=alloc([0],Float64Array,mod.HEAPF64);
+const dOut=mod._malloc(4),dSz=mod._malloc(4),rOut=mod._malloc(4),rSz=mod._malloc(4);
+
+mod._deform(nodesPtr,nodes.length, elementsPtr,elemIdx.length, elemSizesPtr,elements.length,
+ supKeysPtr,supValsPtr,supKeys.length, ldKeysPtr,ldValsPtr,ldKeys.length,
+ el.k,el.v,el.s, ar.k,ar.v,ar.s, mz.k,mz.v,mz.s, my.k,my.v,my.s, sm.k,sm.v,sm.s, to.k,to.v,to.s,
+ th.k,th.v,th.s, po.k,po.v,po.s, eo.k,eo.v,eo.s, say.k,say.v,say.s, saz.k,saz.v,saz.s,
+ springsPtr,0, pf.k,pf.v,pf.s, dt.k,dt.v,dt.s, ds.k,ds.v,ds.s,
+ dOut,dSz,rOut,rSz);
+
+const dPtr=mod.HEAPU32[dOut/4], dN=mod.HEAPU32[dSz/4];
+const df=new Float64Array(mod.HEAPF64.buffer,dPtr,dN);
+const rPtr=mod.HEAPU32[rOut/4], rN=mod.HEAPU32[rSz/4];
+const rf=new Float64Array(mod.HEAPF64.buffer,rPtr,rN);
+let h="<b>Desplazamientos (solver real):</b><br>";
+for(let i=0;i<dN;i+=7){ h+="nodo "+df[i]+": ux="+df[i+1].toExponential(3)+"  uy="+df[i+2].toExponential(3)+"  uz="+df[i+3].toExponential(3)+" m<br>"; }
+const dtip = Math.abs(df[3+7]||df[3]);
+const dteo = 1000*Math.pow(2,3)/(3*E*I);
+h+="<br><b>Flecha tip (uz):</b> "+(Math.abs(df[7*1+3])).toExponential(4)+" m";
+h+="<br><b>Teorico PL^3/3EI:</b> "+dteo.toExponential(4)+" m";
+h+="<br><br><b>Reacciones nodo 0:</b> Fz="+rf[3].toExponential(3)+" N (esperado +1000)";
+h+="<br><br style='color:green'><b>deform.wasm de Hekatan Struct corrio OK.</b>";
+document.getElementById("out").innerHTML=h;
+window.hekDone=true; window.hekUz=df[7+3];
+}catch(e){document.getElementById("out").innerHTML="ERROR: "+e+"<br>"+(e.stack||""); window.hekDone=true; window.hekErr=String(e);}
+</script></body></html>

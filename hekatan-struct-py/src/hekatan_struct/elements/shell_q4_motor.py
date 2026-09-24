@@ -25,7 +25,6 @@ import math
 
 import numpy as np
 
-from .plate_csi_thick import k_placa_csi_thick
 from .membrane_itw import (
     TIPO_DRILLING_DEFECTO,
     TIPOS_ITW,
@@ -35,7 +34,7 @@ from .membrane_itw import (
 
 
 # Parametros de la formulacion. Se dejan como variables de modulo para poder
-# BARRERLOS contra ETABS: el binario no dice que valores usa, asi que se
+# BARRERLOS contra ETABS: CSI no publica que valores usa, asi que se
 # identifican midiendo (ver edificios-slab/calibrar_shell.py).
 KAPPA = 5.0 / 6.0      # factor de correccion de cortante de Mindlin
 
@@ -73,11 +72,6 @@ GAMMA_ITW = 0.4
 # diferencia es 0.06 % de mediana y 0.61 % de cola; en una losa 4x4 con carga
 # puntual, 1.8 %. Se deja conmutable para poder medir contra los dos.
 BENDING_MODOS_INCOMPATIBLES = True   # True = como el C++/WASM (el producto)
-
-# Placa GRUESA: "csi" = el Shell-Thick de ETABS/SAP2000 extraido del binario
-# (`plate_csi_thick.py`, 1e-12 % contra ~140 celdas medidas, trapecios incl.);
-# "mitc4" = el Mindlin de antes, el que hoy lleva `shellQ4.cpp` (paridad WASM).
-PLACA_THICK = "csi"
 
 GP = 1.0 / np.sqrt(3.0)
 GAUSS = [(-GP, -GP), (GP, -GP), (GP, GP), (-GP, GP)]
@@ -396,17 +390,9 @@ def shell_q4_motor(coords_xy, E, nu, t, *, alpha_drilling=None,
     else:
         K[np.ix_(DOF_MEM, DOF_MEM)] += fm * _k_membrana(x, y, E, nu, t, mod_dir)
     if not solo_membrana and not sin_flexion:
-        # un Q4 COLAPSADO (lado de longitud cero) no es un elemento: la placa de
-        # CSI divide por L del lado; se cae al camino viejo, que lo topa.
-        _lados = [np.hypot(x[(k + 1) % 4] - x[k], y[(k + 1) % 4] - y[k]) for k in range(4)]
-        _degenerado = min(_lados) <= 1e-12 * max(_lados)
-        if PLACA_THICK == "csi" and not giros_del_ts and not _degenerado:
-            # ya viene en [w, rx, ry] de ETABS = los del shell: sin T_bend
-            k_ben = k_placa_csi_thick(x, y, E, nu, t, mod=mod_dir)
-        else:
-            k_ben = _k_flexion(x, y, E, nu, t, mod=mod_dir)
-            if not giros_del_ts:
-                k_ben = _T_BEN.T @ k_ben @ _T_BEN
+        k_ben = _k_flexion(x, y, E, nu, t, mod=mod_dir)
+        if not giros_del_ts:
+            k_ben = _T_BEN.T @ k_ben @ _T_BEN
         K[np.ix_(DOF_BEN, DOF_BEN)] += fb * k_ben
     # El drilling va escalado por el modificador de MEMBRANA, como en
     # `shellQ4.cpp` (`K += mFactor * getDrillingK_HughesBrezzi(...)`): si la

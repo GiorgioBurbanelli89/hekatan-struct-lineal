@@ -442,7 +442,33 @@ extern "C"
         // Outputs
         double **frequencies_ptr_out, int *num_frequencies_out,
         double **mode_shapes_ptr_out, int *mode_shapes_rows_out, int *mode_shapes_cols_out,
-        double **mass_participation_ptr_out, int *mass_participation_rows_out, int *mass_participation_cols_out)
+        double **mass_participation_ptr_out, int *mass_participation_rows_out, int *mass_participation_cols_out,
+
+        // ── SALIDAS NUEVAS (17-sep-2026) — analisis espectral estilo SAP2000 ──
+        //
+        // Hasta hoy el modal devolvia periodos, formas (normalizadas a max = 1,
+        // para el visor) y RATIOS de participacion. Con eso NO se puede montar
+        // la respuesta espectral como la monta SAP2000, que necesita:
+        //
+        //   Gamma_mj = phi_m^T * M * r_j   con phi MASA-NORMALIZADO (phi^T M phi = 1)
+        //   M_total_j                      la masa que puede participar en j
+        //   u_m = Gamma_mj * Sa(T_m)/w_m^2 * phi_m   (desplazamientos del modo)
+        //
+        // El ratio que ya salia es participation = Gamma^2 / M_total, o sea
+        // pierde el SIGNO de Gamma y la escala absoluta. Por eso el cortante
+        // modal se venia armando como ratio*W, con W = suma de rho*V, que NO es
+        // la misma masa que el modal ve (la masa pegada a los apoyos no entra en
+        // M_total pero si en W).
+        //
+        // Son punteros NUEVOS al final: los ~12 llamadores viejos de `_modal`
+        // (cli/*.mjs) pasan menos argumentos, el wasm los rellena con 0 y aqui
+        // se comprueba != nullptr antes de escribir. Nada de lo que ya existia
+        // cambia de forma ni de significado.
+        double **participation_factors_ptr_out = nullptr,  // [modo][6] = Gamma_mj
+        double **total_mass_ptr_out = nullptr,             // [6]       = M_total_j
+        // factor s_m tal que  phi_masa_normalizado = mode_shapes[m] * s_m
+        // (mode_shapes sale dividido por su maximo absoluto, para el visor)
+        double **mode_scales_ptr_out = nullptr)
     {
         // Initialize outputs to null
         *frequencies_ptr_out = nullptr;
@@ -453,6 +479,9 @@ extern "C"
         *mass_participation_ptr_out = nullptr;
         *mass_participation_rows_out = 0;
         *mass_participation_cols_out = 0;
+        if (participation_factors_ptr_out) *participation_factors_ptr_out = nullptr;
+        if (total_mass_ptr_out) *total_mass_ptr_out = nullptr;
+        if (mode_scales_ptr_out) *mode_scales_ptr_out = nullptr;
 
         // --- 1. Parse Inputs ---
         std::vector<Node> nodes(num_nodes, Node(3));
@@ -496,14 +525,16 @@ extern "C"
             nodes, element_indices, element_sizes, elementInputs, dof);
 
         // Resortes a la diagonal de K, ANTES de reducir por diafragma.
+        std::vector<springsExtra::Colgado> colgados;   // nudos colgados: al final, con UNA escala
         for (int i = 0; i < num_springs; ++i) {
             const int nodo = (int)springs_flat_ptr[3 * i];
             const int d    = (int)springs_flat_ptr[3 * i + 1];
             const double k = springs_flat_ptr[3 * i + 2];
-            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, nodo, d, k)) continue;
+            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, nodo, d, k, &colgados)) continue;
             if (nodo < 0 || nodo >= num_nodes || d < 0 || d > 5 || k == 0.0) continue;
             K_global.coeffRef(nodo * 6 + d, nodo * 6 + d) += k;
         }
+        springsExtra::aplicarColgados(K_global, nodes, element_indices, element_sizes, colgados);
         if (etabs_wall_joint) addEtabsWallJoint(K_global, nodes, element_indices, element_sizes, elementInputs);
 
         // La masa se arma en ensamblarMasa() (arriba): los mismos pasos 2a,
@@ -1071,6 +1102,10 @@ extern "C"
 
         // Por modo: mapear autovector a GDL completos, participación con M sparse
         std::vector<std::vector<double>> participation(numValidModes, std::vector<double>(6, 0.0));
+        // Gamma con φ MASA-NORMALIZADO (φᵀMφ = 1): conserva signo y escala absoluta.
+        // Es lo que hace falta para u_m = Γ·Sa/ω²·φ (respuesta espectral SAP2000).
+        std::vector<std::vector<double>> gammaMN(numValidModes, std::vector<double>(6, 0.0));
+        std::vector<double> mGen(numValidModes, 1.0);
         std::vector<Eigen::VectorXd> fullModes(numValidModes, Eigen::VectorXd::Zero(dof));
         for (int m = 0; m < numValidModes; ++m)
         {
@@ -1080,12 +1115,14 @@ extern "C"
                 fullRaw(reducedIndices[j]) = eigenvectors(j, modeIdx);
 
             double M_gen = fullRaw.dot(M_global * fullRaw);   // masa generalizada (=1 si M-ortonormal)
+            mGen[m] = M_gen;
             for (int j = 0; j < 6; ++j)
             {
                 if (M_total[j] < 1e-30 || M_gen < 1e-30) continue;
                 double Gamma = fullRaw.dot(Mr[j]);            // φᵀ·M·r_j
                 double M_eff = (Gamma * Gamma) / M_gen;
                 participation[m][j] = M_eff / M_total[j];
+                gammaMN[m][j] = Gamma / std::sqrt(M_gen);     // Γ con φᵀMφ = 1
             }
             fullModes[m] = fullRaw;
         }
@@ -1104,12 +1141,16 @@ extern "C"
         *mode_shapes_rows_out = numValidModes;
         *mode_shapes_cols_out = dofSalida;
         *mode_shapes_ptr_out = (double *)malloc(numValidModes * dofSalida * sizeof(double));
+        std::vector<double> modeScale(numValidModes, 0.0);
         for (int m = 0; m < numValidModes; ++m)
         {
             Eigen::VectorXd fullMode = hayDiafragma ? (T_dia * fullModes[m]).eval()
                                                     : fullModes[m];
             double maxVal = fullMode.cwiseAbs().maxCoeff();  // normalizar a máx = 1 (para el visor)
             if (maxVal > 1e-15) fullMode /= maxVal;
+            // s_m: lo que hay que multiplicar a ESTA forma (max = 1) para tener
+            // la masa-normalizada. φ_mn = (φ_raw/maxVal) · (maxVal/√M_gen).
+            modeScale[m] = (mGen[m] > 1e-30) ? maxVal / std::sqrt(mGen[m]) : 0.0;
             for (int d = 0; d < dofSalida; ++d)
                 (*mode_shapes_ptr_out)[m * dofSalida + d] = fullMode(d);
         }
@@ -1120,5 +1161,24 @@ extern "C"
         for (int m = 0; m < numValidModes; ++m)
             for (int j = 0; j < 6; ++j)
                 (*mass_participation_ptr_out)[m * 6 + j] = participation[m][j];
+
+        // ── salidas nuevas (guardadas: los llamadores viejos pasan 0) ──
+        if (participation_factors_ptr_out)
+        {
+            *participation_factors_ptr_out = (double *)malloc(numValidModes * 6 * sizeof(double));
+            for (int m = 0; m < numValidModes; ++m)
+                for (int j = 0; j < 6; ++j)
+                    (*participation_factors_ptr_out)[m * 6 + j] = gammaMN[m][j];
+        }
+        if (total_mass_ptr_out)
+        {
+            *total_mass_ptr_out = (double *)malloc(6 * sizeof(double));
+            for (int j = 0; j < 6; ++j) (*total_mass_ptr_out)[j] = M_total[j];
+        }
+        if (mode_scales_ptr_out)
+        {
+            *mode_scales_ptr_out = (double *)malloc(numValidModes * sizeof(double));
+            for (int m = 0; m < numValidModes; ++m) (*mode_scales_ptr_out)[m] = modeScale[m];
+        }
     }
 }

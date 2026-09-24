@@ -238,7 +238,7 @@ export function getSettings(
 
   if (mesh?.nodes) {
     pane.addBinding(settings.displayScale, "val", {
-      label: "Display scale",
+      label: "Tamaño de los símbolos",
       min: -10,
       max: 10,
       step: 0.5,   // permite valores fraccionales (-1.5, -2.5, etc.)
@@ -248,7 +248,7 @@ export function getSettings(
     // controles relacionados, así que viven en un folder colapsable para
     // no ocupar espacio en el panel principal. Default colapsado para vista
     // limpia; el usuario lo expande cuando quiere ajustar.
-    const gridFolder = pane.addFolder({ title: "📐 Grid", expanded: false });
+    const gridFolder = pane.addFolder({ title: "📐 Rejilla", expanded: false });
     // Etiquetas claras:
     //  - Dimensión   = tamaño TOTAL del grid (cuántos metros mide cada lado)
     //  - Separación  = distancia entre LÍNEAS (cada cuánto se dibuja una)
@@ -292,12 +292,12 @@ export function getSettings(
     // kilometrico: Jorge, 2026-08-12, "no me gusta que el tweakpane se vea
     // enorme". Van en su propio folder y CERRADO: se abren cuando hacen falta.
     const verFolder = pane.addFolder({ title: "👁 Ver", expanded: false });
-    verFolder.addBinding(settings.nodes, "val", { label: "Nodes" });
+    verFolder.addBinding(settings.nodes, "val", { label: "Nudos" });
     verFolder.addBinding(settings.elements, "val", {
-      label: "Elements",
+      label: "Elementos",
     });
     verFolder.addBinding(settings.edges, "val", {
-      label: "  Edges (delim.)",
+      label: "  Aristas (delim.)",
     });
     verFolder.addBinding(settings.faces, "val", {
       label: "  Caras (fill)",
@@ -321,16 +321,16 @@ export function getSettings(
       label: "  🎨 Color por tipo",
     });
     verFolder.addBinding(settings.nodesIndexes, "val", {
-      label: "Nodes indexes",
+      label: "Nº de nudo",
     });
     verFolder.addBinding(settings.elementsIndexes, "val", {
-      label: "Elements indexes",
+      label: "Nº de elemento",
     });
     verFolder.addBinding(settings.orientations, "val", {
-      label: "Orientations",
+      label: "Ejes locales",
     });
     verFolder.addBinding(settings.sections, "val", {
-      label: "Sections",
+      label: "Secciones",
     });
     // La vista EXTRUIDA (secciones barridas y cascaras con espesor). Va aqui y
     // no solo por consola: un ajuste sin mando no lo usa nadie.
@@ -353,10 +353,10 @@ export function getSettings(
   }
 
   if (mesh?.nodeInputs || mesh?.elementInputs) {
-    const inputs = pane.addFolder({ title: "📌 Analysis Inputs", expanded: false });
+    const inputs = pane.addFolder({ title: "📌 Datos de entrada", expanded: false });
 
-    inputs.addBinding(settings.supports, "val", { label: "Supports" });
-    inputs.addBinding(settings.loads, "val", { label: "Loads" });
+    inputs.addBinding(settings.supports, "val", { label: "Apoyos" });
+    inputs.addBinding(settings.loads, "val", { label: "Cargas" });
     inputs.addBinding(settings.custom3D, "val", { label: "Resortes (Winkler)" });
     inputs.addBinding(settings.showCotas, "val", { label: "Cotas" });
   }
@@ -365,7 +365,7 @@ export function getSettings(
     // El folder donde vive TODO lo de analizar: los resultados por tipo
     // (node / frame / shell), el caso activo, las tablas y el modal. Antes el
     // modal estaba en otro panel y habia que buscarlo.
-    const outputs = pane.addFolder({ title: "🔬 Analyze", expanded: true });
+    const outputs = pane.addFolder({ title: "🔬 Resultados", expanded: true });
     // Exponer el folder para que el workspace inyecte "Case results" (Dead/Live/Modal)
     // junto a Node/Frame/Shell results — los selectores de resultado quedan juntos.
     (window as any).__hekatanOutputsFolder = outputs;
@@ -376,7 +376,7 @@ export function getSettings(
         "U (deformations)": "deformations",   // SAP: U1 U2 U3 + R1 R2 R3 = 6 DOF
         "R (reactions)":    "reactions",      // SAP: F1 F2 F3 + M1 M2 M3 en restraints
       },
-      label: "Node results",
+      label: "Resultados de nudo",
     });
 
     outputs.addBinding(settings.frameResults, "val", {
@@ -397,7 +397,7 @@ export function getSettings(
         "Moment 2-2 (diagram)":   "contour:bendingsY",
         "Moment 3-3 (diagram)":   "contour:bendingsZ",
       },
-      label: "Frame results",
+      label: "Resultados de barra",
     });
     // La vista 2D: el plano de la barra designada (o el primer alzado XZ) con SOLO
     // el diagrama elegido arriba, sin perspectiva y con sus valores. También se abre
@@ -436,14 +436,18 @@ export function getSettings(
         "Uy": "displacementY",
         "Uz": "displacementZ",
       },
-      label: "Shell results",
+      label: "Resultados de cáscara",
     });
 
-    // Selector de PALETA de colores del colormap. Por defecto la CSI (SAFE · ETABS).
+    // Selector de PALETA de colores del colormap. safe/etabs/sap2000 son la MISMA tabla
+    // Contour1..15 de "OPTIONS - COLORS - OUTPUT" (idéntica bit a bit en los 3 programas,
+    // ver getColorMap.ts) — 15 bandas DISCRETAS, no degradado, igual que la barra real de
+    // cada programa. Por defecto SAFE (cimentaciones).
     outputs.addBinding(colorMapPalette, "val", {
       options: {
         "SAFE (cimentación)": "safe",
-        "ETABS / CSI (magenta→azul)": "csi",
+        "ETABS": "etabs",
+        "SAP2000": "sap2000",
         "Jet_r (rojo→azul)": "jet_r",
         "Jet (azul→rojo)": "jet",
         "Viridis": "viridis",
@@ -454,7 +458,7 @@ export function getSettings(
     outputs.addBinding(colorMapScope, "val", {
       // "muros X" = los del plano x = cte (se extienden en Y); "muros Y" = plano y = cte. En el dual
       // el muro y = 0 trabaja a 5 kN/m² y el x = L a 30: ni con "solo muros" se ve el flojo.
-      options: { "todas las cáscaras": "auto", "solo muros": "muros", "muros X (plano x=cte)": "murosX", "muros Y (plano y=cte)": "murosY", "solo losas": "losas" },
+      options: { "todas las cáscaras": "auto", "todas, recortando picos (p1–p99)": "robusto", "todas, min/max real": "real", "solo muros": "muros", "muros X (plano x=cte)": "murosX", "muros Y (plano y=cte)": "murosY", "solo losas": "losas" },
       label: "📐 Rango colormap",
     });
 
@@ -474,31 +478,31 @@ export function getSettings(
         uy: "uy",
         uz: "uz",
       },
-      label: "Solid results",
+      label: "Resultados de sólido",
     });
 
     outputs.addBinding(settings.deformedShape, "val", {
-      label: "Deformed shape",
+      label: "Deformada",
     });
     // Sliders de escala JUNTO al toggle de deformada — en TODOS los
     // ejemplos que tengan deformOutputs/analyzeOutputs. Bindings extra
     // a las mismas State que los sliders top-level: vanjs sincroniza
     // ambos bindings automaticamente (mover uno mueve el otro).
     outputs.addBinding(settings.deformScale, "val", {
-      label: "  Scale XY",
+      label: "  Escala XY",
       min: 0.1,
-      max: 5000,
+      max: 50000,   // el automatico llega a 50000 (placas delgadas, edificios casi rigidos)
       step: 0.1,
     });
     outputs.addBinding(settings.deformScaleZ, "val", {
-      label: "  Scale Z",
+      label: "  Escala Z",
       min: 0.01,
       max: 10,
       step: 0.01,
     });
   }
 
-  if (solids) pane.addBinding(settings.solids, "val", { label: "Solids" });
+  if (solids) pane.addBinding(settings.solids, "val", { label: "Sólidos" });
 
   // ── Folder PLANOS DE CORTE X/Y/Z (universal — para sólidos H8) ──
   // Disponible en TODOS los viewers. Modifica window.__hekatanClip y dispara

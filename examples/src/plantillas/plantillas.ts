@@ -47,6 +47,7 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { ecHormigonNEC } from "../shared/materials";
 import { construirCimentacion } from "./cimentacion";
 
 const G = 9.80665;
@@ -68,7 +69,7 @@ const T_CIM_ESQUINERA = 13;    // columna en esquina + dos vigas centradoras
 const T_CIM_VIGA_T = 14;       // emparrillado de vigas en T invertida (frames)
 const T_CIM_LOSA = 9;          // losa de cimentación (mat)
 const T_ARRIOSTRADO = 7;       // pórtico con diagonales — el `Braced Frame
-                               // [Concentric]` de SAP2000, leído del binario
+                               // [Concentric]` de SAP2000
 
 /**
  * Lee ordenadas escritas a mano (`"0, 6, 12"`). Devuelve `null` si el texto no
@@ -323,8 +324,7 @@ const PARAMS = {
   // Las tres acotan el máximo a [1.25, 1.333). Y leyendo su propia tabla
   // `Analysis Options - Automatic Mesh Settings for Floors` por la OAPI:
   //   MeshOpt = General · **MaxMeshSize = 1.25** (y lo mismo para muros).
-  // De paso: los muros RECTOS ETABS no los malla ("Default: No Meshing for
-  // Straight Walls", de las cadenas de ETABS.dll).
+  // De paso: los muros RECTOS ETABS no los malla por defecto.
   //
   // Lo que cuesta y lo que se gana (plantilla dual, 4 pisos):
   //   0.50 m  5514 nudos  1079 ms  flecha −2.9081 mm
@@ -409,7 +409,16 @@ export const plantillas: ExampleDef = {
   // desplazamiento se ven los paños hundiéndose entre vigas, que es lo que hay
   // que ver al abrir una plantilla.
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "vonMises"],
+  // los 17 campos del visor: recortarlos escondia M12 (la torsion de la losa)
+  availableShellResults: [
+    "none",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: PARAMS,
 
@@ -655,7 +664,7 @@ export const plantillas: ExampleDef = {
     // Así «pórtico de acero» y «pórtico de hormigón» se comparan con la misma
     // geometría sin que uno de los dos sea un disparate.
     const acero = Math.round(p.material) === 1;
-    const E = acero ? 200e6 : 15100 * Math.sqrt(p.fc) * 98.0665;
+    const E = acero ? 200e6 : ecHormigonNEC(p.fc);
     const NU = acero ? 0.30 : 0.20;
     const Gm = E / (2 * (1 + NU));
     const RHO = (acero ? 78.5 : 24) / G;
@@ -690,7 +699,7 @@ export const plantillas: ExampleDef = {
     const shellModifiers = new Map<number, number[]>();
     // La losa y los muros son de HORMIGÓN aunque el pórtico sea de acero: eso es
     // un edificio mixto de verdad, no un edificio de chapa.
-    const Eh = 15100 * Math.sqrt(p.fc) * 98.0665, NUh = 0.20, RHOh = 24 / G;
+    const Eh = ecHormigonNEC(p.fc), NUh = 0.20, RHOh = 24 / G;
     // brazos rigidos automaticos (ETABS): nudos donde llega una columna, y factor de longitud
     // "que pesa" de cada tramo de viga = (L - off_i - off_j) / L, con off = b_col / 2 en cada
     // extremo que toca columna (las columnas son cuadradas: el mismo medio lado en X y en Y)

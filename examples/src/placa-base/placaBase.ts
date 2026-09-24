@@ -33,7 +33,15 @@ export const placaBase: ExampleDef = {
   category: "2️⃣ Shells · 🔩 Conexiones",
   hasModal: false,
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "bendingXX", "bendingYY", "bendingXY", "membraneXX", "membraneYY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     // ── Placa ──
     B: { default: 0.50, min: 0.25, max: 1.20, step: 0.02, label: "B placa (m, eje X)", folder: "Placa" },
@@ -72,7 +80,10 @@ export const placaBase: ExampleDef = {
     // ── Malla (más denso permite ver concentración de tensiones alrededor de los pernos) ──
     mesh_n: { default: 48, min: 20, max: 80, step: 2, label: "Divisiones por lado", folder: "Malla" },
     // ── Solver ──
-    use_nonlinear: { default: 1, label: "Solver", options: { "Lineal (elástico)": 0, "No-lineal (plasticidad J2 secante)": 1 }, folder: "Solver" },
+    // Defecto LINEAL (23-sep-2026): el «secante» rebaja la rigidez sin devolver la tension a la superficie
+    // de fluencia -> von Mises queda en 3.7·Fy y la flecha pasa de 4 mm a 204 mm. No es J2 ni esta validado
+    // contra Abaqus; la plasticidad J2 con retorno radial + contacto se esta validando aparte (prueba local).
+    use_nonlinear: { default: 0, label: "Solver", options: { "Lineal (elástico)": 0, "Secante experimental (NO validado)": 1 }, folder: "Solver" },
     nl_max_iter: { default: 12, min: 3, max: 30, step: 1, label: "Max iteraciones NL", folder: "Solver" },
   },
   build(p, states) {
@@ -89,7 +100,7 @@ export const placaBase: ExampleDef = {
     const shearModuli = new Map<number, number>();
 
     const G_steel = p.E_steel / 2.6;
-    const rho_steel = 77;
+    const rho_steel = 7.85;   // MASA t/m³ (antes 77: el PESO kN/m³, metido ×9.81)
 
     const addNode = (x: number, y: number, z: number): number => {
       nodes.push([x, y, z]);

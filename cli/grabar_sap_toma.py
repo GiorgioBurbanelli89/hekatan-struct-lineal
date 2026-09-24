@@ -14,7 +14,9 @@ def clic(x, y, d=0.8, pausa=0.9): ir(x, y, d); time.sleep(0.25); pyautogui.click
 def quieto(s): time.sleep(s)
 
 # preparar: cerrar el diálogo de tablas que quedó abierto y dejar SAP2000 al frente
-clic(1827, 1222, 0.3, 0.6)
+# (15-sep-2026) Antes cerraba con un clic el diálogo de tablas; si NO está abierto ese punto cae
+# SOBRE el modelo y selecciona una barra, que sale resaltada en el vídeo. Escape no toca nada.
+pyautogui.press('esc'); time.sleep(0.6)
 from pywinauto import Desktop
 import ctypes
 w = [x for x in Desktop(backend="win32").windows() if x.window_text().startswith("SAP2000")][0]
@@ -40,8 +42,9 @@ clic(2077, 1513, pausa=0.5); quieto(7)      # Start Animation
 clic(2077, 1513, pausa=1.0)                 # parar
 marca("4 · tabla de masa participativa")
 pyautogui.hotkey("ctrl", "t"); time.sleep(2.0)
-clic(703, 805); clic(727, 852)              # + Structure Output, + Modal Information (la tabla ya queda marcada)
-quieto(1.5)
+# (14-sep-2026) SIN clics de despliegue: SAP2000 recuerda la tabla marcada, y en otro modelo el árbol cae en
+# otra posición → el clic en (703, 805) marcaba «DESIGN DATA» y salía la tabla de diseño. Se deja ver el diálogo.
+quieto(3.0)
 clic(1690, 1222, pausa=3.0); quieto(6)      # OK -> la tabla
 clic(1878, 1117, pausa=1.5)                 # Done
 marca("fin")

@@ -33,7 +33,15 @@ export const guerraEj4ZapataCombinada: ExampleDef = {
   category: "2️⃣ Shells · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "EJ.4 Guerra MDI - pag. 74-90. Zapata COMBINADA con 2 columnas.",

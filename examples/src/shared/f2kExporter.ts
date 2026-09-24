@@ -34,6 +34,7 @@
  * en el `.s2k` con `selfWtMult: 0`.
  */
 import type { Node, Element, NodeInputs, ElementInputs } from "../../../hekatan-fem/src/data-model";
+import { muellesParaExportar } from "./muellesParaExportar";
 
 export interface F2kExportInput {
   nodes: Node[];
@@ -56,6 +57,14 @@ export interface F2kExportInput {
    * SAFE calcula OTRA estructura (la suya: viga con el 10 % de torsion).
    */
   jFactor?: number;
+  /** TODOS los patrones del .heks (Dead, DNE, Live...) con sus casos, combinaciones, cargas de barra
+   *  repartidas, peso propio calculado por SAFE (multiplicador = `selfweight`), muelle de AREA con su
+   *  «Compression Only», losa tipo Mat/Footing y pedestal Stiff con sus modificadores (18-sep-2026).
+   *  Sin la opcion, lo de antes (un patron, todo ya sumado en los nudos, muelles puntuales). */
+  patrones?: boolean;
+  /** Version de SAFE destino (nombres de campo distintos): 20 -> "Subgrade Modulus" y "Footing";
+   *  22 -> "Stiffnes U3"/"Nonlinear Option for U3" y "Mat". Defecto 22. */
+  versionSafe?: 20 | 22;
 }
 
 function fmt(v: number): string {
@@ -67,6 +76,9 @@ function fmt(v: number): string {
 export function exportF2k(input: F2kExportInput): string {
   const { nodes, elements, nodeInputs, elementInputs } = input;
   const LP = input.loadPattern ?? "Dead";
+  const PAT = !!input.patrones && !!(nodeInputs as any).cargasPorPatron;
+  const V20 = input.versionSafe === 20;
+  const areaExp = PAT ? ((elementInputs as any).areaSpringsExport as Map<number, { ks: number; nodal: boolean; comp: boolean }> | undefined) : undefined;
   const JF = input.jFactor ?? 10;
   const L: string[] = [];
   const push = (s: string) => L.push(s);
@@ -79,7 +91,7 @@ export function exportF2k(input: F2kExportInput): string {
   fin();
 
   tabla("PROGRAM CONTROL");
-  push(`   ProgramName=SAFE   Version=20.3.0   ProgLevel="Post Tensioning"   CurrUnits="kN, m, C"   CompBmCode="AISC 360-16"   ConcFrmCode="ACI 318-19"   ConcSlbCode="ACI 318-19"`);
+  push(`   ProgramName=SAFE   Version=${PAT && !V20 ? "22.6.0" : "20.3.0"}   ProgLevel="Post Tensioning"   CurrUnits="kN, m, C"   CompBmCode="AISC 360-16"   ConcFrmCode="ACI 318-19"   ConcSlbCode="ACI 318-19"`);
   fin();
 
   // ── Materiales: uno por (E, nu), como en el .s2k ──
@@ -91,7 +103,8 @@ export function exportF2k(input: F2kExportInput): string {
              : (E > 0 && Gdecl > 0 ? Math.max(0, Math.min(0.5, E / (2 * Gdecl) - 1)) : 0.2);
     const G = Gdecl > 0 ? Gdecl : (E > 0 ? E / (2 * (1 + nu)) : 0);
     const rho = elementInputs.densities?.get(i) || 0;   // t/m3
-    return { E, nu, G, rho, key: `MAT_${Math.round(E)}_n${nu.toFixed(4)}` };
+    // con `patrones` el peso lo calcula SAFE: la densidad entra en la clave (pedestal con peso 0 != losa)
+    return { E, nu, G, rho, key: `MAT_${Math.round(E)}_n${nu.toFixed(4)}${PAT ? `_r${rho.toFixed(4)}` : ""}` };
   };
   const frameIdx: number[] = [], shellIdx: number[] = [];
   elements.forEach((el, i) => { if (el.length === 2) frameIdx.push(i); else if (el.length === 3 || el.length === 4) shellIdx.push(i); });
@@ -116,7 +129,7 @@ export function exportF2k(input: F2kExportInput): string {
   fin();
   // SAFE exige los datos de hormigon para un material Type=Concrete; f'c no entra en el analisis lineal.
   tabla("MATERIAL PROPERTIES - CONCRETE DATA");
-  for (const [k] of mats) push(`   Material=${k}   Fc=27579.03   LtWtConc=No   IsUserFr=No   SSCurveOpt=Mander   SSHysType=Concrete   SFc=0.002219   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0`);
+  for (const [k] of mats) push(`   Material=${k}   Fc=${fmt((elementInputs as any).fcExport ?? 27579.03)}   LtWtConc=No   IsUserFr=No   SSCurveOpt=Mander   SSHysType=Concrete   SFc=0.002219   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0`);
   fin();
 
   // ── Secciones de barra: General (A, I33=Iz, I22=Iy, J, As2, As3), como el .s2k ──
@@ -162,15 +175,25 @@ export function exportF2k(input: F2kExportInput): string {
   }
 
   // ── Secciones de losa: una por (t, formulacion). plateFormulations: 1 = Thin (Kirchhoff), 0 = Thick (Mindlin) ──
-  const shellSecs = new Map<string, { t: number; matKey: string; thin: boolean }>();
+  const shellSecs = new Map<string, { t: number; matKey: string; thin: boolean; mods?: number[]; tipo?: string }>();
   const elemToShellSec = new Map<number, string>();
+  const smodsF = (elementInputs as any).shellModifiers as Map<number, number[]> | undefined;
+  const bmodsF = (elementInputs as any).bendingModifiers as Map<number, number> | undefined;
+  const mmodsF = (elementInputs as any).membraneModifiers as Map<number, number> | undefined;
   for (const i of shellIdx) {
     const t = elementInputs.thicknesses?.get(i) || 0.1;
     const f = (elementInputs as any).plateFormulations?.get(i) ?? 0;
     const thin = f === 1 || f === 3;
     const matKey = matDe(i).key;
-    const key = `t${t.toPrecision(6)}_${thin ? "thin" : "thick"}_${matKey}`;
-    if (!shellSecs.has(key)) shellSecs.set(key, { t, matKey, thin });
+    // `patrones`: modificadores por propiedad (SAFE los guarda en la losa) y tipo: Stiff si la flexion va
+    // x10 o mas (el pedestal de SAFE), Mat/Footing si lleva muelle de area, Slab si no.
+    let mods: number[] | undefined, tipo: string | undefined;
+    if (PAT) {
+      mods = smodsF?.get(i) ?? (() => { const m = mmodsF?.get(i) ?? 1, b = bmodsF?.get(i) ?? 1; return [m, m, m, b, b, b, b, b]; })();
+      tipo = Math.min(mods[3], mods[4]) >= 10 ? "Stiff" : areaExp?.has(i) ? (V20 ? "Footing" : "Mat") : "Slab";
+    }
+    const key = `t${t.toPrecision(6)}_${thin ? "thin" : "thick"}_${matKey}${PAT ? `_${tipo}_${mods!.join(",")}` : ""}`;
+    if (!shellSecs.has(key)) shellSecs.set(key, { t, matKey, thin, mods, tipo });
     elemToShellSec.set(i, `LOSA${[...shellSecs.keys()].indexOf(key) + 1}`);
   }
   if (shellSecs.size > 0) {
@@ -182,18 +205,34 @@ export function exportF2k(input: F2kExportInput): string {
     k = 0;
     for (const [, s] of shellSecs) {
       k++;
-      push(`   Name=LOSA${k}   "Modeling Type"=${s.thin ? "Shell-Thin" : "Shell-Thick"}   "Property Type"=Slab   Material=${s.matKey}   "Slab Thickness"=${fmt(s.t)}   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=1   "f22 Modifier"=1   "f12 Modifier"=1   "m11 Modifier"=1   "m22 Modifier"=1   "m12 Modifier"=1   "v13 Modifier"=1   "v23 Modifier"=1   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   Orthotropic?=No`);
+      const md = s.mods ?? [1, 1, 1, 1, 1, 1, 1, 1];
+      push(`   Name=LOSA${k}   "Modeling Type"=${s.thin ? "Shell-Thin" : "Shell-Thick"}   "Property Type"=${s.tipo ?? "Slab"}   Material=${s.matKey}   "Slab Thickness"=${fmt(s.t)}   "Notional Size Type"=Auto   "Notional Auto Factor"=1   "f11 Modifier"=${fmt(md[0])}   "f22 Modifier"=${fmt(md[1])}   "f12 Modifier"=${fmt(md[2])}   "m11 Modifier"=${fmt(md[3])}   "m22 Modifier"=${fmt(md[4])}   "m12 Modifier"=${fmt(md[5])}   "v13 Modifier"=${fmt(md[6])}   "v23 Modifier"=${fmt(md[7])}   "Mass Modifier"=1   "Weight Modifier"=1   Color=Blue   Orthotropic?=No`);
     }
     fin();
   }
 
   // ── Muelles nodales: una propiedad por vector k distinto ──
-  const kNudo = new Map<number, number[]>();
-  for (const sp of (nodeInputs as any).springs ?? []) {
-    if (!(sp.k > 0)) continue;
-    const v = kNudo.get(sp.node) ?? [0, 0, 0, 0, 0, 0];
-    v[sp.dof] += sp.k; kNudo.set(sp.node, v);
+  // muelles de AREA -> nodales (int N_i dA); los nudos colgados no son muelles (muellesParaExportar.ts)
+  const muellesExp = muellesParaExportar(nodes as any, elements as any, (nodeInputs as any).springs, { sinArea: !!areaExp?.size });
+  // muelle de AREA como propiedad de area (SAFE): una por (ks, solo compresion)
+  const areaSprProp = new Map<string, { ks: number; comp: boolean }>();
+  const areaSprDe = new Map<number, string>();
+  if (areaExp?.size) {
+    for (const [e, a] of areaExp) {
+      const key = `${+a.ks.toPrecision(10)}_${a.comp}`;
+      let nm = [...areaSprProp.entries()].find(([, v]) => `${+v.ks.toPrecision(10)}_${v.comp}` === key)?.[0];
+      if (!nm) { nm = `KS${areaSprProp.size + 1}`; areaSprProp.set(nm, { ks: a.ks, comp: a.comp }); }
+      areaSprDe.set(e, nm);
+    }
+    tabla("SPRING PROPERTY DEFINITIONS - AREA SPRINGS");
+    for (const [nm, v] of areaSprProp) {
+      const nl = v.comp ? `"Compression Only"` : `"None (Linear)"`;
+      push(V20 ? `   Name=${nm}   "Subgrade Modulus"=${fmt(v.ks)}   "Nonlinear Option"=${nl}   Color=Cyan`
+               : `   Name=${nm}   "Stiffness Option"=User   "Stiffnes U1"=0   "Stiffnes U2"=0   "Stiffnes U3"=${fmt(v.ks)}   "Nonlinear Option for U3"=${nl}   Color=Cyan`);
+    }
+    fin();
   }
+  const kNudo = muellesExp.nodales;
   const springPropDeNudo = new Map<number, string>();
   const springProps = new Map<string, number[]>();
   for (const [ni, v] of kNudo) {
@@ -209,16 +248,41 @@ export function exportF2k(input: F2kExportInput): string {
     fin();
   }
 
+  const cargasPP = (nodeInputs as any).cargasPorPatron as Record<string, Map<number, number[]>> | undefined;
+  const flPP = ((elementInputs as any).frameLoadsPorPatron ?? {}) as Record<string, Map<number, [number, number, number]>>;
+  const pats = PAT ? [...new Set([...Object.keys(cargasPP!), ...Object.keys(flPP)])] : [];
+  if (PAT) {
+    const tipoDe = (p: string) => /^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? `"Super Dead"` : /^(live|viva|l)$/i.test(p) ? "Live" : "Other";
+    const sw = (elementInputs as any).selfWeight ?? 0;
+    tabla("LOAD PATTERN DEFINITIONS");
+    for (const p of pats) push(`   Name=${p}   "Is Auto Load"=No   Type=${tipoDe(p)}   "Self Weight Multiplier"=${/^dead$/i.test(p) ? fmt(sw) : 0}`);
+    fin();
+    tabla("LOAD CASE DEFINITIONS - SUMMARY");
+    for (const p of pats) push(`   Name=${p}   Type="Linear Static"`);
+    fin();
+    tabla("LOAD CASE DEFINITIONS - LINEAR STATIC");
+    for (const p of pats) push(`   Name=${p}   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=${p}   "Load SF"=1   "Design Type"="Program Determined"`);
+    fin();
+    const combos = ((elementInputs as any).combos ?? []) as Array<{ name: string; items: Array<[string, number]> }>;
+    if (combos.length) {
+      tabla("LOAD COMBINATION DEFINITIONS");
+      for (const c of combos) c.items.forEach(([p, f], k) => push(k === 0
+        ? `   Name=${c.name}   Type="Linear Add"   "Is Auto"=No   "Load Name"=${p}   SF=${fmt(f)}`
+        : `   Name=${c.name}   "Load Name"=${p}   SF=${fmt(f)}`));
+      fin();
+    }
+  } else {
   // ── Cargas: un patron, multiplicador de peso propio 0 (el peso ya viene como carga nodal) ──
-  tabla("LOAD PATTERN DEFINITIONS");
-  push(`   Name=${LP}   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=0`);
-  fin();
-  tabla("LOAD CASE DEFINITIONS - SUMMARY");
-  push(`   Name=${LP}   Type="Linear Static"`);
-  fin();
-  tabla("LOAD CASE DEFINITIONS - LINEAR STATIC");
-  push(`   Name=${LP}   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=${LP}   "Load SF"=1   "Design Type"="Program Determined"`);
-  fin();
+    tabla("LOAD PATTERN DEFINITIONS");
+    push(`   Name=${LP}   "Is Auto Load"=No   Type=Dead   "Self Weight Multiplier"=0`);
+    fin();
+    tabla("LOAD CASE DEFINITIONS - SUMMARY");
+    push(`   Name=${LP}   Type="Linear Static"`);
+    fin();
+    tabla("LOAD CASE DEFINITIONS - LINEAR STATIC");
+    push(`   Name=${LP}   "Exclude Group"=None   "Mass Source"=MsSrc1   "Initial Condition"=Unstressed   "Load Type"=Load   "Load Name"=${LP}   "Load SF"=1   "Design Type"="Program Determined"`);
+    fin();
+  }
   tabla("MASS SOURCE DEFINITION");
   push(`   Name=MsSrc1   "Is Default"=Yes   "Include Lateral Mass?"=No   "Include Vertical Mass?"=Yes   "Lump Mass?"=Yes   "Source Self Mass?"=Yes   "Source Added Mass?"=Yes   "Source Load Patterns?"=No   "Move Mass Centroid?"=No`);
   fin();
@@ -272,7 +336,22 @@ export function exportF2k(input: F2kExportInput): string {
   // Los ejemplos de placa Q4 dejan en `loadsSolver` las cargas que recibio el solver (columna +
   // peso propio); `loads` son solo las de visualizacion. Ver shared/f2kPlateQ4.ts.
   const loads = (nodeInputs as any).loadsSolver ?? nodeInputs.loads;
-  if (loads && loads.size) {
+  if (PAT) {
+    const filas: string[] = [];
+    for (const p of pats) for (const [i, f] of [...(cargasPP![p] ?? new Map())].sort((a, b) => a[0] - b[0])) {
+      if (!f.some((v: number) => Math.abs(v) > 1e-12)) continue;
+      filas.push(`   UniqueName=${i + 1}   "Load Pattern"=${p}   FX=${fmt(f[0])}   FY=${fmt(f[1])}   FZ=${fmt(f[2])}   MX=${fmt(f[3])}   MY=${fmt(f[4])}   MZ=${fmt(f[5])}   "X Dimension"=0   "Y Dimension"=0`);
+    }
+    if (filas.length) { tabla("JOINT LOADS ASSIGNMENTS - FORCE"); filas.forEach(push); fin(); }
+    // cargas repartidas de barra: Direction=Gravity, Force>0 hacia abajo (formato del f2k de SAFE)
+    const filasF: string[] = [];
+    for (const p of pats) for (const [i, w] of flPP[p] ?? new Map()) {
+      const el = elements[i]; if (!el || el.length !== 2 || Math.abs(w[2]) < 1e-12) continue;
+      const Lb = dist(nodes[el[0]], nodes[el[1]]);
+      filasF.push(`   UniqueName=B${i + 1}   "Load Pattern"=${p}   "Load Type"=Force   Direction=Gravity   "Distance Type"=Relative   "Relative Distance A"=0   "Relative Distance B"=1   "Absolute Distance A"=0   "Absolute Distance B"=${fmt(Lb)}   "Force A"=${fmt(-w[2])}   "Force B"=${fmt(-w[2])}`);
+    }
+    if (filasF.length) { tabla("FRAME LOADS ASSIGNMENTS - DISTRIBUTED"); filasF.forEach(push); fin(); }
+  } else if (loads && loads.size) {
     tabla("JOINT LOADS ASSIGNMENTS - FORCE");
     for (const [i, f] of [...loads].sort((a, b) => a[0] - b[0])) {
       if (!f.some(v => Math.abs(v) > 1e-12)) continue;
@@ -298,6 +377,11 @@ export function exportF2k(input: F2kExportInput): string {
     tabla("AREA ASSIGNMENTS - SECTION PROPERTIES");
     for (const i of shellIdx) push(`   UniqueName=A${i + 1}   "Section Property"=${elemToShellSec.get(i)}   "Property Type"=Slab`);
     fin();
+    if (areaSprDe.size) {
+      tabla("AREA ASSIGNMENTS - AREA SPRINGS");
+      for (const [e, nm] of [...areaSprDe].sort((a, b) => a[0] - b[0])) push(`   UniqueName=A${e + 1}   "Spring Property"=${nm}`);
+      fin();
+    }
     tabla("AREA ASSIGNMENTS - INSERTION POINT");
     for (const i of shellIdx) push(`   UniqueName=A${i + 1}   "Cardinal Point"=Middle   Transform=No`);
     fin();
@@ -306,7 +390,10 @@ export function exportF2k(input: F2kExportInput): string {
     fin();
     // Sin edge constraint: la malla ya es compatible (misma que Hekatan y que SAP2000).
     tabla("AREA ASSIGNMENTS - AUTO EDGE CONSTRAINTS");
-    for (const i of shellIdx) push(`   UniqueName=A${i + 1}   Constraint=No`);
+    // `edge etabs` / `edge lineal` en el .heks (hay nudos colgados atados): SAFE con su edge constraint
+    // (el @LC, lineal). Sin nudos colgados, No (lo de antes).
+    const conEdge = muellesExp.colgados.length > 0;
+    for (const i of shellIdx) push(`   UniqueName=A${i + 1}   Constraint=${conEdge ? "Yes" : "No"}`);
     fin();
   }
 

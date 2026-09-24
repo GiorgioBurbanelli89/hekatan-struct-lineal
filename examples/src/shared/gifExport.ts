@@ -20,13 +20,14 @@
  */
 import type { State } from "vanjs-core";
 import type { Node, ModalOutputs } from "hekatan-fem";
+import { MODE_SCALE_PERCENT } from "./modeScale";
 
 export interface GifExportOpts {
   mesh: { nodes: State<Node[]> };
   viewerElm: HTMLElement;
   results: ModalOutputs;
   mode: number;            // 0-indexed
-  scalePercent?: number;   // amplitud como % del diagonal (default 6)
+  scalePercent?: number;   // amplitud como % de la diagonal (default: MODE_SCALE_PERCENT, la del visor)
   frames?: number;         // frames por ciclo (default 24)
   delayMs?: number;        // delay entre frames (default 60)
   maxWidth?: number;       // ancho máx del GIF en px (default 560)
@@ -225,7 +226,9 @@ function buildGif(
  */
 export async function exportModeAnimationGif(opts: GifExportOpts): Promise<Blob | null> {
   const { mesh, viewerElm, results, mode } = opts;
-  const scalePct = opts.scalePercent ?? 6;
+  // Antes 6 % — el GIF salia 1.62x el visor con el MISMO modo. Ahora la misma
+  // constante que el visor (3.7 % de la diagonal, medido contra SAP2000).
+  const scalePct = opts.scalePercent ?? MODE_SCALE_PERCENT;
   const nFrames = opts.frames ?? 24;
   const delayCs = Math.max(2, Math.round((opts.delayMs ?? 60) / 10));
   const maxWidth = opts.maxWidth ?? 560;

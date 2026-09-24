@@ -5,7 +5,7 @@
  * conectados con columnas + diagonales que cruzan al siguiente nivel.
  * Núcleo central conectado a cada anillo + viga vertical de núcleo.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateTwistedTower()` en getCad3d.ts (líneas 10142-10241).
  */
 import van, { State } from "vanjs-core";

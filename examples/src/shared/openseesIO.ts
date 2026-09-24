@@ -21,7 +21,7 @@ export function exportOpenSeesPy(input: OpenseesModel): string {
   const { nodes, elements, nodeInputs, elementInputs } = input;
   const lines: string[] = [];
 
-  lines.push(`# OpenSeesPy model exported from Awatif FEM Studio`);
+  lines.push(`# OpenSeesPy model exported from Hekatan Struct`);
   lines.push(`# ${nodes.length} nodes, ${elements.length} elements`);
   lines.push(``);
   lines.push(`import openseespy.opensees as ops`);
@@ -122,7 +122,7 @@ export function exportOpenSeesTcl(input: OpenseesModel): string {
   const { nodes, elements, nodeInputs, elementInputs } = input;
   const lines: string[] = [];
 
-  lines.push(`# OpenSees Tcl model exported from Awatif FEM Studio`);
+  lines.push(`# OpenSees Tcl model exported from Hekatan Struct`);
   lines.push(`# ${nodes.length} nodes, ${elements.length} elements`);
   lines.push(``);
   lines.push(`wipe`);

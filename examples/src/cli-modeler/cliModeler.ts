@@ -149,12 +149,24 @@ interface ParsedModel {
    *  Por defecto CONSISTENTE, ks·∫NᵀN dA sobre la normal (el de SAFE); con `nodal` se reparte a
    *  los nudos por ∫N_i dA (lo que hacen SAP2000 y ETABS, = `spring` a mano). Viaja al WASM por la
    *  lista de muelles con nudo NEGATIVO (utils/springsExtra.h). */
-  areaSprings: Array<{ id: number; ks: number; nodal: boolean }>;
+  areaSprings: Array<{ id: number; ks: number; nodal: boolean; comp?: boolean }>;
+  /** `combo NOMBRE patron factor [patron factor ...]`: combinaciones de patrones (para exportar a
+   *  SAP2000/SAFE y para el selector de la app). El solver no las usa: resuelve lo que diga el caso. */
+  combos: Array<{ name: string; items: Array<[string, number]> }>;
+  /** `fc <kN/m2>`: resistencia del hormigon, SOLO para los ficheros de CSI (Fc del material). No entra al calculo. */
+  fc?: number;
+  /** `vista <campo> [caso]`: con que se abre el modelo (p. ej. `vista pressure SERVICIO`). Solo la usa el
+   *  workspace al abrir por enlace; no entra al calculo. campo = pressure | displacementZ | bendingXX | ... */
+  vista?: { campo: string; caso?: string };
   /** `edge etabs`: nudos COLGADOS sobre la arista de una cascara (malla no conforme) atados a
    *  la arista como el edge constraint de ETABS con OBJMESHTYPE "NONE": w = Hermite cubica con
    *  los giros de los extremos, in-plano y giros lineales (medido 8-sep-2026, 0.11 %). Sin la
    *  directiva un nudo colgado queda suelto, como en SAP2000. */
   edgeEtabs: boolean;
+  /** `edge lineal` (alias safe/sap): el nudo colgado sigue LINEAL a su arista en los 6 GDL, como el
+   *  AUTO EDGE CONSTRAINT de SAFE/SAP2000 (Line Constraint `@LC`); ata TODO nudo sobre una arista,
+   *  tambien un punto cargado que no toca otro elemento. gdl -4 en utils/springsExtra.h. */
+  edgeLineal: boolean;
   /** `hex ID n1..n8 [E nu rho]`: hexaedros H8 (solidos). Se resuelven con hex8Solve
    *  (Wilson–Taylor por defecto; `incompatible 0` lo quita). */
   solids: Array<{ id: number; pts: number[]; E: number; nu: number; rho: number }>;
@@ -267,7 +279,9 @@ export function parseCliCommands(text: string): ParsedModel {
     deckTributario: new Set(),
     autoMesh: 0,
     areaSprings: [],
+    combos: [],
     edgeEtabs: false,
+    edgeLineal: false,
     solids: [],
     solidIncompatible: true,
     etabsWallJoint: true,     // por DEFECTO como ETABS (decision de Jorge, 3-sep-2026); `etabsjoint 0` = modo SAP2000
@@ -297,7 +311,7 @@ export function parseCliCommands(text: string): ParsedModel {
   //   node 1 0 0 0
   //   frame 1 1 2 25e6 0.16 0.001
   let blockMode: "nodes" | "elements" | "areas" | "supports" | "loads" | "springs" | null = null;
-  let autoNodeIdx = 0;  // 0-based para modo bloque (awatif compatible)
+  let autoNodeIdx = 0;  // 0-based para modo bloque
   let autoFrameIdx = 0;
   let autoShellIdx = 0;
 
@@ -594,7 +608,10 @@ export function parseCliCommands(text: string): ParsedModel {
           const id = parseInt(tokens[1], 10);
           const ks = parseFloat(tokens[2] ?? "0");
           const nodal = tokens.slice(3).some(t => /^(nodal|lumped|sap|etabs)$/i.test(t));
-          if (isFinite(id) && isFinite(ks) && ks !== 0) m.areaSprings.push({ id, ks, nodal });
+          // `compresion` (o compression / compressiononly): el terreno no tira, como el «Compression
+          // Only» de SAFE/SAP2000. El SOLVER de la CLI es lineal (no lo aplica); viaja a los exportadores.
+          const comp = tokens.slice(3).some(t => /^(compresion|compression|compressiononly|solocompresion)$/i.test(t));
+          if (isFinite(id) && isFinite(ks) && ks !== 0) m.areaSprings.push({ id, ks, nodal, comp });
           else m.errors.push(`areaspring: uso areaspring <shellID> <ks> [nodal]`);
           break;
         }
@@ -603,6 +620,8 @@ export function parseCliCommands(text: string): ParsedModel {
         case "edgeconstraint": {
           const v = (tokens[1] ?? "etabs").toLowerCase();
           m.edgeEtabs = v === "etabs" || v === "1" || v === "on" || v === "si" || v === "hermite";
+          m.edgeLineal = v === "lineal" || v === "linear" || v === "safe" || v === "sap" || v === "linea";
+          if (m.edgeLineal) m.edgeEtabs = true;
           break;
         }
         // automesh [tam_m | off]   — 1.25 m es el defecto de ETABS
@@ -687,6 +706,23 @@ export function parseCliCommands(text: string): ParsedModel {
           }
           break;
         }
+        // ── cascara TRIANGULAR: tri ID n1 n2 n3 t E [q] [rho] ──
+        // Hace falta para resolver la malla GENERAL de ETABS (Quad_Build mete triangulos
+        // entre los cuadrilateros). El motor ya ensambla la cascara de 3 nudos.
+        case "tri": {
+          const id = parseInt(tokens[1], 10);
+          const pts = [parseInt(tokens[2], 10), parseInt(tokens[3], 10), parseInt(tokens[4], 10)];
+          const t = parseFloat(tokens[5] ?? "0.20");
+          const E = parseFloat(tokens[6] ?? "25e6");
+          const rhoTok = tokens[8] !== undefined ? parseFloat(tokens[8]) : undefined;
+          const rho = rhoTok !== undefined && isFinite(rhoTok) ? rhoTok : undefined;
+          m.shells.push({ id, pts, t, E, rho });
+          if (tokens[7] !== undefined) {
+            const q = parseFloat(tokens[7]);
+            if (isFinite(q) && q !== 0) m.shellLoads.set(id, q);
+          }
+          break;
+        }
         // ── carga de SUPERFICIE sobre un area: areaload shellID q ──
         // q en kN/m2, positivo hacia +z. Antes solo existia `load` nodal, asi
         // que una losa habia que repartirla a mano entre sus nudos: eso ignora
@@ -708,8 +744,12 @@ export function parseCliCommands(text: string): ParsedModel {
           let v: number | undefined;
           if (q === "thin" || q === "delgada" || q === "kirchhoff" || q === "1") v = 1;
           else if (q === "thick" || q === "gruesa" || q === "mindlin" || q === "0") v = 0;
+          // 3 = DKMQ de Katili; 4 = placa DSE de Wilson (cap. 8). El 2 NO se ofrece: es la
+          // «Membrane» de los exportadores y en el solver es el MITC4 (data-model.ts).
+          else if (q === "dkmq" || q === "3") v = 3;
+          else if (q === "wilson" || q === "dse" || q === "4") v = 4;
           if (v === undefined) {
-            m.errors.push(`shelltype ${id}: se esperaba thin o thick`);
+            m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq o wilson`);
             break;
           }
           m.shellTypes.set(id, v);
@@ -772,7 +812,11 @@ export function parseCliCommands(text: string): ParsedModel {
         case "support":
         case "fix": {
           const nodeId = parseInt(tokens[1], 10);
-          const spec = tokens.slice(2).join(" ");
+          // comentario al final de la linea (`support 52 1 1 0 0 0 0   # 1`): fuera. Con el comentario
+          // dentro, "1 1 0 0 0 0 # 1" no era un patron de bits y el apoyo salia LIBRE en los 6 GDL
+          // sin aviso (radier MOD_002, 18-sep-2026: Ux = 7 km en la app, deformada fuera de pantalla).
+          const iCom = tokens.findIndex((t, k) => k >= 2 && t.startsWith("#"));
+          const spec = tokens.slice(2, iCom < 0 ? undefined : iCom).join(" ");
           m.supports.set(nodeId, parseSupportSpec(spec));
           break;
         }
@@ -832,6 +876,30 @@ export function parseCliCommands(text: string): ParsedModel {
             m.masses.set(nodeId, (m.masses.get(nodeId) ?? 0) + mm);
           else
             m.errors.push(`L${lineNo+1}: mass necesita <nudo> <toneladas>`);
+          break;
+        }
+        // combo NOMBRE patron factor [patron factor ...]   (p. ej. combo SERVICIO Dead 1 DNE 1 Live 1)
+        // vista <campo> [caso]  -> resultados que muestra la app al abrir el enlace (?m= / #h= / ?heks=)
+        case "vista": {
+          const a = tokens.slice(1).filter(t => !/^resultados?$/i.test(t));
+          if (a[0]) m.vista = { campo: a[0], caso: a[1] };
+          break;
+        }
+        case "fc": {
+          const v = parseFloat(tokens[1]);
+          if (isFinite(v) && v > 0) m.fc = v; else m.errors.push(`fc: uso fc <kN/m2>`);
+          break;
+        }
+        case "combo":
+        case "combinacion": {
+          const nm = tokens[1];
+          const items: Array<[string, number]> = [];
+          for (let k = 2; k + 1 < tokens.length; k += 2) {
+            const f = parseFloat(tokens[k + 1]);
+            if (isFinite(f)) items.push([tokens[k], f]);
+          }
+          if (nm && items.length) m.combos.push({ name: nm, items });
+          else m.errors.push(`combo: uso combo NOMBRE patron factor [patron factor ...]`);
           break;
         }
         case "solve":
@@ -1145,7 +1213,15 @@ export const cliModeler: ExampleDef = {
   defaultShellResult: "none",
   // Con `areaspring` (Winkler) se calcula la presión de contacto del suelo, así que
   // el mapa de presión se puede ver aquí también, no solo en los ejemplos param.
-  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY", "membraneXX"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {},
   // ── MODAL de un .heks ──
   // Masa 3D de los elementos, sin «solo lateral» ni agrupar por pisos: es la de
@@ -1420,7 +1496,8 @@ export const cliModeler: ExampleDef = {
         const hormigon = dk.tc + (dk.sr > 0 ? dk.hr * (dk.wrt + dk.wrb) / 2 / dk.sr : 0);
         thicknesses.set(eIdx, dk.tc);
         densities.set(eIdx, ((s.rho ?? 2.45) * hormigon + dk.w / 9.80665) / dk.tc);
-        // membrana = flexión 0 (abajo, con los modificadores). NO plateFormulations 2: eso es DKMQ.
+        // membrana = flexión 0 (abajo, con los modificadores). NO plateFormulations 2: en el solver
+        // el 2 es el MITC4 con flexión (solo los exportadores lo leen como Membrane).
         deckSections.set(eIdx, { ...dk });
       }
     }
@@ -1466,6 +1543,10 @@ export const cliModeler: ExampleDef = {
       for (const [id, ld] of mp) { const idx = idToIdx.get(id); if (idx !== undefined) dst.set(idx, [...ld] as any); }
       loadsOtros.set(pat, dst);
     }
+    // Cargas de USUARIO por patron (antes de sumarles frameload y peso propio): para exportar a
+    // SAP2000/SAFE cada patron por separado (el s2k/f2k solo sacaban Dead, y ya con todo sumado).
+    const cargasPorPatron: Record<string, Map<number, number[]>> = { Dead: new Map([...loads].map(([k, v]) => [k, [...v]])) };
+    for (const [pat, mp] of loadsOtros) cargasPorPatron[pat] = new Map([...mp].map(([k, v]) => [k, [...v]]));
     const tandasFL: Array<[Map<number, [number, number, number]>, Map<number, [number,number,number,number,number,number]>]> =
       [[m.frameLoads, loads]];
     for (const [pat, fl] of m.frameLoadsPat) {
@@ -1522,6 +1603,18 @@ export const cliModeler: ExampleDef = {
         continue;
       }
       const P = idx.map((i) => nodes[i as number]);
+      if (idx.length === 3) {
+        // triangulo lineal: el vector consistente es exacto, q·A/3 a cada nudo
+        const u = [0, 1, 2].map((k) => P[1][k] - P[0][k]), v = [0, 1, 2].map((k) => P[2][k] - P[0][k]);
+        const A = Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]) / 2;
+        for (const i of idx as number[]) {
+          const prev = loads.get(i) ?? [0, 0, 0, 0, 0, 0];
+          prev[2] += q * A / 3;
+          loads.set(i, prev as [number,number,number,number,number,number]);
+          cargaDeArea.set(i, (cargaDeArea.get(i) ?? 0) + q * A / 3);
+        }
+        continue;
+      }
       const f = [0, 0, 0, 0];
       for (const [xi, eta] of GAUSS) {
         const N = [0.25 * (1 - xi) * (1 - eta), 0.25 * (1 + xi) * (1 - eta),
@@ -1593,18 +1686,18 @@ export const cliModeler: ExampleDef = {
           };
           acumSW(e[0], [0, 0, wz * L / 2,  c * txw[0],  c * txw[1], 0]);
           acumSW(e[1], [0, 0, wz * L / 2, -c * txw[0], -c * txw[1], 0]);
-        } else if (e.length === 4) {
+        } else if (e.length === 4 || e.length === 3) {
           const t = thicknesses.get(i) ?? 0;
           const P = e.map(n => nodes[n]);
           let area2 = 0;
-          for (let k = 1; k < 3; k++) {
+          for (let k = 1; k < e.length - 1; k++) {
             const u = [P[k][0]-P[0][0], P[k][1]-P[0][1], P[k][2]-P[0][2]];
             const v = [P[k+1][0]-P[0][0], P[k+1][1]-P[0][1], P[k+1][2]-P[0][2]];
             const cr = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
             area2 += Math.hypot(cr[0], cr[1], cr[2]) / 2;
           }
           const W = area2 * t * rho * G * m.selfWeight;
-          for (const n of e) addFz(n, -W / 4);
+          for (const n of e) addFz(n, -W / e.length);
         }
       });
     }
@@ -1621,6 +1714,7 @@ export const cliModeler: ExampleDef = {
     }
     // `edge etabs`: nudos colgados sobre aristas de cascara -> registro gdl -2, k = indice del nudo
     if (m.edgeEtabs) {
+      const lin = m.edgeLineal, tolE = lin ? 1e-4 : 1e-6;
       const enShell = new Set<number>();
       const shellsIdx: number[] = [];
       elements.forEach((el, e) => { if (el.length === 3 || el.length === 4) { shellsIdx.push(e); for (const n of el) enShell.add(n); } });
@@ -1632,7 +1726,9 @@ export const cliModeler: ExampleDef = {
         for (let h = 0; h < nodes.length; h++) {
           if (el.includes(h)) continue;
           const X = nodes[h];
-          if (X[0] < bb[0][0] - 1e-6 || X[0] > bb[0][1] + 1e-6 || X[1] < bb[1][0] - 1e-6 || X[1] > bb[1][1] + 1e-6 || X[2] < bb[2][0] - 1e-6 || X[2] > bb[2][1] + 1e-6) continue;
+          // caja con holgura: 1e-6 m (edge etabs) o tolE * tamano del elemento (edge lineal: SAFE deja ~1e-6 m de ruido)
+          const hb = lin ? tolE * Math.max(bb[0][1] - bb[0][0], bb[1][1] - bb[1][0], bb[2][1] - bb[2][0]) : 1e-6;
+          if (X[0] < bb[0][0] - hb || X[0] > bb[0][1] + hb || X[1] < bb[1][0] - hb || X[1] > bb[1][1] + hb || X[2] < bb[2][0] - hb || X[2] > bb[2][1] + hb) continue;
           // sobre alguna arista (i, j), estrictamente dentro
           let colgado = false;
           for (let k = 0; k < el.length && !colgado; k++) {
@@ -1641,16 +1737,17 @@ export const cliModeler: ExampleDef = {
             const q = [X[0] - A[0], X[1] - A[1], X[2] - A[2]]; const t = (q[0] * d[0] + q[1] * d[1] + q[2] * d[2]) / L2;
             if (t <= 1e-6 || t >= 1 - 1e-6) continue;
             const r = [q[0] - t * d[0], q[1] - t * d[1], q[2] - t * d[2]];
-            if (Math.hypot(r[0], r[1], r[2]) <= 1e-6 * Math.sqrt(L2)) colgado = true;
+            if (Math.hypot(r[0], r[1], r[2]) <= tolE * Math.sqrt(L2)) colgado = true;
           }
           if (!colgado) continue;
-          // solo si el nudo pertenece a OTRO elemento (si no, esta suelto y no hay que atarlo)
-          const usado = elements.some((el2, e2) => e2 !== e && (el2 as number[]).includes(h));
+          // `edge etabs`: solo si el nudo pertenece a OTRO elemento (si no, esta suelto y no hay que
+          // atarlo). `edge lineal` ata todos, como SAFE (un punto cargado sobre una arista va al @LC).
+          const usado = lin || elements.some((el2, e2) => e2 !== e && (el2 as number[]).includes(h));
           if (!usado) continue;
-          springsList.push({ node: -(e + 1), dof: -2, k: h }); nColgados++;
+          springsList.push({ node: -(e + 1), dof: lin ? -4 : -2, k: h }); nColgados++;
         }
       }
-      if (nColgados) console.log(`[CLI Modeler] edge etabs: ${nColgados} nudo(s) colgado(s) atado(s) a su arista (Hermite)`);
+      if (nColgados) console.log(`[CLI Modeler] edge ${lin ? "lineal" : "etabs"}: ${nColgados} nudo(s) colgado(s) atado(s) a su arista (${lin ? "lineal" : "Hermite"})`);
     }
 
     // ── Solidos H8 (`hex`): 8 nudos, 3 GDL por nudo ────────────────────────
@@ -1688,7 +1785,7 @@ export const cliModeler: ExampleDef = {
     // variable local que solo se le pasaba a `deform`, asi que el modal no podia
     // verlos por mucho que el .heks los trajera: la cimentacion del RIOCHICO se
     // apoya en 612 resortes de balasto y el modal la veia flotando.
-    states.nodeInputs.val = { supports, loads, masses, diaphragms,
+    states.nodeInputs.val = { supports, loads, masses, diaphragms, cargasPorPatron,
                               springs: springsList } as any;
     if ((states as any).springs) (states as any).springs.val = springsList;
     // Modificadores por elemento, indexados como los shells en `elements`
@@ -1749,6 +1846,22 @@ export const cliModeler: ExampleDef = {
       shearAreasY, shearAreasZ, momentReleases, endOffsets, plateFormulations,
       deckSections,
       frameLoads: frameLoadsElem,
+      // por patron y por indice de elemento, para exportar cada patron (s2k/f2k)
+      frameLoadsPorPatron: (() => {
+        const out: Record<string, Map<number, [number, number, number]>> = { Dead: frameLoadsElem };
+        const eDe = new Map<number, number>();
+        elements.forEach((el, e) => { if (el.length === 2) { const f = m.frames.find(fr => idToIdx.get(fr.nI) === el[0] && idToIdx.get(fr.nJ) === el[1]); if (f) eDe.set(f.id, e); } });
+        for (const [pat, mp] of m.frameLoadsPat) {
+          const d = new Map<number, [number, number, number]>();
+          for (const [fid, w] of mp) { const e = eDe.get(fid); if (e !== undefined) d.set(e, w); }
+          out[pat] = d;
+        }
+        return out;
+      })(),
+      combos: m.combos,
+      fcExport: m.fc,
+      // muelle de AREA por cascara (indice de elemento): ks, nodal, solo compresion
+      areaSpringsExport: new Map(m.areaSprings.map(a => [shellIdxOf.get(a.id), { ks: a.ks, nodal: a.nodal, comp: !!a.comp }]).filter(([e]) => e !== undefined) as any),
       meshAtIntersections: m.meshCross,
       solidIncompatible: m.solidIncompatible,
       // El `selfweight` del .heks, para que el exportador e2k en modo "auto"
@@ -1894,6 +2007,7 @@ export const cliModeler: ExampleDef = {
     if (dOut?.reactions?.size) {
       for (const [, v] of dOut.reactions) sumRz += v[2] || 0;
     }
+    (window as any).__hekatanCliVista = m.vista ?? null;
     (window as any).__hekatanCliStats = {
       nodes: nodes.length, frames: m.frames.length, shells: m.shells.length,
       supports: supports.size, loads: loads.size, springs: springsList.length,

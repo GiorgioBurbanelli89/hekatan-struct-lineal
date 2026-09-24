@@ -20,7 +20,10 @@ const sys = { slab: true, walls: true };
 const casos = [[2,2,4],[2,2,6],[2,2,8],[3,3,6],[3,3,8],[4,4,8],[6,6,8]];
 
 const rows = [];
-console.log("caso       GDL   nModes    T1     SumUx%  SumUy%  ¿≥90%?   t(ms)   regla 3·pisos");
+// Regla de Jorge (18-sep-2026): la masa participativa se imprime con las SEIS
+// sumatorias (SUx SUy SUz SRx SRy SRz). El 90 % se juzga en X e Y, que son las
+// direcciones de analisis; las otras cuatro delatan si faltan modos.
+console.log("caso       GDL   nModes    T1     SumUx%  SumUy%  ¿≥90%?   t(ms)   regla 3·pisos  |  las SEIS sumatorias (%)");
 console.log("-".repeat(88));
 for (const [nbx, nby, nF] of casos) {
   const tag = `${nbx}x${nby}x${nF}`;
@@ -39,8 +42,10 @@ for (const [nbx, nby, nF] of casos) {
     const sy = mp.reduce((s, r) => s + (r[1] || 0), 0) * 100;
     const T1 = out.frequencies[0] > 0 ? 1 / out.frequencies[0] : 0;
     const ok = sx >= 90 && sy >= 90;
-    rows.push({ tag, dof, nModes, T1: +T1.toFixed(4), sumUx: +sx.toFixed(1), sumUy: +sy.toFixed(1), ok, ms: dt, regla });
-    console.log(`${tag.padEnd(9)} ${String(dof).padStart(6)} ${String(nModes).padStart(7)} ${T1.toFixed(4).padStart(8)} ${sx.toFixed(1).padStart(7)} ${sy.toFixed(1).padStart(7)}  ${(ok?"si":"NO").padStart(6)} ${String(dt).padStart(7)}   ${nModes === regla ? "<= 3·pisos" : ""}`);
+    const S = ["Ux","Uy","Uz","Rx","Ry","Rz"].map((k, d) => +(mp.reduce((s, r) => s + (r[d] || 0), 0) * 100).toFixed(2));
+    rows.push({ tag, dof, nModes, T1: +T1.toFixed(4), sumUx: +sx.toFixed(1), sumUy: +sy.toFixed(1),
+                sum: { Ux: S[0], Uy: S[1], Uz: S[2], Rx: S[3], Ry: S[4], Rz: S[5] }, ok, ms: dt, regla });
+    console.log(`${tag.padEnd(9)} ${String(dof).padStart(6)} ${String(nModes).padStart(7)} ${T1.toFixed(4).padStart(8)} ${sx.toFixed(1).padStart(7)} ${sy.toFixed(1).padStart(7)}  ${(ok?"si":"NO").padStart(6)} ${String(dt).padStart(7)}   ${nModes === regla ? "<= 3·pisos" : ""}  |  ${["Ux","Uy","Uz","Rx","Ry","Rz"].map((k, d) => `Σ${k} ${S[d].toFixed(1)}`).join("  ")}`);
     if (ok && nModes >= regla) break;
   }
   console.log("");

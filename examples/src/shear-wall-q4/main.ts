@@ -5,7 +5,7 @@
  * Empotrado en la base, cargado lateralmente en la fila superior.
  * Material: hormigón armado (E=25 GPa, t=20 cm).
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateShearWallQ4()` en getCad3d.ts (líneas 10466-10527).
  */
 import van, { State } from "vanjs-core";

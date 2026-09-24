@@ -41,6 +41,7 @@ F6 = u"1️⃣ Frames · \U0001f3af 6 GDL Espacial"
 FN = u"1️⃣ Frames · \U0001f3af n GDL Sistemas"
 # ── SHELLS ─────────────────────────────────────────────────────────────────
 S_PLACA = u"2️⃣ Shells · \U0001f9f1 Placas"
+S_VALID = u"2️⃣ Shells · ✅ Validación CSI"
 S_MEMBR = u"2️⃣ Shells · \U0001f578 Membranas"
 S_CASCA = u"2️⃣ Shells · \U0001f41a Cáscaras"
 S_LAYER = u"2️⃣ Shells · \U0001f95e Layered"
@@ -86,6 +87,7 @@ MAPA = {
   "edificio-aporticado": FN, "edificio-frame-nec": FN, "edificio-ladera": FN,
   "edificio-comparativa-fem": FN, "test-m-portico": FN, "edif-nec": FN,
   # ── SHELLS ──────────────────────────────────────────────────────────────
+  "validacion-losas-csi": S_VALID,
   "plate-thin": S_PLACA, "plate-thick": S_PLACA, "plate-thick-validacion": S_PLACA,
   "triangular-plate": S_PLACA, "benchmark-safe-ex01-plate": S_PLACA,
   "plate": S_PLACA, "plate-q4": S_PLACA, "2d-mesh": S_PLACA,

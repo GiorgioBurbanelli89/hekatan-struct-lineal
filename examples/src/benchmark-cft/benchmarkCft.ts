@@ -66,7 +66,15 @@ export const benchmarkCft: ExampleDef = {
   category: "4️⃣ Mixtos · 🔀 Losas con vigas",
   benchmark: true,
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "bendingXY", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   guide: [
     "🆕 BASES EMPOTRADAS (UX UY UZ RX RY RZ): match con modelo ETABS canónico.",
     "Cambiá 'Setup' entre cftDeckSlab (losa+vigas+CFT, q=5 kN/m²) y cftNoSlab (sin losa).",
@@ -295,7 +303,7 @@ export const benchmarkCft: ExampleDef = {
       poissons.set(e, p.nu_c);
       thicknesses.set(e, p.t_slab);
       shearModuli.set(e, G_c_slab);
-      densities.set(e, 24);
+      densities.set(e, 24 / 9.80665);
     }
     const G_s_beam = p.E_s / 2.6;
     const shearAreasY = new Map<number, number>();
@@ -313,7 +321,7 @@ export const benchmarkCft: ExampleDef = {
       Iy_map.set(e, p.Iy_b * 1e-5);
       Iz_map.set(e, p.Iz_b * 1e-5);
       J_map.set(e, J_b_ETABS);
-      densities.set(e, 78.5);
+      densities.set(e, 78.5 / 9.80665);
       if (isBernoulli) {
         shearAreasY.set(e, AS_BERNOULLI);
         shearAreasZ.set(e, AS_BERNOULLI);
@@ -331,7 +339,7 @@ export const benchmarkCft: ExampleDef = {
       Iy_map.set(e, I_cft);
       Iz_map.set(e, I_cft);
       J_map.set(e, J_cft);
-      densities.set(e, isSteel ? 78.5 : 24);
+      densities.set(e, (isSteel ? 78.5 : 24) / 9.80665);   // MASA t/m³ (el peso entre g)
       if (isBernoulli) {
         shearAreasY.set(e, AS_BERNOULLI);
         shearAreasZ.set(e, AS_BERNOULLI);

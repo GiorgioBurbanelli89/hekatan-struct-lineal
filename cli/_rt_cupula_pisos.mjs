@@ -1,0 +1,15 @@
+import { empaquetar, R } from "../tests/lib/bundle.mjs";
+import { resolverHeks } from "../tests/lib/heks.mjs";
+import { readFileSync } from "node:fs";
+const m = await empaquetar(`export * from "${R}/examples/src/shared/e2kParser";\nexport * from "${R}/examples/src/shared/s2kParser";\n`, "rtcp");
+const ol = console.log, ow = console.warn; const avisos = []; console.log = (...a) => avisos.push(a.join(" ")); console.warn = (...a) => avisos.push(a.join(" "));
+const H = await resolverHeks("cli/shots/cupula_niveles/cupula_pisos.heks");
+const E = m.parseE2k(readFileSync("cli/shots/cupula_niveles/cupula_pisos.e2k", "utf-8"));
+const S = (m.parseS2k ?? m.parseS2K)(readFileSync("cli/shots/cupula_niveles/cupula_pisos.s2k", "utf-8"));
+console.log = ol; console.warn = ow;
+const cuenta = (mm) => ({ nudos: mm.nodes.length, q4: mm.elements.filter(e => e.length === 4).length, t3: mm.elements.filter(e => e.length === 3).length, barras: mm.elements.filter(e => e.length === 2).length });
+const k = p => p.map(v => (Math.round(v * 1000) / 1000).toFixed(3)).join(",");
+const orig = new Set(H.nodes.map(k));
+const cmp = (mm) => { const v = new Set(mm.nodes.map(k)); let falta = 0, cerca = 0; for (const x of orig) if (!v.has(x)) { falta++; const [a,b,c] = x.split(",").map(Number); if (mm.nodes.some(n => Math.hypot(n[0]-a, n[1]-b, n[2]-c) < 2e-3)) cerca++; } return { nudos_que_no_vuelven_exactos: falta, de_esos_a_menos_de_2mm: cerca }; };
+console.log(JSON.stringify({ heks: cuenta(H), e2k: { ...cuenta(E), ...cmp(E) }, s2k: { ...cuenta(S), ...cmp(S) } }));
+console.log(JSON.stringify(avisos.filter(a => /no se montaron|no llegan|sin nudo|colaps|poligono/i.test(a)).slice(0, 6)));

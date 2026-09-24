@@ -1,5 +1,5 @@
 Bienvenidos a Hekatan Struct. Hoy comprobamos la bóveda de una capilla contra SAP2000 y ETABS.
-Este es el enlace que le mandas a tu jefe: abre el modelo con el análisis modal de ochenta modos ya corrido, y su tabla de periodos y masa participativa.
+Este enlace abre el modelo con el análisis modal de ochenta modos ya corrido, y su tabla de periodos y masa participativa.
 En Case eliges Modal y el número de modo: la bóveda sigue vibrando al pasar de un modo a otro.
 Case Dead muestra la deformada del peso propio, y en Combo, uno coma cuatro Dead: solo se activa lo que eliges.
 De vuelta al caso Modal, modo uno: periodo de cero coma dos cuatro ocho segundos, como en SAP2000.

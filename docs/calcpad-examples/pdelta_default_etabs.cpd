@@ -1,0 +1,100 @@
+"Efecto P-Delta en Columna Cantilever — Default ETABS
+"-----------------------------------------------------
+"Demostración del efecto P-Δ (segundo orden geométrico) y por qué
+"ETABS por default usa "None" pero recomienda "Non-iterative Based on Mass"
+"para diseño sísmico.
+
+'%% 1. ¿Qué es el efecto P-Delta?
+'
+"Cuando una columna soporta carga axial P y se deflecta lateralmente δ,
+"la gravedad P genera un MOMENTO ADICIONAL P·δ en la base — esto amplifica
+"la deflexión que a su vez amplifica el momento → efecto acoplado no-lineal.
+"
+"Análisis lineal (P-Δ = None) → ignora este acople (sólo válido si P << P_crit).
+"Análisis P-Δ → captura el segundo orden geométrico.
+
+'%% 2. Configuraciones P-Delta en ETABS
+
+"┌──────────────────────────────────┬──────────────────────────────────────┐
+"│ Opción                           │ Cuándo usar                          │
+"├──────────────────────────────────┼──────────────────────────────────────┤
+"│ None (default ETABS)             │ Análisis lineal puro, P << P_crit    │
+"│ Non-iterative Based on Mass      │ ASCE 7 sísmico, 1 sola iteración     │
+"│ Iterative Based on Loads         │ Análisis refinado 2do orden, iter.   │
+"└──────────────────────────────────┴──────────────────────────────────────┘
+
+'%% 3. Datos del modelo cantilever
+
+P_axial = 100            'Carga axial gravitatoria (kN)
+H_lat = 5                'Carga lateral pequeña en cabeza (kN)
+L = 3                    'Longitud de la columna (m)
+E_steel = 200000000      'Módulo de Young (kN/m²)
+I_sec = 0.0006344        'Inercia de la sección (m⁴) — I450 strong axis
+EI = E_steel*I_sec       'Rigidez flexural (kN·m²)
+
+'%% 4. Carga crítica de pandeo (Euler)
+'
+"Para una columna cantilever (un extremo empotrado, otro libre):
+"
+"  P_crit = π²·EI / (2·L)²  =  π²·EI / (4·L²)
+"
+"Si la carga axial P se acerca a P_crit, el efecto P-Δ explota.
+
+P_crit = π^2*EI/(4*L^2)
+
+'%% 5. Deflexión de primer orden (sin P-Δ)
+'
+"  δ_1 = H·L³ / (3·EI)     (Bernoulli, sin P)
+
+δ_1 = H_lat*L^3/(3*EI)*1000   'En mm
+
+'%% 6. Factor de amplificación P-Δ (closed form, Timoshenko §1.18)
+'
+"Para una carga axial P en presencia de lateral H, la deflexión exacta es:
+"
+"  δ_2 = δ_1 / (1 − P/P_crit)
+"
+"El factor B = 1/(1 − P/P_crit) es la AMPLIFICACIÓN P-Δ.
+
+ratio_P = P_axial/P_crit       'Ratio P/P_crit (adim)
+B_amp = 1/(1 - ratio_P)        'Factor de amplificación
+δ_2 = δ_1*B_amp                'Deflexión con P-Δ (mm)
+
+'%% 7. Comparación numérica
+
+"Resultados:
+"  • P_crit  =  carga crítica del cantilever
+"  • δ_1     =  deflexión lineal (P-Δ = None)
+"  • δ_2     =  deflexión con P-Δ (Iterative)
+"  • B_amp   =  factor de amplificación
+
+incremento_pct = (δ_2 - δ_1)/δ_1*100   'Incremento % por P-Δ
+
+'%% 8. Función B(P) — factor de amplificación vs P/P_crit
+'
+"Para visualizar cómo crece la amplificación al acercarse al pandeo:
+
+B(p) = 1/(1 - p)   'p = P/P_crit ∈ [0, 1)
+
+'% Plot del factor de amplificación
+$Plot{B(p) @ p = 0 : 0.9}
+
+'%% 9. Comparación entre las 3 opciones de ETABS
+'
+"Para nuestro caso (P=100 kN, P_crit≈XXX kN):
+"
+"┌─────────────────────────────────┬──────────┬───────────┐
+"│ Opción                          │ δ (mm)   │ Δ% vs lin │
+"├─────────────────────────────────┼──────────┼───────────┤
+"│ None (P-Δ = ignorado)           │ δ_1      │ 0%        │
+"│ Non-iter Based on Mass (aprox)  │ ≈δ_2     │ ≈B_amp-1  │
+"│ Iterative Based on Loads        │ δ_2 exac │ B_amp-1   │
+"└─────────────────────────────────┴──────────┴───────────┘
+"
+"Conclusión:
+"• Si P/P_crit < 0.05 (carga axial muy chica) → diferencia despreciable
+"• Si P/P_crit > 0.1  → recomendado activar Non-iterative en ETABS
+"• Si P/P_crit > 0.3  → obligatorio Iterative (no-lineal completo)
+"
+"ETABS default = "None" porque asume el ingeniero verificará el ratio P/P_crit
+"y activará la opción correcta según las cargas reales del proyecto.

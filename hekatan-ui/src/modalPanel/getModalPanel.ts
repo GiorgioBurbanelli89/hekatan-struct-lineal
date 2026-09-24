@@ -83,6 +83,7 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
   const titleEl = document.createElement("span");
   titleEl.textContent = "📈 Modal — —";
   Object.assign(titleEl.style, { flex: "1", fontWeight: "600", color: "#a5b4fc", fontSize: "12px" });
+  titleEl.setAttribute("data-hk-modal-tit", "1");
   header.appendChild(titleEl);
   const closeBtn = document.createElement("button");
   closeBtn.textContent = "×";
@@ -191,7 +192,7 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
     if (meta?.title) titleEl.textContent = `📈 ${meta.title}`;
     propsEl.innerHTML = (meta?.properties ?? []).map((p) => `<div>${escapeHtml(p)}</div>`).join("");
     // Render table
-    renderTable(tableContainer, out, asceEl);
+    renderTable(tableContainer, out, asceEl, setMode);
     // Slider range
     const n = out.frequencies?.length ?? 1;
     slider.max = String(n);
@@ -200,6 +201,9 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
 
   // Append to DOM
   document.body.appendChild(el);
+  // la piel de la aplicacion manda: se pinta ahora y se sigue escuchando
+  aplicarPiel(el);
+  window.addEventListener("hk-piel", () => aplicarPiel(el));
 
   const api: ModalPanelApi = {
     el,
@@ -243,7 +247,16 @@ function escapeHtml(s: string): string {
 }
 
 /** Render tabla de modos con masa participativa + verifica ASCE 7-22 §12.9.1 */
-function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElement) {
+function renderTable(
+  container: HTMLElement,
+  out: ModalOutputs,
+  asceEl: HTMLElement,
+  // ⚠️ Antes no habia este parametro: la fila llamaba a un `slider_setMode`
+  // con el CUERPO VACIO («Override desde getModalPanel via cierre» — nunca se
+  // hizo). Hacer clic en una fila de la tabla de modos no hacia NADA, y sin
+  // error: el modo seguia siendo el de antes.
+  alElegirModo: (i: number) => void,
+) {
   container.innerHTML = "";
   const n = out.frequencies?.length ?? 0;
   if (n === 0) {
@@ -267,9 +280,14 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Ux</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Uy</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Uz</th>
+      <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Rx</th>
+      <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Ry</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">Rz</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣUx</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣUy</th>
+      <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣUz</th>
+      <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣRx</th>
+      <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣRy</th>
       <th style="padding:6px 4px;text-align:right;color:#a5b4fc">ΣRz</th>
       <th style="padding:6px 4px;text-align:left;color:#a5b4fc">Tipo</th>
     </tr>`;
@@ -277,7 +295,7 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
 
   // Body
   const tbody = document.createElement("tbody");
-  let sumUx = 0, sumUy = 0, sumUz = 0, sumRz = 0;
+  let sumUx = 0, sumUy = 0, sumUz = 0, sumRx = 0, sumRy = 0, sumRz = 0;
   let firstUx = -1, firstUy = -1, firstRz = -1;
   let achieved90Ux = -1, achieved90Uy = -1, achieved90Rz = -1;
   for (let i = 0; i < n; i++) {
@@ -286,14 +304,16 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
     const T = 1 / f;
     const mpRaw = out.massParticipation?.[i];
     // mpRaw puede ser number[6] (formato legacy) o {ux, uy, uz, rx, ry, rz}
-    let ux = 0, uy = 0, uz = 0, rz = 0;
+    let ux = 0, uy = 0, uz = 0, rx = 0, ry = 0, rz = 0;
     if (Array.isArray(mpRaw)) {
-      ux = mpRaw[0] ?? 0; uy = mpRaw[1] ?? 0; uz = mpRaw[2] ?? 0; rz = mpRaw[5] ?? 0;
+      ux = mpRaw[0] ?? 0; uy = mpRaw[1] ?? 0; uz = mpRaw[2] ?? 0;
+      rx = mpRaw[3] ?? 0; ry = mpRaw[4] ?? 0; rz = mpRaw[5] ?? 0;
     } else if (mpRaw && typeof mpRaw === "object") {
       const m = mpRaw as { ux?: number; uy?: number; uz?: number; rx?: number; ry?: number; rz?: number };
-      ux = m.ux ?? 0; uy = m.uy ?? 0; uz = m.uz ?? 0; rz = m.rz ?? 0;
+      ux = m.ux ?? 0; uy = m.uy ?? 0; uz = m.uz ?? 0;
+      rx = m.rx ?? 0; ry = m.ry ?? 0; rz = m.rz ?? 0;
     }
-    sumUx += ux; sumUy += uy; sumUz += uz; sumRz += rz;
+    sumUx += ux; sumUy += uy; sumUz += uz; sumRx += rx; sumRy += ry; sumRz += rz;
     if (firstUx < 0 && ux > 0.5) firstUx = i;
     if (firstUy < 0 && uy > 0.5) firstUy = i;
     if (firstRz < 0 && rz > 0.5) firstRz = i;
@@ -309,7 +329,7 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
     const tr = document.createElement("tr");
     tr.dataset.mode = String(i);
     Object.assign(tr.style, { borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" });
-    tr.onclick = () => slider_setMode(container, i);
+    tr.onclick = () => alElegirModo(i);
     tr.innerHTML = `
       <td style="padding:3px 4px;text-align:right;color:#fde68a;font-weight:600">${i + 1}</td>
       <td style="padding:3px 4px;text-align:right">${omega.toFixed(2)}</td>
@@ -318,9 +338,14 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
       <td style="padding:3px 4px;text-align:right;color:${cmpColor(ux)}">${pct(ux)}</td>
       <td style="padding:3px 4px;text-align:right;color:${cmpColor(uy)}">${pct(uy)}</td>
       <td style="padding:3px 4px;text-align:right;color:${cmpColor(uz)}">${pct(uz)}</td>
+      <td style="padding:3px 4px;text-align:right;color:${cmpColor(rx)}">${pct(rx)}</td>
+      <td style="padding:3px 4px;text-align:right;color:${cmpColor(ry)}">${pct(ry)}</td>
       <td style="padding:3px 4px;text-align:right;color:${cmpColor(rz)}">${pct(rz)}</td>
       <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumUx)}</td>
       <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumUy)}</td>
+      <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumUz)}</td>
+      <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumRx)}</td>
+      <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumRy)}</td>
       <td style="padding:3px 4px;text-align:right;color:#94a3b8">${pct(sumRz)}</td>
       <td style="padding:3px 4px;text-align:left;color:#a5b4fc">${tipo}</td>
     `;
@@ -330,25 +355,82 @@ function renderTable(container: HTMLElement, out: ModalOutputs, asceEl: HTMLElem
   container.appendChild(tbl);
 
   // ASCE banner
+  // Regla de Jorge (18-sep-2026): la participacion de masa se muestra SIEMPRE con las
+  // SEIS sumatorias. El 90 % de ASCE 7-22 §12.9.1 / NEC-15 se exige por DIRECCION de
+  // analisis (X e Y); las otras cuatro se informan porque delatan si faltan modos.
+  const seis = `ΣUx=${pct(sumUx)} ΣUy=${pct(sumUy)} ΣUz=${pct(sumUz)} ΣRx=${pct(sumRx)} ΣRy=${pct(sumRy)} ΣRz=${pct(sumRz)}`;
   const ascePassed = achieved90Ux >= 0 && achieved90Uy >= 0;
   if (ascePassed) {
-    asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ✓ 90% alcanzado en X (modo ${achieved90Ux + 1}) e Y (modo ${achieved90Uy + 1}) de ${n}`;
-    asceEl.style.color = "#86efac";
+    asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ✓ 90% alcanzado en X (modo ${achieved90Ux + 1}) e Y (modo ${achieved90Uy + 1}) de ${n}<br><span style="color:#94a3b8">${seis}</span>`;
+    asceEl.style.color = PAL.ok;
   } else {
-    asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ⚠ Solo ΣUx=${pct(sumUx)} ΣUy=${pct(sumUy)} con ${n} modos. Considera aumentar.`;
-    asceEl.style.color = "#fcd34d";
+    asceEl.innerHTML = `<b>ASCE 7-22 §12.9.1:</b> ⚠ con ${n} modos NO se llega al 90 % en las dos direcciones. Considera aumentar.<br><span style="color:#94a3b8">${seis}</span>`;
+    asceEl.style.color = PAL.aviso;
   }
+}
+
+/**
+ * La tabla modal en MODO CLARO.
+ *
+ * Jorge, 21-sep-2026: «en modo claro puede cambiar la forma de la tabla». El
+ * panel estaba pintado a mano en oscuro (fondo casi negro, letra verde y
+ * ámbar) y sobre el fondo blanco de la aplicación quedaba un recuadro de
+ * terminal en medio de la hoja.
+ *
+ * La piel de la aplicación se guarda en `data-hk-piel` del <html> y avisa de
+ * los cambios con el evento `hk-piel` (ver examples/src/shared/hekatanCadSkin).
+ * Aquí se leen los dos y se cambia la paleta entera, sin tocar los datos.
+ */
+type Paleta = {
+  fondo: string; borde: string; letra: string; titulo: string; suave: string;
+  cabecera: string; fila: string; activa: string; sombra: string;
+  ok: string; medio: string; nada: string; aviso: string;
+};
+
+const OSCURA: Paleta = {
+  fondo: "rgba(20,24,30,0.94)", borde: "rgba(255,255,255,0.15)", letra: "#e2e8f0",
+  titulo: "#a5b4fc", suave: "#94a3b8", cabecera: "rgba(165,180,252,0.1)",
+  fila: "rgba(255,255,255,0.03)", activa: "rgba(165,180,252,0.18)",
+  sombra: "0 6px 24px rgba(0,0,0,0.5)",
+  ok: "#86efac", medio: "#fde68a", nada: "#475569", aviso: "#fcd34d",
+};
+const CLARA: Paleta = {
+  fondo: "rgba(252,252,253,0.97)", borde: "rgba(15,23,42,0.18)", letra: "#1e293b",
+  titulo: "#3730a3", suave: "#475569", cabecera: "#e8eaf6",
+  fila: "rgba(15,23,42,0.03)", activa: "#c7d2fe",
+  sombra: "0 6px 24px rgba(15,23,42,0.18)",
+  // en blanco el verde claro y el ámbar no se leen: se bajan de tono
+  ok: "#15803d", medio: "#a16207", nada: "#94a3b8", aviso: "#b45309",
+};
+
+let PAL: Paleta = OSCURA;
+
+function esClaro(): boolean {
+  try { return document.documentElement.getAttribute("data-hk-piel") === "claro"; }
+  catch { return false; }
+}
+
+/** Repinta un panel ya montado con la paleta que toque. */
+function aplicarPiel(el: HTMLElement) {
+  PAL = esClaro() ? CLARA : OSCURA;
+  el.style.background = PAL.fondo;
+  el.style.border = "1px solid " + PAL.borde;
+  el.style.color = PAL.letra;
+  el.style.boxShadow = PAL.sombra;
+  el.querySelectorAll<HTMLElement>("[data-hk-modal-tit]").forEach((x) => { x.style.color = PAL.titulo; });
+  el.querySelectorAll<HTMLElement>("[data-hk-modal-suave]").forEach((x) => { x.style.color = PAL.suave; });
+  el.querySelectorAll<HTMLElement>("th").forEach((x) => {
+    x.style.color = PAL.titulo; x.style.background = PAL.cabecera;
+  });
 }
 
 function pct(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 function cmpColor(v: number): string {
-  if (v > 0.5) return "#86efac";    // verde — dominante
-  if (v > 0.1) return "#fde68a";    // amarillo — significativo
-  return "#475569";                  // gris — irrelevante
+  if (v > 0.5) return PAL.ok;       // dominante
+  if (v > 0.1) return PAL.medio;    // significativo
+  return PAL.nada;                   // irrelevante
 }
 
-function slider_setMode(_c: HTMLElement, _i: number) {
-  // Override desde getModalPanel via cierre
-}
+

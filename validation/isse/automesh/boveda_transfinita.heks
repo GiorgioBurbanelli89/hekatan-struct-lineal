@@ -1,0 +1,19 @@
+# Boveda cilindrica de luz 20 m (y), flecha 2.5 m y ancho 6 m (x), como UN solo pano con sus dos
+# bordes largos declarados ARCO. El automallado transfinito (Coons) la parte en celdas <= 2.5 m
+# poniendo los nudos SOBRE el arco. Circulo por (0,7)-(10,9.5)-(20,7): R = 21.25 m.
+# Apoyada en las 4 esquinas, como `losa_sola.heks`, y con carga de area: sin vigas, nada que
+# interfiera; lo unico que se juzga es la malla y el elemento.
+node 1 0 0 7
+node 2 0 20 7
+node 3 6 20 7
+node 4 6 0 7
+shell 1 1 2 3 4 0.20 25e6 0.2
+arco 1 2 0 10 9.5
+arco 4 3 6 10 9.5
+areaload 1 -10
+support 1 fixed
+support 2 fixed
+support 3 fixed
+support 4 fixed
+automesh 2.5
+solve

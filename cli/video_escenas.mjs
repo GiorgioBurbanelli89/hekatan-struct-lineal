@@ -706,6 +706,229 @@ const ESCENAS = {
     }
     console.log("   final:", JSON.stringify(await modelo()), await cotasVideo());
   },
+
+  // ── VÍDEO 3 · Casos, combinaciones y análisis (el modelo ya dibujado y cargado) ──
+  // 3A. el PESO PROPIO, aparte: Load Patterns → Dead lleva Self Weight Mult. = 1 (el peso de la
+  //     estructura lo pone el programa); Live lleva 0. Se ve en las reacciones: con el multiplicador
+  //     a 0 la flecha y las reacciones bajan; se vuelve a 1.
+  async peso_propio() {
+    abre("peso_propio");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(3);
+    // las cargas dibujadas: Analysis Inputs › Loads, se apagan y se encienden
+    await verCarpeta("Analysis Inputs");
+    await cursorAEn("Analysis Inputs", "Loads", 2);
+    await ajustaEn("Analysis Inputs", "Loads", false, 3, 900);
+    await ajustaEn("Analysis Inputs", "Loads", true, 3, 900);
+    // el patrón Dead y su multiplicador de peso propio
+    await verCarpeta("Load Patterns"); await foto(2);
+    await verCarpeta("Dead (Dead)");
+    await cursorAEn("Dead (Dead)", "Type", 2);
+    await cursorAEn("Dead (Dead)", "Self Weight Mult.", 4);
+    await verCarpeta("Live (Live)");
+    await cursorAEn("Live (Live)", "Self Weight Mult.", 3);
+    // reacciones en la base con Dead
+    await verCarpeta("Analyze");
+    console.log("   Resultado:", await pag.evaluate(() => { const l = Array.from(document.querySelectorAll(".tp-lblv_l")).find((x) => x.textContent.trim() === "Resultado"); const sel = l?.closest(".tp-lblv")?.querySelector("select"); return sel ? Array.from(sel.options).map((o) => o.textContent).join(" | ") : "(no es select)"; }));
+    await ajustaEn("Analyze", "Case", "Dead", 2);
+    await ajustaEn("Analyze", "Node results", "R (reactions)", 4, 2500);
+    // y para exportar a ETABS, el peso propio va como SELFWEIGHT=1 (o manual, por nudos)
+    await verCarpeta("ETABS");
+    await cursorAEn("ETABS", "Peso propio", 4);
+    // ⚠️ medido el 18-sep-2026: poner «Self Weight Mult.» a 0 y «Calcular (forzar re-build)» NO
+    // cambia la flecha de la plantilla (2.277 mm antes y después): el multiplicador del patrón
+    // no llega al solver de la plantilla. Por eso el vídeo no promete que baje.
+  },
+  // 3B. los CASOS: cada uno es un patrón (o varios) y un tipo de análisis; el Modal no lleva
+  //     cargas; y el tipo puede ser estático, modal, espectro de respuesta o historia en el tiempo.
+  async casos() {
+    abre("casos");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(2);
+    await verCarpeta("Load Cases"); await foto(2);
+    for (const c of ["Dead (Linear", "Live (Linear"]) {
+      await verCarpeta(c);
+      await cursorAEn(c, "Type", 2);
+      await cursorAEn(c, "Patterns", 3);
+    }
+    await verCarpeta("Modal (Modal");
+    await cursorAEn("Modal (Modal", "Type", 2);
+    await cursorAEn("Modal (Modal", "Patterns", 2);
+    await cursorAEn("Modal (Modal", "Max Modes", 3);
+    // un caso nuevo, y su tipo cambiado a espectro de respuesta (el dinámico)
+    const antes = await pag.evaluate(() => Array.from(document.querySelectorAll(".tp-fldv_t")).map((t) => t.textContent.trim()));
+    await botonEn("Load Cases", "Add New Case", 1500, 3);
+    const nuevo = await pag.evaluate((antes) => {
+      const ahora = Array.from(document.querySelectorAll(".tp-fldv_t")).map((t) => t.textContent.trim());
+      return ahora.find((t) => !antes.includes(t)) || null;
+    }, antes);
+    console.log("   caso nuevo:", nuevo);
+    if (nuevo) {
+      const clave = (nuevo.match(/Case\d+/) || [nuevo.slice(0, 12)])[0];
+      await verCarpeta(clave);
+      await cursorAEn(clave, "Type", 2);
+      await ajustaEn(clave, "Type", "Response Spectrum", 4, 1500);
+      await ajustaEn(clave, "Type", "Linear Static", 2, 1200);
+    }
+  },
+  // 3C. las COMBINACIONES: la fórmula de cada una, generar las de la norma, y en Analyze el
+  //     diagrama de momentos cambia con el caso o la combinación elegida (el análisis estático).
+  async combos() {
+    abre("combos");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(2);
+    await verCarpeta("Load Combinations"); await foto(2);
+    for (const c of ["Servicio D+L", "1.4D:", "1.2D+1.6L:", "1.4D+1.7L:"]) {
+      await verCarpeta(c);
+      await cursorAEn(c, "Formula", 3);
+    }
+    const antes = await pag.evaluate(() => document.querySelectorAll(".tp-fldv").length);
+    await botonEn("Load Combinations", "Generar NEC", 2500, 4);
+    console.log("   carpetas antes/después de generar:", antes, await pag.evaluate(() => document.querySelectorAll(".tp-fldv").length));
+    // y el resultado: momentos por caso y por combinación
+    await verCarpeta("Analyze");
+    await ajustaEn("Analyze", "Frame results", "Moment 3-3 (diagram)", 3, 2500);
+    for (const v of ["Dead", "Live"]) await ajustaEn("Analyze", "Case", v, 4, 2500);
+    // las combinaciones: Resultado = Combo, y el select «Combo» (hoy no están en «Case»)
+    await ajustaEn("Analyze", "Resultado", "Combo", 3, 1500);
+    for (const v of ["1.2D+1.6L", "1.4D+1.7L", "Servicio"]) await ajustaEn("Analyze", "Combo", v, 4, 2500);
+  },
+  // 3D. el ESTÁTICO: deformaciones y reacciones en nudos, axiles en barras, momentos en losas, y
+  //     las tablas de reacciones en la base y fuerzas por piso.
+  async estatico() {
+    abre("estatico");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(2);
+    await verCarpeta("Analyze");
+    await ajustaEn("Analyze", "Case", "1.2D+1.6L", 2, 2000);
+    await ajustaEn("Analyze", "Node results", "U (deformations)", 4, 2500);
+    await ajustaEn("Analyze", "Node results", "R (reactions)", 4, 2500);
+    await ajustaEn("Analyze", "Node results", "none", 1, 1200);
+    await ajustaEn("Analyze", "Frame results", "Axial Force (diagram)", 4, 2500);
+    await ajustaEn("Analyze", "Frame results", "none", 1, 1200);
+    await ajustaEn("Analyze", "Shell results", "M11", 4, 2500);
+    await ajustaEn("Analyze", "Shell results", "Uz", 2, 1500);
+    // las tablas piden el modal corrido
+    await verCarpeta("Modal + Anim");
+    await botonEn("Modal + Anim", "Correr modal", 7000, 2);
+    await ajustaEn("Analyze", "🎞 Animar", false, 1, 800);
+    await verCarpeta("Tablas");
+    await botonEn("Tablas", "Base Reactions", 2500, 5);
+    await tecla("Escape", 800); await foto(1);
+    await botonEn("Tablas", "Story Forces", 2500, 5);
+    await tecla("Escape", 800); await foto(1);
+  },
+  // 3E. el DINÁMICO: el modal corre y anima, la tabla de modos y el espectro, los períodos y la
+  //     masa, las derivas, y el botón Modal+ (ASCE 7-22 §12.9.1: espectro de respuesta).
+  async dinamico() {
+    abre("dinamico");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(2);
+    // ⚠️ «Tabla de modos» y «Mostrar espectro» marcadas ANTES de correr dejan el visor en NEGRO
+    // (medido 18-sep-2026: overlay vacío). Se corre sin ellas, como en el vídeo 1.
+    await verCarpeta("Modal + Anim");
+    await botonEn("Modal + Anim", "Correr modal", 7000, 3);
+    for (let i = 0; i < 14; i++) { await espera(160); await foto(); }
+    await cursorAEn("Analyze", "Case", 2);
+    await cursorAEn("Analyze", "Modo", 3);
+    // las opciones dicen «2  (T = …)» con DOS espacios
+    for (const k of ["2  (", "3  ("]) { await ajustaEn("Analyze", "Modo", k, 2, 1500); for (let i = 0; i < 10; i++) { await espera(160); await foto(); } }
+    await ajustaEn("Analyze", "🎞 Animar", false, 2, 800);
+    // las tablas y Modal+ abren VENTANA aparte (nada aparece en el visor): se caza window.open
+    await pag.evaluate(() => { window.__abiertos = []; const o = window.open; window.open = (u, ...r) => { window.__abiertos.push(String(u).slice(0, 200)); return o ? null : null; }; });
+    const cazaVentana = async (nombre) => {
+      const pags = await nav.pages();
+      const urls = await pag.evaluate(() => window.__abiertos.splice(0));
+      console.log(`   ${nombre}: ventanas nuevas ${pags.length - 1}, window.open ->`, JSON.stringify(urls));
+      if (pags.length > 1) {
+        const p2 = pags.find((q) => q !== pag);     // ¡no la principal! (cerrarla mata la escena)
+        await p2.setViewport({ width: 1280, height: 720, deviceScaleFactor: 2 }); await espera(3000);
+        for (let i = 0; i < 6; i++) { await p2.screenshot({ path: join(carpeta, `f${String(nf++).padStart(3, "0")}.png`) }); await espera(300); }
+        await p2.close();
+      }
+    };
+    await verCarpeta("Tablas");
+    await botonEn("Tablas", "Modal Periods", 4000, 3); await cazaVentana("Modal Periods");
+    await tecla("Escape", 600);
+    await botonEn("Tablas", "Story Drifts", 3000, 3); await cazaVentana("Story Drifts");
+    await tecla("Escape", 600);
+    await verCarpeta("Herramientas FEM");
+    await botonEn("Herramientas FEM", "Modal+", 6000, 3); await cazaVentana("Modal+");
+    await tecla("Escape", 800); await foto(2);
+  },
+
+  // ── VÍDEO 0 · LA INTERFAZ: la ventana, el ribbon, y TODO Tweakpane carpeta por carpeta ──
+  async ui_ventana() {
+    abre("ui_ventana");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(4);
+    // las cinco zonas: Settings (izq), panel del modelo (der), visor, ventana de comandos, barra de estado
+    for (const [sel, txt] of [[".tp-rotv_t", "Settings"], [".tp-rotv_t", "Plantillas"], ["#viewer canvas", ""], ["#hk3-cmd-input", ""]]) {
+      const c = await centroDe(sel, txt); if (c) { await mover(c.x, c.y, 5); await foto(4); }
+    }
+    // el ribbon: se abre con «Dibujar» y el cursor pasa por sus botones
+    await clic("button", "Dibujar", 1200, 3);
+    const cajas = await pag.evaluate(() => [...document.querySelectorAll("#hk-ribbon button")]
+      .filter((b) => b.getBoundingClientRect().width > 0)
+      .map((b) => { const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, t: b.textContent.trim().slice(0, 20) }; }));
+    console.log("   ribbon:", cajas.length, "botones:", cajas.map((c) => c.t).join(" | "));
+    for (const c of cajas) { await mover(c.x, c.y, 2); await foto(1); }
+    await foto(3);
+    await tecla("Escape", 500); await foto(2);
+  },
+  async ui_settings() {
+    abre("ui_settings");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(3);
+    for (const [t, max] of [["Grid", 9], ["Ver", 12], ["Analysis Inputs", 4], ["Analyze", 12], ["Tablas", 5], ["Modal + Anim", 4], ["Cortes", 9]]) {
+      await recorreCarpeta(t, max, 2);
+      if (t !== "Analyze") await cierraCarpeta(t);
+    }
+  },
+  async ui_modelo() {
+    abre("ui_modelo");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(3);
+    for (const et of ["Categoría", "Ejemplo"]) { const c = await centroDe(".tp-lblv_l", et); if (c) { await mover(c.x + 120, c.y, 4); await foto(3); } }
+    for (const [t, max] of [["Herramientas FEM", 7], ["Vista", 4], ["Imagen y GIF", 4], ["Vista doble", 3], ["Ejes (frames", 3],
+                            ["Herramientas CAD", 0], ["Dibujar", 8], ["Áreas (shells)", 4], ["En 3D", 4], ["Modificar", 3],
+                            ["Precisión", 4], ["Modos de dibujo", 4], ["Object Snap", 7], ["Plano de trabajo", 8], ["Acciones", 3],
+                            ["Plantas de pisos", 3], ["Ejes y Niveles", 6], ["Rejilla (ejes", 6], ["Acciones de selección", 8], ["AI Assistant", 3]]) {
+      await recorreCarpeta(t, max, 2);
+      if (!["Herramientas CAD", "Vista"].includes(t)) await cierraCarpeta(t);
+    }
+  },
+  async ui_cargas() {
+    abre("ui_cargas");
+    await cargar("?t=plantillas");
+    await autofit(); await foto(3);
+    for (const [t, max] of [["CLI Comandos", 8], ["Cimentación (diseño", 6], ["Load Patterns", 2], ["Dead (Dead)", 4], ["Load Cases", 2], ["Modal (Modal", 5],
+                            ["Load Combinations", 3], ["1.2D+1.6L:", 2], ["ETABS", 4], ["SAP", 3], ["Unidades", 3], ["Sistema (preset)", 1], ["Display Units", 4],
+                            ["Parámetros", 1], ["Rejilla (planta)", 6], ["Pisos", 6], ["Secciones", 8], ["Cargas", 1], ["Calculados", 7]]) {
+      await recorreCarpeta(t, max, 2);
+      if (!["Load Patterns", "Load Cases", "Load Combinations", "Parámetros"].includes(t)) await cierraCarpeta(t);
+    }
+  },
+  // sonda3: qué carpetas y etiquetas hay HOY en Analyze, Modal y Load Cases (el inventario es del 7-sep)
+  async sonda3() {
+    abre("sonda3");
+    await cargar("?t=plantillas");
+    await botonEn("Load Cases", "Add New Case", 1200, 0);
+    const info = await pag.evaluate(() => {
+      const out = {};
+      for (const f of document.querySelectorAll(".tp-fldv")) {
+        const t = (f.querySelector(".tp-fldv_t")?.textContent || "").trim();
+        if (!/Analyze|Modal|Case|Tablas|Herramientas FEM/.test(t)) continue;
+        out[t] = {
+          etiquetas: Array.from(f.querySelectorAll(".tp-lblv_l")).map((l) => l.textContent.trim()),
+          botones: Array.from(f.querySelectorAll("button")).map((b) => b.textContent.trim()).filter((x) => x),
+          anidadas: Array.from(f.querySelectorAll(".tp-fldv .tp-fldv_t")).map((x) => x.textContent.trim()),
+        };
+      }
+      return out;
+    });
+    console.log(JSON.stringify(info, null, 1));
+  },
   async cercha() {
     abre("cercha");
     await pag.setViewport({ width: 1280, height: 760, deviceScaleFactor: 1 });
@@ -785,6 +1008,265 @@ const ESCENAS = {
     await foto(4);
   },
 };
+
+// ── mandos DENTRO de una carpeta concreta (vídeo 3: «Load Cases» y «Load
+// Patterns» repiten etiquetas como «Name» o «Type»; hay que decir en qué carpeta).
+// Y el panel derecho es más alto que la ventana: antes de mover el cursor a
+// algo se hace scrollIntoView, si no el clic cae fuera de la pantalla.
+async function verCarpeta(titulo) {
+  const ok = await pag.evaluate((t) => {
+    const f = Array.from(document.querySelectorAll(".tp-fldv"))
+      .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+    if (!f) return false;
+    f.scrollIntoView({ block: "center", behavior: "instant" });
+    return true;
+  }, titulo);
+  await espera(400);
+  if (!ok) { console.log(`   [!] no hay carpeta «${titulo}»`); return false; }
+  return carpetaPane(titulo);
+}
+const filaEnJS = `(carpeta, etiqueta) => {
+  const f = Array.from(document.querySelectorAll(".tp-fldv"))
+    .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(carpeta));
+  const busca = (raiz) => Array.from(raiz.querySelectorAll(".tp-lblv"))
+    .find((r) => (r.querySelector(".tp-lblv_l")?.textContent || "").trim().startsWith(etiqueta)) || null;
+  // si la carpeta no lo tiene (o el mando se reconstruyó fuera de ella), se busca en todo el
+  // documento: mejor un mando de otra carpeta con la misma etiqueta que ninguno
+  return (f && busca(f)) || busca(document);
+}`;
+async function cursorAEn(carpeta, etiqueta, fotos = 3) {
+  const c = await pag.evaluate((carpeta, etiqueta, js) => {
+    const fila = eval(js)(carpeta, etiqueta); if (!fila) return null;
+    fila.scrollIntoView({ block: "center", behavior: "instant" });
+    const r = (fila.querySelector(".tp-lblv_v") || fila).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, carpeta, etiqueta, filaEnJS);
+  if (!c) { console.log(`   [!] «${carpeta}» › «${etiqueta}»: sin mando`); return false; }
+  await mover(c.x, c.y, 4); await foto(fotos);
+  return true;
+}
+async function leeEn(carpeta, etiqueta) {
+  return pag.evaluate((carpeta, etiqueta, js) => {
+    const fila = eval(js)(carpeta, etiqueta); if (!fila) return null;
+    const sel = fila.querySelector("select"); if (sel) return sel.options[sel.selectedIndex]?.textContent;
+    const i = fila.querySelector("input"); return i ? (i.type === "checkbox" ? i.checked : i.value) : null;
+  }, carpeta, etiqueta, filaEnJS);
+}
+async function ajustaEn(carpeta, etiqueta, valor, fotosTras = 3, esperaMs = 1500) {
+  if (!(await cursorAEn(carpeta, etiqueta, 1))) return false;
+  await pag.evaluate((carpeta, etiqueta, valor, js) => {
+    const fila = eval(js)(carpeta, etiqueta);
+    const sel = fila.querySelector("select");
+    if (sel) {
+      const op = Array.from(sel.options).find((o) => o.textContent.includes(String(valor)) || o.value == valor);
+      if (op) { sel.value = op.value; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+      return;
+    }
+    const chk = fila.querySelector("input[type=checkbox]");
+    if (chk) { if (chk.checked !== !!valor) chk.click(); return; }
+    const i = fila.querySelector("input[type=text], input[type=number]");
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+    set.call(i, String(valor));
+    i.dispatchEvent(new Event("input", { bubbles: true }));
+    i.dispatchEvent(new Event("change", { bubbles: true }));
+    i.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  }, carpeta, etiqueta, valor, filaEnJS);
+  await espera(esperaMs);
+  console.log(`   ${carpeta} › ${etiqueta} = ${await leeEn(carpeta, etiqueta)}`);
+  await foto(fotosTras);
+  return true;
+}
+async function botonEn(carpeta, texto, esperaMs = 1800, fotosTras = 3) {
+  const c = await pag.evaluate((carpeta, texto) => {
+    const f = Array.from(document.querySelectorAll(".tp-fldv"))
+      .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(carpeta));
+    if (!f) return null;
+    const b = Array.from(f.querySelectorAll("button")).find((q) => (q.textContent || "").includes(texto) && q.getBoundingClientRect().width > 0);
+    if (!b) return null;
+    b.scrollIntoView({ block: "center", behavior: "instant" });
+    const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, carpeta, texto);
+  if (!c) { console.log(`   [!] «${carpeta}» › botón «${texto}»: no está`); return false; }
+  await mover(c.x, c.y, 4); await foto();
+  await pag.mouse.click(c.x, c.y); await espera(esperaMs); await foto(fotosTras);
+  return true;
+}
+/** la flecha máxima que la plantilla escribe en «Calculados»: si cambia, recalculó */
+const flechaMax = () => leeEn("Calculados", "flecha m");
+
+
+// ── RECORRIDO de una carpeta de Tweakpane: se abre y el cursor pasa por cada mando (vídeo 0,
+// «la interfaz»). `max` limita los mandos que se enseñan (Ejes tiene 32 botones iguales).
+async function recorreCarpeta(titulo, max = 10, fotosPorMando = 2) {
+  if (!(await verCarpeta(titulo))) return 0;
+  await foto(2);
+  const puntos = await pag.evaluate((t, max) => {
+    const f = Array.from(document.querySelectorAll(".tp-fldv"))
+      .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+    if (!f) return [];
+    // mandos DIRECTOS de la carpeta (los de las subcarpetas se recorren aparte)
+    const filas = Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv"))
+      .filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")))
+      .filter((m) => m.getBoundingClientRect().width > 0);
+    return filas.slice(0, max).map((m) => {
+      m.scrollIntoView({ block: "center", behavior: "instant" });
+      const r = (m.querySelector(".tp-lblv_v, .tp-btnv_b") || m).getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height / 2];
+    });
+  }, titulo, max);
+  // scrollIntoView de cada fila cambió la posición: se vuelve a leer cada una al llegar
+  let n = 0;
+  for (let i = 0; i < puntos.length; i++) {
+    const c = await pag.evaluate((t, i) => {
+      const f = Array.from(document.querySelectorAll(".tp-fldv"))
+        .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+      const filas = Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv"))
+        .filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")))
+        .filter((m) => m.getBoundingClientRect().width > 0);
+      const m = filas[i]; if (!m) return null;
+      m.scrollIntoView({ block: "center", behavior: "instant" });
+      const r = (m.querySelector(".tp-lblv_v, .tp-btnv_b") || m).getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, titulo, i);
+    if (!c) continue;
+    await mover(c.x, c.y, 2); await foto(fotosPorMando); n++;
+  }
+  console.log(`   ${titulo}: ${n} mandos`);
+  return n;
+}
+/** cierra una carpeta (para que la siguiente quede a la vista) */
+async function cierraCarpeta(titulo) {
+  await pag.evaluate((t) => {
+    const f = Array.from(document.querySelectorAll(".tp-fldv"))
+      .find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+    if (f && f.classList.contains("tp-fldv-expanded")) f.querySelector(".tp-fldv_b")?.click();
+  }, titulo);
+  await espera(300);
+}
+
+
+// ══ VÍDEO 0 v2 (19-sep-2026): Jorge — «están mal, no indican nada, solo una voz que dice derecha
+// izquierda, no subraya nada». Ahora lo que se nombra se ENMARCA: marco dorado + rótulo y el resto
+// de la pantalla oscurecido (foco); y dentro de una carpeta un segundo marco (cian) recorre los
+// mandos uno a uno con SU nombre. Una carpeta de fotogramas por PASO, para que en el guion cada
+// paso sea una escena con su voz: marco y voz van juntos por construcción.
+// La lista de pasos vive en hekatan-school/ui_pasos.json (la lee también gen_ui_hs.py).
+async function instalaMarcos() {
+  await pag.evaluate(() => {
+    if (document.getElementById("vd-hl")) return;
+    const mk = (id, css) => { const d = document.createElement("div"); d.id = id; d.style.cssText = css; document.body.appendChild(d); return d; };
+    mk("vd-hl", "position:fixed;z-index:99990;pointer-events:none;display:none;border:3px solid #f5c542;border-radius:7px;" +
+      "box-shadow:0 0 0 9999px rgba(0,0,0,.58),0 0 22px 2px #f5c542;");
+    mk("vd-hl-t", "position:fixed;z-index:99992;pointer-events:none;display:none;background:#f5c542;color:#141414;" +
+      "font:800 21px/1.25 'Segoe UI',system-ui,sans-serif;padding:7px 14px;border-radius:7px;max-width:640px;box-shadow:0 3px 14px #000;");
+    mk("vd-hl2", "position:fixed;z-index:99993;pointer-events:none;display:none;border:2px solid #38e1ff;border-radius:5px;" +
+      "box-shadow:0 0 12px #38e1ff;background:rgba(56,225,255,.10);");
+    mk("vd-hl2-t", "position:fixed;z-index:99994;pointer-events:none;display:none;background:#0b2a33;color:#aef3ff;border:1px solid #38e1ff;" +
+      "font:700 17px/1.2 'Segoe UI',system-ui,sans-serif;padding:4px 10px;border-radius:5px;white-space:nowrap;box-shadow:0 2px 10px #000;");
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+    window.__vdMarco = (r, texto, arriba) => {
+      const d = document.getElementById("vd-hl"), t = document.getElementById("vd-hl-t");
+      const x = Math.max(2, r.x), y = Math.max(2, r.y), x2 = Math.min(W() - 2, r.x + r.w), y2 = Math.min(H() - 2, r.y + r.h);
+      Object.assign(d.style, { display: "block", left: x + "px", top: y + "px", width: (x2 - x) + "px", height: (y2 - y) + "px" });
+      t.textContent = texto; t.style.display = "block";
+      const tw = t.offsetWidth, th = t.offsetHeight;
+      // el rótulo: fuera del marco si cabe (arriba o abajo), si no dentro, arriba
+      let ty = (arriba || y2 + th + 10 > H()) ? y - th - 8 : y2 + 8;
+      if (ty < 4) ty = y + 8;
+      let tx = Math.min(Math.max(6, x + (x2 - x) / 2 - tw / 2), W() - tw - 6);
+      Object.assign(t.style, { left: tx + "px", top: ty + "px" });
+    };
+    window.__vdMando = (r, texto, lado) => {
+      const d = document.getElementById("vd-hl2"), t = document.getElementById("vd-hl2-t");
+      Object.assign(d.style, { display: "block", left: (r.x - 2) + "px", top: (r.y - 1) + "px", width: (r.w + 4) + "px", height: (r.h + 2) + "px" });
+      t.textContent = texto; t.style.display = "block";
+      const tw = t.offsetWidth, th = t.offsetHeight;
+      const tx = lado === "der" ? Math.min(r.x + r.w + 12, W() - tw - 6) : Math.max(6, r.x - tw - 12);
+      Object.assign(t.style, { left: tx + "px", top: Math.max(4, r.y + r.h / 2 - th / 2) + "px" });
+    };
+    window.__vdMandoOff = () => { for (const id of ["vd-hl2", "vd-hl2-t"]) document.getElementById(id).style.display = "none"; };
+    window.__vdMarcoOff = () => { for (const id of ["vd-hl", "vd-hl-t", "vd-hl2", "vd-hl2-t"]) document.getElementById(id).style.display = "none"; };
+  });
+}
+const rectDe = (fnTxt, ...args) => pag.evaluate((fnTxt, args) => {
+  const e = eval(fnTxt)(...args); if (!e) return null;
+  const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height };
+}, fnTxt, args);
+async function marco(r, etiqueta, arriba = false, fotos = 8, margen = 4) {
+  const q = { x: r.x - margen, y: r.y - margen, w: r.w + 2 * margen, h: r.h + 2 * margen };
+  await mover(q.x + q.w / 2, q.y + Math.min(q.h / 2, 60), 4, true);
+  await pag.evaluate((q, e, a) => window.__vdMarco(q, e, a), q, etiqueta, arriba);
+  await espera(120); await foto(fotos);
+}
+/** Un PASO del vídeo de la interfaz: deja sus fotogramas en frames_struct_ui<video>_<id>/ */
+async function pasoUI(video, p, estado) {
+  abre(`ui${video}_${p.id}`);
+  await pag.evaluate(() => window.__vdMarcoOff());
+  await foto(2);
+  if (p.tipo === "panel") {
+    const r = await rectDe(`(t) => Array.from(document.querySelectorAll(".tp-rotv")).find((x) => (x.querySelector(".tp-rotv_t")?.textContent || "").includes(t) && x.getBoundingClientRect().width > 0)`, p.texto);
+    if (r) await marco(r, p.etiqueta, false, 10);
+  } else if (p.tipo === "sel") {
+    const r = await rectDe(`(s) => Array.from(document.querySelectorAll(s)).find((x) => x.getBoundingClientRect().width > 0)`, p.sel);
+    if (r) await marco(r, p.etiqueta, false, 10, p.margen ?? 4);
+  } else if (p.tipo === "id") {
+    const r = await rectDe(`(i) => document.getElementById(i)`, p.el);
+    if (r) await marco(r, p.etiqueta, !!p.arriba, 10);
+    else console.log(`   [!] no hay #${p.el}`);
+  } else if (p.tipo === "ribbon") {
+    if (p.abrir && !estado.ribbon) { await pag.evaluate(() => window.__vdMarcoOff()); await clic("button", "Dibujar", 1200, 3); estado.ribbon = true; }
+    const r = await pag.evaluate((de, a) => {
+      const bs = [...document.querySelectorAll("#hk-ribbon button")].filter((b) => b.getBoundingClientRect().width > 0).slice(de, a + 1);
+      if (!bs.length) return null;
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const b of bs) { const q = b.getBoundingClientRect(); x0 = Math.min(x0, q.left); y0 = Math.min(y0, q.top); x1 = Math.max(x1, q.right); y1 = Math.max(y1, q.bottom); }
+      return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, n: bs.length, cajas: bs.map((b) => { const q = b.getBoundingClientRect(); return { x: q.left, y: q.top, w: q.width, h: q.height, t: (b.title || b.textContent || "").trim().replace(/\s+/g, " ").slice(0, 46) }; }) };
+    }, p.de, p.a);
+    if (!r) { console.log("   [!] ribbon: sin botones", p.de, p.a); return; }
+    await marco(r, p.etiqueta, false, 4, 5);
+    // y botón a botón, con su nombre
+    for (const c of r.cajas) {
+      await mover(c.x + c.w / 2, c.y + c.h / 2, 2, false);
+      await pag.evaluate((c) => window.__vdMando(c, c.t, "abajo"), c);
+      await pag.evaluate((c) => { const t = document.getElementById("vd-hl2-t"); t.style.left = Math.max(6, Math.min(c.x + c.w / 2 - t.offsetWidth / 2, window.innerWidth - t.offsetWidth - 6)) + "px"; t.style.top = (c.y + c.h + 40) + "px"; }, c);
+      await foto(3);
+    }
+    await pag.evaluate(() => window.__vdMandoOff()); await foto(3);
+  } else if (p.tipo === "carpeta") {
+    if (!(await verCarpeta(p.titulo))) return;
+    await espera(300);
+    const rf = await rectDe(`(t) => Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t))`, p.titulo);
+    if (!rf) return;
+    await marco(rf, p.etiqueta, false, 5, 3);
+    const n = await pag.evaluate((t) => {
+      const f = Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+      return Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv")).filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")) && m.getBoundingClientRect().width > 0).length;
+    }, p.titulo);
+    const hasta = Math.min(n, p.max ?? 10);
+    for (let i = 0; i < hasta; i++) {
+      const c = await pag.evaluate((t, i) => {
+        const f = Array.from(document.querySelectorAll(".tp-fldv")).find((x) => (x.querySelector(".tp-fldv_t")?.textContent || "").includes(t));
+        const m = Array.from(f.querySelectorAll(".tp-lblv, .tp-btnv")).filter((m) => m.closest(".tp-fldv") === f && !(m.classList.contains("tp-btnv") && m.closest(".tp-lblv")) && m.getBoundingClientRect().width > 0)[i];
+        if (!m) return null;
+        const q = m.getBoundingClientRect();
+        if (q.top < 30 || q.bottom > window.innerHeight - 90) return null;        // fuera de la vista: no se enmarca a ciegas
+        const et = (m.querySelector(".tp-lblv_l")?.textContent || m.querySelector(".tp-btnv_b")?.textContent || "").trim().replace(/\s+/g, " ");
+        const sel = m.querySelector("select"); const inp = m.querySelector("input");
+        const val = sel ? sel.options[sel.selectedIndex]?.textContent : (inp && inp.type !== "checkbox" ? inp.value : "");
+        return { x: q.left, y: q.top, w: q.width, h: q.height, t: (et || "botón") + (val ? "  =  " + String(val).slice(0, 24) : "") };
+      }, p.titulo, i);
+      if (!c) continue;
+      await mover(c.x + c.w - 30, c.y + c.h / 2, 2, false);
+      await pag.evaluate((c, lado) => window.__vdMando(c, c.t, lado), c, p.lado || "izq");
+      await foto(3);
+    }
+    await pag.evaluate(() => window.__vdMandoOff()); await foto(2);
+    await pag.evaluate(() => window.__vdMarcoOff());
+    if (!p.dejarAbierta) await cierraCarpeta(p.titulo);
+  }
+  console.log(`   paso ${video}_${p.id}: ${nf} fotogramas · ${p.etiqueta.slice(0, 50)}`);
+}
+
 async function centroInput(titulo) {
   return pag.evaluate((t) => {
     const e = Array.from(document.querySelectorAll("#hk-ribbon input"))
@@ -827,7 +1309,21 @@ async function rejillaRapida() {
 // ------------------------------------------------------------------ main
 const pedidas = process.argv.slice(2);
 try {
-  if (!pedidas.length || pedidas.includes("inventario")) { await navegador(); await inventario(); }
+  if (pedidas[0] !== "ui2" && (!pedidas.length || pedidas.includes("inventario"))) { await navegador(); await inventario(); }
+  // «ui2 0a 0b …»: los vídeos de la interfaz con marcos, paso a paso desde ui_pasos.json
+  if (pedidas[0] === "ui2") {
+    const PASOS = JSON.parse(readFileSync(join(SCHOOL, "ui_pasos.json"), "utf-8")).videos;
+    for (const v of pedidas.slice(1)) {
+      const def = PASOS[v]; if (!def) { console.log("no hay vídeo", v); continue; }
+      await navegador();
+      await cargar(def.query || "?t=plantillas"); await autofit(); await instalaMarcos();
+      const estado = {};
+      for (const p of def.pasos) {
+        try { await pasoUI(v, p, estado); } catch (err) { console.log(`   [!] paso ${v}_${p.id} falló: ${String(err).slice(0, 160)}`); }
+      }
+    }
+    pedidas.length = 0; pedidas.push("__nada__");
+  }
   const lista = pedidas.includes("todas") ? Object.keys(ESCENAS).filter((e) => e !== "sonda") : pedidas.filter((e) => ESCENAS[e]);
   for (const e of lista) {
     await navegador();

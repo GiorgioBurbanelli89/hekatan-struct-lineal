@@ -180,8 +180,11 @@ export async function correr() {
 
   // ── la participacion, solo donde el modo PARTICIPA ──────────────────────
   // `massParticipation` viene por columnas [UX, UY, UZ, RX, RY, RZ].
+  // Regla de Jorge (18-sep-2026): la participacion se mira con las SEIS direcciones.
+  // ETABS solo vuelca UX, UY, UZ y RZ en `etabs_testM_dual_full.json`; RX y RY no
+  // tienen referencia, asi que se informan (fila `crudo`) pero no se puntuan.
   for (const [nom, col, ref] of [["UX", 0, REF.UX], ["UY", 1, REF.UY],
-                                 ["RZ", 5, REF.RZ]]) {
+                                 ["UZ", 2, REF.UZ], ["RZ", 5, REF.RZ]]) {
     let peor = 0, dondePeor = 0, mirados = 0;
     for (let i = 0; i < N_MODOS; i++) {
       const a = mp[i]?.[col] ?? 0, b = ref[i];
@@ -201,9 +204,23 @@ export async function correr() {
   }
 
   // ── el acumulado: lo que de verdad mira la NEC ──────────────────────────
-  for (const [nom, col, ref] of [["ΣUX", 0, REF.SumUX], ["ΣUY", 1, REF.SumUY]]) {
+  for (const [nom, col, ref] of [["ΣUX", 0, REF.SumUX], ["ΣUY", 1, REF.SumUY],
+                                 ["ΣUZ", 2, REF.SumUZ]]) {
     const s = mp.slice(0, N_MODOS).reduce((a, r) => a + (r?.[col] ?? 0), 0);
     const se = ref[N_MODOS - 1];
+    // ETABS por defecto NO mete masa vertical (INCLUDEVERTICALMASS "No"): su SumUZ vale
+    // 0.0000 exacto. Contra un cero no hay razon que calcular ni 90 % que exigir, asi que
+    // la fila se INFORMA. No es una tolerancia relajada: es que no hay referencia.
+    if (se === 0) {
+      filas.push({
+        que: `${nom} en ${N_MODOS} modos (Hekatan)`,
+        medido: s * 100, limite: 100, ok: true,
+        detalle: `${(s * 100).toFixed(2)} % — ETABS trae SumUZ = 0.0000: su fuente de masa `
+               + `no incluye la vertical, no hay con que comparar`,
+        crudo: true,
+      });
+      continue;
+    }
     const d = Math.abs(s / se - 1) * 100;
     filas.push({
       que: `${nom} en ${N_MODOS} modos vs ETABS`,
@@ -213,7 +230,21 @@ export async function correr() {
     filas.push({
       que: `${nom} pasa del 90 % (el criterio de la NEC)`,
       medido: s * 100, limite: 90, ok: s >= 0.90,
-      detalle: `${(s * 100).toFixed(2)} %`,
+      detalle: col === 2
+        ? `${(s * 100).toFixed(2)} % — Z NO es direccion de analisis sismico: informativo`
+        : `${(s * 100).toFixed(2)} %`,
+      crudo: true,
+    });
+  }
+
+  // ── las tres sumatorias de ROTACION: sin referencia de ETABS, se INFORMAN ──
+  // Jorge, 18-sep-2026: «la participacion de masa hasta sumatoria de Rz».
+  for (const [nom, col] of [["ΣRX", 3], ["ΣRY", 4], ["ΣRZ", 5]]) {
+    const s = mp.slice(0, N_MODOS).reduce((a, r) => a + (r?.[col] ?? 0), 0);
+    filas.push({
+      que: `${nom} en ${N_MODOS} modos (Hekatan)`,
+      medido: s * 100, limite: 100, ok: true,
+      detalle: `${(s * 100).toFixed(2)} % — sin referencia en etabs_testM_dual_full.json`,
       crudo: true,
     });
   }

@@ -100,7 +100,11 @@ const RUTA = cap.ruta || ("workspace/?t=" + (cap.ejemplo || "plantillas"));
 // misma al arrancar, sobre todo con la máquina cargada). No es un fallo: se sigue
 // esperando al visor.
 try {
-  await pag.goto("http://localhost:" + PUERTO + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
+  // HK_ORIGEN=https://giorgioburbanelli89.github.io → graba el DEPLOY PÚBLICO en vez del bundle local.
+  // Hace falta cuando la rama local va por detrás de lo publicado (19-sep-2026: los menús «Análisis» y
+  // «Diseño» estaban en el deploy y no en sin-binario, y el vídeo de la interfaz salió sin ellos).
+  const ORIGEN = process.env.HK_ORIGEN || ("http://localhost:" + PUERTO);
+  await pag.goto(ORIGEN + BASE + RUTA, { waitUntil: "networkidle2", timeout: 180000 });
 } catch (e) {
   // (13-sep-2026) Un modelo por ENLACE con `&modal=N` anima sin parar y la red nunca queda
   // «idle»: `networkidle2` agotaba los 180 s y abortaba la toma sin un fotograma. No es un
@@ -162,8 +166,8 @@ await pag.evaluate(() => {
   capa.appendChild(nota);
   // Flecha grande que apunta al botón/fila resaltado (Jorge: «no se sabe dónde es»).
   const flecha = document.createElement("div");
-  flecha.style.cssText = "position:fixed;display:none;font-size:58px;line-height:1;color:#facc15;" +
-    "filter:drop-shadow(0 0 7px rgba(250,204,21,.95));z-index:2147483646;pointer-events:none;" +
+  flecha.style.cssText = "position:fixed;display:none;font-size:58px;line-height:1;color:#22d3ee;" +
+    "filter:drop-shadow(0 0 7px rgba(34,211,238,.95));z-index:2147483646;pointer-events:none;" +
     "transform:translateY(-50%);font-family:'Segoe UI Symbol',system-ui";
   flecha.textContent = "➤";   // ➤
   capa.appendChild(flecha);
@@ -273,6 +277,41 @@ const clic = async (x, y) => {
  *   "sel"    por un selector CSS — hace falta para la PORTADA, que no es un panel de
  *            mandos sino tres tarjetas: «Modelo nuevo», «Modelo existente», «Ejemplos».
  */
+/**
+ * Los mandos del panel pasaron del inglés de CSI al español (18-sep-2026). Los guiones
+ * de los tutoriales piden el nombre VIEJO («Frame results»), así que aquí se traduce al
+ * nuevo antes de buscarlo en la pantalla. Con esto ningún capítulo hay que reescribirlo,
+ * y si algún día se quitan los nombres viejos, se borra esta tabla y ya.
+ */
+const SINONIMOS_PANEL = {
+  "Display scale": "Tamaño de los símbolos",
+  "Nodes": "Nudos",
+  "Elements": "Elementos",
+  "Edges (delim.)": "Aristas (delim.)",
+  "Nodes indexes": "Nº de nudo",
+  "Elements indexes": "Nº de elemento",
+  "Orientations": "Ejes locales",
+  "Supports": "Apoyos",
+  "Loads": "Cargas",
+  "Node results": "Resultados de nudo",
+  "Frame results": "Resultados de barra",
+  "Shell results": "Resultados de cáscara",
+  "Solid results": "Resultados de sólido",
+  "Deformed shape": "Deformada",
+  "Scale XY": "Escala XY",
+  "Scale Z": "Escala Z",
+  "Analysis Inputs": "Datos de entrada",
+  "Analyze": "Resultados",
+  "Load Patterns": "Patrones de carga",
+  "Load Cases": "Casos de carga",
+  "Load Combinations": "Combinaciones",
+  "Self Weight Mult.": "Factor de peso propio",
+  "Auto Lateral": "Carga lateral automática",
+  "Initial Cond.": "Condición inicial",
+  "Max Modes": "Modos máx.",
+};
+const tr = (t) => (typeof t === "string" && SINONIMOS_PANEL[t.trim()]) || t;
+
 const rect = (que, texto) => pag.evaluate((q) => {
   let e = null;
   if (q.q === "sel") {
@@ -320,7 +359,7 @@ const rect = (que, texto) => pag.evaluate((q) => {
   // por debajo de lo que se graba (la banda de órdenes): el cuadro saldría cortado
   if (r.bottom > q.lim) return null;
   return { x: r.left, y: r.top, w: r.width, h: r.height };
-}, { q: que, t: texto, lim: ALTO_UTIL });
+}, { q: que, t: tr(texto), lim: ALTO_UTIL });
 
 const api = {
   pag, espera, foto,
@@ -345,6 +384,17 @@ const api = {
     if (!r) { console.log("  x no se ve: " + sel); return false; }
     zona = { x: Math.max(0, Math.min(ANCHO - ZW, Math.round(r.x + r.w / 2 - ZW / 2))),
              y: Math.max(0, Math.min(ALTO_UTIL - ZH, Math.round(r.y + r.h / 2 - ZH / 2))) };
+    return true;
+  },
+  /**
+   * PRIMER PLANO DE LA PARTE DE ABAJO de la ventana: la ventana de comandos y la barra de estado.
+   * La vista general se graba recortada a 640 de los 720 px (abajo va la franja del subtítulo), así
+   * que esas dos zonas NUNCA salían en un vídeo (Jorge, 19-sep-2026: «esa no es la ventana principal»;
+   * en la de verdad la ventana de comandos está a la vista). El primer plano es un recorte 1:1 de la
+   * ventana entera, y aquí se le deja bajar hasta el borde: y de 240 a 720.
+   */
+  cercaAbajo: async (xCentro = ANCHO / 2) => {
+    zona = { x: Math.max(0, Math.min(ANCHO - ZW, Math.round(xCentro - ZW / 2))), y: ALTO - ZH };
     return true;
   },
   /** Cuadro + nota sobre un mando (y el cursor va hasta él). */
@@ -538,7 +588,7 @@ const api = {
       w.style.cssText = "position:fixed;inset:0;z-index:2147483644;background:radial-gradient(ellipse at 50% 40%,#16202e 0%,#070a10 75%);" +
         "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;font-family:'Segoe UI',system-ui,sans-serif";
       w.innerHTML = '<img src="' + q.logo + '" style="height:210px;border-radius:26px;box-shadow:0 14px 40px rgba(0,0,0,.6)">' +
-        '<div style="color:#e6c463;font:600 20px Segoe UI,system-ui,sans-serif;letter-spacing:3px;text-transform:uppercase">' + q.cap + "</div>" +
+        '<div style="color:#22d3ee;font:600 20px Segoe UI,system-ui,sans-serif;letter-spacing:3px;text-transform:uppercase">' + q.cap + "</div>" +
         '<div style="color:#f2f5fa;font:700 40px Segoe UI,system-ui,sans-serif;text-align:center;max-width:1000px;line-height:1.2">' + q.tit + "</div>";
       document.body.appendChild(w);
     }, { tit: titulo, cap: capitulo, logo: LOGO_CUADRADO });
@@ -677,7 +727,7 @@ const api = {
       const o = [...s.options].find((x) => n(x.textContent) === n(q.t)) ||
                 [...s.options].find((x) => n(x.textContent).includes(n(q.t)));
       return o ? o.value : null;
-    }, { e: etiqueta, t: textoOpcion });
+    }, { e: tr(etiqueta), t: textoOpcion });
     if (val == null) { console.log("  x no se ve la opcion: " + textoOpcion); return false; }
     // LA LISTA ABIERTA. El navegador sin pantalla no pinta la lista de un <select> al
     // pulsarlo, y en el vídeo el valor cambiaba «solo». Se dibuja la lista con SUS
@@ -763,6 +813,91 @@ const api = {
       for (const x of v || []) m = Math.max(m, Math.abs(+x || 0));
     return +m.toFixed(2);
   }, clave),
+  /**
+   * DIBUJO sobre el modelo, en coordenadas del MUNDO (se proyectan por la cámara del
+   * visor): la app no rotula (ACAD_FALTA: «aquí no se rotula»), así que las flechas de
+   * momento, las cotas y las etiquetas de un tutorial van en esta capa SVG del grabador.
+   *
+   *   flechas:   [{ de, a, color, doble, texto }]   doble = vector de MOMENTO (dos puntas)
+   *   cotas:     [{ de, a, texto, off }]            off = desplazamiento en px [dx, dy]
+   *   etiquetas: [{ en, texto, color, dx, dy }]
+   *   nudos:     [{ en, color, r }]                 círculo sobre un nudo
+   * Colores sin amarillo (regla de Jorge): cian #22d3ee, rojo #ff5d73, verde #34d399, blanco.
+   */
+  dibujo: async (d = {}, n = 0) => {
+    await pag.evaluate((d) => {
+      const h = document.querySelector("#viewer");
+      const c = h.__ctx; const r = h.querySelector("canvas").getBoundingClientRect();
+      const V = Object.getPrototypeOf(c.camera.position).constructor;
+      const P = ([x, y, z]) => { const v = new V(x, y, z).project(c.camera);
+        return [(v.x * 0.5 + 0.5) * r.width + r.left, (-v.y * 0.5 + 0.5) * r.height + r.top]; };
+      let svg = document.getElementById("hk-tut-dibujo");
+      if (!svg) {
+        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.id = "hk-tut-dibujo";
+        svg.setAttribute("style", "position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483645");
+        document.getElementById("hk-tut-capa").appendChild(svg);
+      }
+      const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const punta = (x1, y1, x2, y2, col, L = 13) => {
+        const a = Math.atan2(y2 - y1, x2 - x1), w = 0.42;
+        return `<path d="M${x2},${y2} L${x2 - L * Math.cos(a - w)},${y2 - L * Math.sin(a - w)} L${x2 - L * Math.cos(a + w)},${y2 - L * Math.sin(a + w)} Z" fill="${col}"/>`;
+      };
+      const txt = (x, y, t, col, anchor = "middle") =>
+        `<text x="${x}" y="${y}" fill="${col}" font-family="Segoe UI,system-ui,sans-serif" font-size="15" font-weight="700" ` +
+        `text-anchor="${anchor}" paint-order="stroke" stroke="#070a10" stroke-width="4">${esc(t)}</text>`;
+      let o = "";
+      for (const f of d.flechas || []) {
+        const [x1, y1] = P(f.de), [x2, y2] = P(f.a), col = f.color || "#ff5d73";
+        o += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="3.2"/>` + punta(x1, y1, x2, y2, col);
+        if (f.doble) { const a = Math.atan2(y2 - y1, x2 - x1); const xb = x2 - 11 * Math.cos(a), yb = y2 - 11 * Math.sin(a); o += punta(x1, y1, xb, yb, col); }
+        if (f.texto) o += txt(x2 + (f.dx ?? 10), y2 + (f.dy ?? -10), f.texto, col, "start");
+      }
+      for (const q of d.cotas || []) {
+        const [ox, oy] = q.off || [0, 22]; let [x1, y1] = P(q.de), [x2, y2] = P(q.a);
+        x1 += ox; y1 += oy; x2 += ox; y2 += oy; const col = q.color || "#e8f6fb";
+        o += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="1.6"/>` +
+             punta(x2, y2, x1, y1, col, 10) + punta(x1, y1, x2, y2, col, 10) +
+             `<line x1="${x1 - ox}" y1="${y1 - oy}" x2="${x1}" y2="${y1 + Math.sign(oy) * 5}" stroke="${col}" stroke-width="1" stroke-dasharray="3 3"/>` +
+             `<line x1="${x2 - ox}" y1="${y2 - oy}" x2="${x2}" y2="${y2 + Math.sign(oy) * 5}" stroke="${col}" stroke-width="1" stroke-dasharray="3 3"/>` +
+             txt((x1 + x2) / 2, (y1 + y2) / 2 + (oy >= 0 ? 20 : -8), q.texto, col);
+      }
+      for (const nd of d.nudos || []) {
+        const [x, y] = P(nd.en);
+        o += `<circle cx="${x}" cy="${y}" r="${nd.r || 7}" fill="none" stroke="${nd.color || "#34d399"}" stroke-width="3"/>`;
+      }
+      for (const e of d.etiquetas || []) {
+        const [x, y] = P(e.en);
+        o += txt(x + (e.dx || 0), y + (e.dy || 0), e.texto, e.color || "#e8f6fb", e.anchor || "middle");
+      }
+      svg.innerHTML = (d.acumular ? svg.innerHTML : "") + o;
+    }, d);
+    if (n) await api.quieto(n, 300);
+  },
+  sinDibujo: async () => { await pag.evaluate(() => { const s = document.getElementById("hk-tut-dibujo"); if (s) s.innerHTML = ""; }); },
+  /**
+   * PIZARRA: un recuadro con título y renglones (fórmulas en texto, citas con página)
+   * sobre la app, en `lado` "der" | "izq" | "centro". Fondo negro, borde cian.
+   */
+  pizarra: async (titulo, lineas, { lado = "der", ancho = 470, n = 0 } = {}) => {
+    await pag.evaluate((q) => {
+      document.getElementById("hk-tut-pizarra")?.remove();
+      const w = document.createElement("div"); w.id = "hk-tut-pizarra";
+      const pos = q.lado === "izq" ? "left:18px" : q.lado === "centro" ? `left:calc(50% - ${q.ancho / 2}px)` : "right:18px";
+      w.style.cssText = `position:fixed;${pos};top:70px;width:${q.ancho}px;z-index:2147483646;background:rgba(7,10,16,.96);` +
+        "border:1px solid #22d3ee;border-left:6px solid #22d3ee;border-radius:8px;padding:14px 18px;color:#e8f6fb;" +
+        "font:500 16px 'Segoe UI',system-ui,sans-serif;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.7)";
+      const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      w.innerHTML = `<div style="font:700 19px 'Segoe UI',system-ui,sans-serif;color:#22d3ee;margin-bottom:8px">${esc(q.titulo)}</div>` +
+        q.lineas.map((l) => l.startsWith("$")
+          ? `<div style="font:600 18px 'Cambria Math','Cambria',serif;color:#fff;margin:6px 0 6px 10px">${esc(l.slice(1))}</div>`
+          : l.startsWith("~") ? `<div style="font-size:13px;color:#8fb3c2;margin-top:6px">${esc(l.slice(1))}</div>`
+          : `<div>${esc(l)}</div>`).join("");
+      document.body.appendChild(w);
+    }, { titulo, lineas, lado, ancho });
+    if (n) await api.quieto(n, 300);
+  },
+  sinPizarra: async () => { await pag.evaluate(() => document.getElementById("hk-tut-pizarra")?.remove()); },
   /** Ajusta un mando de «Settings» del visor (deformada, escalas…). */
   ajuste: async (clave, valor) => {
     await pag.evaluate((q) => {

@@ -280,6 +280,29 @@ import { cadDraw } from "../cad-draw/cadDraw";
 import { vigaMedioElastico } from "../viga-medio-elastico/vigaMedioElastico";
 import { zapataVigaAmarre } from "../zapata-viga-amarre/zapataVigaAmarre";
 import { zapataAislada } from "../zapata-aislada/zapataAislada";
+import { zapataExcentrica, zapataLevantamientoPlantilla } from "../zapata-excentrica/zapataExcentrica";
+import { arco } from "../arco/arco";
+import { burj } from "../burj/burj";
+import { eiffel } from "../eiffel/eiffel";
+import { opera } from "../opera/opera";
+import { talud } from "../talud/talud";
+import { twisted } from "../twisted/twisted";
+import { muroQ4 } from "../muro-q4/muroQ4";
+import { vigaQ4 } from "../viga-q4/vigaQ4";
+import { losaPlana } from "../losa-plana/losaPlana";
+import { losaRect } from "../losa-rect/losaRect";
+import { placaXY } from "../placa-xy/placaXY";
+import { placaOrificios } from "../placa-orificios/placaOrificios";
+import { validacionLosasCsi } from "../validacion-losas-csi/validacionLosasCsi";
+import { colPlaca } from "../col-placa/colPlaca";
+import { vigaAlta } from "../viga-alta/vigaAlta";
+import { muroContencion } from "../muro-contencion/muroContencion";
+import { puenteReticular } from "../puente-reticular/puenteReticular";
+import { diagridParam } from "../diagrid-parametrico/diagridParam";
+import { pergolaParam } from "../pergola-parametrica/pergolaParam";
+import { edifMuros } from "../edif-muros/edifMuros";
+import { edifMixto } from "../edif-mixto/edifMixto";
+import { edifAceroDiag } from "../edif-acero-diag/edifAceroDiag";
 import { zapataAisladaValidacion } from "../zapata-aislada-validacion/zapataAisladaValidacion";
 // ── SAFE Benchmarks (validación cruzada Hekatan vs SAFE 20 API, paridad <0.33%) ──
 import { safeBenchLosa } from "../safe-bench-losa-cimentacion/safeBenchLosa";
@@ -378,12 +401,12 @@ import { itwTodos } from "../itw/itwTests";
 import { plantillas } from "../plantillas/plantillas";
 // Legacy del upstream awatif (rebrandeados, abren standalone)
 import {
-  legacyAwatifExamples,
+  ejemplosConPanelPropio,
   legacyBeams,           // Paz 6.3 Space Frame (FRAME 1D)
   solidCubeFEM,          // Cubo H8 (SOLIDO)
   bulboPresionesSuelo,   // Bulbo presiones (COMBINADO area+spring)
   muroContencionSolido,  // Muro de contencion en solidos H8 (vs SAP2000)
-} from "./legacyAwatif";
+} from "./ejemplosConPanelPropio";
 
 export const examplesRegistry: ExampleDef[] = [
   plantillas,             // 📐 Nuevo modelo → Plantillas
@@ -412,8 +435,19 @@ export const examplesRegistry: ExampleDef[] = [
   ...tipologiasHeks,
   // CAD Drawer — dibujar con mouse + Tweakpane (sincronizado con CLI)
   cadDraw,
+  // ── Los 21 que vivian dentro de `shared/moreExamples.ts`, un fichero que NO
+  //    importaba nadie: eran codigo muerto y `?t=arco` no cargaba nada. Cada uno
+  //    esta ya en SU carpeta con su `index.html`; aqui se registran para que el
+  //    selector los ofrezca y `categorias-arbol` los pueda mirar (18-sep-2026).
+  arco, burj, eiffel, opera, talud, twisted,
+  muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios, validacionLosasCsi,
+  colPlaca, vigaAlta, muroContencion, puenteReticular,
+  diagridParam, pergolaParam,
+  edifMuros, edifMixto, edifAceroDiag,
   // Cimentaciones (zapataAisladaValidacion va en sección Benchmarks Combinados)
   zapataAislada,
+  zapataExcentrica,
+  zapataLevantamientoPlantilla,
   zapataVigaAmarre,
   vigaMedioElastico,
   // SAFE Benchmarks (cross-validation Hekatan vs SAFE 20)
@@ -549,7 +583,7 @@ export const examplesRegistry: ExampleDef[] = [
   // exportador reparta bien deck y losa por grupo.
 
   // ── Legacy upstream awatif (resto que no son benchmarks) ────
-  ...legacyAwatifExamples.filter(e =>
+  ...ejemplosConPanelPropio.filter(e =>
     e.id !== "beams" && e.id !== "solid-cube-fem" && e.id !== "bulbo-presiones-suelo" && e.id !== "muro-contencion-solido"
   ),
 ];

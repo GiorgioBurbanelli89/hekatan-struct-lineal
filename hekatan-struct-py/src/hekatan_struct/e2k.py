@@ -9,9 +9,7 @@ limpio de 2 paños). El reparto en un sentido de ETABS vive en el FICHERO:
               ONEWAYLOADDIST "Yes"  SLABTYPE "Slab"  SLABTHICKNESS 0.8
 
 Es un atributo del `SHELLPROP`, **no un `SlabType`** — por eso barrer los 7
-SlabType no lo encontraba. Sacado del binario (`ETABS 22/ETABS.dll`, cadenas en
-**UTF-16**, tabla de atributos en `0x34b3b19`–`0x34b3f15`) y confirmado en un
-`.e2k` escrito por el propio ETABS.
+SlabType no lo encontraba. Confirmado en un `.e2k` escrito por el propio ETABS.
 
 Lo que arregla respecto al exportador de TypeScript, que se revisó a la vez:
 
@@ -27,8 +25,8 @@ Lo que arregla respecto al exportador de TypeScript, que se revisó a la vez:
    para forzar el ShellType 3; con `MODELINGTYPE "Membrane"` no hace falta.
 
 ⚠️ **TODO EL FICHERO VA EN N y MM.** ETABS **ignora el header `UNITS`**: no hay
-token de unidades en el lector del e2k, lee en las unidades base de SAPFire.
-Medido y confirmado en el binario. Fuerza ×1000 · longitud ×1000 · tensión
+token de unidades en el lector del e2k, lee en las unidades base (N, mm).
+Medido importando el mismo fichero con cabeceras distintas. Fuerza ×1000 · longitud ×1000 · tensión
 ×1e-3 · área ×1e6 · inercia ×1e12 · momento ×1e6.
 
 ⚠️ Una sola línea `POINTLOAD` por nudo con las SEIS componentes: ETABS se queda

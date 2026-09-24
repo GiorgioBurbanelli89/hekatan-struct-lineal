@@ -9,7 +9,9 @@
  *   Simply supported along all four edges
  * Purpose: allow direct comparison between Hekatan Struct Lineal and Calcpad FEM.
  */
-import { plateQ4Solve, modalAnalysis, type Node } from "awatif-fem";
+// El paquete se renombro a `hekatan-fem`; `awatif-fem` ya no existe y el build
+// de produccion fallaba entero por esta linea.
+import { plateQ4Solve, modalAnalysis, type Node } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 export const plateThickValidacion: ExampleDef = {
@@ -17,7 +19,15 @@ export const plateThickValidacion: ExampleDef = {
   name: "Rectangular Slab — Mindlin (Calcpad validation)",
   category: "2️⃣ Shells · 🧱 Placas",
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "bendingXY", "shearX", "shearY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   params: {
     // ── Geometry (Calcpad case: 6 × 4 × 0.10 m) ──
@@ -136,7 +146,7 @@ export const plateThickValidacion: ExampleDef = {
     const elasticities = new Map<number, number>();
     const poissons = new Map<number, number>();
     const densities = new Map<number, number>();
-    elems.forEach((_, i) => { elasticities.set(i, E); poissons.set(i, p.nu); densities.set(i, 24); });
+    elems.forEach((_, i) => { elasticities.set(i, E); poissons.set(i, p.nu); densities.set(i, 24 / 9.80665); });
     states.elementInputs.val = { thicknesses, elasticities, poissonsRatios: poissons, densities };
     states.objects3D.val = [];
 

@@ -1,0 +1,23 @@
+# Losa en L (10 x 8 m con un entrante de 4 x 3 m en la esquina (10,8)) y un HUECO rectangular de
+# 3 x 3 m (x 2..5, y 1..4, lejos de las esquinas: si el hueco toca la esquina entrante queda un nudo
+# duplicado y una malla pellizcada, cazado el 17-sep-2026 con SAP2000), declarada como UN solo `area` con su `hueco`. El pavimentador la parte
+# en cuadrilateros <= 1.25 m (rejilla recortada: el poligono es rectilineo). Apoyada (pinned) en
+# TODO su contorno con `apoyoborde`: el apoyo en 6 puntos era una singularidad (no converge, y
+# SAP2000 daba 9.2 % en el nudo peor por eso, no por la malla; 17-sep-2026). Carga de area, sin
+# vigas: lo unico que se juzga es la malla y el elemento. Para el juez (SAP2000/ETABS): misma malla nudo a nudo, desde el volcado.
+node 1 0 0 0
+node 2 10 0 0
+node 3 10 5 0
+node 4 6 5 0
+node 5 6 8 0
+node 6 0 8 0
+node 7 2 1 0
+node 8 5 1 0
+node 9 5 4 0
+node 10 2 4 0
+area 1 0.20 25e6 1 2 3 4 5 6
+hueco 1 7 8 9 10
+areaload 1 -10
+apoyoborde 1 pinned
+automesh 1.25
+solve

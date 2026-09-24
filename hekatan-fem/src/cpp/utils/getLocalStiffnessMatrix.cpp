@@ -1,3 +1,4 @@
+#include "plateDKT.h"
 #include "../data-model.h"
 #include <vector>
 #include <cmath>
@@ -135,9 +136,29 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
         if (itT != elementInputs.thicknesses.end() && itT->second > 1e-12)
         {
             // Dispatch de la formulacion de placa, segun plateFormulations[idx]:
-            //   0 = Mindlin con MITC4   (Shell-Thick)
+            //   0 = Mindlin con MITC4   (Shell-Thick, defecto de hoy)
             //   1 = Kirchhoff MZC       (Shell-Thin)
+            //   2 = «Membrane» para los EXPORTADORES (.e2k/.s2k, ver data-model.ts).
+            //       En el solver NO quita la flexion: cae en el MITC4 igual que
+            //       el 0 (medido con el WASM de 6be372b75: mismo w que el 0). La
+            //       membrana del solver es flexion 0 (bendingModifiers = 0 o
+            //       shellModifiers m11=m22=m12=0 -> `sinFlexion` en shellQ4.cpp).
             //   3 = DKMQ de Katili      (Discrete Kirchhoff-Mindlin)
+            //   4 = DSE de Wilson       (Shell-Thick del libro, cap. 8)
+            //
+            // El 4 (DSE) se conecto el 17-sep-2026 en el 2 y se movio al 4 el
+            // 19-sep-2026, porque el 2 ya era la membrana de los exportadores y
+            // los modelos que lo ponian (Test M, galpon, ITW) pasaron a flexar
+            // con otra placa sin que nadie lo pidiera. Es la placa GRUESA que expone
+            // Wilson en el cap. 8 de «Analisis Estatico y Dinamico de
+            // Estructuras» (cortante discreto de lado Ec. 8.6-8.9, correccion
+            // de patch test Ec. 8.17, condensacion estatica Ec. 8.18-8.19), y
+            // que el propio libro (pag. PDF 155) dice que es «el enfoque
+            // empleado en el programa SAP2000». El codigo ya estaba escrito
+            // (getBendingK_DSE_FULL) pero solo se podia encender con un
+            // #define, o sea recompilando el WASM en cada prueba. El 4 lo
+            // atiende getLocalStiffnessMatrixShellQ4 leyendo plateFormulations
+            // en EJECUCION, para poder medir A/B contra SAP2000.
             //
             // El 3 estaba COMPILADO pero desenchufado desde que se porto: el
             // dispatcher solo miraba el 1. Se conecta el 19-ago-2026 para poder
@@ -154,7 +175,11 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
             {
                 return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
             }
+#ifdef HK_THICK_DKMQ
+            return getLocalStiffnessMatrixShellQ4_DKMQ(elementNodes, elementInputs, elementIndex);
+#else
             return getLocalStiffnessMatrixShellQ4(elementNodes, elementInputs, elementIndex);
+#endif
         }
         return getLocalStiffnessMatrixInterface(elementNodes, elementInputs, elementIndex);
     }
@@ -779,6 +804,20 @@ Eigen::MatrixXd getLocalStiffnessMatrixShell(
     Eigen::MatrixXd bendingTerm = bendingStrainDisplacementMatrix.transpose() * bendingStiffnessMatrix * bendingStrainDisplacementMatrix;
 
     Eigen::MatrixXd Kp = (shearTerm + bendingTerm) * Ae;
+
+    // Shell-Thin (plateFormulations = 1): la flexion del triangulo es la DKT, no la
+    // placa gruesa de arriba. Antes el `shelltype thin` no llegaba a los triangulos.
+    auto itPF = elementInputs.plateFormulations.find(index);
+    if (itPF != elementInputs.plateFormulations.end() && itPF->second == 1)
+    {
+        const double xd[3] = {x1, x2, x3}, yd[3] = {y1, y2, y3};
+        const Eigen::Matrix<double, 9, 9> Kb = dktK(xd, yd, bendingStiffnessMatrix);
+        const int map[9] = {2, 3, 4, 8, 9, 10, 14, 15, 16};   // w, thx, thy de cada nudo
+        Kp = Eigen::MatrixXd::Zero(18, 18);
+        for (int r = 0; r < 9; ++r)
+            for (int c = 0; c < 9; ++c)
+                Kp(map[r], map[c]) = Kb(r, c);
+    }
 
     Eigen::MatrixXd localStiffnessMatrix = Eigen::MatrixXd::Zero(18, 18);
 

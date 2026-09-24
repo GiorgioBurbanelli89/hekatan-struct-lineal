@@ -65,7 +65,7 @@ document.body.append(
   getLegend(distances),
   getToolbar({
     sourceCode:
-      "https://github.com/madil4/awatif/blob/main/examples/src/color-map/main.ts",
+      "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/color-map/main.ts",
     author: "https://www.linkedin.com/in/siu-kai-cheung/",
   })
 );

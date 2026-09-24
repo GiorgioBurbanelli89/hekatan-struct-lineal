@@ -1324,6 +1324,26 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     return n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT"
         || n.isContentEditable;
   };
+  // Red de seguridad: si en la linea de ordenes acaba pegada algo que PARECE una
+  // clave de API (paso el 21-sep-2026: el foco estaba aqui al pegar la de Gemini
+  // y quedo escrita a la vista, en una captura que ya habia salido del equipo),
+  // se borra al momento y se avisa. Mas vale perder un pegado que una clave.
+  const PARECE_CLAVE = /(AIza[0-9A-Za-z_-]{20,}|AQ\.[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z_-]{20,}|ghp_[0-9A-Za-z_-]{20,})/;
+  const vigilarClave = (inp: HTMLInputElement) => {
+    const revisar = () => {
+      if (!PARECE_CLAVE.test(inp.value)) return;
+      inp.value = "";
+      const g = document.getElementById("hk3-cmd-ghost");
+      if (g) g.innerHTML = "";
+      try {
+        (window as any).__hekatanCadStatus?.(
+          "Eso parecia una API key: se borro de la linea de ordenes. Pegala en el panel del agente (boton 🤖).");
+      } catch { /* sin barra de estado */ }
+      console.warn("[seguridad] posible API key en la linea de ordenes: borrada");
+    };
+    ["input", "paste"].forEach((ev) => inp.addEventListener(ev, () => setTimeout(revisar, 0)));
+  };
+
   const limpiarCmd = () => {
     for (const id of [CMD, "hk-dyn-input"]) {
       const i = document.getElementById(id) as HTMLInputElement | null;

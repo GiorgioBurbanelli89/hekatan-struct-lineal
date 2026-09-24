@@ -48,7 +48,7 @@ for (const id of IDS) {
     // encender la deformada por el checkbox de Settings, buscandolo por texto
     const enc = await pag.evaluate(() => {
       const filas = Array.from(document.querySelectorAll(".tp-lblv"));
-      const f = filas.find((x) => /Deformed shape/i.test(x.textContent || ""));
+      const f = filas.find((x) => /Deformed shape|Deformada/i.test(x.textContent || ""));
       if (!f) return "no esta el toggle";
       const chk = f.querySelector("input[type=checkbox]");
       if (!chk) return "sin checkbox";

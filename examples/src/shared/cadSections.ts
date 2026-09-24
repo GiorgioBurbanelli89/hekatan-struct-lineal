@@ -13,6 +13,7 @@
  * y el débil (Iy aquí) en `momentsOfInertiaY` = I22. Antes era al revés.
  * Para no equivocarse, usar `toLocalInertia()`.
  */
+import { ecHormigonACI } from "./materials";
 
 export interface SectionProps {
   A: number;
@@ -306,7 +307,7 @@ export function cftSection(
   b: number, h: number, t: number,
   Es: number, nuS: number, fc: number, nuC: number,
 ): SectionProps & { Es: number; Gs: number; A_steel: number; A_conc: number } {
-  const Ec = 4700 * Math.sqrt(fc / 1000) * 1000; // kN/m²
+  const Ec = ecHormigonACI(fc / 1000); // kN/m²
   return cftSectionEc(b, h, t, Es, nuS, Ec, nuC);
 }
 
@@ -315,7 +316,7 @@ export function cftSectionBredt(
   b: number, h: number, t: number,
   Es: number, nuS: number, fc: number, nuC: number,
 ): SectionProps & { Es: number; Gs: number; A_steel: number; A_conc: number } {
-  const Ec = 4700 * Math.sqrt(fc / 1000) * 1000; // kN/m²
+  const Ec = ecHormigonACI(fc / 1000); // kN/m²
   const n = Ec / Es; // razón modular
   // Tubo de acero
   const bi = b - 2 * t, hi = h - 2 * t;

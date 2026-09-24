@@ -16,7 +16,7 @@ export function template({
       <div class="header-left">
         <h6>Report</h6>
         <p class="bold">
-          <a href="https://awatif.co" target="_blank">Awatif.co</a>
+          <a href="https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal" target="_blank">Hekatan Struct</a>
         </p>
         <p class="normal" id="reportDate">
           ${new Date().toLocaleDateString("en-US", {

@@ -84,6 +84,17 @@ const PERMITIDOS = {
   "itw-test-3-cook": "membrana plana (X-Z)",
   "itw-muro-acople": "muros planos (X-Z) + viga de acople",
   "itw-muro-frame": "muro plano (X-Z) + viga en voladizo",
+
+  // Los cuatro Q4 rescatados de FEM Studio (18-sep-2026). MISMO motivo, y está
+  // medido en su `gen`, no supuesto: los cuatro generan TODOS sus nudos con
+  // `y = 0` (malla en el plano X-Z) y atan exactamente
+  // `[false, true, false, true, true, true]` — o sea uy y los tres giros, dejando
+  // libres ux y uz, que son los GDL del plano. Es la misma atadura que llevan los
+  // `itw-*` de arriba. La base, esa sí, va empotrada aparte.
+  "viga-alta": "membrana plana (X-Z): se ata uy y los tres giros, ux/uz libres",
+  "muro-contencion": "membrana plana (X-Z) (idem)",
+  "muro-q4": "membrana plana (X-Z) (idem)",
+  "viga-q4": "membrana plana (X-Z) (idem)",
 };
 
 const FUENTE = `

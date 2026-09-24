@@ -1,0 +1,29 @@
+{
+ "pasos": [
+  {
+   "desde": 0,
+   "hasta": 44,
+   "rotulo": "t/L = 0.001"
+  },
+  {
+   "desde": 45,
+   "hasta": 89,
+   "rotulo": "t/L = 0.01"
+  },
+  {
+   "desde": 90,
+   "hasta": 134,
+   "rotulo": "t/L = 0.05"
+  },
+  {
+   "desde": 135,
+   "hasta": 179,
+   "rotulo": "t/L = 0.1"
+  },
+  {
+   "desde": 180,
+   "hasta": 224,
+   "rotulo": "t/L = 0.2"
+  }
+ ]
+}

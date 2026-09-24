@@ -1,0 +1,11 @@
+Análisis lineal según la Nec{nec} quince: cómo se calcula el estático y el dinámico, clic a clic.
+Este es el edificio: dual, dos por dos vanos, cuatro pisos, quinientos cuarenta y cinco nudos. El mismo del artículo.
+Lineal quiere decir que la rigidez no cambia: la matriz K{ka} es la misma antes y después de cargar, y por eso valen la superposición y los modos.
+La norma pide dos caminos: el estático, con una fuerza equivalente; y el dinámico, sumando los modos. Los dos se hacen aquí.
+Los datos sísmicos van en esta carpeta. Son seis, y cada uno sale de una tabla de la norma.
+El primero es Z{zeta}, el factor de zona: cero coma cuarenta, zona cinco, tabla uno, página veintisiete.
+Se escribe con el teclado, como lo haría cualquiera: se borra, se pone otro valor, y el modelo se entera.
+El tipo de suelo manda Fa{efe a}, Fd{efe de} y Fs{efe ese}. Suelo E{e}, zona cinco: uno coma cero, uno coma seis, uno coma nueve. Tablas tres, cuatro y cinco, páginas treinta y uno y treinta y dos.
+La región da eta: uno coma ocho en la Costa, dos coma cuarenta y ocho en la Sierra, dos coma seis en el Oriente. Capítulo tres punto tres punto uno, página treinta y cuatro.
+R{erre} reduce la fuerza porque la estructura se deforma sin romperse. Dual de hormigón con muros: R{erre} igual a ocho, tabla quince, página sesenta y cuatro.
+I{i} sube la fuerza en los edificios que no pueden fallar; aquí vale uno. Y fi pe por fi e castigan la irregularidad: si es regular, los dos valen uno.

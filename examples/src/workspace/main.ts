@@ -103,7 +103,7 @@ van.derive(() => {
   localStorage.setItem(AUTO_MESH_KEY, String(autoMeshShellsEnabled.val));
 });
 import {
-  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, addCadPanel, addCadRibbon, addCadStatusBar,
+  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, addCadPanel, addCadRibbon, addCadStatusBar,
   // 🛠 Orquestador unificado de Herramientas FEM (folder Tweakpane completo)
   attachFemTools,
   // el tema del VISOR: el fondo lo pinta WebGL, no el CSS, asi que la piel
@@ -121,6 +121,8 @@ import {
   DEFAULT_LOAD_PATTERNS, DEFAULT_LOAD_CASES, DEFAULT_LOAD_COMBINATIONS,
 } from "./exampleRegistry";
 import { attachLoadPatternsPanel, loadPersistedLoadPatterns } from "./loadPatternsPanel";
+import { modeloAHeks, hayModelo, avisosHeks } from "./modeloAHeks";
+import { autoEjecutar, etiquetaTipo } from "./autoEjecutar";
 import { downloadZapataF2k } from "../zapata-aislada/f2kExporter";
 import { parseZapataF2k } from "../zapata-aislada/f2kImporter";
 import { exportF2k as exportF2kModelo } from "../shared/f2kExporter";
@@ -211,6 +213,13 @@ import { parseE2k } from "../shared/e2kParser";
 import { exportS2k } from "../shared/s2kExporter";
 import { parseS2k } from "../shared/s2kParser";
 import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
+import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
+import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
+import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
+import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
+import { montarBotonSeccion } from "hekatan-ui/src/cad/cuadroSeccion";
+import { montarMenusBarra } from "../shared/menuDiseno";
+import { registrarGuiaFem } from "../shared/guiaFem";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
   // `mToDisp` lo usa el tooltip del visor (kind === "displacement") y NO estaba
@@ -233,6 +242,10 @@ import "./cursorAux";
 // el scaling de sus valores (kN/m² → tonf/m², mm → cm, etc.).
 van.derive(() => { colorMapForceUnit.val = forceUnit.val; });
 van.derive(() => { colorMapDispUnit.val = dispUnit.val; });
+// ⚠️ Faltaba la TENSION. El workspace arranca en tonf/m² y el visor arrancaba
+// en kN/m², y mover «Unidades → Tension» no tocaba la leyenda: la barra de color
+// y el tooltip del raton rotulaban unidades distintas para el mismo valor.
+van.derive(() => { colorMapStressUnit.val = stressUnit.val as any; });
 
 // ── Estado global compartido ──
 const nodes: State<Node[]> = van.state([]);
@@ -242,6 +255,37 @@ const elementInputs: State<ElementInputs> = van.state({});
 const deformOutputs: State<DeformOutputs> = van.state({});
 const analyzeOutputs: State<AnalyzeOutputs> = van.state({});
 const objects3D: State<THREE.Object3D[]> = van.state([]);
+
+// ── EL SELLO DEL CASO ────────────────────────────────────────────────────
+// Identifica el modelo + el caso de carga que se esta MOSTRANDO. El visor lo
+// compara con el `caseId` que traen `deformOutputs`/`analyzeOutputs` y se
+// NIEGA A PINTAR si no coinciden (ver `Mesh.caseId` y `selloDelCasoOk` en
+// `hekatan-ui/src/viewer/getViewer.ts`).
+//
+// Por que hace falta: el bug de la deformada no era una cuenta mal hecha, era
+// un resultado VIEJO pintado sobre un modelo NUEVO. Con el sello, cualquier
+// calculo que llegue tarde (modal diferido, boton asincrono, arrastre de
+// slider) trae el sello de cuando arranco y, si el modelo cambio por debajo,
+// se descarta en vez de mentir.
+const caseId: State<string> = van.state("");
+let __selloSeq = 0;
+/** Emite un sello NUEVO para el modelo que hay ahora en `states` y lo pone en
+ *  pantalla. Lo llama quien acaba de (re)construir el modelo; lo que calcule
+ *  despues se sella con el valor que devuelve esta funcion. */
+function nuevoSello(etiqueta = ""): string {
+  const id = currentExample?.id ?? "(sin ejemplo)";
+  const nN = nodes.rawVal.length, nE = elements.rawVal.length;
+  const caso = activeLoadCase.rawVal ?? "";
+  const s = `${id}#${nN}n/${nE}e#${caso}${etiqueta ? "#" + etiqueta : ""}#${++__selloSeq}`;
+  caseId.val = s;
+  return s;
+}
+/** Estampa unos resultados con el sello dado. */
+function sellarSalidas(sello: string, dout?: DeformOutputs, aout?: AnalyzeOutputs) {
+  if (dout) dout.caseId = sello;
+  if (aout) aout.caseId = sello;
+}
+(window as any).__hekatanCaseId = () => caseId.rawVal;
 // Drawing states (awatif-style) — mouse interactivo + raycaster nativo de
 // hekatan-ui. Solo se usa en el ejemplo cad-draw (otros los ignoran).
 // ── Drawing state — persistido en localStorage ──
@@ -324,6 +368,14 @@ van.derive(() => {
  * «Archivo nuevo» abriera con el modelo de la ultima vez.
  */
 function ofrecerRecuperar(): void {
+  if (URL_HEKS) return;                                   // modelo por enlace: no hay nada que recuperar encima
+  // Ni cuando el enlace trae un EJEMPLO (?t=zapata-levantamiento, galpon...):
+  // se abre un modelo concreto y preguntar por «un dibujo guardado de antes»
+  // solo estorba — y encima tapa la vista (Jorge, 21-sep-2026).
+  try {
+    const t = new URLSearchParams(window.location.search).get("t");
+    if (t && t !== "new-blank") return;
+  } catch { /* sin URL utilizable */ }
   if (drawingPoints.rawVal.length > 0) return;            // ya hay algo dibujado
   let pts: [number, number, number][] = [], polys: number[][] = [], areas: number[] = [];
   try {
@@ -477,6 +529,17 @@ const states: BuildStates = {
   };
 
 
+// ── El modelo de la pantalla, escrito como .heks ─────────────────────────────
+// `__hekatanModeloAHeks` lo usan «Guardar», «Guardar como…», «Compartir enlace» y
+// «Exportar .tcl». Hasta el 18-sep-2026 SOLO lo definia `new-blank`, asi que con una
+// plantilla cargada los cuatro se quedaban con el cuadro CLI vacio y bajaban un
+// fichero de 0 KB (o un .tcl de 93 bytes con un edificio de tres plantas). Ahora se
+// escribe desde los states, que es lo que el solver tiene de verdad, y vale para
+// cualquier modelo. Comprobado por ida y vuelta en `tests/casos/heks_ida_y_vuelta.mjs`.
+(window as any).__hekatanModeloAHeks = () =>
+  modeloAHeks(states, { nombre: currentExample?.name ?? "Modelo de Hekatan Struct" });
+(window as any).__hekatanHayModelo = () => hayModelo(states);
+
 // ── Example runner ──
 let currentExample: ExampleDef | null = null;
 let currentParams: Record<string, number> = {};
@@ -510,6 +573,8 @@ function resetStates() {
   states.elementInputs.val = {};
   states.deformOutputs.val = {};
   states.analyzeOutputs.val = {};
+  // Modelo vacio = nada que sellar. Sin sello, el visor pinta como siempre.
+  caseId.val = "";
 }
 
 /**
@@ -567,6 +632,62 @@ function volverAlAnterior(): void {
 };
 (window as any).__hekatanShowMenu = () => { try { showMenu(); } catch {} };
 
+// ── EL EJEMPLO SE VE AQUI, NO EN OTRA PAGINA ─────────────────────────────
+//
+// Jorge, 18-sep-2026: «entre a SOLIDOS y me llevaba a OTRA PAGINA, y recien
+// alli veia el solido. Puse RBS y me llevaba a otra pagina. Nada puede ser asi:
+// si digo conexion, adentro su ejemplo, ahi debe verse, no enlazarse a otro
+// lado.»
+//
+// Que pasaba: los ejemplos con `standaloneUrl` (los de
+// `ejemplosConPanelPropio.ts`, entre ellos LOS CINCO de la categoria
+// «Solidos») no tienen `build()`. Al elegirlos, `loadExample` limpiaba los
+// states y se iba: el visor quedaba NEGRO y el unico boton del panel hacia
+// `window.location.href = "../<id>/"`. O sea que la app te echaba fuera para
+// enseñarte su propio ejemplo.
+//
+// Ahora se muestran DENTRO: su pagina se monta en un marco que ocupa el
+// lienzo, encima del visor 3D y por debajo de los paneles. La URL del
+// workspace NO cambia, el selector sigue funcionando y se puede volver a otro
+// ejemplo sin perder el sitio.
+//
+// Sigue siendo un parche de arquitectura: lo que toca es graduarlos a
+// `ExampleDef` con `params` + `build` (el visor del workspace ya sabe pintar
+// solidos: `settings.solids` + `analyzeOutputs.solidStress`). Lo que NO puede
+// seguir es que la app te saque de la app.
+const EMBEBIDO_ID = "hk-ejemplo-embebido";
+
+function ocultarEjemploEmbebido() {
+  const f = document.getElementById(EMBEBIDO_ID);
+  if (f) f.remove();
+  if (viewerElm) viewerElm.style.display = "";
+  document.body.classList.remove("hk-embebido");
+}
+
+function mostrarEjemploEmbebido(url: string, nombre: string) {
+  let f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
+  if (!f) {
+    f = document.createElement("iframe");
+    f.id = EMBEBIDO_ID;
+    // z-index 1: por encima del lienzo 3D, por DEBAJO de los paneles (100+).
+    // El ejemplo trae SU panel pegado al borde derecho. Con el iframe a pantalla completa ese
+    // panel queda DEBAJO del selector del workspace y se ven dos columnas de controles encimadas
+    // (Jorge, 22-sep: «los sólidos… hay errores»). Se le reserva la franja del selector.
+    f.style.cssText = "position:fixed;left:0;top:0;bottom:0;width:calc(100% - 352px);height:100%;border:0;" +
+      "z-index:1;background:var(--cad-bg,#15161a)";
+    document.body.appendChild(f);
+  }
+  f.title = nombre;
+  if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+  // Los controles del visor del WORKSPACE sobran mientras se ve un ejemplo embebido: mandan
+  // sobre un lienzo que está apagado, y encima tapan los del ejemplo (Jorge, 22-sep: «los sólidos
+  // … hay errores»). Se esconden ellos y su lengüeta; el selector de ejemplo se queda.
+  document.body.classList.add("hk-embebido");
+  // El visor 3D del workspace se apaga mientras tanto: el ejemplo trae el suyo
+  // y dos contextos WebGL vivos a la vez es tirar memoria (la maquina tiene 4 GB).
+  if (viewerElm) viewerElm.style.display = "none";
+}
+
 function loadExample(ex: ExampleDef) {
   // Apilar el ejemplo ANTERIOR antes de cambiar (salvo si es una vuelta atrás).
   if (!_navegandoAtras && currentExample && currentExample.id !== ex.id) {
@@ -586,7 +707,9 @@ function loadExample(ex: ExampleDef) {
   // empezar. Se puede apagar desde la propia ventana («no volver a mostrar»).
   // (NO si el modelo llega por enlace ?heks= / ?m=: eso es para mirarlo, y la guía
   // tapaba la bóveda del enlace compartido — medido en el PNG, 13-sep-2026.)
-  if (ex.id === "new-blank" && !_qs.get("heks") && !_qs.get("m")) {
+  // (Y tampoco con el enlace #h= — modelo DENTRO del hash —: la condicion solo miraba ?heks y ?m, y la
+  // guia salia encima del radier compartido por #h=, 18-sep-2026. URL_HEKS cubre los tres.)
+  if (ex.id === "new-blank" && !URL_HEKS) {
     let mostrar = true;
     try { mostrar = localStorage.getItem("hk_guia_nuevo") !== "0"; } catch {}
     if (mostrar) setTimeout(() => { try { (window as any).__hekatanRibbon?.guia?.(true); } catch {} }, 700);
@@ -659,10 +782,9 @@ function loadExample(ex: ExampleDef) {
   if (!loadCases.val.find(c => c.name === activeLoadCase.val)) {
     activeLoadCase.val = loadCases.val[0]?.name ?? "Dead";
   }
-  // ── Ejemplos legacy del upstream awatif (1d-mesh, beams, plate-q4, etc.):
-  // tienen su propia UI VanJS toolbar y no encajan en el flujo Tweakpane del
-  // workspace. El pane solo muestra un botón "Abrir ejemplo →" que navega
-  // al index.html standalone. ──
+  // ── Ejemplos con PANEL PROPIO (1d-mesh, beams, plate-q4, solidos…): traen
+  // su UI VanJS y no encajan en el flujo Tweakpane del workspace. Se muestran
+  // EMBEBIDOS en el lienzo; no se navega a ningun lado. ──
   if (ex.standaloneUrl) {
     // Limpiar animaciones y estado del ejemplo previo
     const animKeys = ["__rbsK3Anim", "__bfpK3Anim", "__endPlateK3Anim"];
@@ -674,9 +796,13 @@ function loadExample(ex: ExampleDef) {
     activeExampleVersion.v++;
     resetStates();
     currentParams = {};
+    // AQUI, no en otra pagina: el ejemplo se monta en el lienzo del workspace.
+    mostrarEjemploEmbebido(ex.standaloneUrl, ex.name);
     buildParamsPane();
     return;
   }
+  // Ejemplo normal: si venia uno embebido, fuera, y vuelve el visor 3D.
+  ocultarEjemploEmbebido();
   // currentParams se almacena en la UNIDAD UI seleccionada. Los p.default
   // están escritos en SI (kN, kN·m) por convención; aquí los convertimos a
   // la unidad UI del usuario para que los sliders muestren valores coherentes.
@@ -713,6 +839,8 @@ function loadExample(ex: ExampleDef) {
   // que cada ejemplo arranque con la superestructura visible.
   ponerFactoresDelCaso();
   ex.build?.(toSIParams(), states, modalPanel);
+  // SELLO del modelo recien cargado (ver `nuevoSello`).
+  sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
 
   // ── Auto-mesh shells ETABS-style (toggle global) ──
   // Si el usuario activó "Auto-mesh shells" en el Tweakpane, detectamos Q4
@@ -763,11 +891,16 @@ function loadExample(ex: ExampleDef) {
           states.nodes.val = fakeModel.nodes;
           states.elements.val = fakeModel.elements;
           states.elementInputs.val = { ...fakeModel.elementInputs };
-          // Re-solve
-          states.deformOutputs.val = deform(fakeModel.nodes, fakeModel.elements,
+          // Re-solve. El auto-mesh CAMBIO la malla (otros nudos, otros
+          // elementos): sello nuevo antes de publicar, si no el visor estaria
+          // pintando resultados de la malla de antes sobre la de ahora.
+          const doutAM = deform(fakeModel.nodes, fakeModel.elements,
             states.nodeInputs.rawVal, fakeModel.elementInputs);
-          states.analyzeOutputs.val = analyze(fakeModel.nodes, fakeModel.elements,
-            fakeModel.elementInputs, states.deformOutputs.rawVal);
+          const aoutAM = analyze(fakeModel.nodes, fakeModel.elements,
+            fakeModel.elementInputs, doutAM);
+          sellarSalidas(nuevoSello("automesh"), doutAM, aoutAM);
+          states.deformOutputs.val = doutAM;
+          states.analyzeOutputs.val = aoutAM;
         }
       }
     } catch (err) {
@@ -783,7 +916,9 @@ function loadExample(ex: ExampleDef) {
   const resetViewerVis = () => {
     const sR = (viewerElm as any).__settings;
     if (!sR) return;
-    if (sR.elements?.val !== undefined)    sR.elements.val = true;
+    // malla muy fina (> 1500 cascaras): aristas apagadas, si no tapan el colormap (placa-base se veia blanca)
+    if (sR.elements?.val !== undefined)    sR.elements.val =
+      (states.elements.rawVal ?? []).filter((e: number[]) => e.length === 3 || e.length === 4).length <= 1500;
     if (sR.nodes?.val !== undefined)       sR.nodes.val = true;
     if (sR.elemColumns?.val !== undefined) sR.elemColumns.val = true;
     if (sR.elemBeams?.val !== undefined)   sR.elemBeams.val = true;
@@ -817,6 +952,7 @@ function loadExample(ex: ExampleDef) {
     // Encender Loads y Supports por default para que el usuario vea la condición del modelo.
     if (s?.loads) s.loads.val = true;
     if (s?.supports) s.supports.val = true;
+
   }
   // Filtra el dropdown Shell results según lo que el ejemplo declara soportar.
   // "pressure" solo se ofrece en zapatas (con resortes Winkler); "bending*" solo
@@ -827,6 +963,32 @@ function loadExample(ex: ExampleDef) {
   autoFitCamera();
   buildParamsPane();
   mountCaseResultsInSettings();   // "Case results" (Dead/Live/Modal) junto a Frame/Shell results
+
+  // El `.heks` de lo que hay en pantalla. `new-blank` define su PROPIO gancho en su build
+  // (escribe el dibujo con sus unidades: ρ en kN/m³ → t/m³); con cualquier otro modelo se
+  // repone el genérico. Sin esto, tras pasar por el lienzo en blanco el gancho de new-blank
+  // se quedaba pegado y «Guardar» escribía el dibujo viejo en vez del modelo cargado.
+  if (ex.id !== "new-blank") {
+    (window as any).__hekatanModeloAHeks = () =>
+      modeloAHeks(states, { nombre: ex.name ?? "Modelo de Hekatan Struct" });
+  }
+
+  // ── EJEMPLO ≠ PLANTILLA (regla de Jorge, 18-sep-2026) ──
+  // Un EJEMPLO se abre ya resuelto y, si tiene modal, con los modos corridos y animando
+  // —también cuando llega por `?t=<id>`, que es como se comparte—. Una PLANTILLA no se
+  // ejecuta sola: es una herramienta, y el usuario calcula cuando quiere. El freno por
+  // tamaño (la animación cuesta 50-80 ms por fotograma con 6600 nudos) vive en
+  // `autoEjecutar.ts` junto con la clasificación, para poder probarlo sin navegador.
+  try {
+    autoEjecutar(ex, states, {
+      correrModalAnimar: () => (window as any).__hekatanRunModalAnimate?.(),
+      pararAnimacion: () => (window as any).__hekatanModalStop?.(),
+      avisar: (msg: string) => {
+        const el = document.getElementById("hk-cad-status");
+        if (el) el.textContent = msg; else console.log("[auto]", msg);
+      },
+    });
+  } catch (e) { console.warn("[auto] no se pudo arrancar el ejemplo:", e); }
   // Si el lienzo esta vacio pero hay un dibujo guardado de otra sesion, se
   // ofrece recuperarlo (no se impone: ver `ofrecerRecuperar`).
   try { setTimeout(ofrecerRecuperar, 1200); } catch {}
@@ -846,6 +1008,26 @@ let __caseResultsBinding: any = null;
 // la animación es para cualquier desplazamiento».
 let __casoMostrado = "";
 const __animar = { on: false };
+// Las flechas de carga se dibujan UNA vez (van.derive sobre settings.loads), no
+// por fotograma. Al animar un modo, el modelo se mueve y ellas se quedan donde
+// estaban: se ven sueltas, flotando fuera de la estructura (Jorge, 21-sep-2026).
+// Redibujar 240 flechas por fotograma seria carisimo, y ademas una carga no
+// pinta nada en un modo de vibracion: CSI tampoco las muestra. Se apagan
+// mientras anima y se restaura lo que hubiera al parar.
+let __cargasAntesDeAnimar: boolean | null = null;
+function __cargasDuranteAnimacion(animando: boolean) {
+  try {
+    const s = (viewerElm as any)?.__settings;
+    if (!s?.loads) return;
+    if (animando) {
+      if (__cargasAntesDeAnimar === null) __cargasAntesDeAnimar = !!s.loads.val;
+      s.loads.val = false;
+    } else if (__cargasAntesDeAnimar !== null) {
+      s.loads.val = __cargasAntesDeAnimar;
+      __cargasAntesDeAnimar = null;
+    }
+  } catch { /* el visor aun no esta montado */ }
+}
 let __animarBinding: any = null;
 // «Modo» aparte de «Case results» (como Mode Number de ETABS): el modo elegido y su control
 let __modoSel = 0;
@@ -1004,20 +1186,39 @@ function mountCaseResultsInSettings() {
       __modeBinding = folder.addBinding(objModo, "modo", { label: "Modo", options: modoOptions, index: 2 });
     }
 
+    // El animador modal solo mueve `mesh.nodes`; nunca escribe `analyzeOutputs`, de donde sale el
+    // colormap. Sin esto la malla se movía con el modo pero seguía pintada con el último caso
+    // estático («Pressure (suelo)», paleta SAFE), que no tiene nada que ver con un modo.
+    const limpiarColormapModal = () => {
+      try {
+        const s = (viewerElm as any).__settings ?? (viewerElm as any).__ctx?.settings;
+        if (s?.shellResults && s.shellResults.val !== "none") s.shellResults.val = "none";
+        if (s?.solidResults && s.solidResults.val !== "none") s.solidResults.val = "none";
+      } catch (err) { console.warn("colormap modal", err); }
+    };
+
     // lo que se ve: el modo elegido (caso modal) o los desplazamientos del caso / combo
     const mostrarModo = () => {
       if (!modalAnimator || !__lastModalResults?.modeShapes?.length) return;
+      limpiarColormapModal();
       try {
         modalAnimator.stop();
         modalAnimator.setResults(__lastModalResults);
         modalAnimator.setMode(__modoSel);
+        __cargasDuranteAnimacion(__animar.on);
         if (__animar.on) modalAnimator.play(); else modalAnimator.showStatic(__modoSel);
       } catch (err) { console.warn("modo", err); }
     };
     const animarCaso = () => {
       if (!modalAnimator) return;
-      if (esModal(__casoMostrado)) { mostrarModo(); return; }
-      if (!__animar.on) { try { modalAnimator.stop(); } catch {} return; }
+      // ⚠️ GUARDA (18-sep-2026): con el modal ACTIVO aquí no se anima ningún caso.
+      // Medido en el deploy (545 nudos): el «modo 1» dibujado NO era φ, era la deformada del caso
+      // DEAD por una constante — mismo factor 30.427 a cinco cifras en 4 nudos × 3 componentes.
+      // La casilla «animar» se enciende ANTES de que `__casoMostrado` sea el caso modal, así que
+      // `esModal(__casoMostrado)` daba false; por eso hace falta también `__modalActivo`.
+      if (esModal(__casoMostrado) ||
+          (__modalActivo && __lastModalResults?.modeShapes?.length)) { mostrarModo(); return; }
+      if (!__animar.on) { __cargasDuranteAnimacion(false); try { modalAnimator.stop(); } catch {} return; }
       // caso de carga / combo: sus desplazamientos reales, como un «modo» de 6 GDL por nudo
       const U = deformOutputs.val?.deformations as Map<number, number[]> | undefined;
       const n = nodes.val.length;
@@ -1046,7 +1247,8 @@ function mountCaseResultsInSettings() {
         try { if (modalAnimator?.isPlaying?.()) modalAnimator.stop(); } catch {}
         __modalActivo = false;
         activeLoadCase.val = v.slice(8); rebuild();
-        try { autoScaleDeformedShape(); } catch {}   // cada caso con SU escala, como ETABS
+        try { autoScaleDeformedShape(); }   // cada caso con SU escala, como ETABS
+        catch (e: any) { console.error(`[caso] autoScaleDeformedShape fallo: ${e?.message ?? e}`); }
       } else {
         const selCase = loadCases.val.find((c) => c.name === v);
         if (!selCase?.type?.startsWith("Modal")) {
@@ -1057,7 +1259,9 @@ function mountCaseResultsInSettings() {
         try { autoScaleDeformedShape(); } catch {}
         try { __loadPanel?.rebuildCases(); } catch {}
       }
-      if (__animar.on) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
+      // 2ª guarda: con el modal activo, este refresco NO puede sustituir el modo por la deformada Dead
+      if (__animar.on && !(__modalActivo && __lastModalResults?.modeShapes?.length)) setTimeout(animarCaso, 300);   // después del rebuild del caso nuevo
+      else if (__animar.on) setTimeout(mostrarModo, 300);
     };
     __caseResultsBinding?.on("change", (e: any) => {
       const v = String(e.value);
@@ -1109,8 +1313,8 @@ function mountCaseResultsInSettings() {
  * pero el usuario puede fijar un valor manual desde el slider "Deform scale".
  */
 // Objetivo de la escala AUTOMATICA de la deformada, como fraccion de la
-// diagonal del modelo. ETABS tiene su propio «Automatic» y NO esta en las
-// cadenas del binario — el criterio vive en el codigo compilado. Se estimo
+// diagonal del modelo. ETABS tiene su propio «Automatic» y no publica su
+// criterio. Se estimo
 // comparando dos capturas del MISMO modelo y la MISMA vista, una con
 // «User Defined = 20» y otra con «Automatic»: la automatica da del orden de 5
 // a 6 para un Uz de 187 mm sobre 14.2 m de diagonal, o sea ~7 %.
@@ -1120,6 +1324,13 @@ function mountCaseResultsInSettings() {
 // Se puede mover a mano desde Settings -> deformScale, que es lo que
 // finalmente manda.
 const OBJETIVO_DEFORMADA = 0.07;
+
+// La ULTIMA escala que puso el automatico. En cada rebuild se recalcula (como el «Automatic» de
+// ETABS) SOLO si el usuario no ha movido los deslizadores desde entonces: si la escala sigue siendo
+// la que puso el automatico, es automatica; si no, manda la del usuario (Jorge, 22-sep-2026: al bajar
+// t de 0.30 a 0.10 la flecha se multiplico x27 con la escala de 2650 fija, la losa se salia de la
+// pantalla y hubo que bajar los deslizadores al minimo, donde ya no se ve nada).
+let escalaAuto: { xy: number; z: number } | null = null;
 
 function autoScaleDeformedShape() {
   const s = (viewerElm as any).__settings;
@@ -1156,12 +1367,12 @@ function autoScaleDeformedShape() {
     // axialmente RÍGIDAS: EA de una col 40×40 hormigón ≈ 4 MN/m, carga típica
     // 400 kN → acortamiento elástico ~0.1 mm/m, totalmente imperceptible en la
     // realidad. Amplificar Uz con el mismo factor XY las hace ver como 'alfeñique'.
-    if (maxUh > 1e-9) {
-      scale = Math.min(5000, Math.max(1, (OBJETIVO_DEFORMADA * diag) / maxUh));
-    } else {
-      scale = 10;  // caso gravitacional puro, scale fijo conservador
-    }
     scaleZfactor = 0.15;  // Uz visible = 15% del Ux/Uy visible — refleja rigidez axial real
+    // Lo que se VE mas grande (horizontal x escala, o vertical x escala x 0.15) = 7 % de la diagonal.
+    // Antes solo miraba Ux/Uy: con solo gravedad el sway es ~0 y la escala se iba a 13000-20000,
+    // y Uz x 0.15 x 13000 dejaba las losas colgando metros (22-sep-2026).
+    const refVis = Math.max(maxUh, scaleZfactor * maxUz);
+    scale = refVis > 1e-12 ? Math.min(50000, Math.max(1, (OBJETIVO_DEFORMADA * diag) / refVis)) : 10;
   } else {
     // PLACA / ZAPATA / SHELL / MURO A CORTE (Δz pequeña): la deformación
     // principal ES Uz (bending out-of-plane de una placa plana, o sag de zapata
@@ -1174,6 +1385,10 @@ function autoScaleDeformedShape() {
   }
   s.deformScale.val = Math.max(1, scale);
   if (s.deformScaleZ) s.deformScaleZ.val = scaleZfactor;
+  escalaAuto = { xy: s.deformScale.val, z: s.deformScaleZ?.val ?? 1 };
+  // Tweakpane no ve un cambio hecho por codigo: sin refresh el deslizador seguia diciendo «1.0»
+  // con la escala real en 78.9, y el usuario veia un numero que no era el que se aplicaba.
+  for (const pn of ((window as any).__hekatanPanes ?? [])) { try { pn?.refresh?.(); } catch { /* no-op */ } }
   // Display scale: −1.5 default (flechas pequeñas) pero −6 para conexiones
   // (modelo de orden 0.5–4 m, evitar que markers tapen geometría).
   const isConexion = currentExample?.id?.startsWith("conexion-") ||
@@ -1497,6 +1712,45 @@ function ponerFactoresDelCaso() {
   (window as any).__hekatanFactoresPatron = factores;
 }
 
+/**
+ * Enlace ?m= / #h= / ?heks=: el modelo abre YA con resultados (Jorge, 19-sep-2026).
+ *  - Patrones y combinaciones del .heks (`load … <patron>`, `combo …`) pasan a los casos y combos del
+ *    workspace; sin eso el selector solo tenia «Dead» y una combinacion del modelo no se podia mirar.
+ *  - Caso activo: `&case=` > `vista … <caso>` del .heks > primera combinacion del .heks > el que habia.
+ *  - Campo de cascara: `&ver=` > `vista <campo>` > «pressure» si hay muelles de area > «displacementZ».
+ */
+function abrirConResultados() {
+  const ei: any = states.elementInputs.val ?? {};
+  const ni: any = states.nodeInputs.val ?? {};
+  const vista = (window as any).__hekatanCliVista as { campo?: string; caso?: string } | null;
+  const pats = Object.keys(ni.cargasPorPatron ?? {});
+  const combos = (ei.combos ?? []) as Array<{ name: string; items: Array<[string, number]> }>;
+  const tipo = (p: string) => (/^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? "Super Dead" : /^(live|viva)$/i.test(p) ? "Live" : "Other");
+  for (const p of pats) {
+    if (!loadPatterns.val.find((x) => x.name === p))
+      loadPatterns.val = [...loadPatterns.val, { name: p, type: tipo(p) as any, selfWeightMultiplier: /^dead$/i.test(p) ? 1 : 0 }];
+    if (!loadCases.val.find((x) => x.name === p))
+      loadCases.val = [...loadCases.val, { name: p, type: "Linear Static", patterns: [{ pattern: p, scaleFactor: 1 }], initialCondition: "Zero" }];
+  }
+  for (const c of combos)
+    if (!loadCombinations.val.find((x: any) => x.name === c.name))
+      loadCombinations.val = [...loadCombinations.val, { name: c.name, type: "Linear Add", cases: c.items.map(([p, f]) => ({ case: p, scaleFactor: f })) } as any];
+  const caso = _qs.get("case") || vista?.caso || combos[0]?.name || null;
+  const hayMuelleArea = (ni.springs ?? []).some((s: any) => s.node < 0 && (s.dof === -1 || s.dof === -3));
+  const campo = _qs.get("ver") || vista?.campo || (hayMuelleArea ? "pressure" : "displacementZ");
+  if (caso && (loadCases.val.some((c) => c.name === caso) || loadCombinations.val.some((c: any) => c.name === caso))) {
+    const esCombo = loadCombinations.val.some((c: any) => c.name === caso);
+    __tipoRes = esCombo ? "combo" : "case";
+    __selRes[__tipoRes] = esCombo ? `__combo_${caso}` : caso;
+    activeLoadCase.val = caso;
+    rebuild();
+  }
+  try { mountCaseResultsInSettings(); } catch { /* no-op */ }
+  const s = (viewerElm as any).__settings;
+  if (s?.shellResults) s.shellResults.val = campo;
+  // paleta: la del visor ya es SAFE por defecto (colorMapPalette = "safe" en hekatan-ui/getColorMap.ts)
+}
+
 function rebuild() {
   if (!currentExample) return;
   resetStates();
@@ -1513,6 +1767,9 @@ function rebuild() {
   }
   ponerFactoresDelCaso();
   currentExample.build(toSIParams(), states, modalPanel);
+  // SELLO: el modelo ya esta armado y el ejemplo dejo sus resultados. Todo lo
+  // que llegue DESPUES con un sello viejo, el visor lo tira.
+  sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
 
   // ── Active Case dispatcher ──
   // Tras el build() estático, si el case activo es Modal-* y el ejemplo
@@ -1573,7 +1830,15 @@ function rebuild() {
   // El auto-scale solo se llama en loadExample (primer build) para dar
   // una escala inicial razonable; después el usuario puede ajustarla
   // manualmente desde el slider "Deform scale".
-  // autoScaleDeformedShape();   ← REMOVIDO
+  // autoScaleDeformedShape();   ← REMOVIDO (hasta el 22-sep-2026)
+  // Ahora SI, pero solo si la escala sigue siendo la automatica (el usuario no la ha tocado):
+  {
+    const sv = (viewerElm as any).__settings;
+    // tolerancia = medio paso del deslizador: Tweakpane redondea al refrescar (2650.16 -> 2650.2)
+    const esAuto = escalaAuto && sv?.deformScale && Math.abs(sv.deformScale.val - escalaAuto.xy) <= 0.051
+                   && Math.abs((sv.deformScaleZ?.val ?? 1) - escalaAuto.z) <= 0.0051;
+    if (esAuto) { try { autoScaleDeformedShape(); } catch { /* no-op */ } }
+  }
   // Sólo recentrar cámara si el usuario NO ha tocado los OrbitControls.
   // Esto permite mover sliders (nVanos, q, secciones, etc.) en modo "live
   // calc" sin que la vista se resetee a iso en cada drag.
@@ -1647,6 +1912,8 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // devuelve `undefined` sin decir por que. Lo usa
 // `cli/shot_plantillas_colormap.mjs`.
 (window as any).__hekatanSettings = () => (viewerElm as any).__settings;
+(window as any).__hekatanViewerCtx = () => (viewerElm as any).__ctx;   // cámara y escena: el tutor proyecta nudos a pantalla
+(window as any).__hekatanViewerElm = () => viewerElm;          // el tutor lo estrecha para partir la pantalla
 // La lista de ejemplos, para que los barridos de la CLI no lleven una copia
 // que se queda vieja en cuanto se anade uno.
 /**
@@ -1669,8 +1936,24 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 (window as any).__hekatanParamDefs = () => currentExample?.params ?? {};
 (window as any).__hekatanModalResults = () => __lastModalResults;
 
+// ── Ganchos del test `animacion-modal-es-el-modo` (repuestos el 19-sep-2026) ──
+// El test compara lo DIBUJADO al animar un modo contra φ, el modo que calculó el solver:
+// si la animación pintara la deformada de Dead en vez del modo, el coseno lo delata. Los
+// añadió el agente que escribió el test y se PERDIERON cuando dos sesiones pisaron este
+// fichero (`git log -S` no los encuentra en ningún commit): desde entonces el test no podía
+// pasar nunca. Se reponen aquí, con el nombre que el test pide.
+//   · `__hekatanModalResultados()` → { frequencies, modeShapes, massParticipation } (φ)
+//   · `__hekatanModalAnimator`     → el animador ACTUAL (se reasigna en buildParamsPane y al
+//     arrancar, por eso va con getter: una referencia fija apuntaría a uno ya desechado).
+(window as any).__hekatanModalResultados = () => __lastModalResults;
+Object.defineProperty(window, "__hekatanModalAnimator", {
+  get: () => modalAnimator, configurable: true,
+});
+
+// `hasModal` va en la lista: `cli/check_animacion_modal.mjs` recorre solo los ejemplos con
+// modal (la mayoría no tiene) y lo da por hecho. También se había perdido.
 (window as any).__hekatanExamples = examplesRegistry.map(
-  (e) => ({ id: e.id, name: e.name, category: e.category }));
+  (e) => ({ id: e.id, name: e.name, category: e.category, hasModal: !!e.hasModal }));
 
 // ── Auto re-fit camera al cambiar de tamaño (mobile rotation) ──
 // El #viewer cambia de tamaño con CSS media queries (ej. en mobile
@@ -1930,12 +2213,11 @@ const openMaterialEditor = (existingName: string | null) => {
   });
   fGen.addBinding(m, "color", { label: "Display Color", view: "color" });
 
-  // ── Weight and Mass ──
-  const fWM = fGen.addBlade ? fGen : editorPane.addFolder({ title: "Material Weight and Mass" });
-  if (fWM === fGen) {
-    // (no addBlade; skip)
-  }
-  const fWeight = editorPane.addFolder({ title: "Weight and Mass" });
+  // ── Peso y masa ──
+  // Aquí había un `const fWM = fGen.addBlade ? fGen : editorPane.addFolder({ title:
+  // "Material Weight and Mass" })`: `addBlade` SIEMPRE existe, así que esa carpeta no se
+  // creaba nunca y la variable no se usaba. Código muerto con nombre de CSI, fuera.
+  const fWeight = editorPane.addFolder({ title: "Peso y masa" });
   fWeight.addBinding(m, "weightDensity", { label: "Weight (kN/m³)", min: 0, step: 0.1 });
   fWeight.addBinding(m, "massDensity", { label: "Mass (kg/m³)", min: 0, step: 1 });
 
@@ -1970,7 +2252,7 @@ const openMaterialEditor = (existingName: string | null) => {
     });
   } else {
     const ph = { msg: "(sin propiedades de diseño)" };
-    fDesign.addBinding(ph, "msg", { readonly: true, label: "" });
+    fDesign.addBinding(ph, "msg", { readonly: true, label: "Sin datos" });
   }
 
   // ── Standards reference ──
@@ -2372,7 +2654,7 @@ const openDisplayUnitsDialog = () => {
       if (filter.category === "All" && def.category !== lastCat) {
         _duPaneInstance.addBlade({ view: "separator" });
         const catLabel = { name: `── ${def.category} ──` };
-        _duPaneInstance.addBinding(catLabel, "name", { readonly: true, label: "" });
+        _duPaneInstance.addBinding(catLabel, "name", { readonly: true, label: "Grupo" });
         lastCat = def.category;
       }
       // Item: 1 binding compacto que muestra el label dinámico, click expande controles
@@ -2574,7 +2856,8 @@ window.addEventListener("hk:property-applied", (ev: any) => {
     w.__hekatanPropToastT = setTimeout(() => { if (toast) toast.style.opacity = "0"; }, 2400);
   } catch {}
   // Disparar rebuild para que el ejemplo procese los cambios manuales
-  try { (window as any).__hekatanRebuild?.(); } catch {}
+  try { (window as any).__hekatanRebuild?.(); }
+  catch (e: any) { console.error(`[props manuales] el rebuild fallo: ${e?.message ?? e}`); }
 });
 // Primera carga: el CSS media query puede no haber aplicado aún
 // cuando autoFitCamera corre por primera vez en loadExample. Forzamos
@@ -2934,6 +3217,12 @@ if (window.innerWidth > 600) {
       html.hk-enlace #hk-settings-toggle, html.hk-enlace #hk-pane-toggle {
         display: none !important;
       }
+      /* Ejemplo EMBEBIDO (trae su propio visor y sus propios controles): los del workspace
+         mandarían sobre un lienzo apagado y taparían los suyos. */
+      body.hk-embebido #settings, body.hk-embebido #hk-settings-toggle,
+      body.hk-embebido #hk-nav-camara, body.hk-embebido #legend {
+        display: none !important;
+      }
       html.hk-enlace #settings {
         position: fixed !important; top: 50vh !important; left: 0 !important; right: 0 !important; bottom: auto !important;
         width: 100vw !important; max-width: 100vw !important;
@@ -3149,9 +3438,34 @@ function makePaneDraggable(host: HTMLElement) {
 // existente / 🧪 Ejemplos. Recién al elegir se cargan las herramientas del
 // pane (loadExample → buildParamsPane).
 function showMenu() {
+  // SALIR AL MENU = EMPEZAR LIMPIO.
+  //
+  // Jorge, 21-sep-2026: «puse menú y ahora está así» — el galpon se quedaba en una
+  // nube de PUNTOS SUELTOS y con la tabla modal abierta encima del menu.
+  //
+  // Se intento limpiar por partes (resetStates, y otra vez a los 60 y 400 ms) y NO
+  // basta: quedaban 214 nudos con 0 elementos y las ventanas de la sesion anterior.
+  // Hay demasiadas capas con estado propio —visor, CAD, paneles, tabla modal— para
+  // ir apagandolas una a una y acertar siempre.
+  //
+  // Asi que se recarga la pagina en la direccion limpia. Es lo que hace cualquier
+  // programa al cerrar un documento, y deja el menu igual que recien abierto. No se
+  // pierde nada que no se estuviera perdiendo ya: salir del modelo ES cerrarlo.
+  try {
+    const u = new URL(location.href);
+    for (const k of ["m", "modal", "t", "cb", "v"]) u.searchParams.delete(k);
+    const limpia = u.pathname + (u.searchParams.toString() ? "?" + u.searchParams : "");
+    if (location.href !== location.origin + limpia) { location.replace(limpia); return; }
+  } catch {}
   currentExample = null;
   activeExampleVersion.v++;
   resetStates();
+  // Y otra vez en el siguiente turno: algo repone los nudos DESPUES del reset y
+  // el visor se queda con una nube de puntos sueltos sin barras (medido
+  // 21-sep-2026: 214 nudos con 0 elementos). Mientras no se sepa quien los
+  // devuelve, se vuelve a vaciar cuando ya han pasado todos.
+  setTimeout(() => { try { if (!currentExample) resetStates(); } catch {} }, 60);
+  setTimeout(() => { try { if (!currentExample) resetStates(); } catch {} }, 400);
   if (currentPane) { currentPane.dispose(); currentPane = null; }
   lastFolderMap = null;
   paneHost.innerHTML = "";
@@ -3972,7 +4286,10 @@ function buildParamsPane() {
           if (cat === ALL_ITW) return !!e.category?.includes("🌀 Drilling ITW");
           return matchesCategory(e.category, cat);
         })
-        .map((e) => [`${e.benchmark ? "🏁 " : ""}${e.name}`, e.id])
+        // ▶ = ejemplo (se abre resuelto) · 📐 = plantilla (se ajusta y se calcula).
+        // Sin esta marca los dos estaban mezclados en la misma lista y no había forma de
+        // saber cuál se iba a ejecutar solo.
+        .map((e) => [`${etiquetaTipo(e)} ${e.benchmark ? "🏁 " : ""}${e.name}`, e.id])
     );
 
   let exBinding = selHost.addBinding(selectorObj, "id", {
@@ -4007,15 +4324,18 @@ function buildParamsPane() {
     if (newEx && newEx.id !== currentExample?.id) setTimeout(() => loadExample(newEx), 0);
   });
 
-  // ── Ejemplos legacy del upstream awatif: solo botón al standalone ──
+  // ── Ejemplos con panel propio: se ven embebidos, no se navega ──
   if (currentExample.standaloneUrl) {
     const url = currentExample.standaloneUrl;
-    const note = pane.addFolder({ title: "ℹ Ejemplo legacy", expanded: true });
-    // Tweakpane no tiene texto multilínea fácil; uso botones consecutivos como labels.
-    note.addButton({ title: "🔗 Abrir ejemplo →" }).on("click", () => {
-      window.location.href = url;
+    // Ya NO hay boton que saque al usuario de la app: el ejemplo esta puesto en
+    // el lienzo (ver `mostrarEjemploEmbebido`). Aqui solo queda recargarlo.
+    // Sin carteles: el ejemplo ya está en el lienzo con sus controles a la vista. Solo el botón
+    // de recargar, que es lo único que hace falta (22-sep-2026, Jorge: «nada de awatif»).
+    pane.addButton({ title: "↻ Recargar el ejemplo" }).on("click", () => {
+      const f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
+      if (f) f.setAttribute("src", url);
+      else mostrarEjemploEmbebido(url, currentExample?.name ?? url);
     });
-    note.addButton({ title: "(usa toolbar VanJS propio)" }).on("click", () => {});
     currentPane = pane;
     return;
   }
@@ -4236,7 +4556,8 @@ function buildParamsPane() {
     } catch {}
     const ns = states.nodes.rawVal ?? [];
     if (!ns.length) {
-      fAxes.addButton({ title: "(modelo vacío — dibujá nodos)" }).on("click", () => {});
+      // Ídem: cartel, no botón (el clic estaba vacío).
+      fAxes.addBinding({ v: "dibujá nodos primero" }, "v", { readonly: true, label: "Modelo vacío" });
       return;
     }
     // Recolectar X únicos + Y únicos (ordenados)
@@ -4378,375 +4699,9 @@ function buildParamsPane() {
       if (!document.getElementById("hk-statusbar")) addCadStatusBar();
     }
   }
-  // ── BLOQUE INLINE LEGACY (será removido al confirmarse el move) ──
-  if (false && currentExample) {
-    const fCad = pane.addFolder({ title: "✏ Herramientas CAD", expanded: !!isModelerCtx });
-    const proxyTool = { v: "node" };
-    const toolBtns: Record<string, any> = {};
-    // Instrucciones por tool — el usuario las ve en el status bar al activar
-    const toolInstructions: Record<string, string> = {
-      select:   "🖱 Seleccionar — click sobre un nodo/elemento para seleccionarlo",
-      node:     "● Nodo — cada click crea un nodo en la posición del plano de trabajo",
-      line:     "／ Línea — click 2 puntos para crear un frame. Continúa clickeando para extender la polilínea, right-click para terminar.",
-      polyline: "⌒ Polilínea — click sucesivos crean segmentos conectados; right-click para terminar.",
-      area:     "▭ Área — 4 clicks crean un Q4 shell (en orden CCW)",
-      col:      "▌ Columna 3D — tipeá altura + Enter, después 1 click en la base. Default = 3m. Ideal para iso.",
-      wall:     "▥ Pared Q4 3D — tipeá altura + Enter, después 2 clicks en las esquinas inferiores. Default = 3m. Crea shell Q4 vertical.",
-      circle:   "○ Círculo — click 2 puntos: 1=centro, 2=radio. Se discretiza en N segmentos (slider 'Segmentos arc/circ').",
-      arc:      "⌒ Arco (3 ptos) — click 3 puntos: 1=inicio, 2=medio, 3=fin. Se discretiza en N segmentos.",
-      rect:     "▭ Rectángulo — click 2 esquinas opuestas. Genera 4 nodos + 4 frames cerrados.",
-      aux:      "┊ Línea auxiliar — referencia visual (no genera FEM)",
-      extend:   "↗ Prolongar — click una línea existente, click en la dirección a extender",
-      chaflan:  "▱ Losa con chaflanes — click 2 esquinas opuestas. Radio del chaflán se ajusta en 'Chaflán r (m)'. Genera 4 lados rectos + 4 cuartos de círculo automáticamente.",
-      "delete": "🗑 Borrar — pasá el mouse sobre una línea/área. Se resalta en rojo. Click para eliminarla. Los nodos huérfanos se limpian automáticamente.",
-    };
-    const setActiveTool = (tool: string) => {
-      proxyTool.v = tool;
-      try { (window as any).__hekatanCadState?.setTool?.(tool); } catch {}
-      // Limpiar clicks pendientes del tool anterior (round-trip)
-      try { (window as any).__hekatanCadResetPending?.(); } catch {}
-      // Mostrar instrucción del tool nuevo
-      const instr = toolInstructions[tool] ?? `Tool ${tool} activo`;
-      const statusEl = document.getElementById("hk-cad-status");
-      if (statusEl) {
-        // Setear texto base; updateStatus interno va a aplicar el sufijo
-        // de modos activos (ORTO, Cota Z, planos) — pero el setText directo
-        // lo hace simple. Usamos refresh helper si está disponible para que
-        // el sufijo se aplique automáticamente.
-        statusEl.textContent = instr;
-        (window as any).__hekatanCadStatusText = instr;
-        (window as any).__hekatanRefreshStatus?.();
-      }
-      console.log(`[CAD] Tool activo: ${tool} — ${instr}`);
-    };
-    fCad.addButton({ title: "🖱 Seleccionar" }).on("click", () => setActiveTool("select"));
-    fCad.addButton({ title: "● Nodo" }).on("click", () => setActiveTool("node"));
-    fCad.addButton({ title: "／ Línea (frame)" }).on("click", () => setActiveTool("line"));
-    fCad.addButton({ title: "▦ Área 4-clics (shell Q4)" }).on("click", () => setActiveTool("area"));
-    fCad.addButton({ title: "▭ Área rectangular (2 clics)" }).on("click", () => setActiveTool("rectarea"));
-    fCad.addButton({ title: "⬡ Área libre (polígono → malla)" }).on("click", () => setActiveTool("polyarea"));
-    fCad.addButton({ title: "◣ Plano inclinado (3 puntos)" }).on("click", () => setActiveTool("plane3"));
-    fCad.addButton({ title: "⬛ Plano XY (reset horizontal)" }).on("click", () => (window as any).__hekatanResetPlaneXY?.());
-    // Tools 3D dedicados — para dibujar SOLO desde vista isométrica sin
-    // tener que cambiar Cota Z entre clicks. Internamente:
-    //   col  → 1 click + altura → frame vertical (columna)
-    //   wall → 2 clicks base + altura → shell Q4 vertical (pared)
-    fCad.addButton({ title: "▌ Columna 3D (1 click + altura)" }).on("click", () => setActiveTool("col"));
-    fCad.addButton({ title: "▥ Pared Q4 3D (2 clicks + altura)" }).on("click", () => setActiveTool("wall"));
-    // Tools CAD adicionales (estilo AutoCAD): polilínea, rectángulo, círculo,
-    // arco, líneas auxiliares/de prolongación. Los elementos no lineales
-    // (arco, círculo) se discretizan en N segmentos al exportarse al FEM.
-    fCad.addButton({ title: "⌒ Polilínea" }).on("click", () => setActiveTool("polyline"));
-    fCad.addButton({ title: "▭ Rectángulo" }).on("click", () => setActiveTool("rect"));
-    fCad.addButton({ title: "○ Círculo" }).on("click", () => setActiveTool("circle"));
-    fCad.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
-    fCad.addButton({ title: "┊ Línea auxiliar" }).on("click", () => setActiveTool("aux"));
-    fCad.addButton({ title: "↗ Prolongar línea" }).on("click", () => setActiveTool("extend"));
-    // ── Tools arquitectónicos (formas irregulares) ──
-    fCad.addButton({ title: "▱ Losa con chaflanes (rect + arcos)" }).on("click", () => setActiveTool("chaflan"));
-    // ── 🗑 Borrar — hover-highlight + click para eliminar líneas/áreas ──
-    fCad.addButton({ title: "🗑 Borrar (hover + click)" }).on("click", () => setActiveTool("delete"));
-    // Modos de drawing
-    const fModes = fCad.addFolder({ title: "🎯 Modos de dibujo", expanded: true });
-    const proxyModes = { ortho: false, polar: false, segs: 12 };
-    fModes.addBinding(proxyModes, "ortho", { label: "ORTO (90°)" }).on("change", (ev: any) => {
-      (window as any).__hekatanOrtho = ev.value;
-      console.log(`[CAD] ORTO ${ev.value ? "ON" : "OFF"}`);
-    });
-    fModes.addBinding(proxyModes, "polar", { label: "POLAR (45°)" }).on("change", (ev: any) => {
-      (window as any).__hekatanPolar = ev.value;
-      console.log(`[CAD] POLAR ${ev.value ? "ON" : "OFF"}`);
-    });
-    fModes.addBinding(proxyModes, "segs", { min: 4, max: 64, step: 1, label: "Segmentos arc/círc" }).on("change", (ev: any) => {
-      (window as any).__hekatanArcSegs = ev.value;
-    });
-    // Radio del chaflán para losas arquitectónicas
-    const proxyChaflan = { r: 1.0 };
-    fModes.addBinding(proxyChaflan, "r", { min: 0.1, max: 5, step: 0.1, label: "Chaflán r (m)" }).on("change", (ev: any) => {
-      (window as any).__hekatanChaflanR = ev.value;
-    });
-    (window as any).__hekatanChaflanR = 1.0;  // default
-
-    // ── 🎯 Object Snap (OSNAP) — estilo AutoCAD ──
-    // Endpoint, Midpoint, Center, Node, Perpendicular, Nearest, Intersection.
-    // Cada uno toggle independiente. Marcador con color por tipo aparece
-    // cuando el cursor está cerca de un snap activo.
-    const fOsnap = fCad.addFolder({ title: "🎯 Object Snap (OSNAP)", expanded: false });
-    const osnapState = (window as any).__hekatanOsnap ?? {
-      end: true, mid: true, node: true, cen: true,
-      per: false, nea: false, int: false,
-    };
-    (window as any).__hekatanOsnap = osnapState;
-    fOsnap.addBinding(osnapState, "end",  { label: "🔴 Endpoint" });
-    fOsnap.addBinding(osnapState, "mid",  { label: "🟡 Midpoint" });
-    fOsnap.addBinding(osnapState, "node", { label: "🔵 Node" });
-    fOsnap.addBinding(osnapState, "cen",  { label: "🟢 Center" });
-    fOsnap.addBinding(osnapState, "per",  { label: "🟣 Perpendicular" });
-    fOsnap.addBinding(osnapState, "nea",  { label: "🌸 Nearest" });
-    fOsnap.addBinding(osnapState, "int",  { label: "🟠 Intersection" });
-    // Plano de trabajo — actualiza drawingGridTarget para que el raycaster
-    // del Hekatan Drawing intersecte contra el plano correcto. Sin esto los
-    // botones solo cambiaban una variable lógica sin efecto visual.
-    const fPlane = fCad.addFolder({ title: "📐 Plano de trabajo", expanded: true });
-    const proxyPlane = { workZ: 0 };
-    const setPlane = (kind: "xy" | "xz" | "yz", z?: number, syncCam = true) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.workPlane = kind;
-      // Rotación del plano según orientación:
-      //   xy (planta)   → plano horizontal a Z = workZ → rotX=PI/2
-      //   xz (elevación) → plano vertical X-Z          → rotX=0
-      //   yz (lateral)   → plano vertical Y-Z          → rotZ=PI/2 (sobre Y)
-      const wz = z ?? proxyPlane.workZ;
-      // Grid centrado en el origen mundial (convención CAD).
-      if (kind === "xy") {
-        drawingGridTarget.val = { position: [0, 0, wz], rotation: [Math.PI/2, 0, 0] };
-      } else if (kind === "xz") {
-        drawingGridTarget.val = { position: [0, 0, 0], rotation: [0, 0, 0] };
-      } else {
-        // YZ: rotZ(π/2) — ver setView elevY para detalle. rotY(π/2) NO sirve
-        // porque deja el plano del raycaster horizontal en y=10 y el rayo
-        // de la cámara nunca lo cruza.
-        drawingGridTarget.val = { position: [0, 0, 0], rotation: [0, 0, Math.PI/2] };
-      }
-      console.log(`[CAD] Plano: ${kind.toUpperCase()} @ Z=${wz}m`);
-      // Sincronizar cámara → vista ortográfica real para CAD-feel
-      if (syncCam) {
-        if (kind === "xy") setView("plan");
-        else if (kind === "xz") setView("elevX");
-        else if (kind === "yz") setView("elevY");
-      }
-    };
-    fPlane.addButton({ title: "Plano XY (planta)" }).on("click", () => setPlane("xy"));
-    fPlane.addButton({ title: "Plano XZ (elevación frontal)" }).on("click", () => setPlane("xz"));
-    fPlane.addButton({ title: "Plano YZ (elevación lateral)" }).on("click", () => setPlane("yz"));
-    // Vista 3D — útil para orientarse mientras se dibuja en planta/elevación.
-    fPlane.addButton({ title: "🧊 Vista isométrica (3D)" }).on("click", () => {
-      setView("iso");
-      console.log("[CAD] Vista: ISOMÉTRICA");
-    });
-    // Vista doble: planta dibujable a la izquierda + iso preview a la derecha.
-    // Toggle: 1er click activa, 2do click desactiva. El folder "🔀 Vista doble
-    // (split)" en Vista expone configuración avanzada (otra cámara secundaria).
-    // ⚠️ Al apagarla se quedaba en PLANTA ortográfica (la que puso al
-    // encenderse) en vez de volver a la vista que había: se guarda y se
-    // restaura. Y el encuadre de un lienzo vacío va por la rejilla (diagLienzo).
-    // Se guarda la CÁMARA tal cual (cuál, posición, objetivo, zoom/frustum), no
-    // un nombre de vista: el nombre podía ser «plan» por el plano de trabajo
-    // inicial aunque lo que se veía fuera la iso, y al apagar caía en planta.
-    let camaraAntesDeDoble: any = null;
-    fPlane.addButton({ title: "🔀 Vista doble (planta + iso)" }).on("click", () => {
-      const ctx: any = (viewerElm as any).__ctx;
-      splitState.enabled = !splitState.enabled;
-      if (splitState.enabled) {
-        const cam = ctx?.camera;
-        camaraAntesDeDoble = cam ? {
-          cam, pos: cam.position.clone(), up: cam.up.clone(), target: ctx.controls.target.clone(),
-          zoom: cam.zoom, l: cam.left, r: cam.right, t: cam.top, b: cam.bottom, plano: (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy",
-        } : null;
-        splitState.secondary = 0;  // 0 = iso a la derecha
-        setPlane("xy");            // planta a la izquierda (vista activa, dibujable)
-        console.log("[CAD] Vista doble ACTIVADA — planta (izq, dibujable) + iso (der, preview)");
-        refreshSplit();
-      } else {
-        refreshSplit();            // a pantalla completa (aspect entero)
-        const s = camaraAntesDeDoble;
-        if (s && ctx) {
-          const cam = s.cam;
-          cam.position.copy(s.pos); cam.up.copy(s.up); ctx.controls.target.copy(s.target);
-          if (cam.isOrthographicCamera) {
-            // el frustum vertical de antes, con el ancho de la pantalla entera
-            const w = (viewerElm as HTMLElement).clientWidth || 1, h = (viewerElm as HTMLElement).clientHeight || 1;
-            cam.top = s.t; cam.bottom = s.b; cam.left = -s.t * (w / h); cam.right = s.t * (w / h);
-          }
-          cam.zoom = s.zoom; cam.updateProjectionMatrix(); cam.lookAt(s.target);
-          ctx.setActiveCamera(cam); ctx.controls.update();
-          if (s.plano !== "xy") setPlane(s.plano);
-          ctx.render?.();
-        }
-        console.log("[CAD] Vista doble DESACTIVADA — vuelve a la cámara de antes");
-      }
-    });
-    // Planos de referencia visibles — guías horizontales a Z=0,3,6,9,12 m
-    // (niveles típicos de pisos). Útil para orientarse en iso 3D.
-    let refPlanesVisible = false;
-    // Atenúa los bordes de los planos de referencia (creados con opacidad 0.55
-    // por hekatan-ui) para que queden MÁS TRANSPARENTES que la grilla de
-    // plataforma. Los identificamos por su opacidad inicial 0.55 (única en la
-    // escena). Local a workspace3 — no toca hekatan-ui.
-    const REF_PLANE_OPACITY = 0.14; // < grilla mayor (0.40) → más transparente
-    const REF_LEVELS = [0, 3, 6, 9, 12];
-    const REF_SIZE = 20;
-    const dimRefPlanes = () => {
-      const cx: any = (viewerElm as any).__ctx;
-      if (!cx?.scene) return;
-      cx.scene.traverse((o: any) => {
-        if ((o.isLine || o.isLineSegments) && o.material &&
-            Math.abs((o.material.opacity ?? 0) - 0.55) < 0.02) {
-          o.material.opacity = REF_PLANE_OPACITY;
-          o.material.needsUpdate = true;
-        }
-      });
-      cx.render?.();
-    };
-    // Re-centra los planos de referencia con su CENTRO GEOMÉTRICO en (cx, cy).
-    // Se llama al activar (centro = origen) y en cada CLICK de dibujo (centro =
-    // punto clickeado) → los planos "siguen" donde dibujás.
-    const recenterRefPlanes = (cx: number, cy: number) => {
-      (window as any).__hekatanShowRefPlanes?.(REF_LEVELS, REF_SIZE, cx, cy);
-      dimRefPlanes();
-    };
-    (window as any).__hekatanRecenterRefPlanes = recenterRefPlanes;
-    fPlane.addButton({ title: "📐 Mostrar/ocultar planos de ref. (siguen tu click)" }).on("click", () => {
-      refPlanesVisible = !refPlanesVisible;
-      (window as any).__hekatanRefPlanesOn = refPlanesVisible;
-      if (refPlanesVisible) {
-        recenterRefPlanes(0, 0); // centro inicial en el origen
-        console.log("[CAD] Planos de referencia VISIBLES (atenuados, siguen click)");
-      } else {
-        (window as any).__hekatanHideRefPlanes?.();
-        console.log("[CAD] Planos de referencia OCULTOS");
-      }
-    });
-    // Toggle de planos ORTOGONALES del último punto (XY/XZ/YZ que aparecen
-    // durante el rubber band para guía visual + snap).
-    //
-    // Default OFF. Venían encendidos, y en un lienzo vacío aparecen dos planos
-    // de color atravesando la pantalla sin que nadie los haya pedido: lo
-    // primero que se ve al entrar es un adorno que no se sabe qué es ni cómo
-    // se quita. Son una guía para afinar un punto, así que se encienden cuando
-    // hagan falta, desde este mismo botón.
-    (window as any).__hekatanShowOrthoPlanes = false;
-    let orthoPlanesVisible = false;
-    fPlane.addButton({ title: "▦ Planos ref. ortogonales (XY/XZ/YZ del último pto)" }).on("click", () => {
-      orthoPlanesVisible = !orthoPlanesVisible;
-      // Llamar al setter expuesto para que el cambio se aplique YA, sin
-      // esperar a que el usuario mueva el mouse. Si no existe el setter
-      // (versión vieja), fallback al flag pelado.
-      const fn = (window as any).__hekatanSetOrthoPlanes;
-      if (typeof fn === "function") fn(orthoPlanesVisible);
-      else (window as any).__hekatanShowOrthoPlanes = orthoPlanesVisible;
-      // Refrescar status (sufijo refleja los modos activos)
-      (window as any).__hekatanRefreshStatus?.();
-      console.log(`[CAD] Planos ortogonales ${orthoPlanesVisible ? "ACTIVADOS" : "DESACTIVADOS"}`);
-    });
-    // ── Sliders de dimensión visual ──
-    // 1) Tamaño del área de los planos ortogonales (cuadrado XY/XZ/YZ).
-    //    `ext` es el semi-lado, así que el cuadrado total es 2·ext × 2·ext.
-    //    Default 8m → cuadrado 16×16. Range generoso (1m a 50m) cubre desde
-    //    detalle (zapata) hasta edificio entero.
-    // 2) Tamaño del grid mallado (la "plataforma" que se ve en el viewer).
-    //    Tira de settings.gridSize del viewer interno (default 10).
-    const proxySizes = { orthoExt: 3.2, gridSize: 30 };
-    const orthoExtBinding = fPlane.addBinding(proxySizes, "orthoExt", {
-      min: 1, max: 50, step: 0.5, label: "Tamaño área planos ref. (m)",
-    }).on("change", (ev: any) => {
-      const fn = (window as any).__hekatanSetOrthoExt;
-      if (typeof fn === "function") fn(ev.value);
-      else (window as any).__hekatanOrthoExt = ev.value;
-    });
-    fPlane.addBinding(proxySizes, "gridSize", {
-      min: 1, max: 100, step: 1, label: "Tamaño grid (m)",
-    }).on("change", (ev: any) => {
-      const s = (viewerElm as any).__settings;
-      if (s?.gridSize) s.gridSize.val = ev.value;
-      // Mantener el plano de referencia del mismo tamaño que la grilla.
-      proxySizes.orthoExt = ev.value / 2;
-      try { orthoExtBinding.refresh(); } catch {}
-      (window as any).__hekatanSetOrthoExt?.(ev.value / 2);
-    });
-    // ── Toggle global de grid snap ──
-    // Cuando OFF, el cursor ignora el grid (Snap 2D / Snap 3D) y queda en
-    // la coordenada raw del raycaster. OSnap (endpoint/midpoint/etc.) sigue
-    // funcionando — esto solo controla el snap a la malla cuadriculada.
-    // El toggle de grid snap + atajo F9 vive ahora en getCadPanel.ts (el panel
-    // CAD real). Acá solo dejamos el binding legacy por compatibilidad.
-    // Apagado por defecto, como en AutoCAD: ver la nota larga en getCadPanel.ts
-    (window as any).__hekatanSnapEnabled = false;
-    const proxySnapToggle = { snapEnabled: false };
-    fCad.addBinding(proxySnapToggle, "snapEnabled", { label: "🧲 Grid snap (F9)" }).on("change", (ev: any) => {
-      (window as any).__hekatanSnapEnabled = !!ev.value;
-    });
-    // ── Selector de paso de snap (cuánto salta el cursor) ──
-    // Dropdown con valores discretos comunes en CAD: 0.01 / 0.05 / 0.1 / 0.2 /
-    // 0.25 / 0.5 / 1 / 2 / 5 metros. Bindea a __hekatanSnap2D igual que el
-    // slider continuo, pero más usable porque clava valores "limpios" sin
-    // tener que arrastrar el slider con precisión.
-    const proxySnapStep = { step: 0.5 };
-    fCad.addBinding(proxySnapStep, "step", {
-      label: "Paso snap (m)",
-      options: {
-        "0.01 m (mm)":  0.01,
-        "0.05 m (5cm)": 0.05,
-        "0.10 m":       0.1,
-        "0.20 m":       0.2,
-        "0.25 m":       0.25,
-        "0.50 m":       0.5,
-        "1.00 m":       1.0,
-        "2.00 m":       2.0,
-        "5.00 m":       5.0,
-      },
-    }).on("change", (ev: any) => {
-      const v = Number(ev.value);
-      (window as any).__hekatanSnap2D = v;
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.snap = v;  // legacy
-    });
-    // Snap 2D y 3D separados (más flexibilidad para distintos workflows)
-    const proxyCAD = { snap2D: 0.5, snap3D: 0.25, workZ: 0 };
-    fCad.addBinding(proxyCAD, "snap2D", { min: 0, max: 5, step: 0.05, label: "Snap 2D fino (m)" }).on("change", (ev: any) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.snap = ev.value;  // legacy
-      (window as any).__hekatanSnap2D = ev.value;
-    });
-    fCad.addBinding(proxyCAD, "snap3D", { min: 0, max: 5, step: 0.05, label: "Snap 3D (m)" }).on("change", (ev: any) => {
-      (window as any).__hekatanSnap3D = ev.value;
-    });
-    fCad.addBinding(proxyPlane, "workZ", { min: -10, max: 50, step: 0.1, label: "Cota Z (m)" }).on("change", (ev: any) => {
-      const st = (window as any).__hekatanCadState?.get?.();
-      if (st) st.workZ = ev.value;
-      // Re-posicionar el plano XY (si está activo) a esa Z
-      const curPlane = ((window as any).__hekatanCadState?.get?.())?.workPlane ?? "xz";
-      if (curPlane === "xy") setPlane("xy", ev.value, false); // no re-sync cámara en cada tick
-      try { (window as any).__hekatanRebuild?.(); } catch {}
-    });
-    // Acciones
-    const fAcc = fCad.addFolder({ title: "🛠 Acciones", expanded: true });
-    // ⏹ Finalizar dibujo: termina la polilínea actual (próximo click = nuevo
-    // trazo independiente), libera axis lock, oculta rubber band/polar lines.
-    // Equivalente a Esc o click derecho.
-    fAcc.addButton({ title: "⏹ Finalizar dibujo (Esc)" }).on("click", () => {
-      (window as any).__hekatanFinalizeDraw?.();
-      (window as any).__hekatanCadMouse?.cancel?.();
-    });
-    fAcc.addButton({ title: "🗑 Limpiar todo" }).on("click", () => {
-      (window as any).__hekatanCadState?.reset?.();
-      // También limpiar el Drawing nativo (puntos + polylines + áreas + aux)
-      drawingPoints.val = [];
-      drawingPolylines.val = [[]];
-      drawingAreas.val = [];
-      drawingAuxLines.val = [];
-      try { (window as any).__hekatanRebuild?.(); } catch {}
-    });
-    // Botones para cambiar la cota Z del plano de trabajo (planta de cada piso)
-    const fFloors = fCad.addFolder({ title: "🏢 Plantas de pisos", expanded: false });
-    [0, 3, 6, 9, 12].forEach(z => {
-      fFloors.addButton({ title: `Piso a Z=${z}m` }).on("click", () => {
-        drawingGridTarget.val = {
-          position: [0, 0, z],
-          rotation: [Math.PI/2, 0, 0],
-        };
-        const cs = (window as any).__hekatanCadState?.get?.();
-        if (cs) cs.workZ = z;
-        console.log(`[CAD] Plano XY @ Z=${z}m`);
-      });
-    });
-    fAcc.addButton({ title: "📋 Copiar comandos a CLI" }).on("click", () => {
-      const script = (window as any).__hekatanCliScript ?? "";
-      console.log("[CAD] Comandos generados:\n" + script);
-      navigator.clipboard?.writeText(script);
-      alert("Comandos copiados al portapapeles. Pega en cli-modeler para editar/correr el FEM.");
-    });
-  }
+  // (Aqui vivia un bloque `if (false && currentExample) { ... }` de 368 lineas:
+  //  la version INLINE de las Herramientas CAD, que ya vive en `hekatan-ui`.
+  //  Nunca se ejecutaba. Borrado el 18-sep-2026; esta en el historial de git.)
 
   // ── 💻 CLI Modeler (siempre disponible — folder colapsado por default
   //     en ejemplos que no son cli-modeler para no estorbar) ──
@@ -4899,6 +4854,66 @@ function buildParamsPane() {
     taContainer.appendChild(heksInput);
     fCli.addButton({ title: "📂 Abrir .heks" }).on("click", () => heksInput.click());
 
+    // ── 📐 DWG / DXF ⇄ geometría (el motor del visor DWG, en public/dwg/) ──
+    // Importar: líneas → barras, 3DFACE/polilínea cerrada de 3-4 lados → áreas,
+    // partiendo en las uniones en T. Entra por el mismo camino que el S2K
+    // (new-blank), así que después solo faltan apoyos, secciones y cargas.
+    // Exportar: cada familia en su capa (COLUMNAS, VIGAS, DIAGONALES, LOSAS, MUROS).
+    const fDwg = pane.addFolder({ title: "📐 DWG / DXF", expanded: false });
+    const importarPlano = (plano: "auto" | "xz") => {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = ".dwg,.dxf";
+      input.onchange = async (ev: any) => {
+        const file = ev.target.files?.[0]; if (!file) return;
+        try {
+          const { leerPlano, docAGeometria } = await import("../shared/dwgGeometria");
+          const doc = await leerPlano(file, import.meta.env.BASE_URL);
+          const g = docAGeometria(doc, { plano });
+          if (!g.nodes.length) {
+            alert(`No se encontró geometría estructural en ${file.name}.` +
+              (g.capasSaltadas.length ? `\nCapas saltadas (ejes, cotas, textos…): ${g.capasSaltadas.join(", ")}` : ""));
+            return;
+          }
+          (window as any).__hekatanDwgImport = g;
+          localStorage.setItem("__hekatan_pending_import__", JSON.stringify({
+            source: "DWG", filename: file.name,
+            nodes: g.nodes, polylines: g.polylines, areas: g.areas, timestamp: Date.now(),
+          }));
+          console.log(`✅ ${file.name}: ${g.resumen}\n   capas usadas: ${g.capasUsadas.join(", ")}` +
+            `\n   capas saltadas:${g.capasSaltadas.join(", ") || "—"}`);
+          const u = new URL(window.location.href);
+          u.searchParams.set("t", "new-blank");
+          window.location.href = u.toString();
+        } catch (e: any) {
+          alert(`Error importando ${file.name}: ${e?.message ?? e}`); console.error(e);
+        }
+      };
+      input.click();
+    };
+    fDwg.addButton({ title: "📥 Importar DWG/DXF (3D o planta)" }).on("click", () => importarPlano("auto"));
+    fDwg.addButton({ title: "📥 Importar DWG/DXF como alzado (XZ)" }).on("click", () => importarPlano("xz"));
+    const nombreBase = () => ((window as any).__hekatanHeksNombre || currentExample?.id || "modelo")
+      .replace(/\.(heks|txt|dwg|dxf)$/i, "");
+    fDwg.addButton({ title: "📤 Exportar DWG" }).on("click", async () => {
+      try {
+        const { escribirDwg } = await import("../shared/dwgGeometria");
+        const bytes = await escribirDwg(states.nodes.val as any, states.elements.val as any,
+                                        import.meta.env.BASE_URL);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([bytes], { type: "image/vnd.dwg" }));
+        a.download = nombreBase() + ".dwg"; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      } catch (e: any) { alert(`Error exportando DWG: ${e?.message ?? e}`); console.error(e); }
+    });
+    fDwg.addButton({ title: "📤 Exportar DXF" }).on("click", async () => {
+      const { modeloAEntidades, entidadesADxf } = await import("../shared/dwgGeometria");
+      const txt = entidadesADxf(modeloAEntidades(states.nodes.val as any, states.elements.val as any));
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([txt], { type: "application/dxf" }));
+      a.download = nombreBase() + ".dxf"; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    });
+
     // ── Guardar / Guardar como… un .heks, y la barra de arriba ──
     // Los botones Nuevo · Abrir · Guardar de la barra superior eran DIBUJO: no tenían
     // acción. Y no había «Guardar como» (Jorge, 13-sep-2026). Guardar reescribe con el
@@ -4906,7 +4921,20 @@ function buildParamsPane() {
     // Chrome/Edge, o un cuadro con el nombre donde no lo hay).
     const guardarHeks = async (pedirNombre: boolean) => {
       const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
-      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
+      const texto = ta.value.trim() ? ta.value : (gen?.() ?? "");
+      // NO se descarga un fichero vacío diciendo que se guardó. Es la regla de Jorge
+      // (18-sep-2026): ningún control puede decir que hizo algo sin comprobar que lo hizo.
+      if (!texto.trim()) {
+        alert("No hay modelo que guardar: el lienzo está vacío y el cuadro de comandos también.");
+        return;
+      }
+      // Lo que el formato .heks no sabe guardar fiel (p. ej. la placa DSE del dual) va
+      // avisado en la cabecera del fichero; aquí se le dice también a quien guarda.
+      const avisos = avisosHeks(texto);
+      if (avisos.length) {
+        alert("El .heks se guarda, pero OJO — el fichero no reproduce exactamente este modelo:\n\n" +
+              avisos.map((l) => l.replace(/^#\s*/, "")).join("\n"));
+      }
       let nombre: string = (window as any).__hekatanHeksNombre || "modelo.heks";
       const ponerNombre = (n: string) => {
         (window as any).__hekatanHeksNombre = n;
@@ -5000,6 +5028,16 @@ function buildParamsPane() {
           ta.value = txt;
           setTimeout(() => {
             applyCliScript();
+            // ENCUADRE: el `autoFitCamera` de loadExample corrio con el lienzo vacio (el modelo llega
+            // despues), y la camara se quedaba en la del lienzo nuevo: el radier MOD_002 salia medio
+            // fuera de cuadro. Se re-encuadra con el modelo ya puesto.
+            userCameraInteracted = false;
+            // ABRIR CON RESULTADOS (Jorge, 19-sep-2026): el enlace es para MIRAR el modelo, asi que abre ya
+            // mostrando resultados. Caso: `&case=` del enlace, o `vista <campo> <caso>` del .heks, o la
+            // primera combinacion del modelo. Campo: `&ver=`, o la `vista`, o presion de suelo si hay
+            // muelles de area (cimentacion) y si no el asiento Uz. Paleta SAFE (el defecto del visor).
+            try { abrirConResultados(); } catch (e) { console.warn("[enlace] resultados por defecto:", e); }
+            setTimeout(() => { try { autoScaleDeformedShape(); autoFitCamera(); } catch { /* no-op */ } }, 300);
             // recien ahora se destapa: hasta aca solo se veian las ayudas de
             // dibujo del CAD (planos de trabajo, triada de ejes, rejilla) y
             // parecia que la pagina cargaba algo antes del modelo.
@@ -5050,18 +5088,10 @@ function buildParamsPane() {
           alert("No se pudo abrir «" + urlHeks + "»: " + e.message);
         });
     }
-    fCli.addButton({ title: "💾 Guardar .heks" }).on("click", () => {
-      // Cuadro CLI vacío = el modelo se dibujó con el mouse: se genera el .heks del dibujo
-      // (Tutorial 9: salía un archivo de 0 KB).
-      const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
-      const texto = ta.value.trim() ? ta.value : (gen?.() ?? ta.value);
-      const blob = new Blob([texto], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "modelo.heks";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    });
+    // 💾 Guardar (sin preguntar el nombre): reusa `guardarHeks`, que ya comprueba que
+    // haya modelo. Antes esto era un SEGUNDO botón con su propio código, que bajaba
+    // `modelo.heks` aunque estuviera vacío — el fichero de 0 KB del Tutorial 9.
+    fCli.addButton({ title: "💾 Guardar .heks" }).on("click", () => guardarHeks(false));
     // ── OpenSees Tcl: importar / exportar ──
     const tclInput = document.createElement("input");
     tclInput.type = "file";
@@ -5082,7 +5112,16 @@ function buildParamsPane() {
     fCli.addButton({ title: "📂 Importar .tcl (OpenSees)" }).on("click", () => tclInput.click());
     fCli.addButton({ title: "💾 Exportar .tcl (OpenSees)" }).on("click", () => {
       try {
-        const blob = new Blob([exportTclFromCli(ta.value)], { type: "text/plain" });
+        // Exportaba el CUADRO DE COMANDOS, no el modelo: con el edificio de 3 plantas
+        // cargado bajaba 93 bytes (medido 18-sep-2026). Ahora, si el cuadro está vacío,
+        // se escribe el .heks del modelo real y de ahí sale el .tcl.
+        const gen = (window as any).__hekatanModeloAHeks as (() => string) | undefined;
+        const fuente = ta.value.trim() ? ta.value : (gen?.() ?? "");
+        if (!fuente.trim()) {
+          alert("No hay modelo que exportar: el lienzo está vacío y el cuadro de comandos también.");
+          return;
+        }
+        const blob = new Blob([exportTclFromCli(fuente)], { type: "text/plain" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "modelo.tcl";
@@ -5136,23 +5175,35 @@ solve`;
       //     LECTURA pero el parser los convierte a 1-based (nI = nums[0]+1)
       //     antes de almacenar — así son consistentes con los IDs 1-based de nodes.
       //   • `supports` y `loads` — usan IDs 1-based directamente (igual que inline).
-      ta.value = `# Portico 2D — sintaxis bloque (estilo awatif)
+      // ⚠️ La CABECERA de un bloque tiene que ir SOLA en su línea: el lector solo la
+      // reconoce si la línea trae UN token (`cmd === "elements" && tokens.length === 1`).
+      // Este ejemplo llevaba «elements    # pares 0-based…» y el comentario al lado la
+      // convertía en dos tokens: el bloque no se abría y el lector escupía
+      // «L8: comando desconocido "elements" · L9: "0" · L10: "1"» (medido 18-sep-2026).
+      // O sea: el botón pegaba un ejemplo que el propio programa no sabe leer.
+      ta.value = `# Portico 2D — sintaxis bloque
+# La cabecera de cada bloque va SOLA en su linea (sin comentario al lado).
+
+# nudos: x y z, con ID automatico 1, 2, 3, 4
 nodes
-0 0 0      # se almacena como nodo ID=1
-0 0 3      # nodo ID=2
-5 0 3      # nodo ID=3
-5 0 0      # nodo ID=4
+0 0 0
+0 0 3
+5 0 3
+5 0 0
 
-elements    # pares 0-based → parser convierte a 1-based
-0 1         # frame ID=1: nodos 1→2 (columna izq)
-1 2         # frame ID=2: nodos 2→3 (viga sup)
-2 3         # frame ID=3: nodos 3→4 (columna der)
+# barras: pares de nudos, 0-based (0 1 = del nudo 1 al 2)
+elements
+0 1
+1 2
+2 3
 
-supports    # IDs 1-based
+# apoyos: ID del nudo (1-based) + tipo
+supports
 1 fixed
 4 fixed
 
-loads       # IDs 1-based
+# cargas: ID del nudo (1-based) + fx fy fz mx my mz
+loads
 2 10 0 -50 0 0 0
 3 10 0 -50 0 0 0
 
@@ -5181,7 +5232,11 @@ solve`;
           const ex = examplesRegistry.find((e) => e.id === "ifc-viewer");
           const quedarse = currentExample?.id === "ifc-viewer" || currentExample?.id === "new-blank";
           if (ex && !quedarse) { loadExample(ex); }
-          else { try { rebuild(); } catch {} try { autoFitCamera(); } catch {} }
+          else {
+            try { rebuild(); }
+            catch (e: any) { console.error(`[IFC] el rebuild fallo: ${e?.message ?? e}`); }
+            try { autoFitCamera(); } catch {}
+          }
           console.log(`✅ IFC: ${file.name} — ${M.grupos.length} objetos, ${M.nTri} triángulos.`);
         } catch (e: any) { alert(`Error importando IFC: ${e?.message ?? e}`); console.error(e); }
       };
@@ -6008,8 +6063,11 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
             states.objects3D.val = colObjs;
             try {
               const dout = deform(N2, E2, states.nodeInputs.val, states.elementInputs.val, springsList2);
-              states.deformOutputs.val = dout;
               const aout = analyze(N2, E2, states.elementInputs.val, dout);
+              // Este boton REEMPLAZA el modelo (N2/E2): sello nuevo y las dos
+              // salidas estampadas antes de publicarlas.
+              sellarSalidas(nuevoSello("cimentacion"), dout, aout);
+              states.deformOutputs.val = dout;
               // Override colormap range para pressure (hasta -q_adm)
               const q_adm_kPa = q_adm * 9.80665;  // tonf/m² → kN/m² ≈ kPa
               if (aout.colorMapRanges == null) aout.colorMapRanges = {};
@@ -6245,8 +6303,13 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   // edificios, pórticos, placas, cáscaras, mezzanines, galpones, etc.
   // Permite roundtrip Hekatan ↔ ETABS/SAP para validación cruzada de
   // edificios duales, modal y participación de masa.
-  // Se excluyen cimentaciones puras (zapata*, guerra-ej*, safe-bench-*).
-  if (currentExample && !isFoundation) {
+  // ANTES se excluian las cimentaciones puras (zapata*, guerra-ej*, safe-bench-*)
+  // porque «F2K ya cubre las zapatas». Jorge, 21-sep-2026: «que exporte a ETABS, SAP
+  // y SAFE». Y tiene razon: el argumento del programa es que el mismo modelo se abre
+  // en los tres y da lo mismo — dejar la zapata sin ETABS ni SAP es quitarle la
+  // comprobacion justo al ejemplo que mas se mira. Los muelles de area viajan en los
+  // tres ficheros (ver reference_csi_tres_ficheros_leyes_safe_f2k).
+  if (currentExample) {
     const fEtabs = pane.addFolder({ title: "ETABS", expanded: false });
     const fSap   = pane.addFolder({ title: "SAP",   expanded: false });
     // Columnas CFT al .s2k: SAP2000 no tiene "Filled Steel Tube" (ETABS si). Por defecto
@@ -6896,7 +6959,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     modalAnimator = createModalAnimator({
       mesh: { nodes, elements, deformOutputs, analyzeOutputs },
       viewerElm,
-      scalePercent: 5,
+      // escala única del modo: `shared/modeScale.ts` (3.7 % de la diagonal = SAP2000 medido)
       onStatusChange: () => {
         const s = modalAnimator.getStatus();
         status.mode = s.mode;
@@ -7077,7 +7140,7 @@ const settingsObj: Record<string, any> = {
 let viewerElm: HTMLElement;
 try {
   viewerElm = getViewer({
-    mesh: { nodes, elements, nodeInputs, elementInputs, deformOutputs, analyzeOutputs },
+    mesh: { nodes, elements, nodeInputs, elementInputs, deformOutputs, analyzeOutputs, caseId },
     objects3D,
     settingsObj,
     // Drawing nativo de hekatan-ui (awatif). Mouse handler + raycaster + snap
@@ -7621,6 +7684,22 @@ try {
   const input = document.createElement("input");
   input.type = "text";
   input.id = "hk3-cmd-input";
+  // Red de seguridad: una API key pegada aqui por error queda ESCRITA A LA VISTA
+  // (paso el 21-sep-2026 con la clave de Gemini, y la captura ya habia salido del
+  // equipo). Si el texto parece una clave, se borra al momento y se avisa.
+  {
+    const PARECE_CLAVE = /(AIza[0-9A-Za-z_-]{20,}|AQ\.[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z_-]{20,}|ghp_[0-9A-Za-z_-]{20,})/;
+    const revisar = () => {
+      if (!PARECE_CLAVE.test(input.value)) return;
+      input.value = "";
+      const g = document.getElementById("hk3-cmd-ghost");
+      if (g) g.innerHTML = "";
+      const st = document.getElementById("hk-cad-status");
+      if (st) st.textContent = "🔒 Eso parecia una API key: se borro de aqui. Pegala en el panel del agente (boton 🤖).";
+      console.warn("[seguridad] posible API key en la linea de ordenes: borrada");
+    };
+    ["input", "paste"].forEach((ev) => input.addEventListener(ev, () => setTimeout(revisar, 0)));
+  }
   input.placeholder = "L línea · PL · REC · C · COL · MU · LO · M mover · CO copiar · O desfase · TR recortar · EX alargar · E borrar · ? ayuda";
   input.autocomplete = "off";
   input.spellcheck = false;
@@ -8869,7 +8948,7 @@ document.body.appendChild(modalPanel.div);
 modalAnimator = createModalAnimator({
   mesh: { nodes, elements, deformOutputs, analyzeOutputs },
   viewerElm,
-  scalePercent: 5,
+  // escala única del modo: `shared/modeScale.ts` (3.7 % de la diagonal = SAP2000 medido)
 });
 
 // ── Hidratar drawing arrays globales desde localStorage si hay import pendiente ──
@@ -8994,3 +9073,27 @@ if (initialEx) {
   }
   }
 }
+
+// El boton del agente 🤖 vivia dentro de getCadPanel(), asi que en la pantalla
+// de inicio NO EXISTIA: se pulsaba «Agente IA» y no pasaba nada porque no habia
+// nada que pulsar (Jorge, 20-sep-2026). Ahora se monta siempre, en cuanto hay
+// DOM, y el propio boton se coloca por encima de la barra inferior del CAD.
+function montarAgenteSiempre() {
+  try {
+    arrancarCajaNegra();     // caja negra: anota comandos, clics y TODOS los errores
+    montarBotonGrabar();     // el boton rojo: graba en video lo que se hace
+    montarBotonGif();        // y el 🎞 de al lado: lo mismo pero en GIF
+    montarBotonSeccion();    // 📐 la seccion de la barra designada, dibujada y acotada
+    registrarGuiaFem();      // 📘 Guía de elementos finitos: guion escrito, no IA
+    montarMenusBarra();      // Analisis / Diseno / Exportar: siempre, no solo si hay diseno
+    montarLanzadorAgente();
+  } catch (e) {
+    console.warn("[agente] no se pudo montar el lanzador:", e);
+  }
+}
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", montarAgenteSiempre);
+else montarAgenteSiempre();
+// el panel de la derecha se monta despues: se vuelve a intentar (es idempotente)
+setTimeout(montarAgenteSiempre, 1200);
+setTimeout(montarAgenteSiempre, 4000);

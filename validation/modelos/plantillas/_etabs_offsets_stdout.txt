@@ -1,0 +1,12 @@
+8 modelos
+ 1/8  P0_portico-2d                  ok                      27.8 s  T1=1.3860
+ 2/8  P1_portico-3d                  ok                      17.8 s  T1=0.4121
+ 3/8  P2_portico-losa                ok                      32.0 s  T1=0.7000
+ 4/8  P3_solo-rejilla                ok                      17.2 s  T1=0.8116
+ 5/8  P4_losa-plana                  ok                      65.2 s  T1=1.0205
+ 6/8  P5_losa-vigas-borde            ok                      84.4 s  T1=0.7611
+ 7/8  P6_dual                        ok                      75.3 s  T1=0.6754
+ 8/8  P7_arriostrado                 ok                      47.4 s  T1=0.4157
+
+8 ok, 0 con problema, 367.0 s
+-> C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\etabs_offsets

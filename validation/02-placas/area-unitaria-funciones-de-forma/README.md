@@ -14,7 +14,7 @@ pone una presión uniforme `q = 1` sobre el elemento y se leen las **reacciones*
 * las de `θx` y `θy` dicen si el elemento reparte **momentos** nodales. Un
   Mindlin **bilineal** no reparte ninguno (la presión solo trabaja contra `w`);
   un Kirchhoff discreto tipo DKQ **sí**, porque su `w` no es bilineal. Es lo que
-  separa las dos familias sin tocar el binario.
+  separa las dos familias por caja negra.
 
 ## Autocontroles del ensayo
 

@@ -408,6 +408,38 @@ export function sections(
     return (dz > dx && dz > dy) || (dy > dx && dy > dz);
   }
 
+  /**
+   * Las secciones SIGUEN a los nudos.
+   *
+   * Jorge, 21-sep-2026: «esas cosas amarillas» — trozos de perfil (una I, una
+   * C) flotando sueltos por encima del galpon. No eran glifos ni basura: eran
+   * estas secciones, quedadas en el sitio que ocupaban ANTES de deformarse el
+   * modelo.
+   *
+   * La causa: el `van.derive` de abajo lee los nudos con `derivedNodes.rawVal`,
+   * y `rawVal` NO apunta dependencia — asi que al moverse la deformada (o al
+   * pasar de un modo a otro en la animacion modal) ese derive no se volvia a
+   * ejecutar y las secciones se quedaban clavadas donde estaban.
+   *
+   * No se arregla leyendo `.val` alli: eso reconstruiria la geometria de cada
+   * seccion en CADA fotograma de la animacion — con el galpon curvo son cientos
+   * de barras. Aqui solo se recoloca lo que ya existe: posicion y giro.
+   */
+  van.derive(() => {
+    const nodos = derivedNodes.val;            // ESTE si apunta la dependencia
+    if (!nodos) return;
+    const mover = (o: THREE.Object3D) => {
+      const el = o.userData?.secElem as number[] | undefined;
+      if (!el) return;
+      const a = nodos[el[0]], b = nodos[el[1]];
+      if (!a || !b) return;
+      o.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+      o.rotation.setFromRotationMatrix(getTransformationMatrixBeam(a, b));
+    };
+    group.children.forEach(mover);
+    labelsGroup.children.forEach(mover);
+  });
+
   // ── Rebuild on change ──
   van.derive(() => {
     settings.deformedShape.val;
@@ -420,7 +452,12 @@ export function sections(
     if (!showCols && !showBeams) { group.children.forEach((c) => { if (c instanceof Text) (c as Text).dispose(); }); group.clear(); return; }
 
     group.children.forEach((c) => { if (c instanceof Text) (c as Text).dispose(); });
+    labelsGroup.clear();
     group.clear();
+    // OJO: aqui NO se devuelve labelsGroup al grupo. Se probo el 21-sep-2026 y el
+    // resultado fue una MANCHA naranja: un rotulo «CFT250x250x8» por barra, que en
+    // el galpon curvo son cientos y tapan el modelo. Las etiquetas se montan aparte
+    // (ver el derive de `settings.sectionLabels`), no aqui.
 
     const elems = structure.elements?.val;
     const inputs = structure.elementInputs?.val;
@@ -453,6 +490,10 @@ export function sections(
 
       const shape = shapes?.get(idx);
       if (!shape) return;
+      // Sección sin cotas (p. ej. una «SD Section» de Section Designer: el .e2k no trae su dibujo)
+      // → no se extruye. Antes se dibujaba con b/h undefined: geometría NaN y la consola llena de
+      // «computeBoundingSphere(): radius is NaN» (estructura-mixta, 64 barras, 22-sep-2026).
+      if (!(shape.h! > 0 || shape.d! > 0 || shape.b! > 0)) return;
 
       const mid: [number, number, number] = [
         (node1[0] + node2[0]) / 2,
@@ -460,6 +501,8 @@ export function sections(
         (node1[2] + node2[2]) / 2,
       ];
       const rotMatrix = getTransformationMatrixBeam(node1, node2);
+      // de que barra sale: sin esto no se puede recolocar cuando la deformada se mueve
+      const marca = (o: THREE.Object3D) => { o.userData.secElem = element; return o; };
 
       if (shape.type === "CFT") {
         // CFT: concrete fill + steel tube walls + outline
@@ -467,18 +510,21 @@ export function sections(
         // Concrete core
         const concMesh = new THREE.Mesh(cft.concFill, concreteFill);
         concMesh.position.set(...mid);
+        marca(concMesh);
         concMesh.rotation.setFromRotationMatrix(rotMatrix);
         concMesh.userData.e = idx;
         group.add(concMesh);
         // Steel walls
         const steelMesh = new THREE.Mesh(cft.steelFillGeom, steelFill);
         steelMesh.position.set(...mid);
+        marca(steelMesh);
         steelMesh.rotation.setFromRotationMatrix(rotMatrix);
         steelMesh.userData.e = idx;
         group.add(steelMesh);
         // Outline
         const line = new THREE.Line(cft.outline, steelLine);
         line.position.set(...mid);
+        marca(line);
         line.rotation.setFromRotationMatrix(rotMatrix);
         line.userData.e = idx;
         group.add(line);
@@ -540,6 +586,7 @@ export function sections(
         // Filled face
         const meshObj = new THREE.Mesh(geom.fill, fillMat);
         meshObj.position.set(...mid);
+        marca(meshObj);
         meshObj.rotation.setFromRotationMatrix(rotMatrix);
         meshObj.userData.e = idx;
         group.add(meshObj);
@@ -547,6 +594,7 @@ export function sections(
         // Outline
         const line = new THREE.Line(geom.outline, lineMat);
         line.position.set(...mid);
+        marca(line);
         line.rotation.setFromRotationMatrix(rotMatrix);
         line.userData.e = idx;
         group.add(line);
@@ -560,6 +608,7 @@ export function sections(
         const color = steelTypes.includes(shape.type) ? "#ff9900" : "#00ccff";
         const text = new Text(label, color, "transparent");
         text.position.set(mid[0], mid[1], mid[2]);
+        marca(text);
         const size = 0.05 * settings.gridSize.rawVal * 0.5;
         text.updateScale(size * (derivedDisplayScale?.rawVal ?? 1));
         labelsGroup.add(text);

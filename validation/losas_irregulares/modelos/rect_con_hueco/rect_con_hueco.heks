@@ -1,0 +1,466 @@
+# rect_con_hueco: malla que genero ETABS 22 (Auto Mesh de fabrica 1.25 m, Shell-Thin)
+# losa maciza t = 0.20 m, E = 25e6 kN/m2, nu = 0.2, q = -10 kN/m2, apoyos de ETABS. kN, m
+node 1 0 0 0
+node 2 10 0 0
+node 3 10 8 0
+node 4 0 8 0
+node 5 2 1 0
+node 6 5 1 0
+node 7 5 4 0
+node 8 2 4 0
+node 9 7.183235 0.332413 0
+node 10 8 0.4 0
+node 11 7.913501 0.706553 0
+node 12 7.108431 0.756854 0
+node 13 9 0.2 0
+node 14 8.668245 0.589464 0
+node 15 9.035004 0.912716 0
+node 16 8.238872 1.427939 0
+node 17 7.485461 1.936085 0
+node 18 7.183991 1.128242 0
+node 19 6.651387 2.398721 0
+node 20 6.138424 1.00639 0
+node 21 5.677118 2.415989 0
+node 22 5.89486 3.185809 0
+node 23 5 3 0
+node 24 5 2 0
+node 25 6.142915 0.584701 0
+node 26 3 4 0
+node 27 2.819872 4.757532 0
+node 28 1.957981 4.531713 0
+node 29 4 4 0
+node 30 3.671376 4.524535 0
+node 31 4.204282 4.826438 0
+node 32 3.376282 5.433048 0
+node 33 2.561391 6.120218 0
+node 34 1.956811 5.456226 0
+node 35 1.78623 6.679776 0
+node 36 1.312814 5.999757 0
+node 37 0.930381 7.234753 0
+node 38 0.580363 6.742611 0
+node 39 0.528724 5.677902 0
+node 40 0.965203 5.505088 0
+node 41 1.015151 4.748095 0
+node 42 1.347872 4.993478 0
+node 43 8.75 0 0
+node 44 7.5 0 0
+node 45 6.25 0 0
+node 46 5 0 0
+node 47 4 1 0
+node 48 3.75 0 0
+node 49 3 1 0
+node 50 2.5 0 0
+node 51 1.25 0 0
+node 52 0 6.857143 0
+node 53 0 5.714286 0
+node 54 1 1.071429 0
+node 55 0 1.142857 0
+node 56 2 2 0
+node 57 0.928765 2.147056 0
+node 58 0 2.285714 0
+node 59 2 3 0
+node 60 0.816416 3.176247 0
+node 61 0 3.428571 0
+node 62 0.780282 4.041537 0
+node 63 0 4.571429 0
+node 64 0.448858 4.768837 0
+node 65 10 3.428571 0
+node 66 10 4.571429 0
+node 67 9.085762 4.679477 0
+node 68 8.96659 3.619905 0
+node 69 10 5.714286 0
+node 70 8.922935 5.650302 0
+node 71 10 6.857143 0
+node 72 8.598503 6.606782 0
+node 73 8.75 8 0
+node 74 7.5 8 0
+node 75 7.317257 6.918619 0
+node 76 6.25 8 0
+node 77 6.076352 6.889661 0
+node 78 5 8 0
+node 79 4.837142 7.155261 0
+node 80 3.75 8 0
+node 81 3.803937 7.149357 0
+node 82 2.5 8 0
+node 83 2.898449 7.270178 0
+node 84 1.25 8 0
+node 85 2.249224 7.173822 0
+node 86 3.084251 6.747721 0
+node 87 3.935308 6.030884 0
+node 88 4.806646 5.362744 0
+node 89 5.562891 4.598839 0
+node 90 6.271528 3.914858 0
+node 91 7.095835 3.374805 0
+node 92 7.851061 2.635462 0
+node 93 8.495162 2.074581 0
+node 94 9.187874 1.665145 0
+node 95 10 1.142857 0
+node 96 10 2.285714 0
+node 97 9.208972 2.539473 0
+node 98 8.305107 3.164291 0
+node 99 8.669747 2.592782 0
+node 100 4.530992 6.583849 0
+node 101 6.23263 5.108138 0
+node 102 5.576075 5.990548 0
+node 103 6.720944 5.627155 0
+node 104 7.126178 6.124217 0
+node 105 6.478761 6.340742 0
+node 106 6.258593 5.986148 0
+node 107 6.573977 4.480719 0
+node 108 6.850934 4.805766 0
+node 109 7.726287 3.81006 0
+node 110 7.312556 4.398508 0
+node 111 6.994122 4.084677 0
+node 112 8.015333 5.559802 0
+node 113 7.711384 4.87286 0
+node 114 7.324649 5.216396 0
+node 115 8.210938 4.29025 0
+node 116 8.437344 4.843176 0
+shell 1 9 10 11 12 0.20 25e6
+areaload 1 -10
+shelltype 1 thin
+shell 2 10 13 14 11 0.20 25e6
+areaload 2 -10
+shelltype 2 thin
+tri 3 13 2 15 0.20 25e6
+areaload 3 -10
+shelltype 3 thin
+shell 4 15 16 11 14 0.20 25e6
+areaload 4 -10
+shelltype 4 thin
+shell 5 16 17 18 11 0.20 25e6
+areaload 5 -10
+shelltype 5 thin
+shell 6 17 19 20 18 0.20 25e6
+areaload 6 -10
+shelltype 6 thin
+tri 7 21 20 19 0.20 25e6
+areaload 7 -10
+shelltype 7 thin
+shell 8 22 7 23 21 0.20 25e6
+areaload 8 -10
+shelltype 8 thin
+tri 9 21 23 24 0.20 25e6
+areaload 9 -10
+shelltype 9 thin
+shell 10 6 25 20 24 0.20 25e6
+areaload 10 -10
+shelltype 10 thin
+shell 11 25 9 12 20 0.20 25e6
+areaload 11 -10
+shelltype 11 thin
+tri 12 12 11 18 0.20 25e6
+areaload 12 -10
+shelltype 12 thin
+tri 13 12 18 20 0.20 25e6
+areaload 13 -10
+shelltype 13 thin
+shell 14 8 26 27 28 0.20 25e6
+areaload 14 -10
+shelltype 14 thin
+shell 15 26 29 30 27 0.20 25e6
+areaload 15 -10
+shelltype 15 thin
+shell 16 29 7 31 30 0.20 25e6
+areaload 16 -10
+shelltype 16 thin
+shell 17 31 32 27 30 0.20 25e6
+areaload 17 -10
+shelltype 17 thin
+shell 18 32 33 34 27 0.20 25e6
+areaload 18 -10
+shelltype 18 thin
+shell 19 33 35 36 34 0.20 25e6
+areaload 19 -10
+shelltype 19 thin
+shell 20 37 38 36 35 0.20 25e6
+areaload 20 -10
+shelltype 20 thin
+shell 21 38 39 40 36 0.20 25e6
+areaload 21 -10
+shelltype 21 thin
+tri 22 40 39 41 0.20 25e6
+areaload 22 -10
+shelltype 22 thin
+shell 23 41 8 28 42 0.20 25e6
+areaload 23 -10
+shelltype 23 thin
+shell 24 42 28 27 34 0.20 25e6
+areaload 24 -10
+shelltype 24 thin
+shell 25 34 36 40 42 0.20 25e6
+areaload 25 -10
+shelltype 25 thin
+tri 26 37 4 38 0.20 25e6
+areaload 26 -10
+shelltype 26 thin
+tri 27 43 2 13 0.20 25e6
+areaload 27 -10
+shelltype 27 thin
+tri 28 43 13 10 0.20 25e6
+areaload 28 -10
+shelltype 28 thin
+tri 29 44 43 10 0.20 25e6
+areaload 29 -10
+shelltype 29 thin
+tri 30 44 10 9 0.20 25e6
+areaload 30 -10
+shelltype 30 thin
+tri 31 9 25 45 0.20 25e6
+areaload 31 -10
+shelltype 31 thin
+shell 32 45 25 6 46 0.20 25e6
+areaload 32 -10
+shelltype 32 thin
+shell 33 6 47 48 46 0.20 25e6
+areaload 33 -10
+shelltype 33 thin
+shell 34 47 49 50 48 0.20 25e6
+areaload 34 -10
+shelltype 34 thin
+shell 35 49 5 51 50 0.20 25e6
+areaload 35 -10
+shelltype 35 thin
+shell 36 39 38 52 53 0.20 25e6
+areaload 36 -10
+shelltype 36 thin
+shell 37 54 55 1 51 0.20 25e6
+areaload 37 -10
+shelltype 37 thin
+tri 38 54 51 5 0.20 25e6
+areaload 38 -10
+shelltype 38 thin
+shell 39 5 56 57 54 0.20 25e6
+areaload 39 -10
+shelltype 39 thin
+shell 40 54 57 58 55 0.20 25e6
+areaload 40 -10
+shelltype 40 thin
+shell 41 56 59 60 57 0.20 25e6
+areaload 41 -10
+shelltype 41 thin
+shell 42 57 60 61 58 0.20 25e6
+areaload 42 -10
+shelltype 42 thin
+shell 43 59 8 62 60 0.20 25e6
+areaload 43 -10
+shelltype 43 thin
+shell 44 60 62 63 61 0.20 25e6
+areaload 44 -10
+shelltype 44 thin
+tri 45 41 64 62 0.20 25e6
+areaload 45 -10
+shelltype 45 thin
+tri 46 62 64 63 0.20 25e6
+areaload 46 -10
+shelltype 46 thin
+shell 47 41 39 53 64 0.20 25e6
+areaload 47 -10
+shelltype 47 thin
+tri 48 64 53 63 0.20 25e6
+areaload 48 -10
+shelltype 48 thin
+tri 49 38 4 52 0.20 25e6
+areaload 49 -10
+shelltype 49 thin
+shell 50 65 66 67 68 0.20 25e6
+areaload 50 -10
+shelltype 50 thin
+shell 51 66 69 70 67 0.20 25e6
+areaload 51 -10
+shelltype 51 thin
+shell 52 69 71 72 70 0.20 25e6
+areaload 52 -10
+shelltype 52 thin
+shell 53 3 73 72 71 0.20 25e6
+areaload 53 -10
+shelltype 53 thin
+shell 54 73 74 75 72 0.20 25e6
+areaload 54 -10
+shelltype 54 thin
+shell 55 74 76 77 75 0.20 25e6
+areaload 55 -10
+shelltype 55 thin
+shell 56 76 78 79 77 0.20 25e6
+areaload 56 -10
+shelltype 56 thin
+shell 57 78 80 81 79 0.20 25e6
+areaload 57 -10
+shelltype 57 thin
+shell 58 80 82 83 81 0.20 25e6
+areaload 58 -10
+shelltype 58 thin
+shell 59 82 84 85 83 0.20 25e6
+areaload 59 -10
+shelltype 59 thin
+shell 60 37 35 85 84 0.20 25e6
+areaload 60 -10
+shelltype 60 thin
+shell 61 35 33 86 85 0.20 25e6
+areaload 61 -10
+shelltype 61 thin
+shell 62 33 32 87 86 0.20 25e6
+areaload 62 -10
+shelltype 62 thin
+shell 63 32 31 88 87 0.20 25e6
+areaload 63 -10
+shelltype 63 thin
+shell 64 31 7 89 88 0.20 25e6
+areaload 64 -10
+shelltype 64 thin
+shell 65 7 22 90 89 0.20 25e6
+areaload 65 -10
+shelltype 65 thin
+shell 66 22 19 91 90 0.20 25e6
+areaload 66 -10
+shelltype 66 thin
+shell 67 19 17 92 91 0.20 25e6
+areaload 67 -10
+shelltype 67 thin
+shell 68 17 16 93 92 0.20 25e6
+areaload 68 -10
+shelltype 68 thin
+shell 69 16 15 94 93 0.20 25e6
+areaload 69 -10
+shelltype 69 thin
+shell 70 2 95 94 15 0.20 25e6
+areaload 70 -10
+shelltype 70 thin
+shell 71 95 96 97 94 0.20 25e6
+areaload 71 -10
+shelltype 71 thin
+shell 72 96 65 68 97 0.20 25e6
+areaload 72 -10
+shelltype 72 thin
+shell 73 98 92 93 99 0.20 25e6
+areaload 73 -10
+shelltype 73 thin
+shell 74 93 94 97 99 0.20 25e6
+areaload 74 -10
+shelltype 74 thin
+shell 75 97 68 98 99 0.20 25e6
+areaload 75 -10
+shelltype 75 thin
+tri 76 83 85 86 0.20 25e6
+areaload 76 -10
+shelltype 76 thin
+tri 77 83 86 81 0.20 25e6
+areaload 77 -10
+shelltype 77 thin
+tri 78 100 79 81 0.20 25e6
+areaload 78 -10
+shelltype 78 thin
+shell 79 100 81 86 87 0.20 25e6
+areaload 79 -10
+shelltype 79 thin
+shell 80 88 89 101 102 0.20 25e6
+areaload 80 -10
+shelltype 80 thin
+shell 81 102 100 87 88 0.20 25e6
+areaload 81 -10
+shelltype 81 thin
+shell 82 103 104 105 106 0.20 25e6
+areaload 82 -10
+shelltype 82 thin
+shell 83 77 102 106 105 0.20 25e6
+areaload 83 -10
+shelltype 83 thin
+tri 84 105 104 75 0.20 25e6
+areaload 84 -10
+shelltype 84 thin
+tri 85 106 102 101 0.20 25e6
+areaload 85 -10
+shelltype 85 thin
+shell 86 77 79 100 102 0.20 25e6
+areaload 86 -10
+shelltype 86 thin
+tri 87 107 108 101 0.20 25e6
+areaload 87 -10
+shelltype 87 thin
+shell 88 107 101 89 90 0.20 25e6
+areaload 88 -10
+shelltype 88 thin
+shell 89 91 92 98 109 0.20 25e6
+areaload 89 -10
+shelltype 89 thin
+shell 90 110 108 107 111 0.20 25e6
+areaload 90 -10
+shelltype 90 thin
+tri 91 111 107 90 0.20 25e6
+areaload 91 -10
+shelltype 91 thin
+shell 92 91 109 110 111 0.20 25e6
+areaload 92 -10
+shelltype 92 thin
+tri 93 112 70 72 0.20 25e6
+areaload 93 -10
+shelltype 93 thin
+shell 94 112 72 75 104 0.20 25e6
+areaload 94 -10
+shelltype 94 thin
+shell 95 108 110 113 114 0.20 25e6
+areaload 95 -10
+shelltype 95 thin
+shell 96 114 103 101 108 0.20 25e6
+areaload 96 -10
+shelltype 96 thin
+tri 97 114 113 112 0.20 25e6
+areaload 97 -10
+shelltype 97 thin
+shell 98 114 112 104 103 0.20 25e6
+areaload 98 -10
+shelltype 98 thin
+shell 99 109 98 68 115 0.20 25e6
+areaload 99 -10
+shelltype 99 thin
+shell 100 115 113 110 109 0.20 25e6
+areaload 100 -10
+shelltype 100 thin
+shell 101 67 70 112 116 0.20 25e6
+areaload 101 -10
+shelltype 101 thin
+shell 102 112 113 115 116 0.20 25e6
+areaload 102 -10
+shelltype 102 thin
+shell 103 115 68 67 116 0.20 25e6
+areaload 103 -10
+shelltype 103 thin
+tri 104 84 4 37 0.20 25e6
+areaload 104 -10
+shelltype 104 thin
+tri 105 15 14 13 0.20 25e6
+areaload 105 -10
+shelltype 105 thin
+tri 106 19 22 21 0.20 25e6
+areaload 106 -10
+shelltype 106 thin
+tri 107 24 20 21 0.20 25e6
+areaload 107 -10
+shelltype 107 thin
+tri 108 41 42 40 0.20 25e6
+areaload 108 -10
+shelltype 108 thin
+tri 109 45 44 9 0.20 25e6
+areaload 109 -10
+shelltype 109 thin
+tri 110 62 8 41 0.20 25e6
+areaload 110 -10
+shelltype 110 thin
+tri 111 75 77 105 0.20 25e6
+areaload 111 -10
+shelltype 111 thin
+tri 112 101 103 106 0.20 25e6
+areaload 112 -10
+shelltype 112 thin
+tri 113 90 91 111 0.20 25e6
+areaload 113 -10
+shelltype 113 thin
+support 1 ux uy uz
+support 2 ux uy uz
+support 3 ux uy uz
+support 4 ux uy uz
+support 5 ux uy uz
+support 6 ux uy uz
+support 7 ux uy uz
+support 8 ux uy uz
+solve

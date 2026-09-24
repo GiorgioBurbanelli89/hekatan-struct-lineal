@@ -20,6 +20,8 @@
  */
 import { deform, analyze, modalAnalysis, type Node, type Element, type DeformOutputs, type AnalyzeOutputs } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { registrarTutorTest } from "../shared/tutorTest";
+import { pasosMesaTorsion } from "./tutorMesaTorsion";
 
 const G = 9.80665;                  // m/s²
 const RHO_CONC = 23.57 / 9.81;      // ton/m³ — γ_c=23.57 kN/m³ / g (consistent mass)
@@ -41,9 +43,13 @@ export const mesaTorsion: ExampleDef = {
   benchmark: true,
   defaultShellResult: "displacementZ",
   availableShellResults: [
-    "none", "displacementZ", "vonMises",
+    "none", "pressure",
     "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
     "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
   ],
   hasModal: true,
   guide: [
@@ -53,6 +59,8 @@ export const mesaTorsion: ExampleDef = {
     "Tabla 📊 Comparación ETABS muestra picks ETABS vs Hekatan por componente y diferencia %.",
     "ETABS periodos modal: T1=T2=0.34337s lateral, T3=0.28756s torsión Rz.",
     "Rigid offsets ETABS: col flexible=3.5m (auto -h_viga/2), viga flexible=5.6m (auto -b_col/2).",
+    "T_u vs malla (Wilson §7.7): cambia 'Subdiv losa' 1→16 y 'Unión viga–losa'; T_u = 0 / 2.61 / 5.04 / 5.85 / 6.06 tonf·m (UDCon2).",
+    "🎓 Tutor con voz: menú «📐 Diseño» → «Tutor del test», o abre ?t=mesa-torsion&tutor=1 (Wilson §7.7, malla, ACI §22.7.3.2).",
   ],
   params: {
     // ─── Caso a visualizar ───
@@ -64,13 +72,22 @@ export const mesaTorsion: ExampleDef = {
     Lx:        { default: 6.0,  min: 4, max: 12, step: 0.5, label: "Lx (m)", folder: "Geometría" },
     Ly:        { default: 6.0,  min: 4, max: 12, step: 0.5, label: "Ly (m)", folder: "Geometría" },
     H:         { default: 4.0,  min: 2.5, max: 6, step: 0.25, label: "H piso (m)", folder: "Geometría" },
-    nMesh:     { default: 5,    min: 2, max: 12, step: 1, label: "Subdiv losa (n×n)", folder: "Geometría" },
+    nMesh:     { default: 5,    min: 1, max: 32, step: 1, label: "Subdiv losa (n×n)", folder: "Geometría" },
+    // Compatibilidad viga–losa (Wilson §7.7): la viga solo gira con la losa en los
+    // nudos que COMPARTEN. "Solo extremos" = viga de una pieza esquina a esquina,
+    // la losa no le entrega giro en ningún punto intermedio.
+    vigaNudos: { default: 1, label: "Unión viga–losa",
+                 options: { "Nudos compartidos (viga partida en la malla)": 1,
+                            "Solo en los extremos (viga de una pieza)": 0 }, folder: "Geometría" },
     // ─── Secciones ───
     bCol:      { default: 0.40, min: 0.25, max: 0.80, step: 0.05, label: "b col (m)", folder: "Secciones" },
     hCol:      { default: 0.40, min: 0.25, max: 0.80, step: 0.05, label: "h col (m)", folder: "Secciones" },
     bViga:     { default: 0.30, min: 0.20, max: 0.60, step: 0.05, label: "b viga (m)", folder: "Secciones" },
     hViga:     { default: 0.50, min: 0.30, max: 0.90, step: 0.05, label: "h viga (m)", folder: "Secciones" },
     tLosa:     { default: 0.10, min: 0.08, max: 0.30, step: 0.01, label: "t losa (m)", folder: "Secciones" },
+    // Multiplica la J de las vigas (ACI 318-19 §22.7.3.2, torsión de compatibilidad:
+    // la viga fisurada pierde rigidez torsional y T_u baja hasta φT_cr).
+    factorJ:   { default: 1.0, min: 0.001, max: 1, step: 0.0001, label: "Factor J vigas", folder: "Secciones" },
     // ─── Material concreto 4000Psi ───
     E_GPa:     { default: 24.85, min: 15, max: 35, step: 0.5, label: "E (GPa)", folder: "Material" },
     nu:        { default: 0.20, min: 0.10, max: 0.30, step: 0.01, label: "ν", folder: "Material" },
@@ -86,6 +103,9 @@ export const mesaTorsion: ExampleDef = {
     q_Live:    { default: 0.5, min: 0, max: 5, step: 0.1, label: "Live (tonf/m²)", folder: "Cargas" },
     // ─── Modal ───
     nModos:    { default: 12, min: 3, max: 24, step: 1, label: "N modos modal", folder: "Modal" },
+    masaModal: { default: 0, label: "Masa modal",
+                 options: { "ETABS (K_M: viga en esquinas, lateral, por piso)": 0,
+                            "Por elemento (viga repartida)": 1 }, folder: "Modal" },
   },
 
   computedLabels(p, states) {
@@ -147,10 +167,13 @@ export const mesaTorsion: ExampleDef = {
     elements.push([3, ix(0, nMesh)]);              // NO
     const colStart = shellCount, colEnd = elements.length;
     // 4 vigas perimetrales subdivididas
-    for (let i = 0; i < nMesh; i++) elements.push([ix(i, 0), ix(i + 1, 0)]);            // S
-    for (let j = 0; j < nMesh; j++) elements.push([ix(nMesh, j), ix(nMesh, j + 1)]);    // E
-    for (let i = 0; i < nMesh; i++) elements.push([ix(i, nMesh), ix(i + 1, nMesh)]);    // N
-    for (let j = 0; j < nMesh; j++) elements.push([ix(0, j), ix(0, j + 1)]);            // W
+    // nSegV = tramos por viga: los de la malla, o 1 si la viga solo se une en las esquinas.
+    const nSegV = Math.round(p.vigaNudos ?? 1) === 0 ? 1 : nMesh;
+    const kV = nMesh / nSegV;   // salto en índices de malla por tramo de viga
+    for (let i = 0; i < nSegV; i++) elements.push([ix(i * kV, 0), ix((i + 1) * kV, 0)]);              // S
+    for (let j = 0; j < nSegV; j++) elements.push([ix(nMesh, j * kV), ix(nMesh, (j + 1) * kV)]);      // E
+    for (let i = 0; i < nSegV; i++) elements.push([ix(i * kV, nMesh), ix((i + 1) * kV, nMesh)]);      // N
+    for (let j = 0; j < nSegV; j++) elements.push([ix(0, j * kV), ix(0, (j + 1) * kV)]);              // W
     const beamStart = colEnd, beamEnd = elements.length;
 
     // ─── Supports ───
@@ -222,15 +245,15 @@ export const mesaTorsion: ExampleDef = {
     const Av = p.bViga * p.hViga;
     const Izv = (p.bViga * Math.pow(p.hViga, 3)) / 12;
     const Iyv = (p.hViga * Math.pow(p.bViga, 3)) / 12;
-    const Jv = stVenantJ(p.bViga, p.hViga);
-    const beamSegL = Lx / nMesh;  // long de cada segmento de viga = dx (= dy)
+    const Jv = stVenantJ(p.bViga, p.hViga) * (p.factorJ ?? 1);
+    const beamSegL = Lx / nSegV;  // long de cada segmento de viga = dx (= dy)
     // Rigid offset solo en los segmentos EXTREMOS (los que tocan col):
     //   - primer segmento de cada lado: offset I = b_col/2 / segLen
     //   - último segmento de cada lado: offset J = b_col/2 / segLen
     const offsetEnd = p.rigidOffsets > 0.5 ? (p.bCol / 2) / beamSegL : 0;
     let bIdx = beamStart;
     for (let side = 0; side < 4; side++) {
-      for (let s = 0; s < nMesh; s++) {
+      for (let s = 0; s < nSegV; s++) {
         elasticities.set(bIdx, E_kNm2);
         poissons.set(bIdx, p.nu);
         Gm.set(bIdx, Gmod);
@@ -249,7 +272,7 @@ export const mesaTorsion: ExampleDef = {
         sections.set(bIdx, { type: "rect", b: p.bViga, h: p.hViga });
         if (offsetEnd > 0) {
           const offI = s === 0          ? offsetEnd : 0;
-          const offJ = s === nMesh - 1  ? offsetEnd : 0;
+          const offJ = s === nSegV - 1  ? offsetEnd : 0;
           if (offI + offJ > 0) rigidOffsets.set(bIdx, [offI, offJ]);
         }
         bIdx++;
@@ -265,6 +288,11 @@ export const mesaTorsion: ExampleDef = {
       rigidOffsets: rigidOffsets.size > 0 ? rigidOffsets : undefined,
       // ETABS Shell-Thin (DKE Kirchhoff) — matchea ETABS exacto < 1.5%
       plateFormulations,
+    };
+    // Índices que necesita runModal para montar la masa como ETABS.
+    (states as any)._mesaTorsionIdx = {
+      beamStart, beamEnd, RHO,
+      topCorners: [ix(0, 0), ix(nMesh, 0), ix(nMesh, nMesh), ix(0, nMesh)],
     };
 
     // ─── Helper para construir cargas por caso ────────────────────────
@@ -296,7 +324,7 @@ export const mesaTorsion: ExampleDef = {
         // Selfweight vigas (lumped a los segmentos × dos extremos)
         let bi = beamStart;
         for (let side = 0; side < 4; side++) {
-          for (let s = 0; s < nMesh; s++) {
+          for (let s = 0; s < nSegV; s++) {
             const [nI, nJ] = elements[bi];
             const Wseg = Av * beamSegL * p.gamma_kNm3 * scaleSW;
             addLoad(nI, -Wseg / 2);
@@ -399,16 +427,43 @@ export const mesaTorsion: ExampleDef = {
     console.log(lines.join("\n"));
 
     states.objects3D.val = [];
+    // Tutor en vivo con voz (📐 Diseño → Tutor, o ?t=mesa-torsion&tutor=1). Solo en el navegador.
+    registrarTutorTest("mesa-torsion", "Tutor · Mesa de torsión: T_u, malla y fisuración", pasosMesaTorsion);
   },
 
   runModal(p, states, modalPanel) {
     if (!states.nodes.val.length) return;
     const nModos = Math.round(p.nModos);
     try {
+      // ── Masa: la de ETABS, leída de su matriz ensamblada (Mesa torsiónT.K_M) ──
+      // ETABS pone la masa de cada viga (solo la LUZ LIBRE L − b_col: el tramo
+      // dentro del brazo rígido no pesa) mitad y mitad en las 2 ESQUINAS, no a lo
+      // largo de los nudos de borde de la losa (esos llevan solo losa, 0.173 t).
+      // Masa solo lateral (INCLUDEVERTICALMASS No) y por piso (LUMPATSTORIES Yes).
+      // Con esto: M = 19.798 t y MMI = 256.72 t·m², igual que ETABS (19.80 / 256.7).
+      // Repartida por elemento, la MMI baja a ~215 y T₃ sale −8.6 %.
+      let ni = states.nodeInputs.val, ei = states.elementInputs.val;
+      let lateral = 0, lump = 0;
+      const idx = (states as any)._mesaTorsionIdx;
+      if (Math.round(p.masaModal ?? 0) === 0 && idx) {
+        const dens = new Map(ei.densities);
+        for (let e = idx.beamStart; e < idx.beamEnd; e++) dens.set(e, 0);
+        // Con brazos rígidos (defecto de ETABS) no pesa el tramo dentro del brazo;
+        // sin ellos (ETABS con SetEndLengthOffset = 0) pesa la viga entera.
+        const libre = p.rigidOffsets > 0.5 ? p.bCol : 0;
+        const mV = (L: number) => idx.RHO * p.bViga * p.hViga * (L - libre) / 2;
+        const mCorner = mV(p.Lx) + mV(p.Ly);   // media viga X + media viga Y
+        const masses = new Map<number, number>(ni.masses ?? []);
+        for (const n of idx.topCorners) masses.set(n, (masses.get(n) ?? 0) + mCorner);
+        ei = { ...ei, densities: dens };
+        ni = { ...ni, masses };
+        lateral = 1; lump = 1;
+      }
       const out = modalAnalysis(
-        states.nodes.val, states.elements.val,
-        states.nodeInputs.val, states.elementInputs.val, nModos,
+        states.nodes.val, states.elements.val, ni, ei, nModos, lateral, lump,
       );
+      // Lo que entró al modal, para que el test lo pese (tests/casos/mesa_torsion_modal.mjs).
+      (states as any)._mesaTorsionModal = { nodeInputs: ni, elementInputs: ei, lateral, lump, out };
       const lines: string[] = [];
       lines.push(`[Mesa torsión Modal Hekatan FEM 3D] ${nModos} modos:`);
       for (let i = 0; i < Math.min(nModos, 6); i++) {

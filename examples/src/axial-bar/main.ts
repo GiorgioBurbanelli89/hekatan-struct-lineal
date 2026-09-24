@@ -166,7 +166,7 @@ van.derive(() => {
     <div style="color:#81c784;">Resultado analitico:</div>
     <div>  u = FL/(EA) = <b>${u_analitico.toExponential(6)}</b> m</div>
     <br/>
-    <div style="color:#ffb74d;">Resultado FEM (awatif):</div>
+    <div style="color:#ffb74d;">Resultado FEM:</div>
     <div>  u = <b>${u_fem.toExponential(6)}</b> m</div>
     <br/>
     <div style="color:${errorPct < 0.01 ? '#4caf50' : '#f44336'};">

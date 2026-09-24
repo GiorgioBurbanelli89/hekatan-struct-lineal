@@ -23,7 +23,7 @@
 import type { State } from "vanjs-core";
 import { ejesCSI, diagramaCSI, ladoPositivo } from "./objects/utils/diagramaCSI";
 import { scriptKLocalBarra, kLocalBarra } from "./klocalMatlab";
-import { kPanoQ4 } from "hekatan-fem";
+import { kPano } from "hekatan-fem";
 
 type Nodo = number[];
 type Plano = "XZ" | "YZ" | "XY";
@@ -542,51 +542,52 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
   // Jorge, 17-sep-2026: «nos falta la matriz de rigidez local de placas y barras».
   // La de barra ya estaba; ésta es la de placa. Son DOS bloques de 12×12 porque el
   // elemento es dos elementos superpuestos que no se acoplan (cáscara plana):
-  //   · flexión  [w, θ1, θ2] × 4   ← Shell-Thick de CSI, o DKQ si el paño es Thin
-  //   · membrana [u1, u2, θ3] × 4  ← ITW tipo 12, la membrana de CSI
+  //   · flexión  [w, θ1, θ2] × n   ← Shell-Thick = MITC4 LEÍDA DEL MOTOR, o DKQ si el paño es Thin
+  //   · membrana [u1, u2, θ3] × n  ← ITW tipo 13 (la del motor)
+  // Solo formulaciones publicadas (Jorge, 24-sep-2026): lo que no se puede sacar del motor
+  // dice «K no disponible todavía», no se enseña una matriz parecida.
   // Los 24 gdl del elemento son la unión de los dos. En ejes DEL ELEMENTO (eje 1 =
   // v01+v32), que es donde el motor la arma: en un trapecio no coinciden con los ejes
   // con los que se REPORTAN M11/M22, y la misma matriz escrita en la otra base se va
   // varios % entrada a entrada. Verificado contra el C++ en `cli/_k_placa_vs_cpp.mjs`.
-  function tablaK(K: number[][], gdl: string[], color: string) {
+  function tablaK(K: number[][], gdl: string[], color: string, titulo: string) {
     const g = (v: number) => (Math.abs(v) < 1e-12 ? "0" : Math.abs(v) >= 1e5 || Math.abs(v) < 1e-2 ? v.toExponential(4) : v.toPrecision(6));
     const filas = K.map((row, i) => `<tr><th style="color:#9fb0c6;padding:2px 6px;text-align:right">${gdl[i]}</th>` +
       row.map((v) => `<td style="padding:2px 6px;text-align:right;color:${Math.abs(v) < 1e-12 ? "#4a5568" : v < 0 ? "#ff9f9a" : "#e6edf5"}">${g(v)}</td>`).join("") + "</tr>").join("");
     return `<div style="overflow-x:auto;padding:4px 8px 10px">` +
-      `<div style="color:${color};font-weight:600;padding:6px 2px">${gdl === GDL_FLEX ? "FLEXIÓN — [w, θ1, θ2] × 4" : "MEMBRANA — [u1, u2, θ3] × 4"}</div>` +
+      `<div style="color:${color};font-weight:600;padding:6px 2px">${titulo}</div>` +
       `<table style="border-collapse:collapse;font-family:Consolas,monospace;font-size:11px">` +
       `<tr><th></th>${gdl.map((d) => `<th style="color:#9fb0c6;padding:2px 6px">${d}</th>`).join("")}</tr>${filas}</table></div>`;
   }
-  const GDL_FLEX = ["w 1", "θ1 1", "θ2 1", "w 2", "θ1 2", "θ2 2", "w 3", "θ1 3", "θ2 3", "w 4", "θ1 4", "θ2 4"];
-  const GDL_MEMB = ["u1 1", "u2 1", "θ3 1", "u1 2", "u2 2", "θ3 2", "u1 3", "u2 3", "θ3 3", "u1 4", "u2 4", "θ3 4"];
+  const gdlDe = (n: number, d: string[]) => Array.from({ length: n }, (_, i) => d.map((q) => q + " " + (i + 1))).flat();
 
   function abrirKPano(idx: number) {
     const N = (mesh as any).nodes?.rawVal ?? [], El = (mesh as any).elements?.rawVal ?? [];
     const el = El[idx];
-    if (!el || el.length !== 4) { alert("La K de paño de esta pantalla es la del Q4 (4 nudos)."); return; }
+    if (!el || (el.length !== 4 && el.length !== 3)) { alert("La K de paño de esta pantalla es la de un Q4 o un triángulo."); return; }
     const ei = (mesh as any).elementInputs?.rawVal ?? {};
     const v = (m: string, d = 0) => (ei[m]?.get?.(idx) ?? d) as number;
     const E = v("elasticities"), nu = v("poissonsRatios", 0.2), t = v("thicknesses");
     let r;
     try {
-      r = kPanoQ4(el.map((n: number) => N[n]), E, nu, t, {
-        tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 12),
+      r = kPano(el.map((n: number) => N[n]), E, nu, t, {
+        tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 13),
         gammaFac: v("drillingPenaltyScales", 0.4),
       });
     } catch (e) { alert(String(e)); return; }
     if (!hostK) crearHostK();
     const mod = ei.shellModifiers?.get?.(idx);
     const aviso = Array.isArray(mod) && mod.some((q: number) => q !== 1)
-      ? ` · <b style="color:#f59e0b">modificadores ${mod.join("/")} aplicados</b>` : "";
+      ? ` · <b style="color:#f59e0b">modificadores ${mod.join("/")}: esta K es SIN modificar</b>` : "";
     hostK!.innerHTML =
       `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#141a24;border-bottom:1px solid #2f3b50">` +
       `<b style="color:#e6c463">K local · paño ${idx + 1}</b>` +
       `<span style="color:#9fb0c6">${r.formulacion} · área ${r.area.toFixed(4)} m² · t = ${t} m · E = ${E} · ν = ${nu}${aviso}</span>` +
       `<button class="hk-k-x" style="margin-left:auto;background:#7a2d2d;color:#fff;border:1px solid #b04545;border-radius:4px;cursor:pointer;padding:2px 9px">✕</button></div>` +
       `<div style="padding:4px 10px;color:#6f7d90">ejes del elemento · e1 = ${r.ex.map((q) => q.toFixed(3)).join(", ")} · e2 = ${r.ey.map((q) => q.toFixed(3)).join(", ")} · e3 = ${r.ez.map((q) => q.toFixed(3)).join(", ")}</div>` +
-      tablaK(r.flexion, GDL_FLEX, "#8fd3ff") +
-      (r.membrana ? tablaK(r.membrana, GDL_MEMB, "#9be59b")
-                  : `<div style="padding:8px 10px;color:#f59e0b">La membrana de este paño no es la ITW (drilling ${v("drillingTypes", 12)}): no se enseña una matriz que no es la suya.</div>`);
+      (r.aviso ? `<div class="hk-k-aviso" style="padding:8px 10px;color:#f59e0b">${r.aviso}</div>` : "") +
+      (r.flexion ? tablaK(r.flexion, gdlDe(r.nNudos, ["w", "θ1", "θ2"]), "#8fd3ff", "FLEXIÓN — [w, θ1, θ2] × " + r.nNudos) : "") +
+      (r.membrana ? tablaK(r.membrana, gdlDe(r.nNudos, ["u1", "u2", "θ3"]), "#9be59b", "MEMBRANA — [u1, u2, θ3] × " + r.nNudos) : "");
     hostK!.querySelector(".hk-k-x")!.addEventListener("click", () => { hostK!.hidden = true; });
     hostK!.hidden = false;
   }
@@ -594,8 +595,8 @@ export function iniciarDiagrama2D(mesh: Malla, settings: any) {
     const N = (mesh as any).nodes?.rawVal ?? [], El = (mesh as any).elements?.rawVal ?? [];
     const ei = (mesh as any).elementInputs?.rawVal ?? {};
     const v = (m: string, d = 0) => (ei[m]?.get?.(idx) ?? d) as number;
-    return kPanoQ4((El[idx] ?? []).map((n: number) => N[n]), v("elasticities"), v("poissonsRatios", 0.2), v("thicknesses"),
-      { tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 12), gammaFac: v("drillingPenaltyScales", 0.4) });
+    return kPano((El[idx] ?? []).map((n: number) => N[n]), v("elasticities"), v("poissonsRatios", 0.2), v("thicknesses"),
+      { tipoPlaca: v("plateFormulations", 0), tipoDrill: v("drillingTypes", 13), gammaFac: v("drillingPenaltyScales", 0.4) });
   };
 
   // ── Al TOCAR una barra: aviso «K local» y ventana con la matriz 12×12 ─────────────

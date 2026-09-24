@@ -14,7 +14,7 @@
  * Cargas: tracción uniforme en los bordes opuestos de la placa (caso clásico
  * de Kirsch — concentración de tensiones 3× alrededor del agujero en infinito).
  *
- * Patrón awatif v2.
+ * Patron de ejemplo con panel propio.
  */
 import van, { State } from "vanjs-core";
 import {

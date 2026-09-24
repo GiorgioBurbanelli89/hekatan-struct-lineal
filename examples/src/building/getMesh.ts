@@ -1,6 +1,6 @@
 import { subtract, divide, add, multiply, cross, norm } from "mathjs";
 import { Node, Element, NodeInputs, ElementInputs } from "hekatan-fem";
-import { getMesh as getAwatifMesh } from "hekatan-mesh";
+import { getMesh as getMeshHekatan } from "hekatan-mesh";
 import { Building } from "./data-model";
 
 // Todo: Add reference mesh
@@ -90,7 +90,7 @@ export function getMesh(
         boundaryPoints,
         Array.from(columnPoints.values())
       ); // more stable
-      const { nodes: meshNodes, elements: meshElements } = getAwatifMesh({
+      const { nodes: meshNodes, elements: meshElements } = getMeshHekatan({
         points: slabPoints,
         polygon,
         maxMeshSize: meshSize,

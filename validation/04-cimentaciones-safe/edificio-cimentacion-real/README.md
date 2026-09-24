@@ -173,12 +173,11 @@ nudos. Si son los anclajes de sus 144 elementos LINK (la forma en que SAFE
 implementa un muelle de área) no cambian nada y habría que mirar la rigidez de
 la viga de amarre; si son otra cosa, ahí está el reparto.
 
-### Lo que dice el binario de SAFE
+### Lo que dice la API de SAFE
 
-Los literales de las DLL de SAFE **no salen con `strings`**: son .NET y los
-guardan en el heap de metadatos (`CSI.SAPFire.SAFE.dll` da 0 coincidencias de
-«spring» en ASCII y en UTF-16). Pero no hace falta descompilar: la propia
-`SAFEv1.dll` se puede **inspeccionar por reflexión**, que es leer el binario.
+La interfaz pública de la OAPI (`SAFEv1.dll`, la que se referencia para
+automatizar SAFE) se puede listar por reflexión .NET: son las firmas
+documentadas de la API.
 
 ```bash
 python reflexion_safe.py

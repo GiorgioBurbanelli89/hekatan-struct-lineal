@@ -1,0 +1,222 @@
+{
+ "0.001": {
+  "restraints_sap": {
+   "N0": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "N4": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+   ],
+   "N36": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "N40": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "N80": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "0.01": {
+  "restraints_sap": {
+   "N0": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "N4": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+   ],
+   "N36": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "N40": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "N80": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "0.05": {
+  "restraints_sap": {
+   "N0": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "N4": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+   ],
+   "N36": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "N40": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "N80": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "0.1": {
+  "restraints_sap": {
+   "N0": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "N4": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+   ],
+   "N36": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "N40": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "N80": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ "0.2": {
+  "restraints_sap": {
+   "N0": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "N4": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+   ],
+   "N36": [
+    true,
+    true,
+    true,
+    true,
+    false,
+    true
+   ],
+   "N40": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "N80": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ]
+  }
+ }
+}

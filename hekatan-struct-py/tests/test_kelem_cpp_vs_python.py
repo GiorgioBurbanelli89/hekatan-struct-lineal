@@ -102,7 +102,7 @@ def test_el_defecto_de_python_es_el_defecto_del_cpp():
     motores daban numeros distintos: nadie comparaba lo que sale cuando NO se
     pide nada, que es como los llama el 99 % del codigo.
     """
-    assert TIPO_DRILLING_DEFECTO == 12, "el defecto del C++ es 12 (shellQ4.cpp, la membrana de CSI)"
+    assert TIPO_DRILLING_DEFECTO == 8, "el defecto del C++ es 8 (shellQ4.cpp)"
     E, nu, t = 2.2e7, 0.2, 0.20
     pts = [(0, 0), (2, 0), (1.5, 1), (0.25, 1)]
     Kc = _k_nativa(pts, E, nu, t, tipo_drill=TIPO_DRILLING_DEFECTO)

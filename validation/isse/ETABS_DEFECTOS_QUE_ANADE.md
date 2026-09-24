@@ -1,8 +1,8 @@
 # Lo que ETABS 22 añade por defecto, dicho por el propio ETABS (8-sep-2026)
 
-Pregunta de Jorge: «revisa bien el binario si solo son los brazos rígidos o es el mallado y el
-edge constraint». Se mira primero lo que ETABS **escribe** (su `.$et` y su modelo de análisis
-por OAPI) y después dónde vive cada cosa en los binarios. Sonda: `etabs_defaults_probe.py`
+Pregunta de Jorge: «revisa bien si solo son los brazos rígidos o es el mallado y el
+edge constraint». Se mira lo que ETABS **escribe** (su `.$et` y su modelo de análisis
+por OAPI) y lo que hace al analizar. Sonda: `etabs_defaults_probe.py`
 (1 planta, 4 columnas 0.5×0.5, 4 vigas 0.5×0.3 de 5 m, 1 losa de 0.20, sin tocar nada).
 
 ## 1 · Lo que escribe en el `.$et` y lo que hace al analizar
@@ -20,20 +20,11 @@ por OAPI) y después dónde vive cada cosa en los binarios. Sonda: `etabs_defaul
 | P-Delta `NONE` | `.$et` | — | — |
 | Unión viga–muro (no está en el `.$et`: es del ensamble) | medido en modelo mínimo | 0.55 % | ✅ `etabsjoint 1` |
 
-## 2 · Dónde vive cada cosa en los binarios (cadenas ASCII/UTF-16)
+## 2 · Preprocesado, no solver
 
-| mecanismo | binario | veces |
-|---|---|---|
-| Auto Mesh / AutoMesh / Floor Mesh / Wall Mesh | **ETABS.dll** | 66 / 86 / 27 / 10 |
-| Edge Constraint · Line Constraint | **ETABS.dll** | 21 · 5 |
-| Rigid Zone · End Length Offset | **ETABS.dll** | 6 · 11 |
-| Mesh at Intersections · Merge Tolerance | **ETABS.dll** | 2 · 7 |
-| (solver) CsiGo2.dll / CSI.SAPFire.CsiGo.dll | ninguna de las anteriores | 0 |
-
-Conclusión: **ninguno de los tres vive en el solver**. Automallado, edge constraint y brazos son
-del **preprocesador** (`ETABS.dll`): transforman los objetos en el modelo de análisis antes de que
-`CsiGo2.dll` reciba nada. Por eso SAP2000 (mismo solver, otro preprocesador) da lo mismo que
-Hekatan sobre la misma malla sin más, y ETABS solo cuando la malla ya viene hecha.
+Automallado, edge constraint y brazos transforman los objetos en el modelo de análisis antes de
+resolver. Por eso SAP2000 (mismo solver, otro preprocesador) da lo mismo que Hekatan sobre la
+misma malla sin más, y ETABS solo cuando la malla ya viene hecha.
 
 ## 3 · Respuesta corta
 

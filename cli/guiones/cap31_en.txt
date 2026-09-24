@@ -1,0 +1,20 @@
+Torsion table in Hekatan Struct: the beam torsion depends on the slab mesh.
+The table: a 10 cm Shell-Thin slab, four 30x50 beams and four 40x40 columns, pinned at the base.
+I pick combination UDCon2 (1.2 Dead + 1.6 Live + 1.2 SDL) and the torsion diagram of the frames.
+In elevation: the slab bends and rotates at its edge. At each shared node the slab rotation is the beam rotation, taken as torsion T = GJ dθ/dx. Next to the column the torsion is maximum.
+Wilson, section 7.7, Fig. 7.6: slab and beam are tied by a rigid-body constraint, and compatibility may require applying it at several sections along the beam axis.
+In section 8.9.5 he warns that plate elements must not model beam torsion. The frame carries the torsion with its GJ; the slab only imposes the rotation.
+With a single slab element the beam shares only its ends: both rotate equally and the torsion is zero. ETABS with the same mesh also gives zero.
+2x2 mesh: one shared node at midspan and the torsion rises to 2.62 tonf·m. ETABS gives 2.53.
+4x4 mesh: five shared nodes and the torsion reaches 5.04.
+8x8 mesh: 5.85.
+16x16 mesh: 6.06. Between 8 and 16 it changes less than 4%: converged.
+Full table: torsion grows with refinement, in Hekatan and in ETABS, and converges. A coarse mesh underestimates it.
+If the beam is tied to the slab only at its ends, torsion is zero again and the slab edge is free: midspan deflection goes from 33 to 210 mm.
+Half-beam equilibrium: dT/dx equals the slab edge moment. Integrated over half the span it gives the support torsion; at 32x32 it closes within 1%.
+With the fine mesh the beam torsion is 6.06 tonf·m, above the cracking torsion of 2.50: the beam cracks. Cracked, its torsional stiffness drops on the order of 85 to 90%. The rotation the beam no longer restrains is taken by the slab: moment redistributes and panel equilibrium is preserved. This is compatibility torsion, which may be reduced; equilibrium torsion, needed to carry the load, may not. Reducing J and iterating is a secant approximation of the nonlinear behavior.
+ACI 318 section 22.7.3.2: for compatibility torsion the design torsion may be reduced to φTcr = 1.88 tonf·m. The beam J is reduced until the torsion drops to that value.
+In 3D, for reference: the slab colored by moment M22 with the uncracked beam. At the edge, -3.35 tonf·m/m; at the center, +2.26.
+With J at 4%, torsion drops to 1.94. The edge moment drops to -0.87 and the center rises to 3.34. At the central section, slab plus beams plus frame thrust add up to 65.68 tonf·m in every case: moment redistributes, it does not vanish.
+Consequence for reinforcement: the positive moment at the slab center rises 48%; bottom steel is designed with the moment after the beam cracks. The beam gets closed stirrups and longitudinal steel for φTcr.
+Conclusion: beam torsion rises as the mesh is refined. The beam does not change; what changes is at how many nodes the slab imposes its rotation. A coarse mesh underestimates torsion.

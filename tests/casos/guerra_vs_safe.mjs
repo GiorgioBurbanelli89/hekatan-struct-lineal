@@ -5,7 +5,8 @@
  * el mismo peso propio nodal; sigma = ks·|Uz|. Sus sigma_max estan en
  * tests/datos/guerra_safe_nodal.json. Lo que vigila: que la presion maxima de cada
  * ejemplo del workspace siga donde SAFE la puso.
- *   ej1/2/3/4/7/8: < 0.5 % · ej5: < 1 %. ej6 no tiene replica valida en SAFE (sin
+ *   todos < 0.5 %. ej5 (22-sep-2026): era un rectangulo con los muelles apagados fuera del
+ *   trapecio (Hekatan) contra un trapecio escalonado (SAFE); ahora malla trapezoidal en los dos: 0.07 %. ej6 no tiene replica valida en SAFE (sin
  *   viga de amarre).
  *   El «ej4 -17 %, formulacion de placa» que estuvo abierto de ago a sep-2026 era el
  *   SIGNO del momento: el gdl 1 de plateQ4Solve iba directo a la pendiente bx de
@@ -43,7 +44,7 @@ export function sigmaMax(id) {
 export async function correr() {
   const S = JSON.parse(readFileSync(join(AQUI, "..", "datos", "guerra_safe_nodal.json"), "utf-8"));
   const mod = await empaquetar(FUENTE, "guerra-vs-safe");
-  const limites = { ej1: 0.5, ej2: 0.5, ej3: 0.5, ej4: 0.5, ej5: 1.0, ej7: 0.5, ej8: 0.5 };
+  const limites = { ej1: 0.5, ej2: 0.5, ej3: 0.5, ej4: 0.5, ej5: 0.5, ej7: 0.5, ej8: 0.5 };
   const filas = [];
   for (const k of ["ej1", "ej2", "ej3", "ej4", "ej5", "ej7", "ej8"]) {
     const ref = S[k]; const r = mod.sigmaMax(ref.ej_key);

@@ -1,0 +1,98 @@
+"Validación Modal — Cantilever Steel I450 (Hekatan vs ETABS)
+"-------------------------------------------------------------
+"Análisis modal analítico de una columna cantilever de acero bajo gravedad,
+"con comparación contra ETABS y solver hekatan-fem.
+"
+"Modelo: columna vertical empotrada en la base, libre en el extremo,
+"  L = 3 m, sección I 450×250×25×13, material A36.
+
+'%% 1. Datos del modelo
+
+L = 3                    'Longitud de la columna (m)
+E_steel = 200000000       'Módulo de Young (kN/m²) — A36 acero
+A_sec = 0.0177            'Área de la sección (m²) — I450
+I_sec = 0.0006344         'Momento de inercia I33 (m⁴) — strong axis
+ρ = 7849                  'Densidad (kg/m³) — Acero
+g = 9.80665               'Aceleración gravedad (m/s²)
+
+'%% 2. Cálculos derivados
+
+m = ρ*A_sec               'Masa por unidad de longitud (kg/m)
+M_total = m*L             'Masa total (kg)
+W_kN = M_total*g/1000     'Peso (kN)
+EI_kNm2 = E_steel*I_sec   'Rigidez flexural (kN·m²)
+EI_Nm2 = EI_kNm2*1000     'Rigidez flexural (N·m² — SI puro)
+
+'%% 3. Frecuencias naturales analíticas
+'
+"Para una viga cantilever Euler-Bernoulli con masa uniformemente distribuida,
+"los modos naturales se derivan de la ecuación característica:
+"
+"  cos(β·L) · cosh(β·L) + 1 = 0
+"
+"Cuyas primeras 3 raíces son β_n·L = [1.875, 4.694, 7.855].
+"
+"La frecuencia natural se obtiene como:
+"
+"  f_n = (β_n·L)² / (2π·L²) · √(EI / m)
+
+βL_1 = 1.875        'Primera raíz característica
+βL_2 = 4.694        'Segunda raíz
+βL_3 = 7.855        'Tercera raíz
+
+f_1 = (βL_1)^2/(2*π*L^2) * sqrt(EI_Nm2/m)
+f_2 = (βL_2)^2/(2*π*L^2) * sqrt(EI_Nm2/m)
+f_3 = (βL_3)^2/(2*π*L^2) * sqrt(EI_Nm2/m)
+
+'%% 4. Períodos correspondientes (s)
+
+T_1 = 1/f_1
+T_2 = 1/f_2
+T_3 = 1/f_3
+
+'%% 5. Ratios de frecuencia (regla de oro Euler-Bernoulli)
+'
+"Para cantilever Euler-Bernoulli, los ratios f_n/f_1 son constantes y
+"dependen solo de las raíces β_n·L:
+"
+"  f_2/f_1 = (4.694/1.875)² ≈ 6.27
+"  f_3/f_1 = (7.855/1.875)² ≈ 17.55
+
+r_21 = f_2/f_1
+r_31 = f_3/f_1
+
+'%% 6. Formas modales analíticas
+'
+"Las funciones modales φ_n(x) son combinaciones de seno/coseno hiperbólicas
+"y trigonométricas que satisfacen las CB del cantilever:
+"
+"  φ_n(x) = cosh(β_n·x) − cos(β_n·x) − σ_n·(sinh(β_n·x) − sin(β_n·x))
+"
+"con σ_n = (sinh(β_n·L) − sin(β_n·L)) / (cosh(β_n·L) + cos(β_n·L))
+
+β_1 = βL_1/L
+β_2 = βL_2/L
+β_3 = βL_3/L
+
+σ_1 = (sinh(β_1*L) - sin(β_1*L)) / (cosh(β_1*L) + cos(β_1*L))
+σ_2 = (sinh(β_2*L) - sin(β_2*L)) / (cosh(β_2*L) + cos(β_2*L))
+σ_3 = (sinh(β_3*L) - sin(β_3*L)) / (cosh(β_3*L) + cos(β_3*L))
+
+'% Funciones φ_n(x) — definidas como expressions
+φ_1(x) = cosh(β_1*x) - cos(β_1*x) - σ_1*(sinh(β_1*x) - sin(β_1*x))
+φ_2(x) = cosh(β_2*x) - cos(β_2*x) - σ_2*(sinh(β_2*x) - sin(β_2*x))
+φ_3(x) = cosh(β_3*x) - cos(β_3*x) - σ_3*(sinh(β_3*x) - sin(β_3*x))
+
+'%% 7. Visualización de los modos
+
+$Plot{φ_1(x) & φ_2(x) & φ_3(x) @ x = 0 : L}
+
+'%% 8. Resultados clave para validación cross-solver
+
+"Para validar:
+"  - Si hekatan-fem reporta f_1, f_2, f_3 cercanos al analítico → solver OK
+"  - Si ETABS Modal-Eigen reporta los mismos f → cross-solver OK
+"  - Ambos deben converger al analítico con malla N ≥ 10 elementos
+"
+"Los valores específicos para nuestro caso (L=3m, I450, A36) son los
+"computados arriba en f_1, f_2, f_3.

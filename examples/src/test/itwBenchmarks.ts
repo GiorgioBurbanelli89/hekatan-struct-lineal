@@ -86,7 +86,15 @@ function inputsMembrana(nElem: number, t: number, E: number, nu: number,
 
 const RES = {
   defaultShellResult: "membraneXX" as const,
-  availableShellResults: ["membraneXX", "membraneYY", "membraneXY", "vonMises", "displacementX"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

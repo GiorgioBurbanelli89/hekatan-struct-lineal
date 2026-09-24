@@ -24,7 +24,7 @@ viewport.appendChild(viewPanel);
 // Info bar
 const info = document.createElement("div");
 info.id = "cad-info";
-info.textContent = "Awatif FEM Studio — type cad.help() in console";
+info.textContent = "Hekatan Struct — type cad.help() in console";
 viewport.appendChild(info);
 
 document.body.appendChild(container);
@@ -35,7 +35,7 @@ const cli = createCli(state, viewPanel);
 
 // Log welcome message
 console.log(
-  "%c Awatif FEM Studio %c type cad.help() for commands",
+  "%c Hekatan Struct %c type cad.help() for commands",
   "background: #0088ff; color: white; padding: 2px 6px; border-radius: 3px;",
   "color: #888;"
 );

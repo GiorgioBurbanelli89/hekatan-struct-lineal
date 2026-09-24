@@ -63,7 +63,15 @@ export const newBlank: ExampleDef = {
   name: "📄 Archivo nuevo (lienzo CAD 2D/3D)",
   category: "🧪 Utilidades",
   defaultShellResult: "none",
-  availableShellResults: ["none", "pressure", "displacementZ", "vonMises", "bendingXX", "bendingYY"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   params: {
     // ── Modo dimensión ──
@@ -86,7 +94,7 @@ export const newBlank: ExampleDef = {
     // con cortante — apto para zapatas gruesas), Shell-Thin (Kirchhoff, losas delgadas),
     // o Membrana (solo en su plano).
     formaPlaca: PE("Sección shells", "Formulación placa", 0, { "Shell-Thick (Mindlin)": 0, "Shell-Thin (Kirchhoff)": 1, "Membrana": 2, "Deck (losa colaborante, como ETABS)": 3 }),
-    // ── DECK (la «Deck Section» de ETABS 22, cotas leídas del binario): Filled Deck ──
+    // ── DECK (la «Deck Section» de ETABS 22, cotas por defecto de su diálogo): Filled Deck ──
     // Membrana de espesor tc (sin nervio) y peso γc·(tc + hr·(wrt+wrb)/2/sr) + lámina — MEDIDO
     // en ETABS (13-sep-2026). Solo se usa con «Formulación placa = Deck».
     deckTc:  P("🧱 Deck (ETABS)", "Slab Depth tc (m)", 0.065, 0.03, 0.25, 0.005),

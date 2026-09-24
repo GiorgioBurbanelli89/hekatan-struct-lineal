@@ -64,7 +64,7 @@ export function fromKn(valKn: number, unit?: ForceUnit): number {
 // ⚠️ EN CSI EL MOMENTO NO ES UNA UNIDAD APARTE: es FUERZA × LONGITUD del
 // sistema. Sus sistemas se llaman literalmente `<Fuerza>, <Longitud>, <Temp>`
 // —`Kip, in, F` · `Kip, ft, F` · `KN, m, C` · `N, mm, C`— y el momento sale de
-// los dos primeros. Sacado del binario (`ETABS.dll`), no de memoria.
+// los dos primeros (los `eUnits` de la OAPI: `kip_in_F`, `kN_m_C`, `N_mm_C`...).
 //
 // Antes esto era una tabla a mano: `kip → 1.3558179` (kip·ft) pasara lo que
 // pasara con la longitud. Coincide con ETABS mientras el usuario no toque la

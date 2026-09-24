@@ -51,6 +51,8 @@ const EXENTOS_EQUILIBRIO = new Set([
   "guerra-ej6-zapata-unida-viga-amarre",
   "guerra-ej7-viga-cimentacion-new", "guerra-ej8-losa-cimentacion",
   "viga-cim-guerra-ej7", "viga-cim-guerra-ej7-tinv",
+  // Winkler SIN TRACCIÓN (levantamiento): la carga la toman los muelles que siguen en contacto
+  "zapata-excentrica", "zapata-levantamiento",
   // plateQ4Solve: no hay `reactions` que sumar
   "plate-thin", "plate-thick", "plate-thick-validacion", "triangular-plate",
   "plane", "layered-shell", "benchmark-safe-ex01-plate",

@@ -8,6 +8,21 @@ export type Mesh = {
   elementInputs?: State<ElementInputs>;
   deformOutputs?: State<DeformOutputs>;
   analyzeOutputs?: State<AnalyzeOutputs>;
+  /**
+   * SELLO DEL CASO. Identifica el modelo + el caso de carga que se esta
+   * MOSTRANDO ahora mismo. Cuando esta puesto, el visor compara este valor con
+   * el `caseId` que traen `deformOutputs` y `analyzeOutputs` y **se niega a
+   * pintar** si no coinciden.
+   *
+   * Existe porque el bug de la deformada no fue un error de calculo: fue un
+   * resultado VIEJO pintado sobre un modelo NUEVO. Un calculo que llega tarde
+   * (el modal, un arrastre de slider, un boton asincrono) trae el sello de
+   * cuando arranco; si el modelo cambio por debajo, el sello ya no cuadra y el
+   * dibujo se descarta en vez de mentir.
+   *
+   * Sin sello (cadena vacia o `undefined`) el visor se comporta como siempre.
+   */
+  caseId?: State<string>;
 };
 
 // The geometry of any structure can be represented by these two entities:
@@ -117,24 +132,28 @@ export type ElementInputs = {
   partialFixitySprings?: Map<number, number[]>;
   insertionPoints?: Map<number, [number, number]>; // [dy, dz] offset from centroid in local coords
   sectionShapes?: Map<number, SectionShape>; // visual section data for rendering
-  /** Plate formulation per shell element:
-   *   0 (default) = Mindlin-Reissner = ETABS "Shell-Thick" (DSE Wilson Ch10)
-   *   1           = MZC Kirchhoff    = ETABS "Shell-Thin"  (DKE Wilson Ch10)
-   *
-   * Para Mesa Torsión (slab delgado t/L=0.017) usar 1 → matchea ETABS Shell-Thin
-   * dentro de < 1.5% en V/M/T (validado vs hekatan-struct-py).
-   */
   /**
-   * Tipo de cascara, con los MISMOS numeros que la OAPI de CSI:
-   *   0 = Shell-Thick (Mindlin)   [defecto]
-   *   1 = Shell-Thin  (Kirchhoff)
-   *   2 = MEMBRANA (sin flexion)
+   * Tipo de cascara por elemento (numeracion PROPIA de Hekatan; NO es la de la
+   * OAPI: ETABS SetSlab usa 1 Thin / 2 Thick / 3 Membrane y SAP SetShell_1
+   * 1 Thin / 2 Thick / 5 Membrane):
+   *   0 = Shell-Thick, MITC4 (Mindlin)            [defecto]
+   *   1 = Shell-Thin, Kirchhoff (MZC/DKQ)
+   *   2 = «Membrane» PARA LOS EXPORTADORES
+   *   3 = DKMQ de Katili
+   *   4 = placa DSE de Wilson (cap. 8 de su libro), `shelltype <id> wilson`
    *
-   * No es solo para el solver: los exportadores .e2k y .s2k lo escriben tal
-   * cual lo escriben ETABS y SAP —`MODELINGTYPE "Membrane"` y `Type=Membrane`—
-   * porque si no, el mismo modelo daba 1.500000 por la OAPI y 1.491651 al
-   * pasar por el fichero, y la comparacion no medía el exportador: medía dos
-   * elementos distintos.
+   * ⚠️ El 2 NO es membrana en el solver: ahi cae en el MITC4 igual que el 0
+   * (medido con el WASM de 6be372b75, 16-sep: mismo w que el 0). La membrana
+   * del SOLVER es flexion 0 (`bendingModifiers` = 0, o `shellModifiers` con
+   * m11 = m22 = m12 = 0). Un modelo que quiera ser membrana en los dos sitios
+   * pone las DOS cosas, como el galpon. Del 17 al 19-sep el 2 fue por error
+   * la placa de Wilson; ahora es el 4.
+   *
+   * Por que el exportador lo escribe: ETABS y SAP reciben `MODELINGTYPE
+   * "Membrane"` / `Type=Membrane` para que el fichero sea el MISMO elemento que
+   * se monto por la OAPI (ITW patch test: 1.500000 por los dos caminos). El
+   * 1.491651 que salia antes por fichero era el Poisson fijo, no el tipo
+   * (tests/casos/export_fidelidad.mjs).
    */
   plateFormulations?: Map<number, number>;
   /** Drilling DOF (rotación θz normal al shell) por elemento:
@@ -201,9 +220,13 @@ export type ElementInputs = {
 export type DeformOutputs = {
   deformations?: Map<number, [number, number, number, number, number, number]>;
   reactions?: Map<number, [number, number, number, number, number, number]>;
+  /** Sello del modelo/caso con el que se calculo esto. Ver `Mesh.caseId`. */
+  caseId?: string;
 };
 
 export type AnalyzeOutputs = {
+  /** Sello del modelo/caso con el que se calculo esto. Ver `Mesh.caseId`. */
+  caseId?: string;
   normals?: Map<number, [number, number]>;
   shearsY?: Map<number, [number, number]>;
   shearsZ?: Map<number, [number, number]>;
@@ -247,8 +270,19 @@ export type AnalyzeOutputs = {
 
 export type ModalOutputs = {
   frequencies?: number[];    // natural frequencies [Hz]
-  modeShapes?: number[][];   // mode shapes [mode_index][dof_index]
+  modeShapes?: number[][];   // mode shapes [mode_index][dof_index], normalizadas a máx = 1
   massParticipation?: number[][]; // [mode_index][6] ratios (ux,uy,uz,rx,ry,rz)
+
+  // ── AÑADIDO 17-sep-2026 para el espectral estilo SAP2000 ──
+  // Nada de lo de arriba cambia; esto es información que antes se perdía.
+  //
+  // Γ_mj = φ_mᵀ·M·r_j con φ MASA-NORMALIZADO (φᵀMφ = 1). El ratio de arriba es
+  // Γ²/M_total: pierde el SIGNO y la escala absoluta, y sin signo los modos
+  // acoplados (modo 2 = Y + torsión) no se combinan como en SAP2000.
+  participationFactors?: number[][]; // [mode_index][6], unidades √masa
+  totalMass?: number[];              // [6] masa que PUEDE participar por dirección
+  // φ_masa_normalizado = modeShapes[m] · modeScales[m]
+  modeScales?: number[];             // [mode_index]
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

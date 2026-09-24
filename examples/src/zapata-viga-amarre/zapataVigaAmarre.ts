@@ -28,7 +28,15 @@ export const zapataVigaAmarre: ExampleDef = {
   name: "Zapata + Viga de Amarre + Pedestal",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     // ── 📐 Geometría zapatas ─────────────────────────────────────
@@ -365,9 +373,7 @@ export const zapataVigaAmarre: ExampleDef = {
     // segundo, que ya es basura numerica. El estatico si los recibia, asi que
     // el modelo parecia bueno hasta que se pedia el modal.
     states.nodeInputs.val = { supports, loads, springs: springsList } as any;
-    // Elemento: Mindlin-Reissner (shellQ4, default). SAFE/ETABS ShellThin TAMBIÉN tiene
-    // cortante Mindlin (capturado del binario: G·t·5/6 = 88005.7), NO es Kirchhoff puro.
-    // El Mindlin de Hekatan ya matchea σ_max de SAFE (24.1 vs 24.18, 0.4%). El DKQ thin
+    // Elemento: Mindlin-Reissner (shellQ4, default). El Mindlin de Hekatan ya matchea σ_max de SAFE (24.1 vs 24.18, 0.4%). El DKQ thin
     // (sin cortante) sobre-rigidiza la zapata gruesa (h/L=0.23) → descartado.
     states.elementInputs.val = {
       elasticities, poissonsRatios: poissons,

@@ -26,7 +26,15 @@ export const conexionEndPlate: ExampleDef = {
   category: "2️⃣ Shells · 🔩 Conexiones",
   hasModal: false,
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "membraneXX", "membraneYY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     config: {
       default: 0,

@@ -1,0 +1,24 @@
+1
+00:00:00,050 --> 00:00:06,674
+This tower twists ninety degrees from base to crown, like the Turning Torso in Malmo: not a single column is vertical.
+
+2
+00:00:06,920 --> 00:00:13,784
+Eight hundred twenty nodes, one thousand eighty frames and five hundred forty shells, each floor rotated from the one below.
+
+3
+00:00:14,030 --> 00:00:20,630
+In the first mode Hekatan Struct gives five point two two seconds, and OpenSees stays within one percent.
+
+4
+00:00:20,880 --> 00:00:29,376
+But with the classic shell element the torsional modes drifted nine point four percent: the slab locks up working in in-plane shear.
+
+5
+00:00:29,630 --> 00:00:35,126
+With the element by Petracca and Camata that same mode drops to six hundredths of a percent.
+
+6
+00:00:35,380 --> 00:00:43,540
+Here SAP two thousand still sits at seven percent, and without the slabs it matches exactly: the gap is in its plate, and it is still open.
+

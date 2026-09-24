@@ -17,6 +17,42 @@ export interface ModalTableConfig {
  * Marca con ✓ el modo donde por primera vez ΣUx, ΣUy llegan a 90 % y muestra
  * un dictamen general arriba del cuadro.
  */
+/**
+ * Las dos pieles de la tabla modal.
+ *
+ * Jorge, 21-sep-2026: «en modo claro puede cambiar la forma de la tabla». Estaba
+ * pintada como una terminal —fondo negro, verde fósforo, amarillo y cian— y en
+ * modo claro quedaba un recuadro de consola sobre la hoja blanca.
+ *
+ * Los colores salen ahora de variables CSS puestas en el propio panel, así que
+ * cambiar de piel es reescribir seis valores, no volver a dibujar la tabla.
+ * La piel la marca la aplicación en `data-hk-piel` del <html> y avisa con el
+ * evento `hk-piel` (examples/src/shared/hekatanCadSkin.ts).
+ */
+const PIEL_OSCURA: Record<string, string> = {
+  "--mt-bg": "rgba(0,0,0,0.92)", "--mt-fg": "#0f0", "--mt-tit": "#ff0",
+  "--mt-sum": "#0ff", "--mt-txt": "#fff", "--mt-alto": "#f00",
+  "--mt-avis": "#fa0", "--mt-err": "#f44",
+  "--mt-borde": "#0f03", "--mt-borde2": "#ff03",
+};
+// En blanco el verde fósforo y el amarillo no se leen: se bajan de tono y se
+// sube el contraste. Los papeles se mantienen (verde = bien, ámbar = ojo, rojo = mal).
+const PIEL_CLARA: Record<string, string> = {
+  "--mt-bg": "rgba(252,252,253,0.97)", "--mt-fg": "#15803d", "--mt-tit": "#1e3a8a",
+  "--mt-sum": "#0e7490", "--mt-txt": "#1e293b", "--mt-alto": "#b91c1c",
+  "--mt-avis": "#b45309", "--mt-err": "#b91c1c",
+  "--mt-borde": "rgba(15,23,42,0.18)", "--mt-borde2": "rgba(30,58,138,0.25)",
+};
+
+function pintarPiel(el: HTMLElement) {
+  let claro = false;
+  try { claro = document.documentElement.getAttribute("data-hk-piel") === "claro"; } catch {}
+  const pal = claro ? PIEL_CLARA : PIEL_OSCURA;
+  for (const k in pal) el.style.setProperty(k, pal[k]);
+  // la letra monoespaciada sobre blanco pide un pelo mas de cuerpo
+  el.style.fontWeight = claro ? "500" : "400";
+}
+
 export function createModalPanel() {
   const div = document.createElement("div");
   div.id = "modal-results";
@@ -28,13 +64,13 @@ export function createModalPanel() {
   // sobrescribe.
   div.style.cssText = `
     position: fixed; bottom: 10px; left: 10px; z-index: 9999;
-    background: rgba(0,0,0,0.92); color: #0f0; font-family: monospace;
+    background: var(--mt-bg); color: var(--mt-fg); font-family: monospace;
     font-size: 11px; border-radius: 6px;
     width: 760px; height: 60vh;
     max-width: 96vw; max-height: 92vh;
     overflow-x: auto; overflow-y: auto;
     pointer-events: auto;
-    border: 1px solid #0f03;
+    border: 1px solid var(--mt-borde);
     resize: both;
     min-width: 360px; min-height: 160px;
   `;
@@ -65,6 +101,21 @@ export function createModalPanel() {
     document.addEventListener("mouseup", () => { dragging = false; });
   }
 
+  pintarPiel(div);
+  // Que la tabla NO se salga de la pantalla. Cabe entera (12 modos, sin scroll),
+  // pero al estar anclada abajo se cortaba con el borde inferior en pantallas
+  // bajas — Jorge, 21-sep-2026, se le veian 10 de 12 modos.
+  const dentro = () => {
+    const r = div.getBoundingClientRect();
+    if (r.height > 0 && r.bottom > window.innerHeight - 4) {
+      div.style.bottom = "auto";
+      div.style.top = Math.max(4, window.innerHeight - r.height - 8) + "px";
+    }
+  };
+  for (const ms of [300, 1200, 3000]) setTimeout(dentro, ms);
+  window.addEventListener("resize", dentro);
+  window.addEventListener("hk-piel", () => pintarPiel(div));
+
   let minimized = false;
   let ajustadoATabla = false;
   // Tamaño guardado antes de "⤢ Ancho", para poder volver.
@@ -80,11 +131,11 @@ export function createModalPanel() {
         ? config.properties.map((l) => `<div>${l}</div>`).join("")
         : "<div>El solver no devolvió modos.</div>";
       div.innerHTML = `<div id="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; cursor:move; user-select:none;" title="Arrastra para mover">
-  <b style="color:#ff0">✥ ⚡ MODAL — ${config.title}</b>
+  <b style="color:var(--mt-tit)">✥ ⚡ MODAL — ${config.title}</b>
 </div>
 <div id="modal-body" style="padding:0 12px 10px 12px;">
-  <div style="color:#f44; font-weight:bold; font-size:13px; padding:6px 0">✗ El análisis modal NO se ejecutó</div>
-  <div style="color:#fa0; font-size:11px; line-height:1.5">${motivo}</div>
+  <div style="color:var(--mt-err); font-weight:bold; font-size:13px; padding:6px 0">✗ El análisis modal NO se ejecutó</div>
+  <div style="color:var(--mt-avis); font-size:11px; line-height:1.5">${motivo}</div>
 </div>`;
       return;
     }
@@ -116,12 +167,12 @@ export function createModalPanel() {
       // Corto y en UNA línea: el aviso largo ocupaba dos renglones y tapaba los modos (Jorge,
       // 14-sep-2026: «que se vean los 3 primeros modos y hasta ΣRz»). La norma queda en el title.
       if (modeAt90Both > 0)
-        return `<span style="color:#0f0" title="Masa participativa ≥ 90 % en X e Y (NEC-15 §6.2.2 / ASCE 7-22 §12.9.1.1)">✓ ≥ 90 % en X e Y al modo ${modeAt90Both} de ${N} · ΣUx ${(totalX * 100).toFixed(1)} % · ΣUy ${(totalY * 100).toFixed(1)} %</span>`;
+        return `<span style="color:var(--mt-fg)" title="Masa participativa ≥ 90 % en X e Y (NEC-15 §6.2.2 / ASCE 7-22 §12.9.1.1)">✓ ≥ 90 % en X e Y al modo ${modeAt90Both} de ${N} · ΣUx ${(totalX * 100).toFixed(1)} % · ΣUy ${(totalY * 100).toFixed(1)} %</span>`;
       if (modeAt90X > 0 && modeAt90Y < 0)
-        return `<span style="color:#fa0">⚠ FALTAN MODOS EN Y — ΣUy=${(totalY * 100).toFixed(1)} % en ${N} modos (faltan ${falta(totalY)} para el 90 % que exige NEC-15 §6.2.2). X cumple en el modo ${modeAt90X}. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
+        return `<span style="color:var(--mt-avis)">⚠ FALTAN MODOS EN Y — ΣUy=${(totalY * 100).toFixed(1)} % en ${N} modos (faltan ${falta(totalY)} para el 90 % que exige NEC-15 §6.2.2). X cumple en el modo ${modeAt90X}. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
       if (modeAt90Y > 0 && modeAt90X < 0)
-        return `<span style="color:#fa0">⚠ FALTAN MODOS EN X — ΣUx=${(totalX * 100).toFixed(1)} % en ${N} modos (faltan ${falta(totalX)} para el 90 % que exige NEC-15 §6.2.2). Y cumple en el modo ${modeAt90Y}. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
-      return `<span style="color:#f44">✗ FALTAN MODOS EN AMBAS DIRECCIONES — ΣUx=${(totalX * 100).toFixed(1)} % · ΣUy=${(totalY * 100).toFixed(1)} % en ${N} modos. NEC-15 §6.2.2 exige ≥ 90 %: el cortante dinámico sale bajo y el control Vdin/Vest no es representativo. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
+        return `<span style="color:var(--mt-avis)">⚠ FALTAN MODOS EN X — ΣUx=${(totalX * 100).toFixed(1)} % en ${N} modos (faltan ${falta(totalX)} para el 90 % que exige NEC-15 §6.2.2). Y cumple en el modo ${modeAt90Y}. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
+      return `<span style="color:var(--mt-err)">✗ FALTAN MODOS EN AMBAS DIRECCIONES — ΣUx=${(totalX * 100).toFixed(1)} % · ΣUy=${(totalY * 100).toFixed(1)} % en ${N} modos. NEC-15 §6.2.2 exige ≥ 90 %: el cortante dinámico sale bajo y el control Vdin/Vest no es representativo. Subí «N° de modos» en Settings ▸ ⚡ Modal + Animación.</span>`;
     })();
 
     // Los botones llevan TEXTO, no solo el icono: con "📋" a secas nadie
@@ -129,13 +180,13 @@ export function createModalPanel() {
     // («alguien que quiera copiar la tabla, cómo hace»).
     const btn = (id: string, txt: string, tip: string, bg: string, bd: string) =>
       `<button id="${id}" title="${tip}" style="padding:3px 9px; font-size:10px;
-        cursor:pointer; background:${bg}; color:#fff; border:1px solid ${bd};
+        cursor:pointer; background:${bg}; color:var(--mt-txt); border:1px solid ${bd};
         border-radius:3px; font-family:monospace; white-space:nowrap;">${txt}</button>`;
     let html = `<div id="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; cursor:move; user-select:none;" title="Arrastrá desde acá para mover la ventana">
-  <b style="color:#ff0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0" title="${config.title}">✥ ⚡ MODAL — ${config.title}</b>
+  <b style="color:var(--mt-tit); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0" title="${config.title}">✥ ⚡ MODAL — ${config.title}</b>
   <div style="display:flex; gap:4px; margin-left:12px; flex-shrink:0;">
     ${btn("modal-copy", "📋 Copiar", "Copiar la tabla al portapapeles — se pega en Excel en columnas", "#2d6a4f", "#40916c")}
-    ${btn("modal-wide", "⤢ Ancho", "Agrandar la ventana a casi toda la pantalla", "#33507a", "#4a6fa5")}
+    ${btn("modal-wide", "⤢ Maximizar", "Agrandar la tabla a casi toda la pantalla (para verla entera)", "#33507a", "#4a6fa5")}
     ${btn("modal-minimize", "▬", "Minimizar", "#555", "#777")}
     ${btn("modal-close", "✕", "Cerrar (se vuelve a abrir con «📋 Mostrar tabla» en Settings)", "#7a3333", "#a54a4a")}
   </div>
@@ -151,19 +202,19 @@ export function createModalPanel() {
     html += `<div style="padding:2px 0 4px 0; font-weight:bold; font-size:11px; line-height:1.4; width:0; min-width:100%">${dictamen}</div>`;
 
     // nowrap: el «✓» de ΣUx partía la celda y cada fila salía del doble de alto
-    html += `<table style="border-collapse:collapse; color:#0f0; font-size:10px; margin-top:2px; white-space:nowrap">
-<tr style="color:#ff0; border-bottom:1px solid #ff03">
+    html += `<table style="border-collapse:collapse; color:var(--mt-fg); font-size:10px; margin-top:2px; white-space:nowrap">
+<tr style="color:var(--mt-tit); border-bottom:1px solid var(--mt-borde2)">
   <th style="padding:1px 4px">Mode</th>
   <th style="padding:1px 4px">Freq (Hz)</th>
   <th style="padding:1px 4px">Period (s)</th>
   <th style="padding:1px 4px">ω (rad/s)</th>`;
     for (const d of dirs) html += `<th style="padding:1px 4px">${d}</th>`;
-    html += `<th style="padding:1px 4px; color:#0ff">ΣUx</th>
-  <th style="padding:1px 4px; color:#0ff">ΣUy</th>
-  <th style="padding:1px 4px; color:#0ff">ΣRx</th>
-  <th style="padding:1px 4px; color:#0ff">ΣRy</th>
-  <th style="padding:1px 4px; color:#0ff">ΣRz</th>
-  <th style="padding:1px 4px; color:#fff">Tipo</th></tr>`;
+    html += `<th style="padding:1px 4px; color:var(--mt-sum)">ΣUx</th>
+  <th style="padding:1px 4px; color:var(--mt-sum)">ΣUy</th>
+  <th style="padding:1px 4px; color:var(--mt-sum)">ΣRx</th>
+  <th style="padding:1px 4px; color:var(--mt-sum)">ΣRy</th>
+  <th style="padding:1px 4px; color:var(--mt-sum)">ΣRz</th>
+  <th style="padding:1px 4px; color:var(--mt-txt)">Tipo</th></tr>`;
 
     // Reset y armar filas
     for (let d = 0; d < 6; d++) sumP[d] = 0;
@@ -180,11 +231,11 @@ export function createModalPanel() {
       const tipoLabel = isMF ? "masa faltante (rígida)" : domVal < 0.05 ? "—" : `${dirs[domDir]} (${(domVal * 100).toFixed(0)} %)`;
       const tipoColor =
         domDir === 0 || domDir === 1
-          ? "#0f0"
+          ? "var(--mt-fg)"
           : domDir === 5
-          ? "#0ff"
+          ? "var(--mt-sum)"
           : domDir === 2
-          ? "#fa0"
+          ? "var(--mt-avis)"
           : "#888";
 
       // Highlight si este modo alcanza 90 % en X o Y
@@ -197,7 +248,7 @@ export function createModalPanel() {
         ? "background:rgba(255,200,0,0.1);"
         : "";
 
-      html += `<tr style="border-bottom:1px solid #fff1; ${isMF ? "background:rgba(0,180,255,0.12);" : rowBg}">
+      html += `<tr style="border-bottom:1px solid var(--mt-txt)1; ${isMF ? "background:rgba(0,180,255,0.12);" : rowBg}">
   <td style="padding:1px 4px; text-align:center">${isMF ? "MF" : (i + 1) + (isAt90Both ? " ★" : "")}</td>
   <td style="padding:1px 4px; text-align:right">${isMF ? "rígido" : freq.toFixed(4)}</td>
   <td style="padding:1px 4px; text-align:right">${isMF ? "≈0" : T.toFixed(4)}</td>
@@ -205,23 +256,23 @@ export function createModalPanel() {
 
       for (let d = 0; d < 6; d++) {
         const pct = (mp[d] * 100).toFixed(1);
-        const color = mp[d] > 0.5 ? "#f00" : mp[d] > 0.1 ? "#ff0" : "#0f0";
+        const color = mp[d] > 0.5 ? "var(--mt-alto)" : mp[d] > 0.1 ? "var(--mt-tit)" : "var(--mt-fg)";
         html += `<td style="padding:1px 4px; text-align:right; color:${color}">${pct}%</td>`;
       }
 
-      const sxColor = sumP[0] >= ASCE_THRESHOLD ? "#0f0" : "#0ff";
-      const syColor = sumP[1] >= ASCE_THRESHOLD ? "#0f0" : "#0ff";
+      const sxColor = sumP[0] >= ASCE_THRESHOLD ? "var(--mt-fg)" : "var(--mt-sum)";
+      const syColor = sumP[1] >= ASCE_THRESHOLD ? "var(--mt-fg)" : "var(--mt-sum)";
       html += `<td style="padding:1px 4px; text-align:right; color:${sxColor}">${(sumP[0] * 100).toFixed(1)}%${isAt90X ? " ✓" : ""}</td>
   <td style="padding:1px 4px; text-align:right; color:${syColor}">${(sumP[1] * 100).toFixed(1)}%${isAt90Y ? " ✓" : ""}</td>
-  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[3] * 100).toFixed(1)}%</td>
-  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[4] * 100).toFixed(1)}%</td>
-  <td style="padding:1px 4px; text-align:right; color:#0ff">${(sumP[5] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; text-align:right; color:var(--mt-sum)">${(sumP[3] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; text-align:right; color:var(--mt-sum)">${(sumP[4] * 100).toFixed(1)}%</td>
+  <td style="padding:1px 4px; text-align:right; color:var(--mt-sum)">${(sumP[5] * 100).toFixed(1)}%</td>
   <td style="padding:1px 4px; color:${tipoColor}">${tipoLabel}</td></tr>`;
     });
 
     html += `</table>
 <div style="margin-top:6px; font-size:10px; color:#888;">
-  ★ = primer modo donde ΣUx y ΣUy ≥ 90 %  ·  Tipos: <span style="color:#0f0">Ux/Uy</span>=lateral · <span style="color:#0ff">Rz</span>=torsional · <span style="color:#fa0">Uz</span>=vertical (no relevante para sismo)
+  ★ = primer modo donde ΣUx y ΣUy ≥ 90 %  ·  Tipos: <span style="color:var(--mt-fg)">Ux/Uy</span>=lateral · <span style="color:var(--mt-sum)">Rz</span>=torsional · <span style="color:var(--mt-avis)">Uz</span>=vertical (no relevante para sismo)
 </div>`;
     html += "</div>";
     div.innerHTML = html;
@@ -268,7 +319,7 @@ export function createModalPanel() {
         div.style.left = anchoPrev.l; div.style.top = anchoPrev.t;
         div.style.bottom = anchoPrev.bo; div.style.right = anchoPrev.r;
         anchoPrev = null;
-        b.textContent = "⤢ Ancho"; b.title = "Agrandar la ventana a casi toda la pantalla";
+        b.textContent = "⤢ Maximizar"; b.title = "Agrandar la tabla a casi toda la pantalla (para verla entera)";
       }
     });
 

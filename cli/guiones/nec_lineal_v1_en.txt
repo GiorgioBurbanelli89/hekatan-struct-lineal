@@ -1,0 +1,27 @@
+Linear analysis under NEC-15: how the static and the dynamic base shear are computed, click by click.
+The building: dual system, two by two bays, four storeys, 545 nodes. The same one from the paper.
+Linear means the stiffness does not change: K is the same before and after loading, which is why superposition and mode shapes are valid.
+The code asks for two routes: static, with an equivalent lateral force; and dynamic, adding up the modes. Both are done here.
+The seismic data goes in this folder. Six inputs, each one taken from a table of the code.
+First is Z, the zone factor: 0.40, zone V — Table 1, page 27.
+It is typed in, the way anyone would: clear it, enter another value, and the model updates.
+The soil type sets Fa, Fd and Fs. Soil E, zone V: 1.0, 1.6, 1.9 — Tables 3, 4 and 5, pages 31-32.
+The region gives eta: 1.80 on the Coast, 2.48 in the Highlands, 2.60 in the Amazon. Section 3.3.1, page 34.
+R reduces the force because the structure deforms without breaking. Concrete dual with walls: R = 8, Table 15, page 64.
+I raises the force for buildings that must not fail; here it is 1.0. And phi-P times phi-E penalise irregularity: if regular, both are 1.
+Two things get switched on: the mode table and the spectrum. Without them the analysis runs, but you see nothing.
+The analysis is launched with a single button. It takes just over a minute: it is solving the eigenvalue problem of 545 nodes.
+This is the NEC-15 spectrum, drawn by the engine, not pasted: it rises up to T0, stays flat, and decays from Tc.
+T0 = 0.10 Fs Fd / Fa = 0.304 s. Tc, with 0.55, is 1.672 s.
+The plateau is eta times Z times Fa: 1.80 x 0.40 x 1.0 = 0.720 g. That is where this building falls.
+Now the static base shear. The formula is V = I Sa(Ta) / (R phi-P phi-E) times W. Section 6.3.2, page 61.
+First the approximate period: Ta = Ct h^n. For a dual with walls, 0.055 x 12^0.75 = 0.355 s.
+With that period you enter the spectrum and read Sa: 0.720, because it lands inside the plateau.
+The shear coefficient is Sa over R: 0.720 / 8 = 0.09. And the seismic weight of the model, 356.28 tonf.
+Multiplying: 32.07 tonf. That is the static base shear, and SAP2000 with the same mesh gives the same number.
+The dynamic route starts with the modes. Here they are, with frequency, period and the six mass participations.
+Mode 1, mode 2 and mode 3, moving. The first translates in X, the second mixes Y with torsion, the third is the second X mode.
+The six cumulative sums are the check: the code asks for at least 90 % of the mass in each horizontal direction. Section 6.2.2 e, page 58.
+Each mode contributes its own shear, and they are not added directly: they are combined with CQC, because each mode peaks at a different instant.
+And the control: the dynamic shear may not fall below 80 % of the static one for a regular structure, or 85 % if irregular. Here it is 82.6 %: it passes.
+That is NEC-15. In chapter 6, the 2023 draft: what changes, and how much the base shear of this same building goes up.

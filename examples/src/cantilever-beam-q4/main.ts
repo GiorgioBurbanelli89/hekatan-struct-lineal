@@ -5,7 +5,7 @@
  * punta a media altura (downward Z). Comparación con flexión analítica
  * Euler-Bernoulli: δ = P·L³/(3·E·I) con I = t·h³/12.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateCantileverBeamQ4()` en getCad3d.ts (líneas 10530-10594).
  */
 import van, { State } from "vanjs-core";
@@ -168,3 +168,17 @@ document.body.append(
       "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/cantilever-beam-q4/main.ts",
   }),
 );
+
+// La pieza vive en el plano XZ y el visor arranca en planta (XY): se veia como una RAYA
+// (revision por fotogramas, 23-sep-2026). Se encuadra de frente, desde -Y, al centro del modelo.
+setTimeout(() => {
+  const v: any = [...document.body.querySelectorAll("*")].find((e: any) => e.__ctx);
+  const ctx = v?.__ctx; const ns = nodesState.val;
+  if (!ctx?.camera || !ns?.length) return;
+  const xs = ns.map((n) => n[0]), zs = ns.map((n) => n[2]);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const L = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 1);
+  ctx.camera.up?.set(0, 0, 1);
+  ctx.camera.position.set(cx + 0.35 * L, -1.4 * L, cz + 0.45 * L);
+  ctx.controls?.target?.set(cx, 0, cz); ctx.controls?.update?.(); ctx.render?.();
+}, 400);

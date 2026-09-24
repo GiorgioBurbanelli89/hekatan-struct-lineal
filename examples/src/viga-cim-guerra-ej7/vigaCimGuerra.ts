@@ -53,7 +53,15 @@ export const vigaCimGuerraEj7: ExampleDef = {
   name: "Ej.7 · Viga Cimentación (L=17.20m, 4 cols c/M)",
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "Ejercicio 7 — Ing. Marcelo Guerra Avendaño MDI (Figura 190)",

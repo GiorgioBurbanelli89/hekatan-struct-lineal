@@ -1,0 +1,48 @@
+1
+00:00:00,050 --> 00:00:10,466
+Una cercha Warren en Hekatan Struct, de principio a fin y solo con la cinta de acceso rápido: dibujar, apoyar, cargar, ver el cálculo y guardar. Sin abrir menús.
+
+2
+00:00:10,720 --> 00:00:27,832
+La cinta tiene dos filas. Arriba: dibujar, estructura, analizar, vista y precisión; abajo: modificar, rejilla, cota y carga. Pulso Frente, que es el alzado X Z, y enciendo SNAP aquí mismo en la cinta, para que cada clic caiga exacto en la rejilla.
+
+3
+00:00:28,080 --> 00:00:39,624
+Cordón inferior: pulso Polilínea y hago siete clics, de menos seis a seis metros cada dos metros. Junto al cursor va la longitud y el ángulo de cada tramo. Enter para terminar.
+
+4
+00:00:39,870 --> 00:00:46,254
+Cordón superior: otra polilínea, seis clics a dos metros de altura, uno sobre el centro de cada panel.
+
+5
+00:00:46,500 --> 00:01:00,588
+Diagonales: una sola polilínea en zigzag, trece clics alternando abajo y arriba. Cuando el clic cae sobre un nudo que ya existe, se reusa: no se duplica, como los joints de ETABS. Trece nudos y veintitrés barras.
+
+6
+00:01:00,840 --> 00:01:20,592
+Apoyos: pulso Apoyo en la cinta y hago un clic en cada extremo. Por defecto el apoyo es empotrado: los seis grados de libertad. Con Seleccionar hago clic en el nudo y el panel enseña sus Restraints, las seis casillas marcadas; ahí mismo, Articular lo cambia, y con clic derecho está Assign, Joint, Restraints, como en ETABS.
+
+7
+00:01:20,840 --> 00:01:43,328
+Cargas: en la casilla de la cinta va menos diez kilonewton, negativo es hacia abajo. Diez kilonewton por nudo es la carga distribuida de cinco kilonewton por metro por su ancho tributario de dos metros: la forma puntual de simularla, nudo a nudo. Pulso Carga y un clic en cada nudo superior. En cuanto hay apoyos y cargas, la aplicación calcula sola: no hay botón de analizar.
+
+8
+00:01:43,580 --> 00:02:00,980
+Y la forma distribuida de verdad, sobre la barra, como en ETABS: en la segunda casilla va menos cinco kilonewton por metro, pulso Carga q y un clic en cada tramo del cordón superior: cinco tramos, cincuenta kilonewton más, dibujados como flechas a lo largo de la barra. La app vuelve a calcular sola.
+
+9
+00:02:01,230 --> 00:02:27,606
+Para ver resultados pliego la cinta, y en el panel de la izquierda quedan los mandos a la vista. Marco la deformada y en Frame results elijo el diagrama de axiles: flecha máxima cero coma doscientos noventa y ocho milímetros, axil máximo ochenta kilonewton. En Node results elijo desplazamientos, luego reacciones, y en Frame results el momento tres tres: cada resultado que se puede revisar en una cercha está en esas dos listas. Vuelvo a abrir la cinta.
+
+10
+00:02:27,860 --> 00:02:34,340
+Con Medir, dos clics de apoyo a apoyo: doce metros, y la cota sale pequeña, sin tapar el dibujo.
+
+11
+00:02:34,590 --> 00:02:45,942
+En tres D se ve la deformada con los axiles. El mismo modelo en ETABS veintidós por su interfaz de comandos da la misma flecha, cero coma doscientos noventa y ocho milímetros, en los trece nudos.
+
+12
+00:02:46,190 --> 00:03:11,294
+Y para guardar: con la flecha de la cinta se busca Guardar punto heks, se marca y queda como acceso rápido; un clic y se descarga. Y Guardar como, arriba, pide el nombre: cercha Warren punto heks; desde entonces Guardar lo reescribe. Es el formato de texto de Hekatan Struct: nudos, barras, apoyos y cargas en líneas que se leen; sirve para guardar el modelo y compartirlo en un grupo. Siguen la Howe y la Pratt.
+

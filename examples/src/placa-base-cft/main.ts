@@ -30,6 +30,7 @@ import {
   getToolbar, getParameters, Parameters, getViewer,
   colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, enableDraggableAllPanes,
 } from "hekatan-ui";
+import { ecHormigonACI } from "../shared/materials";
 
 const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 78;
 const Fy_steel = 250000, fut_anchor = 600000;
@@ -244,7 +245,7 @@ van.derive(() => {
   // (contacto compresivo aproximado como shared nodes en linear FEA).
   // El plug que conecta fill ↔ pedestal vía orificio se genera DESPUÉS del
   // pedestal (necesita pedGrid declarado) — ver bloque "PLUG diferido" abajo.
-  const Ec_fill = 4700 * Math.sqrt(fc / 1000) * 1000;
+  const Ec_fill = ecHormigonACI(fc / 1000);
   const nu_c_fill = 0.20;
   const Gc_fill = Ec_fill / (2 * (1 + nu_c_fill));
   // Fill ligeramente más pequeño que el interior HSS para que sea VISIBLE
@@ -379,7 +380,7 @@ van.derive(() => {
   //      simplificada). Sin este contacto la placa flota y la deformada se
   //      vuelve inestable bajo Mx+My.
   //   2) EMBEBIDO de pernos: cada bolt nBot snap a nodo interior del pedestal.
-  const Ec = 4700 * Math.sqrt(fc / 1000) * 1000;
+  const Ec = ecHormigonACI(fc / 1000);
   const nu_c = 0.20;
   const Gc = Ec / (2 * (1 + nu_c));
   const nx_p = 10, ny_p = 10, nz_p = 6;

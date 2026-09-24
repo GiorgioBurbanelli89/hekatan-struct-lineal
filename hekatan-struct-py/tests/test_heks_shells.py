@@ -48,21 +48,6 @@ writeFileSync(process.argv[3], JSON.stringify({
 """
 
 
-import pytest as _pytest
-import hekatan_struct.elements.shell_q4_motor as _M
-
-
-@_pytest.fixture(autouse=True)
-def _placa_mitc4_como_el_cpp():
-    """Estos tests miden PARIDAD con el C++/WASM. Desde el 2-sep-2026 los dos
-    llevan la placa de CSI (`PLACA_THICK="csi"`, `getBendingK_CSI`). Si hay que
-    comparar contra un WASM viejo (MITC4), aqui se pone "mitc4"."""
-    old = _M.PLACA_THICK
-    _M.PLACA_THICK = "csi"
-    yield
-    _M.PLACA_THICK = old
-
-
 def _motor_ts(ruta_heks: Path, destino: Path):
     """Resuelve el `.heks` con el motor TS/C++ (WASM) y devuelve el JSON."""
     if not (RAIZ / "node_modules" / "esbuild").exists():

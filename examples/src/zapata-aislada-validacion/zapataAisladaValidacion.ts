@@ -43,7 +43,15 @@ export const zapataAisladaValidacion: ExampleDef = {
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   benchmark: true,  // 🏁 Validación Bowles 1996 — referencia Winkler clásica
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   guide: [
     "Geometría: ajustá Lz, Bz (m) — dimensiones de la zapata en planta",
     "Material suelo: q_adm (tonf/m²) presión admisible · ks (tonf/m³) módulo Bowles",
@@ -439,17 +447,29 @@ export const zapataAisladaValidacion: ExampleDef = {
         const r = deform(states.nodes.val, states.elements.val, inputsP, states.elementInputs.val, springs);
         (ao as any).pressure_P = computePressure(r.deformations);
         (ao as any).deform_P = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(P) fallo: ${e?.message ?? e}`);
+      }
       try {
         const r = deform(states.nodes.val, states.elements.val, inputsMx, states.elementInputs.val, springs);
         (ao as any).pressure_Mx = computePressure(r.deformations);
         (ao as any).deform_Mx = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(Mx) fallo: ${e?.message ?? e}`);
+      }
       try {
         const r = deform(states.nodes.val, states.elements.val, inputsMy, states.elementInputs.val, springs);
         (ao as any).pressure_My = computePressure(r.deformations);
         (ao as any).deform_My = r.deformations;
-      } catch {}
+      } catch (e: any) {
+        // Se comia el fallo del solver: la superposicion salia SIN este termino
+        // y sin decirlo, y la tabla contra Calcpad parecia correcta.
+        console.error(`[zapata-aislada-validacion] deform(My) fallo: ${e?.message ?? e}`);
+      }
 
       states.analyzeOutputs.val = ao;
 

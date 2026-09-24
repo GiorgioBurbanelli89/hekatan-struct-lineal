@@ -21,6 +21,8 @@
  */
 
 import { aiStorage } from "./aiAssistant";
+import { abrirHoja, tieneFormulas } from "./hojaLisp";
+import { leerArchivos, mensajeCon, pedirArchivos, type Adjunto } from "./adjuntos";
 
 const W = () => window as any;
 
@@ -45,7 +47,7 @@ const PROVEEDORES: AgentProvider[] = [
   },
   {
     id: "gemini", nombre: "✨ Gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-    clave: true, modelos: ["gemini-2.5-flash", "gemini-2.0-flash"],
+    clave: true, modelos: ["gemini-3.6-flash", "gemini-flash-latest", "gemini-flash-lite-latest"],
     pista: "Clave gratis: aistudio.google.com/apikey",
   },
   {
@@ -156,7 +158,7 @@ Cómo trabajar:
      galpón curvo → galpon-curvo · galpón a un agua → galpon-agua1
      puente de losa sobre vigas → puente-losa-vigas · puente reticular → puente
      estribo de puente (áreas) → estribo-puente
-     muro de contención con áreas → muro-contencion-areas · con sólidos → muro-contencion-solido
+     muro de contención con áreas → muro-contencion-areas · con sólidos → muro-contencion-h8
      placa base (áreas) → placa-base · zapata aislada → zapata-aislada
      zapatas con viga de amarre → zapata-viga-amarre · viga de cimentación → viga-cim-guerra-ej7
      losa de cimentación → guerra-ej8-losa-cimentacion
@@ -166,6 +168,68 @@ Cómo trabajar:
    Si hay errores, flecha absurda o la suma de reacciones no equilibra la carga, corrige y repite.
 4. Termina con 2-4 líneas en español: qué modelaste y los números clave (flecha, periodo).
    No inventes números: usa solo los que devolvieron las herramientas.
+
+Cómo se escribe una EXPLICACIÓN (cuando piden explicar, comprobar, deducir o un dibujo):
+NO se escribe en el chat: se escribe como HOJA DE HEKATAN LISP en un bloque de código marcado
+«lisp», y el motor la resuelve y la dibuja en la ventana de la izquierda. Nada de LaTeX.
+
+  # Título de la hoja
+  #: Texto corrido, con **negrita**. Aquí se dice de dónde sale cada cosa.
+  ## 1 · Datos
+  #: Los DATOS van en TABLA, en columnas — nunca uno por renglón, que deja la hoja medio vacía:
+  #| Dato | Valor | Dato | Valor |
+  #|---|---:|---|---:|
+  #| B | 1.50 m | P | 606 kN |
+  #| L | 1.50 m | e_{x} | 0.15 m |
+  #| h | 0.40 m | e_{y} | 0.30 m |
+  ## 2 · El cálculo
+  #: Primero en letras, que el motor la deja simbólica:
+  sigma_max = P/A*(1 + 6*e_x/B)
+  #: Y ahora con los números y SUS UNIDADES:
+  A = 1.5m*1.5m|m^2
+  sigma_max = dec(606kN/2.25m^2*(1 + 6*0.15/1.5), 1)|kPa
+
+UNIDADES — OBLIGATORIAS en TODA línea que tenga un número. El motor las calcula de verdad.
+  MAL:   Lx = 1.5          P = 606.2         s = sigma_max/ks      → sale «≈ 0.0» y no dice nada
+  BIEN:  L_x = 1.5m        P = 606.2kN       s = dec(754.3kPa/20000kN/m^3, 1)|mm   → «37.7 mm»
+  · se pegan al número, sin espacio: 606kN, 1.5m, 20000kN/m^3, 240kgf/cm^2;
+  · la BARRA dice en qué unidad se quiere LEER: |kPa, |mm, |tonf/m2, |kgf/cm2;
+  · sin la barra el resultado sale en la unidad base (metros) y un asiento de 37 mm
+    se convierte en «0.0»: por eso la barra NO es opcional;
+  · si las dimensiones no cuadran el motor avisa, así que no hay que inventar factores.
+DECIMALES: el motor es exacto y escribe 9/4 en vez de 2.25. Para leerlo en decimal: dec(expr, 2).
+  Nunca metas un dec() dentro de otro dec(): deja de evaluar.
+SUBÍNDICES: en la línea de cálculo SIN llaves (e_x, N_q, sigma_max). En el texto «#:» y en las
+  tablas CON llaves (e_{x}), que si no el guion bajo abre cursiva.
+  En las tablas el exponente tambien con llaves: kN/m^{3}, kgf/cm^{2}.
+
+Para DIBUJAR (croquis a escala, con cotas); coordenadas del problema en metros, Y hacia arriba:
+
+  #dibujo("Zapata 1.5 x 1.5 m", ud = m, escala = 1:28, cotas = m, alto = 240)
+  #  rect(0, 0, 1.5, 0.4, "gruesa")
+  #  achurado(0, 0, 1.5, 0.4, "diagonal")
+  #  rect(0.6, 0.4, 0.3, 0.9, "gruesa")
+  #  flecha(0.75, 1.75, 0.75, 1.35, "rojo")
+  #  texto(0.95, 1.6, "P = 606 kN", 2.6, "i")
+  #  cota(0, -0.3, 1.5, -0.3, -0.12, "B = 1.50")
+  #fin
+
+Y para una GRÁFICA: #fplot(...). Dos o tres apartados bastan; la ventana es estrecha.
+Usa los números que devolvieron las herramientas, nunca inventados.
+
+Si te falta un dato para contestar bien — una fórmula, una tabla de la norma, un plano, el
+enunciado de un ejercicio — NO lo inventes ni te disculpes: PÍDELO. Di exactamente esto:
+  «Eso no lo sé de memoria. Adjúntame la página con el botón ' + chr(0x1F4CE) + ' de abajo: vale una FOTO o una
+   captura (la leo yo), un PDF (le saco el texto) o un .txt. Dime también qué parte miro.»
+Cuando llegue, trabaja SOLO con lo que ponga ahí, y cita de dónde sale cada número.
+
+Si piden COMPROBAR algo a mano, la hoja es además la CALCULADORA: dilo y explica cómo se usa.
+En la ventana de la izquierda, sobre el papel, está la barra del motor:
+  · «✎ Volver al editor» abre el código: se cambia un número y se ve el resultado nuevo.
+  · «▶ Ejecutar» (o AutoRun) vuelve a calcular.
+  · «🔗 Enlace», arriba, copia la hoja ENTERA dentro del enlace: se pega en WhatsApp o Telegram y
+    el que lo abra ve la misma hoja, sin instalar nada. «↗ Abrir» la saca a una pestaña aparte.
+Una hoja de comprobación lleva los datos arriba y las fórmulas debajo: así basta tocar un dato.
 
 Sintaxis .heks (un comando por línea, # comentario):
 node <id> <x> <y> <z>
@@ -424,6 +488,63 @@ type Msg = { role: string; content?: string | null; tool_calls?: any[]; tool_cal
 const MAX_PASOS = 14;
 const conversacion: Msg[] = [];
 
+// Lo que el usuario adjunto para el PROXIMO mensaje (se vacia al enviarlo).
+let bandeja: Adjunto[] = [];
+let pintarBandeja: () => void = () => {};
+
+/**
+ * El modelo se satura y contesta 503 «high demand» (o 429, que es la cuota por
+ * minuto). No es culpa de la clave ni del programa, y se arregla esperando o
+ * cambiando de modelo — asi que lo hace el agente solo.
+ *
+ * Jorge, 21-sep-2026: «Gemini 503 UNAVAILABLE» en mitad de la demostracion.
+ *
+ *   1. reintenta el MISMO modelo, esperando cada vez mas (2 s, 5 s, 12 s);
+ *   2. si sigue caido, pasa al siguiente de la lista del proveedor y avisa.
+ */
+const REINTENTOS = [2000, 5000, 12000];
+const SATURADO = new Set([429, 500, 502, 503, 504]);
+
+let modeloActual = "";
+
+async function llamarConAguante(p: AgentProvider, modelo: string, clave: string, señal: AbortSignal) {
+  const cola = [modelo, ...p.modelos.filter((m) => m !== modelo)];
+  let ultimo: any = null;
+  for (let i = 0; i < cola.length; i++) {
+    for (let r = 0; r <= REINTENTOS.length; r++) {
+      try {
+        const msg = await llamarModelo(p, cola[i], clave, señal);
+        if (cola[i] !== modeloActual) {
+          modeloActual = cola[i];
+          if (i > 0) {
+            burbuja("paso", `El modelo estaba saturado; sigo con ${cola[i]}.`);
+            aiStorage.setModel(`agente_${p.id}`, cola[i]);
+            const caja = document.getElementById("hk-agente-modelo") as HTMLInputElement | null;
+            if (caja) caja.value = cola[i];
+          }
+        }
+        return msg;
+      } catch (e: any) {
+        if (e?.name === "AbortError") throw e;
+        ultimo = e;
+        const cod = parseInt((String(e?.message ?? "").match(/\b(\d{3})\b/) ?? [])[1] ?? "0", 10);
+        // un 404 es un modelo retirado (le paso a gemini-2.5-flash el 21-sep-2026:
+        // «no longer available to new users»): no se reintenta, pero SÍ se prueba
+        // el siguiente de la lista. Un 401 es la clave: ahí no hay nada que hacer.
+        if (cod === 404 && i < cola.length - 1) break;
+        if (!SATURADO.has(cod)) throw e;                 // 401 y demás: esperar no arregla nada
+        if (r === REINTENTOS.length) break;              // agotado: al siguiente modelo
+        burbuja("paso", `El modelo está saturado (${cod}). Reintento en ${REINTENTOS[r] / 1000} s…`);
+        await new Promise((ok, mal) => {
+          const t = setTimeout(ok, REINTENTOS[r]);
+          señal.addEventListener("abort", () => { clearTimeout(t); mal(new DOMException("", "AbortError")); }, { once: true });
+        });
+      }
+    }
+  }
+  throw ultimo ?? new Error("sin respuesta");
+}
+
 async function llamarModelo(p: AgentProvider, modelo: string, clave: string, señal: AbortSignal) {
   const cab: Record<string, string> = { "content-type": "application/json" };
   if (p.clave) cab["Authorization"] = `Bearer ${clave}`;
@@ -454,14 +575,34 @@ async function llamarModelo(p: AgentProvider, modelo: string, clave: string, se�
     method: "POST", headers: cab, signal: señal, body: JSON.stringify(cuerpo),
   }).catch((e) => {
     if (e?.name === "AbortError") throw e;
-    throw new Error(p.id === "ollama"
-      ? "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b" +
-        (location.hostname !== "localhost" ? "\nDesde esta web hace falta permitirla: variable de entorno OLLAMA_ORIGINS=* y reiniciar Ollama." : "")
-      : `sin conexión con ${p.nombre}: ${e?.message ?? e}`);
+    if (p.id === "ollama") {
+      // Ollama solo acepta peticiones del PROPIO localhost. Desde el sitio
+      // publico (github.io) contesta 403 y el navegador lo da como fallo de red:
+      // parece «no responde» cuando en realidad esta corriendo y rechaza el
+      // origen (medido el 21-sep-2026: localhost 200, github.io 403).
+      const fuera = location.protocol !== "file:" &&
+                    !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+      // Desde un sitio PUBLICO no se puede llegar a Ollama aunque este corriendo
+      // y aunque se le den permisos: Chrome/Edge bloquean que una web publica
+      // alcance la red local si el servidor no devuelve
+      // `Access-Control-Allow-Private-Network: true`, y Ollama no la envia
+      // (medido el 21-sep-2026: CORS 204 correcto y aun asi «Failed to fetch»).
+      // Es Private Network Access, una proteccion del navegador, no un ajuste.
+      throw new Error(fuera
+        ? "Desde el sitio público el navegador NO deja llegar a Ollama de tu PC " +
+          "(protección de red privada de Chrome/Edge), aunque Ollama esté abierto. " +
+          "Opciones: abre Hekatan Struct en local, o elige aquí arriba un proveedor " +
+          "en la nube (Gemini tiene clave gratis en aistudio.google.com/apikey)."
+        : "Ollama no responde en localhost:11434. Ábrelo o instala: ollama.com → ollama pull qwen2.5:7b");
+    }
+    throw new Error(`sin conexión con ${p.nombre}: ${e?.message ?? e}`);
   });
   if (!r.ok) {
     const txt = (await r.text()).slice(0, 400);
     if (p.id === "ollama" && r.status === 404) throw new Error(`Modelo «${modelo}» no instalado: ollama pull ${modelo}`);
+    if (p.id === "ollama" && r.status === 403)
+      throw new Error("Ollama rechaza a " + location.origin + ". Dale permiso: " +
+                      "setx OLLAMA_ORIGINS \"" + location.origin + "\" y reinicia Ollama.");
     throw new Error(`${p.nombre} ${r.status}: ${txt}`);
   }
   const j = await r.json();
@@ -556,7 +697,10 @@ async function enviar() {
 
   entrada.value = "";
   burbuja("user", texto);
-  conversacion.push({ role: "user", content: texto });
+  const adj = bandeja;
+  bandeja = [];
+  pintarBandeja();
+  conversacion.push(mensajeCon(texto, adj) as Msg);
   control = new AbortController();
   btnEnviar.textContent = "■ Parar";
   const pensando = burbuja("ia", "…");
@@ -565,7 +709,7 @@ async function enviar() {
   let modifico = false, verifico = false, empujones = 0;
   try {
     for (let paso = 0; paso < MAX_PASOS; paso++) {
-      const msg = await llamarModelo(p, modelo, clave, control.signal);
+      const msg = await llamarConAguante(p, modelo, clave, control.signal);
       let calls: any[] = msg.tool_calls ?? [];
       if (!calls.length && msg.content) calls = llamadasEnTexto(msg.content);
       conversacion.push({ role: "assistant", content: calls.length ? (msg.content ?? "") : msg.content, tool_calls: calls.length ? calls : undefined });
@@ -578,7 +722,7 @@ async function enviar() {
       }
       if (!calls.length) {
         pensando.remove();
-        burbuja("ia", (msg.content ?? "").trim() || "(sin respuesta)");
+        responder((msg.content ?? "").trim() || "(sin respuesta)");
         return;
       }
       for (const c of calls) {
@@ -609,6 +753,63 @@ async function enviar() {
   }
 }
 
+/**
+ * La respuesta final. Si trae formulas NO se vuelca en la burbuja: ahi se leia
+ * el LaTeX en crudo («$f'_c = 240\text{ kgf/cm}^2$»). Va a la HOJA de la
+ * izquierda, compuesta, y en el chat queda solo el aviso y la primera linea.
+ * Jorge, 21-sep-2026: «que no explique asi, siempre en Hekatan LISP».
+ */
+function responder(texto: string) {
+  if (!tieneFormulas(texto)) { burbuja("ia", texto); return; }
+  abrirHoja(tituloHoja(texto), texto);
+  const primera = texto.split("\n").map((l) => l.trim())
+    .find((l) => l && !/^[#*\-]/.test(l) && !l.includes("$")) ?? "";
+  const d = burbuja("ia", (primera ? primera + "\n" + "\n" : "") +
+                          "\ud83d\udcc4 La explicaci\u00f3n, con las f\u00f3rmulas, est\u00e1 en la hoja de la izquierda.");
+  const b = document.createElement("button");
+  b.textContent = "Abrir la hoja \u25b8";
+  b.style.cssText = "margin-top:6px;background:#13314f;color:#e8eef5;border:1px solid #2b5480;" +
+                    "border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;display:block;";
+  b.onclick = () => abrirHoja(tituloHoja(texto), texto);
+  d.appendChild(b);
+}
+
+/** El titulo de la hoja: el primer encabezado, o algo corto de la primera linea. */
+function tituloHoja(t: string): string {
+  const h = t.match(/^\s*#{1,3}\s+(.+)$/m);
+  if (h) return h[1].replace(/[*`$]/g, "").trim().slice(0, 60);
+  const l = t.split("\n").map((x) => x.trim()).find(Boolean) ?? "";
+  return l.replace(/[*`$]/g, "").slice(0, 60) || "Hoja \u00b7 Hekatan LISP";
+}
+
+/**
+ * Ollama SOLO si de verdad esta corriendo aqui.
+ *
+ * Jorge, 21-sep-2026: «no pongas Ollama por defecto, sino si esta local».
+ * Y tiene razon: Ollama era el primero de la lista, asi que un ingeniero que
+ * abria el agente se encontraba un proveedor que no tiene instalado, veia un
+ * fallo de red y se iba pensando que el agente no funciona.
+ *
+ * Se le pregunta a Ollama si esta ahi (una peticion corta a su puerto). Si
+ * contesta, se deja elegido; si no, se pasa a Gemini, que es el que cualquiera
+ * puede usar con una clave gratis.
+ *
+ * Desde el sitio PUBLICO no se puede llegar a Ollama aunque este corriendo
+ * (Chrome bloquea publico -> localhost), asi que alli ni se intenta.
+ */
+async function ollamaEstaAqui(): Promise<boolean> {
+  const local = location.protocol === "file:" ||
+                /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if (!local) return false;
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 900);
+    const r = await fetch("http://localhost:11434/api/tags", { signal: c.signal });
+    clearTimeout(t);
+    return r.ok;
+  } catch { return false; }
+}
+
 function crearVentana() {
   const v = document.createElement("div");
   v.id = "hk-agente-ia";
@@ -620,31 +821,54 @@ function crearVentana() {
   ].join(";");
 
   const cab = document.createElement("div");
-  cab.style.cssText = "display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid #1e293b;cursor:move;";
+  cab.style.cssText = "display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid #1e293b;cursor:move;flex-shrink:0;";
   cab.innerHTML = `<b style="flex:1">🤖 Agente IA · Hekatan Struct</b>`;
   const cerrar = document.createElement("button");
   cerrar.textContent = "✕";
   cerrar.title = "Cerrar";
   cerrar.style.cssText = "background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;";
-  cerrar.onclick = () => { v.style.display = "none"; };
+  cerrar.onclick = () => { v.style.display = "none"; sincronizarBotonesFlotantes(); };
   cab.appendChild(cerrar);
 
   // Proveedor · modelo · clave (compartidos con el panel de IA por localStorage)
   const conf = document.createElement("div");
-  conf.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid #1e293b;";
+  conf.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid #1e293b;flex-shrink:0;";
   const ctrl = "background:#111827;color:#e5e7eb;border:1px solid #334155;border-radius:4px;padding:3px 5px;font-size:12px;";
   const selP = document.createElement("select");
   selP.style.cssText = ctrl + "flex:1 1 120px;";
   for (const p of PROVEEDORES) selP.add(new Option(p.nombre, p.id));
   const inM = document.createElement("input");
+  inM.id = "hk-agente-modelo";
   inM.style.cssText = ctrl + "flex:1 1 140px;";
   inM.setAttribute("list", "hk-agente-modelos");
   const dl = document.createElement("datalist");
   dl.id = "hk-agente-modelos";
   const inK = document.createElement("input");
+  // ⚠️ Las teclas NO pueden llegar a los atajos del CAD: si el foco se escapa,
+  // la clave acaba escrita en la linea de ordenes, a la vista de todos.
+  ["keydown", "keyup", "keypress", "paste"].forEach((ev) =>
+    inK.addEventListener(ev, (e) => e.stopPropagation()));
   inK.type = "password";
   inK.placeholder = "API key";
-  inK.style.cssText = ctrl + "flex:1 1 100%;";
+  inK.style.cssText = ctrl + "flex:1;";
+  const ojo = document.createElement("button");
+  ojo.type = "button";
+  ojo.textContent = "👁";
+  ojo.title = "Ver la clave un momento (se vuelve a ocultar sola a los 8 s)";
+  ojo.style.cssText = "background:#1e293b;color:#94a3b8;border:1px solid #334155;" +
+                      "border-radius:4px;padding:2px 8px;cursor:pointer;";
+  let ocultarLuego: any = null;
+  ojo.onclick = () => {
+    const ver = inK.type === "password";
+    inK.type = ver ? "text" : "password";
+    ojo.textContent = ver ? "🙈" : "👁";
+    clearTimeout(ocultarLuego);
+    // se vuelve a tapar sola: una clave a la vista en una grabacion es un regalo
+    if (ver) ocultarLuego = setTimeout(() => { inK.type = "password"; ojo.textContent = "👁"; }, 8000);
+  };
+  const filaK = document.createElement("div");
+  filaK.style.cssText = "display:flex;gap:4px;flex:1 1 100%;";
+  filaK.append(inK, ojo);
   const pista = document.createElement("div");
   pista.style.cssText = "flex:1 1 100%;color:#64748b;font-size:11px;";
   const refrescar = () => {
@@ -652,22 +876,40 @@ function crearVentana() {
     dl.innerHTML = p.modelos.map((m) => `<option value="${m}">`).join("");
     inM.value = aiStorage.getModel(`agente_${p.id}`) || p.modelos[0];
     inK.style.display = p.clave ? "" : "none";
+    ojo.style.display = p.clave ? "" : "none";
+    filaK.style.display = p.clave ? "flex" : "none";
     inK.value = aiStorage.getKey(p.id);
     pista.textContent = p.pista;
   };
   const pidGuardado = aiStorage.getProvider();
-  selP.value = PROVEEDORES.some((p) => p.id === pidGuardado) ? pidGuardado : "ollama";
+  // Si el usuario ya eligio, se respeta. Si no, Gemini — y solo se cambia a
+  // Ollama cuando se comprueba que esta corriendo en esta misma maquina.
+  selP.value = PROVEEDORES.some((p) => p.id === pidGuardado) ? pidGuardado : "gemini";
+  if (!PROVEEDORES.some((p) => p.id === pidGuardado)) {
+    ollamaEstaAqui().then((hay) => {
+      if (hay && selP.value === "gemini") { selP.value = "ollama"; refrescar(); }
+    });
+  }
   selP.onchange = () => { aiStorage.setProvider(selP.value); refrescar(); };
   inM.onchange = () => aiStorage.setModel(`agente_${selP.value}`, inM.value.trim());
-  inK.onchange = () => aiStorage.setKey(selP.value, inK.value.trim());
-  conf.append(selP, inM, dl, inK, pista);
+  const guardarClave = () => {
+    const v = inK.value.trim();
+    aiStorage.setKey(selP.value, v);
+    if (!v) { pista.textContent = "Falta la clave."; pista.style.color = "#f59e0b"; return; }
+    pista.textContent = "✓ Clave guardada en este navegador (no se envía a ningún sitio).";
+    pista.style.color = "#5ecb92";
+  };
+  inK.onchange = guardarClave;
+  inK.oninput = guardarClave;          // al pegar tambien, sin esperar al foco
+  inK.addEventListener("paste", () => setTimeout(guardarClave, 0));
+  conf.append(selP, inM, dl, filaK, pista);
   refrescar();
 
   lista = document.createElement("div");
-  lista.style.cssText = "flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;";
+  lista.style.cssText = "flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:10px;";
 
   const pie = document.createElement("div");
-  pie.style.cssText = "display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1e293b;";
+  pie.style.cssText = "display:flex;gap:6px;padding:8px 10px;border-top:1px solid #1e293b;flex-shrink:0;";
   entrada = document.createElement("textarea");
   entrada.rows = 2;
   entrada.placeholder = "Ej.: edificio de 4 pisos, 3×2 vanos de 5 m; dime la flecha y el periodo";
@@ -692,10 +934,43 @@ function crearVentana() {
     const r = await ejecutar("deshacer", {});
     burbuja("paso", `↶ deshacer → ${resumenResultado("deshacer", r)}`);
   };
-  col.append(btnEnviar, btnDeshacer);
+  const btnClip = document.createElement("button");
+  btnClip.textContent = "📎";
+  btnClip.title = "Adjuntar una imagen, un PDF o un texto: una página del libro, un plano, " +
+                  "la formulación. El modelo LEE la imagen (no hace falta pasarla a texto).";
+  btnClip.style.cssText = "background:#334155;color:#e5e7eb;border:none;border-radius:4px;" +
+                          "padding:4px 8px;cursor:pointer;font-size:13px;";
+  btnClip.onclick = async () => {
+    const fs = await pedirArchivos();
+    if (!fs.length) return;
+    const nuevos = await leerArchivos(fs, (m) => burbuja("paso", "📎 " + m));
+    bandeja = [...bandeja, ...nuevos];
+    pintarBandeja();
+  };
+  col.append(btnEnviar, btnDeshacer, btnClip);
+
+  // la tira con lo adjuntado, para saber qué va a viajar y poder quitarlo
+  const tira = document.createElement("div");
+  tira.style.cssText = "display:none;flex-wrap:wrap;gap:4px;padding:4px 10px;" +
+                       "border-top:1px solid #1e293b;flex-shrink:0;";
+  pintarBandeja = () => {
+    tira.innerHTML = "";
+    tira.style.display = bandeja.length ? "flex" : "none";
+    bandeja.forEach((a, i) => {
+      const c = document.createElement("span");
+      c.style.cssText = "background:#1e293b;border:1px solid #334155;border-radius:4px;" +
+                        "padding:1px 6px;font-size:11px;color:#cbd5e1;cursor:pointer;";
+      c.textContent = (a.tipo === "imagen" ? "🖼 " : "📄 ") +
+                      a.nombre.slice(0, 26) + " ×";
+      c.title = "Quitar";
+      c.onclick = () => { bandeja.splice(i, 1); pintarBandeja(); };
+      tira.appendChild(c);
+    });
+  };
+
   pie.append(entrada, col);
 
-  v.append(cab, conf, lista, pie);
+  v.append(cab, conf, lista, tira, pie);
   document.body.appendChild(v);
 
   // Arrastrar por la cabecera
@@ -720,12 +995,92 @@ function crearVentana() {
 }
 
 /** Abre (o trae al frente) la ventana del agente. Idempotente. */
+/**
+ * Los botones flotantes (🤖 y 📋) viven en la misma esquina que el panel del
+ * agente y le caian ENCIMA de «Enviar»: con el panel abierto no se podia
+ * enviar nada (Jorge, 21-sep-2026). Mientras el panel este abierto, se esconden.
+ */
+export function sincronizarBotonesFlotantes() {
+  const abierto = !!ventana && ventana.style.display !== "none" &&
+                  document.body.contains(ventana);
+  for (const id of ["hk-agente-lanzador", "hk-caja-negra-btn"]) {
+    const el = document.getElementById(id);
+    if (el) (el as HTMLElement).style.display = abierto ? "none" : "block";
+  }
+  // El de «Explícame» solo se esconde: quien decide si debe verse es `mirar()`,
+  // que mira si hay resultados.
+  const ex = document.getElementById("hk-agente-explicar") as HTMLElement | null;
+  if (ex && abierto) ex.style.display = "none";
+}
+
 export function abrirAgenteIA(textoInicial?: string) {
   reenganchar();
   if (!ventana) ventana = crearVentana();
   ventana.style.display = "flex";
+  sincronizarBotonesFlotantes();
+  setTimeout(() => {
+    try {
+      const k = ventana!.querySelector('input[type="password"]') as HTMLInputElement | null;
+      if (k && !k.value) { k.focus(); return; }
+      entrada?.focus();
+    } catch { /* el panel aun no esta listo */ }
+  }, 60);
   if (textoInicial) entrada.value = textoInicial;
   entrada.focus();
+}
+
+/**
+ * Sube el botón por encima de la barra inferior del CAD (consola + línea de
+ * órdenes + estado). Con `bottom` fijo el icono salía cortado por la mitad:
+ * esa barra cambia de alto según las líneas de la consola y según la pantalla.
+ *
+ * No se busca por id — la barra la montan varios módulos — sino midiendo: se
+ * mira qué elementos fijos tocan el fondo de la ventana y se deja el botón
+ * encima del más alto de ellos.
+ */
+function subirSobreLaBarraInferior(b: HTMLElement) {
+  const recolocar = () => {
+    // No se busca la barra por id ni por `position`: se PREGUNTA al navegador
+    // quien esta encima del boton. Buscar elementos fijos fallaba porque la barra
+    // del CAD no es `fixed`, y el boton quedaba debajo, cortado por la mitad.
+    const alto = window.innerHeight;
+    const ex = document.getElementById("hk-agente-explicar") as HTMLElement | null;
+    const mio = (el: Element | null) => !!el && (el === b || el === ex || b.contains(el));
+    // ⚠️ `elementFromPoint` NO ve los elementos con `pointer-events: none`
+    // (la barra «CAD listo» y la leyenda del colormap lo llevan): los atraviesa
+    // y devuelve lo de debajo. Con esas hay que cruzar RECTANGULOS.
+    const invisiblesAlRaton = ["#hk-cad-status", "#legend", "#hk3-cmdline"];
+    const chocaConBarra = (r: DOMRect) => invisiblesAlRaton.some((sel) => {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      if (!el) return false;
+      const q = el.getBoundingClientRect();
+      if (q.width <= 0 || q.height <= 0) return false;
+      const m = 6;   // un poco de aire, que no queden pegados
+      return !(r.right + m < q.left || q.right < r.left - m ||
+               r.bottom + m < q.top || q.bottom < r.top - m);
+    });
+    for (let px = 18; px < alto * 0.7; px += 12) {
+      b.style.bottom = px + "px";
+      if (ex) ex.style.bottom = px + "px";
+      const r = b.getBoundingClientRect();
+      if (chocaConBarra(r)) continue;
+      // y los que SI responden al raton, por punto
+      const arriba = document.elementFromPoint(r.x + r.width / 2, r.y + 4);
+      const medio = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      const abajo = document.elementFromPoint(r.x + r.width / 2, r.bottom - 4);
+      if (mio(arriba) && mio(medio) && mio(abajo)) return;   // libre
+    }
+    b.style.bottom = "120px";   // no se encontro hueco: valor de emergencia
+  };
+  recolocar();
+  // ⚠️ NADA de ResizeObserver sobre el body: `recolocar` mueve el boton, eso
+  // cambia el layout, el observer vuelve a disparar y se monta un bucle que come
+  // CPU y deja la pagina pegada — con el visor 3D eso es «no se puede girar»
+  // (Jorge, 20-sep-2026). Basta con el resize de ventana y unos reintentos.
+  window.addEventListener("resize", recolocar);
+  setTimeout(recolocar, 400);
+  setTimeout(recolocar, 1500);
+  setTimeout(recolocar, 4000);
 }
 
 /** Botón redondo 🤖 siempre a mano (el panel de IA queda plegado dentro del CAD). Idempotente. */
@@ -737,15 +1092,69 @@ export function montarLanzadorAgente() {
   b.textContent = "🤖";
   b.title = "Agente IA: pídele una estructura y la modela";
   b.style.cssText = [
-    "position:fixed", "right:16px", "bottom:100px", "z-index:8999", "width:44px", "height:44px",
+    "position:fixed", "right:16px", "bottom:100px", "z-index:9600", "width:44px", "height:44px",
     "border-radius:50%", "border:1px solid #22d3ee", "background:#0b1220", "font-size:22px",
     "cursor:pointer", "box-shadow:0 4px 14px rgba(0,0,0,.4)",
   ].join(";");
+  subirSobreLaBarraInferior(b);
   b.onclick = () => {
-    if (ventana && ventana.style.display !== "none" && document.body.contains(ventana)) ventana.style.display = "none";
+    if (ventana && ventana.style.display !== "none" && document.body.contains(ventana)) {
+      ventana.style.display = "none";
+      sincronizarBotonesFlotantes();
+    }
     else abrirAgenteIA();
   };
   document.body.appendChild(b);
+  montarBotonExplicar();
+}
+
+/**
+ * Botón «💬 Explícame» AL LADO del 🤖, y solo cuando el modelo YA ESTÁ CORRIDO
+ * (hay `deformOutputs.deformations`). Con el modelo vacío no hay nada que
+ * explicar, así que se esconde en vez de dar un error después del clic.
+ */
+function montarBotonExplicar() {
+  if (document.getElementById("hk-agente-explicar")) return;
+  const e = document.createElement("button");
+  e.id = "hk-agente-explicar";
+  e.textContent = "💬 Explícame";
+  e.title = "Que el agente lea el modelo y sus resultados y te los explique";
+  e.style.cssText = [
+    "position:fixed", "left:0", "top:0", "z-index:8999", "height:44px", "padding:0 14px",
+    "border-radius:22px", "border:1px solid #22d3ee", "background:#0b1220", "color:#e2e8f0",
+    "font:13px system-ui,sans-serif", "cursor:pointer", "box-shadow:0 4px 14px rgba(0,0,0,.4)",
+    "display:none",
+  ].join(";");
+  e.onclick = () => {
+    void pedirAlAgente(
+      "Explícame este modelo ya calculado. Usa obtener_modelo y resultados, y dime en pocas " +
+      "líneas: qué estructura es, qué cargas y apoyos tiene, cuánto se desplaza (dónde y cuánto), " +
+      "si las reacciones equilibran la carga y si el resultado es razonable.",
+    );
+  };
+  document.body.appendChild(e);
+  // El workspace no avisa cuando termina de resolver: se mira el estado, que es
+  // lo mismo que lee `leerResultados()` para el agente.
+  const mirar = () => {
+    const d = W().__hekatanStates?.deformOutputs?.val;
+    const hay = !!d?.deformations?.size;
+    e.style.display = hay ? "block" : "none";
+    if (!hay) return;
+    // Pegado a la IZQUIERDA del 🤖, midiendo su caja: el panel de parámetros de
+    // la derecha se mueve (se pliega, cambia de ancho) y con `right:` fijo el
+    // botón caía encima de los sliders.
+    const b = document.getElementById("hk-agente-lanzador");
+    if (!b) return;
+    const r = b.getBoundingClientRect();
+    // ⚠️ Con el 🤖 oculto (panel del agente abierto) su rect es 0×0 en la esquina:
+    // sin esta guarda, «Explícame» saltaba arriba a la izquierda y tapaba la
+    // barra de herramientas (Jorge, 21-sep-2026).
+    if (r.width <= 0 || r.height <= 0) { e.style.display = "none"; return; }
+    e.style.top = `${r.top}px`;
+    e.style.left = `${Math.max(8, r.left - e.offsetWidth - 8)}px`;
+  };
+  mirar();
+  setInterval(mirar, 1200);
 }
 
 /** Para pruebas y tutoriales: manda un pedido como si lo escribiera el usuario. */

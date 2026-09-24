@@ -11,6 +11,7 @@ import { addRigidDiaphragms, mergeDiaphragmProps } from "../shared/rigidDiaphrag
 import { computeHinges, buildHingeObjects3D, summarizeHinges } from "../shared/plasticHinges";
 import { designAllFootings, classifyFootingType, type FootingType } from "../shared/footingDesign";
 import * as THREE from "three";
+import { ecHormigonACI } from "../shared/materials";
 
 // Densidad de MASA del concreto, NO peso específico.
 // CSI Manual §4.12: "Mass values must be given in consistent mass units (W/g)".
@@ -47,8 +48,12 @@ export const edificioAporticado: ExampleDef = {
   defaultShellResult: "none",
   availableShellResults: [
     "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
     "bendingXX", "bendingYY", "bendingXY",
-    "displacementZ", "vonMises",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
   ],
   hasModal: true,
   params: {
@@ -68,8 +73,9 @@ export const edificioAporticado: ExampleDef = {
 
     // Luces por vano y Alturas por piso ahora son DINÁMICAS (dynamicParams).
     // Solo se muestran svX_1..svX_{nVanosX}, svY_1..svY_{nVanosY}, hP_1..hP_{nPisos}.
-    hP_7:     P("Alturas por piso", "Piso 7 (m)", 0, 0, 6, 0.1),
-    hP_8:     P("Alturas por piso", "Piso 8 (m)", 0, 0, 6, 0.1),
+    // (Aquí había `hP_7` y `hP_8` FIJOS: con 3 plantas el panel enseñaba «Piso 7» y
+    //  «Piso 8», dos alturas de pisos que no existen. Los pisos los crea `dynamicParams`
+    //  de 1 a nPisos, así que sobraban.)
 
     // ── Secciones globales (fallback si per-piso es 0) ──
     // (14-sep-2026, Jorge: «perfiles de cotas modificables, nada de catálogo»): «Acero tubo (cotas)» y
@@ -312,14 +318,14 @@ export const edificioAporticado: ExampleDef = {
     const nVX = Math.round(cur.nVanosX ?? 2);
     const nVY = Math.round(cur.nVanosY ?? 2);
     for (let i = 1; i <= nP; i++) {
-      out[`hP_${i}`]    = P("Alturas por piso", `h Piso ${i} (m)`, 0, 0, 6, 0.1);
-      out[`colB_p${i}`] = P("Secciones por piso", `b col P${i} (m)`, 0, 0, 1.0, 0.05);
-      out[`colH_p${i}`] = P("Secciones por piso", `h col P${i} (m)`, 0, 0, 1.0, 0.05);
-      out[`vigaB_p${i}`] = P("Secciones por piso", `b viga P${i} (m)`, 0, 0, 0.8, 0.05);
-      out[`vigaH_p${i}`] = P("Secciones por piso", `h viga P${i} (m)`, 0, 0, 1.0, 0.05);
+      out[`hP_${i}`]    = P("Alturas por piso", `h Piso ${i} (m) · 0 = usa la uniforme`, 0, 0, 6, 0.1);
+      out[`colB_p${i}`] = P("Secciones por piso", `b col P${i} (m) · 0 = usa la global`, 0, 0, 1.0, 0.05);
+      out[`colH_p${i}`] = P("Secciones por piso", `h col P${i} (m) · 0 = usa la global`, 0, 0, 1.0, 0.05);
+      out[`vigaB_p${i}`] = P("Secciones por piso", `b viga P${i} (m) · 0 = usa la global`, 0, 0, 0.8, 0.05);
+      out[`vigaH_p${i}`] = P("Secciones por piso", `h viga P${i} (m) · 0 = usa la global`, 0, 0, 1.0, 0.05);
     }
-    for (let i = 1; i <= nVX; i++) out[`svX_${i}`] = P("Luces por vano", `svX #${i} (m)`, 0, 0, 12, 0.5);
-    for (let i = 1; i <= nVY; i++) out[`svY_${i}`] = P("Luces por vano", `svY #${i} (m)`, 0, 0, 12, 0.5);
+    for (let i = 1; i <= nVX; i++) out[`svX_${i}`] = P("Luces por vano", `Luz X vano ${i} (m) · 0 = usa la uniforme`, 0, 0, 12, 0.5);
+    for (let i = 1; i <= nVY; i++) out[`svY_${i}`] = P("Luces por vano", `Luz Y vano ${i} (m) · 0 = usa la uniforme`, 0, 0, 12, 0.5);
     return out;
   },
   /**
@@ -437,7 +443,7 @@ export const edificioAporticado: ExampleDef = {
 
     // Material propiedades (kN/m²)
     const fc_MPa = p.fcConcr * 0.0981;  // kg/cm² → MPa
-    const Ec = 4700 * Math.sqrt(fc_MPa) * 1000;   // ACI: E = 4700√f'c MPa → kN/m²
+    const Ec = ecHormigonACI(fc_MPa);   // ACI: E = 4700√f'c MPa → kN/m²
     const Es = 200e6;                              // acero W
     const nu_c = 0.2, nu_s = 0.3;
     const Gc = Ec / (2 * (1 + nu_c));

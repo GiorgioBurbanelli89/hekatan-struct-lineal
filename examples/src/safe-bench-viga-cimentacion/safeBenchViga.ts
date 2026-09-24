@@ -47,7 +47,15 @@ export const safeBenchViga: ExampleDef = {
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "pressure",
-  availableShellResults: ["pressure", "bendingXX", "bendingYY", "bendingXY", "vonMises", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: false,
   guide: [
     "Modelo estructural compuesto típico de cimentación corrida:",

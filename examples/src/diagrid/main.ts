@@ -6,7 +6,7 @@
  * +1 y −1 en el siguiente piso, alternando shift). Anillos horizontales
  * en cada nivel.
  *
- * Patrón awatif v2: todo en main.ts.
+ * Patron de ejemplo con panel propio: todo en main.ts.
  * Portado desde FEM Studio `generateDiagrid()` en getCad3d.ts (líneas 10392-10463).
  */
 import van, { State } from "vanjs-core";

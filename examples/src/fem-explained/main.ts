@@ -213,7 +213,7 @@ const viewerEl = getViewer({
 document.body.append(viewerEl, femPanelDiv);
 document.body.append(
   getToolbar({
-    sourceCode: "https://github.com/GiorgioBurbanelli89/awatif-workspace/blob/hekatan-fem-v2-shells-nonlinear/examples/src/fem-explained/main.ts",
+    sourceCode: "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/fem-explained/main.ts",
   })
 );
 

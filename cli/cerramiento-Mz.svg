@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="tick" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><line x1="0" y1="0" x2="0" y2="6" stroke="#888"/></marker>
+  </defs>
+  <rect width="1200" height="700" fill="white"/>
+  <text x="600" y="28" font-size="15" font-family="sans-serif" fill="#222" text-anchor="middle" font-weight="600">Cerramiento N=3  H=3m  ·  Momentos Mz (kN·m) · out-of-plane (col bends in Y)  ·  E=14100·√210=204328 kgf/cm²</text>
+  <line x1="60" y1="640" x2="60" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="392.3076923076923" y1="640" x2="392.3076923076923" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="807.6923076923077" y1="640" x2="807.6923076923077" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="1140" y1="640" x2="1140" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="60" y1="390.7692307692308" x2="226.15384615384616" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="226.15384615384616" y1="390.7692307692308" x2="392.3076923076923" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="392.3076923076923" y1="390.7692307692308" x2="600" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="600" y1="390.7692307692308" x2="807.6923076923077" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="807.6923076923077" y1="390.7692307692308" x2="973.8461538461539" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <line x1="973.8461538461539" y1="390.7692307692308" x2="1140" y2="390.7692307692308" stroke="#222" stroke-width="2"/>
+  <polygon points="52,654 68,654 60,640" fill="#444"/>
+  <line x1="46" y1="654" x2="74" y2="654" stroke="#444" stroke-width="2"/>
+  <polygon points="384.3076923076923,654 400.3076923076923,654 392.3076923076923,640" fill="#444"/>
+  <line x1="378.3076923076923" y1="654" x2="406.3076923076923" y2="654" stroke="#444" stroke-width="2"/>
+  <polygon points="799.6923076923077,654 815.6923076923077,654 807.6923076923077,640" fill="#444"/>
+  <line x1="793.6923076923077" y1="654" x2="821.6923076923077" y2="654" stroke="#444" stroke-width="2"/>
+  <polygon points="1132,654 1148,654 1140,640" fill="#444"/>
+  <line x1="1126" y1="654" x2="1154" y2="654" stroke="#444" stroke-width="2"/>
+  <polygon points="60,640 10,640 61.79039052750213,390.7692307692308 60,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="10" y="640" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-7.31</text>
+  <text x="61.79039052750213" y="390.7692307692308" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.26</text>
+  <polygon points="392.3076923076923,640 379.854557158986,640 391.08017815715596,390.7692307692308 392.3076923076923,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="379.854557158986" y="640" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-1.82</text>
+  <text x="391.08017815715596" y="390.7692307692308" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.18</text>
+  <polygon points="807.6923076923077,640 808.1147769878041,640 807.1585303279938,390.7692307692308 807.6923076923077,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="808.1147769878041" y="640" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.06</text>
+  <text x="807.1585303279938" y="390.7692307692308" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.08</text>
+  <polygon points="1140,640 1140.4789861878355,640 1139.9709009873482,390.7692307692308 1140,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="1140.4789861878355" y="640" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.07</text>
+  <text x="1139.9709009873482" y="390.7692307692308" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.00</text>
+  <polygon points="60,390.7692307692308 60,396.28099156934127 226.15384615384616,389.7734654774264 226.15384615384616,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="60" y="396.28099156934127" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.81</text>
+  <text x="226.15384615384616" y="389.7734654774264" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.15</text>
+  <polygon points="226.15384615384616,390.7692307692308 226.15384615384616,389.7734654774264 392.3076923076923,383.26593938551156 392.3076923076923,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="226.15384615384616" y="389.7734654774264" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.15</text>
+  <text x="392.3076923076923" y="383.26593938551156" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">1.10</text>
+  <polygon points="392.3076923076923,390.7692307692308 392.3076923076923,387.38362877709596 600,388.6039053273441 600,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="392.3076923076923" y="387.38362877709596" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.50</text>
+  <text x="600" y="388.6039053273441" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.32</text>
+  <polygon points="600,390.7692307692308 600,388.6039053273441 807.6923076923077,389.8241818775922 807.6923076923077,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="600" y="388.6039053273441" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.32</text>
+  <text x="807.6923076923077" y="389.8241818775922" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.14</text>
+  <polygon points="807.6923076923077,390.7692307692308 807.6923076923077,390.1525517458748 973.8461538461539,390.4912752128665 973.8461538461539,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="807.6923076923077" y="390.1525517458748" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.09</text>
+  <text x="973.8461538461539" y="390.4912752128665" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">0.04</text>
+  <polygon points="973.8461538461539,390.7692307692308 973.8461538461539,390.4912752128665 1140,390.82999867985814 1140,390.7692307692308" fill="rgba(220,80,80,0.35)" stroke="#c44" stroke-width="1"/>
+  <text x="973.8461538461539" y="390.4912752128665" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.04</text>
+  <text x="1140" y="390.82999867985814" font-size="11" font-family="monospace" fill="#a00" text-anchor="middle">-0.01</text>
+  <circle cx="60" cy="640" r="3" fill="#222"/>
+  <circle cx="60" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="392.3076923076923" cy="640" r="3" fill="#222"/>
+  <circle cx="392.3076923076923" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="807.6923076923077" cy="640" r="3" fill="#222"/>
+  <circle cx="807.6923076923077" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="1140" cy="640" r="3" fill="#222"/>
+  <circle cx="1140" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="226.15384615384616" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="600" cy="390.7692307692308" r="3" fill="#222"/>
+  <circle cx="973.8461538461539" cy="390.7692307692308" r="3" fill="#222"/>
+  <line x1="60" y1="670" x2="392.3076923076923" y2="670" stroke="#888" stroke-width="0.7" marker-start="url(#tick)" marker-end="url(#tick)"/>
+  <text x="226.15384615384616" y="664" font-size="11" font-family="monospace" fill="#555" text-anchor="middle">4.00 m</text>
+  <line x1="392.3076923076923" y1="670" x2="807.6923076923077" y2="670" stroke="#888" stroke-width="0.7" marker-start="url(#tick)" marker-end="url(#tick)"/>
+  <text x="600" y="664" font-size="11" font-family="monospace" fill="#555" text-anchor="middle">5.00 m</text>
+  <line x1="807.6923076923077" y1="670" x2="1140" y2="670" stroke="#888" stroke-width="0.7" marker-start="url(#tick)" marker-end="url(#tick)"/>
+  <text x="973.8461538461538" y="664" font-size="11" font-family="monospace" fill="#555" text-anchor="middle">4.00 m</text>
+</svg>

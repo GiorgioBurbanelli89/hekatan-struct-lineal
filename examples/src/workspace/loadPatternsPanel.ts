@@ -111,7 +111,7 @@ export function attachLoadPatternsPanel(opts: {
   // ════════════════════════════════════════════════════════════════════
   // PATTERNS FOLDER
   // ════════════════════════════════════════════════════════════════════
-  const patternsFolder = pane.addFolder({ title: "📋 Load Patterns", expanded: false });
+  const patternsFolder = pane.addFolder({ title: "📋 Patrones de carga", expanded: false });
 
   // Cada pattern como sub-folder
   const patternSubfolders: any[] = [];
@@ -132,18 +132,18 @@ export function attachLoadPatternsPanel(opts: {
       });
       patternSubfolders.push(sub);
       // Name (string)
-      sub.addBinding(pat, "name", { label: "Name" }).on("change", () => {
+      sub.addBinding(pat, "name", { label: "Nombre" }).on("change", () => {
         sub.title = `▸ ${pat.name} (${pat.type})  SW=${pat.selfWeightMultiplier}`;
         persist();
       });
       // Type (dropdown)
-      sub.addBinding(pat, "type", { label: "Type", options: PATTERN_TYPES }).on("change", () => {
+      sub.addBinding(pat, "type", { label: "Tipo", options: PATTERN_TYPES }).on("change", () => {
         sub.title = `▸ ${pat.name} (${pat.type})  SW=${pat.selfWeightMultiplier}`;
         persist();
       });
       // Self Weight Multiplier
       sub.addBinding(pat, "selfWeightMultiplier", {
-        label: "Self Weight Mult.", min: 0, max: 2, step: 0.05,
+        label: "Factor de peso propio", min: 0, max: 2, step: 0.05,
       }).on("change", () => {
         sub.title = `▸ ${pat.name} (${pat.type})  SW=${pat.selfWeightMultiplier}`;
         persist();
@@ -151,10 +151,10 @@ export function attachLoadPatternsPanel(opts: {
       // Auto Lateral Load
       pat.autoLateralLoad ??= "None";
       sub.addBinding(pat, "autoLateralLoad", {
-        label: "Auto Lateral", options: AUTO_LAT_OPTIONS,
+        label: "Carga lateral automática", options: AUTO_LAT_OPTIONS,
       }).on("change", () => persist());
       // Delete
-      sub.addButton({ title: "🗑 Delete pattern" }).on("click", () => {
+      sub.addButton({ title: "🗑 Borrar patrón" }).on("click", () => {
         loadPatterns.val = loadPatterns.val.filter((_, i) => i !== idx);
         rebuildPatterns();
         rebuildCases();    // cases pueden referenciar este pattern
@@ -164,7 +164,7 @@ export function attachLoadPatternsPanel(opts: {
     });
 
     // Add new
-    const addBtn = patternsFolder.addButton({ title: "+ Add New Pattern" });
+    const addBtn = patternsFolder.addButton({ title: "+ Patrón nuevo" });
     try { addBtn.element?.classList?.add("hk-pattern-add"); } catch {}
     addBtn.on("click", () => {
       const newName = `Pattern${loadPatterns.val.length + 1}`;
@@ -179,7 +179,7 @@ export function attachLoadPatternsPanel(opts: {
   // ════════════════════════════════════════════════════════════════════
   // CASES FOLDER
   // ════════════════════════════════════════════════════════════════════
-  const casesFolder = pane.addFolder({ title: "📊 Load Cases", expanded: false });
+  const casesFolder = pane.addFolder({ title: "📊 Casos de carga", expanded: false });
 
   const caseSubfolders: any[] = [];
   const rebuildCases = () => {
@@ -204,35 +204,35 @@ export function attachLoadPatternsPanel(opts: {
       });
       caseSubfolders.push(sub);
       // Name
-      sub.addBinding(cs, "name", { label: "Name" }).on("change", () => {
+      sub.addBinding(cs, "name", { label: "Nombre" }).on("change", () => {
         sub.title = `▸ ${cs.name} (${cs.type})`;
         rebuildCases();   // refresh active selector
         rebuildCombos();
         persist();
       });
       // Type
-      sub.addBinding(cs, "type", { label: "Type", options: CASE_TYPES }).on("change", () => {
+      sub.addBinding(cs, "type", { label: "Tipo", options: CASE_TYPES }).on("change", () => {
         sub.title = `▸ ${cs.name} (${cs.type})`;
         persist();
       });
       // Initial Condition
       cs.initialCondition ??= "Zero";
       sub.addBinding(cs, "initialCondition", {
-        label: "Initial Cond.", options: INIT_COND,
+        label: "Condición inicial", options: INIT_COND,
       }).on("change", () => persist());
       // Patterns aplicados (texto info por ahora)
       cs.patterns ??= [];
       const patternsInfo = { value: patternsTxt };
-      sub.addBinding(patternsInfo, "value", { label: "Patterns", readonly: true });
+      sub.addBinding(patternsInfo, "value", { label: "Patrones", readonly: true });
       // maxModes (solo si Modal)
       if (cs.type.startsWith("Modal")) {
         cs.maxModes ??= 12;
         sub.addBinding(cs, "maxModes", {
-          label: "Max Modes", min: 1, max: 50, step: 1,
+          label: "Modos máx.", min: 1, max: 50, step: 1,
         }).on("change", () => persist());
       }
       // Delete
-      sub.addButton({ title: "🗑 Delete case" }).on("click", () => {
+      sub.addButton({ title: "🗑 Borrar caso" }).on("click", () => {
         loadCases.val = loadCases.val.filter((_, i) => i !== idx);
         if (activeLoadCase.val === cs.name) {
           activeLoadCase.val = loadCases.val[0]?.name ?? "";
@@ -244,7 +244,7 @@ export function attachLoadPatternsPanel(opts: {
     });
 
     // Add new
-    const addBtn = casesFolder.addButton({ title: "+ Add New Case" });
+    const addBtn = casesFolder.addButton({ title: "+ Caso nuevo" });
     try { addBtn.element?.classList?.add("hk-case-add"); } catch {}
     addBtn.on("click", () => {
       const newName = `Case${loadCases.val.length + 1}`;
@@ -262,7 +262,7 @@ export function attachLoadPatternsPanel(opts: {
   // ════════════════════════════════════════════════════════════════════
   // COMBINATIONS FOLDER
   // ════════════════════════════════════════════════════════════════════
-  const combosFolder = pane.addFolder({ title: "Σ Load Combinations", expanded: false });
+  const combosFolder = pane.addFolder({ title: "Σ Combinaciones", expanded: false });
 
   const comboSubfolders: any[] = [];
   const rebuildCombos = () => {
@@ -278,20 +278,20 @@ export function attachLoadPatternsPanel(opts: {
       const txt = cm.cases.map(c => `${c.scaleFactor}·${c.case}`).join(" + ");
       const sub = combosFolder.addFolder({ title: `▸ ${cm.name}: ${txt}`, expanded: false });
       comboSubfolders.push(sub);
-      sub.addBinding(cm, "name", { label: "Name" }).on("change", () => {
+      sub.addBinding(cm, "name", { label: "Nombre" }).on("change", () => {
         const t = cm.cases.map(c => `${c.scaleFactor}·${c.case}`).join(" + ");
         sub.title = `▸ ${cm.name}: ${t}`;
         persist();
       });
       const txtInfo = { value: txt };
-      sub.addBinding(txtInfo, "value", { label: "Formula", readonly: true });
-      sub.addButton({ title: "🗑 Delete combo" }).on("click", () => {
+      sub.addBinding(txtInfo, "value", { label: "Fórmula", readonly: true });
+      sub.addButton({ title: "🗑 Borrar combinación" }).on("click", () => {
         loadCombinations.val = loadCombinations.val.filter((_, i) => i !== idx);
         rebuildCombos();
         persist();
       });
     });
-    const addBtn = combosFolder.addButton({ title: "+ Add New Combo" });
+    const addBtn = combosFolder.addButton({ title: "+ Combinación nueva" });
     try { addBtn.element?.classList?.add("hk-combo-add"); } catch {}
     addBtn.on("click", () => {
       const firstCase = loadCases.val[0]?.name ?? "Dead";

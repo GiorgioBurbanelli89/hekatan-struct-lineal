@@ -73,7 +73,7 @@ await pag.keyboard.press("Escape");            // cierra la ayuda del CAD
 // deformada encendida
 await pag.evaluate(() => {
   const f = Array.from(document.querySelectorAll(".tp-lblv"))
-    .find((x) => /Deformed shape/i.test(x.textContent || ""));
+    .find((x) => /Deformed shape|Deformada/i.test(x.textContent || ""));
   const c = f?.querySelector("input[type=checkbox]");
   if (c && !c.checked) c.click();
 });

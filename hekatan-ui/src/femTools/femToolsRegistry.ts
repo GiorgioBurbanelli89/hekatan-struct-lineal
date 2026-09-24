@@ -159,7 +159,12 @@ export class FemToolsRegistry {
       nFrames, nShells, nSolids,
       nSupports: supports, nLoads: loads,
       totalDOFs, freeDOFs: totalDOFs - supports * 6,
-      timings: { assembly: 1, solve: 2, internalForces: 1, total: 6 },
+      // ⚠️ Estos numeros estaban CLAVADOS (1/2/1/6 ms) y el panel «Solver Log»
+      // imprimia «SparseLU → 2.0 ms … ✓ Completado: 6.0 ms» igual con 3 nudos que
+      // con 6600. Un tiempo inventado es peor que ningun tiempo: se lee como
+      // medida. Mientras no se instrumente el solver de verdad (el WASM no
+      // devuelve los parciales), no se enseña ninguno.
+      timings: undefined,
       maxDisplacement: maxUIdx >= 0
         ? { value: maxU, nodeIdx: maxUIdx, component: maxUComp }
         : undefined,

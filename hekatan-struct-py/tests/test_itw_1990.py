@@ -73,7 +73,7 @@ def test_tres_modos_nulos_y_ni_uno_mas(pts):
     spurious zero energy modes are prevented*.
     """
     assert modos_nulos(pts, n_gauss=3) == 3
-    assert modos_nulos(pts, n_gauss=2, khg=0.0) == 4  # el mecanismo, documentado (sin el reloj de CSI)
+    assert modos_nulos(pts, n_gauss=2, khg=0.0) == 4  # el mecanismo, documentado (sin reloj de arena)
 
 
 @pytest.mark.parametrize("pts", [CUADRADO, TRAPECIO])

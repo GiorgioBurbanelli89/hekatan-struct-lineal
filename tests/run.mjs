@@ -26,7 +26,10 @@ const t0 = Date.now();
 
 for (const archivo of archivos) {
   const caso = await import(pathToFileURL(join(AQUI, "casos", archivo)).href);
-  if (filtro && !caso.nombre.includes(filtro)) continue;
+  // el filtro casa con el NOMBRE del caso o con el del fichero: los nombres van
+  // con guion ("placa-opensees-vs-sap2000") y los ficheros con guion bajo, y no
+  // tiene sentido que `node tests/run.mjs placa_opensees` no encuentre el suyo.
+  if (filtro && !caso.nombre.includes(filtro) && !archivo.includes(filtro)) continue;
 
   console.log(`\n── ${caso.nombre} ${"─".repeat(Math.max(0, 60 - caso.nombre.length))}`);
   console.log(`   ${caso.descripcion}`);

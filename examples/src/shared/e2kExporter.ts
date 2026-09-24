@@ -8,6 +8,7 @@
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
 import type { E2kModel } from "./e2kParser";
+import { muellesParaExportar } from "./muellesParaExportar";
 
 export interface ExportE2kInput {
   nodes: Node[];
@@ -388,10 +389,8 @@ function exportFromScratch(input: ExportE2kInput): string {
     return [(load[3] ?? 0) - (r?.[3] ?? 0), (load[4] ?? 0) - (r?.[4] ?? 0), (load[5] ?? 0) - (r?.[5] ?? 0)];
   };
   // ⚠️ N y MM SIEMPRE. El lector del e2k de ETABS **no tiene token de
-  // unidades** — comprobado en el binario (ETABS.dll ~0x03490e00: sus palabras
-  // clave son LINE/COLUMN/BEAM/BRACE/$ CONTROLS/TITLE1/TITLE2/PREFERENCE, y
-  // UNITS no esta) y comprobado midiendo (con "Tonf", "KN" y "KN"/"M" el
-  // resultado es identico). Lee todo en las unidades base de SAPFire, N y mm.
+  // unidades** — comprobado midiendo (con "Tonf", "KN" y "KN"/"M" el
+  // resultado es identico). Lee todo en las unidades base, N y mm.
   // Escribir en tonf-m hacia que ETABS leyera A con factor 1e-6, E con x102 y
   // las cargas con 1e-3: de 4078.45 kN llegaban 0.42.
   const force = "N";
@@ -964,12 +963,8 @@ function exportFromScratch(input: ExportE2kInput): string {
   const springDeNudo = new Map<number, string>();
   const springProps: string[] = [];
   {
-    const kNudo = new Map<number, number[]>();
-    for (const sp of (nodeInputs as any).springs ?? []) {
-      if (!(sp.k > 0)) continue;
-      const v = kNudo.get(sp.node) ?? [0, 0, 0, 0, 0, 0];
-      v[sp.dof] += sp.k; kNudo.set(sp.node, v);
-    }
+    // muelles de AREA -> nodales (int N_i dA); los nudos colgados no son muelles (muellesParaExportar.ts)
+    const kNudo = muellesParaExportar(nodes as any, elements as any, (nodeInputs as any).springs).nodales;
     const nombrePorK = new Map<string, string>();
     for (const [ni, v] of kNudo) {
       const enFichero = v.map((k, i) => i < 3 ? k * forceFactor / lengthFactor : k * forceFactor * lengthFactor);
@@ -2022,12 +2017,20 @@ function exportFromScratch(input: ExportE2kInput): string {
   // justo lo que hace el motor: `getGlobalMassMatrix.cpp` pesa los elementos
   // por `densities` (MASA, t/m³) y no mira las cargas.
   //
-  // Lo demás sigue igual y a propósito, porque el motor lo replica paso a paso
-  // en `ensamblarMasa()` (modal.cpp): sólo masa LATERAL
-  // (`INCLUDEVERTICALMASS "No"`) y agrupada por piso (`LUMPATSTORIES "Yes"`).
+  // ⚠️ MASA VERTICAL (16-sep-2026). Esto escribía `INCLUDEVERTICALMASS "No"` y
+  // `LUMPATSTORIES "Yes"`, que es el DEFECTO DE ETABS, no lo que resuelve Hekatan.
+  // Consecuencia medida en el galpón curvo (214 nudos): ETABS se comía los modos
+  // VERTICALES — SumUZ = 0 contra el 38.4 % de Hekatan y de SAP2000, el modo 4
+  // salía a −29.7 % (su "modo 4" era en realidad el 6). Con la masa vertical
+  // encendida, ETABS = Hekatan a −0.01 % en los cinco primeros modos.
+  // SAP2000 trae la masa en las tres direcciones de fábrica y no tiene el problema.
+  // En el binario: `IncludeLateralMass` / `IncludeVerticalMass` (ETABS.dll,
+  // CSI.SAPModel.dll). Por OAPI no hay SourceMass: es la tabla
+  // "Mass Source Definition" de DatabaseTables (campos IncLateral, IncVertical,
+  // LumpMass). Ver validation/opensees/README.md.
   const masaDeElementos = weightMode === "manual";
   lines.push(`$ MASS SOURCE`);
-  lines.push(`  MASSSOURCE  "MsSrc1"    INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "No"    LUMPATSTORIES "Yes"    ISDEFAULT "Yes"  `);
+  lines.push(`  MASSSOURCE  "MsSrc1"    INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "Yes"    LUMPATSTORIES "No"    ISDEFAULT "Yes"  `);
   if (!masaDeElementos) lines.push(`  MASSSOURCELOAD  "MsSrc1"  "Dead"  1 `);
   lines.push(``);
 

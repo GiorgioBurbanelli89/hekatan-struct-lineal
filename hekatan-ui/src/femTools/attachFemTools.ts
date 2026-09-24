@@ -23,7 +23,7 @@
  *    🛠 Herramientas FEM ▼
  *      🔍 Inspect — derivación FEM
  *      📈 Modal+ ASCE 7-22 (solo si hasModal)
- *      📜 Solver Log + tiempos
+ *      📜 Registro del solver
  *      🧮 Calculadora FEM (MATLAB-style)
  *      💻 CLI cad.* (terminal)
  *      📄 Report Explained (PDF imprimible)
@@ -91,7 +91,7 @@ export function attachFemTools(
   }
 
   if (visible.solverLog) {
-    folder.addButton({ title: "📜 Solver Log + tiempos" })
+    folder.addButton({ title: "📜 Registro del solver" })
       .on("click", () => reg.toggleSolverLog(ctx));
   }
 

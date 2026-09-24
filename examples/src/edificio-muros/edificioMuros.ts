@@ -27,7 +27,15 @@ const params = { ...base };
 params.matCol     = { ...base.matCol,     default: 0 };  // Hormigón
 params.matViga    = { ...base.matViga,    default: 0 };
 params.slabOn     = { ...base.slabOn,     default: 1 };
-params.bracesMode = { ...base.bracesMode, default: 1 };  // perimetrales (muros proxy)
+// ⚠️ Aqui decia `bracesMode = 1` (diagonales perimetrales, "muros proxy") y NO
+// tocaba `murosMode`, cuyo defecto es 0 = ninguno. O sea: el ejemplo que se
+// llama "Edificio con Muros de Corte" salia con CERO muros y N diagonales.
+// Es el mismo bug que CLAUDE.md da por cerrado el 2-sep-2026 para
+// `edificioAporticado`, y que aqui seguia vivo. Se copia lo que hace el gemelo
+// que si funciona, `edificio-con-muros/edificioConMuros.ts:22-23`.
+params.bracesMode = { ...base.bracesMode, default: 0 };  // sin diagonales: los muros son de verdad
+params.murosMode  = { ...base.murosMode,  default: 3 };  // muros Q4 en X e Y
+params.tMuro      = { ...base.tMuro,      default: 0.25 };
 params.slabT      = { ...base.slabT,      default: 0.15 };
 params.fcConcr    = { ...base.fcConcr,    default: 280 };
 params.nPisos     = { ...base.nPisos,     default: 6 };
@@ -40,7 +48,18 @@ export const edificioMuros: ExampleDef = {
   // F22 (tensión vertical de membrana): el campo con el que se LEE un muro de corte. Con M11 los muros
   // salían uniformes y "sin colormap" (Jorge, 6-sep-2026).
   defaultShellResult: "membraneYY",
-  availableShellResults: ["bendingXX", "bendingYY", "displacementZ", "vonMises"],
+  // ⚠️ `membraneYY` NO estaba en esta lista, y `filterShellResultOptions` la usa
+  // para PODAR el desplegable: el campo por defecto del propio ejemplo quedaba
+  // fuera de sus propias opciones.
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params,
   build: edificioAporticado.build,

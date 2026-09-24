@@ -16,9 +16,9 @@ then ETABS and SAFE**.
 
 | part | formulation | source |
 |---|---|---|
-| 📐 Membrane with drilling rotation | The normal rotation enters the **displacement field** (Allman edge interpolation + condensed bubble), not a penalty added afterwards. Default variant (type 12): 2×2 Gauss, drilling projection, centre penalty γ = 0.4·μ and a θz hourglass term, measured against the ETABS 12×12 membrane cell. | Ibrahimbegović, Taylor & Wilson (1990), *IJNME* 30:445-457; Ibrahimbegović & Wilson (1991) |
+| 📐 Membrane with drilling rotation | The normal rotation enters the **displacement field** (Allman edge interpolation + condensed bubble), not a penalty added afterwards. Default variant (type 8): 3×3 Gauss plus the drilling projection of FEAP; centre penalty γ = 0.4·μ, measured (black box) on the ETABS 12×12 membrane cell reconstructed by flexibility. | Ibrahimbegović, Taylor & Wilson (1990), *IJNME* 30:445-457; Taylor (FEAP) |
 | 🔲 Thin plate (Shell-Thin) | **DKQ** — discrete Kirchhoff quadrilateral. | Batoz & Tahar (1982), *IJNME* 18 |
-| 🔳 Thick plate (Shell-Thick) | **Reissner–Mindlin** with assumed transverse shear (MITC-like, Wilson edge shears), hierarchical edge rotations and bubble, condensed. Suitable for thick footings and slabs. MITC4 remains available as the published alternative. | Wilson's edge-shear element; Bathe & Dvorkin (MITC4) — see note below |
+| 🔳 Thick plate (Shell-Thick) | **Reissner–Mindlin MITC4** (assumed transverse shear) with Wilson's incompatible modes, condensed. Suitable for thick footings and slabs. DKMQ and Wilson's DSE available as alternatives. | Bathe & Dvorkin (1985); Wilson et al. (1973); Taylor, Beresford & Wilson (1976) |
 | 📏 Frames | **3D Timoshenko beam** with effective shear areas (As2, As3), end releases by static condensation, rigid end offsets, CSI local axes and local-axis angle; consistent fixed-end loads. | SAP IV lineage: Bathe, Wilson & Peterson (1973) |
 | 🧱 Solids | **8-node hexahedron** with incompatible modes. | Wilson, Taylor, Doherty & Ghaboussi (1973); Taylor, Beresford & Wilson (1976) |
 | 🌍 Soil | **Winkler springs** (modulus of subgrade reaction): nodal, line and area, translational and rotational. | Winkler (1867); Bowles, *Foundation Analysis and Design* |
@@ -26,13 +26,9 @@ then ETABS and SAFE**.
 | 🧮 Static solver | Sparse LDLT; preconditioned conjugate gradient (incomplete Cholesky) above 150 000 DOF. | Eigen |
 | 🏗️ Load cases | Loads by **pattern** (Dead, Live, Ex…); a **Case** is solved with its patterns and a **Combo** with Σ factor × case — only the selected one is analysed, as in SAP2000. | — |
 
-**What is public and what is not.** The formulations are public in full **except one part**:
-the stabilisation of the thick plate (symmetrisation of the edge shear and a penalty on the
-divergence of the rotation field, factor 1000). Those two ingredients were matched against
-SAP2000/ETABS result by result; sensitivity is below 0.001 % from the factor 1000 on, and the
-element passes the patch test and converges to the exact Reissner–Mindlin series without
-locking independently of CSI (see the validation table below and
-`validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md`).
+**Everything is published.** Every formulation above comes from the cited papers and books.
+Where Hekatan is compared with CSI programs, the comparison is black box: same mesh, results or
+element matrices reconstructed by flexibility from what SAP2000/ETABS report.
 
 **Reference books**
 - Zienkiewicz & Taylor — *The Finite Element Method*
@@ -89,8 +85,8 @@ Full detail in [`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md).
 | **Frames + deck** — warehouse, 609 nodes, same mesh by OAPI | SAP2000 24 · ETABS 22 (`--noedge`) | **0.001 %** on all nodes with stiffness | ✅ |
 | **Modal** (Paz & Leigh 6.3) | ETABS 22 | **0.00 %** on 6 modes, subspace path | ✅ |
 | **Shell-Thin** (Kirchhoff) | ETABS 22, 3 load steps | **0.93 %** worst | ✅ |
-| **Shell-Membrane** (CSI drilling, `drillingTypes = 12`) | ETABS 22, measured 12×12 cell, 9 geometries | **1e-13 %** | ✅ |
-| **Shell-Thick** (CSI formulation read from `CsiGo2.dll`) | ETABS/SAP2000, ~140 measured cells | **1e-12 %** on K · plate 8×8 = ETABS to 7 digits | ✅ [how](#the-plate-element-identifying-csis-shell-thick-2026-09-01) |
+| **Shell-Membrane** (ITW + drilling projection, `drillingTypes = 8`) | ETABS 22, 12×12 cell reconstructed by flexibility, 10 geometries | **1.42 %** mean | ✅ |
+| **Shell-Thick** (MITC4 + Wilson incompatible modes) | ETABS 19, simply supported plate 8×8, 5 thicknesses | **0.37–1.9 %** | ⚠️ [plate element](#the-plate-element-shell-thick) |
 | **Deck / membrane floors** — ETABS semantics (`deck etabs [oneway]`) | ETABS 22 by OAPI and e2k | **0.0000 %** (two-way) · **0.0010 %** (one-way) | ✅ [table](#etabs--sap2000--safe--hekatan-struct-lineal-side-by-side) |
 | **Deck / membrane floors** — no directive (= SAP2000 semantics) | SAP2000 24 by OAPI | **1e-13 %** | ✅ |
 | **Self weight** (Dead, consistent nodal vector) | SAP2000 24 own weight · ETABS 22 own weight | **0.0000 %** · **0.0000 %** (with `deck etabs`) | ✅ |
@@ -105,14 +101,12 @@ Full detail in [`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md).
 | **Line springs** (grade beams on Winkler) | SAP2000 24 · ETABS 22, line spring vs nodal springs lumped by tributary length | **0.0000 %** in both → same as Hekatan `spring` | ✅ 2026-09-08 |
 | **Rotational springs** (footing SSI, kθ) — `.heks` `spring n rx/ry/rz k` | SAP2000 24 · ETABS 22 by OAPI, same mesh | **4e-13 %** · **2.5e-13 %** | ✅ 2026-09-08 |
 | **Shell forces, joint by joint** (`AreaForceShell` M11/M22/M12 at the 4 joints of every shell, unaveraged) — Shell-Thin = DKQ evaluated at 2×2 Gauss and extrapolated | ETABS 22, templates portico-losa / losa-plana / losa-vigas-borde / dual (3600–3760 joints each) · SAP2000 24 | **0.0000 %** vs ETABS **and vs SAP2000** in all four (centroid, joint and node) once the `.s2k` carries the diaphragm (the 3-Sep files did not: 0.5–0.9 %) | ✅ 2026-09-08 |
-| **Membrane forces, joint by joint** (F11/F22/F12; ITW type 12: Allman projected, evaluated at 2×2 Gauss without the bubble, extrapolated) | ETABS 22 · SAP2000 24, dual template with shear walls (3760 joints) | **0.0000 %** in both (with the bubble recovered inside: 5.7 % at wall joints; CSI does not use it when reporting) | ✅ 2026-09-08 |
+| **Membrane forces, joint by joint** (F11/F22/F12; ITW type 8: Allman projected, evaluated at 2×2 Gauss without the bubble, extrapolated) | ETABS 22, dual template with shear walls (3760 joints) | **0.454 %** (with the bubble recovered inside: 5.7 % at wall joints; CSI does not use it when reporting) | ✅ 2026-09-15 |
 | **Dual template vs SAP2000, wall forces** — the 14 % reported earlier was the old `.s2k` without diaphragm | SAP2000 24, `etabsjoint 0` | displacements, M and F joint by joint **0.0000 %** | ✅ 2026-09-08 |
 | **ETABS automesh** (`AUTOMESHOPTIONS … FLOORMESHMAXSIZE 1250`) reproduced as `automesh <size>` — Hekatan solves the mesh it is given, so a 5×5 slab arriving as ONE panel is not the same model | ETABS 22 analysis model (`PointElm`/`AreaElm`) of that slab | same mesh (**25 nodes, 16 shells**, exactly ETABS's) and **1.1e-10 %** on all 25 nodes | ✅ 2026-09-08 |
 | **`.e2k` exporter wrote `ADDRESTRAINT "Yes"`** — with it, when ETABS automeshes a panel it restrains every NEW edge node touching a restrained one | ETABS 22, 5×5 slab supported at its 4 corners only | `"Yes"`: whole edge fixed, **7× stiffer** (4.99e-4 vs 3.58e-3). `"No"` (what ETABS itself writes): 3.5841e-3 = Hekatan at 0.00000 %. **Fixed**; templates unchanged (their mesh is already in the file) | ✅ 2026-09-08 |
-| **ETABS automatic rigid end offsets** (RZ = 0: no stiffness; but ETABS does not weigh or mass the beam length inside the column, ½ column side per end; measured Dead 136.8 = 144.0 − 4×2×0.25 m) | ETABS 22 with its offsets **untouched** (driver no longer zeroes them), 8 templates | `offsets=1` (default): mass **0.000 %**, statics **0.000 %**, modes 1–3 **0.00 %**, forces **0.000 %** in all eight; `offsets=0` = SAP2000. What ETABS adds by default (auto offsets, 1.25 m automesh, edge constraint) lives in `ETABS.dll`, none in the solver: `validation/isse/ETABS_DEFECTOS_QUE_ANADE.md` | ✅ 2026-09-08 |
+| **ETABS automatic rigid end offsets** (RZ = 0: no stiffness; but ETABS does not weigh or mass the beam length inside the column, ½ column side per end; measured Dead 136.8 = 144.0 − 4×2×0.25 m) | ETABS 22 with its offsets **untouched** (driver no longer zeroes them), 8 templates | `offsets=1` (default): mass **0.000 %**, statics **0.000 %**, modes 1–3 **0.00 %**, forces **0.000 %** in all eight; `offsets=0` = SAP2000. What ETABS adds by default (auto offsets, 1.25 m automesh, edge constraint) is preprocessing, not the solver: `validation/isse/ETABS_DEFECTOS_QUE_ANADE.md` | ✅ 2026-09-08 |
 | **Moment sign and nodal values** — Hekatan reported bending with the solver-curvature sign (opposite to CSI) and averaged element centroids at nodes, which erased the peak over a column (4.2 where ETABS lists 57.8) | ETABS 22 | now CSI sign (M11 > 0 = tension at the bottom) and the node takes the mean of the neighbours' **joint** values: 0.0000 % vs ETABS (thin) | ✅ 2026-09-08 |
-| **Penalty factor sensitivity** (the kernel's 1000, the one unpublished ingredient together with the shear symmetrisation) | same K with the factor free, 16×16 plate solved in dense: `shell_thick_sensibilidad.mjs` | 10 → 100 000: w moves 0.07 %, M 0.16 %; from 1000 on **< 0.001 %**: a stabilisation parameter (Flanagan–Belytschko), not a calibration. Kept, named and optional, with the published MITC4/DKQ as alternatives | ✅ 2026-09-08 |
-| **Shell-Thick validity without ETABS** — rank (3 rigid modes in square, rectangle, parallelogram, trapezoid, irregular), MacNeal–Harder constant-curvature patch test on distorted quads, convergence to the exact Reissner–Mindlin series (hard support) | independent of CSI: `validation/02-placas/shell_thick_validez.mjs`, `shell_thick_convergencia.mjs` | patch test **6.9e-11 %** (Thick) / **6.6e-13 %** (DKQ); 32×32: w 0.12 % / M 0.29 % at t/L = 0.1, w 0.065 % / M 0.24 % at t/L = 0.01, no locking · sources per ingredient in `SHELL_THICK_FUENTES_Y_VALIDEZ.md` | ✅ 2026-09-08 |
 | **Edge constraint with `OBJMESHTYPE "NONE"`** — analysis model read via `PointElm`/`AreaElm` | ETABS 22 by e2k, hanging joint at 0.35 of a 2 m edge | ETABS **still meshes through the joint** (14 joints / 8 area elements from 3 objects, one of them a triangle): "NONE" does not stop the cookie-cut. SAP2000 on the same objects = Hekatan with the joint free (**0.000 %**); the "Hermite" reading of the morning was the smooth field of that mesh. Hekatan's replica of ETABS is the partition (`deck etabs`); `edge etabs` (hanging-node MPC, Hermite) stays as a published option, not as ETABS | ✅ 2026-09-08 |
 | **Area spring of SAFE = lumped**, not consistent — 4×4 plate, t = 0.20, ks = 20000, P = 1000 at the centre, 8×8, Shell-Thick | SAFE 20 (`SubModulus` via tables) vs Hekatan `areaspring … nodal` and `areaspring` (consistent ks·∫NᵀN) | nodal **≤ 1.1 %** (SAFE prints 4 digits); consistent 23 % at the corners. The "−1.9 % = consistent matrix" of 20-Aug is not supported: SAFE, SAP2000 and ETABS all lump by tributary area = Hekatan `spring`. Footing 1.5×1.5×0.4 nodal: SAP2000 = Hekatan **exact** | ✅ 2026-09-08 |
 | **Dual template, lateral push (2nd-mode shape), fixed e2k** | ETABS 22 (`etabs_fix/P6_dual_lat2`, `P2_lat2`) | **0.00 %** on every storey (before the e2k fix: −16 % in modes 7–8) | ✅ 2026-09-08 |
@@ -140,10 +134,9 @@ software; ETABS, SAP2000 and SAFE are only used to check it.
 | One-way deck (`ONEWAYLOADDIST`, `ANG 90`) | `deck etabs oneway` | n/a ³ | **0.0010 %** | — |
 | Shell-Thin (DKQ) — 9 modes of the cell | `shelltype thin` | — | **0.000000 %** | — |
 | Shell-Thin — plate 8×8, 5 thicknesses | `shelltype thin` | — | **0.000 %** | — |
-| Shell-Thick (CSI formulation) — K of ~140 measured cells | `shelltype thick` | **1e-12 %** | **1e-12 %** | — |
 | Shell-Thick — solid-slab mezzanine, 1284 nodes | `shelltype thick` | **< 1e-6 %** | **< 1e-6 %** | — |
 | 6 slab types (deck, membrane, thin, thick, ribbed, waffle) | — | — | **< 3e-7 %** | — |
-| Membrane / drilling — 12×12 cell, 9 geometries | `drillingTypes 12` | — | **1e-13 %** | — |
+| Membrane / drilling — 12×12 cell, 10 geometries | `drillingTypes 8` | — | **1.42 %** | — |
 | Drilling — 2 walls + coupling beam, 92 nodes | — | **2.5e-12 %** | — | — |
 | Beam–wall joint — dual template with walls, modes 1–3 | `etabsjoint 1` | — | **0.00–0.01 %** | — |
 | Rigid diaphragm — 8 templates, mass · modes 1–3 | `diaph` | **0.0000 %** (mezzanine) | **0.000 %** · **0.00–0.01 %** | — |
@@ -183,7 +176,7 @@ shell carries no MITC4**.
 
 `elementInputs.drillingTypes` selects the formulation. All of them pass the
 higher-order patch test **exactly** (1.500000 / 0.600000) and have exactly
-**3 zero-energy modes** — both checked on the matrix the binary emits, not on a
+**3 zero-energy modes** — both checked on the matrix the compiled C++ element emits, not on a
 displacement:
 
 | type | ETABS 12×12 matrix | drilling vs ETABS | pinched hemisphere 8×8 | mezzanine axial |
@@ -210,17 +203,7 @@ not produce a rank-deficient matrix**"*. That matters because genuine 2×2 leave
 the element with **four** zero-energy modes, a mechanism, while this rule keeps
 three (measured). It is what takes the pinched hemisphere from −34 % to −4 %.
 
-⚠️ A **retracted claim**, kept here on purpose: this was briefly reported as
-"proven by the binary", on the grounds that `CsiGo2.dll` loads
-`0.5773502691896258` and `α(W_α = 1) = 9^{-1/4} = 1/√3`. The arithmetic is right
-but the evidence is not: the function those loads live in has **three** natural
-coordinates and writes **24** shape-function slots — it is an 8-node
-**hexahedral solid**, not the shell, and its `0.125` is the `1/8` of
-`N = ⅛(1±r)(1±s)(1±t)`. A constant compatible with two explanations proves
-neither. Everything else in this section stands on its own footing: measurements
-against ETABS's reconstructed matrix, and CSI's own published bibliography.
-
-**ETABS's drilling term, isolated and measured — no binary needed.** Subtract
+**ETABS's drilling term, isolated and measured from outside.** Subtract
 from ETABS's reconstructed matrix our own **without** the penalty, and look at
 what is left. Its dominant eigenvector, on a unit square, is
 
@@ -233,9 +216,7 @@ v : [-1,  1,  1, -1]     ← rigid-body rotation
 which is `θ_nodal − θ_rigid-body`: **Wilson's rank-one penalty**, eqs.
 (9.11)-(9.13) of his chapter 9. Scaling it gives `k₀ = 0.4·G` **exactly** in 9 of
 10 geometries, with **1.0000** alignment against our own residual — the same
-vector, not a similar one. Two days of disassembly had failed at this; half an
-hour of subtracting matrices did it. The lesson is recorded: when a measurement
-of the real system exists, exhaust it before opening a disassembler.
+vector, not a similar one.
 
 **And the missing piece was a projection, only present in source code.**
 Reconstructing ETABS's full 12×12 membrane matrix by flexibility (10 geometries)
@@ -405,242 +386,22 @@ All buildings support the **Rigid Diaphragm** toggle (ASCE 7-22 §12.3.1) in the
 - [`?t=tutorials`](https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=tutorials) — Tutorial index
 - [`?t=csi-importer`](https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=csi-importer) — Import E2K / S2K files
 
-### The plate element: identifying CSI's Shell-Thick (2026-09-01)
+### The plate element (Shell-Thick)
 
-The membrane section above closed by *reading CSI's own bibliography*. The plate
-side needed more: the manual says "Mindlin/Reissner" and cites no
-implementation. So the element was identified by **measuring the 12×12 cell of a
-single SAP2000 area object** (one area = one element; ETABS auto-meshes past
-1.25 m, SAP2000 does not) and by **reading the binary**.
+Default: **MITC4** (Bathe & Dvorkin 1985) with Wilson's incompatible modes condensed
+(`getBendingK` in `shellQ4.cpp`, `HK_BENDING_FORMULATION = 3`). Compile-time alternatives:
+`=1` hybrid DSE, `=2` Wilson's full DSE (ch. 8). DKMQ (Katili 1993) lives in `shellQ4_DKMQ.cpp`.
+Shell-Thin is the **DKQ of Batoz & Tahar (1982)**, which matches ETABS's 12×12 cell at
+`0.000000 %` (three programs, same nine modes: ETABS Shell-Thin, OpenSees ShellDKGQ and ours).
 
-**Shell-Thin is closed — three independent programs, same nine modes:**
+Only published formulations are used. Measured against CSI as a black box (same mesh):
 
-```
-ETABS Shell-Thin    0.4529  0.4529  0.4587  0.8000  0.8000  1.2000  15.0137  15.0137  16.7413
-OpenSees ShellDKGQ  0.4529  0.4529  0.4587  0.8000  0.8000  1.2000  15.0138  15.0138  16.7413
-DKQ (ours)          0.4529  0.4529  0.4587  0.8000  0.8000  1.2000  15.0137  15.0137  16.7413
-```
-
-It is the **DKQ of Batoz & Tahar (1982)**, matching the *whole* matrix at
-`0.000000 %` — not just a deflection.
-
-**Shell-Thick is the DSE of Wilson (ch. 8) = the PQ3 of Ibrahimbegović (1993)**,
-confirmed from `CsiGo2.dll`: the type switch sets **16 DOF = 12 + 4 edge Δθ**
-and loads the **−2/3** factor of the edge equation; the quadrature is the
-8-point rule of ITW 1991 (`9/49`, `40/49`, `√(7/9)`, `√(7/15)`), written
-verbatim in the code.
-
-⚠️ *This section originally said a **single** rank-1 term was missing. That was
-wrong and is corrected below: there are **four**, and as of 2026-09-01 all four are
-measured and the square cell closes to `0.0000 %` — see [The square cell, closed](#the-square-cell-closed-2026-09-01).
-The first of the four, and the largest, is:*
-
-A **rank-1 stiffness on one mode** — rotations opening from the centroid (`θx = x−x_c`,
-`θy = y−y_c`, `w = 0`) — split equally across the three bending terms:
-
-    λ_φ / D = k (2 + (1−ν)/2),   k = 181.81
-
-constant over 5 decades of element size (L = 0.5 … 10) and 18 thicknesses
-(t = 0.001 … 0.4), linear in ν to 4 digits. Independent of `E`, `L` and `t`,
-which is why it is a **numerical penalty, not physics**. Candidate source:
-Belytschko, Tsay & Liu, *A stabilization matrix for the bilinear Mindlin plate
-element*, CMAME **29** (1981).
-
-**Element bench.** Six formulations were implemented and measured against the
-same problems — four of them from published sources, one translated from
-MYSTRAN's Fortran, one from OpenSees:
-
-| element | deflection vs Navier (8×8) | thin limit `t = L/10⁴` | zero modes |
-|---|---|---|---|
-| **DSQ** (Batoz-Lardeur 1990) | **−0.001 %** | 0.004060 ✅ | 3 ✅ |
-| **DKMQ** (Katili 1993) | **−0.016 %** | 0.004060 ✅ | 3 ✅ |
-| DKQ (Batoz-Tahar 1982) | −0.058 % | 0.004060 ✅ | 3 ✅ |
-| MIN4 (Tessler-Hughes, from MYSTRAN) | +0.958 % | 0.004097 ✅ | 3 ✅ |
-| DSE / PQ3 (Wilson, = CSI's) | +4.060 % | 0.004223 ⚠️ | 3 ✅ |
-| Mindlin Q4 + bubble | −85.4 % | 0.000000 ❌ | 3 |
-
-(exact = `0.004062`)
-
-Two different answers for two different questions: **DSQ or DKMQ for
-production**, the **DSE only to replicate CSI**. And note the DSE converges
-*from above* — it is too flexible, which is precisely what the missing `k`
-term corrects.
-
-**Every piece of the binary is published — in Wilson's own book.** Reading
-*Three-Dimensional Static and Dynamic Analysis of Structures* end to end
-(423 pages) matched each constant read from the disassembler to an equation:
-
-| read from `CsiGo2.dll` | equation in the book |
-|---|---|
-| `0.125` with the edge Δx, Δy | **(F.7a)** `β₁ = (L/8)(θi−θj)` |
-| `−2/3` | **(F.9)** `γ = (wj−wi)/L − (θi+θj)/2 − (2/3)Δθ` |
-| `κ = 5/6` | **(F.21)**, derived |
-| `9/49`, `40/49`, `√(7/9)`, `√(7/15)` | **(G.18)-(G.20)**, the 8-point rule |
-| subtract `Σ w·detJ·B` over the internal columns | **(6.7)** `B_IC = −(1/V)∫B_I dV` |
-| static condensation | **(6.11)** and **(F.14)** |
-| the **rank-one stiffness** that is missing | **(9.13)-(9.14)** |
-
-Appendix F is the beam element *«to develop constraint equations that can be used
-in the development of a plate bending element»* — the DSE's own foundation. And
-§9.7, on the membrane, states the technique verbatim: *«this **rank one matrix is
-added to the 12 by 12 stiffness matrix**, the zero energy mode is removed»*, with
-
-    K₀ = k₀ · Vol · b̄ᵀb̄        (9.13)
-    k₀ = 0.025 · D₃₃            (9.14)
-
-and the honest footnote: *«**experience** with the solution of a large number of
-problems indicates that this value **is effective**»*.
-
-**So the technique is published; the numbers mostly are not.** `k₀` is chosen, not
-derived — which is why `k = 181.81` appears in no paper, and why it is absent from
-the binary's constant pool (searched both `.rdata` and the 64-bit immediates, where
-`√(7/9)` had been hiding).
-
-The hourglass term's dependence on thickness factorises as
-`(1 + B s²)(1 + φ s²)` with `s = t/L`, and at `ν = 0` that second root is `2.400`
-— numerically identical to Katili's `φ_k` (eq. 74) for `κ = 5/6`.
-
-⚠️ **That identification was premature and a `t × ν` sweep the same day disproved
-it.** With 24 cells (`ν` = 0, 0.15, 0.30, 0.45 × six thicknesses) the root divided by
-Katili's `φ_k` comes out **1.000, 1.150, 1.300, 1.450 — exactly `(1 + ν)`**. So the
-true law is `φ = 2(1+ν)/(κ(1−ν))`, not `2/(κ(1−ν))`: it carries one factor of
-`(1+ν)` more than Katili's, and the two agree **only at `ν = 0`**, which is exactly
-where the first sweep lived. Left as a standing note so the conclusion is not drawn
-again. None of these constants is published.
-
-Code: `validation/02-placas/dse-de-wilson/` (`dsq_batoz.py`, `min4_mystran.py`,
-`campeonato.py`, `pruebas_fisicas.py`, `dse_mas_phi.py`, `tamiz*.py`,
-`mapa_funcion.py`, `buscar_constantes.py`).
-
-Adding the measured term to the DSE **halves** the Navier error (4.06 % → 2.75 %
-at 8×8) and reproduces ETABS' φ mode to 0.004 % on squares.
-
-#### The square cell, closed (2026-09-01)
-
-The residual `R = K_ETABS − K_DSE` turned out to have **rank 1-2**, not 4 —
-fitting it with four vectors was over-parameterised and still failed, which meant
-the *vectors* were wrong, not the model. Printing the dominant eigenvector node by
-node settled it: the hourglass term is **not** a penalty on `w` alone (MAC 0.889,
-not 1.000). It carries rotations worth exactly `w/4`. With `ξ,η` the natural
-coordinates and `h = ξ·η`:
-
-| mode | shape | λ/D (E=2.2e7, ν=0, t=0.20, L=1) |
+| case | reference | Hekatan |
 |---|---|---|
-| φ | w=0, θ=(x−xc, y−yc) | **454.542** |
-| hg | w=h/L, θx=−ξ/4, θy=+η/4 | **83.629** |
-| hg_tx | w=0, θx=h | **0.499867** |
-| hg_ty | w=0, θy=h | **0.499867** |
-
-That `1/L` matters and was not there at first. “The rotations are worth `w/4`” only
-holds at `L = 1`, because `w` is a length and rotations are not. Setting `w = L·h`
-made it *worse* (3.1 % → 7.7 %), so the factor was **swept instead of assumed** and
-came out `c = 1/L` **exactly** (2.0, 1.0, 0.5, 0.2, 0.1 for L = 0.5, 1, 2, 5, 10).
-The dimensionally sound statement is `θ = w/(4L)` — rotation = displacement over
-length. With it the unexplained residual is **0.001-0.010 % across all 23 square
-cells at any size**.
-
-Two things were ruled out with evidence along the way: the `L ≠ 1` cells were *not*
-auto-meshed (all 16 have **exactly 3 zero eigenvalues**, so they are genuine single
-elements), and ETABS and our own `K_DSE` are **both self-similar to 0.00000 %**
-(cells with equal `t/L` and different size give the same dimensionless matrix) —
-which is what forced the search onto the normalisation, where the answer was.
-
-**The three closed-form laws**, against all 34 measured square cells:
-
-| term | law | error |
-|---|---|---|
-| `λ_φ/D` | `181.817 · (2.5 − ν/2)` | ±0.18 % |
-| `λ_htx/D = λ_hty/D` | `0.5 · (1 − ν)` | ±0.027 % |
-| `λ_hg/D` | `A/[(1 + B s²)(1 + φ_k)] · (4/L² + 0.5)/4.5` | **0.0000 %** |
-
-with `s = t/L`, `φ_k = 2/(κ(1−ν))·s²`, `A = 4500.90`, `B = 1202.64`. The last factor
-is not physics — it is the artefact of normalising a vector whose direction moves
-with `L` (`|v|² = 4/L² + 0.5`, which is 4.5 at `L=1`).
-
-#### `A(ν)` and `B(ν)`, closed by the `t × ν` sweep (24 new ETABS cells)
-
-`A` and `B` were initially measured at `ν = 0` only — every stored cell with
-`ν ≠ 0` sat at `t = 0.2`, and one thickness cannot separate two constants. A sweep
-of `ν × t` = 4 × 6 closed it. Its `ν = 0` row is the **control** and returns
-`A = 4500.9001`, `B = 1202.6400`, `R² = 1.0000000` — the values measured earlier by
-an independent route.
-
-⚠️ The raw sweep came back with the **rotational DOFs scaled by 1000** (the `.K_0`
-wrote moments in kN·mm; the capture script does not pin units). It is detected from
-the matrix itself rather than by comparison: a free element has two rigid-body
-rotation modes in its null space, where `|w|/|θ|` must be the coordinate scale, so
-the power of 1000 is read off the null vector (`escala_rot.py`). Corrected, the
-cell reproduces the stored one to `5·10⁻⁸ %`.
-
-Fitting the full polynomial per `ν` and factorising it — imposing nothing — gives
-`0.00000 %` at all four `ν`, and the three laws read straight off:
-
-| constant | law | worst error |
-|---|---|---|
-| `A(ν)` | `4500.90 − 900.90·ν` | **0.00000 %** (R² = 1.000000000) |
-| `B(ν)` | `(1202.64 − 237.84·ν)/(1−ν)` | 0.00041 % |
-| `φ(ν)` | `2(1+ν)/(κ(1−ν))`, `κ = 5/6` | 0.00127 % |
-
-**The whole square cell in closed form**, checked entry by entry against all
-**55 measured square cells** (`ν` 0→0.45, `L` 0.5→10, `t` 0.001→2.0):
-worst **0.179 %**, typical `0.01 %`. The worst case is `t/L = 2` — an absurdly thick
-plate — and it comes from the `λ_φ` law, whose own error is ±0.18 %.
-Implementation: `validation/02-placas/dse-de-wilson/ley_shellthick.py` (`K_shellthick`).
-
-⚠️ The `z_*` cells in `celda_sap2000.json` are **trapezoids** (0.9/0.1, 0.8/0.2,
-0.7/0.3) and a bounding-box test lets them through, since they also measure 1×1.
-They must be excluded with a real squareness test (equal edges *and* equal
-diagonals) — with one of them in, the "worst case" reads 149 % and means nothing.
-
-#### Trapezoids: closed on 2026-09-02 (the diagnosis below is history)
-
-*Update 2026-09-02:* the distorted cells closed too, once the Shell-Thick was read
-out of `CsiGo2.dll` instead of being fitted — `getBendingK_CSI` / `plate_csi_thick.py`
-reproduce **27 trapezoids and irregular quads at 1e-12 %** together with the square
-(see [The plate element](#the-plate-element-identifying-csis-shell-thick-2026-09-01)).
-What follows is the diagnosis as it stood on 2026-09-01, kept because it says *why*
-fitting additive terms could never have worked.
-
-
-The same basis does *not* close on distorted cells (12-96 % out). Both remaining
-hypotheses were tested and both fail: adding a fifth/sixth vector, and letting the
-penalty be `V C Vᵀ` with **C non-diagonal** (the cross terms come out *exactly
-zero* on the square, as symmetry predicts, but only take 96.9 % → 89.0 %). Sweeping
-the `1/L` factor freely does not save them either: with the optimal `c` and all
-seven candidate lengths (bottom edge, top edge, mean edge, height, √A, diagonal,
-√detJ₀) the residual stays at 12-96 %.
-
-The decisive measurement is what fraction of the *real* eigenvector lies inside the
-span of the four modes: **1.000** on the square, 0.94-0.99 at `d=0.05`, and
-**0.25-0.61** at `d≥0.30`, degrading smoothly with distortion. That is not the
-signature of a missing additive term — it is the signature of the **base DSE
-formulation itself differing** once the cell is distorted.
-
-#### How much does this matter in a real building?
-
-Measured, not argued (`pruebas_fisicas.resolver_dist`, 8×8 mesh progressively
-skewed; `d` = how far each interior node moves). Centre deflection error vs Navier:
-
-| element | d=0.0 | d=0.1 | d=0.2 | d=0.3 |
-|---|---|---|---|---|
-| DKQ (Shell-Thin) | −0.058 % | −0.355 % | −1.168 % | −2.240 % |
-| DSQ | −0.001 % | −0.299 % | −1.148 % | −2.901 % |
-| **DKMQ (ours)** | −0.016 % | −0.313 % | −1.124 % | **−2.233 %** |
-| MIN4 | 0.958 % | 0.367 % | −2.338 % | −9.677 % |
-| DSE (CSI's) | 4.060 % | 3.731 % | 2.826 % | 1.554 % |
-
-Trapezoids appear in slabs with non-parallel edges, ramps, stair openings and mesh
-transitions. Under the worst skew, DKMQ stays at **−2.2 %** deflection — and
-periods go with the square root of that, so **~1 %**. The 99 % gap being chased is
-between *isolated element* matrices and is dominated by λ_φ ≈ 455·D, a numerical
-penalty, not physics.
-
-⚠️ **MIN4 collapses to −9.7 %** under skew — the only element here that should not
-be used on an irregular mesh.
-
-Code: `quinto_modo.py`, `quien_es_el_quinto.py`, `espectro_resto.py`,
-`los_dos_modos.py`, `modo2_crudo.py`, `reconstruir.py`, `trapecios_v4.py`,
-`ajuste_cruzado.py`, `donde_vive.py`.
+| simply supported plate 8×8, 5 thicknesses, Shell-Thin | ETABS 19 | **0.000 %** |
+| same plate, Shell-Thick (MITC4) | ETABS 19 | 0.37–1.9 % depending on t/L |
+| footing 1.5×1.5×0.4 on Winkler springs, Thick | SAP2000 24 | **0.011 %** |
+| dual building 2×2×4, 1 m mesh — T1 with DKQ / DKMQ | — | 0.4871 / 0.4874 s (< 1 % from a CSI-matched plate) |
 
 ## 📐 CAD Tools (new — NewBlank canvas)
 
@@ -733,7 +494,7 @@ Naming canonical para validación cruzada hekatan-struct-lineal ↔ ETABS / SAP2
 
 | format | target | round-trip closure | notes |
 |---|---|---|---|
-| **E2K** | ETABS 22 | **0.000 %** — 372/378 nodes, ΣRz exact | must be written in **N and MM**: the E2K parser has **no `UNITS` token** (confirmed in `ETABS.dll` ~0x03490e00) and always reads SAPFire base units. Moments are **N·mm (×1e6)**, not N·m |
+| **E2K** | ETABS 22 | **0.000 %** — 372/378 nodes, ΣRz exact | must be written in **N and MM**: the E2K parser has **no `UNITS` token** (measured: `Tonf`, `KN` and `KN`/`M` headers give identical results) and always reads base units. Moments are **N·mm (×1e6)**, not N·m |
 | **S2K** | SAP2000 24 | **0.000 %** — 378/378 nodes; re-measured 2026-08-27 on the 8 templates: reaction **and** deflection at 0.000 % in all 8 | `Shape=General`, not `Rectangular`: with a parametric shape SAP **recomputes I22 and J** from t3/t2 and discards what you wrote. And `CurrUnits` must say **KN, m** — see below |
 | **F2K** | SAFE 20 | ✅ 1.5e-3 % (2026-09-05) | generic `f2kExporter.ts` from the same model as e2k/s2k: point springs, restraints, General sections, Thin/Thick slabs; imported by tables (`csi_cli.py --engine safe --open`) |
 
@@ -866,9 +627,9 @@ npx gh-pages --dist website/src/examples `
 | Bathe composite time integration (α-dissipative) | ❌ | ✅ TS scaffold `batheStep()` + `newmarkStep()` for ASCE 7-22 §16 RHA |
 | ETABS-style slab discretization (25-50 cm per bay) | ❌ | ✅ `etabsDiscretize2D()` — each bay meshed to target size, like ETABS default |
 | Materials helper (Hormigón/Acero/CFT × Rect/Circ/W/HSS) | ❌ | ✅ `materials.ts` w/ ACI 318-22 Ec=15100√f'c, AISC/A992 steel, composite |
-| Mindlin-Reissner plates | ❌ | ✅ CSI Shell-Thick formulation (read from `CsiGo2.dll`, 1e-12 % on measured cells) via `plateQ4Solve(theoryType: 0)`; MITC4 kept as build option |
+| Mindlin-Reissner plates | ❌ | ✅ MITC4 + Wilson incompatible modes (`deform`); Bathe Q4 via `plateQ4Solve(theoryType: 0)` |
 | Kirchhoff thin plates | ❌ | ✅ `plateQ4Solve(theoryType: 1)` |
-| CSI Shell-Membrane formulation | ❌ | ✅ ITW + bubble + hourglass drilling (`drillingTypes = 12`): 1e-13 % vs ETABS's 12×12 cell |
+| ITW membrane with drilling DOF | ❌ | ✅ ITW + bubble + FEAP drilling projection (`drillingTypes = 8`): 1.42 % vs ETABS's 12×12 cell |
 | ETABS floor semantics (`deck etabs [oneway]`) | ❌ | ✅ panel split at edge nodes + tributary load transfer to edge beams; off = SAP2000 semantics |
 | Timoshenko beams | ❌ Euler-Bernoulli only | ✅ φ = 12EI/GA_sL² |
 | Shell Q4 incompatible modes | ❌ | ✅ Wilson + drilling DOF |
@@ -971,7 +732,7 @@ Every example exports an `ExampleDef` with:
 | `utils/getLocalStiffnessMatrix.cpp` | K_local 12×12 (Timoshenko) + Q4 shell |
 | `utils/getTransformationMatrix.cpp` | T matrix (3D rotation) |
 | `utils/getGlobalStiffnessMatrix.cpp` | Assembly with rigid offsets + releases |
-| `utils/shellQ4.cpp` | Shell Q4: membrane + Mindlin plate + drilling DOF — **= ETABS Shell-Thick**. Holds every drilling formulation (`drillingTypes` 2/3/7/8/9, see [above](#the-membrane-element-and-its-drilling-dof)). ⚠️ **too stiff on a coarse mesh — see below** |
+| `utils/shellQ4.cpp` | Shell Q4: membrane + Mindlin plate (MITC4 + Wilson) + drilling DOF. Holds every drilling formulation (`drillingTypes` 2/3/6/7/8/9/10/11, see [above](#the-membrane-element-and-its-drilling-dof)). ⚠️ **too stiff on a coarse mesh — see below** |
 | `utils/shellThin.cpp` | **NUEVO: Shell Q4 Kirchhoff** = ETABS Shell-Thin (DKE Wilson Ch10), MZC plate bending puro, libre de shear locking. Validated <1.5% vs ETABS Mesa Torsión |
 | `plate_q4/kirchhoff_q4.cpp` | Dedicated Mindlin / Kirchhoff plate solver (legacy, separate API) |
 
@@ -984,14 +745,9 @@ Every example exports an `ExampleDef` with:
 ### Shell status vs ETABS (measured 2026-08-18) — superseded
 
 This section used to carry the 2026-08-18 three-step benchmark (Thin 0.93 %,
-Membrane 0.85 %, **Thick 11.28 % open**) and the diagnosis that MITC4's four
-missing modes were the cause. Both are history: on 2026-09-01/02 the membrane
-was closed by reproducing ETABS's measured 12×12 cell (`drillingTypes = 12`,
-1e-13 %) and the Shell-Thick by reading CSI's own formulation out of
-`CsiGo2.dll` (1e-12 % on ~140 measured cells). See
-[The plate element](#the-plate-element-identifying-csis-shell-thick-2026-09-01)
-and [`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md). The Python regression
-`hekatan-struct-py/tests/test_csi_thick_cells.py` guards it cell by cell.
+Membrane 0.85 %, **Thick 11.28 % open**). Current state: see
+[The plate element](#the-plate-element-shell-thick) and
+[`ESTADO_VS_ETABS.md`](./ESTADO_VS_ETABS.md).
 
 ### Import/Export
 

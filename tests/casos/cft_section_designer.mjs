@@ -1,6 +1,6 @@
 /**
  * COLUMNA CFT contra SAP2000 (Section Designer) y ETABS (Filled Steel Tube).
- * Leido del binario el 2-sep-2026: SAP2000 24 no tiene seccion parametrica de
+ * SAP2000 24 no tiene seccion parametrica de
  * tubo relleno; se hace en Section Designer, y SAP recalcula A, I, As y J de las
  * formas (ignora los de la fila). ETABS si la tiene ("Filled Steel Tube") y usa
  * los MISMOS numeros que el SD (0.004 % entre los dos en la flecha lateral).

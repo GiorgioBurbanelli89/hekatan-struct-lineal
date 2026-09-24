@@ -1,0 +1,24 @@
+1
+00:00:00,050 --> 00:00:07,538
+Este galpón curvo tiene veinte metros de luz: doscientos catorce nudos, cuatrocientas cuarenta y tres barras y cien chapas de zinc.
+
+2
+00:00:07,790 --> 00:00:16,622
+El mismo modelo entró en cuatro programas con la misma malla, los mismos nudos y las mismas cargas: así se comparan los solvers, no los repartos de carga.
+
+3
+00:00:16,870 --> 00:00:25,774
+En el primer modo, Hekatan Struct da un periodo de cero coma tres tres uno uno cuatro cuatro segundos, y SAP dos mil da el mismo número hasta la sexta cifra.
+
+4
+00:00:26,020 --> 00:00:33,244
+ETABS se queda a dos centésimas de por ciento, pero solo después de encenderle la masa vertical, que trae apagada de fábrica.
+
+5
+00:00:33,490 --> 00:00:40,090
+OpenSees queda a un cuarto de por ciento, y esa diferencia no es el solver: es que su chapa es otro elemento.
+
+6
+00:00:40,340 --> 00:00:46,580
+Cuatro programas independientes, el mismo galpón y el mismo número: eso es lo que significa validar.
+

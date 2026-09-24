@@ -185,7 +185,7 @@ def frame_rigid_offset_matrix(o_i: float, o_j: float) -> np.ndarray:
 def frame_moment_at_offset_face(m_nudo: float, v: float, off: float) -> float:
     """Traslada un momento del NUDO a la cara interior del offset, como ETABS.
 
-    Del binario: *"ETABS outputs forces at the inside face of end offsets along
+    Del manual de CSI: *"ETABS outputs forces at the inside face of end offsets along
     the length of the member"* y *"No output forces are produced within the end
     offset"*. Y medido (`ref_end_offsets_etabs.json`): con off = 1.00 m en el
     empotrado de un voladizo de 6 m con P = 10 kN, la primera estación es
@@ -221,7 +221,7 @@ def frame_design_orientation_csi(p_i, p_j, umbral_grados: float = 20.0) -> str:
 
 def frame_self_weight_length(p_i, p_j, off_i: float = 0.0, off_j: float = 0.0,
                              self_wt_opt: str = "auto") -> float:
-    """Longitud con la que ETABS pesa la barra. `SelfWtOpt` del binario.
+    """Longitud con la que ETABS pesa la barra (opcion `SelfWtOpt` de ETABS).
 
     `Auto` (el defecto de las 723 barras del galpón) = **el programa decide**:
     la **viga** pesa por su **luz libre** `L − (off_i + off_j)` —con el offset
@@ -279,7 +279,7 @@ def frame_stiffness_end_offsets(E: float, G: float, A: float, Iz_loc: float,
                                 ) -> tuple[np.ndarray, float, float, float]:
     """K local (12×12) de una barra con *end length offsets* de CSI. → (k, lr_i, lr_j, Lf)
 
-    La ley, sacada del binario y medida al 0.005 % (registro
+    La ley, medida contra ETABS al 0.005 % (registro
     `2026-08-25_ley_end_length_offset.md`):
 
         lr = RZ · off              tramo REALMENTE rígido, el de fuera
@@ -287,7 +287,7 @@ def frame_stiffness_end_offsets(E: float, G: float, A: float, Iz_loc: float,
         flexión y cortante  → con Lf
         axil EA/L y torsión GJ/L → con la L COMPLETA
 
-    La última línea es literal del binario: *"The rigid zones of the end offsets
+    La última línea es literal del manual de CSI: *"The rigid zones of the end offsets
     never affect axial and torsional deformations. The full element length is
     always assumed to be flexible for those deformations."* Con RZ = 0 —el
     defecto de ETABS— esto devuelve exactamente la barra de siempre.

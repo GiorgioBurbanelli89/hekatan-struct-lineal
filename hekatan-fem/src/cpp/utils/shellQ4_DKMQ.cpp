@@ -1,6 +1,6 @@
 // Shell Q4 DKMQ (Discrete Kirchhoff-Mindlin Quadrilateral) — port C++ Eigen de PyNite Quad3D.py
 // Referencia primaria: Katili 1993 / Katili-Batoz-Maknun-Hamdouni 2015
-// Activable via elementInputs.plateFormulations[idx] == 2
+// Activable via elementInputs.plateFormulations[idx] == 3 (el 2 es la membrana de los exportadores)
 
 #include "../data-model.h"
 #include <Eigen/Dense>

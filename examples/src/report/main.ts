@@ -108,7 +108,7 @@ document.body.append(
     clickedButton,
     buttons: ["Report"],
     sourceCode:
-      "https://github.com/madil4/awatif/blob/main/examples/src/report/main.ts",
+      "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/blob/main/examples/src/report/main.ts",
     author: "https://www.linkedin.com/in/cal-mense/",
   }),
   getDialog({ dialogBody }),

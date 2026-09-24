@@ -621,6 +621,8 @@ def deform(
     # ⚠️ NO es lo que hace ETABS: ETABS malla el pano por el nudo (medido 8-sep-2026, tambien con
     # OBJMESHTYPE "NONE"). Es una opcion de malla no conforme, no la replica de ETABS.
     colgados = getattr(node_inputs, "hanging_nodes", None)
+    lineal = bool(getattr(node_inputs, "hanging_linear", False))
+    tol_c = 1e-4 if lineal else 1e-6
     if colgados:
         filas: list[tuple[list[tuple[int, float]], bool]] = []   # (restriccion, es_giro)
         for e_idx, h in colgados:
@@ -638,7 +640,7 @@ def deform(
                 if L < 1e-12:
                     continue
                 t = float((X - A) @ d) / (L * L)
-                if t <= 1e-6 or t >= 1 - 1e-6 or np.linalg.norm((X - A) - t * d) > 1e-6 * L:
+                if t <= 1e-6 or t >= 1 - 1e-6 or np.linalg.norm((X - A) - t * d) > tol_c * L:
                     continue
                 s = d / L
                 # m = s x n (NO n x s): con mano derecha, un giro theta alrededor de m da
@@ -650,6 +652,8 @@ def deform(
                 H2 = (t - 2 * t * t + t ** 3) * L
                 H3 = 3 * t * t - 2 * t ** 3
                 H4 = (-t * t + t ** 3) * L
+                if lineal:                                   # `edge lineal`: la flecha tambien lineal
+                    H1, H2, H3, H4 = 1 - t, 0.0, t, 0.0
                 for vec in (s, mvec):                       # traslacion en el plano: lineal
                     C = []
                     for p in range(3):

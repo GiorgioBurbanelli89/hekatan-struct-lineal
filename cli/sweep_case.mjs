@@ -295,7 +295,9 @@ if (!R.dofCapExceeded) {
   R.freqPositive = f.every(x => x > 1e-9);
   const mp = out.massParticipation || [];
   const sum = d => mp.reduce((s, r) => s + (r[d] || 0), 0) * 100;
+  // Regla de Jorge (18-sep-2026): las SEIS sumatorias, hasta SRz.
   R.sumUx = +sum(0).toFixed(1); R.sumUy = +sum(1).toFixed(1); R.sumUz = +sum(2).toFixed(1);
+  R.sumRx = +sum(3).toFixed(1); R.sumRy = +sum(4).toFixed(1); R.sumRz = +sum(5).toFixed(1);
   R.massFinite = mp.every(r => r.every(Number.isFinite));
 
   // FASE 4 — deform de DERIVAS (dynLines): niveles de piso + carga lateral

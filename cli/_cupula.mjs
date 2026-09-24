@@ -56,6 +56,13 @@ const nSel = await ev(() => [...(window.__hekatanSelection ?? [])].filter((i) =>
 // 4. Revolución: 16 sectores, 1 clic en el eje (x = 0, en el alzado)
 await abrirCarpeta("Áreas \\(shells\\)"); await escribir("Sectores \\(revoluci", 16); await pulsar("Revolución de la selecci"); await foto("boton_revolucion");
 await clicMundo([[0, 0, 2]]); console.log("  ", await estado()); await foto("cupula_alzado");
+// 4b. apoyos: ventana sobre la base (z = 0) → 16 nudos → «Empotrar» en el panel de selección
+await abrirCarpeta("Modificar"); await pulsar("🖱 Seleccionar");
+{ const [p, q] = await proj([[-5.6, 0, 0.35], [5.6, 0, -0.35]]); await clic(p.x, p.y); await mover(q.x, q.y, 10); await clic(q.x, q.y); await espera(400); }
+{ const nPt = await ev(() => [...(window.__hekatanSelection ?? [])].filter((i) => i.startsWith("pt:")).length); ok("apoyos: nudos de la base seleccionados", nPt, "= 16", nPt === 16); }
+await pulsar("Empotrar los"); await espera(600); console.log("  ", await estado()); await foto("apoyos_base");
+{ const sup = await ev(() => { const s = window.__hekatanStates?.nodeInputs?.rawVal?.supports; if (!s) return null; const v = s instanceof Map ? [...s.values()] : Object.values(s); return { n: v.length, seis: v.filter((d) => Array.isArray(d) && d.length === 6 && d.every(Boolean)).length }; });
+  ok("apoyos: nudos empotrados en el modelo", sup ? sup.n : "sin estado", "= 16", !!sup && sup.n === 16); ok("apoyos: 6 GDL cada uno", sup ? sup.seis : "-", "= 16", !!sup && sup.seis === 16); }
 // 5. vista isométrica por el menú
 await abrirCarpeta("Plano de trabajo"); await pulsar("Vista isom"); await ev(() => { const s = window.__hekatanSettings?.(); if (s?.extruded) s.extruded.val = true; }); await espera(600); await foto("cupula_iso");
 { const d = await dibujo(); const nudos = new Set(); for (const a of d.A) for (const i of d.PL[a]) nudos.add(i);

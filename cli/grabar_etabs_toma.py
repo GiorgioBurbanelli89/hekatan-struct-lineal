@@ -32,7 +32,9 @@ clic(2107, 1507, pausa=0.5); quieto(7)      # Start Animation
 clic(2107, 1507, pausa=1.0)                 # parar
 marca("4 · tabla de masa participativa")
 pyautogui.hotkey("ctrl", "t"); time.sleep(2.5)
-clic(705, 768); clic(730, 817); quieto(1.5) # + Structure Output, + Modal Information
+# (14-sep-2026) SIN clics de despliegue: ETABS recuerda la tabla marcada; en otro modelo el árbol cae en otra
+# posición y el clic marcaba otra rama (en SAP2000 salía la tabla de diseño). Se deja ver el diálogo.
+quieto(3.0)
 clic(1691, 1185, pausa=3.0); quieto(6)      # OK -> la tabla
 clic(1878, 1117, pausa=1.5)                 # Done
 marca("fin")

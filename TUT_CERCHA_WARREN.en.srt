@@ -1,0 +1,48 @@
+1
+00:00:00,050 --> 00:00:10,466
+A Warren truss in Hekatan Struct, start to finish and only with the quick-access ribbon: draw, support, load, see the analysis and save. No menus to open.
+
+2
+00:00:10,720 --> 00:00:27,832
+The ribbon has two rows. Top: draw, structure, analyze, view and precision; bottom: modify, grid, level and load. I press Front, the X Z elevation, and turn on SNAP right here on the ribbon, so every click lands exactly on the grid.
+
+3
+00:00:28,080 --> 00:00:39,624
+Bottom chord: I press Polyline and click seven times, from minus six to six metres every two metres. Next to the cursor you see the length and angle of each segment. Enter to finish.
+
+4
+00:00:39,870 --> 00:00:46,254
+Top chord: another polyline, six clicks at two metres height, one over the centre of each panel.
+
+5
+00:00:46,500 --> 00:01:00,588
+Diagonals: a single zigzag polyline, thirteen clicks alternating bottom and top. When a click lands on an existing node it is reused, not duplicated, like ETABS joints. Thirteen nodes and twenty-three members.
+
+6
+00:01:00,840 --> 00:01:20,592
+Supports: I press Support on the ribbon and click once on each end. By default the support is fixed: all six degrees of freedom. With Select I click the node and the panel shows its Restraints, six boxes ticked; right there, Pin changes it, and with right click there is Assign, Joint, Restraints, as in ETABS.
+
+7
+00:01:20,840 --> 00:01:43,328
+Loads: the ribbon box holds minus ten kilonewtons, negative means downward. Ten kilonewtons per node is the distributed load of five kilonewtons per metre times its tributary width of two metres: the point-load way of simulating it, node by node. I press Load and click on each top node. As soon as there are supports and loads, the app solves by itself: there is no analyze button.
+
+8
+00:01:43,580 --> 00:02:00,980
+And the truly distributed form, on the member, as in ETABS: the second box holds minus five kilonewtons per metre, I press Load q and click once on each segment of the top chord: five segments, fifty more kilonewtons, drawn as arrows along the member. The app solves again by itself.
+
+9
+00:02:01,230 --> 00:02:27,606
+To see results I fold the ribbon, and the left panel shows its controls in full view. I tick the deformed shape and under Frame results choose the axial force diagram: maximum deflection zero point two nine eight millimetres, maximum axial force eighty kilonewtons. Under Node results I choose displacements, then reactions, and under Frame results the moment three-three: every result you can check on a truss is in those two lists. I open the ribbon again.
+
+10
+00:02:27,860 --> 00:02:34,340
+With Measure, two clicks from support to support: twelve metres, and the dimension is small, not covering the drawing.
+
+11
+00:02:34,590 --> 00:02:45,942
+In 3D you see the deformed shape with the axial forces. The same model in ETABS twenty-two through its command-line interface gives the same deflection, zero point two nine eight millimetres, at all thirteen nodes.
+
+12
+00:02:46,190 --> 00:03:11,294
+And to save: with the ribbon arrow, search Save dot heks, tick it and it becomes a quick-access button; one click and it downloads. And Save As, at the top, asks for the name: cercha Warren dot heks; from then on Save overwrites it. It is the text format of Hekatan Struct: nodes, members, supports and loads in readable lines; it stores the model and lets you share it with a group. Howe and Pratt come next.
+

@@ -52,17 +52,18 @@
   "safe_libro_sigma_max": 17.793
  },
  "ej5": {
-  "sigma_max": 24.474,
-  "sigma_min": 22.276,
+  "sigma_max": 24.572,
+  "sigma_min": 22.026,
   "n_nodes": 375,
-  "n_elems": 240,
-  "n_loaded": 6,
-  "n_extracted": 247,
+  "n_elems": 336,
+  "n_loaded": 16,
+  "n_extracted": 375,
   "run_rc": 0,
   "ej_key": "guerra-ej5-zapata-combinada-trapezoidal",
-  "hekatan_sigma_max": 24.112,
-  "delta_vs_hekatan_pct": 1.5,
-  "safe_libro_sigma_max": 20.0
+  "hekatan_sigma_max": 24.589,
+  "delta_vs_hekatan_pct": 0.07,
+  "safe_libro_sigma_max": 20.0,
+  "nota": "22-sep-2026: malla TRAPEZOIDAL real en Hekatan y en SAFE (antes rectangulo con muelles apagados en Hekatan y trapecio escalonado en SAFE)"
  },
  "ej7": {
   "sigma_max": 45.602,

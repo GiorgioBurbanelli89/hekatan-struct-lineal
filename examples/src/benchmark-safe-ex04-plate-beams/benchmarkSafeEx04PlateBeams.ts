@@ -58,8 +58,15 @@ export const benchmarkSafeEx04PlateBeams: ExampleDef = {
   category: "4️⃣ Mixtos · 🧰 Cimentaciones",
   benchmark: true,
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "bendingXX", "bendingYY", "bendingXY",
-                          "shearX", "shearY", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   hasModal: true,
   params: {
     lambda: {

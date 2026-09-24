@@ -25,7 +25,15 @@ export const conexionBfp: ExampleDef = {
   category: "2️⃣ Shells · 🔩 Conexiones",
   hasModal: false,
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "membraneXX", "membraneYY", "displacementZ"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     // ── Viga W-shape ──
     d_beam:  { default: 0.50, min: 0.30, max: 0.90, step: 0.02, label: "d viga (m)", folder: "Viga" },

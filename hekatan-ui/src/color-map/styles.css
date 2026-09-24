@@ -63,14 +63,14 @@
   width: 10px;
   height: 1px;
   margin-left: 20px;
-  background: var(--awatif-legend-color, white);
+  background: var(--hk-legend-color, white);
   position: relative;
 }
 
 #legend .marker p,
 #frame-legend .marker p {
   position: absolute;
-  color: var(--awatif-legend-color, white);
+  color: var(--hk-legend-color, white);
   font-size: var(--legend-font, 14px);
   top: -7px;
   left: 15px;
@@ -143,4 +143,10 @@
 body.hk-pane-oculto #legend,
 body.hk-pane-oculto #frame-legend {
   right: calc(12px + var(--legend-num-w));
+}
+
+/* Tutor abierto (tutorTest.ts): la barra de colores en su franja, al borde derecho, sin pisar el modelo. */
+body.hk-tutor #legend,
+body.hk-tutor #frame-legend {
+  right: calc(8px + var(--legend-num-w)) !important;
 }

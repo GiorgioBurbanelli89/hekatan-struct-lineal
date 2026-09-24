@@ -40,7 +40,8 @@ cases.push([4, 4, 8], [5, 5, 8], [6, 6, 8], [6, 6, 6], [3, 3, 8], [6, 3, 8]);
 cases.push([3, 3, 6, 0.5], [4, 4, 6, 0.5], [6, 6, 8, 0.5]);
 
 const results = [];
-const H = ["nbx","nby","nF","ms","nodDisp","dofDisp","tDisp","nodMod","dofMod","cap>","tMod","T1","SUx","SUy","niv","tTot","wall","FAIL"];
+// Regla de Jorge (18-sep-2026): las SEIS sumatorias, hasta SRz.
+const H = ["nbx","nby","nF","ms","nodDisp","dofDisp","tDisp","nodMod","dofMod","cap>","tMod","T1","SUx","SUy","SUz","SRx","SRy","SRz","niv","tTot","wall","FAIL"];
 console.log(H.map((h,i)=>h.padStart(i<4?4:8)).join(" "));
 for (const c of cases) {
   const r = await run(c);
@@ -49,6 +50,7 @@ for (const c of cases) {
     r.nodes_display ?? "-", r.dof_display ?? "-", r.t_deform_display ?? "-",
     r.nodes_modal ?? "-", r.dof_modal ?? "-", r.dofCapExceeded ? "SI" : "no",
     r.t_modal ?? "-", r.T?.[0] ?? "-", r.sumUx ?? "-", r.sumUy ?? "-",
+    r.sumUz ?? "-", r.sumRx ?? "-", r.sumRy ?? "-", r.sumRz ?? "-",
     r.nivelesOk === undefined ? "-" : (r.nivelesOk ? "ok" : `${r.nivelesDetectados}!=${r.pisosReales}`),
     r.t_total ?? "-", r.wall, r.FAIL ?? ""];
   console.log(row.map((v,i)=>String(v).padStart(i<4?4:8)).join(" "));

@@ -1,0 +1,12 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });
+await pag.goto("http://localhost:4600/workspace/?t=new-blank", { waitUntil: "networkidle2", timeout: 120000 });
+const espera = (ms) => new Promise((r) => setTimeout(r, ms)); await espera(2500);
+await pag.evaluate(() => { try { window.__hekatanRibbon?.guia?.(false); localStorage.setItem("hk_guia_nuevo", "0"); window.__hekatanRibbonPlegar?.(true); } catch (e) {} });
+await espera(500); await pag.screenshot({ path: "cli/shots/vista_doble_0_antes.png" });
+const clic = () => pag.evaluate(() => [...document.querySelectorAll("button")].find((b) => /Vista doble \(planta/i.test(b.textContent || "")).click());
+await clic(); await espera(1200); await pag.screenshot({ path: "cli/shots/vista_doble_1_activada.png" });
+await clic(); await espera(1200); await pag.screenshot({ path: "cli/shots/vista_doble_2_apagada.png" });
+console.log(await pag.evaluate(() => { const h = [...document.querySelectorAll("div")].find((d) => d.__ctx && d.__ctx.camera); return h.__ctx.camera.type + " split=" + window.__hekatanSplitMode; }));
+await nav.close();

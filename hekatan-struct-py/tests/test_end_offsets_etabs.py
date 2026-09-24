@@ -8,7 +8,7 @@ cada extremo, barriendo RZ = 0 … 1:
   caso "I" — offset en el EMPOTRADO: mide la longitud flexible `Lf = L − RZ·off`
   caso "J" — offset en el LIBRE:     mide el BRAZO (y su signo)
 
-La ley, del binario: axil y torsión NUNCA se ven afectados (`ux`, `rx` iguales
+La ley (manual de CSI, y medida): axil y torsión NUNCA se ven afectados (`ux`, `rx` iguales
 en los diez casos), y con RZ = 0 el offset es flexible → nada cambia.
 """
 import json
@@ -63,7 +63,7 @@ def test_flecha_contra_etabs(fila):
 @pytest.mark.parametrize("fila", REF["casos"],
                          ids=[f'{c["caso"]}_rz{c["rz"]}' for c in REF["casos"]])
 def test_axil_y_torsion_no_los_toca(fila):
-    """Literal del binario: 'The rigid zones never affect axial and torsional
+    """Literal del manual de CSI: 'The rigid zones never affect axial and torsional
     deformations. The full element length is always assumed to be flexible.'"""
     dx = _uz(fila["offI"], fila["offJ"], fila["rz"], (N, 0.0, 0.0, 0.0, 0.0, 0.0))
     rx = _uz(fila["offI"], fila["offJ"], fila["rz"], (0.0, 0.0, 0.0, T, 0.0, 0.0))

@@ -20,14 +20,7 @@ export interface E2kGrid {
 
 /**
  * Un NIVEL AUXILIAR de ETABS. En el `.e2k` es `REFERENCEPLANE ... Z <z>` y va
- * dentro de `$ GRIDS`, **no** dentro de `$ STORIES`. La gramatica esta sacada
- * del binario (`ETABS.dll`, la tabla de tokens del e2k):
- *
- *     GRIDSYSTEM  TOWER  CARTESIAN CYLINDRICAL ... TOPSTORY BOTTOMSTORY
- *     GENGRID  LABEL  X1 Y1 X2 Y2  VISIBLE  BUBBLELOC
- *     REFERENCEPLANE   Z
- *     REFERENCEPOINT   X  Y
- *     GRID  DIR  COORD
+ * dentro de `$ GRIDS`, **no** dentro de `$ STORIES`.
  *
  * Y esa es la respuesta a por que **no cortan nada**: son entidades de
  * REJILLA, ayudas de dibujo, igual que una linea de ejes. Lo unico que parte un
@@ -108,12 +101,17 @@ export function parseE2k(text: string): E2kModel {
   // PANEL de muro —dos puntos en planta y dos plantas, `1 1 0 0`— de un FLOOR,
   // que los lleva todos a 0.
   const areaConns: { name: string; tipo: string; pts: string[]; dz: number[] }[] = [];
-  const areaAssigns = new Map<string, { story: string; section: string; spring?: string }>();
+  // UN AREA puede ir asignada a VARIAS plantas (un AREAASSIGN por planta, como los pisos típicos):
+  // por eso es una LISTA. Con un solo valor por nombre la última planta pisaba a las demás y la casa
+  // MOD_001 perdía 23 de sus 36 losas nervadas (−474 kN de peso, 22-sep-2026).
+  const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string }>>();
   /** SHELLPROP: espesor (m), material, tipo de cascara y los 8 modificadores. */
   const shellProps = new Map<string, {
     t: number; material: string; modeling: string; mods?: number[];
     /** cotas del DECK en unidades del fichero (tc, hr, wrt, wrb, sr en L; w en F/L²) */
     deck?: { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number };
+    /** losa nervada/reticular: peso (loseta + nervios) / peso de la loseta sola */
+    pesoFactor?: number;
   }>();
   /**
    * SECTION DESIGNER: una seccion DIBUJADA, hecha de varias piezas.
@@ -510,7 +508,7 @@ export function parseE2k(text: string): E2kModel {
     // ── AREA ASSIGNS: que SECCION lleva cada area, y en que planta ──
     if (currentSection === "AREA ASSIGNS") {
       const aa = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+SECTION\s+"([^"]+)"/);
-      if (aa) areaAssigns.set(aa[1], { story: aa[2], section: aa[3],
+      if (aa) (areaAssigns.get(aa[1]) ?? areaAssigns.set(aa[1], []).get(aa[1])!).push({ story: aa[2], section: aa[3],
         spring: line.match(/SPRINGPROP\s+"([^"]+)"/)?.[1] });
     }
 
@@ -538,6 +536,21 @@ export function parseE2k(text: string): E2kModel {
           wrt: num(/DECKRIBWIDTHTOP\s+([\d.eE+-]+)/) ?? 0, wrb: num(/DECKRIBWIDTHBOTTOM\s+([\d.eE+-]+)/) ?? 0,
           sr: num(/DECKRIBSPACING\s+([\d.eE+-]+)/) ?? 0, w: num(/DECKUNITWEIGHT\s+([\d.eE+-]+)/) ?? 0,
         } : undefined;
+        // LOSA NERVADA / RETICULAR (SLABTYPE "Ribbed" / "Waffle"): SLABTHICKNESS es solo la loseta;
+        // los nervios cuelgan OVERALLDEPTH − loseta. El PESO es el de loseta + nervios: se guarda como
+        // factor sobre la loseta (adimensional, vale en cualquier unidad del fichero). Sin esto la
+        // casa MOD_001 pesaba 2197 kN donde ETABS pesa 2819 (−22 %, 36 losas nervadas, 22-sep-2026).
+        //   Ribbed: t_eq = tf + (h − tf)·b̄/s          Waffle: t_eq = tf + (h − tf)·[b̄/s1 + b̄/s2 − b̄²/(s1·s2)]
+        const tipoLosa = line.match(/SLABTYPE\s+"([^"]+)"/)?.[1];
+        let pesoFactor: number | undefined;
+        if (tipoLosa === "Ribbed" || tipoLosa === "Waffle") {
+          const tf = num(/SLABTHICKNESS\s+([\d.eE+-]+)/) ?? 0, h = num(/OVERALLDEPTH\s+([\d.eE+-]+)/) ?? 0;
+          const b = ((num(/SLABRIBWIDTHTOP\s+([\d.eE+-]+)/) ?? 0) + (num(/SLABRIBWIDTHBOTTOM\s+([\d.eE+-]+)/) ?? 0)) / 2;
+          const s1 = num(/SLABRIBSPACING1?\s+([\d.eE+-]+)/) ?? 0, s2 = num(/SLABRIBSPACING2\s+([\d.eE+-]+)/) ?? s1;
+          const nervio = tipoLosa === "Ribbed" ? (s1 > 0 ? b / s1 : 0)
+                                               : (s1 > 0 && s2 > 0 ? b / s1 + b / s2 - (b * b) / (s1 * s2) : 0);
+          if (tf > 0 && h > tf) pesoFactor = (tf + (h - tf) * nervio) / tf;
+        }
         const MODS = ["F11MOD", "F22MOD", "F12MOD", "M11MOD", "M22MOD",
                       "M12MOD", "V13MOD", "V23MOD"];
         const leidos = MODS.map(k => num(new RegExp(k + "\\s+([\\d.eE+-]+)")));
@@ -546,10 +559,10 @@ export function parseE2k(text: string): E2kModel {
           // Linea de modificadores: completa la propiedad ya leida.
           const mods = leidos.map(v => v ?? 1);
           shellProps.set(nm, { t: prev?.t ?? 0, material: prev?.material ?? "",
-                               modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck });
+                               modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck, pesoFactor: prev?.pesoFactor });
         } else if (esp !== undefined) {
           shellProps.set(nm, {
-            t: esp, mods: prev?.mods, deck: deck ?? prev?.deck,
+            t: esp, mods: prev?.mods, deck: deck ?? prev?.deck, pesoFactor: pesoFactor ?? prev?.pesoFactor,
             material: line.match(/MATERIAL\s+"([^"]+)"/)?.[1] ??
                       line.match(/CONCMATERIAL\s+"([^"]+)"/)?.[1] ?? "",
             modeling: line.match(/MODELINGTYPE\s+"([^"]+)"/)?.[1] ??
@@ -672,9 +685,7 @@ export function parseE2k(text: string): E2kModel {
     if (j < 0 || j > stories.length - 1) return undefined;   // fuera del edificio
     return stories[j].name;
   };
-  for (const ac of areaConns) {
-    const aa = areaAssigns.get(ac.name);
-    if (!aa) continue;
+  for (const ac of areaConns) for (const aa of areaAssigns.get(ac.name) ?? []) {
     ac.pts.forEach((pt, k) => {
       const st = storyDe(aa.story, ac.dz[k] ?? 0);
       if (st) allNodeKeys.add(nodeKey(pt, st));
@@ -1105,8 +1116,8 @@ export function parseE2k(text: string): E2kModel {
   // SEIS lados, que no es un fallo de nadie: hekatan-fem tiene Q4 y T3.
   const perdidas = { sinAssign: 0, sinNudo: 0, colapsada: 0, poligono: 0 };
   for (const ac of areaConns) {
-    const aa = areaAssigns.get(ac.name);
-    if (!aa) { perdidas.sinAssign++; continue; }
+    if (!areaAssigns.get(ac.name)?.length) perdidas.sinAssign++;
+    for (const aa of areaAssigns.get(ac.name) ?? []) {
     const idx = ac.pts.map((pt, k) => {
       const st = storyDe(aa.story, ac.dz[k] ?? 0);
       return st === undefined ? undefined : nodeNameToIdx.get(nodeKey(pt, st));
@@ -1143,7 +1154,7 @@ export function parseE2k(text: string): E2kModel {
       if (mat?.E) elasticities.set(ei, mat.E);
       if (mat?.G) shearModuli.set(ei, mat.G);
       if (mat?.nu !== undefined) poissonsRatios.set(ei, mat.nu);
-      if (mat?.density) densities.set(ei, mat.density);
+      if (mat?.density) densities.set(ei, mat.density * (sp.pesoFactor ?? 1));
       if (sp.deck && sp.deck.tc > 0) {
         // El DECK pesa loseta + hormigón de los nervios + lámina, repartido en la membrana
         // de espesor tc: densidad equivalente = [γc·(tc + hr·(wrt+wrb)/2/sr) + w] / tc
@@ -1160,6 +1171,7 @@ export function parseE2k(text: string): E2kModel {
       if (sp.mods || esMembrana) shellModifiers.set(ei, m);
     }
     }   // for (trozos del polígono)
+    }   // for (cada planta a la que va asignada el área)
   }
   // ⚠️ ESTE BLOQUE VA AQUI Y NO ARRIBA. Las areas se montan mas abajo que
   // las cargas de barra, asi que puesto junto a ellas el `areaLookup` sale

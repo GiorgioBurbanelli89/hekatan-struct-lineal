@@ -1,0 +1,34 @@
+{
+ "pasos": [
+  {
+   "desde": 0,
+   "hasta": 54,
+   "rotulo": "presentacion"
+  },
+  {
+   "desde": 55,
+   "hasta": 109,
+   "rotulo": "geometria"
+  },
+  {
+   "desde": 110,
+   "hasta": 164,
+   "rotulo": "modo 1"
+  },
+  {
+   "desde": 165,
+   "hasta": 219,
+   "rotulo": "bloqueo"
+  },
+  {
+   "desde": 220,
+   "hasta": 274,
+   "rotulo": "ASDShellQ4"
+  },
+  {
+   "desde": 275,
+   "hasta": 329,
+   "rotulo": "abierto"
+  }
+ ]
+}

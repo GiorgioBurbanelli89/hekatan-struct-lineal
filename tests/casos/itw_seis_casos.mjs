@@ -66,12 +66,10 @@ const TABLA_III = { 2: 20.683, 4: 22.993, 8: 23.668 };
 /** Tabla IV del paper (pág. 455), columna M-type — hemisferio. */
 const TABLA_IV = { 4: 0.087548, 8: 0.093714, 12: 0.093587, 16: 0.093488 };
 /** Dónde está HOY el déficit del hemisferio, en % contra la Tabla IV. */
-// 2-sep-2026: con la MEMBRANA DE CSI (`drillingTypes = 12`: Gauss 2x2 + proyeccion
-// + reloj de arena 5e-5, extraida del binario) el deficit se fue solo:
-// 4x4 -88 % -> 3.5 %, 8x8 -37 % -> 1.1 %, 12x12 -> 0.4 %, 16x16 -> 0.2 %.
-// Era el 3x3 el que bloqueaba en cascara curva; el 2x2 sin el reloj era un
-// mecanismo, y el reloj de CSI es justo lo que lo estabiliza sin bloquear.
-// Bandas ANTES: { 4: [80, 95], 8: [30, 45], 12: [5, 18], 16: [1, 8] }.
+// 2-sep-2026: con Gauss 2x2 + proyeccion + reloj de arena (el tipo 12, hoy
+// retirado) el deficit bajaba: 4x4 -88 % -> 3.5 %, 8x8 -37 % -> 1.1 %,
+// 12x12 -> 0.4 %, 16x16 -> 0.2 %. Con el defecto actual (tipo 8, 3x3) vuelven
+// las bandas de ANTES: { 4: [80, 95], 8: [30, 45], 12: [5, 18], 16: [1, 8] }.
 const HEMI_HOY = { 4: [2, 5], 8: [0.5, 2], 12: [0.2, 1], 16: [0.05, 0.5] };
 
 const van = (v) => ({ val: v });

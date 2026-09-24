@@ -1,0 +1,10 @@
+import { resolverHeks } from "../tests/lib/heks.mjs";
+import { writeFileSync } from "node:fs";
+globalThis.__hekatanFactoresPatron = { Dead: 1 };
+const ol = console.log; console.log = () => {};
+const H = await resolverHeks("" + (process.argv[2] ?? "cli/shots/cupula_niveles/cupula_pisos.heks") + "");
+console.log = ol;
+const puntos = H.nodes.map((p, i) => ({ x: p[0], y: p[1], z: p[2], u: (H.deformOutputs.deformations.get(i) ?? [0,0,0]).slice(0, 3) }));
+let mx = 0; for (const q of puntos) mx = Math.max(mx, Math.hypot(...q.u));
+writeFileSync((process.argv[3] ?? "cli/shots/cupula_niveles/cupula_pisos_hekatan_dead.json"), JSON.stringify({ umax: mx, puntos }));
+console.log("Hekatan Dead: umax", (mx * 1000).toFixed(4), "mm ·", puntos.length, "nudos");

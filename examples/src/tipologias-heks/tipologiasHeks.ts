@@ -289,7 +289,8 @@ function def(id: string, name: string, category: string, params: Record<string, 
 
 const CAT_GALPON = "4️⃣ Mixtos · 🏢 Edificios";
 const CAT_PUENTE = "4️⃣ Mixtos · 🌉 Puentes e icónicos";
-const CAT_MURO = "🧱 Losas y cáscaras";
+const CAT_MURO = "2️⃣ Shells · 🧱 Placas";   // lo MEDIDO: solo cáscaras (categorias_arbol.mjs)
+const CAT_SOLIDOS = "3️⃣ Sólidos";
 
 const paramsGalpon = (tipo: "curvo" | "agua1") => ({
   L: P("Geometría", "Luz (m)", 20, 8, 40, 1),
@@ -335,7 +336,7 @@ export const tipologiasHeks: ExampleDef[] = [
     qCV: P("Cargas", "Carga viva (kN/m²)", 4.8, 0, 12, 0.1),
     nx: P("Malla", "Divisiones en luz", 16, 4, 40, 1),
   }, puenteHeks),
-  def("estribo-puente", "Estribo de puente (áreas: pantalla, aletas, zapata)", CAT_PUENTE, {
+  def("estribo-puente", "Estribo de puente (áreas: pantalla, aletas, zapata)", CAT_MURO, {
     B: P("Geometría", "Ancho (m)", 10, 4, 20, 0.5),
     H: P("Geometría", "Alto pantalla (m)", 6, 2, 12, 0.25),
     La: P("Geometría", "Largo aletas (m)", 4, 1, 10, 0.25),
@@ -353,7 +354,7 @@ export const tipologiasHeks: ExampleDef[] = [
     nz: P("Malla", "Divisiones en alto", 8, 3, 20, 1),
   }, estriboHeks),
   def("muro-contencion-areas", "Muro de contención en voladizo (áreas Q4)", CAT_MURO, paramsMuro, muroAreasHeks),
-  def("muro-contencion-solido", "Muro de contención en voladizo (sólidos H8)", CAT_MURO, paramsMuro, muroSolidoHeks, "none"),
+  def("muro-contencion-h8", "Muro de contención en voladizo (sólidos H8, paramétrico)", CAT_SOLIDOS, paramsMuro, muroSolidoHeks, "none"),
 ];
 
 // Para pruebas desde la consola / el agente: el .heks de una tipología con sus defectos.
@@ -365,7 +366,7 @@ export function heksDeTipologia(id: string, params: Record<string, number> = {})
   const gen: Record<string, (p: any) => string> = {
     "galpon-curvo": (q) => galponHeks(q, "curvo"), "galpon-agua1": (q) => galponHeks(q, "agua1"),
     "puente-losa-vigas": puenteHeks, "estribo-puente": estriboHeks,
-    "muro-contencion-areas": muroAreasHeks, "muro-contencion-solido": muroSolidoHeks,
+    "muro-contencion-areas": muroAreasHeks, "muro-contencion-h8": muroSolidoHeks,
   };
   return gen[id](p);
 }

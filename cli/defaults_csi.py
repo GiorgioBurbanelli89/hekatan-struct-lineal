@@ -4,10 +4,9 @@
 Jorge: «todo lo que por defecto tiene ETABS debe tenerlo Hekatan Struct —
 releases, etc. Revisa que tiene por defecto y lo traes asi por defecto».
 
-Se le pregunta AL PROGRAMA, no al manual ni al binario decompilado: se crea un
+Se le pregunta AL PROGRAMA, no al manual: se crea un
 modelo en blanco con una columna, una viga y un pano, y se leen los valores que
-el programa pone SOLO. Es la regla de siempre — agotar la MEDIDA antes del
-desensamblador — y ademas es lo unico que no envejece con la version.
+el programa pone SOLO. Es lo unico que no envejece con la version.
 
     python defaults_csi.py            # los tres
     python defaults_csi.py etabs      # uno

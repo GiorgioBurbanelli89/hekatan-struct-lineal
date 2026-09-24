@@ -53,7 +53,15 @@ export const benchmark3way: ExampleDef = {
   category: "4️⃣ Mixtos · 🔀 Losas con vigas",
   benchmark: true,
   defaultShellResult: "displacementZ",
-  availableShellResults: ["displacementZ", "displacementX", "bendingXX", "bendingYY", "bendingXY", "membraneXX", "membraneYY", "vonMises"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     areaType: {
       default: 1,
@@ -238,7 +246,7 @@ export const benchmark3way: ExampleDef = {
       poissons.set(e, p.nu_c);
       thicknesses.set(e, t_eff);
       shearModuli.set(e, G_c);
-      densities.set(e, 24);
+      densities.set(e, 24 / 9.80665);
     }
     for (let f = 0; f < frames.length; f++) {
       const e = shells.length + f;
@@ -248,7 +256,7 @@ export const benchmark3way: ExampleDef = {
       Iy_map.set(e, p.Iy_b * 1e-5);     // ×10⁻⁵ m⁴
       Iz_map.set(e, p.Iz_b * 1e-5);
       J_map.set(e, 0.31e-6);
-      densities.set(e, 78.5);            // acero kN/m³
+      densities.set(e, 78.5 / 9.80665);            // acero kN/m³
     }
 
     // ── Set states ──

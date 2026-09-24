@@ -126,7 +126,10 @@ function build(ms) {
 const mss = process.argv.slice(2).map(Number);
 const list = mss.length ? mss : [2.5, 1.25, 1.0, 0.75];
 console.log("Test M dual — modal WASM método 3 (lateralMass=1, Guyan), 12 modos");
-console.log("ms(m)  nodos   GDL    T1(s)    T2(s)   SumUx%  SumUy%   tiempo(ms)");
+// Regla de Jorge (18-sep-2026): la masa participativa se imprime con las SEIS
+// sumatorias (SUx SUy SUz SRx SRy SRz). El 90 % se juzga en X e Y, que son las
+// direcciones de analisis; las otras cuatro delatan si faltan modos.
+console.log("ms(m)  nodos   GDL    T1(s)    T2(s)    T3(s)   tiempo(ms)  |  las SEIS sumatorias (%)");
 console.log("-".repeat(70));
 for (const ms of list) {
   const m = build(ms);
@@ -136,5 +139,6 @@ for (const ms of list) {
   const T = out.frequencies.map(f => f > 0 ? 1 / f : 0);
   const mp = out.massParticipation;
   const sum = (d) => mp.reduce((s, r) => s + (r[d] || 0), 0) * 100;
-  console.log(`${ms.toFixed(2).padStart(5)} ${String(m.nodes.length).padStart(6)} ${String(m.nodes.length * 6).padStart(6)} ${(T[0] || 0).toFixed(4).padStart(8)} ${(T[1] || 0).toFixed(4).padStart(8)} ${sum(0).toFixed(1).padStart(7)} ${sum(1).toFixed(1).padStart(7)} ${dt.toFixed(0).padStart(11)}`);
+  const S6 = ["Ux","Uy","Uz","Rx","Ry","Rz"].map((k, d) => `Σ${k} ${sum(d).toFixed(1)}`).join("  ");
+  console.log(`${ms.toFixed(2).padStart(5)} ${String(m.nodes.length).padStart(6)} ${String(m.nodes.length * 6).padStart(6)} ${(T[0] || 0).toFixed(4).padStart(8)} ${(T[1] || 0).toFixed(4).padStart(8)} ${(T[2] || 0).toFixed(4).padStart(8)} ${dt.toFixed(0).padStart(11)}  |  ${S6}`);
 }

@@ -274,6 +274,28 @@ export function elements(
           continue;
         }
       }
+      // BARRAS durante la animación modal: el animador mueve los nudos y deja en
+      // `settings.__modoAnim` la foto sin deformar + el modo (6 GDL) + la amplitud del
+      // cuadro. Con eso la barra sale CURVA como en la deformada estática; sin ello era
+      // una recta entre nudos y un pórtico empotrado se veía girando rígido desde la base.
+      const anim = (settings as any).__modoAnim as
+        { orig: Node[]; shape: number[]; amp: number } | null | undefined;
+      if (e.length === 2 && !settings.deformedShape.val && anim && anim.orig.length === nodes.length) {
+        const pi = anim.orig[e[0]], pj = anim.orig[e[1]];
+        if (pi && pj) {
+          const di = anim.shape.slice(e[0] * 6, e[0] * 6 + 6);
+          const dj = anim.shape.slice(e[1] * 6, e[1] * 6 + 6);
+          const pts = curvaHermite(pi, pj, di, dj, anim.amp, anim.amp);
+          for (let k = 0; k < pts.length - 1; k++) {
+            wireVerts.push(...pts[k], ...pts[k + 1]);
+            if (colorByType && edgeColor) {
+              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
+              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
+            }
+          }
+          continue;
+        }
+      }
       for (const edge of elementToEdges(e)) {
         const a = nodes[edge[0]], b = nodes[edge[1]];
         if (!a || !b) continue;

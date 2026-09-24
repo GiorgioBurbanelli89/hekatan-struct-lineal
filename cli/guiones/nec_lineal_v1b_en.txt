@@ -1,0 +1,16 @@
+Two things get switched on: the mode table and the spectrum. Without them the analysis runs, but you see nothing.
+The analysis is launched with a single button. It takes just over a minute: it is solving the eigenvalue problem of 545 nodes.
+This is the NEC-15 spectrum, drawn by the engine, not pasted: it rises up to T0, stays flat, and decays from Tc.
+T0 = 0.10 Fs Fd / Fa = 0.304 s. Tc, with 0.55, is 1.672 s.
+The plateau is eta times Z times Fa: 1.80 x 0.40 x 1.0 = 0.720 g. That is where this building falls.
+Now the static base shear. The formula is V = I Sa(Ta) / (R phi-P phi-E) times W. Section 6.3.2, page 61.
+First the approximate period: Ta = Ct h^n. For a dual with walls, 0.055 x 12^0.75 = 0.355 s.
+With that period you enter the spectrum and read Sa: 0.720, because it lands inside the plateau.
+The shear coefficient is Sa over R: 0.720 / 8 = 0.09. And the seismic weight of the model, 356.28 tonf.
+Multiplying: 32.07 tonf. That is the static base shear, and SAP2000 with the same mesh gives the same number.
+The dynamic route starts with the modes. Here they are, with frequency, period and the six mass participations.
+Mode 1, mode 2 and mode 3, moving. The first translates in X, the second mixes Y with torsion, the third is the second X mode.
+The six cumulative sums are the check: the code asks for at least 90 % of the mass in each horizontal direction. Section 6.2.2 e, page 58.
+Each mode contributes its own shear, and they are not added directly: they are combined with CQC, because each mode peaks at a different instant.
+And the control: the dynamic shear may not fall below 80 % of the static one for a regular structure, or 85 % if irregular. Here it is 82.6 %: it passes.
+That is NEC-15. In chapter 6, the 2023 draft: what changes, and how much the base shear of this same building goes up.

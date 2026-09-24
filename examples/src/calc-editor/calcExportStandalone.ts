@@ -58,7 +58,7 @@ function generateMatlab(md: ModelData, _calcCode: string): string {
   const L = (s: string) => lines.push(s);
 
   L("% ═══════════════════════════════════════════════════════════════");
-  L("% FEM Standalone — Generado por awatif-clone");
+  L("% FEM Standalone — Generado por Hekatan Struct");
   L("% Compatible con MATLAB R2019+ y GNU Octave 6+");
   L("% Ejecutar sin dependencias externas");
   L("% ═══════════════════════════════════════════════════════════════");
@@ -303,7 +303,7 @@ function generatePython(md: ModelData, _calcCode: string): string {
   const L = (s: string) => lines.push(s);
 
   L('"""');
-  L("FEM Standalone — Generado por awatif-clone");
+  L("FEM Standalone — Generado por Hekatan Struct");
   L("Compatible con Python 3.8+ y NumPy 1.20+");
   L("Ejecutar: python fem_standalone.py");
   L('"""');
@@ -560,7 +560,7 @@ function generateHekatan(md: ModelData): string {
   const lines: string[] = [];
   const L = (s: string) => lines.push(s);
 
-  L("# Análisis FEM — Generado por awatif-clone");
+  L("# Análisis FEM — Generado por Hekatan Struct");
   L("# Abrir en Hekatan Calc 1.0.0");
   L("");
   L("## Datos del modelo");

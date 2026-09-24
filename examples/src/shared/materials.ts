@@ -11,6 +11,67 @@
  * =============================================================================
  */
 
+// ════════════════════════════════════════════════════════════════════════
+//  LAS CONSTANTES Y LAS DOS FORMULAS DEL HORMIGON — un solo sitio
+// ════════════════════════════════════════════════════════════════════════
+//
+// Hasta el 18-sep-2026 la formula del modulo del hormigon estaba COPIADA en 20
+// ficheros, en DOS versiones que no dan lo mismo, y este fichero —que ya la
+// tenia— no lo importaba nadie. Con f'c = 210 kg/cm² salian tres valores:
+//
+//     21 458 891 kN/m²   15100·√f'c  [kg/cm²]   (NEC-SE-HM / Ecuador)
+//     21 328 888 kN/m²   4700·√f'c   [MPa]      (ACI 318)
+//     21 460 000 kN/m²   redondeo del csiImporter
+//
+// Dispersion: 0.61 %. **No es el error de nadie: son dos normas.** 15100 en
+// kg/cm² equivale a 4733 en MPa, y ACI redondea a 4700. Por eso aqui NO se
+// elige una a escondidas: se dan las dos con su nombre y sus unidades, y cada
+// ejemplo declara cual usa. Lo que no puede volver a pasar es que un mismo
+// modelo mezcle las dos sin que se vea.
+//
+// ⏳ Queda por decidir (es de Jorge, no del codigo): unificar TODO en la NEC,
+//    que es la norma del pais. Cuesta 0.61 % en E, 0.61 % en flechas y 0.31 %
+//    en periodos, y mueve referencias ya validadas contra CSI.
+
+/** La gravedad. UNA. Antes convivian 9.81 y 9.80665 en los tres exportadores
+ *  (`e2kExporter:140` 9.81 · `:345` 9.80665 · `s2kExporter:751` 9.81 ·
+ *  `f2kExporter:111` 9.80665): el MISMO modelo pesaba distinto en el .s2k y en
+ *  el .f2k. Es el valor normal estandar, el que usa CSI. */
+export const GRAVEDAD = 9.80665;   // m/s²
+
+/** Peso especifico del hormigon armado [kN/m³]. Es un PESO. */
+export const PESO_HORMIGON_kNm3 = 24;
+
+/** Densidad de MASA del hormigon armado [t/m³] = peso / g.
+ *
+ *  ⚠️ `ElementInputs.densities` y el `rho` del `.heks` son MASA (t/m³), no
+ *  peso. Meter 24 ahi es meter la masa multiplicada por g: **×9.81**. Paso de
+ *  verdad entre dos ejemplos de la MISMA zapata (`zapata-aislada` usa `24/g` y
+ *  `zapata-aislada-validacion` usa `24`). */
+export const MASA_HORMIGON_t_m3 = PESO_HORMIGON_kNm3 / GRAVEDAD;   // 2.44733
+
+/** 1 kg/cm² en kN/m². */
+export const KGCM2_A_KNM2 = 98.0665;
+
+/**
+ * Modulo elastico del hormigon segun **NEC-SE-HM / Ecuador**:
+ *     E_c = 15100·√f'c   con f'c en kg/cm², resultado en kg/cm²
+ * Devuelto en kN/m².
+ */
+export function ecHormigonNEC(fc_kgcm2: number): number {
+  return 15100 * Math.sqrt(fc_kgcm2) * KGCM2_A_KNM2;
+}
+
+/**
+ * Modulo elastico del hormigon segun **ACI 318**:
+ *     E_c = 4700·√f'c   con f'c en MPa, resultado en MPa
+ * Devuelto en kN/m². Da un 0.61 % menos que `ecHormigonNEC` (ver la nota de
+ * arriba): no es un bug, es la otra norma.
+ */
+export function ecHormigonACI(fc_MPa: number): number {
+  return 4700 * Math.sqrt(fc_MPa) * 1000;
+}
+
 export type MaterialType = "concrete" | "steel" | "cft";
 export type SectionShape = "rect" | "circ" | "W" | "HSS" | "cft-rect" | "cft-circ";
 
@@ -58,9 +119,7 @@ export interface MechanicalProps {
  */
 export function concreteProps(fc_kgcm2: number): MechanicalProps {
   // E_c en kg/cm² → kN/m² : 1 kg/cm² = 98.0665 kN/m²
-  const Ec_kgcm2 = 15100 * Math.sqrt(fc_kgcm2);
-  const Ec_kNm2 = Ec_kgcm2 * 98.0665;
-  return { E: Ec_kNm2, nu: 0.20, gamma: 24 };
+  return { E: ecHormigonNEC(fc_kgcm2), nu: 0.20, gamma: PESO_HORMIGON_kNm3 };
 }
 
 /** Acero ASTM A992 / A36 / A572 Gr.50 — propiedades elásticas idénticas */

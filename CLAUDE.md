@@ -108,9 +108,10 @@ plateQ4Solve({ theoryType: 2 })   // Plane stress (membrana)
 1 = sobre X (Mx / θx), 2 = sobre Y (My / θy). Por dentro el C++ usa las pendientes de Bathe
 [w, βx, βy] (βx = ∂w/∂x): θx = βy, θy = −βx, y la fuerza conjugada de βx es **−My**. Hasta
 esa fecha el `dof` 1 iba directo a βx: un «Mx» del usuario era −My — la ej4 de Guerra daba
-23.47 t/m² contra 28.405 de SAFE por eso, y con el signo bueno da 28.405 exacto. El elemento
-es el mismo de `deform`: Shell-Thick de CSI (theoryType 0) y DKQ (1); plateQ4Solve y deform
-dan la misma flecha a todos los dígitos (`zapata-winkler-sap2000`).
+23.47 t/m² contra 28.405 de SAFE por eso, y con el signo bueno da 28.405 exacto. Kirchhoff
+(theoryType 1) usa la DKQ, la misma de `deform`; Mindlin (0) usa la formulación propia de
+`kirchhoff_q4.cpp` (Bathe: flexión 2×2 + cortante MITC4). En `zapata-winkler-sap2000` los dos
+caminos Thick difieren 0.001 % y quedan a 0.011 % de SAP2000.
 
 Retorna `elementResults[i].Mxx/Myy/Mxy/Qx/Qy` por elemento. El ejemplo debe poblar `analyzeOutputs.bendingXX/YY/XY` (Maps con array per-nodo del Q4) para que el viewer renderice el colormap.
 
@@ -238,13 +239,14 @@ burbuja `(1-r²)(1-s²)` condensada), no como una penalización pegada aparte.
 
 Vive en `getMembraneITW` (`shellQ4.cpp`, usada también por `shellThin.cpp`) y en
 `hekatan_struct/elements/membrane_itw.py`. Se elige con
-`elementInputs.drillingTypes`: **3 = ITW (defecto)**, 2 = Q4 con modos
+`elementInputs.drillingTypes`: **8 = ITW + proyección del drilling de FEAP/Taylor
+(defecto desde el 19-ago-2026)**, 3 = ITW 1990 puro, 2 = Q4 con modos
 incompatibles + Hughes-Brezzi (lo de antes), 1/0 = legacy.
 `drillingPenaltyScales` pasa a ser **γ/μ** (defecto **0.4**).
 
 **Por qué γ = 0.4·μ y no 1.0 como el paper**: reconstruida la matriz 12×12 de
-membrana de ETABS entera por flexibilidad (`celda_membrana12.py`, sin tocar el
-binario) y ajustada γ por mínimos cuadrados sale **0.400 exacto**, en las 10
+membrana de ETABS entera por flexibilidad (`celda_membrana12.py`, caja negra)
+y ajustada γ por mínimos cuadrados sale **0.400 exacto**, en las 10
 geometrías y con 0, 2 o 4 modos incompatibles. Da igual: el paper avisa —y se
 comprueba— de que la formulación es **insensible a γ**.
 
@@ -270,19 +272,19 @@ comprueba— de que la formulación es **insensible a γ**.
 3. **La modificación de Taylor sobre la burbuja** (J₀ del centro): no desbloquea
    nada (−37.38 % contra −37.40 %).
 
-### El hemisferio: CERRADO el 2-sep-2026 con la membrana de CSI (tipo 12)
+### El hemisferio con el defecto (tipo 8), medido el 15-sep-2026
 
-| malla | paper (M-type) | SAP2000 | tipo 8 (3×3) | **tipo 12 (2×2 + reloj)** |
-|---|---|---|---|---|
-| 4×4 | 0.087548 | — | 0.010114 (−88 %) | **0.084490 (−3.5 %)** |
-| 8×8 | 0.093714 | 0.093751 | 0.059249 (−37 %) | **0.092718 (−1.1 %)** |
-| 12×12 | 0.093587 | — | 0.083555 (−11 %) | **0.093174 (−0.4 %)** |
-| 16×16 | 0.093488 | — | 0.089954 (−3.8 %) | **0.093325 (−0.2 %)** |
+| malla | paper (M-type) | SAP2000 | tipo 8 (3×3 + proyección) |
+|---|---|---|---|
+| 4×4 | 0.087548 | — | 0.011468 (−86.9 %) |
+| 8×8 | 0.093714 | 0.093751 | 0.059668 (−36.3 %) |
+| 12×12 | 0.093587 | — | 0.083591 (−10.7 %) |
+| 16×16 | 0.093488 | — | 0.089943 (−3.8 %) |
 
-Lo que sigue es la historia de cómo se buscó, y por qué el «Gauss 2×2 = mecanismo»
-de abajo era verdad a medias: con el reloj de arena del θz (`khg = 2e-4`, el 5e-5
-del kernel de CSI) el 2×2 tiene 3 modos nulos y no bloquea. `itw_seis_casos.mjs`
-vigila ahora la banda nueva.
+Contra la 12×12 de membrana de ETABS (10 geometrías, `banco-elemento/probar.py --proyeccion
+--cpp`): **1.42 % de media**, C++ = Python a 1e-13, 3 modos nulos. Para cáscara curva en malla
+gruesa: tipo 9 (proyección + regla de 8) o tipo 6 (2×2 + reloj de arena `khg = 2e-4`, medido en
+la 12×12 de ETABS por flexibilidad: 3 modos nulos y patch test exacto).
 
 #### (histórico) El hemisferio: DÉFICIT ABIERTO (⚠️ antes decía "bloqueo, no bug" — era falso)
 
@@ -321,54 +323,19 @@ malla a malla y **falla también si mejora**, para que el arreglo no pase
 desapercibido. Para una cúpula en malla gruesa, hoy conviene `drillingTypes = 2`.
 
 
-## La membrana: también es la de CSI desde el 2-sep-2026 (`drillingTypes = 12`)
+## La placa gruesa (Shell-Thick): MITC4 + modos incompatibles de Wilson
 
-Con la K de membrana 12×12 MEDIDA en ETABS (`galpon-bodega-electoral/memb12.json`,
-9 geometrías: cuadrados con ν, rectángulos, paralelogramo, trapecio) y lo leído
-del kernel (`registros/2026-09-02_binario_drilling_shellthick.md`), la membrana
-de ETABS resulta ser el ITW **con** estas cuatro cosas juntas:
+La flexión del `shelltype thick` es `getBendingK` (`shellQ4.cpp`, `HK_BENDING_FORMULATION = 3`,
+el defecto): MITC4 (Bathe & Dvorkin 1985) con los modos incompatibles de Wilson condensados
+(Wilson et al. 1973; Taylor, Beresford & Wilson 1976). Variantes de compilación: `=1` DSE
+híbrido, `=2` DSE completo de Wilson (cap. 8). DKMQ (Katili 1993) en `shellQ4_DKMQ.cpp`. El
+Shell-Thin es la DKQ (Batoz & Tahar 1982). Python: `_k_flexion` de `shell_q4_motor.py`.
 
-```
-Allman + burbuja (14 gdl)  ·  Gauss 2×2  ·  proyección FEAP del drilling (B-bar del giro)
-penalización P en el centro con γ = 0.4·μ (el 0.1 del binario × (2·b0)²)
-+ reloj de arena del θz:  (khg·μ·t·A/4)·h hᵀ,  h = [+1,−1,+1,−1],  khg = 2e-4  (el 5e-5 del kernel)
-```
-
-Tipo **12** en `shellQ4.cpp` (`getMembraneITW` con `ngITW=2, proyITW, khg=2e-4`) y en
-`membrane_itw.py` (`_DRILLING[12]`, parámetro `khg`). **Es el defecto** en los dos
-(`getMapVal(drillingTypes, index, 12)`, `TIPO_DRILLING_DEFECTO = 12`). Contra la
-12×12 medida: **1e-13 % (Python) / 1e-11 % (C++)** en las 9 geometrías, 3 modos nulos.
-El tipo 8 (3×3 + proyección, 0.88 %) y el 10 se quedan como estaban.
-
-## La placa gruesa: Shell-Thick de CSI, extraído del binario (2-sep-2026)
-
-Desde el **2026-09-02** la flexión del `shelltype thick` es la formulación del
-Shell-Thick de ETABS/SAP2000 tal como la calcula `CsiGo2.dll` — medida en vivo
-(monta_B y la K de 22 gdl antes de condensar) y reproducida a **1e-12 %** contra
-la K medida de ~140 celdas (cuadrado, rectángulo, 27 trapecios, cuadriláteros
-irregulares, barridos de t/ν/L y modificadores). Bitácora:
-`registros/2026-09-02_binario_drilling_shellthick.md`.
-
-```
-giros con 9 funciones (4 bilineales + 4 jerárquicas de lado + burbuja), 2 componentes cada una
-curvaturas  kx = θy,x   ky = −θx,y   kxy = θy,y − θx,x
-cortante    4 cortantes de LADO de Wilson (8.7) (jerárquicas con 2/3) → covariante
-            tipo MITC con la parte lineal SIMETRIZADA, m = (b+d)/2 → físico J⁻¹
-penalización 1000·(D11+D22+D33)·∫(θx,x + θy,y)² dA        ← la divergencia del giro
-cuadratura  ITW 1991 de 8 puntos · B-barra en las 10 internas · condensación saltando pivotes nulos
-```
-
-| dónde | qué |
-|---|---|
-| `hekatan-fem/src/cpp/utils/shellQ4.cpp` → `getBendingK_CSI` | el C++/WASM (defecto). `-DHK_BENDING_FORMULATION=3` devuelve el MITC4 de antes |
-| `hekatan-struct-py/.../elements/plate_csi_thick.py` | el espejo en Python. `shell_q4_motor.PLACA_THICK = "csi"` (defecto) / `"mitc4"` |
-| `hekatan-struct-py/tests/test_csi_thick_cells.py` | contra la K medida de ETABS, celda a celda |
-| `validation/02-placas/dse-de-wilson/etabs_thick_full.py` | la fórmula suelta, con la validación masiva |
-
-Lo que NO es: ni MITC4, ni el DSE de Wilson a secas, ni «DSE + un coeficiente».
-El cortante simetrizado deja un mecanismo (φ: θ = (x−xc, y−yc)) y la
-penalización de la divergencia es lo que lo estabiliza — ese es el origen del
-`λ_φ = 455·D` que se persiguió durante semanas. El Shell-Thin sigue siendo el DKQ.
+Solo formulaciones publicadas; lo de CSI se compara por **caja negra** (misma malla, resultados
+o matrices reconstruidas por flexibilidad). Cuánto pesa la elección de la placa gruesa, medido en
+el edificio dual 2×2×4 con malla de 1 m: T1 = 0.4871 (DKQ) / 0.4874 (DKMQ), < 1 % de lo que da
+un elemento ajustado a CSI. Placa apoyada 8×8 contra ETABS 19 misma malla
+(`placa-thick-thin-sano`, 15-sep-2026): Thin 0.000 %; Thick 0.37–1.9 % según t/L.
 
 ⚠️ El harness `cli/native/kelem_native.exe` imprime la K en ejes LOCALES del
 elemento (`localX = v01 + v32`): en un trapecio no coincide entrada a entrada
@@ -385,11 +352,9 @@ lista 57.8) y el signo era el de la curvatura del solver, **al revés que CSI**.
   **0.0000 % joint a joint** en las 4 plantillas con losa (3600 joints c/u); evaluando en las
   esquinas directamente el M12 de las celdas de esquina se iba 26 %. Contra SAP2000, 0.5–0.9 %
   (lo que SAP y ETABS difieren entre sí).
-- **Shell-Thick (`plateFormulations = 0`)**: `utils/csiThickJoints.ts` recupera los 10 gdl
-  internos (`u_i = −K_ii⁻¹ K_ib u_b`, misma K que `getBendingK_CSI`) y evalúa en las esquinas.
-  Placa 4×4 vs SAP2000 0.026 % joint a joint; losa gruesa de edificio vs SAP y ETABS 0.075 %.
-  ⚠️ Aplicar la recuperación gruesa a una solución DKQ da 41 vs 58 sobre columna: cada
-  formulación con su B.
+- **Shell-Thick (`plateFormulations = 0`, MITC4)**: `utils/mitc4Joints.ts`: curvatura bilineal
+  de los giros en Gauss 2×2 extrapolada a las esquinas (los modos incompatibles no se recuperan).
+  ⚠️ Cada formulación con su B: no aplicar la recuperación de una a la solución de otra.
 - **Signo**: `SIGNO_CSI = −1` en `computeQ4ShellStresses`: M11 > 0 = tracción abajo (vano de
   losa positivo, columna negativa). El test `placa-momentos-navier` lleva ese signo y SAP2000 de
   árbitro (`tests/datos/placa_navier_sap2000.json`).
@@ -400,14 +365,10 @@ lista 57.8) y el signo era el de la curvatura del solver, **al revés que CSI**.
 - **Giros del solver = mano derecha**: `θx = +∂w/∂y`, `θy = −∂w/∂x` (medido con el patch test;
   las otras siete combinaciones dan cientos de %). En un apoyo duro de placa, «pendiente
   tangencial nula» en y = 0 es `ry = 0`; fijar `rx` ahí es empotrar.
-- Validez sin ETABS (`validation/02-placas/shell_thick_validez.mjs`, `_convergencia.mjs`): rango
-  3, patch test 6.9e-11 % (Thick) / 6.6e-13 % (DKQ), convergencia a Reissner–Mindlin 0.12 % / 0.29 %
-  (t/L 0.1, 32×32) y 0.065 % / 0.24 % (t/L 0.01), sin bloqueo. Fuentes pieza a pieza en
-  `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md`: la simetrización del cortante y la
-  penalización de la divergencia **no están publicadas** (son del kernel); el resto sí.
-- **Membrana (F11/F22/F12)**: `utils/itwJoints.ts` (ITW tipo 12: Allman proyectada, Gauss 2×2
-  extrapolado, **sin la burbuja** al recuperar; con ella 5.7 % en muros). = ETABS y SAP2000
-  **0.0000 %** en la dual (3760 joints). Salidas `membraneXXcentro/joint`.
+- **Membrana (F11/F22/F12)**: `utils/itwJoints.ts` (ITW tipo 8 por defecto: Allman proyectada,
+  Gauss 2×2 extrapolado, **sin la burbuja** al recuperar; con ella 5.7 % en muros). Dual contra
+  ETABS (3760 joints, 15-sep-2026): F joint a joint 0.454 %, M 0.204 %. Salidas
+  `membraneXXcentro/joint`.
 - ⚠️ Los `.s2k` de `validation/modelos/plantillas/csi/` eran del 3-sep, sin diafragma: SAP daba
   0.5–0.9 % en fuerzas y 0.5 % en uy, y se atribuyó a «lo que SAP y ETABS difieren». Re-exportados
   el 8-sep: SAP2000 = ETABS = Hekatan a 0.0000 % (flexión y membrana) en las 4 plantillas con losa.
@@ -892,8 +853,8 @@ un muro sale casi uniforme: para verlo, F22 / FMin / von Mises.
 
 ## Columna CFT: Section Designer en SAP2000, Filled Steel Tube en ETABS (2-sep-2026)
 
-SAP2000 24 **no tiene** sección paramétrica de tubo relleno (leído del binario: el
-enum `FilledTube` de la OAPI es compartido con ETABS y no prueba nada). Se hace en
+SAP2000 24 **no tiene** sección paramétrica de tubo relleno (el enum `FilledTube` de
+la OAPI es compartido con ETABS y no prueba nada). Se hace en
 Section Designer, y SAP **recalcula** A, I, As y J de las formas: ignora los que
 lleve la fila `SD Section` del s2k. ETABS sí la tiene ("Filled Steel Tube") y usa
 los mismos números (0.004 % entre los dos). Medido por OAPI, columna 300×300×10:
@@ -1119,3 +1080,45 @@ también escribe `disp_nudos`).
 + `PointObj.SetDiaphragm(n, 3, "D1")`, SAP con `ConstraintDef.SetDiaphragm` + `PointObj.SetConstraint`;
 600–800 nudos tardan 5–6 min por programa; los prints de Python se pierden con la salida
 redirigida (el resultado va al JSON). Si SAP2000 «no vuelve», es un diálogo: `taskkill //F //IM SAP2000.exe`.
+
+## Caja negra: ver qué hizo el usuario y qué falló (20-sep-2026)
+
+`hekatan-ui/src/cad/cajaNegra.ts`, arrancada desde `examples/src/workspace/main.ts`.
+Jorge: «¿hay posibilidad de que puedas ver cada recorrido que hago y si algo no me funciona
+tú saberlo?».
+
+Anota sola, sin que el usuario haga nada:
+
+| se anota | de dónde sale |
+|---|---|
+| **errores** de JS y promesas rechazadas, con traza | `window.onerror`, `unhandledrejection` |
+| `console.error` / `console.warn` | consola parcheada (sin romper la de siempre) |
+| **comandos** tecleados | `keydown` Enter sobre input/textarea |
+| **clics** en botones, Tweakpane, selects | delegación en `document`, fase de captura |
+| cálculos y modelos | `hk:solved`, `hk:model-loaded`, `hk:property-applied` |
+
+Se saca con el botón **📋** (al lado del 🤖) o con `hkInforme()` en la consola: descarga un
+`.txt` con **los errores primero** y después todo en orden cronológico. `hkEventos()` da el
+array en crudo.
+
+- Persiste en `localStorage` (`hk_caja_negra_v1`) y **conserva la sesión ANTERIOR**
+  (`..._anterior`), que es la que interesa cuando la app se cuelga.
+- **Las claves de API se ocultan antes de anotar** (`limpiar()`). El orden de las dos reglas
+  importa: primero lo que va tras `key/token/...` y luego los patrones `sk-`/`AIza`, o sale
+  el churro `<oculto> oculta>`.
+- Buffer circular de 4000 eventos; guarda a los 1.5 s de un error y cada 20 s.
+
+### El bug que lo motivó: el botón del agente
+
+Tres fallos encadenados, y ninguno daba error en pantalla:
+
+1. `montarLanzadorAgente()` vivía **dentro de `getCadPanel()`**: en la pantalla de inicio el
+   botón no existía. Pulsar «Agente IA» no hacía nada porque no había nada que pulsar.
+2. Quedaba **cortado por la barra inferior** del CAD. Buscar la barra por `position: fixed`
+   no vale: no lo es. Ahora se pregunta con `elementFromPoint` quién está encima del botón en
+   tres puntos y se sube hasta que manda él.
+3. `z-index` 8999 → **9600**.
+
+⚠️ El botón usa `position: fixed` pero hay un ancestro con `transform`, así que se posiciona
+respecto a ESE ancestro, no a la ventana: aparece en x≈1301 y no en la esquina derecha. Por
+eso «no estaba» al buscarlo por coordenadas.

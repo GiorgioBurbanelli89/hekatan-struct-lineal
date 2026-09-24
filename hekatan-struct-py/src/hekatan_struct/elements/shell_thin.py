@@ -58,8 +58,8 @@ def shell_thin_motor(coords_xy, E, nu, t, *, alpha_drilling=None,
         sin_flexion = abs(fb) < 1e-9
 
     # La MISMA membrana que el Thick (`shellThin.cpp` tambien va por
-    # `getMembraneITW` para los tipos 3..12): thin y thick tienen que dar lo
-    # mismo en su plano. Con el 12 es la membrana de CSI (2-sep-2026).
+    # `getMembraneITW` para los tipos 3..10): thin y thick tienen que dar lo
+    # mismo en su plano.
     usa_itw = tipo_drilling in TIPOS_ITW
     if usa_itw:
         K[np.ix_(DOF_DRI, DOF_DRI)] += fm * k_membrana_itw(

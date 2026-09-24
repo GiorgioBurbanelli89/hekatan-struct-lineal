@@ -161,19 +161,21 @@ extern "C"
 
         // --- Add nodal springs (Winkler foundation) to diagonal of K_global ---
         // Each spring adds +k to K_global(gdof, gdof) where gdof = 6*node + dof
+        std::vector<springsExtra::Colgado> colgados;   // nudos colgados: al final, con UNA escala
         for (int i = 0; i < num_springs; ++i) {
             int node = static_cast<int>(springs_flat_ptr[3 * i]);
             int d    = static_cast<int>(springs_flat_ptr[3 * i + 1]);
             double k = springs_flat_ptr[3 * i + 2];
             // nudo NEGATIVO = registro de elemento: muelle de area consistente (SAFE) o nudo
             // colgado (edge constraint de ETABS), ver utils/springsExtra.h
-            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, node, d, k)) continue;
+            if (springsExtra::despacharMuelleExtra(K_global, nodes, element_indices, element_sizes, node, d, k, &colgados)) continue;
             int gdof = 6 * node + d;
             if (gdof >= 0 && gdof < dof) {
                 K_global.coeffRef(gdof, gdof) += k;
             }
         }
 
+        springsExtra::aplicarColgados(K_global, nodes, element_indices, element_sizes, colgados);
         if (etabs_wall_joint) addEtabsWallJoint(K_global, nodes, element_indices, element_sizes, elementInputs);
 
         // ── Diafragma rigido: u = T u_red; K y F pasan al espacio reducido ──

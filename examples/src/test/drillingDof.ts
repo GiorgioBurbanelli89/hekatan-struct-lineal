@@ -21,7 +21,15 @@ export const drillingDof: ExampleDef = {
   name: "Drilling DOF — 2 muros + viga de acople",
   category: "4️⃣ Mixtos · 🔀 Losas con vigas",
   defaultShellResult: "membraneXX",
-  availableShellResults: ["membraneXX", "membraneYY", "membraneXY", "vonMises", "displacementX"],
+  availableShellResults: [
+    "none", "pressure",
+    "membraneXX", "membraneYY", "membraneXY",
+    "membranePrincipalMax", "membranePrincipalMin", "vonMises",
+    "tranverseShearX", "tranverseShearY", "transverseShearMax",
+    "bendingXX", "bendingYY", "bendingXY",
+    "bendingPrincipalMax", "bendingPrincipalMin",
+    "displacementX", "displacementY", "displacementZ",
+  ],
   params: {
     W:   { default: 2.0, min: 1, max: 4, step: 0.25, label: "W ancho machón X (m)" },
     H:   { default: 4.0, min: 2, max: 8, step: 0.5,  label: "H altura Z (m)" },
@@ -113,7 +121,7 @@ export const drillingDof: ExampleDef = {
       thicknesses.set(e, p.t);
       elasticities.set(e, p.E);
       poissons.set(e, p.nu);
-      densities.set(e, 24);
+      densities.set(e, 24 / 9.80665);
     }
     // viga de acople (frames): rectangular t (ancho) × bH (peralte), en cada segmento
     const b = p.t, h = p.bH;
@@ -125,7 +133,7 @@ export const drillingDof: ExampleDef = {
       torsionalConstants.set(e, b * h ** 3 / 12 + h * b ** 3 / 12);
       elasticities.set(e, p.E);
       shearModuli.set(e, G);
-      densities.set(e, 24);
+      densities.set(e, 24 / 9.80665);
       orientations.set(e, [0, 0, 1]);
       sectionShapes.set(e, { type: "rect", b, h, name: `VA-${Math.round(b*100)}x${Math.round(h*100)}` });
     }

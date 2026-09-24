@@ -12,7 +12,7 @@ Basado en [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) de Moham
 - **Modelado estructural 3D** -- porticos, shells y edificios completos con visor interactivo Three.js
 - **Analisis estatico** -- elastico lineal con vigas Timoshenko (ejes locales de CSI, `ang`, `as`, releases, brazos rigidos) y cascaras Q4
 - **Analisis modal** -- solver de eigenvalores (Eigen C++ SparseLU) para frecuencias naturales y modos
-- **Elementos Shell Q4** -- los de CSI: membrana ITW + burbuja con drilling (1e-13 % contra la celda 12x12 de ETABS), Shell-Thin = DKQ de Batoz-Tahar (0.000000 %), Shell-Thick extraido de `CsiGo2.dll` (1e-12 % en ~140 celdas medidas)
+- **Elementos Shell Q4** -- formulaciones publicadas: membrana ITW + proyeccion del drilling (1.42 % contra la celda 12x12 de ETABS reconstruida por flexibilidad), Shell-Thin = DKQ de Batoz-Tahar (0.000000 %), Shell-Thick = MITC4 + modos incompatibles de Wilson
 - **Deck / pisos membrana** -- `deck etabs [oneway]`: el pano se parte en los nudos de sus bordes y su peso/carga de area va a las vigas de borde por area tributaria, como ETABS (0.0000 %); sin la directiva se comporta como SAP2000 (1e-13 %)
 - **Generadores parametricos** -- edificios, pergolas, cerchas, muros de contencion, taludes y 20+ modelos
 - **Tutoriales interactivos FEM** -- 12 tutoriales paso a paso desde elementos barra hasta analisis modal
@@ -43,26 +43,23 @@ software; ETABS, SAP2000 y SAFE solo se usan para comprobarlo.
 | Deck en un sentido (`ONEWAYLOADDIST`, `ANG 90`) | `deck etabs oneway` | n/a ³ | **0.0010 %** | — |
 | Shell-Thin (DKQ) — 9 modos de la celda | `shelltype thin` | — | **0.000000 %** | — |
 | Shell-Thin — placa 8×8, 5 espesores | `shelltype thin` | — | **0.000 %** | — |
-| Shell-Thick (formulación de CSI) — K de ~140 celdas medidas | `shelltype thick` | **1e-12 %** | **1e-12 %** | — |
 | Edificio con muros de corte, 6 pisos, losa, muros en X / en X e Y (3333 / 3981 nudos) — misma malla por OAPI y por fichero | `comparar` 0 (SAP2000) / 1 (unión viga-muro de ETABS) · `diafragmaNudos` | **0.0000 %** todos los nudos; 6 períodos idénticos a 4 decimales | **0.0000 %** todos los nudos; 6 períodos ≤ 0.6 % con su masa lateral | — |
 | Exportador `.e2k`: el `DIAPH "D1"` sigue el mapa de diafragmas de Hekatan (antes iba en cada tramo de columna de 0.5 m y en toda la losa: 1.3–15.9 % más rígido en ETABS) | — | — | **0.0000 %** · 8 plantillas re-corridas: estático 0.000 %, modos 1–3 0.00 % | — |
 | Muelle de área (Winkler, ISSE) contra muelles nodales por área tributaria | `spring` | **0.0000 %** | **0.0000 %** | consistente (−1.9 %) |
 | Muelle de línea (viga de cimentación) contra muelles nodales por longitud tributaria | `spring` | **0.0000 %** | **0.0000 %** | — |
 | Muelles de giro en la base (ISSE de zapata, kθ), `.heks` `spring n rx/ry/rz k`, misma malla por OAPI | `spring` | **4e-13 %** | **2.5e-13 %** | — |
 | Fuerzas de cáscara joint a joint (`AreaForceShell` M11/M22/M12 en los 4 joints de cada cáscara, sin promediar) — Shell-Thin = DKQ en Gauss 2×2 extrapolado; 4 plantillas con losa, 3600–3760 joints cada una | `shelltype thin` | **0.0000 %** ⁶ | **0.0000 %** (centroide, joint y nudo) | — |
-| Fuerzas de MEMBRANA joint a joint (F11/F22/F12; ITW tipo 12: Allman proyectada en Gauss 2×2 sin la burbuja, extrapolada) — dual con muros, 3760 joints | `drillingTypes 12` | **0.0000 %** (`etabsjoint 0`) | **0.0000 %** | — |
+| Fuerzas de MEMBRANA joint a joint (F11/F22/F12; ITW tipo 8: Allman proyectada en Gauss 2×2 sin la burbuja, extrapolada) — dual con muros, 3760 joints | `drillingTypes 8` | — | **0.454 %** | — |
 | Automallado de ETABS (`FLOORMESHMAXSIZE 1250`) reproducido como `automesh <tam>` — losa 5×5 que llega como UN paño | `automesh 1.25` | — | misma malla (**25 nudos, 16 cáscaras**) y **1.1e-10 %** en los 25 nudos | — |
 | El exportador `.e2k` escribía `ADDRESTRAINT "Yes"`: al automallar, ETABS empotraba todos los nudos NUEVOS del borde | — | — | con `"Yes"` la losa salía **7× más rígida**; con `"No"` (lo que escribe ETABS) 0.00000 %. **Corregido** | — |
 | Brazos rígidos AUTOMÁTICOS de ETABS (RZ = 0: no rigidizan; la viga no pesa ni masa el tramo dentro de la columna, ½ lado por extremo) — 8 plantillas con los brazos de ETABS **sin anular** | `offsets` 1 (ETABS, defecto) / 0 (SAP2000) | — | masa **0.000 %** · estático **0.000 %** · modos 1–3 **0.00 %** · fuerzas **0.000 %** | — |
-| Sensibilidad al factor de la penalización (el 1000 del kernel, lo no publicado junto con la simetrización del cortante) | — | 10 → 100 000: w se mueve 0.07 %, M 0.16 %; de 1000 en adelante **< 0.001 %**: parámetro de estabilización, no calibración (`shell_thick_sensibilidad.mjs`). Se mantiene, con nombre y opcional, con MITC4/DKQ publicados como alternativa | | |
-| Validez del Shell-Thick SIN CSI: rango (3 modos rígidos en 5 geometrías), patch test de curvatura constante (MacNeal–Harder, cuadriláteros distorsionados), convergencia a Reissner–Mindlin exacto (apoyo duro, 32×32) | — | patch test **6.9e-11 %** (gruesa) / **6.6e-13 %** (DKQ) · w 0.12 % / M 0.29 % (t/L 0.1) · w 0.065 % / M 0.24 % (t/L 0.01), sin bloqueo — `validation/02-placas/SHELL_THICK_FUENTES_Y_VALIDEZ.md` | | |
 | Edge constraint con `OBJMESHTYPE "NONE"` (modelo de análisis leído por `PointElm`/`AreaElm`) | `deck etabs` | = Hekatan con el nudo suelto **0.000 %** | ETABS **malla el paño por el nudo igual** (14 nudos / 8 áreas de 3 objetos, una triangular): «NONE» no evita el cookie-cut; la «Hermite» de la mañana era el campo suave de esa malla | — |
 | Muelle de ÁREA de SAFE = nodal, no consistente (placa 4×4, t = 0.20, ks = 20000, P = 1000 al centro, 8×8) | `areaspring … nodal` / `areaspring` | — | — | nodal **≤ 1.1 %**; consistente 23 % en esquinas → el «−1.9 % = matriz consistente» del 20-ago no se sostiene |
 | Plantilla dual, empuje lateral (forma del 2.º modo), e2k arreglado | `etabsjoint 1` | — | **0.00 %** en las 4 plantas | — |
 | Edge constraint (nudo colgado en la arista de un paño) | `deck etabs` | n/a | por defecto ETABS **malla por el nudo** (ON = OFF); la restricción interpolada solo con `OBJMESHTYPE "NONE"` | — |
 | Shell-Thick — mezanine losa maciza, 1284 nudos | `shelltype thick` | **< 1e-6 %** | **< 1e-6 %** | — |
 | 6 tipos de losa (deck, membrana, thin, thick, nervada, waffle) | — | — | **< 3e-7 %** | — |
-| Membrana / drilling — celda 12×12, 9 geometrías | `drillingTypes 12` | — | **1e-13 %** | — |
+| Membrana / drilling — celda 12×12, 10 geometrías | `drillingTypes 8` | — | **1.42 %** | — |
 | Drilling — 2 muros + viga de acople, 92 nudos | — | **2.5e-12 %** | — | — |
 | Unión viga-muro — plantilla dual con muros, modos 1–3 | `etabsjoint 1` | — | **0.00–0.01 %** | — |
 | Diafragma rígido — 8 plantillas, masa · modos 1–3 | `diaph` | **0.0000 %** (mezanine) | **0.000 %** · **0.00–0.01 %** | — |

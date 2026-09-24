@@ -8,15 +8,11 @@ import { getTransformationMatrixBeam } from "./utils/getTransformationMatrixBeam
  * 🧱 VISTA EXTRUIDA — las barras con su sección real y las cáscaras con su
  * espesor, no líneas y planos.
  *
- * ## Cómo lo hace ETABS, leído del binario
+ * ## Cómo se hace
  *
- * `CSIOpenGL.dll` —el módulo que dibuja— trae `DTSweep`, `DTSweepContext`,
- * `AddHole`, `AddSteinerPoint`, `AddTriangle`: es **Poly2Tri**, una
- * triangulación de Delaunay con restricciones. O sea que ETABS **triangula el
- * polígono de la sección**, huecos incluidos, y barre esos triángulos a lo
- * largo de la barra. No tiene una malla por tipo de perfil: tiene el contorno.
- *
- * Aquí se hace igual, y encaja con el Section Designer, que ya devuelve
+ * Se **triangula el polígono de la sección**, huecos incluidos, y se barren
+ * esos triángulos a lo largo de la barra. No hay una malla por tipo de perfil:
+ * hay el contorno. Encaja con el Section Designer, que ya devuelve
  * contornos: `THREE.Shape` con sus `holes` + `ExtrudeGeometry` triangula
  * (earcut, el mismo problema resuelto igual) y extruye. Una forma nueva no
  * necesita nada: si sabe dar su contorno, se extruye.

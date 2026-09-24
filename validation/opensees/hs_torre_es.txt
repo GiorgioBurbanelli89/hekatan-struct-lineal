@@ -1,0 +1,6 @@
+Esta torre gira noventa grados de la base a la cima, como el Turning Torso de Malmö: ninguna columna es vertical.
+Ochocientos veinte nudos, mil ochenta barras y quinientas cuarenta cáscaras, y cada planta girada respecto a la de abajo.
+En el primer modo Hekatan Struct da cinco coma dos dos segundos, y OpenSees queda a menos de un uno por ciento.
+Pero con el elemento de cáscara clásico, los modos de torsión se iban nueve coma cuatro por ciento: la losa se agarrota trabajando a cortante en su plano.
+Con el elemento de Petracca y Camata, ese mismo modo cae a seis centésimas de por ciento.
+Aquí SAP dos mil todavía se queda a siete por ciento, y sin las losas coincide exacto: la diferencia está en su placa, y sigue abierta.

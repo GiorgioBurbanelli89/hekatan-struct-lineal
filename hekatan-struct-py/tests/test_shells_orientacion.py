@@ -29,21 +29,6 @@ RAIZ = AQUI.parents[1]
 E, NU, T = 25e6, 0.2, 0.20        # hormigon, losa de 20 cm
 
 
-import pytest as _pytest
-import hekatan_struct.elements.shell_q4_motor as _M
-
-
-@_pytest.fixture(autouse=True)
-def _placa_mitc4_como_el_cpp():
-    """Estos tests miden PARIDAD con el C++/WASM. Desde el 2-sep-2026 los dos
-    llevan la placa de CSI (`PLACA_THICK="csi"`, `getBendingK_CSI`). Si hay que
-    comparar contra un WASM viejo (MITC4), aqui se pone "mitc4"."""
-    old = _M.PLACA_THICK
-    _M.PLACA_THICK = "csi"
-    yield
-    _M.PLACA_THICK = old
-
-
 def _malla(nx, ny, Lx, Ly, punto):
     """Malla nx×ny de un rectangulo Lx×Ly, colocada por `punto(u, v)`."""
     nodes, idx = [], {}
@@ -220,9 +205,6 @@ def test_shell_q4_python_es_el_del_ts():
     """
     nodes, elements, caso, ni, ei, centro = _caso_losa()
     ts_uz = _oraculo(caso, "ts")["deformations"][str(centro)][2]
-    # `shellQ4.ts` sigue siendo MITC4 (no es el producto: manda el C++); este
-    # test es el del PORT del TS, asi que se mide con la misma placa.
-    _M.PLACA_THICK = "mitc4"
     py = _flecha_python(nodes, elements, ni, ei, centro, False)
     dif = abs(py - ts_uz) / abs(ts_uz)
     print("\n  losa 4x4 vs shellQ4.ts:   Python %.6e   TS %.6e   dif %.2e"

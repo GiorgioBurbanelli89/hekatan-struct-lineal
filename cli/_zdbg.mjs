@@ -1,0 +1,11 @@
+import { resolverHeks } from "../tests/lib/heks.mjs";
+globalThis.__hekatanFactoresPatron = { Dead: 1 };
+const ol = console.log; console.log = () => {};
+const H = await resolverHeks(process.argv[2]);
+console.log = ol;
+const D = H.deformOutputs.deformations;
+const ks = [...D.keys()];
+console.log("tipo", D.constructor.name, "tamaño", D.size, "min", Math.min(...ks), "max", Math.max(...ks));
+console.log("faltan:", [...Array(43).keys()].slice(1).filter((k) => !D.has(k)).join(",") || "ninguno");
+console.log("42 =", JSON.stringify(D.get(42)));
+console.log("41 =", JSON.stringify(D.get(41)));
