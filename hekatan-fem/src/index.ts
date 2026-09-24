@@ -69,3 +69,6 @@ export type {
 // Internal utils exposed for FEM inspection/debugging
 export { getLocalStiffnessMatrix } from "./utils/getLocalStiffnessMatrix";
 export { getTransformationMatrix } from "./utils/getTransformationMatrix";
+
+export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
+export type { KPano } from "./utils/shellElementK";

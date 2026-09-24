@@ -1,0 +1,43 @@
+# 1 vano x 1 vano (6 x 5 m, h = 3 m). Vigas de borde partidas en el centro.
+# Carga: 100 kN hacia abajo en el CENTRO de la viga del borde y = 0 (nudo 6).
+# Si las vigas transversales (las que van en Y) salen con torsion SIN losa,
+# la torsion no la trae la losa.
+node 1 0 0 0
+node 2 6 0 0
+node 3 0 5 0
+node 4 6 5 0
+node 5 0   0   3
+node 6 3   0   3
+node 7 6   0   3
+node 8 0   2.5 3
+node 9 3   2.5 3
+node 10 6  2.5 3
+node 11 0  5   3
+node 12 3  5   3
+node 13 6  5   3
+# columnas 0.40x0.40: A=0.16  I22=I33=2.1333e-3  J=3.6046e-3
+frame 1 1 5  2.2e7 0.16 2.1333e-3 2.1333e-3 3.6046e-3 0.2 2.4
+frame 2 2 7  2.2e7 0.16 2.1333e-3 2.1333e-3 3.6046e-3 0.2 2.4
+frame 3 3 11 2.2e7 0.16 2.1333e-3 2.1333e-3 3.6046e-3 0.2 2.4
+frame 4 4 13 2.2e7 0.16 2.1333e-3 2.1333e-3 3.6046e-3 0.2 2.4
+# vigas 0.25x0.50: A=0.125  I22=6.5104e-4  I33=2.6042e-3  J=1.8817e-3
+frame 5  5 6   2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 6  6 7   2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 7  11 12 2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 8  12 13 2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 9  5 8   2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 10 8 11  2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 11 7 10  2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+frame 12 10 13 2.2e7 0.125 6.5104e-4 2.6042e-3 1.8817e-3 0.2 2.4
+support 1 fixed
+support 2 fixed
+support 3 fixed
+support 4 fixed
+load 6 0 0 -100
+# la MISMA estructura con losa de 0.15 m, Shell-Thin (DKQ, Kirchhoff)
+shelltype thin
+shell 20 5 6 9 8   0.15 2.2e7 0 0
+shell 21 6 7 10 9  0.15 2.2e7 0 0
+shell 22 8 9 12 11 0.15 2.2e7 0 0
+shell 23 9 10 13 12 0.15 2.2e7 0 0
+solve

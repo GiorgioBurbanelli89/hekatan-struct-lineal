@@ -512,18 +512,21 @@ export function sections(
         concMesh.position.set(...mid);
         marca(concMesh);
         concMesh.rotation.setFromRotationMatrix(rotMatrix);
+        concMesh.userData.e = idx;
         group.add(concMesh);
         // Steel walls
         const steelMesh = new THREE.Mesh(cft.steelFillGeom, steelFill);
         steelMesh.position.set(...mid);
         marca(steelMesh);
         steelMesh.rotation.setFromRotationMatrix(rotMatrix);
+        steelMesh.userData.e = idx;
         group.add(steelMesh);
         // Outline
         const line = new THREE.Line(cft.outline, steelLine);
         line.position.set(...mid);
         marca(line);
         line.rotation.setFromRotationMatrix(rotMatrix);
+        line.userData.e = idx;
         group.add(line);
       } else {
         let geom: { fill: THREE.BufferGeometry; outline: THREE.BufferGeometry };
@@ -585,6 +588,7 @@ export function sections(
         meshObj.position.set(...mid);
         marca(meshObj);
         meshObj.rotation.setFromRotationMatrix(rotMatrix);
+        meshObj.userData.e = idx;
         group.add(meshObj);
 
         // Outline
@@ -592,6 +596,7 @@ export function sections(
         line.position.set(...mid);
         marca(line);
         line.rotation.setFromRotationMatrix(rotMatrix);
+        line.userData.e = idx;
         group.add(line);
       }
 
@@ -609,6 +614,26 @@ export function sections(
         labelsGroup.add(text);
       }
     });
+  });
+
+  // ── Seguir a los nudos ──
+  // El rebuild de arriba lee `derivedNodes.rawVal` (a propósito: rehacer 400+ mallas en cada fotograma
+  // de la animación del modo es caro), así que los glifos se quedaban donde estaba la barra al
+  // construirlos. Con la deformada o el modo animado quedaban perfiles naranjas FLOTANDO lejos de las
+  // barras (Jorge, 15-sep-2026: «quedan unos puntos amarillos»). Aquí solo se mueven y giran.
+  van.derive(() => {
+    const N = derivedNodes.val;
+    const elems = structure.elements?.rawVal;
+    if (!elems) return;
+    for (const o of group.children) {
+      const e = o.userData?.e;
+      if (e === undefined) continue;
+      const el = elems[e];
+      const a = el && N[el[0]], b = el && N[el[1]];
+      if (!a || !b) continue;
+      o.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+      o.rotation.setFromRotationMatrix(getTransformationMatrixBeam(a, b));
+    }
   });
 
   // on derivedDisplayScale change update label sizes

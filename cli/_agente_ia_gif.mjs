@@ -62,9 +62,15 @@ const clic = async (x, y) => {
 const centro = (sel) => p.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }, sel);
 
 await foto(6);
-// 1. clic en el botón 🤖
-let [x, y] = await centro("#hk-agente-lanzador");
+// 1. desde la PORTADA (menú principal): «🤖 Agente IA — pídele el modelo»; si la página ya
+//    está en un modelo, el botón redondo 🤖 del lienzo.
+let [x, y] = await p.evaluate(() => {
+  const b = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Agente IA — pídele"))
+    ?? document.getElementById("hk-agente-lanzador");
+  const r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2];
+});
 await raton(x, y); await clic(x, y);
+await espera(1500); await foto(6);
 // 2. clic en la caja de texto y escribir
 [x, y] = await centro("#hk-agente-ia textarea");
 await raton(x, y); await clic(x, y);

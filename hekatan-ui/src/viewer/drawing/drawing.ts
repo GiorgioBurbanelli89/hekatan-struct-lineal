@@ -853,14 +853,24 @@ export function drawing({
   // a la polilínea. Necesita rubberStart (último punto) para los modos rel.
   const resolveParsedInput = (p: ParsedInput): [number, number, number] | null => {
     if (!p) return null;
-    if (p.kind === "absCart") return [p.x, p.y, p.z];
+    // ── EL ORIGEN LOCAL (SCU) ────────────────────────────────────────────────
+    // Jorge (16-sep-2026, con el dibujo de los dos trípodes): «cuando hacía un
+    // vector había una posición donde dentro había otra coordenada; es lo que
+    // quiero para dibujar en 3D».
+    //
+    // Es el SCU de AutoCAD: pones el origen en un punto del modelo y a partir de
+    // ahí «0,0,0» es ESE punto. Sin esto, para dibujar un pórtico que arranca en
+    // (12, 7, 3.2) hay que sumar a mano en cada coordenada, que es justo lo que
+    // vuelve impracticable teclear en 3D.
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    if (p.kind === "absCart") return [O[0] + p.x, O[1] + p.y, O[2] + p.z];
     if (p.kind === "relCart") {
       if (!rubberStart) return null;
       return [rubberStart[0] + p.dx, rubberStart[1] + p.dy, rubberStart[2] + p.dz];
     }
     if (p.kind === "absPolar") {
       const a = p.ang * Math.PI / 180;
-      return [p.L * Math.cos(a), p.L * Math.sin(a), 0];
+      return [O[0] + p.L * Math.cos(a), O[1] + p.L * Math.sin(a), O[2]];
     }
     if (p.kind === "relPolar") {
       if (!rubberStart) return null;
@@ -881,23 +891,34 @@ export function drawing({
     return null;  // length → manejado aparte por commitTypedDistance
   };
   // Commit un punto absoluto (x,y,z) — equivalente a un click en esa coord.
+  //
+  // ⚠️ Antes esto empujaba el punto DIRECTO a `drawingObj.points/polylines`, que
+  // es el camino de la Línea y la Polilínea y de nadie más. O sea que teclear
+  // una coordenada con el Arco, el Círculo, la Parábola, la Cúbica, el
+  // Rectángulo, el Muro o la Columna activos NO le llegaba a la herramienta:
+  // el punto caía suelto en la polilínea y la herramienta seguía esperando su
+  // primer clic para siempre. Medido en el DEPLOY PÚBLICO el 17-sep-2026 con
+  // el Arco y «0,0,6.5 / 10,0,9.5 / 20,0,6.5»: 1 nudo suelto, 0 barras, y el
+  // pie repitiendo «ARCO Precise punto inicial». Por eso no se podía dibujar
+  // una cercha curva tecleando cotas.
+  //
+  // Ahora va por `procesarClic`, que es EL MISMO reparto por herramienta que
+  // usa el ratón (y el que ya usaba `__hekatanTypeCoord`, la caja de comandos
+  // de abajo): un punto tecleado es un clic en esa coordenada, ni más ni menos.
+  // De regalo reusa el nudo que ya exista a ≤ 1 mm en vez de crear otro encima.
   const commitAbsolutePoint = (pt: [number, number, number]) => {
-    if (!drawingObj.polylines) return;
-    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
-    drawingObj.points.val = [...drawingObj.points.rawVal, pt];
-    const polys = drawingObj.polylines.rawVal;
-    const last = polys.length ? polys[polys.length - 1] : [];
-    drawingObj.polylines.val = [
-      ...polys.slice(0, -1),
-      [...last, drawingObj.points.rawVal.length - 1],
-    ];
+    procesarClic(new THREE.Vector3(pt[0], pt[1], pt[2]), null);
     // El punto tecleado pasa a ser el origen del siguiente relativo: sin esto
     // «0,0,3» + «@6,0,0» por la caja de comandos daba «desconocido», porque
     // rubberStart solo lo fijaba el ratón (updateRubberLabel) y con el
     // teclado nunca llegaba a existir. Medido el 8-sep-2026 capturando el
     // vídeo 2 de School: 3 coordenadas → 1 nudo y 0 tramos.
     rubberStart = pt;
-    rubberLabelInput.blur();
+    // NO se hace blur: una herramienta de varios puntos (Arco 3, Cúbica 4)
+    // se teclea de corrido, y con el foco perdido el segundo punto se iba al
+    // vacío. Se deja el campo vivo y seleccionado para el punto siguiente.
+    rubberUserEditing = false;
+    try { rubberLabelInput.select(); } catch {}
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
@@ -1094,7 +1115,14 @@ export function drawing({
     let base: [number, number, number] | null = null;
     let hitFaceVerts: [number, number, number][] | null = null;
     const hits = raycaster.intersectObjects(scene.children, true)
-      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && h.object !== fillPreview && (h.object as any).visible !== false);
+      // ⚠️ Los HANDLES del reshaper también son mallas, y siguen al cursor: el rayo
+      // chocaba con el propio handle y el punto de mundo salía de su superficie.
+      // Como el handle se mueve con lo que devuelve esta función, se realimentaba y
+      // el nudo salía disparado (medido: soltando en x = 9 acababa en x = 13.1).
+      // Van fuera del rayo, igual que el marcador de snap y la vista previa.
+      .filter((h) => (h.object as any).isMesh && h.object !== snapMarker && h.object !== fillPreview
+        && (h.object.parent as any)?.name !== "hekatan-reshape-grips"
+        && (h.object as any).visible !== false);
     if (hits.length) {
       const h = hits[0]; const p = h.point; base = [p.x, p.y, p.z];
       // Vértices de la CARA impactada (para OSNAP a esquina de la malla IFC).
@@ -1117,7 +1145,16 @@ export function drawing({
     let best = base, bestD = TOL;
     const consid = (w: [number, number, number]) => { const q = px(w); const d = Math.hypot(q[0]-cur[0], q[1]-cur[1]); if (d < bestD) { bestD = d; best = w; } };
     for (const w of (hitFaceVerts ?? [])) consid(w);
-    for (const n of drawingObj.points.rawVal) consid(n as [number, number, number]);
+    // ⚠️ El punto que se está REMODELANDO no entra en el OSNAP. Si entra, se
+    // engancha a sí mismo: acabas de dejarlo bajo el cursor, así que es el más
+    // cercano, y el arrastre deja de avanzar. Medido: llevando el ratón de x = 6
+    // a x = 9, el nudo se quedaba en 6.75 por más que se insistiera.
+    const ptEnReshape = (window as any).__hekatanReshapeIgnorarPt;
+    const ptsOsnap = drawingObj.points.rawVal;
+    for (let i = 0; i < ptsOsnap.length; i++) {
+      if (i === ptEnReshape) continue;
+      consid(ptsOsnap[i] as [number, number, number]);
+    }
     return best;
   };
   const actualizarLabelMedida = () => {
@@ -1479,6 +1516,8 @@ export function drawing({
   // columnas verticales (Lock Z), vigas horizontales (Lock X o Y) en iso.
   // Esc o repetir la misma tecla libera el lock.
   let axisLock: "x" | "y" | "z" | null = null;
+  // El rótulo de lo que enganchó el ORTO/POLAR: «X», «Z» o «30° XZ».
+  let _polarRotulo: string | null = null;
   (window as any).__hekatanAxisLock = () => axisLock;  // getter para debug
   // Punto enganchado por el SNAP A EJES 3D (pointermove). El click lo usa para
   // que el commit coincida con lo que se ve (evita el "2 cursores"). null = sin
@@ -2249,6 +2288,230 @@ export function drawing({
       drawingObj.polylines.val = [...polys.slice(0, -1), arcPoly, []];
     }
   };
+  /**
+   * La última polilínea con al menos dos puntos (la vacía es la marca de
+   * «trazo terminado», no un objeto). Es sobre lo que actúan DIVIDIR y DESFASAR
+   * cuando no hay nada designado, igual que el «ÚLTIMO» de AutoCAD.
+   */
+  const ultimaPolilinea = (): { i: number; pl: number[] } | null => {
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    for (let i = polys.length - 1; i >= 0; i--)
+      if (polys[i] && polys[i].length >= 2) return { i, pl: polys[i] };
+    return null;
+  };
+
+  // ── DIVIDIR: el DIVIDE de AutoCAD, partiendo la barra ────────────────────
+  //
+  // En AutoCAD DIVIDE siembra puntos a lo largo del objeto; aquí lo que hace
+  // falta es que la BARRA quede partida, que es lo que ve el cálculo. Parte cada
+  // tramo de la polilínea en `n` trozos iguales.
+  //
+  // Sin esto, un arco trazado con pocos tramos había que volver a dibujarlo
+  // entero para refinarlo, y para colgarle montantes en medio no había dónde
+  // engancharlos: no existían los nudos.
+  (window as any).__hekatanDividir = (n: number) => {
+    const N = Math.round(n);
+    if (!(N >= 2)) return { ok: false, msg: "el número de partes va de 2 en adelante" };
+    const u = ultimaPolilinea();
+    if (!u) return { ok: false, msg: "no hay ninguna polilínea que dividir" };
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...drawingObj.points.rawVal] as [number, number, number][];
+    const nueva: number[] = [u.pl[0]];
+    let largoTotal = 0;
+    for (let k = 0; k + 1 < u.pl.length; k++) {
+      const A = pts[u.pl[k]], B = pts[u.pl[k + 1]];
+      largoTotal += Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]);
+      for (let j = 1; j < N; j++) {
+        const t = j / N;
+        pts.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t]);
+        nueva.push(pts.length - 1);
+      }
+      nueva.push(u.pl[k + 1]);
+    }
+    const polys = [...(drawingObj.polylines!.rawVal as number[][])];
+    polys[u.i] = nueva;
+    drawingObj.points.val = pts;
+    drawingObj.polylines!.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { ok: true, tramosAntes: u.pl.length - 1, tramosAhora: nueva.length - 1,
+             nudosNuevos: nueva.length - u.pl.length,
+             largo: +largoTotal.toFixed(4),
+             tramoMedio: +(largoTotal / (nueva.length - 1)).toFixed(4) };
+  };
+
+  // ── DESFASAR una curva: el OFFSET de AutoCAD, que sí desfasa arcos ────────
+  //
+  // El Desfase de aquí movía tramos rectos; una polilínea curva no se podía
+  // desfasar, y es justo lo que hace falta para el segundo cordón de una cercha
+  // o el intradós de una bóveda.
+  //
+  // Cada vértice se mueve por la BISECTRIZ de sus dos tramos, y el paso es
+  // d / cos(α/2) —no d— para que la distancia perpendicular salga constante:
+  // es lo que hace el OFFSET de una polilínea. En los extremos, perpendicular
+  // al único tramo que hay.
+  (window as any).__hekatanDesfasarCurva = (d: number) => {
+    if (!isFinite(d) || Math.abs(d) < 1e-9) return { ok: false, msg: "la distancia no puede ser cero" };
+    const u = ultimaPolilinea();
+    if (!u) return { ok: false, msg: "no hay ninguna polilínea que desfasar" };
+    const P = drawingObj.points.rawVal as [number, number, number][];
+    const V = u.pl.map((i) => new THREE.Vector3(...P[i]));
+    // La normal del plano de trabajo: el desfase se queda EN el plano dibujado.
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const nrm = new THREE.Vector3(...(wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1]));
+    const perp = (a: THREE.Vector3, b: THREE.Vector3) => {
+      const t = new THREE.Vector3().subVectors(b, a);
+      const p = new THREE.Vector3().crossVectors(nrm, t);
+      return p.lengthSq() < 1e-18 ? null : p.normalize();
+    };
+    const desp: (THREE.Vector3 | null)[] = V.map((_, k) => {
+      const pa = k > 0 ? perp(V[k - 1], V[k]) : null;
+      const pb = k + 1 < V.length ? perp(V[k], V[k + 1]) : null;
+      if (pa && pb) {
+        const bis = pa.clone().add(pb);
+        if (bis.lengthSq() < 1e-12) return pa;              // tramos opuestos
+        bis.normalize();
+        const cos = bis.dot(pa);                            // = cos(α/2)
+        return bis.multiplyScalar(Math.abs(cos) < 1e-6 ? 1 : 1 / cos);
+      }
+      return pa ?? pb;
+    });
+    if (desp.some((q) => q === null))
+      return { ok: false, msg: "la curva es perpendicular al plano de trabajo; cambie de plano" };
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...P];
+    const nueva: number[] = [];
+    V.forEach((v, k) => {
+      const q = v.clone().addScaledVector(desp[k]!, d);
+      pts.push([q.x, q.y, q.z]); nueva.push(pts.length - 1);
+    });
+    const polys = [...(drawingObj.polylines!.rawVal as number[][])];
+    if (polys.length && polys[polys.length - 1].length === 0) polys.pop();
+    polys.push(nueva, []);
+    drawingObj.points.val = pts;
+    drawingObj.polylines!.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    // Comprobación honesta: la distancia REAL de cada vértice nuevo a su tramo
+    // original. Si el desfase está bien, todas valen |d|.
+    let dmin = Infinity, dmax = -Infinity;
+    for (let k = 0; k + 1 < V.length; k++) {
+      const A = V[k], B = V[k + 1], p = perp(A, B)!;
+      const Q = new THREE.Vector3(...pts[nueva[k]]);
+      const e = Math.abs(new THREE.Vector3().subVectors(Q, A).dot(p));
+      dmin = Math.min(dmin, e); dmax = Math.max(dmax, e);
+    }
+    return { ok: true, vertices: nueva.length, distancia: +d.toFixed(4),
+             separacionMin: +dmin.toFixed(5), separacionMax: +dmax.toFixed(5) };
+  };
+
+  // ── CERCHA CURVA, de una orden ──────────────────────────────────────────
+  //
+  // Dibujar una cercha curva a mano es inviable: la que se trazó en el deploy el
+  // 17-sep-2026 costó 31 coordenadas tecleadas —11 del cordón de arriba, 11 del de
+  // abajo y 9 montantes—, y todas salieron de calcular la parábola FUERA del
+  // programa. Eso no es dibujar acotado. Aquí la cercha se da como viene en un
+  // plano de taller: luz, flecha, canto, número de paños y tipo de celosía.
+  //
+  // Los dos cordones son CONCÉNTRICOS (R y R − canto) y se parten con los MISMOS
+  // ángulos, así el canto es constante y medido perpendicular al arco, que es como
+  // se fabrica. Los montantes salen entonces radiales, no verticales.
+  //
+  //     R = (L²/4 + f²) / (2f)      θ = 2·asen((L/2)/R)      centro a R − f del arranque
+  //
+  // Devuelve las medidas para poder ACOTARLAS: no se dibuja nada cuyas cotas no se
+  // puedan leer después.
+  (window as any).__hekatanDrawCercha = (o: {
+    luz: number; flecha: number; canto: number; panos: number;
+    tipo?: "montantes" | "warren" | "howe";
+    x0?: number; y0?: number; base?: number; copias?: number; sep?: number; correas?: boolean;
+  }) => {
+    const L = o.luz, f = o.flecha, h = o.canto;
+    const n = Math.max(2, Math.round(o.panos));
+    const tipo = o.tipo ?? "montantes";
+    const x0 = o.x0 ?? 0, y0 = o.y0 ?? 0, base = o.base ?? 0;
+    const copias = Math.max(1, Math.round(o.copias ?? 1)), sep = o.sep ?? 0;
+    if (!(L > 0) || !(f > 0) || !(h > 0)) return { ok: false, msg: "luz, flecha y canto tienen que ser positivos" };
+    const R = (L * L / 4 + f * f) / (2 * f);
+    if (h >= R) return { ok: false, msg: `el canto (${h} m) no puede llegar al radio (${R.toFixed(3)} m)` };
+    const th = 2 * Math.asin(Math.min(1, (L / 2) / R));          // ángulo abarcado
+    const zc = base - (R - f);                                    // centro del arco
+    const a0 = Math.atan2(base - zc, x0 - (x0 + L / 2));          // ángulo del arranque izquierdo
+    const a1 = Math.atan2(base - zc, x0 + L - (x0 + L / 2));      // …y del derecho
+    const xc = x0 + L / 2;
+    const enArco = (ang: number, r: number, y: number): [number, number, number] =>
+      [xc + r * Math.cos(ang), y, zc + r * Math.sin(ang)];
+
+    if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
+    const pts = [...drawingObj.points.rawVal] as [number, number, number][];
+    const polys = [...(drawingObj.polylines?.rawVal ?? [])] as number[][];
+    if (polys.length && polys[polys.length - 1].length === 0) polys.pop();
+    const meter = (p: [number, number, number]) => { pts.push(p); return pts.length - 1; };
+    const barra = (a: number, b: number) => { polys.push([a, b]); };
+
+    const supPorCercha: number[][] = [];
+    let nDiag = 0, nMont = 0;
+    for (let c = 0; c < copias; c++) {
+      const y = y0 + c * sep;
+      const sup: number[] = [], inf: number[] = [];
+      for (let i = 0; i <= n; i++) {
+        const ang = a0 + (a1 - a0) * (i / n);
+        sup.push(meter(enArco(ang, R, y)));
+        inf.push(meter(enArco(ang, R - h, y)));
+      }
+      supPorCercha.push(sup);
+      polys.push([...sup]);            // cordón superior, de una polilínea
+      polys.push([...inf]);            // cordón inferior
+      // Celosía. Los extremos SIEMPRE llevan su montante: es el cierre de la cercha.
+      barra(sup[0], inf[0]); barra(sup[n], inf[n]); nMont += 2;
+      for (let i = 1; i < n; i++) {
+        if (tipo === "montantes" || tipo === "howe") { barra(sup[i], inf[i]); nMont++; }
+        if (tipo === "warren") {                       // zigzag sin montantes intermedios
+          if (i % 2 === 1) { barra(inf[i - 1], sup[i]); barra(sup[i], inf[i + 1]); nDiag += 2; }
+        } else if (tipo === "howe") {                  // diagonales hacia la clave
+          const haciaClave = i < n / 2 ? 1 : -1;
+          barra(inf[i], sup[i + haciaClave]); nDiag++;
+        }
+      }
+    }
+    // Correas: atan los cordones superiores de cerchas consecutivas (la cercha
+    // suelta es un mecanismo fuera de su plano; esto la hace espacial de verdad).
+    if (o.correas && copias > 1) {
+      for (let c = 0; c + 1 < copias; c++)
+        for (let i = 0; i <= n; i++) barra(supPorCercha[c][i], supPorCercha[c + 1][i]);
+    }
+    polys.push([]);                    // marca de «trazo terminado»
+    drawingObj.points.val = pts;
+    if (drawingObj.polylines) drawingObj.polylines.val = polys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+
+    // ── Las cotas, para poder acotar lo dibujado ──
+    const P = (i: number, r: number) => enArco(a0 + (a1 - a0) * (i / n), r, 0);
+    const dist = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+    const lSup: number[] = [], lInf: number[] = [], angDiag: number[] = [];
+    for (let i = 0; i < n; i++) {
+      lSup.push(dist(P(i, R), P(i + 1, R)));
+      lInf.push(dist(P(i, R - h), P(i + 1, R - h)));
+      const d = [P(i + 1, R)[0] - P(i, R - h)[0], 0, P(i + 1, R)[2] - P(i, R - h)[2]];
+      angDiag.push(Math.atan2(d[2], d[0]) * 180 / Math.PI);
+    }
+    const r3 = (v: number) => +v.toFixed(3);
+    return {
+      ok: true,
+      luz: r3(L), flecha: r3(f), canto: r3(h), radio: r3(R),
+      anguloAbarcado: r3(th * 180 / Math.PI),
+      clave: r3(base + f), centro: [r3(xc), r3(y0), r3(zc)],
+      panos: n, tipo, cerchas: copias, separacion: r3(sep),
+      desarrolloSup: r3(R * th), desarrolloInf: r3((R - h) * th),
+      tramoSupMin: r3(Math.min(...lSup)), tramoSupMax: r3(Math.max(...lSup)),
+      tramoInfMin: r3(Math.min(...lInf)), tramoInfMax: r3(Math.max(...lInf)),
+      anguloDiagMin: r3(Math.min(...angDiag)), anguloDiagMax: r3(Math.max(...angDiag)),
+      montantes: nMont, diagonales: nDiag,
+      nudosNuevos: 2 * (n + 1) * copias,
+    };
+  };
+
   // ── Curva POLINÓMICA por k puntos (parábola: 3, cúbica: 4) ──
   // Desafío 2D de Jorge (13-sep-2026): «un círculo, un arco, una parábola, una
   // parábola de 3er grado, todo con el mouse». Los k puntos van en el plano de
@@ -3304,7 +3567,9 @@ export function drawing({
         // Toggle global: si __hekatanSnapEnabled es false, NO snap a grid.
         // El cursor queda en la coordenada raw del raycaster.
         const snapEnabled = !sinEnganche && (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0.5;
+        // El paso del enganche = la separación de la rejilla que se VE (AutoCAD: la rejilla sigue
+        // al snap). Con «Paso cursor» 0.5 y rejilla de 1 m el punto caía entre líneas.
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0.5);
         if (snapEnabled && snap > 0) {
           p.x = Math.round(p.x / snap) * snap;
           p.y = Math.round(p.y / snap) * snap;
@@ -3544,25 +3809,104 @@ export function drawing({
         // ── ORTO mode (F8) ── auto-detecta el eje dominante si está activo.
         const orthoOn = !!(window as any).__hekatanOrthoMode;
         if (!effectiveLock && !enganchadoAObjeto && orthoOn) {
-          const dx = Math.abs(p.x - lastPt[0]);
-          const dy = Math.abs(p.y - lastPt[1]);
-          const dz = Math.abs(p.z - lastPt[2]);
-          // Detectar plano hover desde la intersección actual (igual que
-          // refPlaneBadge calcula más abajo). El plano hover restringe ORTO
-          // a solo los 2 ejes del plano.
-          const hoveredObj = hit[0]?.object;
-          let hoveredPlane: "xy" | "xz" | "yz" | null = null;
-          if (hoveredObj === refFillXY) hoveredPlane = "xy";
-          else if (hoveredObj === refFillXZ) hoveredPlane = "xz";
-          else if (hoveredObj === refFillYZ) hoveredPlane = "yz";
-          if (hoveredPlane === "xy") {
-            effectiveLock = dx >= dy ? "x" : "y";
-          } else if (hoveredPlane === "xz") {
-            effectiveLock = dx >= dz ? "x" : "z";
-          } else if (hoveredPlane === "yz") {
-            effectiveLock = dy >= dz ? "y" : "z";
-          } else {
-            effectiveLock = dx >= dy && dx >= dz ? "x" : (dy >= dz ? "y" : "z");
+          // ── ORTO EN 3D: el eje se elige POR LA PANTALLA ────────────────────
+          //
+          // ⚠️ Antes se comparaban dx, dy y dz del punto, y ese punto sale del
+          // rayo contra el PLANO DE TRABAJO: con el plano XY, dz vale siempre 0
+          // y el eje Z no podía ganar NUNCA. Medido en el deploy el 17-sep-2026
+          // en isométrica: arrastrando el ratón hacia arriba enganchaba «⊥ ORTO
+          // Y». O sea que con el ratón no se podía subir en vertical sin
+          // cambiar de plano de trabajo. Jorge: «quiero ver si se puede dibujar
+          // en 3D sin usar planos de referencia, los siguientes serían ortho F8».
+          //
+          // Ahora se mira hacia dónde va el ratón EN PÍXELES y se compara con
+          // los tres ejes del mundo proyectados a pantalla desde el último
+          // punto: gana aquel cuya dirección en pantalla se parece más. Luego
+          // el punto se calcula sobre la recta 3D de ese eje, por el punto más
+          // cercano al rayo de la cámara — la misma cuenta que ya usa el
+          // enganche a ejes de aquí arriba. Así el ORTO da X, Y **y Z** en
+          // cualquier vista, que es lo que hace AutoCAD en isométrica.
+          const rectO = rendererElm.getBoundingClientRect();
+          const P0o = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
+          const aPantalla = (v: THREE.Vector3) => {
+            const c = v.clone().project(_camForRay);
+            return { x: (c.x * 0.5 + 0.5) * rectO.width + rectO.left,
+                     y: (-c.y * 0.5 + 0.5) * rectO.height + rectO.top };
+          };
+          const oS = aPantalla(P0o);
+          const mvx = event.clientX - oS.x, mvy = event.clientY - oS.y;
+          const largo = Math.hypot(mvx, mvy);
+          const ejes3D: Array<["x" | "y" | "z", THREE.Vector3]> = [
+            ["x", new THREE.Vector3(1, 0, 0)],
+            ["y", new THREE.Vector3(0, 1, 0)],
+            ["z", new THREE.Vector3(0, 0, 1)],
+          ];
+          // Un eje casi paralelo a la vista sale como un punto en pantalla y no
+          // se puede distinguir: se descarta en vez de dar un enganche falso.
+          const esc = Math.max(1, (settings.gridSize?.rawVal ?? 10)) * 0.5;
+          // ── ORTO + ÁNGULO ────────────────────────────────────────────────
+          //
+          // Con un incremento puesto (`__hekatanPolarInc`, p. ej. 15, 30 o 45)
+          // las direcciones candidatas ya no son solo los tres ejes: son cada
+          // α grados DENTRO de cada plano coordenado que pasa por el último
+          // punto — XY, XZ e YZ. Así se traza una diagonal a 30° en el alzado,
+          // que es lo que pide una cercha, sin salir del 3D y sin plano de
+          // trabajo. Los ejes son el caso α = 90°, así que el ORTO de siempre
+          // sigue estando: es esta misma lista con el incremento a 90.
+          //
+          // El panel ya ofrecía «POLAR (45°)» pero nadie leía ese valor: el
+          // rastreo solo enganchaba a los ejes, con ±6°. Ahora lo lee.
+          const incPolar = Number((window as any).__hekatanPolarInc) || 0;
+          type Cand = { rotulo: string; u: THREE.Vector3 };
+          const candidatas: Cand[] = ejes3D.map(([n, u]) => ({ rotulo: n.toUpperCase(), u }));
+          if (incPolar > 0 && incPolar < 90) {
+            const planos: Array<[string, THREE.Vector3, THREE.Vector3]> = [
+              ["XY", new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)],
+              ["XZ", new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)],
+              ["YZ", new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)],
+            ];
+            for (const [nom, u1, u2] of planos) {
+              for (let g = incPolar; g < 360; g += incPolar) {
+                if (g % 90 === 0) continue;               // eso ya es un eje
+                const t2 = g * Math.PI / 180;
+                candidatas.push({
+                  rotulo: `${g}° ${nom}`,
+                  u: u1.clone().multiplyScalar(Math.cos(t2))
+                       .addScaledVector(u2, Math.sin(t2)).normalize(),
+                });
+              }
+            }
+          }
+          if (largo > 4) {
+            let mejor: { axis: "x" | "y" | "z"; rotulo: string; cos: number; u: THREE.Vector3 } | null = null;
+            for (const c of candidatas) {
+              const u = c.u;
+              const eS = aPantalla(P0o.clone().addScaledVector(u, esc));
+              const ex = eS.x - oS.x, ey = eS.y - oS.y;
+              const le = Math.hypot(ex, ey);
+              if (le < 6) continue;                       // dirección de punta a la cámara
+              const cos = Math.abs((mvx * ex + mvy * ey) / (largo * le));
+              // El eje al que se «bloquea» es el dominante de esa dirección: lo
+              // usa la entrada de distancia por teclado para saber el signo.
+              const ax = Math.abs(u.x) >= Math.abs(u.y) && Math.abs(u.x) >= Math.abs(u.z)
+                ? "x" : (Math.abs(u.y) >= Math.abs(u.z) ? "y" : "z");
+              if (!mejor || cos > mejor.cos) mejor = { axis: ax as "x"|"y"|"z", rotulo: c.rotulo, cos, u };
+            }
+            if (mejor) {
+              effectiveLock = mejor.axis;
+              _polarRotulo = mejor.rotulo;
+              // Punto de la recta 3D más cercano al rayo de la cámara.
+              const ray = raycaster.ray;
+              const w0 = P0o.clone().sub(ray.origin);
+              const b = mejor.u.dot(ray.direction), d_ = mejor.u.dot(w0), e2 = ray.direction.dot(w0);
+              const den = 1 - b * b;
+              const s = Math.abs(den) < 1e-6 ? -d_ : (b * e2 - d_) / den;
+              const q = P0o.clone().addScaledVector(mejor.u, s);
+              if (isFinite(q.x) && isFinite(q.y) && isFinite(q.z)) {
+                p.copy(q);
+                _axisSnapPoint = q.clone();               // el clic confirma AQUÍ
+              }
+            }
           }
         }
         // ── POLAR TRACKING automático (estilo AutoCAD) ──
@@ -3856,36 +4200,8 @@ export function drawing({
     // de lo dibujado, el 0 siempre) y la del plano de trabajo se queda como está,
     // brillante. Es lo que enseñan ETABS y Revit: los planos de planta puestos, y
     // resaltado aquel en el que estás dibujando.
-    {
-      const wz = drawingObj.gridTarget.val.position[2];
-      const enPlanta = Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3;  // rotX = π/2
-      for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
-      sueloGrids.length = 0;
-      if (enPlanta) {
-        const P = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
-        const cotas = new Set<number>([0]);
-        for (const p of P) cotas.add(+p[2].toFixed(3));
-        for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
-          if (isFinite(l?.z)) cotas.add(+l.z.toFixed(3));
-        const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
-        for (const z of lista) {
-          if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
-          const copia = gridObj.clone(true);
-          copia.name = `hekatan-grid-nivel-${z}`;
-          copia.traverse((o: any) => {
-            if (!o.material) return;
-            o.material = o.material.clone();
-            o.material.transparent = true;
-            // el suelo (0) se ve algo más que los pisos intermedios: es la base
-            o.material.opacity = (o.material.opacity ?? 1) * (Math.abs(z) < 1e-6 ? 0.5 : 0.22);
-          });
-          copia.position.set(0, 0, z);
-          copia.quaternion.copy(qPreGeo);                  // tumbada, sin el giro del plano
-          scene.add(copia);
-          sueloGrids.push(copia);
-        }
-      }
-    }
+    redibujarGrillasNivel(drawingObj.gridTarget.val.position[2],
+                          Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3, qPreGeo);
 
     plane.position.set(...drawingObj.gridTarget.val.position);
     plane.quaternion.setFromEuler(
@@ -3900,6 +4216,338 @@ export function drawing({
     );
     inclinedPlaneActive = !(Math.abs(nrm.x) > 0.999 || Math.abs(nrm.y) > 0.999 || Math.abs(nrm.z) > 0.999);
   });
+
+  // Las copias de rejilla por cota, aparte: las llama el derive de arriba y
+  // también quien AÑADE una grilla auxiliar (`__hekatanRefrescarGrillas`), que
+  // no cambia el plano de trabajo y por tanto no dispara aquel derive.
+  function redibujarGrillasNivel(wz: number, enPlanta: boolean, qPreGeo: THREE.Quaternion) {
+    {
+      for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
+      sueloGrids.length = 0;
+      if (enPlanta) {
+        const P = (drawingObj.points?.rawVal ?? []) as [number, number, number][];
+        const cotas = new Set<number>([0]);
+        for (const p of P) cotas.add(+p[2].toFixed(3));
+        // Las que PUSO el usuario se marcan aparte: una grilla que has pedido a mano
+        // tiene que verse (es donde vas a dibujar), y las que salen solas de las cotas
+        // del modelo son solo contexto.
+        const pedidas = new Set<number>();
+        for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
+          if (isFinite(l?.z)) { cotas.add(+l.z.toFixed(3)); pedidas.add(+l.z.toFixed(3)); }
+        const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
+        for (const z of lista) {
+          if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
+          const copia = gridObj.clone(true);
+          copia.name = `hekatan-grid-nivel-${z}`;
+          copia.traverse((o: any) => {
+            if (!o.material) return;
+            o.material = o.material.clone();
+            o.material.transparent = true;
+            // el suelo (0) se ve algo más que los pisos intermedios: es la base.
+            // Una grilla auxiliar PEDIDA a mano se ve casi como la de trabajo.
+            o.material.opacity = (o.material.opacity ?? 1) *
+              (pedidas.has(z) ? 0.65 : Math.abs(z) < 1e-6 ? 0.5 : 0.22);
+          });
+          copia.position.set(0, 0, z);
+          // ⚠️ IDENTIDAD, no la pre-rotación. La geometría de la rejilla ya viene con sus
+          // líneas en X-Y: con giro cero está TUMBADA y con rotX(π/2) se pone DE PIE.
+          // Aquí se le aplicaba `qPreGeo` (π/2) «para dejarla tumbada» —el comentario
+          // decía una cosa y el código hacía la contraria—, así que todas las grillas
+          // auxiliares salían VERTICALES. Medido: normal (0,−1,0) en las dos copias.
+          copia.quaternion.identity();
+          scene.add(copia);
+          sueloGrids.push(copia);
+        }
+      }
+    }
+    // ── Y LOS PLANOS AUXILIARES VERTICALES (alzados a una distancia) ────────
+    {
+      const aux = ((window as any).__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+      const wpAhora = (window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy";
+      const dAhora = (window as any).__hekatanCadState?.get?.()
+        ?.[wpAhora === "xz" ? "workY" : wpAhora === "yz" ? "workX" : "workZ"] ?? 0;
+      for (const g of aux.slice(0, 24)) {
+        if (g.plano === "xy" || !isFinite(g.d)) continue;            // las de planta van arriba
+        if (g.plano === wpAhora && Math.abs(g.d - dAhora) < 1e-6) continue;  // esa es la de trabajo
+        const copia = gridObj.clone(true);
+        copia.name = `hekatan-grid-${g.plano}-${g.d}`;
+        copia.traverse((o: any) => {
+          if (!o.material) return;
+          o.material = o.material.clone();
+          o.material.transparent = true;
+          o.material.opacity = (o.material.opacity ?? 1) * 0.6;
+        });
+        // la geometría viene tumbada (pre-giro rotX π/2): para ponerla DE PIE en el
+        // plano XZ se deshace ese giro, y para el YZ se gira además sobre Z.
+        // Partiendo de TUMBADA (identidad, normal +Z):
+        //   XZ (normal Y) → girar 90° sobre X   ·   YZ (normal X) → girar 90° sobre Y
+        if (g.plano === "xz") {
+          copia.quaternion.setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+          copia.position.set(0, g.d, 0);
+        } else {
+          copia.quaternion.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+          copia.position.set(g.d, 0, 0);
+        }
+        scene.add(copia);
+        sueloGrids.push(copia);
+      }
+    }
+    viewerRender();
+  }
+
+  // Añadir una GRILLA AUXILIAR a la cota que se pida y dejarla puesta, como un
+  // nivel de referencia de ETABS/Revit: no cambia el plano de trabajo, solo pone
+  // dónde referenciarse. Devuelve las cotas que quedan con grilla.
+  //
+  // Vale para los TRES planos, no solo para la planta: en alzado la rejilla pasaba
+  // por Y = 0 y no se podía llevar al pórtico que tocaba («cómo se coloca la grilla
+  // auxiliar a cierta distancia», Jorge 16-sep). `plano` dice de cuál es y `d` a qué
+  // distancia: xy → Z, xz → Y, yz → X. Pulsar con la misma distancia la quita.
+  (window as any).__hekatanGrillaAux = (d: number, plano: "xy" | "xz" | "yz" = "xy") => {
+    if (!isFinite(d)) return [];
+    const W = window as any;
+    W.__hekatanPushUndo?.();          // poner o quitar una grilla se deshace con Ctrl+Z
+    const aux = (W.__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+    const i = aux.findIndex((g) => g.plano === plano && Math.abs(g.d - d) < 1e-6);
+    if (i >= 0) aux.splice(i, 1); else aux.push({ plano, d });
+    W.__hekatanPlanosAux = aux;
+    // Las de planta siguen además en `__hekatanLevels`, que es lo que miran los ejes
+    // y niveles de Revit y el resto del programa.
+    if (plano === "xy") {
+      const niveles = (W.__hekatanLevels ?? []) as Array<{ label: string; z: number; tipo?: string }>;
+      const j = niveles.findIndex((l) => Math.abs(l.z - d) < 1e-6 && l.tipo !== "piso");
+      if (i >= 0) { if (j >= 0) niveles.splice(j, 1); }
+      else if (j < 0) niveles.push({ label: `N${d >= 0 ? "+" : ""}${d.toFixed(2)}`, z: d, tipo: "aux" });
+      W.__hekatanLevels = niveles;
+    }
+    W.__hekatanRefrescarGrillas?.();
+    return aux;
+  };
+  (window as any).__hekatanQuitarGrillaAux = (z: number): number[] => {
+    const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number; tipo?: string }>;
+    const quedan = niveles.filter((l) => !(Math.abs(l.z - z) < 1e-6 && l.tipo !== "piso"));
+    (window as any).__hekatanLevels = quedan;
+    (window as any).__hekatanRefrescarGrillas?.();
+    return quedan.map((l) => l.z);
+  };
+  // ── MOVER LA GRILLA CON EL CURSOR, COMO SE MUEVE UNA LÍNEA EN AUTOCAD ─────
+  //
+  // Jorge (16-sep-2026): «o con el teclado, así como el cursor: selecciono la grilla
+  // y me desplaza, va a hacer paralelo perpendicularmente a una distancia que elija,
+  // en un recuadro para colocar la distancia».
+  //
+  // Es el DESPLAZA de AutoCAD con entrada directa de distancia: la grilla se mueve
+  // PARALELA A SÍ MISMA (solo en su normal: Z en planta, Y en alzado frontal, X en
+  // el lateral), el recuadro junto al cursor dice cuánto llevas, y si tecleas un
+  // número + Enter va exactamente a esa distancia.
+  //
+  // El cálculo no es «dónde corta el rayo» —el plano se mueve con él y no habría
+  // solución—, sino el punto del EJE normal más cercano al rayo del cursor: la
+  // distancia mínima entre dos rectas. Si el eje apunta casi a la cámara (mirando la
+  // planta desde arriba) las dos rectas son paralelas y no hay nada que resolver: ahí
+  // se avisa en vez de dar un salto sin sentido, igual que AutoCAD no deja mover en
+  // la dirección de la vista.
+  const cajaDist = document.createElement("input");
+  cajaDist.id = "hk-grid-dist";
+  cajaDist.type = "text"; cajaDist.spellcheck = false;
+  cajaDist.title = "Distancia del plano. Teclea un número y Enter para colocarlo exacto; Esc cancela.";
+  cajaDist.style.cssText = [
+    "position:fixed", "z-index:99997", "pointer-events:none", "display:none",
+    "padding:3px 8px", "background:rgba(15,23,42,.94)", "color:#22d3ee",
+    "border:1.5px solid #22d3ee", "border-radius:4px", "width:104px", "text-align:center",
+    "font:bold 13px Consolas,monospace", "transform:translate(14px,-28px)", "outline:none",
+  ].join(";") + ";";
+  document.body.appendChild(cajaDist);
+
+  let moviendoGrilla = false;
+  let distInicial = 0;
+  let tecleado = "";
+  const normalDe = (wp: string): THREE.Vector3 =>
+    wp === "xz" ? new THREE.Vector3(0, 1, 0) : wp === "yz" ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+  const claveDe = (wp: string) => (wp === "xz" ? "workY" : wp === "yz" ? "workX" : "workZ");
+  const planoActualW = () => String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+  const distActual = () => Number((window as any).__hekatanCadState?.get?.()?.[claveDe(planoActualW())] ?? 0);
+  const colocarPlano = (d: number) => {
+    const wp = planoActualW();
+    const st = (window as any).__hekatanCadState?.get?.();
+    if (st) (st as any)[claveDe(wp)] = d;
+    if (!drawingObj.gridTarget) return;
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    drawingObj.gridTarget.val = wp === "xy" ? { position: [O[0], O[1], d], rotation: [Math.PI / 2, 0, 0] }
+                             : wp === "xz" ? { position: [O[0], d, O[2]], rotation: [0, 0, 0] }
+                             : { position: [d, O[1], O[2]], rotation: [0, 0, Math.PI / 2] };
+  };
+  /** Distancia sobre el eje normal del punto del eje más próximo al rayo del cursor. */
+  const distanciaBajoCursor = (): number | null => {
+    const n = normalDe(planoActualW());
+    const ro = raycaster.ray.origin, rd = raycaster.ray.direction;
+    const b = n.dot(rd);
+    const den = 1 - b * b;                       // a·c − b² con a = c = 1 (unitarios)
+    if (Math.abs(den) < 1e-4) return null;       // el eje apunta a la cámara
+    const w0 = ro.clone().negate();              // origen del eje en (0,0,0)
+    const d0 = n.dot(w0), e0 = rd.dot(w0);
+    return (b * e0 - d0) / den;
+  };
+  const pintarCaja = (ev: { clientX: number; clientY: number } | null, d: number) => {
+    if (ev) { cajaDist.style.left = ev.clientX + "px"; cajaDist.style.top = ev.clientY + "px"; }
+    const L = planoActualW() === "xz" ? "Y" : planoActualW() === "yz" ? "X" : "Z";
+    cajaDist.value = tecleado !== "" ? `${L} = ${tecleado}` : `${L} = ${d.toFixed(2)} m`;
+    cajaDist.style.display = "block";
+  };
+  const terminarMover = (aplicar: boolean, d?: number) => {
+    if (!moviendoGrilla) return;
+    moviendoGrilla = false;
+    (window as any).__hekatanMoviendoGrilla = false;
+    cajaDist.style.display = "none";
+    if (!aplicar) colocarPlano(distInicial);
+    else if (typeof d === "number" && isFinite(d)) colocarPlano(d);
+    tecleado = "";
+    (window as any).__hekatanRefrescarGrillas?.();
+    viewerRender();
+  };
+  (window as any).__hekatanMoverGrilla = (on = true) => {
+    if (!on) return terminarMover(false);
+    distInicial = distActual(); tecleado = "";
+    moviendoGrilla = true;
+    (window as any).__hekatanMoviendoGrilla = true;
+    pintarCaja(null, distInicial);
+    return true;
+  };
+  rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
+    if (!moviendoGrilla) return;
+    setPointerFromEvent(ev);
+    const d = distanciaBajoCursor();
+    if (d === null) { pintarCaja(ev, distActual()); return; }
+    if (tecleado === "") colocarPlano(d);
+    pintarCaja(ev, d);
+  }, true);
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!moviendoGrilla) return;
+    ev.preventDefault(); ev.stopPropagation();
+    terminarMover(true, tecleado !== "" ? parseFloat(tecleado) : distActual());
+  }, true);
+  window.addEventListener("keydown", (ev: KeyboardEvent) => {
+    if (!moviendoGrilla) return;
+    if (ev.key === "Escape") { ev.preventDefault(); return terminarMover(false); }
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      return terminarMover(true, tecleado !== "" ? parseFloat(tecleado) : distActual());
+    }
+    if (ev.key === "Backspace") { ev.preventDefault(); tecleado = tecleado.slice(0, -1); pintarCaja(null, distActual()); return; }
+    if (/^[0-9.\-]$/.test(ev.key)) {
+      ev.preventDefault();
+      tecleado += ev.key;
+      const v = parseFloat(tecleado);
+      if (isFinite(v)) colocarPlano(v);              // se ve ir al sitio mientras tecleas
+      pintarCaja(null, isFinite(v) ? v : distActual());
+    }
+  }, true);
+
+  // ── EL TRÍPODE DEL ORIGEN LOCAL ──────────────────────────────────────────
+  // Se ve como en el dibujo de Jorge: los ejes pequeños en el punto elegido y una
+  // línea de puntos hasta el origen global, para no perder de vista dónde estás.
+  const grupoSCU = new THREE.Group();
+  grupoSCU.name = "hekatan-scu";
+  grupoSCU.visible = false;
+  scene.add(grupoSCU);
+  const construirSCU = (o: [number, number, number]) => {
+    while (grupoSCU.children.length) {
+      const c: any = grupoSCU.children.pop();
+      c.geometry?.dispose?.(); c.material?.dispose?.(); c.dispose?.();
+    }
+    const L = Math.max(0.8, ((window as any).__hekatanGridConfig?.minorStep ?? 1) * 2);
+    const O = new THREE.Vector3(...o);
+    const ejes: Array<[THREE.Vector3, number]> = [
+      [new THREE.Vector3(1, 0, 0), 0xff5b5b],
+      [new THREE.Vector3(0, 1, 0), 0x5bff8a],
+      [new THREE.Vector3(0, 0, 1), 0x6aa8ff],
+    ];
+    for (const [d, col] of ejes) grupoSCU.add(new THREE.ArrowHelper(d, O, L, col, L * 0.28, L * 0.16));
+    // la línea de puntos hasta el origen global (el «dónde estoy» del dibujo)
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), O]);
+    const m = new THREE.LineDashedMaterial({ color: 0x22d3ee, dashSize: 0.35, gapSize: 0.25, transparent: true, opacity: 0.8 });
+    const ln = new THREE.Line(g, m); ln.computeLineDistances();
+    grupoSCU.add(ln);
+    grupoSCU.visible = true;
+  };
+  (window as any).__hekatanPonerSCU = (o: [number, number, number]) => {
+    (window as any).__hekatanSCU = [o[0], o[1], o[2]];
+    construirSCU(o);
+    // la rejilla se centra en el origen nuevo: es el plano de trabajo de AHÍ
+    (window as any).__hekatanRecentrarGrilla?.();
+    viewerRender();
+    return o;
+  };
+  (window as any).__hekatanQuitarSCU = () => {
+    (window as any).__hekatanSCU = [0, 0, 0];
+    grupoSCU.visible = false;
+    (window as any).__hekatanRecentrarGrilla?.();
+    viewerRender();
+    return [0, 0, 0];
+  };
+  // Colocar el origen CON EL CURSOR: el siguiente clic manda (y el osnap engancha
+  // a un nudo, a un cruce de rejilla o a un punto final, que es lo que se quiere).
+  let colocandoSCU = false;
+  (window as any).__hekatanElegirSCU = (on = true) => {
+    colocandoSCU = on;
+    (window as any).__hekatanColocandoSCU = on;
+    return on;
+  };
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!colocandoSCU) return;
+    ev.preventDefault(); ev.stopPropagation();
+    colocandoSCU = false;
+    (window as any).__hekatanColocandoSCU = false;
+    // el punto que el visor ya calcula bajo el cursor, con su osnap
+    const os = (window as any).__hekatanOsnapUltimo as { x: number; y: number; z: number } | null;
+    if (os) { (window as any).__hekatanPonerSCU([os.x, os.y, os.z]); return; }
+    setPointerFromEvent(ev);
+    const inter = intersectWorkPlane();          // devuelve un ARRAY de intersecciones
+    if (inter.length) {
+      const q = inter[0].point;
+      (window as any).__hekatanPonerSCU([q.x, q.y, q.z]);
+    }
+  }, true);
+
+  // La rejilla se centra en el origen local, manteniendo la distancia del plano:
+  // el plano de trabajo es «el suelo de AQUÍ», no el del origen global.
+  (window as any).__hekatanRecentrarGrilla = () => {
+    if (!drawingObj.gridTarget) return;
+    const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const st = (window as any).__hekatanCadState?.get?.();
+    const d = Number(st?.[wp === "xz" ? "workY" : wp === "yz" ? "workX" : "workZ"] ?? 0);
+    drawingObj.gridTarget.val =
+      wp === "xy" ? { position: [O[0], O[1], d], rotation: [Math.PI / 2, 0, 0] }
+    : wp === "xz" ? { position: [O[0], d, O[2]], rotation: [0, 0, 0] }
+                  : { position: [d, O[1], O[2]], rotation: [0, 0, Math.PI / 2] };
+  };
+
+  // Quitar TODAS las grillas auxiliares de una vez. Sin esto había que acertar la cota
+  // exacta de cada una para apagarlas una a una, y con «▦× replicar» salen tres o
+  // cuatro de golpe: era poner y no poder recoger.
+  (window as any).__hekatanLimpiarGrillasAux = (): number => {
+    const W = window as any;
+    const n = ((W.__hekatanPlanosAux ?? []) as any[]).length +
+              ((W.__hekatanLevels ?? []) as any[]).filter((l) => l?.tipo !== "piso").length;
+    if (!n) return 0;
+    W.__hekatanPushUndo?.();
+    const G = W.__hekatanPlanosAux; if (Array.isArray(G)) G.length = 0; else W.__hekatanPlanosAux = [];
+    const L = W.__hekatanLevels;
+    if (Array.isArray(L)) { const pisos = L.filter((l: any) => l?.tipo === "piso"); L.length = 0; L.push(...pisos); }
+    W.__hekatanRefrescarGrillas?.();
+    try { W.__hekatanRefreshLevels?.(); } catch {}
+    return n;
+  };
+
+  (window as any).__hekatanRefrescarGrillas = () => {
+    if (!drawingObj.gridTarget) return;
+    const rot = drawingObj.gridTarget.rawVal.rotation;
+    const qPlano = new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot));
+    const qPreGeo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    redibujarGrillasNivel(drawingObj.gridTarget.rawVal.position[2],
+                          Math.abs(qPlano.x - Math.sin(Math.PI / 4)) < 1e-3, qPreGeo);
+  };
 
   // On points change, update points positions for intersections
   van.derive(() => {
@@ -3987,14 +4635,17 @@ export function drawing({
   const paintDragRect = (
     x0: number, y0: number, x1: number, y1: number, isCrossing: boolean,
   ) => {
+    // Los colores de AutoCAD, no unos parecidos: CROSSINGAREACOLOR = 100 (verde) con
+    // borde DISCONTINUO, WINDOWAREACOLOR = 150 (azul) con borde CONTINUO, y
+    // SELECTIONAREAOPACITY = 25 (%) de relleno. Estaban en cian al 10 %, mas palidos.
     if (isCrossing) {
-      dragRect.style.borderColor = "#34d399";
+      dragRect.style.borderColor = "#3faf46";          // verde AutoCAD (índice 100)
       dragRect.style.borderStyle = "dashed";
-      dragRect.style.background = "rgba(52, 211, 153, 0.10)";
+      dragRect.style.background = "rgba(63, 175, 70, 0.25)";
     } else {
-      dragRect.style.borderColor = "#22d3ee";
+      dragRect.style.borderColor = "#3f77c4";          // azul AutoCAD (índice 150)
       dragRect.style.borderStyle = "solid";
-      dragRect.style.background = "rgba(34, 211, 238, 0.10)";
+      dragRect.style.background = "rgba(63, 119, 196, 0.25)";
     }
     dragRect.style.left = Math.min(x0, x1) + "px";
     dragRect.style.top = Math.min(y0, y1) + "px";
@@ -4179,6 +4830,27 @@ export function drawing({
       }
     }
 
+    // 1b) Los PUNTOS de las polilíneas borradas que ya no usa nadie se van con ellas.
+    //
+    // ⚠️ El comentario del paso 1 decía «+ propagar borrado a sus pts huérfanos» y
+    // NO se hacía: al borrar una polilínea quedaban todos sus puntos sueltos, que
+    // siguen siendo NUDOS del modelo. Medido en el deploy el 17-sep-2026: borrar la
+    // cercha entera («E» → TODO → Supr) dejaba 0 barras y los 22 nudos. Y eso no es
+    // solo suciedad: el plano de trabajo del alzado se ANCLA en el último punto
+    // dibujado (`puntoRef`), así que un punto fantasma lejano manda a dibujar a 100 m
+    // de la estructura, que es por lo que no se podía dibujar una cercha con el ratón.
+    //
+    // Se borran SOLO los que venían de una polilínea borrada y no quedan en ninguna
+    // otra: un nudo puesto a mano con la herramienta Nodo nunca estuvo en una de
+    // ellas, así que no se lo lleva por delante.
+    if (polysToDelete.size > 0) {
+      const vivos = new Set<number>();
+      for (const pl of newPolys) for (const n of pl) vivos.add(n);
+      for (const i of polysToDelete) {
+        for (const n of polys[i] ?? []) if (!vivos.has(n)) ptsToDelete.add(n);
+      }
+    }
+
     // 2) Borrar pts marcados + propagar a polylines (remover refs + cortar)
     if (ptsToDelete.size > 0) {
       // Filtrar pts y construir remap viejo→nuevo
@@ -4232,21 +4904,235 @@ export function drawing({
     updateStatus(`🗑 ${deletedCount} item(s) borrado(s)`);
     return true;
   };
+
+  // ══════════════════════════════════════════════════════════════════════
+  // RESHAPER — el «Reshape Object» de ETABS (Draw ▸ Reshape Object)
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  // Jorge, 17-sep-2026: «revisa ETABS, la parte donde selecciona una barra y la
+  // puede alargar o acortar solo con seleccionarla».
+  //
+  // Las reglas NO son inventadas: salen de la propia ayuda de ETABS 22
+  // (ETABS.chm > Menus/Draw/Reshape_Object.htm), y son estas:
+  //
+  //   · Al pinchar una BARRA salen «selection handles»: CIRCULOS grandes en sus
+  //     dos extremos. En una CASCARA son CUADRADOS en las esquinas.
+  //   · Arrastrando el CUERPO, el objeto se mueve entero y conserva su forma.
+  //   · Arrastrando un EXTREMO, «the other end joint remains in its original
+  //     location; the length of the frame changes»: o sea, alarga o acorta.
+  //   · Clic DERECHO en un handle: teclear las coordenadas del nudo.
+  //   · ⚠️ Y una que es facil pasar por alto, y que ETABS avisa expresamente:
+  //     al mover asi, el nudo «is disconnected from any other shells to which it
+  //     might have been connected». O sea, el reshape afecta SOLO al objeto que
+  //     estas tocando, no a los vecinos que compartian ese nudo. Aqui igual: si
+  //     el punto lo usa alguien mas, se DUPLICA antes de moverlo.
+  //
+  // Restricciones de dibujo (Drawing_Constraints_in_ETABS.htm), con las mismas
+  // teclas: X bloquea la Y, Y bloquea la X, Z bloquea X e Y, L fija la longitud,
+  // y la barra espaciadora las quita.
+  const grips = new THREE.Group();
+  grips.name = "hekatan-reshape-grips";
+  scene.add(grips);
+  let reshapePoly = -1;
+  let reshapeDrag: { pt: number; poly: number; x0: number; y0: number; z0: number;
+                     otro: [number, number, number] | null } | null = null;
+  let reshapeLock: "" | "x" | "y" | "z" | "l" = "";
+
+  const limpiarGrips = () => {
+    for (const h of [...grips.children]) {
+      grips.remove(h);
+      const m = h as THREE.Mesh;
+      m.geometry?.dispose?.();
+      (m.material as THREE.Material)?.dispose?.();
+    }
+  };
+  /** Tamano del handle en unidades de mundo, atado al paso de snap: asi no se
+   *  vuelve una pelota al alejar la camara ni desaparece al acercarla. */
+  const tamGrip = () => Math.max(0.06, ((window as any).__hekatanSnap2D ?? 0.5) * 0.35);
+
+  const pintarGrips = (polyIdx: number) => {
+    limpiarGrips();
+    reshapePoly = polyIdx;
+    if (polyIdx < 0 || !drawingObj.polylines) return;
+    const poly = drawingObj.polylines.rawVal[polyIdx];
+    const pts = drawingObj.points.rawVal;
+    if (!poly) return;
+    const esArea = drawingObj.areas?.rawVal?.includes(polyIdx) ?? false;
+    const r = tamGrip();
+    // circulo para barras, cuadrado para cascaras: los de ETABS
+    const geo = esArea ? new THREE.BoxGeometry(r * 1.7, r * 1.7, r * 1.7)
+                       : new THREE.SphereGeometry(r, 12, 10);
+    for (const idx of poly) {
+      const p = pts[idx];
+      if (!p) continue;
+      const m = new THREE.Mesh(geo.clone(), new THREE.MeshBasicMaterial({
+        color: 0x00e0ff, depthTest: false, transparent: true, opacity: 0.95 }));
+      m.position.set(p[0], p[1], p[2]);
+      m.renderOrder = 998;
+      (m as any).__pt = idx;
+      grips.add(m);
+    }
+    geo.dispose();
+    viewerRender?.();
+  };
+  (window as any).__hekatanReshapeGrips = () =>
+    grips.children.map((h) => ({ pt: (h as any).__pt,
+      p: [h.position.x, h.position.y, h.position.z] as [number, number, number] }));
+  (window as any).__hekatanReshapeSel = () => reshapePoly;
+
+  /** Hay un handle bajo este punto del mundo? Devuelve el indice de punto. */
+  const gripBajo = (p: [number, number, number]) => {
+    const r = tamGrip() * 2.2;
+    let mejor = -1, dMin = r;
+    for (const h of grips.children) {
+      const d = Math.hypot(h.position.x - p[0], h.position.y - p[1], h.position.z - p[2]);
+      if (d < dMin) { dMin = d; mejor = (h as any).__pt; }
+    }
+    return mejor;
+  };
+
+  /**
+   * DESCONECTAR como ETABS: si el punto lo comparten varias polilineas, se
+   * duplica y la que se esta remodelando se queda con la copia. Sin esto,
+   * alargar una viga arrastraria tambien la columna que llega a ese nudo, que es
+   * justo lo que la ayuda de ETABS dice que NO pasa.
+   */
+  const desconectar = (polyIdx: number, ptIdx: number): number => {
+    const polys = drawingObj.polylines.rawVal;
+    let usos = 0;
+    for (const pl of polys) for (const q of pl) if (q === ptIdx) usos++;
+    if (usos <= 1) return ptIdx;
+    const pts = [...drawingObj.points.rawVal];
+    const nuevo = pts.length;
+    pts.push([...pts[ptIdx]] as [number, number, number]);
+    drawingObj.points.val = pts;
+    const nuevas = polys.map((pl: number[], i: number) =>
+      i === polyIdx ? pl.map((q: number) => (q === ptIdx ? nuevo : q)) : pl);
+    drawingObj.polylines.val = nuevas;
+    return nuevo;
+  };
+
+  /** Aplica la restriccion de dibujo activa al punto destino. */
+  const conRestriccion = (destino: [number, number, number]): [number, number, number] => {
+    if (!reshapeDrag) return destino;
+    const o: [number, number, number] = [reshapeDrag.x0, reshapeDrag.y0, reshapeDrag.z0];
+    if (reshapeLock === "x") return [destino[0], o[1], o[2]];
+    if (reshapeLock === "y") return [o[0], destino[1], o[2]];
+    if (reshapeLock === "z") return [o[0], o[1], destino[2]];
+    if (reshapeLock === "l" && reshapeDrag.otro) {
+      // longitud fija: se conserva el modulo original y solo gira la direccion
+      const a = reshapeDrag.otro;
+      const L0 = Math.hypot(o[0] - a[0], o[1] - a[1], o[2] - a[2]);
+      const d = [destino[0] - a[0], destino[1] - a[1], destino[2] - a[2]];
+      const m = Math.hypot(d[0], d[1], d[2]) || 1;
+      return [a[0] + (d[0] / m) * L0, a[1] + (d[1] / m) * L0, a[2] + (d[2] / m) * L0];
+    }
+    return destino;
+  };
+
+  const enReshape = () =>
+    ((window as any).__hekatanCadState?.get?.() as any)?.tool === "reshape";
+
+  rendererElm.addEventListener("pointerdown", (ev: PointerEvent) => {
+    if (!enReshape() || ev.button !== 0) return;
+    const p = puntoBajoCursor(ev);
+    if (!p) return;
+    // 1) se agarro un HANDLE -> alargar/acortar ese extremo
+    const g = gripBajo(p);
+    if (g >= 0 && reshapePoly >= 0) {
+      const ptReal = desconectar(reshapePoly, g);
+      const poly = drawingObj.polylines.rawVal[reshapePoly];
+      const pos = drawingObj.points.rawVal[ptReal];
+      const otroIdx = poly.length === 2 ? poly.find((q: number) => q !== ptReal) : undefined;
+      const otro = otroIdx !== undefined ? drawingObj.points.rawVal[otroIdx] : null;
+      reshapeDrag = { pt: ptReal, poly: reshapePoly, x0: pos[0], y0: pos[1], z0: pos[2],
+                      otro: otro ? [otro[0], otro[1], otro[2]] : null };
+      (window as any).__hekatanReshapeIgnorarPt = ptReal;
+      ev.stopPropagation();
+      updateStatus("RESHAPE: arrastra el extremo. X / Y / Z fijan un eje - L fija la longitud - Espacio quita la restriccion.");
+      return;
+    }
+    // 2) si no, se DESIGNA lo que haya debajo y salen sus handles
+    const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
+    const f = findClosestPoly(p[0], p[1], p[2], tol);
+    if (f) {
+      pintarGrips(f.polyIdx);
+      const esArea = drawingObj.areas?.rawVal?.includes(f.polyIdx) ?? false;
+      updateStatus("RESHAPE: " + (esArea ? "cascara" : "barra") + " designada - arrastra un extremo para " +
+                   (esArea ? "deformarla" : "alargarla o acortarla") + ".");
+      ev.stopPropagation();
+    } else {
+      limpiarGrips(); reshapePoly = -1;
+    }
+  }, true);
+
+  rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
+    if (!reshapeDrag) return;
+    const p = puntoBajoCursor(ev);
+    if (!p) return;
+    const d = conRestriccion(p);
+    const pts = drawingObj.points.rawVal;
+    pts[reshapeDrag.pt] = [d[0], d[1], d[2]];
+    drawingObj.points.val = [...pts];
+    const h = grips.children.find((q) => (q as any).__pt === reshapeDrag!.pt);
+    h?.position.set(d[0], d[1], d[2]);
+    if (reshapeDrag.otro) {
+      const a = reshapeDrag.otro;
+      const L = Math.hypot(d[0] - a[0], d[1] - a[1], d[2] - a[2]);
+      updateStatus("RESHAPE: longitud " + L.toFixed(3) + " m" +
+                   (reshapeLock ? "  -  fijo " + reshapeLock.toUpperCase() : ""));
+    }
+    viewerRender?.();
+  }, true);
+
+  rendererElm.addEventListener("pointerup", () => {
+    if (!reshapeDrag) return;
+    reshapeDrag = null; reshapeLock = "";
+    (window as any).__hekatanReshapeIgnorarPt = undefined;
+    try { (window as any).__hekatanRebuild?.(); } catch { /* no-op */ }
+    updateStatus("Reshape aplicado.");
+  }, true);
+
+  window.addEventListener("keydown", (ev: KeyboardEvent) => {
+    if (!reshapeDrag) return;
+    const k = ev.key.toLowerCase();
+    if (k === "x" || k === "y" || k === "z" || k === "l") { reshapeLock = k as any; ev.preventDefault(); }
+    else if (k === " ") { reshapeLock = ""; ev.preventDefault(); }
+  }, true);
+  (window as any).__hekatanReshapeLimpiar = () => { limpiarGrips(); reshapePoly = -1; };
+
   (window as any).__hekatanDeleteSelected = deleteSelectedItems;
 
   window.addEventListener("keydown", (ev: KeyboardEvent) => {
     if (ev.key !== "Delete" && ev.key !== "Backspace") return;
     const ae = document.activeElement as HTMLElement | null;
-    // La barra de comandos (siempre enfocada) y su input al cursor NO deben
-    // bloquear el Delete si están VACÍOS → permitir borrar la selección.
-    const isEmptyCmd = ae && (ae.id === "hk3-cmd-input" || ae.id === "hk-dyn-input")
-      && (ae as HTMLInputElement).value === "";
-    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable) && !isEmptyCmd) {
-      return; // editando texto real → no borrar la selección
+    const esBarra = !!ae && (ae.id === "hk3-cmd-input" || ae.id === "hk-dyn-input");
+    // ⚠️ SI HAY ALGO DESIGNADO, Supr BORRA LO DESIGNADO. Y punto.
+    //
+    // Antes la barra de comandos solo dejaba pasar el Delete si estaba VACÍA, y
+    // esa barra se autoenfoca siempre: bastaba con que hubiera quedado el texto
+    // de una orden anterior para que Supr dejara de borrar, sin decir nada.
+    // Medido en el deploy el 17-sep-2026 con 83 objetos designados: el pie decía
+    // «SELECCIÓN 83 objetos · Supr borra», se pulsaba Supr y el modelo se
+    // quedaba igual —126 nudos y 103 barras antes y después—, porque el foco
+    // estaba en `hk3-cmd-input` con texto. Jorge: «trato de seleccionar un arco
+    // y borrarlo y no se puede».
+    //
+    // Es además lo que hacen AutoCAD y ETABS: con objetos designados, Supr es
+    // «borra los objetos». El texto que hubiera en la barra se limpia, que era
+    // resto de otra orden. Solo se respeta la edición cuando el foco está en
+    // OTRO campo (el panel de propiedades, un parámetro), donde Supr sí es
+    // «borra caracteres».
+    if (selection.size > 0) {
+      if (ae && !esBarra && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) {
+        return;                                   // editando un campo de verdad
+      }
+      ev.preventDefault();
+      if (esBarra) { (ae as HTMLInputElement).value = ""; }
+      deleteSelectedItems();
+      return;
     }
-    if (selection.size === 0) return;
-    ev.preventDefault();
-    deleteSelectedItems();
+    // Sin nada designado, Supr es del texto: no se toca.
   });
 
   // ════════════════════════════════════════════════════════════════════
@@ -4417,7 +5303,21 @@ export function drawing({
       else { propsState.Fx = propsState.Fy = propsState.Fz = propsState.Mx = propsState.My = propsState.Mz = 0; }
     }
     const segIds = ids.filter(id => id.startsWith("seg:"));
-    const polyIds = ids.filter(id => id.startsWith("poly:"));
+    // ⚠️ UNA POLILÍNEA NO ES UN ÁREA.
+    //
+    // Aquí se llamaba «área» a toda polilínea seleccionada, sin mirar si estaba
+    // marcada como tal. Resultado: dibujas dos LÍNEAS, las designas, y el panel
+    // anuncia «2 item(s) — ▭ 2 área(s)» y te ofrece espesor, hormigón y carga
+    // superficial de losa para dos barras. Medido el 17-sep-2026: 4 barras,
+    // 0 shells y `drawingAreas` vacío, y aun así decía 2 áreas.
+    //
+    // Área es la polilínea cuyo índice está en `drawingObj.areas` —lo que marca
+    // la herramienta Área—; las demás son líneas, y se editan como barras.
+    const setAreas = new Set(drawingObj.areas?.rawVal ?? []);
+    const esArea = (id: string) => setAreas.has(+id.split(":")[1]);
+    const polyTodas = ids.filter(id => id.startsWith("poly:"));
+    const polyIds = polyTodas.filter(esArea);
+    const lineaIds = polyTodas.filter((id) => !esArea(id));
     const auxIds = ids.filter(id => id.startsWith("aux:"));
 
     // NOTA: antes el panel era excluyente (onlyNodes / onlySegs / onlyPolys /
@@ -4429,13 +5329,15 @@ export function drawing({
     const hasNodes = nodeIds.length > 0;
     const hasSegs = segIds.length > 0;
     const hasPolys = polyIds.length > 0;
-    const noneEditable = !hasNodes && !hasSegs && !hasPolys; // solo aux / vacío
+    const hasLineas = lineaIds.length > 0;
+    const noneEditable = !hasNodes && !hasSegs && !hasPolys && !hasLineas; // solo aux / vacío
 
     // Título: resumen por tipo
     const parts: string[] = [];
     if (nodeIds.length) parts.push(`🔵 ${nodeIds.length} nodo(s)`);
     if (segIds.length) parts.push(`📏 ${segIds.length} segmento(s)`);
     if (polyIds.length) parts.push(`▭ ${polyIds.length} área(s)`);
+    if (lineaIds.length) parts.push(`／ ${lineaIds.length} línea(s)`);
     if (auxIds.length) parts.push(`┊ ${auxIds.length} aux`);
     const title = `🎯 ${selection.size} item(s) — ${parts.join(", ")}`;
 
@@ -4890,7 +5792,12 @@ export function drawing({
     //
     // `dragStart` se deja a null: el `pointermove` y el `pointerup` de abajo
     // salen solos, y los controles de camara se quedan con el arrastre.
-    dragStart = null;
+    // ⚠️ ESTO ESTABA AL REVES: el comentario de arriba decia «arrastrar es ORBITAR, y
+    // punto», pero el AutoCAD de Jorge dice lo contrario — PICKAUTO = 5 (leido de su
+    // perfil): arrastrar con el izquierdo ABRE la ventana de seleccion. Ya no se pisan
+    // los dos gestos porque el izquierdo dejo de orbitar (getViewer: LEFT libre, rueda
+    // pulsada = pan, Shift+rueda = orbitar, como en AutoCAD y en ETABS).
+    dragStart = { x: ev.clientX, y: ev.clientY };
     dragActive = false;
   });
   rendererElm.addEventListener("pointermove", (ev: PointerEvent) => {
@@ -4955,6 +5862,10 @@ export function drawing({
     ifc: 0xf59e0b, ifcAxis: 0xfde68a, ifcSec: 0xfb923c, ifcEdge: 0xfbbf24, ifcVert: 0xff3344,
   };
   const showOsnap = (type: string, x: number, y: number, z: number) => {
+    // Qué referencia está enganchada AHORA, para poder comprobarlo desde fuera
+    // (guiones de prueba): el marcador se ve en pantalla, pero un test necesita
+    // el dato, y leerlo de la escena es adivinar por el color del cuadrito.
+    (window as any).__hekatanOsnapUltimo = { type, x, y, z };
     while (osnapMarker.children.length) {
       const c = osnapMarker.children.pop()!;
       (c as any).geometry?.dispose?.();
@@ -4992,7 +5903,7 @@ export function drawing({
     if (typeof n === "number" && n > 0) { _osnapPx = n; updateOsnapScale(); viewerRender(); }
     return _osnapPx;
   };
-  const hideOsnap = () => { osnapMarker.visible = false; };
+  const hideOsnap = () => { osnapMarker.visible = false; (window as any).__hekatanOsnapUltimo = null; };
   // ── El NOMBRE de la referencia, junto al cursor (AutoCAD lo llama tooltip de
   // referencia). Sin él, el cuadradito de color no dice a qué te enganchas.
   const OSNAP_NOMBRE: Record<string, string> = {
@@ -5122,6 +6033,36 @@ export function drawing({
       } else {
         const gx = cae(px), gy = cae(py);
         if (dentro(gx, gy)) consider("grid", gx, gy, pz);
+        // ── Y LOS CRUCES DE LAS GRILLAS AUXILIARES ──────────────────────────
+        // Con una sola grilla, en cuanto subes la cota lo de abajo deja de tener
+        // referencia: por eso «ubico una altura y allí no hay con qué
+        // referenciarse». Cada grilla auxiliar es un plano z = cte, así que su
+        // cruce bajo el cursor es donde el RAYO corta ese plano, redondeado al
+        // paso — no vale reusar (px,py), que son del plano de trabajo y en
+        // isométrico caen metros más allá. Es lo que hace ETABS con sus niveles.
+        // planos auxiliares VERTICALES: el rayo corta y = d (xz) o x = d (yz)
+        const auxV = ((window as any).__hekatanPlanosAux ?? []) as Array<{ plano: string; d: number }>;
+        for (const g of auxV.slice(0, 24)) {
+          if (g.plano === "xy" || !isFinite(g.d)) continue;
+          const n = g.plano === "xz" ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+          const pl2 = new THREE.Plane(n, -g.d), q2 = new THREE.Vector3();
+          if (!raycaster.ray.intersectPlane(pl2, q2)) continue;
+          if (g.plano === "xz") { const ax = cae(q2.x), az = cae(q2.z); if (dentro(ax, az)) consider("grid", ax, g.d, az); }
+          else { const ay = cae(q2.y), az = cae(q2.z); if (dentro(ay, az)) consider("grid", g.d, ay, az); }
+        }
+        const niveles = ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>;
+        if (niveles.length) {
+          const rayo = raycaster.ray;
+          const planoZ = new THREE.Plane();
+          const corte = new THREE.Vector3();
+          for (const l of niveles.slice(0, 24)) {
+            if (!isFinite(l?.z) || Math.abs(l.z - pz) < 1e-6) continue;   // esa ya es la de trabajo
+            planoZ.set(new THREE.Vector3(0, 0, 1), -l.z);
+            if (!rayo.intersectPlane(planoZ, corte)) continue;
+            const ax = cae(corte.x), ay = cae(corte.y);
+            if (dentro(ax, ay)) consider("grid", ax, ay, l.z);
+          }
+        }
       }
     }
 
@@ -5593,17 +6534,35 @@ export function drawing({
   // Ctrl+Z, ojo con eso»): una guía de cúpula dibujada como auxiliar no se deshacía,
   // y al deshacer una revolución las guías borradas no volvían.
   const auxSnap = () => { const st = (window as any).__hekatanDrawingAuxLines; return JSON.parse(JSON.stringify(st?.rawVal ?? st?.val ?? [])); };
+  // Y las REJILLAS y los EJES también, por lo mismo (Jorge, 16-sep-2026: «¿qué es eso
+  // de rejilla, no se puede eliminar cuando ya se coloca?»). Medido: 🏗 Rejilla metía
+  // 100 nudos, 9 ejes y 2 niveles y Ctrl+Z no tocaba nada de eso, porque el snapshot
+  // solo guardaba el dibujo. Lo que no está en la foto no se puede deshacer.
+  const ejesSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanAxisGrids ?? []));
+  const nivSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanLevels ?? []));
+  const auxPlanosSnap = () => JSON.parse(JSON.stringify((window as any).__hekatanPlanosAux ?? []));
   const snapshot = () => ({
     p: JSON.parse(JSON.stringify(drawingObj.points.rawVal ?? [])),
     l: JSON.parse(JSON.stringify(drawingObj.polylines?.rawVal ?? [])),
     a: JSON.parse(JSON.stringify(drawingObj.areas?.rawVal ?? [])),
     x: auxSnap(),
+    e: ejesSnap(),
+    n: nivSnap(),
+    g: auxPlanosSnap(),
   });
-  const restore = (s: { p: any; l: any; a: any; x?: any }) => {
+  const restore = (s: { p: any; l: any; a: any; x?: any; e?: any; n?: any; g?: any }) => {
     drawingObj.points.val = s.p;
     if (drawingObj.polylines) drawingObj.polylines.val = s.l;
     if (drawingObj.areas) drawingObj.areas.val = s.a;
     if (s.x) { const st = (window as any).__hekatanDrawingAuxLines; if (st && "val" in st) st.val = s.x; }
+    // ejes, niveles y grillas auxiliares: son ARRAYS compartidos por referencia con el
+    // panel, así que se vacían y se rellenan en su sitio en vez de reasignarlos.
+    if (s.e) { const A = (window as any).__hekatanAxisGrids; if (Array.isArray(A)) { A.length = 0; A.push(...s.e); } }
+    if (s.n) { const L = (window as any).__hekatanLevels; if (Array.isArray(L)) { L.length = 0; L.push(...s.n); } }
+    if (s.g) { const G = (window as any).__hekatanPlanosAux; if (Array.isArray(G)) { G.length = 0; G.push(...s.g); }
+               else (window as any).__hekatanPlanosAux = s.g; }
+    try { (window as any).__hekatanRefreshAxes?.(); (window as any).__hekatanRefreshLevels?.(); } catch {}
+    try { (window as any).__hekatanRefrescarGrillas?.(); } catch {}
     pendingClicks = [];
     rubberBand.visible = false;
     polarLines.visible = false;
@@ -5759,6 +6718,11 @@ export function drawing({
   // finalizaba el dibujo (no limpiaba la selección) y encima el command bar se
   // lo comía → "ESC no servía". Esto limpia clicks pendientes, polígono libre,
   // selección + panel de propiedades, y finaliza el dibujo.
+  // El cancelar general, accesible desde fuera: el Esc del CUADRO DE COMANDOS no
+  // llegaba aquí (el input hace preventDefault y el evento no sube — medido: 0 Escapes
+  // llegaban a window con el foco en `hk3-cmd-input`, que es donde suele estar). Así
+  // que el cuadro llama a esto directamente.
+  (window as any).__hekatanCancelarTodo = () => { escapeCancel(); return true; };
   const escapeCancel = () => {
     pendingClicks = [];
     polyAreaPts = [];
@@ -6296,6 +7260,11 @@ export function drawing({
 
   rendererElm.addEventListener("click", (event: PointerEvent) => {
     (window as any).__hekatanCursorPx = { x: event.clientX, y: event.clientY };
+    // ⚠️ En modo REMODELAR el clic NO dibuja: designa el objeto y agarra sus
+    // extremos. Sin esta guarda, pinchar una viga para remodelarla añadía un
+    // punto al dibujo (medido: el modelo pasaba de 3 a 4 nudos con solo
+    // designar), y a partir de ahí lo que se arrastraba ya era otra cosa.
+    if (((window as any).__hekatanCadState?.get?.() as any)?.tool === "reshape") return;
     // Ignorar click que viene de drag (rotación)
     if (pointerDownAndMovedCount > 5) {
       pointerDownAndMovedCount = 0;
@@ -6388,7 +7357,7 @@ export function drawing({
       } else {
         // Si no hay osnap, aplicar grid snap 2D — solo si toggle ON.
         const snapEnabled = (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0;
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0);   // = separación de la rejilla
         if (snapEnabled && snap > 0) {
           point = new THREE.Vector3(
             Math.round(point.x / snap) * snap,
@@ -6406,8 +7375,69 @@ export function drawing({
   // por el mismo reparto de herramientas. Antes lo tecleado solo servia para
   // linea/polilinea (commitAbsolutePoint): "CIRCULO centro 0,0 radio 3" habia
   // que clicarlo. `event` es null cuando el punto viene del teclado.
+  /**
+   * ¿Ese punto cae a una distancia RAZONABLE de lo que hay dibujado?
+   *
+   * En vista isométrica el rayo del ratón llega al plano de trabajo casi
+   * rasante, así que unos pocos píxeles valen decenas de metros: un clic en
+   * mitad de la pantalla caía en X=−67 Y=101 (medido en el deploy público el
+   * 17-sep-2026, con la rejilla de 20 m). Esos puntos no se ven —quedan fuera
+   * de cuadro— pero se quedan en el dibujo, y como el plano del alzado se
+   * ancla en el último punto, la siguiente vez te pone a dibujar a 100 m de la
+   * estructura. Así se perdían los clics de la cercha curva.
+   *
+   * El límite es RELATIVO, que un puente sí mide 100 m: lo que abarque el
+   * modelo más cuatro rejillas, y nunca menos de 50 m.
+   */
+  const puntoRazonable = (p: THREE.Vector3): boolean => {
+    // ⚠️ Esto MIDE EL RAYO, no la distancia al origen.
+    //
+    // La primera versión rechazaba todo punto a más de tantos metros del
+    // modelo, y eso es una mala regla: con la cámara alejada un clic legítimo
+    // cae lejos y se quedaba sin dibujar. Jorge, en el deploy: «trato de
+    // dibujar y no se puede».
+    //
+    // Lo que de verdad hace malo un punto es que el rayo del ratón llegue al
+    // plano de trabajo CASI DE CANTO: ahí unos pocos píxeles valen decenas de
+    // metros y el punto es puro ruido —da igual a qué distancia esté—. Con el
+    // rayo entrando con ángulo, el punto es bueno aunque caiga a 200 m, que es
+    // lo normal en un puente.
+    //
+    // Se pide 1.5° entre el rayo y el plano. Por debajo de eso, un píxel de
+    // pantalla vale más de 38 veces la distancia al plano: no es dibujar.
+    const gt = drawingObj.gridTarget?.rawVal;
+    if (!gt) return true;
+    const n = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
+    const d = raycaster.ray.direction;
+    if (d.lengthSq() < 1e-12) return true;
+    const senoRasante = Math.abs(d.clone().normalize().dot(n));
+    return senoRasante >= 0.026;                    // sen(1.5°)
+  };
+
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
+    // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
+    const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
+                            tool === "medir" || tool === "move" || tool === "copy" ||
+                            tool === "delete" || tool === "trim" || tool === "extend");
+    // ── AVISAR, NO BLOQUEAR ──────────────────────────────────────────────
+    //
+    // Este filtro nació para evitar los puntos a 100 m que deja un clic rasante,
+    // y en un día se comió tres cosas legítimas: los puntos del ORTO en vertical
+    // (que se fijan sobre una recta, no sobre el plano), las coordenadas
+    // TECLEADAS —que son exactas por definición— y hasta el dibujo a mano
+    // alzada en alzado. Cada vez, sin que se viera el motivo.
+    //
+    // Un punto raro es una molestia; no poder dibujar es un programa roto. Así
+    // que ahora SOLO AVISA: el punto se coloca igual y en la barra se explica
+    // qué ha pasado y cómo evitarlo, para que quien dibuja decida.
+    if (event && creaGeometria && !_axisSnapPoint && !puntoRazonable(point)) {
+      updateStatus(
+        `⚠ Estás mirando el plano de trabajo casi de canto, y ahí un píxel vale ` +
+        `decenas de metros: el punto ha caído en (${point.x.toFixed(1)}, ${point.y.toFixed(1)}, ` +
+        `${point.z.toFixed(1)}) m. Si no era eso, deshaz (Ctrl+Z) y ponte en una vista ` +
+        `ortogonal (Planta / Frente XZ / Lado YZ), engancha a un nudo con OSNAP, o teclea la coordenada.`);
+    }
 
     // ── SELECT/none: NO crear geometría — los planos ortogonales se quedan
     // SIMÉTRICOS al origen siempre. Antes cualquier click los movía y
@@ -7145,7 +8175,9 @@ export function drawing({
       } else {
         // 4) Sin osnap → grid snap 2D (igual que click handler L2952-2962)
         const snapEnabled = (window as any).__hekatanSnapEnabled !== false;
-        const snap = (window as any).__hekatanSnap2D ?? 0.5;
+        // El paso del enganche = la separación de la rejilla que se VE (AutoCAD: la rejilla sigue
+        // al snap). Con «Paso cursor» 0.5 y rejilla de 1 m el punto caía entre líneas.
+        const snap = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0.5);
         if (snapEnabled && snap > 0) {
           point.x = Math.round(point.x / snap) * snap;
           point.y = Math.round(point.y / snap) * snap;

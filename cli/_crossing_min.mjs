@@ -1,0 +1,41 @@
+/** Crossing (der→izq) a pelo: ¿pinta el recuadro y selecciona? Se prueba con y sin Esc previo. */
+import puppeteer from "puppeteer"; import fs from "node:fs"; import { createServer } from "http";
+import { fileURLToPath } from "url"; import { dirname, join, extname } from "path";
+const __dirname=dirname(fileURLToPath(import.meta.url));
+const BASE="/hekatan-struct-lineal/"; const raiz=join(__dirname,"..","website","src","examples");
+const MIME={".html":"text/html",".js":"text/javascript",".css":"text/css",".wasm":"application/wasm",".json":"application/json",".svg":"image/svg+xml",".png":"image/png",".ico":"image/x-icon",".woff2":"font/woff2"};
+const srv=createServer((q,r)=>{let p=decodeURIComponent((q.url||"/").split("?")[0]);if(p.startsWith(BASE))p=p.slice(BASE.length-1);let f=join(raiz,p);if(fs.existsSync(f)&&fs.statSync(f).isDirectory())f=join(f,"index.html");if(!fs.existsSync(f)){r.writeHead(404);return r.end("404");}r.writeHead(200,{"content-type":MIME[extname(f)]||"application/octet-stream"});r.end(fs.readFileSync(f));});
+await new Promise(r=>srv.listen(4823,r));
+const nav=await puppeteer.launch({headless:"new",executablePath:"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",args:["--no-sandbox","--enable-unsafe-swiftshader","--use-angle=swiftshader","--enable-webgl"]});
+const pag=await nav.newPage(); await pag.setViewport({width:1400,height:880});
+const esp=m=>new Promise(r=>setTimeout(r,m));
+await pag.goto(`http://localhost:4823${BASE}workspace/?t=new-blank`,{waitUntil:"networkidle2",timeout:180000});
+await pag.waitForFunction(()=>!!document.querySelector("#viewer")?.__ctx,{timeout:120000}); await esp(6000);
+await pag.evaluate(()=>document.getElementById("hk-ribbon-guia")?.remove());
+for(const id of ["#hk-settings-toggle","#hk-pane-toggle"]){const b=await pag.evaluate(s=>{const e=document.querySelector(s);if(!e)return null;const r=e.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};},id); if(b){await pag.mouse.click(b.x,b.y); await esp(500);} }
+await pag.evaluate(()=>{ const v=document.querySelector("#viewer"),c=v.__ctx.camera;
+  v.__ctx.controls.target.set(3,2,0); c.position.set(14,-12,10); c.up.set(0,0,1); c.lookAt(3,2,0);
+  v.__ctx.controls.update?.(); v.__ctx.render?.();
+  window.__hekatanDrawingPoints.val=[[0,0,0],[6,0,0],[6,4,0],[0,4,0]];
+  window.__hekatanDrawingPolylines.val=[[0,1],[1,2],[2,3],[3,0]];
+  window.__hekatanRebuild?.(); window.__hekatanCadState?.setTool?.("select"); });
+await esp(1500);
+const rect=()=>pag.evaluate(()=>{ const d=[...document.querySelectorAll("div")].find(x=>x.style&&x.style.position==="fixed"&&(x.style.borderStyle==="solid"||x.style.borderStyle==="dashed")&&x.style.display!=="none"&&parseFloat(x.style.width||"0")>5);
+  return d?{borde:d.style.borderStyle,color:d.style.borderColor,w:d.style.width}:null; });
+const sel=()=>pag.evaluate(()=>window.__hekatanSelection?.size??0);
+const arrastrar=async(x0,y0,x1,y1)=>{ await pag.mouse.move(x0,y0,{steps:3}); await esp(200); await pag.mouse.down();
+  await pag.mouse.move((x0+x1)/2,(y0+y1)/2,{steps:6}); await esp(250);
+  const r=await rect();
+  await pag.mouse.move(x1,y1,{steps:6}); await esp(200); await pag.mouse.up(); await esp(800);
+  return {rectDurante:r, seleccionados:await sel()}; };
+// ¿donde acaba el lienzo?
+console.log("canvas:", JSON.stringify(await pag.evaluate(()=>{const c=document.querySelector("#viewer canvas").getBoundingClientRect();
+  return {top:Math.round(c.top),left:Math.round(c.left),right:Math.round(c.right),bottom:Math.round(c.bottom)};})));
+console.log("A) izq→der SIN Esc previo :", JSON.stringify(await arrastrar(300,200,1150,780)));
+await pag.keyboard.press("Escape"); await esp(500);
+console.log("B) der→izq CON Esc previo :", JSON.stringify(await arrastrar(1150,780,300,200)));
+await pag.evaluate(()=>{window.__hekatanSelection?.clear();window.__hekatanRefreshSelection?.();}); await esp(300);
+console.log("C) der→izq SIN Esc previo :", JSON.stringify(await arrastrar(1150,780,300,200)));
+await pag.evaluate(()=>{window.__hekatanSelection?.clear();window.__hekatanRefreshSelection?.();}); await esp(300);
+console.log("D) der→izq empezando DENTRO del lienzo (1150,300):", JSON.stringify(await arrastrar(1150,300,300,700)));
+await nav.close(); srv.close();
