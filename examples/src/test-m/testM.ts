@@ -349,21 +349,39 @@ function runModalEdificio(p: any, states: any, modalPanel: any, label: string, s
       // ── DINÁMICO: espectral CQC modal + SRSS direccional.  V_i = I·Sad(Tᵢ)·partMasa_i·W ──
       const freqs = out.frequencies ?? [], mpart = out.massParticipation ?? [];
       const periods = freqs.map((f: number) => (f > 0 ? 1 / f : 0));
-      const Vmod = (dir: number) => freqs.map((f: number, i: number) =>
-        I * sp.Sad(f > 0 ? 1 / f : 0) * ((mpart[i]?.[dir]) ?? 0) * W);
+      // Cortante de cada modo = reacción de la base (equilibrio, como SAP2000):
+      //   Vᵢ = I·Sad(Tᵢ)·Γᵢ²·g   (Γ = φᵀMr con φ masa-normalizado → Γ²·g = peso efectivo del modo)
+      // NO ratioᵢ·W: el ratio está normalizado por la masa LIBRE del modal y W incluye la masa
+      // pegada a los apoyos, que no vibra (dual 2×2×4: 1.88 % de W → Vdin +2 % sobre SAP2000;
+      // con Γ, −0.14 % / +0.22 %). Métodos sin Γ (Ritz, diafragma): ratio × masa libre, o W si falta.
+      const Gam: number[][] = out.participationFactors ?? [], Mlib: number[] = out.totalMass ?? [];
+      const g = 9.80665;
+      const metodoV = Gam.length ? "Γ²·g (reacción de base)" : Mlib.length ? "ratio·M_libre·g" : "ratio·W (sin Γ: aprox.)";
+      const Vmod = (dir: number) => freqs.map((f: number, i: number) => {
+        const Sa = I * sp.Sad(f > 0 ? 1 / f : 0);
+        if (Gam[i]) return Sa * Gam[i][dir] ** 2 * g;
+        if (Mlib.length) return Sa * ((mpart[i]?.[dir]) ?? 0) * Mlib[dir] * g;
+        return Sa * ((mpart[i]?.[dir]) ?? 0) * W;
+      });
       const Vx = combineModal(Vmod(0), periods, "CQC", zeta);
       const Vy = combineModal(Vmod(1), periods, "CQC", zeta);
       const Vdin = Math.hypot(Vx, Vy);
       // ── CONTROL del cortante dinámico mínimo (si no se alcanza → escalar) ──
       //   NEC-15 §6.2.2.b: 80% regular / 85% irregular.   ASCE 7-22 §12.9.1.4: 100%.
+      //   POR DIRECCIÓN, no con la resultante: hypot(Vx,Vy) tapaba un Vy bajo (dual 2×2×4:
+      //   Vx 82.6 %, Vy 51.0 % → la resultante daba 97 % y marcaba ✓; SAP2000 da 50.9 % en Y).
       const minR = esAsce ? 1.00 : (irregular ? 0.85 : 0.80);
-      const ratio = Vest > 0 ? Vdin / Vest : 0;
-      const fEsc = ratio < minR ? minR / Math.max(ratio, 1e-6) : 1.0;
+      const ratioX = Vest > 0 ? Vx / Vest : 0, ratioY = Vest > 0 ? Vy / Vest : 0;
+      const fEscX = ratioX < minR ? minR / Math.max(ratioX, 1e-6) : 1.0;
+      const fEscY = ratioY < minR ? minR / Math.max(ratioY, 1e-6) : 1.0;
+      const ratio = Math.min(ratioX, ratioY), fEsc = Math.max(fEscX, fEscY);   // la dirección que gobierna
+      const control = (d: string, r: number, f: number) =>
+        `${d} ${(r * 100).toFixed(1)} % ${r >= minR ? "✓" : `✗ → escalar ×${f.toFixed(2)}`}`;
       dynLines = [
         `══ NORMA DE ANÁLISIS: ${esAsce ? "ASCE 7-22 (factores)" : "NEC-15 (Ecuador)"} · peligro sísmico SIEMPRE Ecuador (Z, Fa/Fd/Fs, espectro NEC) ══`,
         `── CORTANTE BASAL — estático vs dinámico ──`,
-        `ESTÁTICO V = ${Vest.toFixed(1)} kN  ·  DINÁMICO Vx=${Vx.toFixed(1)} Vy=${Vy.toFixed(1)} → V=${Vdin.toFixed(1)} kN  (CQC+SRSS, ζ=${zeta})`,
-        `CONTROL Vdin/Vest = ${(ratio * 100).toFixed(0)} %  ${ratio >= minR ? `✓ ≥ ${(minR * 100).toFixed(0)}%` : `✗ < ${(minR * 100).toFixed(0)}% → escalar ×${fEsc.toFixed(2)}`}  (${esAsce ? "ASCE 7-22 §12.9.1.4" : `NEC-15 §6.2.2.b ${irregular ? "irregular" : "regular"}`})`,
+        `ESTÁTICO V = ${Vest.toFixed(1)} kN  ·  DINÁMICO Vx=${Vx.toFixed(1)} Vy=${Vy.toFixed(1)} kN  (CQC por dirección, ζ=${zeta}, Vᵢ = ${metodoV})`,
+        `CONTROL Vdin/Vest ≥ ${(minR * 100).toFixed(0)} %:  ${control("X", ratioX, fEscX)}  ·  ${control("Y", ratioY, fEscY)}  (${esAsce ? "ASCE 7-22 §12.9.1.4" : `NEC-15 §6.2.2.b ${irregular ? "irregular" : "regular"}`})`,
       ];
       const storyTable: { piso: number; z: number; Fx: number; Vx: number; delta: number; dM: number; drift: number; ok: boolean }[] = [];
       // ── DERIVAS DE PISO: V estático distribuido en altura → resolver → ΔM = 0.75·R·ΔE ≤ 2% ──
@@ -413,7 +431,7 @@ function runModalEdificio(p: any, states: any, modalPanel: any, label: string, s
       // que ASCE 7: la 5 gobierna gravedad+sismo, la 7 el vuelco (D mínima).
       // ρ = redundancia: NEC-15 no la usa (=1.0). ASCE 7-22 §12.3.4: 1.0 ó 1.3 (acá 1.0 regular).
       const rho = 1.0;
-      const Edis = rho * Vdin * fEsc;                 // sismo horizontal de diseño Eh [kN]
+      const Edis = rho * Math.hypot(Vx * fEscX, Vy * fEscY);   // sismo horizontal de diseño Eh [kN], cada dirección con su escala
       // Componente vertical:  NEC-15 §3.4.2 Ev=(2/3)·Eh  ·  ASCE 7-22 §12.4.2.2 Ev=0.2·Sa·D
       const Ev = esAsce ? (0.20 * sp.Sa(0) * W) : ((2 / 3) * Edis);
       const evForm = esAsce ? "Ev=0.2·Sa·D · ASCE §12.4.2.2" : "Ev=(2/3)·Eh · NEC §3.4.2";
@@ -421,7 +439,7 @@ function runModalEdificio(p: any, states: any, modalPanel: any, label: string, s
         `── COMBINACIONES DE CARGA SÍSMICA (NEC-SE-CG §3.4.3) ──`,
         `C5:  1.2 D + 1.0 L + 1.0 E        (gravedad + sismo)`,
         `C7:  0.9 D + 1.0 E                (vuelco · gravedad mínima)`,
-        `   E = ρ·V_din${fEsc > 1.001 ? `·fEsc` : ""} = ${rho.toFixed(1)}·${Vdin.toFixed(1)}${fEsc > 1.001 ? `·${fEsc.toFixed(2)}` : ""} = ${Edis.toFixed(1)} kN  (ρ=${rho.toFixed(1)}${esAsce ? " ASCE" : " NEC"}) ;  Ev ≈ ${Ev.toFixed(1)} kN  [${evForm}]`,
+        `   E = ρ·√((Vx·fx)²+(Vy·fy)²) = ${rho.toFixed(1)}·√((${Vx.toFixed(1)}·${fEscX.toFixed(2)})²+(${Vy.toFixed(1)}·${fEscY.toFixed(2)})²) = ${Edis.toFixed(1)} kN  (ρ=${rho.toFixed(1)}${esAsce ? " ASCE" : " NEC"}) ;  Ev ≈ ${Ev.toFixed(1)} kN  [${evForm}]`,
       );
       // Centros de masa (CM) y rigidez (CR) por piso. CM = centroide del piso;
       // CR = centroide ponderado por la rigidez lateral de los verticales
@@ -453,7 +471,7 @@ function runModalEdificio(p: any, states: any, modalPanel: any, label: string, s
       // Tablas estructuradas para el menú "📋 Tablas" de Analysis Outputs (estilo ETABS).
       (window as any).__hekatanSeismic = {
         tag: esAsce ? "ASCE 7-22" : "NEC-15", label,
-        base: { Vest, Vx, Vy, Vdin, ratio, fEsc, Edis, Ev },
+        base: { Vest, Vx, Vy, Vdin, ratio, fEsc, ratioX, ratioY, fEscX, fEscY, Edis, Ev },
         modal: { freqs: out.frequencies ?? [], periods: out.periods ?? [], massPart: out.massParticipation ?? [] },
         story: storyTable,   // top → bottom (como ETABS)
         cmcr,
