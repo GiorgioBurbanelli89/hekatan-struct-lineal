@@ -161,3 +161,9 @@ zapata-aislada-validacion
 zapata-viga-amarre
 col-placa
 validacion-losas-csi
+galpon-curvo
+galpon-agua1
+puente-losa-vigas
+estribo-puente
+muro-contencion-areas
+muro-contencion-h8
