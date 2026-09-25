@@ -62,12 +62,29 @@ export function supports(
     group.clear();
 
     const size = computeSize();
-    structure.nodeInputs?.val.supports?.forEach((dofs, index) => {
+    const sups = structure.nodeInputs?.val.supports;
+    // Restricción de PLANO (p. ej. uy, rx, rz fijos en un muro X-Z): el mismo
+    // patrón parcial puesto en la mayoría de los nudos NO es un apoyo, es lo que
+    // ETABS/SAP2000 llaman «Available DOFs» del modelo, y no lo dibujan en los
+    // nudos. Si se dibuja, un nudo libre parece articulado. Se cuenta cada patrón
+    // parcial y el que cubra más de la mitad de los nudos no se pinta.
+    const key = (d: boolean[]) => d.map((x) => (x ? 1 : 0)).join("");
+    const nNodes = derivedNodes.val.length;
+    const cuenta = new Map<string, number>();
+    sups?.forEach((dofs) => {
+      const d = (dofs as boolean[]) ?? [];
+      if (d.every(Boolean) || !d.some(Boolean)) return;
+      cuenta.set(key(d), (cuenta.get(key(d)) ?? 0) + 1);
+    });
+    const dePlano = new Set([...cuenta].filter(([, c]) => c > nNodes / 2).map(([k]) => k));
+
+    sups?.forEach((dofs, index) => {
       const position = derivedNodes.val[index];
       if (!position) return; // do not create if node does not exist
 
       // Elegir el símbolo según los DOF restringidos.
       const d = (dofs as boolean[]) ?? [];
+      if (dePlano.has(key(d))) return; // restricción de plano, no apoyo
       const nT = (d[0] ? 1 : 0) + (d[1] ? 1 : 0) + (d[2] ? 1 : 0); // traslaciones fijas
       const nR = (d[3] ? 1 : 0) + (d[4] ? 1 : 0) + (d[5] ? 1 : 0); // rotaciones fijas
       let mesh: THREE.Mesh;

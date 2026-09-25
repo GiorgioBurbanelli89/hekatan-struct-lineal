@@ -82,8 +82,11 @@ const PERMITIDOS = {
   "itw-test-1-flexion-pura": "membrana plana (X-Z): se ata el fuera-de-plano",
   "itw-test-2-voladizo": "membrana plana (X-Z)",
   "itw-test-3-cook": "membrana plana (X-Z)",
-  "itw-muro-acople": "muros planos (X-Z) + viga de acople",
-  "itw-muro-frame": "muro plano (X-Z) + viga en voladizo",
+  // ⚠️ `itw-muro-acople` e `itw-muro-frame` ya NO estan (24-sep-2026): llevaban
+  // la misma atadura (uy, rx, rz en todos los nudos) y el visor pintaba un cono
+  // azul en cada nudo libre. Medido: reacciones de la atadura ~1e-12 y deriva
+  // identica sin ella (0.2370 mm y 6.7606 mm) — la cascara tiene flexion de
+  // placa y la carga va en el plano, asi que sobraba. Ahora solo base empotrada.
 
   // Los cuatro Q4 rescatados de FEM Studio (18-sep-2026). MISMO motivo, y está
   // medido en su `gen`, no supuesto: los cuatro generan TODOS sus nudos con

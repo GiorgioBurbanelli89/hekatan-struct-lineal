@@ -725,10 +725,11 @@ export const muroAcopleITW: ExampleDef = {
     for (let k = 0; k < cadena.length - 1; k++)
       elements.push([cadena[k], cadena[k + 1]] as unknown as Element);
 
+    // Solo la base empotrada. Antes se sujetaba el fuera-de-plano (uy, rx, rz)
+    // en TODOS los nudos: sus reacciones daban ~1e-12 y la respuesta era
+    // idéntica sin ellas (la cáscara tiene flexión de placa y la carga está en
+    // el plano), pero el visor las dibujaba como apoyos en nudos libres.
     const supports = new Map<number, Sup>();
-    for (let n = 0; n < nodes.length; n++)
-      // Muro en el plano X-Z: libres ux, uz y el drilling ry.
-      supports.set(n, [false, true, false, true, false, true]);
     for (let pp = 0; pp < 2; pp++)
       for (let i = 0; i <= nx; i++)
         supports.set(pp * npp + i, [true, true, true, true, true, true]);
@@ -829,9 +830,9 @@ export const muroFrameITW: ExampleDef = {
     for (let k = 0; k < cadena.length - 1; k++)
       elements.push([cadena[k], cadena[k + 1]] as unknown as Element);
 
+    // Solo la base empotrada (ver el muro de acople: el fuera-de-plano sujeto en
+    // todos los nudos no cambiaba nada y se dibujaba como apoyos).
     const supports = new Map<number, Sup>();
-    for (let n = 0; n < nodes.length; n++)
-      supports.set(n, [false, true, false, true, false, true]);   // X-Z: ux, uz, ry
     for (let i = 0; i <= nx; i++)
       supports.set(i, [true, true, true, true, true, true]);   // base empotrada
 
