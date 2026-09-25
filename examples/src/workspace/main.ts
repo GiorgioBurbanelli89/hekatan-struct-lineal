@@ -664,6 +664,25 @@ function ocultarEjemploEmbebido() {
   document.body.classList.remove("hk-embebido");
 }
 
+/**
+ * El marco va ENTRE la barra de título (#hk-cad-tit) y la línea de órdenes (#hk3-cmdline), no a
+ * pantalla completa: las dos van por encima (z 400 / 99999) y tapaban la cabecera de los paneles del
+ * ejemplo y las últimas filas de su «Parameters» (placa-base-cft, Jorge 24-sep-2026).
+ */
+function encajarEmbebido() {
+  const f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
+  if (!f) return;
+  const vis = (id: string) => { const e = document.getElementById(id); const r = e?.getBoundingClientRect();
+    return r && r.width > 0 && r.height > 0 && getComputedStyle(e as Element).display !== "none" ? r : null; };
+  const tit = vis("hk-cad-tit"), cmd = vis("hk3-cmdline");
+  const top = tit && tit.top < 80 ? Math.round(tit.bottom) : 0;
+  const bottom = cmd && cmd.top > innerHeight / 2 ? Math.round(cmd.top) : innerHeight;
+  f.style.top = `${top}px`;
+  f.style.bottom = "auto";
+  f.style.height = `${Math.max(200, bottom - top)}px`;
+}
+addEventListener("resize", () => { if (document.getElementById(EMBEBIDO_ID)) encajarEmbebido(); });
+
 function mostrarEjemploEmbebido(url: string, nombre: string) {
   let f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
   if (!f) {
@@ -679,6 +698,7 @@ function mostrarEjemploEmbebido(url: string, nombre: string) {
   }
   f.title = nombre;
   if (f.getAttribute("src") !== url) f.setAttribute("src", url);
+  encajarEmbebido();
   // Los controles del visor del WORKSPACE sobran mientras se ve un ejemplo embebido: mandan
   // sobre un lienzo que está apagado, y encima tapan los del ejemplo (Jorge, 22-sep: «los sólidos
   // … hay errores»). Se esconden ellos y su lengüeta; el selector de ejemplo se queda.
@@ -686,6 +706,9 @@ function mostrarEjemploEmbebido(url: string, nombre: string) {
   // El visor 3D del workspace se apaga mientras tanto: el ejemplo trae el suyo
   // y dos contextos WebGL vivos a la vez es tirar memoria (la maquina tiene 4 GB).
   if (viewerElm) viewerElm.style.display = "none";
+  // Las barras se montan despues del primer ejemplo: se vuelve a medir cuando ya estan.
+  setTimeout(encajarEmbebido, 600);
+  setTimeout(encajarEmbebido, 2000);
 }
 
 function loadExample(ex: ExampleDef) {
