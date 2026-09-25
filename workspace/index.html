@@ -1,25 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Hekatan Struct — Análisis estructural FEM en el navegador</title>
-    <meta name="description" content="Hekatan Struct: análisis estructural por elementos finitos en el navegador. Pórticos, armaduras, losas y cimentaciones sin instalar nada. Validado contra ETABS, SAP2000 y SAFE.">
-    <meta name="author" content="Jorge Burbano">
-    <meta name="keywords" content="análisis estructural, elementos finitos, FEM, pórticos, armaduras, losas, ingeniería estructural, ETABS, SAP2000, SAFE, software gratis">
-    <link rel="canonical" href="https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Hekatan Struct — Análisis estructural FEM en el navegador">
-    <meta property="og:description" content="Modela y calcula estructuras por elementos finitos directamente en el navegador. Sin instalación, sin servidor. Validado contra ETABS, SAP2000 y SAFE.">
-    <meta property="og:url" content="https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/">
-    <meta property="og:locale" content="es_EC">
-    <meta name="twitter:card" content="summary_large_image">
     <!-- CRITICAL: prevenir cache de index.html. Sin esto el browser cachea esta
          página con hashes de chunks viejos → 404 cuando deployamos nueva versión. -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <link rel="icon" href="/hekatan-struct-lineal/img/favicon.ico" type="image/x-icon" />
+    <title>Hekatan Struct Lineal</title>
     <style>
       /* Safe area for mobile browsers with URL bar / notch */
       :root {
@@ -41,150 +31,152 @@
            dev:        /workspace/             → ../web-ifc-api-iife.js → /web-ifc-api-iife.js
            gh-pages:   /hekatan-struct-lineal/workspace/ → ../web-ifc-api-iife.js → /hekatan-struct-lineal/web-ifc-api-iife.js -->
     <script src="../web-ifc-api-iife.js"></script>
-    <script type="module" crossorigin src="/hekatan-struct-lineal/assets/workspace-BL21t6P1.js"></script>
+    <script type="module" crossorigin src="/hekatan-struct-lineal/assets/workspace-BLfbvclG.js"></script>
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/modulepreload-polyfill-B5Qt9EMX.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/didacticCpp-BoYi16rL.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/Text-C1TX4d8g.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/preload-helper-V2P8TQsQ.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/Text-Br8EG2up.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/tweakpane-BXg6ZhiP.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/aiAgent-CDkRN2K5.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/pureFunctionsAny.generated-DeJSBP3k.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/analyze-BNmKymcK.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/analyze-CWJH9Nzr.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/deform-DGwQQaqs.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/didacticCpp-iMwzdM-v.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/aiAgent-BbDbzZHq.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/modeScale-sgWZ-KrB.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/units-BjHPBmMt.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/csiImporter-C_dUiqss.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/newBlank-BdH4of39.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/units-D37lXmxW.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/csiImporter-D9vVZSoL.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/newBlank-DJjSucrQ.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/materials-VwssM8Vw.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cadSections-BcRFaG1j.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cargasPorCaso-B_GZ_-rO.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/h8-NvnnhbYJ.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cliModeler-_2hsk4zz.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/h8-BasB3Yl9.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cliModeler-B4DEPeTo.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cadDraw-C6PJzRpg.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaMedioElastico-CBPNe7lS.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaMedioElastico-AI8xMfeI.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/exampleVersion-D1A_5i59.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataVigaAmarre-CIDDL3ug.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataAislada-CjI5CuR9.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/simpleExampleTemplates-DQEnfnkD.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/arco-DKMRpFVy.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/burj-BNrnMifY.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/eiffel-DGtbwBwo.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/opera-Cu3Xd7hj.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/talud-C2VwaMge.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/twisted-DTY3E1bX.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroQ4-C1s8mxg1.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaQ4-CB5g6Eo7.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/losaPlana-By6zQnyV.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/losaRect-DH37D9F2.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaXY-Cj7npVWA.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaOrificios-Dg1uWbfu.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/validacionLosasCsi-BP_-aw2V.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/colPlaca-BE8cnhND.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAlta-CUdELAbM.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroContencion-C4wfz3zX.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/puenteReticular-DHq6U4Ay.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/diagridParam-D0eUP2pt.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/pergolaParam-C1-6WBYy.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cotas3D-CjkJ2Z3B.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioAporticado-ckoXsHB1.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifMuros-9W5tKztt.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifMixto-Cr_WE1eU.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifAceroDiag-DLWODr9S.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataAisladaValidacion-BfbA_DtV.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchLosa-Ck_Ebm0t.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchViga-CUdKuSNh.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataVigaAmarre-CXstrRWn.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataAislada-D6KZZGN2.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/simpleExampleTemplates-DJCIC-8Q.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/arco-DHrRczk_.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/burj-DIKnuSJ7.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/eiffel-BIvS3JA1.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/opera-hbbd-9Ki.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/talud-VSiJcj-Z.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/twisted-ulpG8HDE.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroQ4-Bo0tkI91.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaQ4-CenZptOq.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/losaPlana-B_f2mQje.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/losaRect-BrKyn-qT.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaXY-BKv8F_-p.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaOrificios-CkqSciCv.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/validacionLosasCsi-V3SGrxei.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/colPlaca-8ybpnhhQ.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAlta-RRgbWw9G.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroContencion-e1ylxNIj.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/puenteReticular-5LlQOFtU.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/diagridParam-BOgbarA0.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/pergolaParam-AmjGewh9.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cotas3D-BdlSa8JM.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioAporticado-CVfnSDUM.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifMuros-cFPZPjlx.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifMixto-D1A-AnCB.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifAceroDiag-CkAf0C8f.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/zapataAisladaValidacion-CknFsL0N.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchLosa-5qv2cJLm.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchViga-Cc1kNosN.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/f2kPlateQ4-BZ9dGpgS.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchCombinada-Bv2VCFJV.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchConectada-DxExV7UR.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchCombinada-Mz4PCGAK.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchConectada-ChkHNqcE.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cargaColumnaConsistente-DPcPMAlx.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchComparativa-XDlcvP_e.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj1-BSmGqBkp.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj2-C6OCJz2E.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj3-DUyIcA4N.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj4-D89UW-jK.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj5-Bu5V0PN6.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj6-ByZSJJHx.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSafeEx01Plate-GIAkdCdh.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSafeEx04PlateBeams-C4lycPI-.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj7-6-0odaIe.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj8-D1gp9lVP.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaCimGuerra-Bm2Jzp1O.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaCimGuerraTinv-qQG58mu0.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioConLosa-Dz-P_iR1.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioConMuros-CNODj9Oq.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/safeBenchComparativa-DEkUekAT.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj1-BM6cl0mU.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj2-Br902xfl.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj3-1BR0EZUC.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj4-kfmWOQTl.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj5-DHXrAHte.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj6-D12v7Lxc.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSafeEx01Plate-BvMc8Eo1.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSafeEx04PlateBeams-R2TjdU4M.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj7-PZH0phaK.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/guerraEj8-C1cUGoQy.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaCimGuerra-9NbFUupE.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaCimGuerraTinv-BhJEuzWw.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioConLosa-Cx2BN9dx.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioConMuros-CUDNTNds.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/planeQ4-DsCzHfbV.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plane-HRfbomji.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/membranaCSI-jO1QHZgs.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateThin-CySTObGE.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateWithBeams-CzC-dyT9.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/slabBeamsColumns-8FZM86tI.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateThick-DSJzYLTD.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/membrana-BoyJZ095.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/shellThin-CjTz2pVS.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmark3way-BaHfY3HP.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkCft-C8TnZD7D.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cantileverE2k-DKcZJaX3.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plane-CToMwCTu.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/membranaCSI-10QGeFhN.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateThin-8xYevNPH.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateWithBeams-9zLJiLlJ.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/slabBeamsColumns-BtnOk-uV.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/plateThick-CjYSx0wS.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/membrana-DMsDLAHh.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/shellThin-Zd8l7RnX.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmark3way-B1tm5wmi.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkCft-BOwShsdW.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cantileverE2k-BDmP4yIh.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/loadCaseHelpers-D2m4cQgV.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkCftCantilever-DpQxDHM_.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSteelCantilever-DErLbOJO.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkConcreteCantilever-CpIDob0z.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/pazFrameE2k-CVFCEYOh.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkCftCantilever-BF4c_08G.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkSteelCantilever-DpFUQJoV.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkConcreteCantilever-DVnXLmxB.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/pazFrameE2k-DUdzBIEZ.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/chartPanel-DKe9UCQ8.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/newmarkBeta-BvlZHnmY.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz4_1-BYwx7PxH.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz6_1-Dflp-8zM.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz7_1-BzPAAlJ8.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz8_1-BKO6TDUH.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz9_3-CwEskubH.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz10_7-DzrOpd7h.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz11_1-CjmvwYcF.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz12_1-DvjOrM7b.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz13_1-D4hO7olx.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroLargueros-vcmi6Igp.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/e2kParser-Db5bKAgo.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/mesaTorsion-CIXezxze.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/shellThick-Dp_3Rilk.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz4_1-BA-zbKn8.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz6_1-CX6fu8dG.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz7_1-U2A3hvyP.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz8_1-DLUz7FDE.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz9_3-k6hU7LYe.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz10_7-fyqc4pnj.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz11_1-2YZ_whh-.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz12_1-BpmFh8Gv.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/benchmarkPaz13_1-DY_g3KRy.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/muroLargueros-DR-zo1Yn.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/e2kParser-2L7GKQGH.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/mesaTorsion-CnXhZ0O8.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/shellThick-d8__G_TJ.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/layeredQ4-DuXBBCkf.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/layeredShell-42E5iszF.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioLadera-CXG9bq0m.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioComparativaFem-0Uw7ej0Q.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioHormigon-DQ9PhMVw.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioAceroV2-uclsxBfr.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioMixto-je0yYZTC.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioMuros-BdTUm4oK.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioDual-C2cGs1Su.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/layeredShell-DKrMA4mJ.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioLadera-D6aISKBL.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioComparativaFem-D5T86UQU.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioHormigon-DOqbW63W.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioAceroV2-c_dUdgrO.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioMixto-BTYv_zi7.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioMuros-DBTW8QDE.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioDual-CdLq2znn.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/fiberSectionCft-CvKVMF85.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/columnaCft-B6CfU-yP.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/columnaCft-Dn0wZA_o.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/mitc3-2FJr2z_r.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/triangularPlate-CE7p4oUi.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/triangularPlate-CF5-F0Ye.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/menegottoPinto-9Id4uJ7l.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/secantPlasticity-AEyMAIpW.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/secantPlasticity-Da1qmwOo.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/colorMapPercentile-OnF3uP-w.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionRbs-BcHsCf5T.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionBfp-Cee7ZiDr.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionEndPlate-DPbL_SUM.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaBase-Bn7rWBuV.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionRbs-ziIrewWH.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionBfp-DdlQIzI8.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/conexionEndPlate-DHwgCkws.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/placaBase-CbUNvgIo.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/paramsSeccion-C710IYP5.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/trussGen-5hYrxcZl.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/barraAxial-Diq7D-Ye.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCantilever-Dlh9JBkx.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialConcreteCantilever-BvIoFSA3.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCompositeCantilever-B1Vj8EjJ.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCompositeEncasedCantilever-CdIIuqMl.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionConcreteCantilever-BJQSGuAg.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionSteelCantilever-ID5tCuQ7.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionCompositeSlabCantilever-B26jqbcy.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionCompositeEncasedCantilever-Cy3q9pkJ.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/portico2D-CNT5-YTL.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cerramiento-B8zLiN31.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/tower3D-BQgTqg9y.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/galpon-CnAEQBpi.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/galponBodega-CtTfjLsd.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifAcero-CJUzvL3B.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/mezanine-C0A41caL.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/trussGen-t7eXyO9V.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/barraAxial-BoROsERl.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCantilever-DJmDIPfq.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialConcreteCantilever-BlP0-jq5.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCompositeCantilever-CZtAUA-5.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaAxialCompositeEncasedCantilever-DmF_3lFp.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionConcreteCantilever-CL9T88oP.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionSteelCantilever-Ct-c7YSQ.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionCompositeSlabCantilever-CMCfJXvw.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/vigaFlexionCompositeEncasedCantilever-CR7pSfdE.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/portico2D-DD0l4ICT.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/cerramiento-BFrxngiM.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/tower3D-BeHMZj-D.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/galpon-BafFsK9_.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/galponBodega-BzFYIT4x.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edifAcero-D0k5cRqB.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/mezanine-B5lj8VQj.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/espectroNec-CMQq_yyp.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioFrameNec-D-_kAyZR.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/edificioFrameNec-C217gicK.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/f2kExporter-CcrVIqWt.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/f2kImporter-Cp9ARV1y.js">
-    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/e2kExporter-BgDRO_ej.js">
+    <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/e2kExporter-gMXh1Px4.js">
     <link rel="modulepreload" crossorigin href="/hekatan-struct-lineal/assets/f2kCimentacionCompleta-Ct_BuFMO.js">
     <link rel="stylesheet" crossorigin href="/hekatan-struct-lineal/assets/aiAgent-BhY8c8nT.css">
   </head>
@@ -197,7 +189,5 @@
          hecho y funcionando en headless.
          Vite ya versiona los modulos por su cuenta en desarrollo, y en el
          build les pone hash en el nombre. No hace falta nada. -->
-
-
   </body>
 </html>
