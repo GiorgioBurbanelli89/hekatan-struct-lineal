@@ -21,3 +21,13 @@ PERMANENTE) + peso propio (`SelfWtMult=1` en PESO PROPIO).
   14 apoyos, 582 nudos cargados, ΣFz = −1352.591 kN (= a mano), frameFixedEnd 1265 (= 1279 − 14), 0 errores. PNG: flechas.
 - ⏳ El arreglo del PARSER (Gravity, peso propio) es de la otra sesión y sigue SIN commit: sin él no hay cargas.
 - ⏳ Deploy público (gh-pages) sin actualizar.
+
+## Pasar Cancha Parque.s2k (v25.3.1) a SAP2000 v24 (25-sep-2026)
+- ❌ SAP 24.1.0 importa el texto de v25 y ABORTA: aviso oculto «Error getting table name for table key
+  Active Degrees of Freedom in modDB > SubMakeDBTable!» + «Error 91 ... Import aborted». Oculto = modelo vacío, sin log.
+  Una instancia arrancada por la API quedó rota (el aviso se repetía en bucle): sospecha de la instancia, no del archivo.
+- ✅ Diferencia hallada: v25 escribe `CardinalPt="10 (centroid)"` (1279 barras); v24 lo lee como entero
+  (el .NET decía Conversions.ToInteger(String)). Conversor: `csi-cli/sap2000-cli/s2k_v25_a_v24.py`
+  (Version→24.1.0, CardinalPt→número). Salida: `Downloads/Cancha Parque v24.s2k`.
+- ⏳ SIN VERIFICAR en SAP 24: la prueba limpia (control boveda.$2k + convertido) la mató Claude Code por RAM baja.
+  Otra sesión (hekatan-calc-1-0-0-da) se enganchó a mi SAP por GetActiveObject a las 00:08: coordinar antes.

@@ -130,6 +130,14 @@ export function analyze(
           fLocal = fLocal.map((v: number, k: number) => v + feLocal[k]);
         }
       }
+      // Empotramiento GENERAL (12, globales): cargas parciales / trapeciales / peso propio
+      // de los lectores de CSI (examples/src/shared/cargaBarraConsistente.ts). Se SUMA al
+      // de `frameLoads` (uniforme): los lectores no ponen la misma carga en los dos.
+      const feG = (elementInputs as any)?.frameFixedEnd?.get(i) as number[] | undefined;
+      if (feG) {
+        const feLocal = multiply(T, feG) as unknown as number[];
+        fLocal = fLocal.map((v: number, k: number) => v + feLocal[k]);
+      }
 
       analyzeOutputs.normals!.set(i, [fLocal[0], fLocal[6]]);
       analyzeOutputs.shearsY!.set(i, [fLocal[1], fLocal[7]]);

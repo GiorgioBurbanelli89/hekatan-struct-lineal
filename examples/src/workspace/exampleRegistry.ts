@@ -294,6 +294,7 @@ import { losaRect } from "../losa-rect/losaRect";
 import { placaXY } from "../placa-xy/placaXY";
 import { placaOrificios } from "../placa-orificios/placaOrificios";
 import { validacionLosasCsi } from "../validacion-losas-csi/validacionLosasCsi";
+import { placaBaseNoLineal } from "../placa-base-nolineal/placaBaseNoLineal";   // SOLO DEV (prueba local)
 import { colPlaca } from "../col-placa/colPlaca";
 import { vigaAlta } from "../viga-alta/vigaAlta";
 import { muroContencion } from "../muro-contencion/muroContencion";
@@ -441,6 +442,8 @@ export const examplesRegistry: ExampleDef[] = [
   //    selector los ofrezca y `categorias-arbol` los pueda mirar (18-sep-2026).
   arco, burj, eiffel, opera, talud, twisted,
   muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios, validacionLosasCsi,
+  // Prueba LOCAL de la placa base no lineal: solo en `npm run dev` (en el build import.meta.env.DEV = false).
+  ...(import.meta.env.DEV ? [placaBaseNoLineal] : []),
   colPlaca, vigaAlta, muroContencion, puenteReticular,
   diagridParam, pergolaParam,
   edifMuros, edifMixto, edifAceroDiag,

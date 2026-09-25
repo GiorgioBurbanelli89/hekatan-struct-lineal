@@ -5,6 +5,21 @@
  *   - Modern (v15+): TABLE: "..." format with key=value pairs
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
+import { cargaBarraConsistente, acumularCargaBarra } from "./cargaBarraConsistente";
+
+/** Cargas que el formato de tablas trae y que hasta el 24-sep-2026 no se leian (ver buildModel). */
+interface CargasTabla {
+  /** FRAME LOADS - DISTRIBUTED que NO son uniformes de extremo a extremo en GLOBAL X/Y/Z. */
+  barras: { frame: string; dir: number[]; a: number; b: number; rel: boolean; fa: number; fb: number }[];
+  /** AREA LOADS - UNIFORM: q por unidad de area en la direccion `dir` (global) o normal (dir null). */
+  areas: { area: string; dir: number[] | null; q: number }[];
+  /** SelfWtMult (el mayor de los patrones: se suman todos los patrones como el e2kParser). */
+  selfWtMult: number;
+  /** MassMod / WeightMod de AREA STIFFNESS MODIFIERS, por area. */
+  areaMW: Map<string, [number, number]>;
+  /** FRAME AUTO MESH ASSIGNMENTS con AutoMesh=Yes y AtJoints=Yes: SAP parte la barra en los nudos que caen sobre ella. */
+  autoMeshJoints?: Set<string>;
+}
 
 export interface S2kModel {
   units: { force: string; length: string };
@@ -94,6 +109,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
   const solidAssign = new Map<string, string>();
 
   let currentTable = "";
+  const cargasTabla: CargasTabla = { barras: [], areas: [], selfWtMult: 0, areaMW: new Map(), autoMeshJoints: new Set() };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -136,6 +152,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
           mat.G = parseNum(kv.get("G12"));
           mat.nu = parseNum(kv.get("U12"));
           mat.density = parseNum(kv.get("UnitMass"));
+          (mat as any).weight = parseNum(kv.get("UnitWeight"));   // peso propio (SelfWtMult)
           materials.set(name, mat);
         }
         break;
@@ -173,7 +190,10 @@ function parseTableFormat(rawLines: string[]): S2kModel {
             // quedaba con 5/6·A (Timoshenko de defecto) y salia 2 % mas rigido.
             As2: parseNum(kv.get("AS2")),
             As3: parseNum(kv.get("AS3")),
-          });
+            // modificadores de masa y peso de la seccion (defecto 1)
+            MMod: kv.has("MMod") ? parseNum(kv.get("MMod")) : 1,
+            WMod: kv.has("WMod") ? parseNum(kv.get("WMod")) : 1,
+          } as any);
         }
         break;
       }
@@ -285,12 +305,50 @@ function parseTableFormat(rawLines: string[]): S2kModel {
       }
 
       case "FRAME LOADS - DISTRIBUTED": {
-        // Uniforme, en GLOBALES, de extremo a extremo: lo que escribe el exportador.
-        const fr = kv.get("Frame"); const dir = kv.get("Dir"); const w = parseNum(kv.get("FOverLA"));
-        if (fr && dir && w) {
-          const k = { X: 0, Y: 1, Z: 2 }[dir as "X" | "Y" | "Z"];
-          if (k !== undefined) { const v = frameLoadsRaw.get(fr) ?? [0, 0, 0]; v[k] += w; frameLoadsRaw.set(fr, v); }
+        // Uniforme, en GLOBALES, de extremo a extremo (lo que escribe el exportador): va a
+        // `frameLoads` como siempre. Lo DEMAS (trapecio FOverLA != FOverLB, parcial RelDist /
+        // AbsDist, Dir=Gravity) hasta el 24-sep-2026 se leia como FOverLA en TODA la barra:
+        // ahora va al vector consistente (cargaBarraConsistente) en buildModel.
+        const fr = kv.get("Frame"); const dir = kv.get("Dir");
+        const fa = parseNum(kv.get("FOverLA")), fb = kv.has("FOverLB") ? parseNum(kv.get("FOverLB")) : fa;
+        const cs = (kv.get("CoordSys") ?? "GLOBAL").toUpperCase();
+        if (!fr || !dir || (!fa && !fb) || cs !== "GLOBAL") break;
+        const rel = (kv.get("DistType") ?? "RelDist") !== "AbsDist";
+        const a = rel ? parseNum(kv.get("RelDistA")) : parseNum(kv.get("AbsDistA"));
+        const b = rel ? (kv.has("RelDistB") ? parseNum(kv.get("RelDistB")) : 1) : parseNum(kv.get("AbsDistB"));
+        const k = { X: 0, Y: 1, Z: 2 }[dir as "X" | "Y" | "Z"];
+        if (k !== undefined && rel && a === 0 && b === 1 && fa === fb) {
+          const v = frameLoadsRaw.get(fr) ?? [0, 0, 0]; v[k] += fa; frameLoadsRaw.set(fr, v);
+        } else {
+          const d = k !== undefined ? [0, 1, 2].map(j => (j === k ? 1 : 0)) : /^grav/i.test(dir) ? [0, 0, -1] : null;
+          if (d) cargasTabla.barras.push({ frame: fr, dir: d, a, b, rel, fa, fb });
         }
+        break;
+      }
+
+      case "FRAME AUTO MESH ASSIGNMENTS": {
+        // Cancha Parque (25-sep-2026): 14 columnas de 0 a 7.1 m pasan por un nudo del arco a 6.3 m.
+        // SAP las parte ahi (AtJoints) y las conecta; sin esto Hekatan dejaba el arco suelto: flechas x2.2.
+        const fr = kv.get("Frame");
+        if (fr && /^yes$/i.test(kv.get("AutoMesh") ?? "") && /^yes$/i.test(kv.get("AtJoints") ?? "")) cargasTabla.autoMeshJoints!.add(fr);
+        break;
+      }
+
+      case "AREA LOADS - UNIFORM": {
+        // `Area=A20 LoadPat=Live CoordSys=GLOBAL Dir=Z UnifLoad=-2` (escrito por SAP2000).
+        // Dir=Gravity: positivo hacia -Z. CoordSys=Local Dir=3: normal del area.
+        const ar = kv.get("Area"); const dir = kv.get("Dir") ?? ""; const q = parseNum(kv.get("UnifLoad"));
+        if (!ar || !q) break;
+        const local = /^local/i.test(kv.get("CoordSys") ?? "GLOBAL");
+        const d = local ? (dir === "3" ? null : undefined)
+          : dir === "X" ? [1, 0, 0] : dir === "Y" ? [0, 1, 0] : dir === "Z" ? [0, 0, 1] : /^grav/i.test(dir) ? [0, 0, -1] : undefined;
+        if (d !== undefined) cargasTabla.areas.push({ area: ar, dir: d, q });
+        break;
+      }
+
+      case "LOAD PATTERN DEFINITIONS": {
+        const sw = parseNum(kv.get("SelfWtMult"));
+        if (sw > cargasTabla.selfWtMult) cargasTabla.selfWtMult = sw;
         break;
       }
 
@@ -317,6 +375,8 @@ function parseTableFormat(rawLines: string[]): S2kModel {
       case "AREA STIFFNESS MODIFIERS": {
         const area = kv.get("Area");
         if (area) areaMods.set(area, ["f11", "f22", "f12", "m11", "m22", "m12", "v13", "v23"].map(k => kv.has(k) ? parseNum(kv.get(k)) : 1));
+        if (area && (kv.has("MassMod") || kv.has("WeightMod")))
+          cargasTabla.areaMW.set(area, [kv.has("MassMod") ? parseNum(kv.get("MassMod")) : 1, kv.has("WeightMod") ? parseNum(kv.get("WeightMod")) : 1]);
         break;
       }
 
@@ -351,7 +411,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
   }
 
   return buildModel(units, dof, materials, frameSections, shellSections, joints,
-    frameConns, shellConns, restraints, frameSectionAssign, areaSectionAssign, loads, offsets, angles, areaMods, frameLoadsRaw, solidConns, solidProps, solidAssign, sdBox, sdFill, jointSprings);
+    frameConns, shellConns, restraints, frameSectionAssign, areaSectionAssign, loads, offsets, angles, areaMods, frameLoadsRaw, solidConns, solidProps, solidAssign, sdBox, sdFill, jointSprings, cargasTabla);
 }
 
 // ═══════════════════════════════════════════
@@ -499,6 +559,7 @@ function buildModel(
   sdBox?: Map<string, { h: number; b: number; t: number; tf?: number; mat: string; D?: number }>,
   sdFill?: Map<string, { mat: string }>,
   jointSprings: Map<string, number[]> = new Map(),
+  cargasTabla?: CargasTabla,
 ): S2kModel {
   const nodeNames: string[] = [];
   const nodeNameToIdx = new Map<string, number>();
@@ -513,15 +574,39 @@ function buildModel(
   const elementNames: string[] = [];
   const elementSections = new Map<number, string>();
 
+  // AutoMesh AtJoints: la barra se parte en cada nudo que cae sobre su eje (tolerancia 1 mm, la
+  // MergeTol de SAP). Los trozos 2..n se llaman `nombre~k`; `piezas` guarda la fraccion [s0, s1] de
+  // cada uno para repartir las cargas de la barra original.
+  const piezas = new Map<string, { i: number; s0: number; s1: number }[]>();
+  const nombreBase = (n: string) => n.replace(/~\d+$/, "");
   for (const fc of frameConns) {
     const i1 = nodeNameToIdx.get(fc.j1);
     const i2 = nodeNameToIdx.get(fc.j2);
     if (i1 !== undefined && i2 !== undefined) {
-      const idx = elements.length;
-      elements.push([i1, i2]);
-      elementNames.push(fc.name);
-      const sec = frameSectionAssign.get(fc.name);
-      if (sec) elementSections.set(idx, sec);
+      const cortes: { s: number; n: number }[] = [];
+      if (cargasTabla?.autoMeshJoints?.has(fc.name)) {
+        const a = nodesArr[i1], b = nodesArr[i2];
+        const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2;
+        if (L2 > 1e-12) nodesArr.forEach((p, n) => {
+          if (n === i1 || n === i2) return;
+          const s = ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1] + (p[2] - a[2]) * d[2]) / L2;
+          if (s <= 1e-9 || s >= 1 - 1e-9) return;
+          const e = Math.hypot(p[0] - a[0] - s * d[0], p[1] - a[1] - s * d[1], p[2] - a[2] - s * d[2]);
+          if (e < 1e-3) cortes.push({ s, n });
+        });
+        cortes.sort((x, y) => x.s - y.s);
+      }
+      const ss = [0, ...cortes.map(c => c.s), 1], ns = [i1, ...cortes.map(c => c.n), i2];
+      const lista: { i: number; s0: number; s1: number }[] = [];
+      for (let k = 0; k < ns.length - 1; k++) {
+        const idx = elements.length;
+        elements.push([ns[k], ns[k + 1]]);
+        elementNames.push(k === 0 ? fc.name : `${fc.name}~${k + 1}`);
+        const sec = frameSectionAssign.get(fc.name);
+        if (sec) elementSections.set(idx, sec);
+        lista.push({ i: idx, s0: ss[k], s1: ss[k + 1] });
+      }
+      piezas.set(fc.name, lista);
     }
   }
   const nFrames = elements.length;
@@ -557,6 +642,8 @@ function buildModel(
     thicknesses: new Map(), poissonsRatios: new Map(),
   };
   const sectionShapes = new Map<number, SectionShape>();
+  /** Para el tooltip del cursor (hover.ts): nombre de sección + material por elemento. */
+  const sectionInfo = new Map<number, any>();
 
   // Default material (first one)
   const defaultMat = materials.values().next().value || { E: 29000, nu: 0.3, G: 11153 };
@@ -581,9 +668,9 @@ function buildModel(
       ei.densities!.set(i, mat.density || 0);
       if (sec.As2) (ei as any).shearAreasZ ??= new Map(), (ei as any).shearAreasZ.set(i, sec.As2);
       if (sec.As3) (ei as any).shearAreasY ??= new Map(), (ei as any).shearAreasY.set(i, sec.As3);
-      const off = offsets.get(elementNames[i]);
+      const off = (piezas.get(elementNames[i])?.length ?? 1) === 1 ? offsets.get(elementNames[i]) : undefined;
       if (off) (ei as any).endOffsets ??= new Map(), (ei as any).endOffsets.set(i, off);
-      const ang = angles.get(elementNames[i]);
+      const ang = angles.get(nombreBase(elementNames[i]));
       if (ang) (ei as any).localAngles ??= new Map(), (ei as any).localAngles.set(i, ang);
       const sx: any = sec;
       if (sec.shape?.includes("Wide Flange") || sec.shape === "I") {
@@ -599,6 +686,17 @@ function buildModel(
       } else {
         sectionShapes.set(i, { type: "rect", b: sec.B, h: sec.D });
       }
+      // Tooltip del cursor (hover.ts): «Sección: <nombre>» y «Material: <mat>»
+      // en lineas verticales, con o sin cálculo (modo none). Solo cotas finitas.
+      sectionInfo.set(i, {
+        name: secName || sec.shape,
+        shape: sec.shape,
+        D: sec.D > 0 ? sec.D : undefined,
+        B: sec.B > 0 ? sec.B : undefined,
+        TF: sx.TF > 0 ? sx.TF : undefined,
+        TW: sx.TW > 0 ? sx.TW : undefined,
+        ...(sec.material ? { material: sec.material } : {}),
+      });
       const box = secName ? sdBox?.get(secName) : undefined;
       if (box && box.t > 0 && ((box.b > 0 && box.h > 0) || (box.D ?? 0) > 0)) {
         const fill = secName ? sdFill?.get(secName) : undefined;
@@ -633,6 +731,12 @@ function buildModel(
         (ei as any).bendingModifiers ??= new Map(); (ei as any).bendingModifiers.set(i, 0);
       }
       ei.densities!.set(i, mat.density || 0);
+      sectionInfo.set(i, {
+        name: secName,
+        shape: ssec.type,
+        t: ssec.thickness > 0 ? ssec.thickness : undefined,
+        ...(ssec.material ? { material: ssec.material } : {}),
+      });
     }
   }
 
@@ -646,9 +750,15 @@ function buildModel(
       ei.elasticities!.set(i, E); ei.poissonsRatios!.set(i, nu); ei.shearModuli!.set(i, mat.G || E / (2 * (1 + nu)));
       ei.densities!.set(i, (mat as any).density || 0);
       if (prop?.incomp) incompAlguno = true;
+      sectionInfo.set(i, {
+        name: elementSections.get(i) || undefined,
+        shape: "Solid",
+        ...(prop?.material ? { material: prop.material } : {}),
+      });
     }
     (ei as any).solidIncompatible = incompAlguno;
   }
+  if (sectionInfo.size) (ei as any).sectionInfo = sectionInfo;
 
   // NodeInputs
   const ni: NodeInputs = { supports: new Map(), loads: new Map() };   // `loads`, que es lo que lee el motor (`forces` no existe en NodeInputs: las cargas del s2k se perdian)
@@ -669,9 +779,8 @@ function buildModel(
   // Cargas de barra: se guardan en `frameLoads` (para re-exportar) y se
   // reparten a los nudos como hace el cliModeler (w·L/2 y ±L²/12·(t×w)), que
   // es lo que consume el motor.
-  for (const [fr, w] of frameLoadsRaw) {
-    const i = elementNames.indexOf(fr);
-    if (i < 0 || elements[i].length !== 2) continue;
+  for (const [fr, w] of frameLoadsRaw) for (const { i } of piezas.get(fr) ?? []) {
+    if (elements[i].length !== 2) continue;
     (ei as any).frameLoads ??= new Map(); (ei as any).frameLoads.set(i, w);
     const a = nodesArr[elements[i][0]], b = nodesArr[elements[i][1]];
     const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const L = Math.hypot(d[0], d[1], d[2]);
@@ -690,6 +799,96 @@ function buildModel(
       f[3] += ld.mx; f[4] += ld.my; f[5] += ld.mz;
       ni.loads!.set(idx, f);
     }
+  }
+
+  // ── Cargas de tabla que antes se perdian (24-sep-2026) ──────────────────────
+  // Medido con la mesa de torsion (hekatan-fem-py/benchmarks/tests_convergencia): sin esto un
+  // s2k con losa Shell-Thin entraba con L = 0 y D = 0, y las trapeciales +36 %.
+  if (cargasTabla) {
+    const loadsMap = ni.loads as unknown as Map<number, number[]>;
+    const fixedEnd = new Map<number, number[]>();
+    // Frame=1 y Area=1 son espacios de nombres DISTINTOS en SAP2000: un mapa por tipo.
+    const frameIdx = new Map<string, number>(), areaIdx = new Map<string, number>();
+    elementNames.forEach((n, i) => (i < nFrames ? frameIdx : i < nFrames + nShells ? areaIdx : new Map()).set(n, i));
+    const esFrame = (i: number | undefined) => i !== undefined && i < nFrames;
+    // 1) FRAME LOADS - DISTRIBUTED trapeciales / parciales / Gravity: vector consistente
+    for (const c of cargasTabla.barras) {
+      const ps = piezas.get(c.frame); if (!ps?.length || !esFrame(ps[0].i)) continue;
+      const A0 = nodesArr[elements[ps[0].i][0]], B0 = nodesArr[elements[ps[ps.length - 1].i][1]];
+      const Lt = Math.hypot(B0[0] - A0[0], B0[1] - A0[1], B0[2] - A0[2]);
+      const s0 = c.rel ? c.a * Lt : c.a, s1 = c.rel ? c.b * Lt : c.b;
+      const q = (s: number) => (s1 > s0 ? c.fa + (c.fb - c.fa) * (s - s0) / (s1 - s0) : c.fa);
+      for (const p of ps) {   // barra partida por AutoMesh: cada trozo lleva su tramo de la carga
+        const lo = Math.max(s0, p.s0 * Lt), hi = Math.min(s1, p.s1 * Lt);
+        if (hi - lo <= 1e-12) continue;
+        const [n1, n2] = elements[p.i] as number[];
+        acumularCargaBarra(loadsMap, fixedEnd, p.i, n1, n2,
+          cargaBarraConsistente(nodesArr[n1], nodesArr[n2], lo - p.s0 * Lt, hi - p.s0 * Lt, q(lo), q(hi), c.dir));
+      }
+    }
+    // ∫N_i dA de un Q4 bilineal (Gauss 2x2 con su jacobiano) o A/3 del T3, y la normal unitaria.
+    const repartoArea = (P: number[][]): { w: number[]; n: number[] } => {
+      const cr = (u: number[], v: number[]) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      const sub = (u: number[], v: number[]) => [u[0] - v[0], u[1] - v[1], u[2] - v[2]];
+      if (P.length === 3) {
+        const c = cr(sub(P[1], P[0]), sub(P[2], P[0])), A2 = Math.hypot(...c);
+        return { w: [A2 / 6, A2 / 6, A2 / 6], n: c.map(x => x / (A2 || 1)) };
+      }
+      const w = [0, 0, 0, 0], g = 1 / Math.sqrt(3);
+      let nn = [0, 0, 0];
+      for (const xi of [-g, g]) for (const et of [-g, g]) {
+        const N = [(1 - xi) * (1 - et), (1 + xi) * (1 - et), (1 + xi) * (1 + et), (1 - xi) * (1 + et)].map(v => v / 4);
+        const dxi = [-(1 - et), (1 - et), (1 + et), -(1 + et)].map(v => v / 4);
+        const det = [-(1 - xi), -(1 + xi), (1 + xi), (1 - xi)].map(v => v / 4);
+        const tx = [0, 1, 2].map(k => P.reduce((s, p, j) => s + dxi[j] * p[k], 0));
+        const te = [0, 1, 2].map(k => P.reduce((s, p, j) => s + det[j] * p[k], 0));
+        const c = cr(tx, te), J = Math.hypot(...c);
+        nn = nn.map((v, k) => v + c[k]);
+        for (let j = 0; j < 4; j++) w[j] += N[j] * J;
+      }
+      const nl = Math.hypot(...nn) || 1;
+      return { w, n: nn.map(v => v / nl) };
+    };
+    const sumaF = (n: number, f: number[]) => {
+      const p = loadsMap.get(n) ?? [0, 0, 0, 0, 0, 0];
+      for (let k = 0; k < 3; k++) p[k] += f[k];
+      loadsMap.set(n, p);
+    };
+    // 2) AREA LOADS - UNIFORM
+    for (const c of cargasTabla.areas) {
+      const i = areaIdx.get(c.area); if (i === undefined) continue;
+      const el = elements[i] as number[]; if (el.length !== 3 && el.length !== 4) continue;
+      const { w, n } = repartoArea(el.map(j => nodesArr[j]));
+      const d = c.dir ?? n;
+      el.forEach((j, k) => sumaF(j, d.map(x => x * c.q * w[k])));
+    }
+    // 3) PESO PROPIO (SelfWtMult): barras CONSISTENTE (fuerzas + momentos, como `frameload`),
+    //    areas ∫N_i dA · UnitWeight · t · WeightMod. Y la MASA de las areas con su MassMod.
+    const sw = cargasTabla.selfWtMult;
+    for (let i = 0; i < elements.length; i++) {
+      const secName = elementSections.get(i);
+      const el = elements[i] as number[];
+      if (i < nFrames) {
+        const fs: any = secName ? frameSections.get(secName) : null;
+        const mat: any = fs ? materials.get(fs.material) : null;
+        if (fs && fs.MMod !== undefined && fs.MMod !== 1 && ei.densities!.has(i)) ei.densities!.set(i, ei.densities!.get(i)! * fs.MMod);
+        const q = sw * (mat?.weight ?? 0) * (ei.areas!.get(i) ?? 0) * (fs?.WMod ?? 1);
+        if (!q) continue;
+        const a = nodesArr[el[0]], b = nodesArr[el[1]];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+        acumularCargaBarra(loadsMap, fixedEnd, i, el[0], el[1], cargaBarraConsistente(a, b, 0, L, q, q, [0, 0, -1]));
+      } else if (el.length === 3 || el.length === 4) {
+        const ss: any = secName ? shellSections.get(secName) : null;
+        const mat: any = ss ? materials.get(ss.material) : null;
+        const mw = cargasTabla.areaMW.get(elementNames[i]);
+        if (mw && ei.densities!.has(i)) ei.densities!.set(i, ei.densities!.get(i)! * mw[0]);
+        const q = sw * (mat?.weight ?? 0) * (ss?.thickness ?? 0) * (mw ? mw[1] : 1);
+        if (!q) continue;
+        const { w } = repartoArea(el.map(j => nodesArr[j]));
+        el.forEach((j, k) => sumaF(j, [0, 0, -q * w[k]]));
+      }
+    }
+    if (fixedEnd.size) (ei as any).frameFixedEnd = fixedEnd;
   }
 
   return {

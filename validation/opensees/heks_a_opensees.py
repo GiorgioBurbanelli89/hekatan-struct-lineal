@@ -144,10 +144,14 @@ def _main():
             barras.append(idx); nbar += 1
         elif len(el) == 4:
             t = g("thicknesses", idx); fm = g("membraneModifiers", idx, 1.0)
-            key = (round(E * fm, 6), round(nu, 6), round(t, 9), round(rho, 6))
+            # --flexion=hekatan (22-sep-2026): la MISMA flexion que Hekatan (bendingModifiers, 0 = membrana
+            # pura) via el Ep_mod de ElasticMembranePlateSection; 0 -> 1e-9 para no dejar K singular.
+            # Sin la opcion, flexion completa (el comportamiento de antes).
+            ep = max(float(g("bendingModifiers", idx, 1.0)), 1e-9) if "--flexion=hekatan" in sys.argv else 1.0
+            key = (round(E * fm, 6), round(nu, 6), round(t, 9), round(rho, 6), ep)
             if key not in secs:
                 sid = 1000 + len(secs)
-                ops.section("ElasticMembranePlateSection", sid, float(E) * float(fm), float(nu), float(t), float(rho))
+                ops.section("ElasticMembranePlateSection", sid, float(E) * float(fm), float(nu), float(t), float(rho), ep)
                 secs[key] = sid
             # --asdshell: el ASDShellQ4 de Petracca y Camata (ASDEA), que lleva la
             # membrana de Allman con drilling y transformacion EICR — la familia de

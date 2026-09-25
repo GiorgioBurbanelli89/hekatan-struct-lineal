@@ -11,6 +11,8 @@
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "./cadSections";
 import { propiedadesSD, formaDesdeE2k, type PiezaSD } from "./sectionDesigner";
+import { cargaBarraConsistente, acumularCargaBarra } from "./cargaBarraConsistente";
+import { reticularEtabs } from "./losaReticular";
 
 export interface E2kGrid {
   label: string;   // "A", "B", "1", "2", etc.
@@ -112,6 +114,10 @@ export function parseE2k(text: string): E2kModel {
     deck?: { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number };
     /** losa nervada/reticular: peso (loseta + nervios) / peso de la loseta sola */
     pesoFactor?: number;
+    /** MMOD / WMOD de ETABS: modificadores de MASA y de PESO propio de la propiedad (defecto 1) */
+    mmod?: number; wmod?: number;
+    /** SLABTYPE "Waffle": los 10 modificadores que ETABS le pasa al solver (losaReticular.ts). */
+    reticular?: number[];
   }>();
   /**
    * SECTION DESIGNER: una seccion DIBUJADA, hecha de varias piezas.
@@ -151,7 +157,10 @@ export function parseE2k(text: string): E2kModel {
   const pointSprings = new Map<string, string>();
   /** Todo joint que el fichero declara con un `POINTASSIGN`, tenga o no apoyo. */
   const puntosDeclarados = new Set<string>();
-  const frameLoads: { line: string; story: string; type: string; dir: string; lc: string; val: number }[] = [];
+  // UNIFF: `val` en toda la barra. TRAPF (lo que ETABS escribe para trapecios Y parciales, varias
+  // lineas por barra que se suman): FSTART/FEND en RDSTART/RDEND (distancias RELATIVAS).
+  const frameLoads: { line: string; story: string; type: string; dir: string; lc: string; val: number;
+                      fs?: number; fe?: number; rs?: number; re?: number }[] = [];
   /**
    * Las cargas de LOSA. Son la mayor parte de la carga de un edificio y no se
    * leian: el modelo real entraba con 48 kN en total cuando sus losas llevan
@@ -416,6 +425,18 @@ export function parseE2k(text: string): E2kModel {
           line: flm[1], story: flm[2], type: flm[3], dir: flm[4],
           lc: flm[5], val: parseFloat(flm[6]),
         });
+      } else {
+        // LINELOAD "B195" "Entrepiso" TYPE "TRAPF" DIR "GRAV" LC "GRAV" FSTART 4.6 FEND 4.6 RDSTART 0 RDEND 0.066
+        // (gramatica de un $et escrito por ETABS: galpon-bodega-electoral/galpon_scp.$et). Hasta el
+        // 24-sep-2026 no se leia: la carga trapecial/parcial entraba a Hekatan como CERO.
+        const tm = line.match(/LINELOAD\s+"([^"]+)"\s+"([^"]+)"\s+TYPE\s+"TRAPF"\s+DIR\s+"([^"]+)"\s+LC\s+"([^"]+)"(.*)$/);
+        if (tm) {
+          const nv = (k: string, d: number) => {
+            const m = tm[5].match(new RegExp(`\\b${k}\\s+([-\\d.eE+]+)`)); return m ? parseFloat(m[1]) : d;
+          };
+          frameLoads.push({ line: tm[1], story: tm[2], type: "TRAPF", dir: tm[3], lc: tm[4], val: 0,
+                            fs: nv("FSTART", 0), fe: nv("FEND", 0), rs: nv("RDSTART", 0), re: nv("RDEND", 1) });
+        }
       }
     }
 
@@ -551,18 +572,42 @@ export function parseE2k(text: string): E2kModel {
                                                : (s1 > 0 && s2 > 0 ? b / s1 + b / s2 - (b * b) / (s1 * s2) : 0);
           if (tf > 0 && h > tf) pesoFactor = (tf + (h - tf) * nervio) / tf;
         }
+        // WAFFLE como ETABS (RE de ETABS.dll 22.6, 24-sep-2026): cascara de espesor h (OVERALLDEPTH,
+        // membrana = flexion) + 10 modificadores [tv/h, tv/h, tf/h, (tb1/h)^3, (tb2/h)^3, (tt/h)^3,
+        // 1, 1, tv/h, tv/h]. Antes: espesor = loseta tf con el peso escalado, o sea una losa de 5 cm
+        // donde ETABS pone una rigidez de ~21 cm. La J va por Prandtl (misma malla que mesa_modelo.py),
+        // asi que se calcula en METROS: la malla depende de las cotas absolutas.
+        let reticular: number[] | undefined, espRet: number | undefined;
+        if (tipoLosa === "Waffle") {
+          const tf = num(/SLABTHICKNESS\s+([\d.eE+-]+)/) ?? 0, h = num(/OVERALLDEPTH\s+([\d.eE+-]+)/) ?? 0;
+          const bt = num(/SLABRIBWIDTHTOP\s+([\d.eE+-]+)/) ?? 0, bb = num(/SLABRIBWIDTHBOTTOM\s+([\d.eE+-]+)/) ?? bt;
+          const s1 = num(/SLABRIBSPACING1?\s+([\d.eE+-]+)/) ?? 0, s2 = num(/SLABRIBSPACING2\s+([\d.eE+-]+)/) ?? s1;
+          const Lm = ({ MM: 1e-3, CM: 1e-2, M: 1, IN: 0.0254, FT: 0.3048 } as Record<string, number>)[(units.length || "M").toUpperCase()] ?? 1;
+          if (tf > 0 && h > tf && bt > 0 && s1 > bt && s2 > bt) {
+            reticular = reticularEtabs(h * Lm, tf * Lm, bt * Lm, bb * Lm, s1 * Lm, s2 * Lm).mods;
+            espRet = h; pesoFactor = undefined;
+          }
+        }
         const MODS = ["F11MOD", "F22MOD", "F12MOD", "M11MOD", "M22MOD",
                       "M12MOD", "V13MOD", "V23MOD"];
         const leidos = MODS.map(k => num(new RegExp(k + "\\s+([\\d.eE+-]+)")));
         const prev = shellProps.get(nm);
+        // MMOD / WMOD (`SHELLPROP "Stiff1" M11MOD 100 ... MMOD 0 WMOD 0`, e2k real): masa y peso.
+        // Pueden venir SOLOS en la linea de modificadores; hasta el 24-sep-2026 esa linea se
+        // descartaba entera y la losa pesaba y masaba como si valieran 1.
+        const mmodL = num(/\bMMOD\s+([\d.eE+-]+)/), wmodL = num(/\bWMOD\s+([\d.eE+-]+)/);
+        if (prev && mmodL !== undefined) prev.mmod = mmodL;
+        if (prev && wmodL !== undefined) prev.wmod = wmodL;
         if (leidos.some(v => v !== undefined)) {
           // Linea de modificadores: completa la propiedad ya leida.
           const mods = leidos.map(v => v ?? 1);
           shellProps.set(nm, { t: prev?.t ?? 0, material: prev?.material ?? "",
-                               modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck, pesoFactor: prev?.pesoFactor });
+                               modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck, pesoFactor: prev?.pesoFactor,
+                               mmod: prev?.mmod, wmod: prev?.wmod, reticular: prev?.reticular });
         } else if (esp !== undefined) {
           shellProps.set(nm, {
-            t: esp, mods: prev?.mods, deck: deck ?? prev?.deck, pesoFactor: pesoFactor ?? prev?.pesoFactor,
+            t: espRet ?? esp, mods: prev?.mods, deck: deck ?? prev?.deck, pesoFactor: pesoFactor ?? prev?.pesoFactor,
+            mmod: prev?.mmod, wmod: prev?.wmod, reticular: reticular ?? prev?.reticular,
             material: line.match(/MATERIAL\s+"([^"]+)"/)?.[1] ??
                       line.match(/CONCMATERIAL\s+"([^"]+)"/)?.[1] ?? "",
             modeling: line.match(/MODELINGTYPE\s+"([^"]+)"/)?.[1] ??
@@ -821,6 +866,8 @@ export function parseE2k(text: string): E2kModel {
   const torsionalConstants = new Map<number, number>();
   const sectionShapes = new Map<number, SectionShape>();
   let sdCompuestas = 0;
+  /** Para el tooltip del cursor (hover.ts): nombre de sección + material por elemento. */
+  const sectionInfo = new Map<number, any>();
 
   for (const [elemIdx, secName] of elementSections) {
     const sec = frameSections.get(secName);
@@ -1022,6 +1069,18 @@ export function parseE2k(text: string): E2kModel {
       r: sec.R,
       name: secName,
     });
+
+    sectionInfo.set(elemIdx, {
+      name: secName,
+      shape: sec.shape,
+      D: sec.D > 0 ? sec.D : undefined,
+      B: sec.B > 0 ? sec.B : undefined,
+      TF: sec.TF > 0 ? sec.TF : undefined,
+      TW: sec.TW > 0 ? sec.TW : undefined,
+      r: sec.R,
+      material: sec.material,
+      ...(sec.fillMaterial ? { fillMaterial: sec.fillMaterial } : {}),
+    });
   }
 
   // ── Build node inputs (supports) ──
@@ -1054,6 +1113,10 @@ export function parseE2k(text: string): E2kModel {
     elemLookup.set(`${elementNames[ei]}@${elementStoriesArr[ei]}`, ei);
   }
 
+  /** Empotramiento de las barras cargadas (12, globales), en las unidades del fichero hasta el
+   *  bloque de unidades; lo lee analyze() (`elementInputs.frameFixedEnd`). */
+  const frameFixedEnd = new Map<number, number[]>();
+  let lineLoadsSinDir = 0;
   for (const fl of frameLoads) {
     const elemIdx = elemLookup.get(`${fl.line}@${fl.story}`);
     if (elemIdx === undefined) continue;
@@ -1063,28 +1126,24 @@ export function parseE2k(text: string): E2kModel {
     const L = Math.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2 + (p2[2]-p1[2])**2);
     if (L < 1e-10) continue;
 
-    // La carga repartida w (vector GLOBAL): GRAV/GRAVITY = hacia -Z; X, Y, Z
-    // son los ejes globales tal cual (Z positivo hacia ARRIBA: antes se leia
-    // como -F y una carga hacia arriba entraba hacia abajo).
-    const w: [number, number, number] = [0, 0, 0];
-    if (fl.dir === "GRAV" || fl.dir === "GRAVITY") w[2] = -fl.val;
-    else if (fl.dir === "X") w[0] = fl.val;
-    else if (fl.dir === "Y") w[1] = fl.val;
-    else if (fl.dir === "Z") w[2] = fl.val;
+    // Direccion GLOBAL de la carga: GRAV/GRAVITY = hacia -Z; X, Y, Z tal cual (Z positivo
+    // hacia ARRIBA: antes se leia como -F y una carga hacia arriba entraba hacia abajo).
+    // Las direcciones LOCALES (1, 2, 3) no se leen todavia: se cuentan y se avisa.
+    const dir = fl.dir === "GRAV" || fl.dir === "GRAVITY" || fl.dir === "GRAVPROJ" ? [0, 0, -1]
+      : fl.dir === "X" ? [1, 0, 0] : fl.dir === "Y" ? [0, 1, 0] : fl.dir === "Z" ? [0, 0, 1] : null;
+    if (!dir) { lineLoadsSinDir++; continue; }
 
-    // Fuerzas Y MOMENTOS de empotramiento perfecto (la misma formula del
-    // cliModeler y del s2kParser): F = w*L/2, M = +-L^2/12 * (t x w). Sin los
-    // momentos el galpon leido del e2k daba -25.1 mm por -29.05 (13.6 %).
-    const t = [(p2[0]-p1[0]) / L, (p2[1]-p1[1]) / L, (p2[2]-p1[2]) / L], c = L * L / 12;
-    const txw = [t[1] * w[2] - t[2] * w[1], t[2] * w[0] - t[0] * w[2], t[0] * w[1] - t[1] * w[0]];
-    const acum = (ni: number, v: number[]) => {
-      const prev = loads.get(ni) || [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number];
-      for (let k = 0; k < 6; k++) prev[k] += v[k];
-      loads.set(ni, prev);
-    };
-    acum(n1, [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2,  c * txw[0],  c * txw[1],  c * txw[2]]);
-    acum(n2, [w[0] * L / 2, w[1] * L / 2, w[2] * L / 2, -c * txw[0], -c * txw[1], -c * txw[2]]);
+    // Vector nodal CONSISTENTE (fuerzas Y momentos de empotramiento; UNIFF da w*L/2 y
+    // +-L^2/12 (t x w), la formula de antes; sin los momentos el galpon daba -25.1 mm por
+    // -29.05) y su opuesto a `frameFixedEnd`, para que analyze() devuelva el esfuerzo real.
+    // TRAPF: FSTART..FEND entre RDSTART..RDEND (relativas): trapecios y cargas PARCIALES.
+    const eq = fl.type === "TRAPF"
+      ? cargaBarraConsistente(p1, p2, (fl.rs ?? 0) * L, (fl.re ?? 1) * L, fl.fs ?? 0, fl.fe ?? 0, dir)
+      : cargaBarraConsistente(p1, p2, 0, L, fl.val, fl.val, dir);
+    acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, elemIdx, n1, n2, eq);
   }
+  if (lineLoadsSinDir)
+    console.warn(`[e2kParser] ${lineLoadsSinDir} LINELOAD en ejes LOCALES (DIR 1/2/3) no se leen: esa carga se pierde.`);
 
   // ── Add material densities to element inputs ──
   const densities = new Map<number, number>();
@@ -1107,6 +1166,8 @@ export function parseE2k(text: string): E2kModel {
   //                `Membrane` que entre como placa seria otra estructura.
   const thicknesses = new Map<number, number>();
   const poissonsRatios = new Map<number, number>();
+  /** WMOD / MMOD de la propiedad de cada area (peso propio y masa). */
+  const wmodArea = new Map<number, number>(), mmodArea = new Map<number, number>();
   const plateFormulations = new Map<number, number>();
   const shellModifiers = new Map<number, number[]>();
   const areaNames: string[] = [];
@@ -1155,6 +1216,11 @@ export function parseE2k(text: string): E2kModel {
       if (mat?.G) shearModuli.set(ei, mat.G);
       if (mat?.nu !== undefined) poissonsRatios.set(ei, mat.nu);
       if (mat?.density) densities.set(ei, mat.density * (sp.pesoFactor ?? 1));
+      // Waffle: los modificadores de ETABS MULTIPLICAN a los del usuario (apx.af de ETABS.dll)
+      const ret = sp.reticular;
+      const wm = (sp.wmod ?? 1) * (ret ? ret[9] : 1), mm = (sp.mmod ?? 1) * (ret ? ret[8] : 1);
+      if (sp.wmod !== undefined || ret) wmodArea.set(ei, wm);
+      if (sp.mmod !== undefined || ret) mmodArea.set(ei, mm);
       if (sp.deck && sp.deck.tc > 0) {
         // El DECK pesa loseta + hormigón de los nervios + lámina, repartido en la membrana
         // de espesor tc: densidad equivalente = [γc·(tc + hr·(wrt+wrb)/2/sr) + w] / tc
@@ -1167,8 +1233,12 @@ export function parseE2k(text: string): E2kModel {
       const esMembrana = /membrane/i.test(sp.modeling);
       plateFormulations.set(ei, /thick/i.test(sp.modeling) || esMembrana ? 0 : 1);
       const m = sp.mods ? sp.mods.slice(0, 8) : [1, 1, 1, 1, 1, 1, 1, 1];
+      if (ret) for (let k = 0; k < 8; k++) m[k] *= ret[k];
       if (esMembrana) { m[3] = 0; m[4] = 0; m[5] = 0; m[6] = 0; m[7] = 0; }
-      if (sp.mods || esMembrana) shellModifiers.set(ei, m);
+      if (sp.mods || esMembrana || ret) shellModifiers.set(ei, m);
+    }
+    if (sp) {
+      sectionInfo.set(ei, { name: aa.section, shape: sp.modeling, t: sp.t > 0 ? sp.t : undefined, material: sp.material });
     }
     }   // for (trozos del polígono)
     }   // for (cada planta a la que va asignada el área)
@@ -1330,6 +1400,7 @@ export function parseE2k(text: string): E2kModel {
     for (const [i, v] of loads) {
       loads.set(i, v.map((x, k) => x * (k < 3 ? F : F * L)) as typeof v);
     }
+    for (const [i, v] of frameFixedEnd) frameFixedEnd.set(i, v.map((x, k) => x * (k % 6 < 3 ? F : F * L)));
     // Los MUELLES. Cada tipo lleva su potencia de la longitud, porque cada uno
     // vale una cosa distinta:
     //   punto  F/L        (kgf/m)     -> * F / L
@@ -1368,8 +1439,8 @@ export function parseE2k(text: string): E2kModel {
         `En ETABS los sujetan links, muelles de pilote o diafragmas, que este lector aun no importa.`);
   }
 
-  /** El PESO PROPIO (SELFWEIGHT del patron Dead), ya en kN y m: rho*A*L/2 a
-   *  cada extremo de barra y rho*t*A/4 a cada nudo de cascara, hacia -Z. Es lo
+  /** El PESO PROPIO (SELFWEIGHT del patron Dead), ya en kN y m: barras con el vector
+   *  CONSISTENTE (fuerzas + momentos) y rho*t*A/4*WMOD a cada nudo de cascara, hacia -Z. Es lo
    *  que hace ETABS con el patron y lo que hace `apply_selfweight` en Hekatan. */
   const conPesoPropio = () => {
     if (!(selfWeightMult > 0)) return loads;
@@ -1391,9 +1462,18 @@ export function parseE2k(text: string): E2kModel {
         const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
         const dh = Math.hypot(dx, dy);
         const esViga = dh > 1e-9 && Math.atan2(Math.abs(dz), dh) * 180 / Math.PI < 20;
-        const Lb = Math.max(0, Math.hypot(dx, dy, dz) - (off && esViga ? off[0] + off[1] : 0));
-        const w = rho * A * Lb * selfWeightMult;
-        suma(e[0], -w / 2); suma(e[1], -w / 2);
+        const Lt = Math.hypot(dx, dy, dz);
+        const Lb = Math.max(0, Lt - (off && esViga ? off[0] + off[1] : 0));
+        // CONSISTENTE (24-sep-2026): fuerzas Y momentos de empotramiento (L^2/12)(t x w), con la
+        // MISMA formula del peso propio del cliModeler (w·Lb/2 y ±(Lb²/12)(t×w), Lb = luz libre
+        // en vigas con brazo): asi un e2k "auto" vuelve a dar lo que da el .heks. Antes era
+        // rho*A*L/2 a cada extremo sin momentos: la viga de la mesa de torsion salia con V
+        // -6..-10 % y M ~1 % contra mesa_modelo.py. El opuesto va a `frameFixedEnd`.
+        const q = rho * A * selfWeightMult, r = Lt > 0 ? Lb / Lt : 0;
+        const eq = cargaBarraConsistente(a, b, 0, Lt, q, q, [0, 0, -1])
+          .map((v, k) => v * (k % 6 < 3 ? r : r * r));
+        total += eq[2] + eq[8];
+        acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, i, e[0], e[1], eq);
       } else if (e.length >= 3) {
         const t = thicknesses.get(i) ?? 0; const p = e.map(n => nodes[n]);
         let nx = 0, ny = 0, nz = 0;
@@ -1402,7 +1482,8 @@ export function parseE2k(text: string): E2kModel {
           nx += a[1] * b[2] - a[2] * b[1]; ny += a[2] * b[0] - a[0] * b[2]; nz += a[0] * b[1] - a[1] * b[0];
         }
         const Ar = Math.hypot(nx, ny, nz) / 2;
-        const w = rho * t * Ar * selfWeightMult;
+        // WMOD de la propiedad (ETABS `SHELLPROP ... WMOD x`): 0 = el area no pesa.
+        const w = rho * t * Ar * selfWeightMult * (wmodArea.get(i) ?? 1);
         for (const n of e) suma(n, -w / e.length);
       }
     });
@@ -1455,7 +1536,8 @@ export function parseE2k(text: string): E2kModel {
       // ρ = 2.4. Entregar el peso metía 9.81 veces la masa y el e2k re-exportado
       // pesaba 9.81 veces más (bóveda, 13-sep-2026: 23.536 en vez de 2.4).
       // El peso propio de arriba (conPesoPropio) sí va con el peso.
-      densities: new Map([...densities].map(([k, w]) => [k, w / 9.80665] as [number, number])),
+      // ... y la MASA de las areas con su MMOD (`SHELLPROP ... MMOD x`), 24-sep-2026.
+      densities: new Map([...densities].map(([k, w]) => [k, w / 9.80665 * (mmodArea.get(k) ?? 1)] as [number, number])),
       // cotas del deck en m y kN/m² (para volver a escribir la «Deck Section» de ETABS tal cual)
       deckSections,
       sectionShapes,
@@ -1463,6 +1545,8 @@ export function parseE2k(text: string): E2kModel {
       poissonsRatios,
       plateFormulations,
       shellModifiers,
+      frameFixedEnd,
+      sectionInfo,
       springNames: springAssigns,
       mallaEnCruces,
     },

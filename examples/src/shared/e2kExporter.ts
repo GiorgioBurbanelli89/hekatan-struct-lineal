@@ -360,7 +360,15 @@ function exportFromScratch(input: ExportE2kInput): string {
             if (esViga) L = Math.max(L - eo[0] - eo[1], 0);
           }
           const W = A * L * rho * G * swDecl;
-          restar(e[0], [0, 0, -W / 2, 0, 0, 0]); restar(e[1], [0, 0, -W / 2, 0, 0, 0]);
+          // El cliModeler reparte el peso propio CONSISTENTE (w·L/2 y ±(L²/12)(t×w)) y ETABS con
+          // SELFWEIGHT 1 tambien: hay que descontar los MOMENTOS, no solo las fuerzas. Hasta el
+          // 24-sep-2026 solo se restaba W/2 y el momento de empotramiento del peso quedaba en los
+          // POINTLOAD: ETABS (y el e2kParser consistente) lo contaban DOS veces
+          // (cimentacion_9zapatas: flecha 4.2 % al releer).
+          const Lf = Math.hypot(d[0], d[1], d[2]) || 1;
+          const t = [d[0] / Lf, d[1] / Lf], c = L * L / 12, wz = -W / (L || 1);
+          const mx = c * t[1] * wz, my = -c * t[0] * wz;       // (L²/12)·(t × (0,0,wz))
+          restar(e[0], [0, 0, -W / 2, mx, my, 0]); restar(e[1], [0, 0, -W / 2, -mx, -my, 0]);
         } else if (e.length === 4) {
           const t = elementInputs.thicknesses?.get(i) ?? 0;
           const P = e.map(n => nodes[n]);

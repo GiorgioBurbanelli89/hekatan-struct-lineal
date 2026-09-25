@@ -5,7 +5,7 @@ import puppeteer from "puppeteer";
 import { mkdirSync } from "node:fs";
 mkdirSync("cli/shots/en_vivo", { recursive: true });
 const b = await puppeteer.launch({ headless: false, defaultViewport: null,
-  userDataDir: "C:/Users/j-b-j/AppData/Local/Temp/hk_vivo_perfil",
+  userDataDir: "C:/Users/j-b-j/AppData/Local/Temp/hk_vivo_perfil2",
   args: ["--no-sandbox","--start-maximized","--remote-debugging-port=9222",
          "--enable-unsafe-swiftshader","--use-angle=swiftshader","--enable-webgl"] });
 const p = (await b.pages())[0] ?? (await b.newPage());

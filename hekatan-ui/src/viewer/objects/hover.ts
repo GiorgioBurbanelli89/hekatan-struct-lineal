@@ -397,19 +397,22 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       const ei = ctx.mesh?.elementInputs?.rawVal as any;
       const sInfo = ei?.sectionInfo?.get?.(bestElem);
       if (sInfo) {
-        // Formato e2k completo
-        if (sInfo.name)  info += `\n  📋 ${sInfo.name}`;
+        // Formato e2k completo — nombre de la sección de definición y material
+        // (pedido: se ven SIEMPRE en el cursor, en modo "none" sin cálculo).
+        if (sInfo.name)  info += `\n  Sección: ${sInfo.name}`;
         if (sInfo.shape) info += `\n  Shape: ${sInfo.shape}`;
         // Dimensiones (D × B × TF × TW) — MM para acero/CFT, CM para hormigón
         // Detección automática:
-        //   - shape contiene "Concrete" → cm
+        //   - shape o material contiene "Concrete"/"Hormigón" → cm
         //   - shape contiene "Steel" / "Tube" / "Filled" → mm
         //   - default → mm
-        const isConcrete = /concrete|hormig|rect.*sólida/i.test(sInfo.shape || "");
+        const isConcrete = /concrete|hormig|conc|rect.*sólida/i.test(
+          `${sInfo.shape || ""} ${sInfo.material || ""}`);
         const lenFactor = isConcrete ? 100 : 1000;
         const lenUnit   = isConcrete ? "cm" : "mm";
         // Helper: redondear a 1 decimal si es necesario, sino entero
         const fmtDim = (v: number) => {
+          if (!Number.isFinite(v)) return "—";
           const x = v * lenFactor;
           return Math.abs(x - Math.round(x)) < 0.05 ? `${Math.round(x)}` : `${x.toFixed(1)}`;
         };
@@ -419,12 +422,13 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         if (sInfo.TF != null) dimParts.push(`TF=${fmtDim(sInfo.TF)}`);
         if (sInfo.TW != null) dimParts.push(`TW=${fmtDim(sInfo.TW)}`);
         if (sInfo.t  != null) dimParts.push(`t=${fmtDim(sInfo.t)}`);   // espesor shell
-        if (dimParts.length) info += `\n  Dim: ${dimParts.join(" ")} ${lenUnit}`;
+        const dimFinitas = dimParts.filter(p => !p.endsWith("=—"));
+        if (dimFinitas.length) info += `\n  Dim: ${dimFinitas.join(" ")} ${lenUnit}`;
         // Material (+ FillMaterial si CFT)
         if (sInfo.material) {
           let matStr = sInfo.material;
           if (sInfo.fillMaterial) matStr += ` + FILL "${sInfo.fillMaterial}"`;
-          info += `\n  Mat: ${matStr}`;
+          info += `\n  Material: ${matStr}`;
         }
       } else {
         // Legacy: solo string (sin estructura)

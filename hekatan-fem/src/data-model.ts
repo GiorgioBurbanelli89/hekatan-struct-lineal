@@ -107,6 +107,10 @@ export type ElementInputs = {
    *  wL/2 = 50, y M = 15.06 donde ETABS da 45.17, porque faltaban los
    *  wL^2/12 = 41.67. Los desplazamientos si eran exactos. */
   frameLoads?: Map<number, [number, number, number]>;
+  /** Empotramiento perfecto GENERAL de la barra, 12 valores en GLOBALES (fe = -carga nodal
+   *  equivalente). Lo ponen los lectores de CSI para cargas parciales/trapeciales y el peso
+   *  propio consistente; `analyze()` lo suma a k*u. Se suma al de `frameLoads`. */
+  frameFixedEnd?: Map<number, number[]>;
   rigidOffsets?: Map<number, [number, number]>; // [offsetI, offsetJ] rigid zone factors (0-1) at each end
   // END LENGTH OFFSETS de CSI: [offI, offJ, rigidZoneFactor] — longitudes en
   // unidades del modelo y factor 0-1. NO es `rigidOffsets` (el de awatif, que

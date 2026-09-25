@@ -1,0 +1,8 @@
+nudos 656 en 15 s
+  elemento 0/556, 15 s
+  elemento 200/556, 16 s
+  elemento 400/556, 16 s
+etabs: 656 nudos, 0 barras (0 con ang, 0 con releases), 556 shells (0 con modificadores), 0 secciones
+cargas nodales 103, sum Fz -45.980, 16 s
+run -> 0
+etabs [Dead] vs Hekatan: peor nudo 3.374e-09 % del maximo (nudo 350, u_max 8.8728e-03), 656 nudos, sumRz 45.97999999982817

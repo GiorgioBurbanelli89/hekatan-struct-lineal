@@ -43,6 +43,10 @@ kN·m** (o sea 0.054 kN·m: la torsión de este modelo es ruido).
 2. **Áreas de cortante.** AS2 (cortante en el eje 2) = `shearAreasZ` de Hekatan, y AS3 =
    `shearAreasY`. Entran cruzadas si se leen por el nombre.
 
+## 22-sep-2026: el −11 % de los modos locales era la FLEXIÓN de la chapa
+Con `--flexion=hekatan` (la chapa como membrana, igual que Hekatan) OpenSees queda a ≤0.37 % en los 12 periodos
+(ShellMITC4 0.27 % / ASDShellQ4 0.12 % en el estático). Ver `registros/2026-09-22_galpon_opensees_placa.md`.
+
 ## Falta
 - SAP2000 y ETABS sobre este mismo modelo (juez primero SAP, luego ETABS).
 - Esfuerzos de la chapa joint a joint y participación de masa modal en los tres.
