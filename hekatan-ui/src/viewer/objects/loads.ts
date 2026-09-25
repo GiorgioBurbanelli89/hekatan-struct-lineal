@@ -57,15 +57,26 @@ export function loads(
     // no depende de la malla.
     //
     // Aquí se hace lo mismo sin cambiar el modelo: si hay más nudos cargados que
-    // `MAX_FLECHAS`, se reparten en una rejilla y se dibuja UNA por celda — la
-    // que caiga más cerca del centro de la celda. El campo queda uniforme y con
-    // la misma densidad tanto si la losa tiene 200 nudos como 20 000.
+    // `SUBMUESTREA_DESDE` (losa grande), se reparten en una rejilla y se dibuja
+    // UNA por celda. El campo queda uniforme y con la misma densidad tanto si la
+    // losa tiene 200 nudos como 20 000.
     //
     // ⚠️ Las flechas pasan a ser una REPRESENTACIÓN del campo de carga, no un
     // inventario. El modelo no cambia: la comprobación de que la carga es la
     // correcta es que las reacciones sumen lo aplicado (`plantillas_modelo_sano`
     // lo mide, y da 0.000 %).
+    //
+    // ── Pero el campo regular SOLO para losas grandes ─────────────────────
+    // Cancha Parque (25-sep-2026, Jorge: «las cargas no tiene repartido en
+    // todas las correas»): 582 nudos cargados y el submuestreo a 240 dejaba
+    // 160 flechas (27 %) — 90 de las 186 correas sin UNA sola carga a la vista.
+    // Un pórtico/cantera NO es una losa mallada: sus nudos cargados son
+    // contables y cada nudo debe mostrar su carga. Por eso hasta
+    // SUBMUESTREA_DESDE nudos cargados se dibuja TODO; el campo regular queda
+    // para arriba de eso (la losa de 5476 sigue yendo a ~240, que es lo que
+    // no tapaba el modelo).
     const MAX_FLECHAS = 240;
+    const SUBMUESTREA_DESDE = 700;
     const cargados: number[] = [];
     structure.nodeInputs?.val?.loads?.forEach((load, index) => {
       if (!nodes[index]) return;
@@ -73,7 +84,7 @@ export function loads(
     });
 
     let dibujar: number[] = cargados;
-    if (cargados.length > MAX_FLECHAS) {
+    if (cargados.length > SUBMUESTREA_DESDE) {
       // Rejilla en planta con ~MAX_FLECHAS celdas; una flecha por celda ocupada.
       const xs = cargados.map((i) => nodes[i][0]), ys = cargados.map((i) => nodes[i][1]);
       const x0 = Math.min(...xs), x1 = Math.max(...xs);

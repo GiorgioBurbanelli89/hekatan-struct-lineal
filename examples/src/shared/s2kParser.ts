@@ -10,7 +10,7 @@ import { cargaBarraConsistente, acumularCargaBarra } from "./cargaBarraConsisten
 /** Cargas que el formato de tablas trae y que hasta el 24-sep-2026 no se leian (ver buildModel). */
 interface CargasTabla {
   /** FRAME LOADS - DISTRIBUTED que NO son uniformes de extremo a extremo en GLOBAL X/Y/Z. */
-  barras: { frame: string; dir: number[]; a: number; b: number; rel: boolean; fa: number; fb: number }[];
+  barras: { frame: string; dir: number[]; a: number; b: number; rel: boolean; fa: number; fb: number; pat?: string }[];
   /** AREA LOADS - UNIFORM: q por unidad de area en la direccion `dir` (global) o normal (dir null). */
   areas: { area: string; dir: number[] | null; q: number }[];
   /** SelfWtMult (el mayor de los patrones: se suman todos los patrones como el e2kParser). */
@@ -19,6 +19,8 @@ interface CargasTabla {
   areaMW: Map<string, [number, number]>;
   /** FRAME AUTO MESH ASSIGNMENTS con AutoMesh=Yes y AtJoints=Yes: SAP parte la barra en los nudos que caen sobre ella. */
   autoMeshJoints?: Set<string>;
+  /** Patrones DesignType=Wind: buildModel rota su Dir=Gravedad a la normal de la superficie (ver «VIENTO perpendicular al zinc»). */
+  windPats?: Set<string>;
 }
 
 export interface S2kModel {
@@ -109,7 +111,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
   const solidAssign = new Map<string, string>();
 
   let currentTable = "";
-  const cargasTabla: CargasTabla = { barras: [], areas: [], selfWtMult: 0, areaMW: new Map(), autoMeshJoints: new Set() };
+  const cargasTabla: CargasTabla = { barras: [], areas: [], selfWtMult: 0, areaMW: new Map(), autoMeshJoints: new Set(), windPats: new Set() };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -310,6 +312,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
         // AbsDist, Dir=Gravity) hasta el 24-sep-2026 se leia como FOverLA en TODA la barra:
         // ahora va al vector consistente (cargaBarraConsistente) en buildModel.
         const fr = kv.get("Frame"); const dir = kv.get("Dir");
+        const pat = kv.get("LoadPat") ?? "";
         const fa = parseNum(kv.get("FOverLA")), fb = kv.has("FOverLB") ? parseNum(kv.get("FOverLB")) : fa;
         const cs = (kv.get("CoordSys") ?? "GLOBAL").toUpperCase();
         if (!fr || !dir || (!fa && !fb) || cs !== "GLOBAL") break;
@@ -321,7 +324,7 @@ function parseTableFormat(rawLines: string[]): S2kModel {
           const v = frameLoadsRaw.get(fr) ?? [0, 0, 0]; v[k] += fa; frameLoadsRaw.set(fr, v);
         } else {
           const d = k !== undefined ? [0, 1, 2].map(j => (j === k ? 1 : 0)) : /^grav/i.test(dir) ? [0, 0, -1] : null;
-          if (d) cargasTabla.barras.push({ frame: fr, dir: d, a, b, rel, fa, fb });
+          if (d) cargasTabla.barras.push({ frame: fr, dir: d, a, b, rel, fa, fb, pat });
         }
         break;
       }
@@ -349,6 +352,10 @@ function parseTableFormat(rawLines: string[]): S2kModel {
       case "LOAD PATTERN DEFINITIONS": {
         const sw = parseNum(kv.get("SelfWtMult"));
         if (sw > cargasTabla.selfWtMult) cargasTabla.selfWtMult = sw;
+        // Patrones de viento: en buildModel sus cargas con Dir=Gravedad se rotan a la
+        // normal de la superficie (galpón curvo: «el viento va perpendicular al zinc»).
+        const lp = kv.get("LoadPat");
+        if (lp && /wind/i.test(kv.get("DesignType") ?? "")) cargasTabla.windPats!.add(lp);
         break;
       }
 
@@ -811,6 +818,70 @@ function buildModel(
     const frameIdx = new Map<string, number>(), areaIdx = new Map<string, number>();
     elementNames.forEach((n, i) => (i < nFrames ? frameIdx : i < nFrames + nShells ? areaIdx : new Map()).set(n, i));
     const esFrame = (i: number | undefined) => i !== undefined && i < nFrames;
+
+    // ── VIENTO perpendicular al zinc (Jorge, 25-sep-2026) ─────────────────────────
+    // «Es un galpón curvo: el viento va perpendicular al zinc.» SAP solo sabe escribir
+    // Dir=Gravity en barras, así que el s2k trae el patrón Wind vertical. Para los
+    // patrones DesignType=Wind se rota la dirección de cada fila a la NORMAL de la
+    // superficie: las posiciones (x,z) de los extremos de las barras cargadas,
+    // agrupadas por plano de Y y ordenadas por x, son la polilínea del arco; tangente
+    // por diferencia central; normal = eje de la barra × tangente; signo hacia el
+    // interior (centroide). La magnitud no cambia (q>0 empuja, q<0 succiona). Lo que
+    // la geometría no dé (arista degenerada) se queda con Gravedad.
+    if (cargasTabla.windPats?.size) {
+      const esGravedad = (d: number[]) => d[0] === 0 && d[1] === 0 && d[2] === -1;
+      const filas = cargasTabla.barras.filter((c) => c.pat !== undefined && cargasTabla.windPats!.has(c.pat) && esGravedad(c.dir));
+      if (filas.length) {
+        let C = [0, 0, 0];
+        for (const p of nodesArr) { C[0] += p[0]; C[1] += p[1]; C[2] += p[2]; }
+        C = C.map((v) => v / (nodesArr.length || 1));
+        const planos = new Map<string, { x: number; z: number }[]>();
+        type Ext = { c: (typeof filas)[number]; yKey: string; xz: [number, number]; p: number[]; eje: number[] };
+        const extremos: Ext[] = [];
+        for (const c of filas) {
+          const ps = piezas.get(c.frame); if (!ps?.length) continue;
+          const i0 = elements[ps[0].i]?.[0], i1 = elements[ps[ps.length - 1].i]?.[1];
+          if (i0 === undefined || i1 === undefined) continue;
+          const pa = nodesArr[i0], pb = nodesArr[i1];
+          const e = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]];
+          const Le = Math.hypot(e[0], e[1], e[2]); if (Le < 1e-9) continue;
+          const eje = [e[0] / Le, e[1] / Le, e[2] / Le];
+          for (const p of [pa, pb]) {
+            const yKey = p[1].toFixed(3);
+            let arr = planos.get(yKey); if (!arr) { arr = []; planos.set(yKey, arr); }
+            if (!arr.some((q) => Math.abs(q.x - p[0]) < 1e-6 && Math.abs(q.z - p[2]) < 1e-6))
+              arr.push({ x: p[0], z: p[2] });
+            extremos.push({ c, yKey, xz: [p[0], p[2]], p, eje });
+          }
+        }
+        for (const [, arr] of planos) arr.sort((a, b) => a.x - b.x);
+        const nAcum = new Map<object, number[]>();
+        for (const ex of extremos) {
+          const arr = planos.get(ex.yKey)!;
+          const i = arr.findIndex((q) => Math.abs(q.x - ex.xz[0]) < 1e-6 && Math.abs(q.z - ex.xz[1]) < 1e-6);
+          if (i < 0) continue;
+          const a = arr[Math.max(0, i - 1)], b = arr[Math.min(arr.length - 1, i + 1)];
+          const tx = b.x - a.x, tz = b.z - a.z;
+          const Lt = Math.hypot(tx, tz); if (Lt < 1e-9) continue;
+          const u = [tx / Lt, 0, tz / Lt], e = ex.eje;
+          const n = [e[1] * u[2] - e[2] * u[1], e[2] * u[0] - e[0] * u[2], e[0] * u[1] - e[1] * u[0]];
+          const Ln = Math.hypot(n[0], n[1], n[2]); if (Ln < 1e-7) continue;
+          const nu = [n[0] / Ln, n[1] / Ln, n[2] / Ln];
+          const hacia = [C[0] - ex.p[0], C[1] - ex.p[1], C[2] - ex.p[2]];
+          if (nu[0] * hacia[0] + nu[1] * hacia[1] + nu[2] * hacia[2] < 0) { nu[0] = -nu[0]; nu[1] = -nu[1]; nu[2] = -nu[2]; }
+          const prev = nAcum.get(ex.c);
+          nAcum.set(ex.c, prev ? [prev[0] + nu[0], prev[1] + nu[1], prev[2] + nu[2]] : nu);
+        }
+        let rotadas = 0;
+        for (const c of filas) {
+          const n = nAcum.get(c); if (!n) continue;
+          const Ln = Math.hypot(n[0], n[1], n[2]); if (Ln < 1e-7) continue;
+          c.dir = [n[0] / Ln, n[1] / Ln, n[2] / Ln]; rotadas++;
+        }
+        if (rotadas) console.log(`[s2kParser] viento: ${rotadas}/${filas.length} cargas de patrones Wind rotadas a la normal del zinc.`);
+      }
+    }
+
     // 1) FRAME LOADS - DISTRIBUTED trapeciales / parciales / Gravity: vector consistente
     for (const c of cargasTabla.barras) {
       const ps = piezas.get(c.frame); if (!ps?.length || !esFrame(ps[0].i)) continue;

@@ -20,6 +20,8 @@ Pedido de Jorge (01:35): *«La SECCION TRANSVERSAL TIENE QUE IR EN CLICK DERECHO
   solo-barras con vacío).
 - **Tests**: `cli/ctl_click_derecho_seccion.mjs` 9/9 ✓ (barra→ventana+SVG+selección
   exacta, vacío→menú, Esc) · `cli/ctl_menu_y_ventana.mjs` 8/8 ✓.
+- **Desplegado**: fuente `ffbabaf23` → gh-pages `e5e2b8e46..293958b3d`; verificado
+  9/9 contra el SITIO PÚBLICO (`node cli/ctl_click_derecho_seccion.mjs publico`).
 
 ## ❌ No funcionó (y por qué)
 - **Busqueda de `sectionShapes` en `#viewer.__ctx.mesh`** → ese `__ctx` público no tiene
