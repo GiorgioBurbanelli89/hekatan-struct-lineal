@@ -6473,30 +6473,49 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
         try {
           const text = await file.text();
           const model = parseS2k(text);
-          // Carga en new-blank igual que E2K
-          const points = (model.nodes ?? []).map((n: number[]) => [n[0], n[1], n[2]]);
-          const polylines: number[][] = [];
-          const areas: number[] = [];
-          for (let i = 0; i < (model.elements?.length ?? 0); i++) {
-            const elem = model.elements![i] as number[];
-            if (elem.length === 4) {
-              polylines.push([...elem, elem[0]]);
-              areas.push(polylines.length - 1);
-            } else {
-              polylines.push([elem[0], elem[1]]);
-            }
+          // ── Igual que «Importar E2K»: el modelo ENTERO a «Importar CSI» ──────
+          // Hasta el 24-sep-2026 solo viajaban nudos y líneas a `new-blank` y se
+          // perdían las CARGAS (FRAME LOADS, AREA LOADS, peso propio), los apoyos y
+          // las secciones que parseS2k ya había leído (Cancha Parque.s2k: 1352.59 kN
+          // leídos, 0 kN en pantalla).
+          const ei: Record<string, [number, unknown][]> = {};
+          for (const [k, v] of Object.entries(model.elementInputs ?? {})) {
+            if (v instanceof Map) ei[k] = [...v.entries()];
           }
-          localStorage.setItem("__hekatan_pending_import__", JSON.stringify({
-            source: "S2K",
-            filename: file.name,
-            nodes: points,
-            polylines,
-            areas,
-            timestamp: Date.now(),
-          }));
-          console.log(`✅ S2K importado: ${file.name} (${model.nodes?.length ?? 0} nodos, ${model.elements?.length ?? 0} elementos) → cargando en new-blank...`);
+          // El s2k no dice COLUMN/BEAM/BRACE: se deduce de la geometría.
+          const tipos = model.elements.map((e: number[]) => {
+            if (e.length !== 2) return "AREA";
+            const a = model.nodes[e[0]], b = model.nodes[e[1]];
+            const dh = Math.hypot(b[0] - a[0], b[1] - a[1]), dz = Math.abs(b[2] - a[2]);
+            return dh < 1e-6 ? "COLUMN" : dz < 1e-6 ? "BEAM" : "BRACE";
+          });
+          const loadsMap = (model.nodeInputs?.loads as Map<number, number[]>) ?? new Map();
+          (window as any).__hekatanImportedModel = {
+            fuente: "S2K",
+            archivo: file.name,
+            nodes: model.nodes,
+            elements: model.elements,
+            tipos,
+            secciones: model.elements.map((_e: number[], i: number) =>
+              model.elementSections?.get(i) ?? "—"),
+            plantas: [],
+            supports: [...((model.nodeInputs?.supports as Map<number, boolean[]>) ?? new Map()).entries()],
+            loads: [...loadsMap.entries()],
+            elementInputs: ei,
+            info: model.info,
+          };
+          let fz = 0; for (const f of loadsMap.values()) fz += f[2] ?? 0;
+          console.log(`✅ S2K importado: ${file.name} — ${model.nodes.length} nudos, `
+            + `${model.elements.length} elementos, ${loadsMap.size} nudos cargados (ΣFz = ${fz.toFixed(2)} kN). `
+            + `Se muestra en «Importar CSI» con SUS datos.`);
+          try {
+            sessionStorage.setItem("__hekatan_modelo_importado__",
+              JSON.stringify((window as any).__hekatanImportedModel));
+          } catch (e: any) {
+            console.warn("[Importar S2K] no cabe en sessionStorage:", e?.message ?? e);
+          }
           const u = new URL(window.location.href);
-          u.searchParams.set("t", "new-blank");
+          u.searchParams.set("t", "csi-importer");
           window.location.href = u.toString();
         } catch (e: any) {
           alert(`Error importando S2K: ${e?.message ?? e}`); console.error(e);
@@ -8962,7 +8981,7 @@ try {
   if (imp) {
     (window as any).__hekatanImportedModel = JSON.parse(imp);
     sessionStorage.removeItem("__hekatan_modelo_importado__");
-    console.log(`[Importar E2K] modelo recuperado: ${(window as any).__hekatanImportedModel?.archivo}`);
+    console.log(`[Importar ${(window as any).__hekatanImportedModel?.fuente ?? "CSI"}] modelo recuperado: ${(window as any).__hekatanImportedModel?.archivo}`);
   }
 } catch (e: any) {
   console.warn("[Importar E2K] no se pudo recuperar el modelo:", e?.message ?? e);

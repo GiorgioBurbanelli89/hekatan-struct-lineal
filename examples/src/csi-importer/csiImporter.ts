@@ -152,10 +152,20 @@ function conectarIntersecciones(m: ModeloImportado): ModeloImportado {
     pts.sort((x, y) => x[0]-y[0]); let prev = i;
     for (const [, k] of pts) { push([prev, k]); prev = k; } push([prev, j]);
   });
+  // Carga de barra (`frameLoads`, `frameFixedEnd`) ya repartida a los nudos de la
+  // barra ENTERA: copiada a cada trozo, analyze() sumaría el empotramiento de la barra
+  // entera a cada pedazo. En las barras partidas se deja solo la carga nodal (el
+  // equilibrio y los desplazamientos de nudo no cambian; el diagrama dentro del trozo sí).
+  const nTrozos = new Map<number, number>();
+  padre.forEach((o) => nTrozos.set(o, (nTrozos.get(o) ?? 0) + 1));
+  const deBarra = new Set(["frameLoads", "frameFixedEnd"]);
   const ei: Record<string, [number, number][]> = {};
   for (const [k, mp] of Object.entries(eiOrig)) {
     const arr: [number, number][] = [];
-    padre.forEach((o, nuevo) => { const v = mp.get(o); if (v !== undefined) arr.push([nuevo, v]); });
+    padre.forEach((o, nuevo) => {
+      if (deBarra.has(k) && (nTrozos.get(o) ?? 1) > 1) return;
+      const v = mp.get(o); if (v !== undefined) arr.push([nuevo, v]);
+    });
     ei[k] = arr;
   }
   const partidas = elements.filter((e) => e.length === 2).length - m.elements.filter((e) => e.length === 2).length;
