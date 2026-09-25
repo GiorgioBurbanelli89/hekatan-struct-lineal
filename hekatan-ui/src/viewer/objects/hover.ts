@@ -797,6 +797,31 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     limpiarSeleccion();
   }, { capture: true });
 
+  // ── API para el MENÚ del clic derecho (workspace) ──
+  // `findHovered` no estaba expuesta: el menú adivinaba «¿el modelo tiene
+  // áreas?» en vez de mirar qué hay bajo el cursor. Ahora el clic derecho SÍ
+  // mira, y sobre una BARRA abre la sección transversal directo (ETABS).
+  (window as any).__hekatanFindHovered = findHovered;
+  // Designa UNO reemplazando el conjunto: el clic derecho es «esta de acá».
+  // Con `designar()` a secas, clickear lo mismo otra vez lo SACABA (toggle
+  // PICKADD), y la ventana de sección se quedaría sin barra.
+  (window as any).__hekatanDesignarExacto = (type: SelItem["type"], idx: number) => {
+    selSet.length = 0;
+    selSet.push({ type, idx });
+    selected = selSet[selSet.length - 1];
+    updateSelection();
+    window.dispatchEvent(new CustomEvent("hk:model-selection", { detail: { ultimo: selected } }));
+  };
+  // El clic derecho sobre un elemento NO debe disparar el «cancel» de
+  // drawing.ts (Escape sintético que vacía la selección): esa marca la lee
+  // drawing.ts en el pointerup y se la salta, dejando la selección viva
+  // para la sección. Con un comando CAD activo se respeta el cancel normal.
+  ctx.rendererElm.addEventListener("pointerdown", (e: PointerEvent) => {
+    if (e.button !== 2) return;
+    (window as any).__hekatanRClickOnElement =
+      sePuedeDesignar() && !!findHovered(e.clientX, e.clientY);
+  });
+
   // ── Update visual de la SELECCIÓN PERSISTENTE ──
   /** Borra los resaltados y libera las geometrías propias de cada uno. */
   function limpiarResaltados() {

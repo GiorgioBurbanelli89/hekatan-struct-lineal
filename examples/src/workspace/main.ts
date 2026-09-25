@@ -217,7 +217,7 @@ import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
 import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
-import { montarBotonSeccion } from "hekatan-ui/src/cad/cuadroSeccion";
+import { montarBotonSeccion, mostrarSeccionConAviso } from "hekatan-ui/src/cad/cuadroSeccion";
 import { montarMenusBarra } from "../shared/menuDiseno";
 import { registrarGuiaFem } from "../shared/guiaFem";
 import {
@@ -3966,17 +3966,19 @@ const ACCIONES: Record<string, () => void> = {
   "Display ▸ Frame Forces": () => {
     try {
       const st = (window as any).__hekatanSettings?.();
-      // el momento del plano del canto es lo que se mira primero en una viga
+      // el momento del plano del cantón es lo que se mira primero en una viga
       if (st?.frameResults) st.frameResults.val = "Mz";
       (window as any).__hekatanDiagrama2D?.();
     } catch (e) { console.warn("[menu] Frame Forces:", e); }
   },
+  "Ver ▸ Sección transversal": () => { mostrarSeccionConAviso(); },
 };
 
 /** Que se puede hacer segun lo que se selecciono. Los nombres son los de
  *  ETABS a proposito: quien lo usa ahi lo encuentra sin buscar. */
 const MENU: Record<string, Array<[string, string]>> = {
   frame: [
+    ["Ver ▸ Sección transversal", ""],
     ["Assign ▸ Frame ▸ Section Property", "Secciones"],
     ["Assign ▸ Frame ▸ Local Axes", "Ejes"],
     ["Display ▸ Frame Forces", "Tablas"],
@@ -4051,15 +4053,29 @@ function montarMenuContextual(pane: any) {
     const largo = Date.now() - tDer > 400;
     if (arrastro || largo) return;      // estaba orbitando: no molestar
     ev.stopPropagation();
-    // Que hay bajo el cursor. Sin picking fino todavia: si el modelo tiene
-    // areas se ofrecen las de area, y siempre las generales.
+    // ── Click derecho SOBRE un elemento → la acción del elemento (ETABS) ──
+    // `hover.ts` expone su picking fino (`__hekatanFindHovered`): sobre una
+    // BARRA se abre directo el cuadro de la sección transversal acotada,
+    // sin pasar por el menú. Sobre vacío sigue el menú de siempre. Con un
+    // comando CAD activo NO se toca nada (el botón derecho es «cancel» ahí).
+    const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
+    const enSelect = tool === "select" || tool === "none" || !tool;
+    const fh = enSelect ? (window as any).__hekatanFindHovered?.(ev.clientX, ev.clientY) : null;
+    if (fh?.type === "frame") {
+      (window as any).__hekatanDesignarExacto?.("frame", fh.idx);
+      mostrarSeccionConAviso();
+      return;
+    }
+    // Que hay bajo el cursor (antes: «si el modelo tiene áreas» — adivinaba).
     const tieneAreas = (states.elements.rawVal ?? []).some((e: any) => e.length >= 3);
-    const tipo = tieneAreas ? "area" : "frame";
+    const tipo = fh?.type === "node" ? "joint" : fh?.type === "shell" ? "area"
+      : tieneAreas ? "area" : "frame";
     const items = [...MENU[tipo], ["", ""] as [string, string], ...MENU.nada];
 
     menu.innerHTML = "";
     const cab = document.createElement("div");
-    cab.textContent = tieneAreas ? "AREA / SHELL" : "FRAME";
+    cab.textContent = fh?.type === "node" ? "JOINT" : fh?.type === "shell" ? "SHELL"
+      : tieneAreas ? "AREA / SHELL" : "FRAME";
     cab.style.cssText = "padding:5px 12px;color:#8a94a6;font-size:11px;" +
                         "border-bottom:1px solid #3a3f47;margin-bottom:3px";
     menu.appendChild(cab);

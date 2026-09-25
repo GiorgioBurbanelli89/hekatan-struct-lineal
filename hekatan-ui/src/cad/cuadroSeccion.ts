@@ -193,6 +193,21 @@ export function mostrarSeccion(): string {
   return `Barra ${ult.idx + 1}: ${nombreSeccion(f)}`;
 }
 
+/** Igual que `mostrarSeccion`, pero avisa con un toast si no hay barra designada
+ *  o si la barra no tiene forma — para quien lo pide desde el clic derecho. */
+export function mostrarSeccionConAviso(): string {
+  const msg = mostrarSeccion();
+  if (msg.startsWith("Designá") || msg.startsWith("La barra")) {
+    const t = document.createElement("div");
+    t.style.cssText = "position:fixed;left:16px;top:100px;z-index:9200;background:#3f1d1d;color:#fca5a5;" +
+      "padding:6px 10px;border-radius:6px;font:12px system-ui;max-width:260px";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+  return msg;
+}
+
 export function montarBotonSeccion() {
   if (document.getElementById("hk-sec-btn")) return;
   const b = document.createElement("button");
@@ -205,18 +220,9 @@ export function montarBotonSeccion() {
     "background:#0b1220", "color:#f1f5f9", "font-size:15px", "cursor:pointer",
     "opacity:.85", "box-shadow:0 3px 10px rgba(0,0,0,.35)",
   ].join(";");
-  b.onclick = () => {
-    const msg = mostrarSeccion();
-    if (msg.startsWith("Designá") || msg.startsWith("La barra")) {
-      const t = document.createElement("div");
-      t.style.cssText = "position:fixed;left:16px;top:100px;z-index:9200;background:#3f1d1d;color:#fca5a5;" +
-        "padding:6px 10px;border-radius:6px;font:12px system-ui;max-width:260px";
-      t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(() => t.remove(), 4000);
-    }
-  };
+  b.onclick = () => { mostrarSeccionConAviso(); };
   const poner = () => document.body && document.body.appendChild(b);
   if (document.body) poner(); else document.addEventListener("DOMContentLoaded", poner);
   W().hkSeccion = mostrarSeccion;
+  W().hkSeccionConAviso = mostrarSeccionConAviso;
 }

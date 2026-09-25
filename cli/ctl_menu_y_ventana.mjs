@@ -52,6 +52,12 @@ await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { ti
 await espera(5000);
 await pag.evaluate(() => {
   document.getElementById("hk-ribbon-guia")?.remove();
+  // El ribbon creció (46 botones, 2 filas → 394 px) y TAPA el centro de la
+  // pantalla: el clic derecho caía en el ribbon y el menú no se abría nunca
+  // (medido 25-sep-2026, también sin los cambios del clic-derecho-sección).
+  // El test mide el MENÚ, no el ribbon: lo ocultamos.
+  const rib = document.getElementById("hk-ribbon");
+  if (rib) rib.style.display = "none";
   const c = document.querySelector("#viewer").__ctx.controls;
   if (c) { c.enableDamping = false; c.update?.(); }
 });
