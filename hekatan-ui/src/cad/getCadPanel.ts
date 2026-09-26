@@ -358,6 +358,16 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     // En perspectiva (iso) el marcador del plano sobra: se quedaba flotando sobre la
     // cercha en el 3D del Tutorial 9 aunque la cinta lo escondía (setView es asíncrono).
     refGroup.visible = !(ctx?.camera as any)?.isPerspectiveCamera;
+    // 26-sep-2026: al pulsar «Plano XZ» desde el 3D la cámara aún es perspectiva en este instante
+    // (setView es asíncrono) y el marcador quedaba OCULTO para siempre, ya con la vista de alzado
+    // puesta: la barra decía «pasa por Y = 15» y en el lienzo no había nada (lo cazó ctl_ribbon).
+    // Se vuelve a mirar cuando la cámara ya cambió; si sigue en perspectiva, sigue oculto.
+    setTimeout(() => {
+      const c2 = (viewerElm as any).__ctx?.camera as any;
+      if ((window as any).__hekatanPlanoRef !== kind) return;      // ya se cambió de plano
+      refGroup.visible = !c2?.isPerspectiveCamera;
+      try { (viewerElm as any).__ctx?.render?.(); } catch {}
+    }, 700);
     (window as any).__hekatanPuntoRef = p;
     (window as any).__hekatanPlanoRef = kind;
     ctx?.render?.();

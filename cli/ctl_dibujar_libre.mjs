@@ -16,6 +16,11 @@
  * La prueba dibuja a mano alzada y exige que cada punto quede a menos de 1 cm de
  * donde estaba el cursor.
  *
+ * 26-sep-2026: el imán a la rejilla y ORTO vuelven a venir ENCENDIDOS de fábrica (Jorge; el
+ * lienzo de Hekatan LISP los trae y sale (2,3)(2,10)… limpio). Esta prueba mide el trazo LIBRE,
+ * así que los apaga a propósito DESPUÉS de comprobar que el defecto es «encendido»; y pliega la
+ * cinta (290 px) para que los píxeles fijos caigan en el lienzo y no bajo ella.
+ *
  *   node cli/ctl_dibujar_libre.mjs
  */
 import puppeteer from "puppeteer";
@@ -36,7 +41,10 @@ const esperar=(ms)=>new Promise(r=>setTimeout(r,ms));
 await pag.goto(`http://localhost:4759${BASE}workspace/?t=new-blank`,{waitUntil:"networkidle2",timeout:180000});
 await esperar(6000);
 await pag.evaluate(()=>document.getElementById("hk-ribbon-guia")?.remove());
-await pag.evaluate((on)=>{ window.__hekatanSnapEnabled = on; }, CON_REJILLA);
+// el DEFECTO, antes de tocar nada
+const defecto = await pag.evaluate(()=>({ snap: window.__hekatanSnapEnabled, orto: !!window.__hekatanOrthoMode }));
+await pag.evaluate(()=>window.__hekatanRibbonPlegar?.(true));      // la cinta no tapa los píxeles de la prueba
+await pag.evaluate((on)=>{ window.__hekatanSnapEnabled = on; window.__hekatanOrthoMode = false; }, CON_REJILLA);
 console.log("enganche a la rejilla:", await pag.evaluate(()=>window.__hekatanSnapEnabled !== false ? "ENCENDIDO" : "apagado"),
             "· paso", await pag.evaluate(()=>window.__hekatanSnap2D));
 // planta, centrada, con zoom conocido
@@ -52,7 +60,8 @@ await cmd("pl");
 // puntos a mano alzada: pixeles cualesquiera, no elegidos para caer en la rejilla
 // ⚠️ nada por encima de y=300: el ribbon tapa el centro-arriba del lienzo y el
 // clic se lo lleva el BOTÓN, no el dibujo (ya pasó en el vídeo del modelo nuevo)
-const PIX = [[437,352],[812,391],[901,548],[566,612],[389,486]];
+// (901,548) caía bajo el botón 🤖 y (566,612) bajo la ventana de comandos: dentro de [420..820]×[200..520]
+const PIX = [[437,352],[812,391],[760,470],[566,500],[489,286]];
 let mov = 0, n = 0, peor = 0;
 // ⚠️ Aquí se mide el trazo LIBRE, así que se apagan las dos ayudas que MUEVEN el
 // punto a propósito, igual que haría cualquiera en AutoCAD para dibujar a mano
@@ -80,7 +89,7 @@ for (const [px,py] of PIX) {
     return [o.position.x + nx * halfW, o.position.y + ny * halfH, 0];
   }, [px,py]);
   const tapado = await pag.evaluate(([x,y])=>{ const e=document.elementFromPoint(x,y); return e ? e.tagName !== "CANVAS" : true; }, [px,py]);
-  if (tapado) { console.log(`  (${px},${py}) cae bajo un panel: se salta`); continue; }
+  if (tapado) { console.log(`  (${px},${py}) cae bajo un panel: se salta`, await pag.evaluate(([x,y])=>{const e=document.elementFromPoint(x,y);return e?(e.tagName+"#"+e.id+"."+(e.className||"").toString().slice(0,40)):"?"},[px,py])); continue; }
   await pag.mouse.click(px, py); await esperar(380);
   const puestos = await pag.evaluate(()=>(window.__hekatanDrawingPoints?.val||[]).map(q=>q.map(c=>+c.toFixed(3))));
   const p = puestos[puestos.length-1];
@@ -91,11 +100,11 @@ for (const [px,py] of PIX) {
 }
 await pag.keyboard.press("Escape");
 console.log("");
-ok(n >= 4, "se colocan los puntos a mano alzada", `${n} de ${PIX.length} (uno cae bajo un panel)`);
+ok(n === PIX.length, "se colocan los puntos a mano alzada", `${n} de ${PIX.length}`);
 ok(peor < 0.01, "cada punto cae DONDE está el cursor (menos de 1 cm)",
    `media ${(mov / n).toFixed(4)} m · peor ${peor.toFixed(4)} m`);
-ok(await pag.evaluate(() => window.__hekatanSnapEnabled === false),
-   "el enganche a la rejilla viene APAGADO, como el SNAP de AutoCAD");
+ok(defecto.snap === true && defecto.orto === true,
+   "el imán a la rejilla y ORTO vienen ENCENDIDOS de fábrica (como el lienzo de Hekatan LISP)", JSON.stringify(defecto));
 // ── UN SOLO CURSOR ─────────────────────────────────────────────────────────
 // El resaltador de nudos de la rejilla (anillo ambar) dice «el clic caeria
 // EXACTAMENTE aqui». Con el enganche apagado eso es mentira: el punto cae bajo el

@@ -46,3 +46,10 @@
 ✅ Casillas ORTO/POLAR del panel derecho eran letra muerta (escribían `__hekatanOrtho`/`__hekatanPolar`, que nadie lee; mostraban «apagado» con ORTO encendido). Ahora mandan el mismo estado que F8/F10 y se ponen al día si se cambia desde otro sitio. 5/5 (cli/_test_rejilla_paneles.mjs) + PNG.
 ✅ «Dimensión grid (m)» duplicada y estática en el panel derecho: quitada; queda la de Settings › Ajuste fino. «Separación = paso del imán» sube al nivel principal de Settings › Rejilla.
 ⏳ Falta: rehacer ctl_dibujar_libre y ctl_ribbon (píxeles fijos / teclas de una letra).
+
+## Pruebas rehechas + 2 arreglos que salieron de ellas (worktree _work_pruebas, rama pruebas-dibujo)
+✅ ctl_dibujar_libre 6/6 (defecto = imán+ORTO encendidos; los apaga a propósito para medir el trazo libre; cinta plegada; píxeles dentro de [420..820]×[200..520]: 901,548 caía bajo el 🤖 y 566,612 bajo la ventana de comandos).
+✅ ctl_ribbon 14/14 (letras + ESPACIO; PL y LO, no P/Q; Esc antes de los dígitos).
+✅ BUG real cazado: el marcador del punto de referencia (cruz + «ALZADO X-Z Y=…») quedaba OCULTO tras pulsar «Plano XZ» desde 3D (setView asíncrono, cámara aún perspectiva): getCadPanel.ts re-evalúa a los 700 ms.
+✅ «Abajo también colisiona» (captura de Jorge): la barra «CAD listo» (centrada, hasta 1000 px) pasaba por debajo de los botones redondos 🤖/📋/●/regla. drawing.ts: `limitarAncho` recorta el ancho al hueco simétrico libre (aire 24 px, cada 400 ms); si no hay hueco (ventana <~1000 px) se esconde. cli/_test_barra_inferior.mjs 4/4 (1280, 1500, 2000, 1000) + PNG.
+❗ Trampa de worktree: node_modules/hekatan-ui enlazado al árbol PRINCIPAL compilaba el código de OTRA rama; en el worktree hay que hacer node_modules real con junctions por paquete y los hekatan-* apuntando al worktree.

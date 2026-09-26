@@ -149,13 +149,17 @@ await foto("9 ejes · 5 niveles · 80 columnas, de un boton");
         !!ref && !!st.grid && Math.abs(st.grid[1] - ref[1]) < 1e-6,
         `ultimo punto Y=${ref ? ref[1].toFixed(2) : "?"} · plano en Y=${st.grid ? st.grid[1].toFixed(2) : "?"}`);
   anota("la barra dice por donde corta", /pasa por Y/.test(st.barra), st.barra.slice(0, 70));
-  anota("hay marcador del punto de referencia",
+  // El marcador existe y se ve en cámara ortogonal; en perspectiva se OCULTA a propósito (se
+  // quedaba flotando sobre la cercha en el 3D del Tutorial 9).
+  anota("hay marcador del punto de referencia (visible salvo en perspectiva)",
         await pag.evaluate(() => {
           const ctx = document.querySelector("#viewer")?.__ctx;
-          let v = false;
-          ctx?.scene.traverse((o) => { if (o.name === "punto-referencia" && o.visible) v = true; });
-          return v;
-        }), "");
+          let o = null;
+          ctx?.scene.traverse((x) => { if (x.name === "punto-referencia") o = x; });
+          window.__dbgRef = { existe: !!o, visible: o && o.visible, persp: !!ctx.camera.isPerspectiveCamera, plano: window.__hekatanPlanoRef };
+          if (!o) return false;
+          return o.visible === !ctx.camera.isPerspectiveCamera;
+        }), JSON.stringify(await pag.evaluate(() => window.__dbgRef)));
   await foto("Alzado anclado al ultimo punto — la barra dice por donde corta");
   await pag.evaluate(() => {
     const b = Array.from(document.querySelectorAll("button.tp-btnv_b"))
@@ -166,11 +170,15 @@ await foto("9 ejes · 5 niveles · 80 columnas, de un boton");
 }
 
 // ── 2) Las TECLAS, como AutoCAD ─────────────────────────────────────────────
-for (const [k, esperado, txt] of [["l","line","Tecla L → Linea"],
-                                  ["p","polyline","Tecla P → Polilinea"],
-                                  ["k","col","Tecla K → Columna"],
-                                  ["q","area","Tecla Q → Losa"]]) {
-  await pag.keyboard.press(k);
+// (P es PAN y Q no es nada en AutoCAD: la cinta rotula PL y LO, y esos son los alias.)
+for (const [k, esperado, txt] of [["l","line","L → Linea"],
+                                  ["pl","polyline","PL → Polilinea"],
+                                  ["k","col","K → Columna"],
+                                  ["lo","area","LO → Losa"]]) {
+  // Las letras se acumulan en la ventana de comandos y el ESPACIO/Enter ejecuta, como en AutoCAD.
+  await pag.keyboard.press("Escape");
+  await new Promise((r) => setTimeout(r, 200));
+  await pag.keyboard.type(k + " ", { delay: 40 });
   await new Promise((r) => setTimeout(r, 420));
   const t = await tool();
   const foco = await pag.evaluate(() => {
@@ -183,6 +191,8 @@ for (const [k, esperado, txt] of [["l","line","Tecla L → Linea"],
 
 // ── 3) Vistas por número ────────────────────────────────────────────────────
 for (const [k, txt] of [["4","Tecla 4 → 3D"], ["1","Tecla 1 → Planta"]]) {
+  await pag.keyboard.press("Escape");         // con herramienta activa un dígito es una coordenada
+  await new Promise((r) => setTimeout(r, 200));
   await pag.keyboard.press(k);
   await new Promise((r) => setTimeout(r, 1500));
   await pag.evaluate(() => window.__hekatanAutoFit?.());
@@ -191,7 +201,8 @@ for (const [k, txt] of [["4","Tecla 4 → 3D"], ["1","Tecla 1 → Planta"]]) {
 }
 
 // ── 4) Dibujar una viga con el raton, encima de la rejilla ─────────────────
-await pag.keyboard.press("l");
+await pag.keyboard.press("Escape");
+await pag.keyboard.type("l ", { delay: 40 });
 await new Promise((r) => setTimeout(r, 350));
 const cv = await pag.evaluate(() => {
   const c = document.querySelector("#viewer canvas"); const r = c.getBoundingClientRect();
@@ -210,6 +221,7 @@ for (const [dx, dy] of [[0.38,0.42],[0.60,0.42],[0.60,0.60]]) {
 const m2 = await modelo();
 anota("los clics anaden tramos sobre la rejilla", m2.tramos > m1.tramos,
       `${m1.tramos} -> ${m2.tramos}`);
+await pag.keyboard.press("Escape");
 await pag.keyboard.press("4");
 await new Promise((r) => setTimeout(r, 1500));
 await pag.evaluate(() => window.__hekatanAutoFit?.());

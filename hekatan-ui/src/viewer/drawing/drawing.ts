@@ -6380,6 +6380,31 @@ export function drawing({
     const desdeAbajo = Math.max(0, window.innerHeight - r.top);
     statusBar.style.bottom = Math.round(desdeAbajo + 8) + "px";
   };
+  // 26-sep-2026 (Jorge, captura): «abajo también colisiona». La barra está CENTRADA y con un
+  // mensaje largo llega hasta el grupo de botones redondos de la derecha (regla, grabar, 🤖, 📋):
+  // el texto pasaba POR DEBAJO de ellos. Colocar los botones esquivando la barra fallaba porque el
+  // mensaje cambia de largo. Al revés es estable: se limita el ANCHO de la barra al hueco libre
+  // (simétrico, para que siga centrada); lo que no cabe se corta con «…» (ya lleva ellipsis).
+  const limitarAncho = () => {
+    const cx = window.innerWidth / 2;
+    let izq = window.innerWidth;                       // borde izquierdo del grupo de botones
+    document.querySelectorAll("body button").forEach((el) => {
+      const b = el as HTMLElement;
+      if (b.getBoundingClientRect().width > 80) return;
+      const r = b.getBoundingClientRect();
+      if (r.width <= 0 || r.left < cx || r.top < window.innerHeight * 0.5) return;
+      if (getComputedStyle(b).position !== "fixed") return;
+      izq = Math.min(izq, r.left);
+    });
+    const mitad = izq - 24 - cx;                       // 24 px de aire
+    // Ventana tan estrecha que los botones llegan casi al centro: no hay hueco para el cartel
+    // (solo es una pista de sintaxis; el mismo texto está en la línea de órdenes). Se esconde.
+    statusBar.style.visibility = mitad < 60 ? "hidden" : "visible";
+    statusBar.style.maxWidth = Math.round(2 * Math.max(60, mitad)) + "px";
+  };
+  limitarAncho();
+  setInterval(limitarAncho, 400);
+  window.addEventListener("resize", limitarAncho);
   subirStatus();
   // sin ResizeObserver sobre el body: mover la barra cambia el layout y se monta
   // un bucle que deja la pagina pegada (pasó con el boton del agente)
