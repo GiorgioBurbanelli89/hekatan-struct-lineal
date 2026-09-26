@@ -353,6 +353,7 @@ import { slabBeamsColumns } from "../slab-beams-columns/slabBeamsColumns";
 import { plateThick } from "../plate-thick/plateThick";
 import { membrana } from "../membrana-pstress/membrana";
 import { drillingDof } from "../test/drillingDof";
+import { placaNavier } from "../test/placaNavier";
 import { itwPatchTest, itwCantilever, itwCook, itwHemisferio } from "../test/itwBenchmarks";
 import { shellThin } from "../shell-thin/shellThin";
 import { benchmark3way } from "../benchmark-3way/benchmark3way";
@@ -473,6 +474,7 @@ export const examplesRegistry: ExampleDef[] = [
   edificioFrameNec,       // Edificio pórtico paramétrico (frame puro) + carga lateral NEC
   // 🧪 TEST — casos de prueba / desarrollo (categoría "test")
   drillingDof,            // 2 muros + viga de acople (drilling DOF + test exportador e2k)
+  placaNavier,            // Placa apoyada 8x8: momentos vs Navier y SAP2000 (test placa-momentos-navier)
   itwPatchTest,           // ITW I   — patch test de orden superior (exacto 1.5 / 0.6)
   itwCantilever,          // ITW II  — cantilever corto (exacto 0.3553)
   itwCook,                // ITW III — membrana de Cook (referencia 23.91 en C)
