@@ -31,3 +31,9 @@
 ✅ PRUEBA FINAL (cli/_bench_dibujo.mjs, clics con ±5 px de ruido, GPU): pórtico (0,0)(0,4)(6,4)(6,0) EXACTO, 3 tramos, 4 clics, 56-95 ms/clic, ~160 fps, 0 errores.
 ❌ cli/ctl_dibujar_libre.mjs: 1 fallo («4 de 5 puntos caen bajo un panel»): sus píxeles fijos caen bajo la cinta (290 px). No es de estos cambios; sin verificar contra el commit anterior.
 ⏳ Sin resolver: la cinta flotante sigue tapando el lienzo (se pliega con ▴ / Ctrl+`); rejilla repartida en 4 sitios; ctl_ribbon.mjs desfasado; sin commit.
+
+## Commit + push + deploy (26-sep-2026)
+✅ main: f8e734370 (dibujo rápido) + c6bcb8522 (concreteBeamDesign[Panel].ts que main.ts ya importaba pero NO estaban en git: main no compilaba de una copia limpia). Push a hekatan-struct/main.
+✅ Deploy con build LIMPIO (worktree de HEAD, sin el WIP ITW de otra sesión) + copia sobre gh-pages sin borrar m/ → 87bb81337. Chunk publicado idéntico al build (cmp). Público: snap=true, orto=true, menú Diseño, título SEO, pórtico exacto (0,0)(0,4)(6,4)(6,0), 0 pageerror (cli/_verif_publico.mjs).
+✅ SEO del workspace/index.html RESTAURADO: los 7 deploys del 25-sep lo habían perdido (twitter:card=0); se tomó de a32dfc0b7.
+⏳ Sin commitear (de otras sesiones): menuDiseno.ts (guarda de tests), itwBenchmarks/exampleRegistry/runExampleStandalone (ITW 4.1), tests/lib/bundle.mjs, e2k 9-itw.
