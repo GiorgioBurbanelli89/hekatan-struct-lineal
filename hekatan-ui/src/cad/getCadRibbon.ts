@@ -1240,8 +1240,24 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     if (v) verGuia(false);
     if (recordar) { try { localStorage.setItem(LS, v ? "1" : "0"); } catch {} }
   }
+  // ── Se pliega SOLA al poner el primer punto (26-sep-2026) ────────────────────
+  // La cinta mide ~290 px y flota sobre el lienzo: justo donde cae el dibujo (las pruebas
+  // con clics reales daban «cae bajo un panel»). AutoCAD/Revit no tapan el dibujo. Aquí:
+  // con una herramienta de dibujo activa, el primer clic sobre el lienzo la recoge al botón
+  // «✏ Dibujar» (no se recuerda: la próxima sesión abre como siempre). Si el usuario la abre
+  // a mano (botón o Ctrl+`), no se vuelve a plegar sola durante esta sesión.
+  let abiertaAMano = false;
+  const plegarSola = (e: Event) => {
+    if (plegado || abiertaAMano) return;
+    const t = e.target as HTMLElement | null;
+    if (!t || t.tagName !== "CANVAS" || !t.closest("#viewer")) return;
+    const tool = hooks.getTool();
+    if (!tool || tool === "select" || tool === "none") return;
+    plegar(true, false);
+  };
+  host.addEventListener("pointerdown", plegarSola, true);
   bPlegar.addEventListener("click", () => plegar(true));
-  bAbrir.addEventListener("click", () => plegar(false));
+  bAbrir.addEventListener("click", () => { abiertaAMano = true; plegar(false); });
 
   // El workspace cambia de ejemplo por el DESPLEGABLE, sin tocar la URL. Asi
   // que el defecto no puede decidirse una sola vez al montar mirando
@@ -1260,6 +1276,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     const t = e.target as HTMLElement | null;
     if (t && /^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
     e.preventDefault();
+    if (plegado) abiertaAMano = true;
     plegar(!plegado);
   });
 
