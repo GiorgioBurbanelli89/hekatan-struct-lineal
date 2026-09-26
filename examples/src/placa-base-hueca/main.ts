@@ -27,7 +27,7 @@ import {
 import { analyze, deform } from "hekatan-fem";
 import {
   getToolbar, getParameters, Parameters, getViewer,
-  colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, enableDraggableAllPanes,
+  colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, enableDraggableAllPanes, colorMapScope,
 } from "hekatan-ui";
 import { ecHormigonACI } from "../shared/materials";
 
@@ -114,6 +114,10 @@ van.derive(() => {
   const Iz = new Map<number, number>();
   const Iy = new Map<number, number>();
   const J = new Map<number, number>();
+  // Caras del pedestal: láminas de 1 mm que solo DIBUJAN el volumen de concreto. Sin resultado de
+  // cáscara (ver tras `analyze`): el visor las pinta en su gris neutro, no en el primer color de la
+  // paleta (mismo arreglo que placa-base-cft, 24-sep-2026).
+  const concreteShells = new Set<number>();
 
   function addNode(x: number, y: number, z: number): number {
     nodes.push([x, y, z]);
@@ -299,6 +303,7 @@ van.derive(() => {
   function addPedShell(n0: number, n1: number, n2: number, n3: number) {
     elements.push([n0, n1, n2, n3]);
     const i = elements.length - 1;
+    concreteShells.add(i);
     thicknesses.set(i, 0.001);
     elasticities.set(i, Ec);
     poissonsRatios.set(i, nu_c);
@@ -374,6 +379,8 @@ van.derive(() => {
   try {
     deformOutputs = deform(nodes, elements, nodeInputs, elementInputs);
     analyzeOutputs = analyze(nodes, elements, elementInputs, deformOutputs);
+    for (const v of Object.values(analyzeOutputs as any))
+      if (v instanceof Map) for (const i of concreteShells) v.delete(i);
   } catch (e: any) { console.warn("placa-base-hueca:", e?.message ?? e); }
 
   // ── 3D decoraciones: símbolos contacto + tuercas pernos ──
@@ -453,6 +460,10 @@ van.derive(() => {
   objects3DState.val = objs;
 });
 
+// Rango de la barra = el de la PLACA BASE («Rango colormap» → «solo losas»): el pico está en la cabeza
+// del tubo, donde entran las cargas puntuales. Ver placa-base-cft.
+colorMapScope.val = "losas";
+
 const viewerEl = getViewer({
   mesh: {
     nodes: nodesState, elements: elementsState,
@@ -468,7 +479,7 @@ const viewerEl = getViewer({
 });
 
 const benchContainer = document.createElement("div");
-benchContainer.style.cssText = "position:fixed;top:8px;right:8px;width:300px;max-height:85vh;overflow-y:auto;z-index:9999;";
+benchContainer.style.cssText = "position:fixed;top:8px;right:8px;width:300px;max-height:48vh;overflow-y:auto;z-index:4;";
 const benchPane = new Pane({ title: "🧪 Placa base + col HSS hueca", container: benchContainer, expanded: true });
 const benchObj = {
   vmMax: 0, A1: 0, A2: 0, phiPp: 0, demandCapPp: 0,
@@ -494,7 +505,7 @@ fACI.addBinding(benchObj, "phiNn",          { readonly: true, label: "φNn (kN)"
 fACI.addBinding(benchObj, "demandCapAnchor",{ readonly: true, label: "T/φNn", format: ratioFmt });
 
 const fH = benchPane.addFolder({ title: "FEM" });
-fH.addBinding(benchObj, "vmMax", { readonly: true, label: "σ vM max (kN/m²)", format: (v: number) => v.toExponential(3) });
+fH.addBinding(benchObj, "vmMax", { readonly: true, label: "σ vM max acero (kN/m²)", format: (v: number) => v.toExponential(3) });
 
 const fU = benchPane.addFolder({ title: "Unidades", expanded: false });
 const unitsObj = { stress: colorMapStressUnit.val, disp: colorMapDispUnit.val };
@@ -518,17 +529,85 @@ document.body.append(
 );
 
 setTimeout(() => enableDraggableAllPanes(), 200);
-setTimeout(() => {
+/** #parameters empieza donde acaba el panel de comprobaciones y hace scroll por dentro. */
+function apilarColumnaDerecha() {
+  const par = document.getElementById("parameters");
+  if (!par) return;
+  const top = Math.round(benchContainer.getBoundingClientRect().bottom) + 8;
+  par.style.top = `${top}px`;
+  par.style.bottom = "8px";
+  par.style.maxHeight = `${Math.max(120, innerHeight - top - 8)}px`;
+  par.style.overflowY = "auto";
+}
+new ResizeObserver(apilarColumnaDerecha).observe(benchContainer);
+addEventListener("resize", apilarColumnaDerecha);
+
+/**
+ * Encuadre: el modelo ENTERO y centrado en el hueco LIBRE del lienzo — entre Settings (izquierda) y la
+ * barra de colores, que va pegada a la columna derecha — no en el centro del canvas, que cae debajo de
+ * la barra. Antes la cámara era fija (1.5, −1.5, 2): con el lienzo estrecho el modelo salía chico,
+ * descentrado y con la leyenda encima (Jorge, 24-sep-2026).
+ */
+/** Hueco libre en x (px del lienzo): de Settings a la barra de colores. */
+function huecoLibre(W: number): [number, number] {
+  const r = (id: string) => { const e = document.getElementById(id); const b = e?.getBoundingClientRect(); return b && b.width ? b : null; };
+  const leg = r("legend");
+  // Settings plegado (solo la cabecera) no quita ancho: el modelo pasa por debajo.
+  const set = ((b) => (b && b.height > 80 ? b : null))(r("settings"));
+  const x0 = set ? Math.min(W / 2, set.right + 8) : 0;
+  const x1 = leg ? Math.max(x0 + 100, leg.left - 8) : Math.max(x0 + 100, benchContainer.getBoundingClientRect().left - 8);
+  return [x0, x1];
+}
+/** Corre la imagen (setViewOffset) para que el centro de la vista caiga en el centro del hueco libre. */
+function centrarEnHueco() {
+  const cam = (viewerEl as any).__ctx?.camera;
+  if (!cam?.isPerspectiveCamera) return;
+  const W = viewerEl.clientWidth || innerWidth, H = viewerEl.clientHeight || innerHeight;
+  const [x0, x1] = huecoLibre(W);
+  cam.setViewOffset(W, H, W / 2 - (x0 + x1) / 2, 0, W, H);
+  cam.updateProjectionMatrix();
+  (viewerEl as any).__ctx?.render?.();
+}
+function encuadrar() {
   const ctx = (viewerEl as any).__ctx;
-  if (ctx?.camera && ctx?.controls) {
-    ctx.camera.up.set(0, 0, 1);
-    ctx.camera.position.set(1.5, -1.5, 2.0);
-    ctx.controls.target.set(0, 0, 0.4);
-    ctx.controls.update(); ctx.render?.();
+  const cam = ctx?.camera, controls = ctx?.controls;
+  const nodes = nodesState.rawVal;
+  if (!cam || !controls || !nodes.length) return;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const n of nodes) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], n[k]); hi[k] = Math.max(hi[k], n[k]); }
+  const c = new THREE.Vector3((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2);
+  const R = 0.5 * Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  const W = viewerEl.clientWidth || innerWidth, H = viewerEl.clientHeight || innerHeight;
+  const [x0, x1] = huecoLibre(W);
+  cam.up.set(0, 0, 1);
+  if (cam.isPerspectiveCamera) {
+    const fv = (cam.fov * Math.PI) / 180;
+    const fh = 2 * Math.atan(Math.tan(fv / 2) * ((x1 - x0) / H));
+    const dist = 1.1 * R / Math.sin(Math.min(fv, fh) / 2);
+    cam.position.copy(c.clone().addScaledVector(new THREE.Vector3(1.5, -1.5, 2.0).normalize(), dist));
+    cam.near = dist / 100; cam.far = dist * 100;
   }
+  controls.target.copy(c);
+  controls.update();
+  centrarEnHueco();
+}
+// Al cambiar el tamaño solo se recentra la imagen: la órbita que haya hecho el usuario se respeta.
+addEventListener("resize", () => setTimeout(centrarEnHueco, 50));
+
+setTimeout(() => {
+  apilarColumnaDerecha();
+  // Lienzo estrecho (portátil 1366, o el marco del workspace): Settings arranca PLEGADO, si no se come
+  // un tercio del ancho y el modelo queda del tamaño de una moneda. Se despliega con su cabecera.
+  if (innerWidth < 1300) {
+    const t = document.querySelector<HTMLElement>("#settings .tp-rotv_b");
+    const exp = document.querySelector("#settings .tp-rotv")?.classList.contains("tp-rotv-expanded");
+    if (t && exp) t.click();
+  }
+}, 700);
+setTimeout(() => {
+  encuadrar();
   // CORTE Y POR DEFECTO: abre el HSS por la mitad para mostrar el INTERIOR
-  // VACÍO del tubo (no hay concreto fill) — clave didáctica para diferenciarlo
-  // de placa-base-cft donde sí se ve concreto adentro.
+  // VACÍO del tubo (no hay concreto fill).
   const cs = (window as any).__hekatanClip;
   const apply = (window as any).__hekatanClipApply;
   if (cs && apply) {
@@ -537,4 +616,4 @@ setTimeout(() => {
     cs.invertY = false;
     apply();
   }
-}, 800);
+}, 1100);
