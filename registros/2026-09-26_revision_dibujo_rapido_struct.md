@@ -41,3 +41,8 @@
 ## Cinta que se pliega sola (getCadRibbon.ts) — commit 0cbfd4360, deploy gh-pages 1821c1526
 ✅ Con herramienta de dibujo activa, el 1er clic en el lienzo pliega la cinta (no se recuerda); el clic sí pone el punto; «✏ Dibujar»/Ctrl+` la abre y entonces no se repliega en la sesión. Con Seleccionar no se pliega. 7/7 en local y en el sitio público (cli/_test_plegar_cinta.mjs, _test_plegar_publico.mjs), 0 pageerror. PNG revisado: lienzo libre.
 ⏳ Falta: juntar la rejilla en un sitio; rehacer ctl_dibujar_libre / ctl_ribbon.
+
+## Rejilla ordenada (getCadPanel.ts, getSettings.ts)
+✅ Casillas ORTO/POLAR del panel derecho eran letra muerta (escribían `__hekatanOrtho`/`__hekatanPolar`, que nadie lee; mostraban «apagado» con ORTO encendido). Ahora mandan el mismo estado que F8/F10 y se ponen al día si se cambia desde otro sitio. 5/5 (cli/_test_rejilla_paneles.mjs) + PNG.
+✅ «Dimensión grid (m)» duplicada y estática en el panel derecho: quitada; queda la de Settings › Ajuste fino. «Separación = paso del imán» sube al nivel principal de Settings › Rejilla.
+⏳ Falta: rehacer ctl_dibujar_libre y ctl_ribbon (píxeles fijos / teclas de una letra).

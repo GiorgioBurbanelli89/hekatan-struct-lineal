@@ -211,13 +211,22 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
 
   // ── Modos de dibujo (ORTO/POLAR/segs) ──
   const fModes = fPrec.addFolder({ title: "Modos de dibujo", expanded: true });
-  const proxyModes = { ortho: false, polar: false, segs: 12, aux: false };
-  fModes.addBinding(proxyModes, "ortho", { label: "ORTO (90°)" }).on("change", (ev: any) => {
-    (window as any).__hekatanOrtho = ev.value;
+  // 26-sep-2026: estas dos casillas escribían `__hekatanOrtho` / `__hekatanPolar`, que NADIE lee
+  // (el dibujo lee `__hekatanOrthoMode` y `__hekatanPolarTrack`): marcarlas no hacía nada y
+  // mostraban «ORTO apagado» con ORTO encendido. Ahora mandan el mismo estado que F8/F10 y los
+  // botones de la barra, y se ponen al día cuando se cambia desde otro sitio.
+  const proxyModes = { ortho: !!(window as any).__hekatanOrthoMode, polar: (window as any).__hekatanPolarTrack !== false, segs: 12, aux: false };
+  const bOrto = fModes.addBinding(proxyModes, "ortho", { label: "ORTO (F8)" }).on("change", (ev: any) => {
+    if (!!ev.value !== !!(window as any).__hekatanOrthoMode) (window as any).__hekatanToggleOrtho?.();
   });
-  fModes.addBinding(proxyModes, "polar", { label: "POLAR (45°)" }).on("change", (ev: any) => {
-    (window as any).__hekatanPolar = ev.value;
+  const bPolar = fModes.addBinding(proxyModes, "polar", { label: "POLAR (F10)" }).on("change", (ev: any) => {
+    if (!!ev.value !== ((window as any).__hekatanPolarTrack !== false)) (window as any).__hekatanTogglePolar?.();
   });
+  setInterval(() => {
+    const o = !!(window as any).__hekatanOrthoMode, pl = (window as any).__hekatanPolarTrack !== false;
+    if (proxyModes.ortho !== o) { proxyModes.ortho = o; try { bOrto.refresh(); } catch {} }
+    if (proxyModes.polar !== pl) { proxyModes.polar = pl; try { bPolar.refresh(); } catch {} }
+  }, 400);
   // Jorge, 13-sep-2026: «necesitamos crear líneas auxiliares que luego se borran».
   // Con esto Arco/Círculo/Parábola/Cúbica/Losa con chaflanes salen como líneas
   // auxiliares (cian): son la guía de la Revolución o el Barrido, que las borran al
@@ -465,7 +474,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   });
 
   // Tamaños visuales (orthoExt + gridSize del viewer)
-  const proxySizes = { orthoExt: 8, gridSize: 10 };
+  const proxySizes = { orthoExt: 8 };
   fPlane.addBinding(proxySizes, "orthoExt", {
     // min 0.1 m (antes 1) para permitir trabajar en piezas chicas (zapatas,
     // conexiones, columnas finas). step 0.1 da resolución fina en el rango bajo.
@@ -475,12 +484,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     if (typeof fn === "function") fn(ev.value);
     else (window as any).__hekatanOrthoExt = ev.value;
   });
-  fPlane.addBinding(proxySizes, "gridSize", {
-    min: 1, max: 100, step: 1, label: "Dimensión grid (m)",
-  }).on("change", (ev: any) => {
-    const s = (viewerElm as any).__settings;
-    if (s?.gridSize) s.gridSize.val = ev.value;
-  });
+  // «Dimensión grid» vivía aquí Y en Settings › Rejilla › Ajuste fino; esta copia era estática
+  // (mostraba 10 aunque el visor tuviera otro) y no seguía al valor real. Queda solo la de Settings.
 
   // ── El enganche a la REJILLA viene APAGADO (9-sep-2026, decisión de Jorge) ──
   // Venía encendido con paso de 0.5 m, y eso ata cada punto a un módulo invisible:

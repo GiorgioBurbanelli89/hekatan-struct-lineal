@@ -267,12 +267,14 @@ export function getSettings(
     gridFolder.addBinding(settings.gridXY, "val", { label: "Plano XY (planta)" });
     gridFolder.addBinding(settings.gridXZ, "val", { label: "Plano XZ (frontal)" });
     gridFolder.addBinding(settings.gridYZ, "val", { label: "Plano YZ (lateral)" });
+    // «Separación» sube al nivel principal: es lo único de la rejilla que se toca al dibujar
+    // (también es el paso del imán, F9). El resto queda en «Ajuste fino».
+    gridFolder.addBinding(settings.gridStep, "val", {
+      label: "Separación = paso del imán (m)", min: 0.05, max: 5, step: 0.05,
+    });
     const gridFino = gridFolder.addFolder({ title: "⚙ Ajuste fino", expanded: false });
     gridFino.addBinding(settings.gridSize, "val", {
       label: "Dimensión (m)", min: 1, max: 100, step: 1,
-    });
-    gridFino.addBinding(settings.gridStep, "val", {
-      label: "Separación = paso del imán (m)", min: 0.05, max: 5, step: 0.05,
     });
     gridFino.addBinding(settings.gridMajor, "val", {
       label: "Separación mayores (m)", min: 0.1, max: 50, step: 0.1,
