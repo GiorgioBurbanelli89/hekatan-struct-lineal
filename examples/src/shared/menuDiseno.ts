@@ -6,6 +6,7 @@
  * encima del panel derecho. Cada panel registra su entrada con `registrarDiseno`; su botón
  * propio queda oculto.
  */
+import { FUNDAMENTOS, mostrarFundamento } from "./fundamentos";
 type Entrada = { id: string; icono: string; titulo: string; detalle: string; abrir: () => void; orden: number };
 const menus: Record<string, Entrada[]> = {
   analisis: [
@@ -75,11 +76,19 @@ function pulsar(texto: string, nombre: string): void {
   alert("Abrí un modelo o un archivo nuevo para usar " + nombre + ".");
 }
 
-const NOMBRE: Record<string, string> = { analisis: "▶ Análisis", diseno: "📐 Diseño", exportar: "📤 Exportar" };
+// FUNDAMENTOS (Jorge, 26-sep-2026): «todo lo que usa Hekatan Struct»; cada entrada abre una tarjeta
+// con qué es, su referencia y dónde se usa. No cambia el modelo: solo explica. El contenido vive
+// en shared/fundamentos.ts. «Respaldo» se descartó: en español es sobre todo «copia de seguridad».
+menus.fundamentos = FUNDAMENTOS.map((f) => ({
+  id: f.id, orden: f.orden, icono: f.icono, titulo: f.titulo, detalle: f.resumen, abrir: () => mostrarFundamento(f.id),
+}));
+
+const NOMBRE: Record<string, string> = { analisis: "▶ Análisis", diseno: "📐 Diseño", exportar: "📤 Exportar", fundamentos: "📚 Fundamentos" };
 const AYUDA: Record<string, string> = {
   analisis: "Análisis — elige qué calcular:",
   diseno: "Diseño — elige qué hacer:",
   exportar: "Exportar el modelo a otro programa:",
+  fundamentos: "Fundamentos — qué usa Hekatan Struct y dónde (clic para ver):",
 };
 
 /**
@@ -109,6 +118,8 @@ function montar(): void {
   const st = document.createElement("style");
   st.textContent = "#hk-cad-tit button{white-space:nowrap}" +
     "@media (max-width:1100px){#hk-cad-tit .marca{display:none}}" +
+    "@media (max-width:1150px){#hk-fundamentos-btn .ft{display:none}}" +
+    "@media (max-width:1050px){#hk-cad-tit .piel{padding:3px 6px}#hk-fundamentos-btn .ar{display:none}}" +
     "@media (max-width:900px){#hk-cad-tit .doc{display:none}#hk-menus{margin-left:4px!important}#hk-cad-tit .piel{padding:3px 6px}}";
   document.head.appendChild(st);
   const barra = document.createElement("span");
@@ -138,9 +149,11 @@ function montar(): void {
     if ((!a || !v) && ++intentos < 20) setTimeout(traer, 400);
   };
   const ponerMenus = () => {
-    for (const k of ["analisis", "diseno", "exportar"]) {
+    for (const k of ["analisis", "diseno", "exportar", "fundamentos"]) {
       const b = document.createElement("button");
       b.id = `hk-${k}-btn`; b.className = "piel"; b.textContent = NOMBRE[k] + " ▾";
+      // Fundamentos es el menú más ancho: en pantallas angostas queda solo el 📚 para que «Franjas» no salga de la barra
+      if (k === "fundamentos") { b.innerHTML = `📚<span class="ft"> Fundamentos</span><span class="ar"> ▾</span>`; b.title = "Fundamentos — qué usa Hekatan Struct y dónde"; }
       b.onclick = (ev) => { ev.stopPropagation(); abrirMenu(k, b); };
       barra.appendChild(b);
     }
@@ -172,7 +185,7 @@ function abrirMenu(k: string, btn: HTMLButtonElement) {
   const eraEste = menuAbierto?.dataset.menu === k; cerrar(); if (eraEste) return;
   const m = document.createElement("div");
   m.dataset.menu = k; m.id = `hk-${k}-menu`;
-  m.style.cssText = "position:fixed;z-index:1000;width:360px;background:rgba(24,28,34,.98);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:6px;box-shadow:0 6px 18px rgba(0,0,0,.4)";
+  m.style.cssText = "position:fixed;z-index:1000;width:360px;max-height:calc(100vh - 220px);overflow:auto;background:rgba(24,28,34,.98);color:#e8e8e8;border:1px solid #4a7fb0;border-radius:6px;font:12px sans-serif;padding:6px;box-shadow:0 6px 18px rgba(0,0,0,.4)";
   // Un menu VACIO no se explica solo: se abria «Diseño — elige qué hacer:» y debajo,
   // nada. Las entradas de Diseño las registra cada panel (zapata, cimentacion...), asi
   // que sin un modelo con esos paneles la lista esta vacia. Se dice, en vez de dejar
