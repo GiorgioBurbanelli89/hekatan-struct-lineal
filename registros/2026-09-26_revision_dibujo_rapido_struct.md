@@ -53,3 +53,10 @@
 ✅ BUG real cazado: el marcador del punto de referencia (cruz + «ALZADO X-Z Y=…») quedaba OCULTO tras pulsar «Plano XZ» desde 3D (setView asíncrono, cámara aún perspectiva): getCadPanel.ts re-evalúa a los 700 ms.
 ✅ «Abajo también colisiona» (captura de Jorge): la barra «CAD listo» (centrada, hasta 1000 px) pasaba por debajo de los botones redondos 🤖/📋/●/regla. drawing.ts: `limitarAncho` recorta el ancho al hueco simétrico libre (aire 24 px, cada 400 ms); si no hay hueco (ventana <~1000 px) se esconde. cli/_test_barra_inferior.mjs 4/4 (1280, 1500, 2000, 1000) + PNG.
 ❗ Trampa de worktree: node_modules/hekatan-ui enlazado al árbol PRINCIPAL compilaba el código de OTRA rama; en el worktree hay que hacer node_modules real con junctions por paquete y los hekatan-* apuntando al worktree.
+
+## SCRIPT de dibujo (hekatan-ui/src/cad/scriptCad.ts) + bug de las letras A/S/D/F
+✅ Orden `SCRIPT` (alias scr, guion, macro) y botón «📝 Script de dibujo» en Acciones abren una ventana con un cuadro de texto: una línea = una orden con sus respuestas (`l 0,0 6,0 6,4`, `rec 0,0 6,4`, `pl … c`), `para i 0 3 [paso] … fin`, `let a = 6`, `{i*6}` con + − * / ^ sin cos sqrt pi…; comentarios `;` `//` `#`. Reutiliza `run` de la línea de órdenes (no hay segundo dibujante); errores con nº de línea; las llaves NO ejecutan código (lista blanca de identificadores). Ctrl+Enter ejecuta; «Ejemplo»; «↶ Deshacer»; se arrastra. 40 columnas en bucle = 40 tramos en ~0.9 s.
+✅ cli/ctl_script_cad.mjs 8/8 (ejemplo 9 tramos, expresiones exactas, 3 errores claros, pl…c, bucle 40) + PNG.
+✅ BUG REAL encontrado al probar «script»: con el foco en la línea de órdenes y el cuadro vacío, las letras A, S, D, F las comía el atajo de diagramas (axil/cortante/momento/deformada): «a␣» alternaba el axil y NUNCA activaba el ARCO (la cinta rotula «Arco A»). getCadRibbon.ts: con el foco en la línea de órdenes la letra es texto. «a␣» → tool=arc.
+✅ Regresión: ctl_dibujar_libre, ctl_ribbon 14/14, ctl_alias_autocad, ctl_replicar sin fallos.
+⏳ Falta: probar con tu navegador/GPU reales y con una plantilla grande; atajos A/S/D/F de diagramas ahora solo con el foco fuera de la línea de órdenes.

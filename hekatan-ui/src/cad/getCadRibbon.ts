@@ -1407,6 +1407,13 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
       d: ["bendingsZ", "Momento 3-3"],
     };
     const kk = e.key.toLowerCase();
+    // 26-sep-2026: con el foco en la línea de órdenes (donde vive siempre) la letra es TEXTO.
+    // `enCampo` deja pasar el cuadro VACÍO (lo necesitan los dígitos 1-4), y así la «a» de ARCO,
+    // la «s» de SCRIPT, la «d» o la «f» tecleadas al empezar una orden se las comía el atajo:
+    // alternaba el diagrama de axil y la orden nunca llegaba (medido: «a␣» → frameResults=normals,
+    // herramienta = select). Cinta y AutoCAD rotulan «Arco A»: manda la orden.
+    const tid = (e.target as HTMLElement | null)?.id;
+    if (tid === CMD || tid === "hk-dyn-input") return;
     if (kk in DIAGRAMAS || kk === "f") {
       const st = (window as any).__hekatanSettings?.();
       if (!st) return;

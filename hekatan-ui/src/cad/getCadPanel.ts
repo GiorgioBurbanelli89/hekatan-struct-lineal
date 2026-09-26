@@ -589,6 +589,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
 
   // Acciones
   const fAcc = fCad.addFolder({ title: "🛠 Acciones", expanded: true });
+  fAcc.addButton({ title: "📝 Script de dibujo (SCRIPT)" }).on("click", () => (window as any).__hekatanCadScript?.abrir?.());
   fAcc.addButton({ title: "⏹ Finalizar dibujo (Esc)" }).on("click", () => {
     (window as any).__hekatanFinalizeDraw?.();
     (window as any).__hekatanCadMouse?.cancel?.();

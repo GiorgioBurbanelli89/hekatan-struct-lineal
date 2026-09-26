@@ -214,6 +214,7 @@ import { exportS2k } from "../shared/s2kExporter";
 import { parseS2k } from "../shared/s2kParser";
 import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
 import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
+import { abrirScriptCad } from "hekatan-ui/src/cad/scriptCad";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
 import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
@@ -7702,6 +7703,15 @@ try {
     flash(n ? `✓ Designados ${n} objetos (todo el modelo)` : "✕ No hay nada que designar", !!n);
   });
   especial("zoom", ["encuadre", "ze", "fit", "z", "e-zoom"], "ZOOM Extensión", () => (window as any).__hekatanAutoFit?.());
+  // SCRIPT: varias órdenes pegadas de una vez (con bucles y {expresiones}); usa esta misma línea de
+  // órdenes, así que no hay otro dibujante que mantener. Ver hekatan-ui/src/cad/scriptCad.ts.
+  const abrirScript = () => abrirScriptCad({
+    run: (t) => run(t),
+    finalizar: () => { (window as any).__hekatanFinalizeDraw?.(); activarTool("select"); },
+    herramienta: () => toolActual(),
+  });
+  (window as any).__hekatanCadScript = { abrir: abrirScript };
+  especial("script", ["scr", "guion", "macro"], "SCRIPT — pegar órdenes", abrirScript);
   especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
   especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
   especial("lado", ["side"], "VISTA lado", () => (window as any).__hekatanRibbon?.vista?.(2));
