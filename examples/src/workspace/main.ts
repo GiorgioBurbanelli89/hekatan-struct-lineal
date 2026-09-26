@@ -219,6 +219,7 @@ import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
 import { montarBotonSeccion, mostrarSeccionConAviso } from "hekatan-ui/src/cad/cuadroSeccion";
 import { montarMenusBarra } from "../shared/menuDiseno";
+import { montarPanelDisenoVigas } from "../shared/concreteBeamDesignPanel";
 import { registrarGuiaFem } from "../shared/guiaFem";
 import {
   forceUnit, dispUnit, fromKn, toKn, fromKnm, toKnm,
@@ -962,6 +963,7 @@ function loadExample(ex: ExampleDef) {
   autoScaleDeformedShape();
   autoFitCamera();
   buildParamsPane();
+  montarPanelDisenoVigas();
   mountCaseResultsInSettings();   // "Case results" (Dead/Live/Modal) junto a Frame/Shell results
 
   // El `.heks` de lo que hay en pantalla. `new-blank` define su PROPIO gancho en su build
@@ -1842,7 +1844,13 @@ function rebuild() {
   // Sólo recentrar cámara si el usuario NO ha tocado los OrbitControls.
   // Esto permite mover sliders (nVanos, q, secciones, etc.) en modo "live
   // calc" sin que la vista se resetee a iso en cada drag.
-  if (!userCameraInteracted) autoFitCamera();
+  // 26-sep-2026: MIENTRAS SE DIBUJA no se reencuadra. Cada segmento nuevo reconstruye el
+  // modelo y este encuadre movía la cámara (medido: z 1000 → 250 tras el 2º punto), con lo
+  // que el siguiente punto caía bajo el panel derecho. AutoCAD nunca hace zoom solo al dibujar.
+  const _tool = (window as any).__hekatanCadState?.get?.()?.tool;
+  const _pts = ((window as any).__hekatanDrawingPoints?.val ?? []).length;
+  const _dibujando = !!_tool && _tool !== "select" && _tool !== "none" && _pts > 0;
+  if (!userCameraInteracted && !_dibujando) autoFitCamera();
   // Refrescar el folder "📊 Calculados" con los nuevos valores derivados
   if (currentExample.computedLabels && computedObj) {
     const latest = currentExample.computedLabels(currentParams, states);
@@ -4191,6 +4199,7 @@ function buildParamsPane() {
     "2️⃣ Shells · 🥞 Layered",
     "2️⃣ Shells · 🧰 Cimentaciones",
     "2️⃣ Shells · 🔩 Conexiones",
+    "2️⃣ Shells · ✅ Validación CSI",
     "3️⃣ Sólidos",
     "4️⃣ Mixtos · 🏢 Edificios",
     "4️⃣ Mixtos · 🧰 Cimentaciones",

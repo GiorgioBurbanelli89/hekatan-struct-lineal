@@ -260,10 +260,9 @@ export function getSettings(
     // enseñan encender/apagar y en qué plano se dibuja, y el resto vive en un
     // cuadro aparte que casi nadie abre. Aquí igual.
     //
-    // Y el «Paso cursor» ya no manda en el dibujo: el enganche a la rejilla va
-    // APAGADO de fábrica y lo que sujeta el punto es la mirilla de referencias,
-    // que se mide en PÍXELES. Se deja porque sigue valiendo si se enciende el
-    // enganche con F9, pero no tiene por qué estar delante.
+    // 26-sep-2026: el enganche a la rejilla vuelve ENCENDIDO (con ORTO). El paso del
+    // imán es «Separación» (minorStep); «Radio de captura» (cursorSnap) solo mide a
+    // qué distancia se pegan las referencias a objetos.
     gridFolder.addBinding(settings.gridVisible, "val", { label: "Mostrar la rejilla" });
     gridFolder.addBinding(settings.gridXY, "val", { label: "Plano XY (planta)" });
     gridFolder.addBinding(settings.gridXZ, "val", { label: "Plano XZ (frontal)" });
@@ -273,13 +272,13 @@ export function getSettings(
       label: "Dimensión (m)", min: 1, max: 100, step: 1,
     });
     gridFino.addBinding(settings.gridStep, "val", {
-      label: "Separación (m)", min: 0.05, max: 5, step: 0.05,
+      label: "Separación = paso del imán (m)", min: 0.05, max: 5, step: 0.05,
     });
     gridFino.addBinding(settings.gridMajor, "val", {
       label: "Separación mayores (m)", min: 0.1, max: 50, step: 0.1,
     });
     gridFino.addBinding(settings.cursorSnap, "val", {
-      label: "Paso cursor con F9 (m)", min: 0.05, max: 5, step: 0.05,
+      label: "Radio de captura (m)", min: 0.05, max: 5, step: 0.05,
     });
     gridFino.addBinding(settings.gridOpacity, "val", {
       label: "Opacidad", min: 0, max: 1, step: 0.05,

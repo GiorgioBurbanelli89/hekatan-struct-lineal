@@ -492,8 +492,14 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // las referencias a objetos (nudos, extremos, medios, intersecciones y el cruce de
   // los ejes de replanteo), el ORTO/POLAR y las coordenadas tecleadas. El botón sigue
   // ahí, y F9 lo enciende para quien lo quiera.
-  (window as any).__hekatanSnapEnabled = false;
-  const proxySnapToggle = { snapEnabled: false };
+  // ── 26-sep-2026 (Jorge): VUELVE a encenderse, junto con ORTO. Probado contra el lienzo de
+  // Hekatan LISP (LispCad.js, forzc + refent de fábrica): los mismos 4 clics daban
+  // (2,3)(2,10)(18,10)(18,3) allí y (-9.673,-11.201)(-6.84,0.72)… aquí, con el pilar
+  // torcido. El paso ya NO es 0.5 fijo: es la separación de la rejilla (`minorStep`),
+  // que era lo que ataba los ejes a 4.60. F9 / F8 lo apagan.
+  (window as any).__hekatanSnapEnabled = true;
+  (window as any).__hekatanOrthoMode = true;   // sin el marco cian de pantalla: solo el estado
+  const proxySnapToggle = { snapEnabled: true };
   const snapToggleBinding = fPrec.addBinding(proxySnapToggle, "snapEnabled", { label: "🧲 Grid snap (F9)" }).on("change", (ev: any) => {
     (window as any).__hekatanSnapEnabled = !!ev.value;
   });

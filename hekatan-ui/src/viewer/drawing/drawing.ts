@@ -3903,6 +3903,15 @@ export function drawing({
               const s = Math.abs(den) < 1e-6 ? -d_ : (b * e2 - d_) / den;
               const q = P0o.clone().addScaledVector(mejor.u, s);
               if (isFinite(q.x) && isFinite(q.y) && isFinite(q.z)) {
+                // 26-sep-2026: con el imán a la rejilla encendido, la coordenada que
+                // corre a lo largo del eje también se redondea al paso. Sin esto el
+                // ORTO dejaba salir (-7, -4.703): recto, pero fuera de la rejilla.
+                const pasoO = (window as any).__hekatanGridConfig?.minorStep || ((window as any).__hekatanSnap2D ?? 0);
+                if ((window as any).__hekatanSnapEnabled !== false && pasoO > 0 && incPolar <= 0) {
+                  if (mejor.axis === "x") q.x = Math.round(q.x / pasoO) * pasoO;
+                  else if (mejor.axis === "y") q.y = Math.round(q.y / pasoO) * pasoO;
+                  else q.z = Math.round(q.z / pasoO) * pasoO;
+                }
                 p.copy(q);
                 _axisSnapPoint = q.clone();               // el clic confirma AQUÍ
               }
