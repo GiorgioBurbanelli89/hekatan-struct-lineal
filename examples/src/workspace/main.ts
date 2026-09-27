@@ -216,6 +216,7 @@ import { aplicarPielCad, ponerCoordenadas } from "../shared/hekatanCadSkin";
 import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
 import { abrirScriptCad } from "hekatan-ui/src/cad/scriptCad";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
+import { arrancarKLocalHover, abrirHojaBarra } from "hekatan-ui/src/cad/kLocalHover";
 import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
 import { montarBotonSeccion, mostrarSeccionConAviso } from "hekatan-ui/src/cad/cuadroSeccion";
@@ -7730,6 +7731,12 @@ try {
   });
   (window as any).__hekatanCadScript = { abrir: abrirScript };
   especial("script", ["scr", "guion", "macro"], "SCRIPT — pegar órdenes", abrirScript);
+  // MATRIZ local de la barra designada, como hoja de Hekatan LISP (la misma del botón de la tarjeta)
+  especial("klocal", ["kl", "matriz", "rigidez"], "MATRIZ de rigidez local de la barra designada", () => {
+    const sel: { type: string; idx: number }[] = (window as any).__hekatanModelSelection ?? [];
+    const b = [...sel].reverse().find((s) => s.type === "frame");
+    flash(b ? "✓ " + abrirHojaBarra(b.idx) : "✕ Designa primero una barra (clic encima) y repite KLOCAL", !!b);
+  });
   especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
   especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
   especial("lado", ["side"], "VISTA lado", () => (window as any).__hekatanRibbon?.vista?.(2));
@@ -9176,6 +9183,7 @@ if (initialEx) {
 function montarAgenteSiempre() {
   try {
     arrancarCajaNegra();     // caja negra: anota comandos, clics y TODOS los errores
+    arrancarKLocalHover();   // al quedarse sobre una barra: su matriz de rigidez local
     montarBotonGrabar();     // el boton rojo: graba en video lo que se hace
     montarBotonGif();        // y el 🎞 de al lado: lo mismo pero en GIF
     montarBotonSeccion();    // 📐 la seccion de la barra designada, dibujada y acotada

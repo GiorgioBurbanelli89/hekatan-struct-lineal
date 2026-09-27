@@ -160,6 +160,8 @@ const CSS = `
 #hk-hoja-lisp .katex{font-size:1.02em;}
 `;
 
+let anchoPedido = 430;
+
 /** Coloca la hoja pegada a la IZQUIERDA del agente, sin salirse de la pantalla. */
 function colocar() {
   if (!ventana) return;
@@ -170,6 +172,13 @@ function colocar() {
     ventana.style.left = Math.max(8, Math.round(r.left - ancho - 10)) + "px";
     ventana.style.top = Math.round(r.top) + "px";
     ventana.style.height = Math.round(r.height) + "px";
+  } else if (anchoPedido > 430) {
+    // hoja de INFORME (matrices): ancha, centrada y del alto de la ventana
+    ventana.style.right = "auto";
+    ventana.style.bottom = "auto";
+    ventana.style.left = Math.max(8, Math.round((window.innerWidth - ancho) / 2)) + "px";
+    ventana.style.top = "56px";
+    ventana.style.height = Math.max(320, window.innerHeight - 56 - 100) + "px";
   } else {
     ventana.style.left = "auto";
     ventana.style.right = "410px";
@@ -268,9 +277,13 @@ let enlaceHoja = "";
  *      MOTOR de verdad en un iframe: simbolico, #dibujo, #graf, unidades;
  *   2. si solo trae LaTeX suelto, se compone aqui con KaTeX.
  */
-export function abrirHoja(tit: string, texto: string): void {
+export function abrirHoja(tit: string, texto: string, ancho = 430): void {
   if (!ventana || !document.body.contains(ventana)) ventana = crear();
   ventana.style.display = "flex";
+  anchoPedido = ancho;
+  ventana.style.width = ancho + "px";
+  if (ancho > 430) ventana.style.maxHeight = "calc(100vh - 110px)";
+  else { ventana.style.maxHeight = "calc(100vh - 150px)"; ventana.style.height = "540px"; }
   titulo.textContent = "\ud83d\udcc4 " + (tit || "Hoja \u00b7 Hekatan LISP");
   ultimoTexto = texto;
   colocar();

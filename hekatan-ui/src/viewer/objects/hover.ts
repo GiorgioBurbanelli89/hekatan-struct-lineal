@@ -696,6 +696,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       if (key !== lastHoverKey) {
         lastHoverKey = key;
         updateHighlight(hover, e.clientX, e.clientY);
+        // quién está bajo el cursor, para quien quiera enseñar algo más que el rótulo
+        // (la tarjeta de la matriz local: hekatan-ui/src/cad/kLocalHover.ts)
+        window.dispatchEvent(new CustomEvent("hk:hover", {
+          detail: hover ? { type: hover.type, idx: hover.idx, x: e.clientX, y: e.clientY } : null,
+        }));
       } else if (hover) {
         // Mismo objeto pero mover tooltip al cursor
         const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect()
@@ -718,6 +723,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     solidHL.visible = false;
     tooltip.style.display = "none";
     ctx.render();
+    window.dispatchEvent(new CustomEvent("hk:hover", { detail: null }));
   };
   const onPointerLeave = (e: PointerEvent) => {
     const rect = ctx.rendererElm.getBoundingClientRect();
