@@ -260,7 +260,7 @@ comprueba— de que la formulación es **insensible a γ**.
 | `drilling-dof` vs ETABS | +11.46 % | **+5.45 %** | — | — |
 | Cook en C | 0.459 % | 0.962 % | −1.29 % | 23.91 |
 | mezanine, axil P | 0.30/1.15 | 0.62/3.47 | — | — |
-| hemisferio 8×8 | −3.6 % | **−37.4 %** | −0.26 % (SAP) | 0.094 |
+| hemisferio 8×8 | −3.6 % | **−1.1 %** ⚠️ver nota 27-sep | −0.26 % (SAP) | 0.094 |
 
 ### Tres cosas que NO hay que volver a probar
 
@@ -321,6 +321,28 @@ Lo que ya se probó y **no** lo explica:
 Vigilado en `tests/casos/itw_seis_casos.mjs`, que compara contra la Tabla IV
 malla a malla y **falla también si mejora**, para que el arreglo no pase
 desapercibido. Para una cúpula en malla gruesa, hoy conviene `drillingTypes = 2`.
+
+### ⚠️ CORRECCIÓN (27-sep-2026): las tablas de arriba y de abajo YA NO describen lo que corre hoy
+
+Las dos tablas de esta sección («tipo 8, medido el 15-sep-2026» y la histórica de
+20-ago) dan −36…−37 % a 8×8. Verificado hoy corriendo `node tests/run.mjs itw`
+(la suite real, `itw_seis_casos.mjs`) contra el ejemplo `itw-hemisferio` tal cual
+lo sirve el deploy: el déficit a 8×8 es **−1.06 %** (0.092723 contra 0.093714 de
+la Tabla IV), no −36 %. Coincide exacto con lo que ya vigila el propio test —su
+`HEMI_HOY` (línea 73) trae las bandas CHICAS, `{ 4: [2,5], 8: [0.5,2], 12: [0.2,1],
+16: [0.05,0.5] }`, puestas el 2-sep-2026 — y con lo leído en vivo en el vídeo de
+Hekatan School del test IV (`hekatan-school/VIDEOS/itw_tests/ITW_TEST4_...mp4`).
+
+La confusión: el commit `cecc37905` (15-sep-2026, retiro del tipo 12 ajustado a
+CSI) trae un COMENTARIO que dice que al volver al tipo 8 por defecto «vuelven las
+bandas de ANTES: 8×8 → 30-45 %» — una PREDICCIÓN, escrita al retirar el tipo 12,
+que nunca se verificó después. Pasó lo contrario: el déficit se quedó chico. Ese
+comentario (líneas 69-72 de `itw_seis_casos.mjs`) queda desactualizado igual que
+esta sección; no se ha investigado todavía POR QUÉ el tipo 8 de hoy no regresó al
+−37 % que predijo ese commit — puede ser que otro cambio posterior (no anotado)
+mejoró el tipo 8 mismo. Antes de citar cualquier número de esta sección en un
+vídeo, artículo o conversación con Jorge: correr `node tests/run.mjs itw` y usar
+ESE número, no el de esta prosa.
 
 
 ## La placa gruesa (Shell-Thick): MITC4 + modos incompatibles de Wilson
