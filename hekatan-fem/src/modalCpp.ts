@@ -195,6 +195,22 @@ export function modalCpp(
   mod.HEAPU32[modeScalesPtrOut / 4] = 0;
 
   // 2- Call C++ modal()
+
+  // END LENGTH OFFSETS de CSI: [offI, offJ, rz] por barra. Solo viajan las barras que
+  // rigidizan de verdad (rz > 0 y algun offset): con rz = 0 la matriz es la de siempre.
+  const endOff = (elementInputs as any).endOffsets as Map<number, number[]> | undefined;
+  const endOffKeys: number[] = [];
+  const endOffValues: number[] = [];
+  if (endOff) for (const [k, v] of endOff) {
+    if (!v || !(v[2] > 0) || !(v[0] > 0 || v[1] > 0)) continue;
+    endOffKeys.push(k);
+    endOffValues.push(v[0] ?? 0, v[1] ?? 0, v[2] ?? 0);
+  }
+  const endOffKeysPtr = allocate(endOffKeys, Uint32Array, mod.HEAPU32);
+  gc.push(endOffKeysPtr);
+  const endOffValuesPtr = allocate(endOffValues, Float64Array, mod.HEAPF64);
+  gc.push(endOffValuesPtr);
+
   mod._modal(
     nodesPtr,
     nodes.length,
@@ -292,7 +308,11 @@ export function modalCpp(
     massColsOut,
     gammaPtrOut,
     totalMassPtrOut,
-    modeScalesPtrOut
+    modeScalesPtrOut,
+    // End length offsets (brazos rigidos de CSI): al final, detras de las salidas
+    endOffKeysPtr,
+    endOffValuesPtr,
+    endOffKeys.length
   );
 
   // 3- Read outputs

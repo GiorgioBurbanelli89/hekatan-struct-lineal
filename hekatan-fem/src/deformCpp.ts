@@ -209,6 +209,21 @@ export function deformCpp(
   // Diafragma rigido por nudo (`diaph` del .heks): nodo -> grupo
   const diaph = processElementInput((nodeInputs as any).diaphragms);
 
+  // END LENGTH OFFSETS de CSI: [offI, offJ, rz] por barra. Solo viajan las barras que
+  // rigidizan de verdad (rz > 0 y algun offset): con rz = 0 la matriz es la de siempre.
+  const endOff = (elementInputs as any).endOffsets as Map<number, number[]> | undefined;
+  const endOffKeys: number[] = [];
+  const endOffValues: number[] = [];
+  if (endOff) for (const [k, v] of endOff) {
+    if (!v || !(v[2] > 0) || !(v[0] > 0 || v[1] > 0)) continue;
+    endOffKeys.push(k);
+    endOffValues.push(v[0] ?? 0, v[1] ?? 0, v[2] ?? 0);
+  }
+  const endOffKeysPtr = allocate(endOffKeys, Uint32Array, mod.HEAPU32);
+  gc.push(endOffKeysPtr);
+  const endOffValuesPtr = allocate(endOffValues, Float64Array, mod.HEAPF64);
+  gc.push(endOffValuesPtr);
+
   // 2- Call C++ Function
   mod._deform(
     nodesPtr,
@@ -257,9 +272,9 @@ export function deformCpp(
     shearAreasZ.keysPtr,
     shearAreasZ.valuesPtr,
     shearAreasZ.size,
-    // NOTE: rigidOffsets sigue sin llegar al C++ (los brazos rigidos no
-    // existen en Hekatan). Los RELEASES si: van mas abajo, detras del angulo
-    // de eje local.
+    // NOTE: `rigidOffsets` (los de awatif) no llega al C++. Los brazos rigidos de
+    // CSI son `endOffsets` y van al final de la llamada. Los RELEASES van mas abajo,
+    // detras del angulo de eje local.
     // Springs (Winkler): flat [node, dof, k, ...] array
     springsPtr,
     springs ? springs.length : 0,
@@ -304,7 +319,11 @@ export function deformCpp(
     deformationsDataPtrOutPtr,
     deformationsSizeOutPtr,
     reactionsDataPtrOutPtr,
-    reactionsSizeOutPtr
+    reactionsSizeOutPtr,
+    // End length offsets (brazos rigidos de CSI): al final, detras de las salidas
+    endOffKeysPtr,
+    endOffValuesPtr,
+    endOffKeys.length
   );
 
   // 3- Read Output Data

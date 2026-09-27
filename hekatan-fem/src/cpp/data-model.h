@@ -27,6 +27,12 @@ struct ElementInputs
     std::map<int, double> shearAreasY; // As_y for Timoshenko beams
     std::map<int, double> shearAreasZ; // As_z for Timoshenko beams
     std::map<int, std::vector<double>> rigidOffsets; // [factorI, factorJ] rigid zone factors
+    // END LENGTH OFFSETS de CSI: [offI, offJ, rz] por barra, en metros y factor 0..1.
+    //   tramo rigido lr = rz*off ; longitud flexible Lf = L - rz*(offI + offJ)
+    //   flexion y cortante con Lf ; axil y torsion con la L COMPLETA (manual de CSI)
+    // Medido contra ETABS 22.6 (hekatan-struct-py/tests/ref_end_offsets_etabs.json).
+    // Con rz = 0 -el defecto de ETABS- o sin entrada, la barra es la de siempre.
+    std::map<int, std::vector<double>> endOffsets;
     // Angulo de eje local de barra, en GRADOS, alrededor del eje 1 — el "local
     // axis angle" de CSI (`FrameObj.SetLocalAxes` de ETABS). Ausente = 0.
     std::map<int, double> localAngles;

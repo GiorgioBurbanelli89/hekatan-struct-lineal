@@ -15,6 +15,7 @@ import {
   getIsotropicInPlaneConstitutiveMatrix,
   getOrthotropicInPlaneConstitutiveMatrix,
 } from "./utils/getLocalStiffnessMatrix";
+import { cargaUniformeBarra } from "./utils/cargaUniformeBarra";
 
 export function analyze(
   nodes: Node[],
@@ -110,23 +111,12 @@ export function analyze(
       // el signo contrario al del reparto a los nudos.
       const w = elementInputs?.frameLoads?.get(i);
       if (w && (w[0] || w[1] || w[2])) {
-        const a = elmNodes[0], b = elmNodes[1];
-        const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        const L = Math.hypot(d[0], d[1], d[2]);
-        if (L > 1e-9) {
-          const t = [d[0] / L, d[1] / L, d[2] / L];
-          const c = (L * L) / 12;
-          // t x w: el eje del momento de empotramiento
-          const txw = [t[1] * w[2] - t[2] * w[1],
-                       t[2] * w[0] - t[0] * w[2],
-                       t[0] * w[1] - t[1] * w[0]];
-          const feGlobal = [
-            -w[0] * L / 2, -w[1] * L / 2, -w[2] * L / 2,
-            -c * txw[0], -c * txw[1], -c * txw[2],
-            -w[0] * L / 2, -w[1] * L / 2, -w[2] * L / 2,
-            +c * txw[0], +c * txw[1], +c * txw[2],
-          ];
-          const feLocal = multiply(T, feGlobal);
+        // las mismas fuerzas equivalentes que carga `cliModeler` (con los brazos rigidos de
+        // CSI si la barra los trae), con el signo contrario
+        const eq = cargaUniformeBarra(elmNodes[0], elmNodes[1], w,
+                                      (elementInputs as any)?.endOffsets?.get(i));
+        if (eq) {
+          const feLocal = multiply(T, eq.map((v) => -v));
           fLocal = fLocal.map((v: number, k: number) => v + feLocal[k]);
         }
       }

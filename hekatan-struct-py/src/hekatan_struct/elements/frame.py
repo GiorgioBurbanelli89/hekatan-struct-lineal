@@ -311,7 +311,7 @@ def frame_stiffness_end_offsets(E: float, G: float, A: float, Iz_loc: float,
     return k, lr_i, lr_j, Lf
 
 
-def frame_fixed_end_loads(p_i, p_j, w_global) -> tuple[np.ndarray, np.ndarray]:
+def frame_fixed_end_loads(p_i, p_j, w_global, end_offset=None) -> tuple[np.ndarray, np.ndarray]:
     """Carga repartida global w (kN/m) → fuerzas de empotramiento nodales.
 
         F_i = F_j = w·L/2
@@ -320,6 +320,16 @@ def frame_fixed_end_loads(p_i, p_j, w_global) -> tuple[np.ndarray, np.ndarray]:
     con t = versor de la barra. Es EXACTO para desplazamientos y reacciones, y
     es lo que separa una viga CONTINUA de un reparto por ancho tributario: sin
     los momentos, el apoyo interior de un vano ancho recibe de menos.
+
+    Con BRAZOS RÍGIDOS de CSI (`end_offset` = (offI, offJ, rz), rz > 0): la parte
+    flexible (Lf = L − lI − lJ, l = rz·off) se carga y se lleva de la cara al nudo, y
+    la carga que cae sobre el brazo va directa al nudo:
+
+        F_i = w·(Lf/2 + lI)      M_i = +(Lf²/12 + lI·Lf/2 + lI²/2)·(t × w)
+        F_j = w·(Lf/2 + lJ)      M_j = −(Lf²/12 + lJ·Lf/2 + lJ²/2)·(t × w)
+
+    Medido contra ETABS 22.6 en un pórtico (`tests/casos/brazos_portico_csi.mjs`);
+    espejo de `hekatan-fem/src/utils/cargaUniformeBarra.ts`.
     """
     a = np.asarray(p_i, float)
     b = np.asarray(p_j, float)
@@ -329,10 +339,17 @@ def frame_fixed_end_loads(p_i, p_j, w_global) -> tuple[np.ndarray, np.ndarray]:
         return np.zeros(6), np.zeros(6)
     t = d / L
     w = np.asarray(w_global, float)
-    c = L * L / 12.0
+    rz = float(end_offset[2]) if end_offset is not None and end_offset[2] > 0 else 0.0
+    l_i = rz * float(end_offset[0]) if rz else 0.0
+    l_j = rz * float(end_offset[1]) if rz else 0.0
+    Lf = L - l_i - l_j
+    if Lf <= 1e-9:
+        return np.zeros(6), np.zeros(6)
+    c_i = Lf * Lf / 12.0 + l_i * Lf / 2.0 + l_i * l_i / 2.0
+    c_j = Lf * Lf / 12.0 + l_j * Lf / 2.0 + l_j * l_j / 2.0
     txw = np.cross(t, w)
-    fi = np.concatenate([w * L / 2.0, c * txw])
-    fj = np.concatenate([w * L / 2.0, -c * txw])
+    fi = np.concatenate([w * (Lf / 2.0 + l_i), c_i * txw])
+    fj = np.concatenate([w * (Lf / 2.0 + l_j), -c_j * txw])
     return fi, fj
 
 

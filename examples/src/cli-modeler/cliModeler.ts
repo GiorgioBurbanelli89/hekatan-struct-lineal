@@ -56,7 +56,7 @@ import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
-import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
+import { deform, analyze, modalAnalysis, cargaUniformeBarra, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 interface ParsedModel {
@@ -117,6 +117,9 @@ interface ParsedModel {
   /** `dosl ID d t2 tf tw dis`: doble ángulo 2L PARAMÉTRICO (SAP2000 «Double Angle»); t2 = ancho total. */
   frameDosL: Map<number, { d: number; t2: number; tf: number; tw: number; dis: number }>;
   frameEndOffsets: Map<number, [number, number, number]>;   // [offI, offJ, rigidZone]
+  /** `rigidzone <f>`: el factor de zona rígida de TODAS las barras con `endoffset`
+   *  (0 = ETABS por defecto, no rigidiza). `rigidzone off` = sin brazos (SAP2000). */
+  rigidZone?: number | "off";
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -660,6 +663,23 @@ export function parseCliCommands(text: string): ParsedModel {
         //
         //   endoffset 17 0.20 0.20        (brazos de 20 cm, flexibles)
         //   endoffset 17 0.20 0.20 1.0    (y rigidos de verdad)
+        // ── FACTOR DE ZONA RÍGIDA de todo el modelo: `rigidzone <f>` | `rigidzone off` ──
+        //   rigidzone 0     como ETABS por defecto: los brazos NO rigidizan (solo peso y estación)
+        //   rigidzone 0.5   la mitad de cada brazo es rígida
+        //   rigidzone 1     brazos rígidos enteros
+        //   rigidzone off   sin brazos, como SAP2000: las barras van de nudo a nudo
+        // Manda sobre el `rz` de cada `endoffset`, esté escrita antes o después.
+        case "rigidzone":
+        case "zonarigida": {
+          const v = (tokens[1] ?? "").toLowerCase();
+          if (["off", "no", "none", "ninguno", "sap", "sap2000"].includes(v)) m.rigidZone = "off";
+          else {
+            const f = parseFloat(v);
+            if (isFinite(f) && f >= 0 && f <= 1) m.rigidZone = f;
+            else m.errors.push(`rigidzone: se esperaba un factor entre 0 y 1, u "off" (sin brazos)`);
+          }
+          break;
+        }
         case "endoffset":
         case "offset":
         case "lengthoff": {
@@ -1283,6 +1303,10 @@ export const cliModeler: ExampleDef = {
     const sectionShapes = new Map<number, any>();
     const localAngles = new Map<number, number>();
     const momentReleases = new Map<number, boolean[]>();
+    // `rigidzone`: un solo factor para todo el modelo (u "off" = sin brazos, SAP2000)
+    if (m.rigidZone === "off") m.frameEndOffsets.clear();
+    else if (m.rigidZone !== undefined)
+      for (const [k, v] of m.frameEndOffsets) m.frameEndOffsets.set(k, [v[0], v[1], m.rigidZone]);
     const endOffsets = new Map<number, [number, number, number]>();
     // 0 = Mindlin (defecto del C++), 1 = Kirchhoff Shell-Thin
     const plateFormulations = new Map<number, number>();
@@ -1565,17 +1589,12 @@ export const cliModeler: ExampleDef = {
         if (!f) { m.errors.push(`frameload ${fid}: no existe esa barra`); continue; }
         const iI = idToIdx.get(f.nI), iJ = idToIdx.get(f.nJ);
         if (iI === undefined || iJ === undefined) continue;
-        const a = nodes[iI], b = nodes[iJ];
-        const d = [b[0]-a[0], b[1]-a[1], b[2]-a[2]];
-        const L = Math.hypot(d[0], d[1], d[2]);
-        if (L < 1e-9) continue;
-        const t = [d[0]/L, d[1]/L, d[2]/L];
-        const c = L*L/12;
-        const txw = [t[1]*w[2] - t[2]*w[1],
-                     t[2]*w[0] - t[0]*w[2],
-                     t[0]*w[1] - t[1]*w[0]];
-        acum(iI, [w[0]*L/2, w[1]*L/2, w[2]*L/2,  c*txw[0],  c*txw[1],  c*txw[2]]);
-        acum(iJ, [w[0]*L/2, w[1]*L/2, w[2]*L/2, -c*txw[0], -c*txw[1], -c*txw[2]]);
+        // w·L/2 y ±(L²/12)(t × w); con brazos rigidos de CSI (rz > 0), la parte flexible mas
+        // la carga del brazo, que va directa al nudo (hekatan-fem/src/utils/cargaUniformeBarra.ts)
+        const eq = cargaUniformeBarra(nodes[iI], nodes[iJ], w, m.frameEndOffsets.get(fid));
+        if (!eq) continue;
+        acum(iI, eq.slice(0, 6));
+        acum(iJ, eq.slice(6, 12));
       }
     }
 

@@ -68,6 +68,7 @@ export type {
 
 // Internal utils exposed for FEM inspection/debugging
 export { getLocalStiffnessMatrix } from "./utils/getLocalStiffnessMatrix";
+export { cargaUniformeBarra } from "./utils/cargaUniformeBarra";
 export { getTransformationMatrix } from "./utils/getTransformationMatrix";
 
 export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";

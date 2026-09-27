@@ -224,6 +224,49 @@ Por qué importa, medido en el galpón (1120 barras, misma malla de ETABS):
 ⚠️ `ang` **ya no es alias de `shellang`**. Lo fue; al añadirse para barras, el
 `case` de shell quedó inalcanzable. El ángulo de cáscara es `shellang`.
 
+### Brazos rígidos (end length offsets de CSI) — en el solver desde el 27-sep-2026
+
+```
+endoffset <frameID> <offI> <offJ> [rz]    # brazos de la barra (m) y factor de zona rígida 0..1
+rigidzone <f>                             # el factor de TODO el modelo (manda sobre cada rz)
+rigidzone off                             # sin brazos: barras de nudo a nudo, como SAP2000
+```
+
+| se quiere | se escribe |
+|---|---|
+| ETABS por defecto (brazos automáticos, RZ = 0) | `endoffset` con rz = 0, o `rigidzone 0` |
+| ETABS / SAP2000 con zona rígida | `endoffset … rz`, o `rigidzone 0.5`, `rigidzone 1` |
+| SAP2000 por defecto (sin brazos) | ningún `endoffset`, o `rigidzone off` |
+
+La ley, medida contra ETABS 22.6 por OAPI (voladizos y pórtico, RZ = 0 … 1):
+
+```
+l = rz·off                      tramo REALMENTE rígido de cada extremo
+Lf = L − lI − lJ                longitud flexible → flexión y cortante (también el φ de Timoshenko)
+EA/L y GJ/L                     con la L COMPLETA («rigid zones never affect axial and torsional»)
+K = Rᵀ·K(Lf)·R                  el brazo, en ejes locales y DESPUÉS de las liberaciones
+carga de vano w                 F = w·(Lf/2 + l)   M = ±(Lf²/12 + l·Lf/2 + l²/2)·(t × w)
+```
+
+Con rz = 0 el brazo no rigidiza: solo descuenta el peso de las VIGAS (luz libre) y mueve la
+estación donde CSI reporta los esfuerzos (la cara del brazo).
+
+Las CUATRO copias tienen que decir lo mismo: `getLocalStiffnessMatrix.cpp` (el WASM: `deform` y
+`modal`), `getLocalStiffnessMatrix.ts` (`analyze`, tarjeta K local del visor), `frame.py` y, para la
+carga de vano, `hekatan-fem/src/utils/cargaUniformeBarra.ts` + `frame_fixed_end_loads`.
+Hasta el 27-sep-2026 el C++ NO la tenía: `deform` resolvía sin brazos y `analyze` recuperaba
+esfuerzos con ellos (11.4 % en un voladizo con rz = 1). Al WASM viajan como tres argumentos AL
+FINAL de `_deform` y `_modal` (detrás de las salidas): los llamadores viejos pasan menos
+argumentos, el wasm los rellena con 0 y la barra es la de siempre.
+
+Tests: `node tests/run.mjs brazos-rigidos` (31 filas, voladizos), `node tests/run.mjs brazos-portico`
+(30 filas: desplazamientos, esfuerzos en la cara del brazo, carga de vano, 4 periodos),
+`pytest tests/test_end_offsets_etabs.py tests/test_brazos_portico_etabs.py`. Referencia:
+`validation/brazos-rigidos/ref_portico_csi.py etabs|sap` → `tests/datos/brazos_portico_<prog>.json`
+(el test toma el de SAP2000 solo si existe). ⚠️ `cli/native/main_modal_native.cpp` declara una
+firma VIEJA de `modal` (sin `etabs_wall_joint` ni las salidas espectrales): hay que ponerla al día
+antes de volver a usarlo. Las plantillas (`offsets`) siguen con RZ = 0 (solo peso y masa).
+
 ## La membrana: elemento ITW 1990 (drilling)
 
 Desde el **19-ago-2026** la membrana de la cáscara es el elemento de

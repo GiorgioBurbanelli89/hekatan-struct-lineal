@@ -125,6 +125,7 @@ def leer_heks(ruta: str) -> ModeloHeks:
     dosl_de: dict[int, tuple] = {}    # `dosl ID d t2 tf tw dis`: doble ángulo paramétrico (SAP2000 Double Angle)
     rels: dict[int, list[bool]] = {}
     endoffs: dict[int, tuple[float, float, float]] = {}   # (offI, offJ, rz)
+    rigidzone: list = [None]                               # `rigidzone`: factor global u "off"
     sw_mult = [0.0]                        # multiplicador de peso propio
     ej_flag = [True]                       # etabsjoint: por DEFECTO como ETABS; `etabsjoint 0` la apaga (modo SAP2000)
     de_flag = [False]                      # `deck etabs`: panos membrana como los pisos de ETABS (ver deck_etabs.py)
@@ -261,6 +262,11 @@ def leer_heks(ruta: str) -> ModeloHeks:
                     # acero + la losa). Con esto el .heks puede traer el caso
                     # Dead de verdad.
                     sw_mult[0] = float(t[1]) if len(t) > 1 else 1.0
+                elif cmd in ("rigidzone", "zonarigida"):
+                    # rigidzone <f> | rigidzone off — el factor de zona rígida de TODO el
+                    # modelo (manda sobre el rz de cada `endoffset`); off = sin brazos (SAP2000)
+                    v = t[1].lower() if len(t) > 1 else ""
+                    rigidzone[0] = "off" if v in ("off", "no", "none", "ninguno", "sap", "sap2000") else float(v)
                 elif cmd in ("endoffset", "offset", "lengthoff"):
                     # endoffset ID offI offJ [rz]   — el END LENGTH OFFSET de CSI.
                     # `rz` es el rigid-zone factor (0-1); ETABS trae 0 por
@@ -384,6 +390,12 @@ def leer_heks(ruta: str) -> ModeloHeks:
     m.nodes = [nodos[i] for i in ids]
 
     ei, ni = m.element_inputs, m.node_inputs
+    # `rigidzone`: un solo factor para todo el modelo (u "off" = sin brazos, SAP2000)
+    if rigidzone[0] == "off":
+        endoffs.clear()
+    elif rigidzone[0] is not None:
+        for k_eo, v_eo in list(endoffs.items()):
+            endoffs[k_eo] = (v_eo[0], v_eo[1], float(rigidzone[0]))
     for f in frames:
         if f["nI"] not in idx_de or f["nJ"] not in idx_de:
             m.errores.append(f"frame {f['id']}: nodo inexistente")

@@ -468,7 +468,9 @@ extern "C"
         double **total_mass_ptr_out = nullptr,             // [6]       = M_total_j
         // factor s_m tal que  phi_masa_normalizado = mode_shapes[m] * s_m
         // (mode_shapes sale dividido por su maximo absoluto, para el visor)
-        double **mode_scales_ptr_out = nullptr)
+        double **mode_scales_ptr_out = nullptr,
+        // END LENGTH OFFSETS de CSI (27-sep-2026): [offI, offJ, rz] por barra; ver deform.cpp
+        int *endoff_keys_ptr = nullptr, double *endoff_values_ptr = nullptr, int num_endoff = 0)
     {
         // Initialize outputs to null
         *frequencies_ptr_out = nullptr;
@@ -517,6 +519,8 @@ extern "C"
         elementInputs.shearAreasZ = parseMapFromFlat(shearZ_keys_ptr, shearZ_values_ptr, num_shearZ);
         elementInputs.localAngles = parseMapFromFlat(locang_keys_ptr, locang_values_ptr, num_locang);
         elementInputs.momentReleases = parseMapBoolVecFromFlat(release_keys_ptr, release_values_ptr, num_releases, 12);
+        if (num_endoff > 0 && endoff_keys_ptr && endoff_values_ptr)
+            elementInputs.endOffsets = parseMapVecFromFlat(endoff_keys_ptr, endoff_values_ptr, num_endoff, 3);
 
         // --- 2. Assemble K and M ---
         int dof = num_nodes * 6;

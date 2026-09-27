@@ -258,7 +258,8 @@ def _assemble_F(nodes: Sequence[Node], node_inputs: NodeInputs,
             if not _is_frame(conn):
                 continue
             i, j = conn
-            fi, fj = frame_fixed_end_loads(nodes[i], nodes[j], w)
+            fi, fj = frame_fixed_end_loads(nodes[i], nodes[j], w,
+                                           element_inputs.end_offsets.get(idx))
             F[6*i:6*i+6] += fi
             F[6*j:6*j+6] += fj
     return F
@@ -765,7 +766,8 @@ def analyze(
             # lleva además las fuerzas de empotramiento de la propia barra.
             w = element_inputs.frame_loads.get(idx)
             if w is not None:
-                fi, fj = frame_fixed_end_loads(nodes[i], nodes[j], w)
+                fi, fj = frame_fixed_end_loads(nodes[i], nodes[j], w,
+                                               element_inputs.end_offsets.get(idx))
                 f_local = f_local - T.T @ np.concatenate([fi, fj])
             # FUERZAS DE EXTREMO crudas (f = k·u + f_empotramiento), sin tocar
             # el signo — es lo que devuelve `analyze.ts` y por tanto lo que

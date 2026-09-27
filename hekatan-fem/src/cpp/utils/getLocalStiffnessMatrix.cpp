@@ -6,6 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
+#include <string>
 
 template <typename K, typename V>
 V getMapValueOrDefault(const std::map<K, V> &map, const K &key, const V &defaultValue);
@@ -123,6 +124,23 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
         if (it != elementInputs.momentReleases.end()) {
             K = applyReleases(K, it->second);
         }
+        // El brazo rigido del end length offset, en LOCAL y DESPUES de las
+        // liberaciones (la rotula queda en la cara interior del brazo, como en
+        // CSI). Mismo orden que getLocalStiffnessMatrix.ts y frame.py.
+        //   cara I (a +lrI del nudo I):  u2 = u2_I + lrI*r3    u3 = u3_I - lrI*r2
+        //   cara J (a -lrJ del nudo J):  u2 = u2_J - lrJ*r3    u3 = u3_J + lrJ*r2
+        auto itEo = elementInputs.endOffsets.find(elementIndex);
+        if (itEo != elementInputs.endOffsets.end() && itEo->second.size() >= 3) {
+            const double rz = itEo->second[2];
+            const double lrI = rz * itEo->second[0];
+            const double lrJ = rz * itEo->second[1];
+            if (rz > 0 && (itEo->second[0] > 0 || itEo->second[1] > 0)) {
+                Eigen::MatrixXd R = Eigen::MatrixXd::Identity(12, 12);
+                if (std::abs(lrI) > 1e-12) { R(1, 5) = lrI;  R(2, 4) = -lrI; }
+                if (std::abs(lrJ) > 1e-12) { R(7, 11) = -lrJ; R(8, 10) = lrJ; }
+                K = R.transpose() * K * R;
+            }
+        }
         return K;
     }
     if (elementNodes.size() == 3)
@@ -220,6 +238,20 @@ Eigen::MatrixXd getLocalStiffnessMatrixFrame(
         return Eigen::MatrixXd::Zero(12, 12);
     }
 
+    // END LENGTH OFFSETS de CSI: flexion y cortante trabajan con la longitud
+    // FLEXIBLE Lf = L - rz*(offI + offJ); axil y torsion, con la L completa
+    // ("The rigid zones never affect axial and torsional deformations").
+    const double Lfull = L;
+    {
+        auto itEo = elementInputs.endOffsets.find(index);
+        if (itEo != elementInputs.endOffsets.end() && itEo->second.size() >= 3 && itEo->second[2] > 0) {
+            const double Lf = L - itEo->second[2] * (itEo->second[0] + itEo->second[1]);
+            if (Lf <= 1e-9)
+                throw std::runtime_error("end offsets se comen la barra " + std::to_string(index));
+            L = Lf;
+        }
+    }
+
     // Timoshenko shear deformation: phi = 12EI/(G*As*L^2)
     // Convention (ETABS-style section property modifiers):
     //   As not provided / As = 0  → default Timoshenko 5/6·A (matches ETABS default)
@@ -236,8 +268,8 @@ Eigen::MatrixXd getLocalStiffnessMatrixFrame(
     double phiZ = (!bernoulliZ && AsZ > 0 && G > 0) ? (12.0 * E * Iz) / (G * AsZ * L * L) : 0.0;
     double phiY = (!bernoulliY && AsY > 0 && G > 0) ? (12.0 * E * Iy) / (G * AsY * L * L) : 0.0;
 
-    const double EA_L = E * A / L;
-    const double GJ_L = G * J / L;
+    const double EA_L = E * A / Lfull;
+    const double GJ_L = G * J / Lfull;
 
     // Timoshenko coefficients (Euler-Bernoulli when phi=0)
     const double tz = (12.0 * E * Iz / (L * L * L)) / (1.0 + phiZ);

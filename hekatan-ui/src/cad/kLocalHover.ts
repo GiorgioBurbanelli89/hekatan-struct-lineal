@@ -84,7 +84,7 @@ function pintar(idx: number, x: number, y: number): void {
   tarjeta.innerHTML =
     `<h4>Matriz de rigidez local · barra ${d.idx + 1}</h4>` +
     `<div class="sub">nudo ${d.n1} → nudo ${d.n2} · ${d.formulacion}</div>` +
-    (d.brazos ? `<div class="sub mal">Aviso: la barra trae brazos rígidos (factor ${num(d.brazos[2])}) y el solver no los aplica; esta es la matriz con la que se calcula.</div>` : "") +
+    (d.brazos ? `<div class="sub">Brazos rígidos: ${num(d.brazos[0])} m y ${num(d.brazos[1])} m · factor ${num(d.brazos[2])} · longitud flexible ${num(d.Lf)} m</div>` : "") +
     `<div class="datos">` +
     dato("L", num(d.L), "m") + dato("E", num(d.E), "kN/m²") + dato("G", num(d.G), "kN/m²") + dato("A", num(d.A), "m²") +
     dato("I<sub>33</sub>", num(d.I33), "m⁴") + dato("I<sub>22</sub>", num(d.I22), "m⁴") +

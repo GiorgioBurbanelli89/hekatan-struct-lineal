@@ -104,7 +104,12 @@ extern "C"
         double **deformations_data_ptr_out, // -> pointer to flat deformation data [nodeIdx, d1..d6, ...]
         int *deformations_size_out,         // -> pointer to total number of doubles in deformations_data_ptr_out
         double **reactions_data_ptr_out,    // -> pointer to flat reaction data [nodeIdx, r1..r6, ...]
-        int *reactions_size_out             // -> pointer to total number of doubles in reactions_data_ptr_out
+        int *reactions_size_out,            // -> pointer to total number of doubles in reactions_data_ptr_out
+
+        // END LENGTH OFFSETS de CSI (27-sep-2026): 3 valores por barra [offI, offJ, rz].
+        // Van AL FINAL, detras de las salidas: un llamador viejo pasa menos argumentos,
+        // el wasm los rellena con 0 y la barra es la de siempre.
+        int *endoff_keys_ptr = nullptr, double *endoff_values_ptr = nullptr, int num_endoff = 0
     )
     {
         // --- 1. Parse Inputs from WASM Memory ---
@@ -152,6 +157,8 @@ extern "C"
         elementInputs.drillingTypes = parseMapIntFromFlat(drillType_keys_ptr, drillType_values_ptr, num_drillType);
         elementInputs.drillingPenaltyScales = parseMapFromFlat(drillScale_keys_ptr, drillScale_values_ptr, num_drillScale);
         elementInputs.solidIncompatible = solid_incompatible != 0;
+        if (num_endoff > 0 && endoff_keys_ptr && endoff_values_ptr)
+            elementInputs.endOffsets = parseMapVecFromFlat(endoff_keys_ptr, endoff_values_ptr, num_endoff, 3);
 
         // --- 2. Core FEA Calculation using Eigen ---
         int dof = num_nodes * 6; // Total degrees of freedom

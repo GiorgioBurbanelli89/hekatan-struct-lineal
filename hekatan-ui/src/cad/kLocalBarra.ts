@@ -10,10 +10,11 @@
  * Lo que se enseña es lo que se resuelve. Test: `node tests/run.mjs k-local`, que resuelve un
  * voladizo con ESTA matriz y lo compara con el WASM.
  *
- * ⚠️ Los BRAZOS RÍGIDOS con factor de rigidez (`endOffsets`, rz > 0) están en la matriz de
- * TypeScript pero NO llegan al WASM (`deformCpp.ts`: «rigidOffsets sigue sin llegar al C++»).
- * Medido el 27-sep-2026 con un voladizo: con rz = 1 la matriz de TS da 11.4 % menos flecha que el
- * solver. Aquí se enseña la del SOLVER (sin brazos) y, si la barra los trae, se avisa.
+ * Los BRAZOS RÍGIDOS de CSI (`endOffsets` = [offI, offJ, rz]) van dentro de la matriz desde el
+ * 27-sep-2026, que es cuando llegaron al WASM (antes estaban solo en TypeScript y el solver no los
+ * aplicaba: 11.4 % en un voladizo). Ley medida contra ETABS: flexión y cortante con la longitud
+ * flexible Lf = L − rz·(offI + offJ), axil y torsión con la L completa, y el brazo K = Rᵀ·K·R.
+ * Con rz = 0 (el defecto de ETABS) o sin brazos (SAP2000) la barra es la de nudo a nudo.
  *
  * Sin DOM: lo usan la tarjeta del visor (`kLocalHover.ts`) y los tests.
  */
@@ -23,7 +24,8 @@ export interface DatosBarra {
   idx: number;
   n1: number; n2: number;
   a: number[]; b: number[];
-  L: number;            // de nudo a nudo: el que usa el solver
+  L: number;            // de nudo a nudo
+  Lf: number;           // longitud FLEXIBLE: L − rz·(offI + offJ); sin brazos rígidos, L
   E: number; G: number; A: number;
   I22: number; I33: number; J: number;
   As2: number; As3: number;      // áreas de cortante que USA el solver
@@ -31,7 +33,7 @@ export interface DatosBarra {
   phi2: number; phi3: number;    // parámetro de cortante en los planos 1-3 y 1-2
   ang: number;                   // giro del eje local, grados
   liberaciones: boolean[] | null;
-  brazos: number[] | null;       // [offI, offJ, rz] que trae la barra y el solver NO aplica
+  brazos: number[] | null;       // [offI, offJ, rz] cuando rigidizan (rz > 0); si no, null
   formulacion: string;
 }
 
@@ -64,16 +66,18 @@ export function datosBarra(st: any, idx: number): DatosBarra | null {
   const asPorDefecto = As2 === 0 && As3 === 0 && A > 0 && G > 0;
   if (asPorDefecto) As2 = As3 = (5 / 6) * A;
   const eo = ei.endOffsets?.get?.(idx) ?? null;
-  const phi3 = As2 > 0 && G > 0 && L > 0 ? (12 * E * I33) / (G * As2 * L * L) : 0;
-  const phi2 = As3 > 0 && G > 0 && L > 0 ? (12 * E * I22) / (G * As3 * L * L) : 0;
+  const hayBrazos = !!eo && eo[2] > 0 && (eo[0] > 0 || eo[1] > 0);
+  const Lf = hayBrazos ? L - eo[2] * (eo[0] + eo[1]) : L;
+  const phi3 = As2 > 0 && G > 0 && Lf > 0 ? (12 * E * I33) / (G * As2 * Lf * Lf) : 0;
+  const phi2 = As3 > 0 && G > 0 && Lf > 0 ? (12 * E * I22) / (G * As3 * Lf * Lf) : 0;
   const rel = ei.momentReleases?.get?.(idx) ?? null;
   const hayRel = !!rel && rel.some((r: any) => !!r);
-  const hayBrazos = !!eo && eo[2] > 0 && (eo[0] > 0 || eo[1] > 0);
   const partes = ["Barra 3D de 12 grados de libertad"];
   partes.push(phi2 > 0 || phi3 > 0 ? "viga de Timoshenko (con deformación por cortante)" : "viga de Euler-Bernoulli");
   if (hayRel) partes.push("con liberaciones (condensación estática)");
+  if (hayBrazos) partes.push("con brazos rígidos en los extremos");
   return {
-    idx, n1: el[0] + 1, n2: el[1] + 1, a, b, L, E, G, A, I22, I33, J: de(ei.torsionalConstants, idx),
+    idx, n1: el[0] + 1, n2: el[1] + 1, a, b, L, Lf, E, G, A, I22, I33, J: de(ei.torsionalConstants, idx),
     As2, As3, asPorDefecto, phi2, phi3, ang: de(ei.localAngles, idx),
     liberaciones: hayRel ? Array.from(rel, (r: any) => !!r) : null,
     brazos: hayBrazos ? Array.from(eo as number[]) : null,
@@ -86,9 +90,7 @@ export function kLocalBarra(st: any, idx: number): number[][] | null {
   const { nodos, elems, ei } = estados(st);
   const el = elems[idx];
   if (!el || el.length !== 2) return null;
-  // sin los brazos rígidos: el solver (WASM) no los aplica, y aquí se enseña lo que se resuelve
-  const eiSolver = ei.endOffsets ? { ...ei, endOffsets: undefined } : ei;
-  const K = getLocalStiffnessMatrix([nodos[el[0]], nodos[el[1]]] as any, eiSolver, idx) as number[][];
+  const K = getLocalStiffnessMatrix([nodos[el[0]], nodos[el[1]]] as any, ei, idx) as number[][];
   return K && K.length === 12 ? K : null;
 }
 
@@ -178,22 +180,32 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
     "k_a = E*A/L",
     "k_t = G*J/L",
   ];
+  // con brazos rígidos la flexión trabaja con la longitud flexible; el axil y la torsión, no
+  const Ls = d.brazos ? "L_f" : "L";
+  if (d.brazos) {
+    T.push(
+      "#: **Brazos rígidos.** El tramo de cada extremo que cae dentro del nudo no se deforma. El factor de zona rígida dice qué parte de ese tramo es rígida de verdad. La flexión y el cortante trabajan con la longitud flexible; estirarse y torcerse, con el largo completo (así lo hacen ETABS y SAP2000).",
+      // en PROSA, no como ecuación: si L_f se define, el motor la sustituye en las fórmulas de
+      // abajo y salen fracciones de tres renglones
+      "#: **Longitud flexible:** L_{f} = L − r_{z}·(o_{i} + o_{j}), con o_{i} y o_{j} los brazos de cada extremo y r_{z} el factor de zona rígida.",
+    );
+  }
   if (timo) {
     T.push(
       "#: **Flectar**, con la deformación por cortante. El parámetro de cortante compara la rigidez a flexión con la de corte; si el área de cortante es muy grande vale cero y queda la viga de Euler-Bernoulli.",
-      "phi = 12*E*I/(G*A_s*L^2)",
-      "k_v = 12*E*I/(L^3*(1 + phi))",
-      "k_m = 6*E*I/(L^2*(1 + phi))",
-      "k_g = 4*E*I*(1 + phi/4)/(L*(1 + phi))",
-      "k_c = 2*E*I*(1 - phi/2)/(L*(1 + phi))",
+      `phi = 12*E*I/(G*A_s*${Ls}^2)`,
+      `k_v = 12*E*I/(${Ls}^3*(1 + phi))`,
+      `k_m = 6*E*I/(${Ls}^2*(1 + phi))`,
+      `k_g = 4*E*I*(1 + phi/4)/(${Ls}*(1 + phi))`,
+      `k_c = 2*E*I*(1 - phi/2)/(${Ls}*(1 + phi))`,
     );
   } else {
     T.push(
       "#: **Flectar**: desplazar un extremo sin dejarlo girar, el acoplamiento entre desplazar y girar, girar un extremo, y el giro cruzado del otro extremo.",
-      "k_v = 12*E*I/L^3",
-      "k_m = 6*E*I/L^2",
-      "k_g = 4*E*I/L",
-      "k_c = 2*E*I/L",
+      `k_v = 12*E*I/${Ls}^3`,
+      `k_m = 6*E*I/${Ls}^2`,
+      `k_g = 4*E*I/${Ls}`,
+      `k_c = 2*E*I/${Ls}`,
     );
   }
   T.push(
@@ -208,9 +220,16 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
     `#| Constante de torsión J | ${lit(d.J)} m⁴ | Giro del eje local | ${n(d.ang, 3)}° |`,
   );
   if (d.asPorDefecto) T.push("#: Las áreas de cortante no venían dadas: el solver usa cinco sextos del área, como ETABS.");
-  if (d.brazos) T.push(`#: **Aviso:** esta barra trae brazos rígidos (${n(d.brazos[0], 4)} m y ${n(d.brazos[1], 4)} m, factor ${n(d.brazos[2], 2)}). El solver estático **no los aplica**: la matriz de abajo es la de la barra de nudo a nudo, que es con la que se calcula.`);
+  if (d.brazos) T.push(
+    "#: **Brazos rígidos de esta barra:**",
+    "#| Brazo rígido | Valor | Brazo rígido | Valor |",
+    "#|---|---:|---|---:|",
+    `#| En el nudo inicial o_{i} | ${n(d.brazos[0], 4)} m | En el nudo final o_{j} | ${n(d.brazos[1], 4)} m |`,
+    `#| Factor de zona rígida r_{z} | ${n(d.brazos[2], 3)} | Longitud flexible L_{f} | ${n(d.Lf, 4)} m |`,
+    "#: Los términos de abajo son los de la **parte flexible**. La matriz final ya lleva los brazos: un giro del nudo mueve la cara de la barra, y por eso los términos de giro crecen.",
+  );
   if (d.liberaciones) T.push("#: Esta barra tiene **liberaciones**: los términos de abajo son los de la barra continua y la matriz final ya lleva la condensación estática.");
-  const L = lit(d.L), Lf = L, E = lit(d.E), G = lit(d.G);
+  const L = lit(d.L), Lf = lit(d.Lf), E = lit(d.E), G = lit(d.G);
   T.push(
     "",
     "## 3 · Los términos, con números",

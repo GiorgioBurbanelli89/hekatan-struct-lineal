@@ -8,9 +8,9 @@
  * desplazamientos del extremo libre tienen que coincidir.
  *
  * Tres barras: con áreas de cortante y el eje local girado; sin áreas de cortante (el solver pone
- * cinco sextos del área); y una que TRAE brazos rígidos con factor de rigidez. Esa última es el
- * motivo del test: `endOffsets` (rz > 0) está en la matriz de TypeScript y no llega al WASM, así
- * que la matriz de TS da 11.4 % menos flecha que el solver. La tarjeta enseña la del solver.
+ * cinco sextos del área); y una con brazos rígidos con factor de rigidez. Hasta el 27-sep-2026
+ * `endOffsets` (rz > 0) estaba en la matriz de TypeScript y no llegaba al WASM (11.4 % en este
+ * voladizo); desde entonces el solver los aplica y la tarjeta enseña la matriz con brazos.
  */
 import { cargarFem, empaquetar, R } from "../lib/bundle.mjs";
 
@@ -45,7 +45,7 @@ const CARGA = [12, -7, 25, 3, -4, 6];                       // kN y kN·m en el 
 const CASOS = [
   { nombre: "con áreas de cortante y eje girado 30°", nudos: [[0, 0, 0], [3, 2, 1.5]], as: [0.004, 0.006], ang: 30 },
   { nombre: "sin áreas de cortante (5/6·A)", nudos: [[1, 1, 0], [1, 1, 4]], as: null, ang: 0 },
-  { nombre: "con brazos rígidos que el solver no aplica", nudos: [[0, 0, 3], [5, 0, 3]], as: [0.004, 0.006], ang: 0, brazos: [0.2, 0.3, 1] },
+  { nombre: "con brazos rígidos (factor 1)", nudos: [[0, 0, 3], [5, 0, 3]], as: [0.004, 0.006], ang: 0, brazos: [0.2, 0.3, 1] },
 ];
 
 export const nombre = "k-local-barra";
