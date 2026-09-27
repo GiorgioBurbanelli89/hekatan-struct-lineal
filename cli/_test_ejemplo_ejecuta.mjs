@@ -1,0 +1,32 @@
+import puppeteer from "puppeteer";
+import { readFileSync, existsSync, statSync } from "fs";
+import { createServer } from "http";
+import { join, extname, dirname } from "path";
+import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const BASE = "/hekatan-struct-lineal/";
+const raiz = join(__dirname, "..", "website", "src", "examples");
+const MIME = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css", ".wasm":"application/wasm", ".json":"application/json" };
+const srv = createServer((req, res) => { let p = decodeURIComponent((req.url || "/").split("?")[0]); if (p.startsWith(BASE)) p = p.slice(BASE.length - 1);
+  let f = join(raiz, p); if (existsSync(f) && statSync(f).isDirectory()) f = join(f, "index.html");
+  if (!existsSync(f)) { res.writeHead(404); return res.end("404"); }
+  res.writeHead(200, { "content-type": MIME[extname(f)] || "application/octet-stream" }); res.end(readFileSync(f)); });
+await new Promise((r) => srv.listen(4788, r));
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=d3d11", "--ignore-gpu-blocklist"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1500, height: 1000 });
+const err = []; pag.on("pageerror", (e) => err.push(e.message));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const ok = (c, q, d = "") => console.log(`${c ? "  ok  " : "FALLA "} ${q} ${d}`);
+await pag.goto(`http://localhost:4788${BASE}workspace/?t=new-blank`, { waitUntil: "networkidle2", timeout: 120000 });
+await wait(7000); await pag.keyboard.press("Escape");
+await pag.evaluate(() => window.__hekatanCadScript.abrir());
+await wait(300);
+// «Ejemplo» solo, SIN pulsar Ejecutar: debe dibujar
+await pag.evaluate(() => document.getElementById("hk-script-ej").click());
+await wait(1500);
+const tramos = await pag.evaluate(() => (window.__hekatanDrawingPolylines?.val ?? []).reduce((s, p) => s + Math.max(0, p.length - 1), 0));
+const est = await pag.evaluate(() => document.getElementById("hk-script-est").textContent);
+ok(tramos === 9, "«Ejemplo» solo (sin Ejecutar) YA dibuja", `tramos=${tramos} · ${est}`);
+console.log("pageerrors:", err.length);
+await pag.screenshot({ path: "cli/shots_bench/ejemplo_ejecuta.png" });
+await nav.close(); srv.close();

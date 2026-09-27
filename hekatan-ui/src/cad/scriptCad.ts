@@ -193,7 +193,11 @@ export function abrirScriptCad(h: ScriptHooks): void {
     if (e.ctrlKey && e.key === "Enter") { e.preventDefault(); ir(); }
     e.stopPropagation();                      // las letras del guion no son atajos del CAD
   }, true);
-  $("hk-script-ej").addEventListener("click", () => { txt.value = EJEMPLO; });
+  // 27-sep-2026 (Jorge: «no sirve ejemplo»): antes solo rellenaba el cuadro y había que
+  // acordarse de pulsar Ejecutar aparte. Con el cuadro ya mostrando el ejemplo por defecto
+  // (primera vez sin nada guardado), pulsar «Ejemplo» no cambiaba nada a la vista — parecía
+  // que el botón no hacía nada. Ahora también lo ejecuta, como un botón «Probar».
+  $("hk-script-ej").addEventListener("click", () => { txt.value = EJEMPLO; ir(); });
   $("hk-script-un").addEventListener("click", () => {
     for (let k = 0; k < Math.max(1, hechas); k++) (window as any).__hekatanUndo?.();
     est.style.color = "#94a3b8"; est.textContent = "Deshecho.";
