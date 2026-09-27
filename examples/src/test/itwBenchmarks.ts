@@ -50,11 +50,25 @@ function mallaQuad(
   return idx;
 }
 
-/** Membrana pura en X-Z: fuera del plano (Uy, Rx, Rz) sujeto en todos los nudos. */
-function membranaPura(nNodos: number): Map<number, Sup> {
-  const s = new Map<number, Sup>();
-  for (let i = 0; i < nNodos; i++) s.set(i, [false, true, false, true, false, true]);
-  return s;
+/**
+ * Membrana pura en X-Z. Antes (hasta el 27-sep-2026) fijaba a mano Uy, Rx, Rz en
+ * TODOS los nudos «para forzar el plano». Jorge, viendo el vídeo del test I:
+ * «los nodos son unos triángulos, esos no son nudos, arréglalo» — con esa marca
+ * cada uno de los 14 nudos salía dibujado como apoyo (triángulo azul), tapando
+ * los DOS apoyos reales del Fig.3 (nudo inferior izquierdo y derecho) entre un
+ * bosque de marcadores iguales.
+ *
+ * Medido antes de tocarlo (`getZerosIndices` de deform.cpp, ver CLAUDE.md): un
+ * elemento membrana no aporta NINGUNA rigidez a Uy/Rx/Rz en ningún nudo — esas
+ * tres columnas de K son cero en TODA la estructura, así que el propio solver ya
+ * las saca del sistema y las deja en 0, sin que haga falta restringirlas a mano.
+ * Comparado nudo a nudo (patch test I): flecha y giro salen IDÉNTICOS a 14
+ * decimales con y sin esta función — es redundante para el cálculo y solo
+ * ensuciaba el dibujo. Los `fijar()` de cada test (los apoyos REALES del papel)
+ * siguen intactos: ahora son los ÚNICOS que se ven.
+ */
+function membranaPura(_nNodos: number): Map<number, Sup> {
+  return new Map();
 }
 function fijar(sup: Map<number, Sup>, id: number, gdl: number[]) {
   const a = (sup.get(id) || [false, false, false, false, false, false]).slice() as Sup;
@@ -282,8 +296,12 @@ export const itwHemisferio: ExampleDef = {
   name: "ITW IV — hemisferio pinzado con agujero 18°",
   category: "2️⃣ Shells · 🐚 Cáscaras",
   benchmark: true,
+  // 27-sep-2026 (Jorge: «¿por qué no se ven todos los resultados de cáscara para
+  // escoger el que es?»): tenía la lista recortada a 4. Los otros tres ITW ya usan
+  // ...RES (los 19 campos); este era el único distinto sin ninguna razón anotada.
+  // ...RES primero: pisa su propio `defaultShellResult` (membraneXX) con el de abajo.
+  ...RES,
   defaultShellResult: "vonMises",
-  availableShellResults: ["vonMises", "membraneXX", "membraneYY", "displacementX"],
   params: {
     R:   { default: 10, min: 5, max: 20, step: 1, label: "R radio (m)" },
     t:   { default: 0.04, min: 0.01, max: 0.2, step: 0.01, label: "t espesor (m)" },
@@ -343,5 +361,86 @@ export const itwHemisferio: ExampleDef = {
       console.log(`[ITW IV] desplazamiento bajo la carga = ${ux.toFixed(6)} (referencia 0.094)`);
     } catch (e) { console.error("itw-hemisferio:", e); }
     states.objects3D.val = [];
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §4.1 — PATCH TEST de un elemento sesgado, tracción uniforme (Figura 2)
+//
+// El único elemento del paper que faltaba. Fig. 2: cuadrilátero sesgado con el
+// borde izquierdo vertical contra un muro, pin abajo y roller arriba (los
+// apoyos MÍNIMOS que dibuja), y dos cargas P en +X en los dos nodos de la
+// derecha. Eso tiene que producir un estado de tensión CONSTANTE:
+//
+//     Nx exacto = 2P / h   (equilibrio del patch),   Ny = Nxy = 0
+//
+// Si el elemento devuelve Nx ≈ 2P/h y Ny = Nxy ≈ 0 pasa el patch test; si no,
+// el drilling o la interpolación andan mal. No depende de la malla: aquí no la
+// hay, es UN elemento (por eso es el test más duro de la serie).
+// ─────────────────────────────────────────────────────────────────────────────
+export const itwPatch41: ExampleDef = {
+  id: "itw-patch-41",
+  name: "ITW 4.1 — Patch test de un elemento sesgado (Fig 2)",
+  category: "2️⃣ Shells · 🕸 Membranas",
+  benchmark: true,
+  ...RES,
+  params: {
+    t:  { default: 1, min: 0.1, max: 2, step: 0.1, label: "t espesor (m)" },
+    E:  { default: 100, min: 10, max: 1e6, step: 10, label: "E (kN/m²)" },
+    nu: { default: 0.3, min: 0, max: 0.45, step: 0.05, label: "ν" },
+    P:  { default: 1, min: 0.1, max: 10, step: 0.1, label: "P (kN)" },
+    h:  { default: 2, min: 1, max: 6, step: 0.5, label: "h alto del borde" },
+    a:  { default: 3, min: 1, max: 8, step: 0.5, label: "a arriba (sesgo)" },
+    b:  { default: 4, min: 1, max: 8, step: 0.5, label: "b abajo (sesgo)" },
+  },
+  build(p, states) {
+    // Plano X-Z (Y = normal), igual que el resto de los tests del paper.
+    const nodes: Node[] = [
+      [0, 0, 0],        // 0 · abajo izquierda (pin)
+      [p.b, 0, 0],      // 1 · abajo derecha   (carga P)
+      [p.a, 0, p.h],    // 2 · arriba derecha  (carga P)
+      [0, 0, p.h],      // 3 · arriba izquierda (roller)
+    ];
+    const elements: Element[] = [[0, 1, 2, 3]];
+
+    const supports = membranaPura(nodes.length);
+    fijar(supports, 0, [0, 2]);    // pin: Ux y Uz
+    fijar(supports, 3, [0]);       // roller contra el muro: solo Ux
+
+    const loads = new Map<number, Car>();
+    loads.set(1, [p.P, 0, 0, 0, 0, 0]);
+    loads.set(2, [p.P, 0, 0, 0, 0, 0]);
+
+    states.nodes.val = nodes;
+    states.elements.val = elements;
+    states.nodeInputs.val = { supports, loads };
+    states.elementInputs.val = inputsMembrana(elements.length, p.t, p.E, p.nu);
+    try {
+      states.deformOutputs.val = deform(nodes, elements, { supports, loads }, states.elementInputs.val);
+      states.analyzeOutputs.val = analyze(nodes, elements, states.elementInputs.val, states.deformOutputs.val);
+      const m = states.analyzeOutputs.val;
+      console.log(`[ITW 4.1] Nx = ${(m.membraneXXcentro?.get(0) ?? NaN).toFixed(6)} `
+        + `Ny = ${(m.membraneYYcentro?.get(0) ?? NaN).toFixed(6)} `
+        + `Nxy = ${(m.membraneXYcentro?.get(0) ?? NaN).toFixed(6)}  (exacto Nx = ${(2 * p.P / p.h).toFixed(6)})`);
+    } catch (e) { console.error("itw-patch-41:", e); }
+    states.objects3D.val = [];
+  },
+  computedLabels(p, states) {
+    const m = states.analyzeOutputs.val;
+    const nx = m?.membraneXXcentro?.get(0) ?? NaN;
+    const ny = m?.membraneYYcentro?.get(0) ?? NaN;
+    const nxy = m?.membraneXYcentro?.get(0) ?? NaN;
+    const j = m?.membraneXXjoint?.get(0) ?? [];
+    const exacto = 2 * p.P / p.h;                      // N/m = fuerza total 2P sobre h
+    const err = (nx / exacto - 1) * 100;
+    const rango = j.length ? Math.max(...j) - Math.min(...j) : NaN;
+    return {
+      "Nx calculado": nx.toExponential(5) + " N/m",
+      "Nx exacto": exacto.toExponential(5) + " N/m",
+      "error": err.toFixed(4) + " %",
+      "Ny / Nxy": `${ny.toExponential(2)} / ${nxy.toExponential(2)}  (deben ser ≈ 0)`,
+      "rango Nx (4 joints)": rango.toExponential(2) + " (constante ⇒ pasa)",
+      "por qué": "patch test: un solo elemento sesgado, tiene que devolver tensión CONSTANTE",
+    };
   },
 };
