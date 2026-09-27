@@ -152,6 +152,87 @@ rec 0,0 {3*luz},{alto}
 const LS = "hekatan.script.texto";
 let ventana: HTMLDivElement | null = null;
 
+/**
+ * Lleva lo dibujado a la parte del visor que se VE.
+ *
+ * 27-sep-2026 (Jorge): el script dibujaba, pero el dibujo quedaba debajo de la guía «Cómo usar ·
+ * cuatro pasos» (que el lienzo abre la primera vez) y de esta misma ventana: solo asomaba una
+ * esquina. El encuadre normal centra el modelo en el visor ENTERO, que está medio tapado por la
+ * cinta de arriba, los paneles, la línea de órdenes y el script.
+ *
+ * No se suponen medidas: se pregunta a la pantalla, punto a punto, dónde lo de encima es el lienzo
+ * (`elementFromPoint`), se busca el rectángulo despejado más grande y se aleja y desplaza la
+ * cámara para que lo que el encuadre puso en el centro del visor caiga en el centro de ese hueco.
+ */
+function encuadrarEnZonaLibre(): void {
+  const w = window as any;
+  try { w.__hekatanRibbon?.guia?.(false); } catch { /* sin cinta: nada que cerrar */ }
+  w.__hekatanAutoFit?.();
+  // el encuadre hace una segunda pasada en el fotograma siguiente: se corrige DESPUÉS de ella
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try {
+      const visor = document.querySelector("#viewer") as any;
+      const ctx = visor?.__ctx;
+      const lienzo: HTMLElement | undefined = ctx?.rendererElm;
+      if (!ctx || !lienzo) return;
+      const R = lienzo.getBoundingClientRect();
+      if (R.width < 50 || R.height < 50) return;
+      // 1) rejilla de puntos: ¿manda el lienzo ahí?
+      const PASO = 20, nx = Math.floor(R.width / PASO), ny = Math.floor(R.height / PASO);
+      const libre: boolean[][] = [];
+      for (let j = 0; j < ny; j++) {
+        libre.push([]);
+        for (let i = 0; i < nx; i++) {
+          const x = R.left + (i + 0.5) * PASO, y = R.top + (j + 0.5) * PASO;
+          libre[j].push(document.elementFromPoint(x, y) === lienzo);
+        }
+      }
+      // 2) el rectángulo libre más grande (histograma por filas)
+      const alto = new Array(nx).fill(0);
+      let mejor = { a: 0, i0: 0, i1: 0, j0: 0, j1: 0 };
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) alto[i] = libre[j][i] ? alto[i] + 1 : 0;
+        for (let i = 0; i < nx; i++) {
+          let h = alto[i];
+          for (let k = i; k < nx && alto[k] > 0 && h > 0; k++) {
+            h = Math.min(h, alto[k]);
+            const a = h * (k - i + 1);
+            if (a > mejor.a) mejor = { a, i0: i, i1: k, j0: j - h + 1, j1: j };
+          }
+        }
+      }
+      if (mejor.a < 16) return;                                  // casi todo tapado: no se toca
+      const fw = (mejor.i1 - mejor.i0 + 1) * PASO, fh = (mejor.j1 - mejor.j0 + 1) * PASO;
+      const fcx = R.left + mejor.i0 * PASO + fw / 2, fcy = R.top + mejor.j0 * PASO + fh / 2;
+      const f = Math.min(1, 0.92 * Math.min(fw / R.width, fh / R.height));   // cuánto hay que encoger
+      const dpx = fcx - (R.left + R.width / 2), dpy = fcy - (R.top + R.height / 2);
+      if (f > 0.97 && Math.abs(dpx) < 8 && Math.abs(dpy) < 8) return;        // ya estaba a la vista
+      const cam = ctx.camera, ctl = ctx.controls;
+      cam.updateMatrixWorld();
+      const e = cam.matrixWorld.elements;                         // columnas 0 y 1: derecha y arriba
+      const der = [e[0], e[1], e[2]], arr = [e[4], e[5], e[6]];
+      let upp: number;                                            // unidades de modelo por píxel
+      if (cam.isOrthographicCamera) {
+        cam.zoom *= f; cam.updateProjectionMatrix();
+        upp = (cam.top - cam.bottom) / cam.zoom / R.height;
+      } else {
+        const t = ctl.target, p = cam.position;
+        const d = Math.hypot(p.x - t.x, p.y - t.y, p.z - t.z) / f;   // alejarse = encoger
+        const k = 1 / f;
+        p.set(t.x + (p.x - t.x) * k, t.y + (p.y - t.y) * k, t.z + (p.z - t.z) * k);
+        upp = (2 * d * Math.tan((cam.fov * Math.PI) / 360)) / R.height;
+      }
+      // para que el modelo se vaya a la derecha/abajo en pantalla, la cámara va a la izquierda/arriba
+      const sx = -dpx * upp, sy = dpy * upp;
+      const s = [der[0] * sx + arr[0] * sy, der[1] * sx + arr[1] * sy, der[2] * sx + arr[2] * sy];
+      cam.position.set(cam.position.x + s[0], cam.position.y + s[1], cam.position.z + s[2]);
+      ctl.target.set(ctl.target.x + s[0], ctl.target.y + s[1], ctl.target.z + s[2]);
+      ctl.update?.();
+      ctx.render?.();
+    } catch { /* si la cámara no se deja, queda el encuadre normal */ }
+  }));
+}
+
 export function abrirScriptCad(h: ScriptHooks): void {
   if (ventana) { ventana.style.display = "block"; (ventana.querySelector("textarea") as HTMLTextAreaElement)?.focus(); return; }
   const v = document.createElement("div");
@@ -193,7 +274,7 @@ export function abrirScriptCad(h: ScriptHooks): void {
     hechas = r.ordenes;
     est.style.color = r.error ? "#f87171" : "#4ade80";
     est.textContent = r.error ? `✕ ${r.error}` : `✓ ${r.ordenes} órdenes ejecutadas`;
-    (window as any).__hekatanAutoFit?.();
+    encuadrarEnZonaLibre();
   };
   $("hk-script-go").addEventListener("click", ir);
   txt.addEventListener("keydown", (e) => {
