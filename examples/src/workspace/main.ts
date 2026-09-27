@@ -7709,6 +7709,24 @@ try {
     run: (t) => run(t),
     finalizar: () => { (window as any).__hekatanFinalizeDraw?.(); activarTool("select"); },
     herramienta: () => toolActual(),
+    // 27-sep-2026 (Jorge: «no funciona botón Ejemplo»): desde la pantalla de INICIO no hay lienzo
+    // cargado; el script corría («✓ 6 órdenes ejecutadas», «Rectángulo dibujado» en la línea de
+    // órdenes) y en pantalla no aparecía NADA, porque quien convierte lo dibujado en modelo es el
+    // lienzo (`new-blank`). Medido en el sitio público: con ?t=new-blank el mismo script dibuja.
+    // Sin modelo → se abre el lienzo y se espera a que monte. Con OTRO modelo cargado no se pisa:
+    // se avisa, en vez de decir que todo fue bien.
+    preparar: async () => {
+      const LIENZOS = ["new-blank", "cad-draw", "cad-editor", "drawing"];
+      if (currentExample && LIENZOS.includes(currentExample.id)) return;
+      if (currentExample) {
+        return "hay un modelo cargado: abre el lienzo (Nuevo modelo → «Lienzo en blanco») " +
+          "o pásalo al lienzo con «Editar el modelo que ya tienes»";
+      }
+      const ex = examplesRegistry.find((e) => e.id === "new-blank");
+      if (!ex) return "no encuentro el lienzo en blanco";
+      loadExample(ex);
+      await new Promise((r) => setTimeout(r, 500));   // el lienzo monta su panel y su plano de trabajo
+    },
   });
   (window as any).__hekatanCadScript = { abrir: abrirScript };
   especial("script", ["scr", "guion", "macro"], "SCRIPT — pegar órdenes", abrirScript);

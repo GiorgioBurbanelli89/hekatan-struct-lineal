@@ -24,6 +24,9 @@ export interface ScriptHooks {
   finalizar: () => void;
   /** Herramienta activa ("select" si ninguna). */
   herramienta: () => string;
+  /** Antes de ejecutar: deja listo el lienzo donde se dibuja. Si devuelve un texto, es el motivo
+   *  por el que NO se puede dibujar ahora: se enseña en rojo y no se ejecuta nada. */
+  preparar?: () => Promise<string | void> | string | void;
 }
 
 const FUNC: Record<string, unknown> = {
@@ -181,7 +184,11 @@ export function abrirScriptCad(h: ScriptHooks): void {
   let hechas = 0;
   const ir = async () => {
     try { localStorage.setItem(LS, txt.value); } catch { /* sin almacenamiento */ }
-    est.style.color = "#94a3b8"; est.textContent = "Ejecutando…";
+    est.style.color = "#94a3b8"; est.textContent = "Preparando el lienzo…";
+    let aviso: string | void;
+    try { aviso = await h.preparar?.(); } catch (e: any) { aviso = String(e?.message ?? e); }
+    if (aviso) { est.style.color = "#f87171"; est.textContent = `✕ ${aviso}`; return; }
+    est.textContent = "Ejecutando…";
     const r = await ejecutarScript(txt.value, h, (n, t) => { est.textContent = `Ejecutando… ${n}/${t}`; });
     hechas = r.ordenes;
     est.style.color = r.error ? "#f87171" : "#4ade80";
