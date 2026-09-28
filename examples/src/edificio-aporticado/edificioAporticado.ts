@@ -357,7 +357,7 @@ export const edificioAporticado: ExampleDef = {
       if (Fz > 0 && Fz > Math.abs(minFz)) { minFz = Fz; minFz_nodo = idx; }   // tracción (uplift)
       if (Math.abs(Mx) > Math.abs(maxMx)) maxMx = Mx;
       if (Math.abs(My) > Math.abs(maxMy)) maxMy = My;
-      // P en compresión: usamos |Fz| (la convención de signo del solver awatif
+      // P en compresión: usamos |Fz| (la convención de signo del solver
       // varía y aquí solo necesitamos la magnitud para dimensionar la zapata).
       // El uplift se detecta por separado en el branch `Fz > 0 && Fz > minFz`.
       baseRows.push({ idx, x: n[0], y: n[1], P_kN: Math.abs(Fz), Mx_kN: Mx, My_kN: My });

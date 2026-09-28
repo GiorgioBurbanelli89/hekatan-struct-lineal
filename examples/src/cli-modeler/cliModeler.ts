@@ -301,7 +301,7 @@ export function parseCliCommands(text: string): ParsedModel {
     doSolve: false,
     errors: [],
   };
-  // Modo BLOQUE estilo awatif (nodes ENCABEZADO, luego solo coords):
+  // Modo BLOQUE (nodes ENCABEZADO, luego solo coords):
   //   nodes
   //   0 0 0
   //   5 0 0
@@ -341,7 +341,7 @@ export function parseCliCommands(text: string): ParsedModel {
         continue;
       }
       if (blockMode === "elements" && nums.length >= 2) {
-        // En modo awatif los índices son 0-based; los convertimos a IDs 1-based
+        // En modo bloque los índices son 0-based; los convertimos a IDs 1-based
         autoFrameIdx++;
         m.frames.push({
           id: autoFrameIdx, nI: nums[0]+1, nJ: nums[1]+1,

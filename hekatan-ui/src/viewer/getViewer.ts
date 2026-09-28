@@ -26,6 +26,7 @@ import { shellResults } from "./objects/shellResults";
 import { frameColorMap } from "./objects/frameColorMap";
 import { setupHover } from "./objects/hover";
 import { tensionEnNudos, type CampoSolido } from "./objects/utils/solidos";
+import { versionCorte } from "./objects/utils/corteSolidos";
 import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
@@ -172,6 +173,30 @@ export function getViewer({
     posX: 0, posY: 0, posZ: 0,
     invertX: false, invertY: false, invertZ: false,
   };
+  let hayCorte = false;
+  let planosActivos: THREE.Plane[] = [];
+  const SIN_PLANOS: THREE.Plane[] = [];
+  /**
+   * Los planos de corte, material a material. Three.js no propaga `renderer.clippingPlanes`
+   * a los materiales, y los objetos que se crean DESPUÉS (símbolos de apoyo, flechas de carga)
+   * nacen sin ellos: por eso se reparte también antes de cada pintado cuando hay un corte.
+   * Solo se toca el material al que le cambia el plano, para no recompilar en cada cuadro.
+   */
+  function repartirPlanos() {
+    // Se mira el MODELO, no una marca que pongan las mallas al redibujarse.
+    const haySolidos = (mesh?.elements?.rawVal ?? []).some((e) => e.length === 8);
+    scene.traverse((obj: THREE.Object3D) => {
+      const o = obj as THREE.Mesh;
+      if (!o.material) return;
+      const quiere = (haySolidos && obj.userData?.pintaSolidos) ? SIN_PLANOS : planosActivos;
+      for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+        if ((m as THREE.Material).clippingPlanes !== quiere) {
+          (m as THREE.Material).clippingPlanes = quiere;
+          (m as THREE.Material).needsUpdate = true;
+        }
+      }
+    });
+  }
   function applyClipping() {
     const s = (window as any).__hekatanClip;
     const planes: THREE.Plane[] = [];
@@ -190,20 +215,17 @@ export function getViewer({
       clipPlaneZ.constant = s.invertZ ? -s.posZ : s.posZ;
       planes.push(clipPlaneZ);
     }
-    renderer.clippingPlanes = planes;
-    // En Three.js renderer.clippingPlanes NO se propaga automáticamente a los
-    // materiales — hay que setear material.clippingPlanes en cada material
-    // de la escena para que el clipping tenga efecto visual.
-    scene.traverse((obj: THREE.Object3D) => {
-      const mesh = obj as THREE.Mesh;
-      if (mesh.material) {
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const m of mats) {
-          (m as THREE.Material).clippingPlanes = planes;
-          (m as THREE.Material).needsUpdate = true;
-        }
-      }
-    });
+    // Los sólidos se cortan por ELEMENTOS, no en la tarjeta gráfica: así el corte sale
+    // relleno y no se ve el hueco (objects/utils/corteSolidos.ts).
+    versionCorte.val++;
+    // ⚠️ `renderer.clippingPlanes` son planos GLOBALES: recortan TODO material con `clipping`,
+    // diga lo que diga su `material.clippingPlanes`. Con sólidos en el modelo se dejan vacíos
+    // y el corte va solo por los planos de cada material (los de abajo); si no, la cara del
+    // corte —que cae justo en el plano— salía a puntitos.
+    hayCorte = planes.length > 0;
+    planosActivos = planes;
+    renderer.clippingPlanes = (mesh?.elements?.rawVal ?? []).some((e) => e.length === 8) ? [] : planes;
+    repartirPlanos();
     // ── SYNC TWEAKPANE DOM ──
     // Cuando se modifica window.__hekatanClip directamente (CLI, programáticamente,
     // desde otro Tweakpane que comparte el mismo objeto), Tweakpane NO detecta el
@@ -391,7 +413,7 @@ export function getViewer({
     gridObj.visible = settings.gridVisible.rawVal;
     scene.add(gridObj);
     applyGridOpacity();  // re-aplica el factor del slider sobre el nuevo gridObj
-    // Reemplazar axes (tamaño = gridSize / 2 por convención awatif)
+    // Reemplazar axes (tamaño = gridSize / 2 por convención)
     scene.remove(axesObj);
     axesObj.traverse((o: any) => {
       o.geometry?.dispose?.();
@@ -542,6 +564,7 @@ export function getViewer({
   let splitListenersAttached = false;
 
   function viewerRender() {
+    if (hayCorte) repartirPlanos();
     const w = viewerElm.clientWidth || 1;
     const h = viewerElm.clientHeight || 1;
     if (!splitMode || !splitCamera) {
@@ -800,7 +823,7 @@ export function getViewer({
         // no propaga renderer.clippingPlanes): con un corte activo, la referencia
         // IFC reconstruida tras cada clic volvía a verse entera y la mirilla
         // tocaba la pared del fondo (x = 12.7 con el corte en 16.5).
-        if (renderer.clippingPlanes.length) applyClipping();
+        if (hayCorte) applyClipping();
       }
       viewerRender();
     });

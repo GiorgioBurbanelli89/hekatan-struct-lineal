@@ -103,7 +103,7 @@ export function localStiffness12(p: FrameElementProps, L: number): number[][] {
 }
 
 /** Direction cosines 3×3: rows are local x, y, z axes in global coords.
- *  Convención awatif/Three.js Z-up: cuando el elemento es vertical,
+ *  Convención Three.js Z-up: cuando el elemento es vertical,
  *  local_y = global_y (default), local_z = -global_x.
  */
 export function directionCosines(ni: Node, nj: Node): { L: number; R: number[][] } {

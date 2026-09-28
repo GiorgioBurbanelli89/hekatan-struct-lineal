@@ -18,7 +18,7 @@
  * pressure_Mx / pressure_My`. Esto permite verificar superposición y comparar
  * con Calcpad caso por caso.
  *
- * Reconstruido desde el bundle gh-pages del repo awatif-workspace (origin/gh-pages).
+ * Reconstruido desde el bundle gh-pages del repo de antes (origin/gh-pages).
  */
 import * as THREE from "three";
 import van from "vanjs-core";

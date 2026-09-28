@@ -1,7 +1,7 @@
 /**
  * OpenSees Import/Export — Tcl (.tcl) and Python (.py) formats
  *
- * Awatif ↔ OpenSees format conversion for structural models.
+ * Hekatan ↔ OpenSees format conversion for structural models.
  * Supports: nodes, elements (elasticBeamColumn), fixities, loads.
  */
 import type { Node, Element, NodeInputs, ElementInputs } from "hekatan-fem";

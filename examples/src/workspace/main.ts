@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- *  Workspace — patrón awatif puro con Tweakpane
+ *  Workspace — un solo entorno con Tweakpane
  *  Cada ejemplo se carga como módulo autónomo via ?t=<example> o selector
  * =============================================================================
  *
@@ -289,7 +289,7 @@ function sellarSalidas(sello: string, dout?: DeformOutputs, aout?: AnalyzeOutput
   if (aout) aout.caseId = sello;
 }
 (window as any).__hekatanCaseId = () => caseId.rawVal;
-// Drawing states (awatif-style) — mouse interactivo + raycaster nativo de
+// Drawing states — mouse interactivo + raycaster nativo de
 // hekatan-ui. Solo se usa en el ejemplo cad-draw (otros los ignoran).
 // ── Drawing state — persistido en localStorage ──
 // Antes era memoria pura: cada reload perdía los nodos dibujados con CAD.
@@ -864,6 +864,15 @@ function loadExample(ex: ExampleDef) {
   // columnas/vigas seguían invisibles. Forzamos defaults ON aquí para
   // que cada ejemplo arranque con la superestructura visible.
   ponerFactoresDelCaso();
+  // Los planos de corte no se heredan: un ejemplo que abre cortado (el bulbo de presiones)
+  // dejaba cortado al siguiente. El que quiera su corte lo pide en su `build`.
+  {
+    const c = (window as any).__hekatanClip;
+    if (c && (c.enableX || c.enableY || c.enableZ)) {
+      c.enableX = c.enableY = c.enableZ = false;
+      (window as any).__hekatanClipApply?.();
+    }
+  }
   ex.build?.(toSIParams(), states, modalPanel);
   // SELLO del modelo recien cargado (ver `nuevoSello`).
   sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
@@ -4395,7 +4404,7 @@ function buildParamsPane() {
     // Ya NO hay boton que saque al usuario de la app: el ejemplo esta puesto en
     // el lienzo (ver `mostrarEjemploEmbebido`). Aqui solo queda recargarlo.
     // Sin carteles: el ejemplo ya está en el lienzo con sus controles a la vista. Solo el botón
-    // de recargar, que es lo único que hace falta (22-sep-2026, Jorge: «nada de awatif»).
+    // de recargar, que es lo único que hace falta (22-sep-2026, Jorge: «nada del proyecto de origen»).
     pane.addButton({ title: "↻ Recargar el ejemplo" }).on("click", () => {
       const f = document.getElementById(EMBEBIDO_ID) as HTMLIFrameElement | null;
       if (f) f.setAttribute("src", url);
@@ -5232,7 +5241,7 @@ solve`;
       applyCliScript();
     });
     fCli.addButton({ title: "📋 Pórtico 2D (bloques)" }).on("click", () => {
-      // Sintaxis compacta tipo awatif: encabezado una vez y luego solo numeros.
+      // Sintaxis compacta: encabezado una vez y luego solo numeros.
       //
       // IMPORTANTE — convención de IDs en bloques:
       //   • `nodes` block — auto-ID 1,2,3,4 (1-based, parseador hace ++ ANTES de set)
@@ -7227,7 +7236,7 @@ try {
     mesh: { nodes, elements, nodeInputs, elementInputs, deformOutputs, analyzeOutputs, caseId },
     objects3D,
     settingsObj,
-    // Drawing nativo de hekatan-ui (awatif). Mouse handler + raycaster + snap
+    // Drawing nativo de hekatan-ui. Mouse handler + raycaster + snap
     // a grid + plane indicator funcionan automáticamente. Solo activo en cad-draw.
     drawingObj: {
       points: drawingPoints,
@@ -8660,7 +8669,7 @@ window.addEventListener("keydown", (e) => {
 
 // ── Sincronizar drawingPoints/polylines a window.__hekatanCliScript ──
 // Cada vez que el usuario dibuja un punto o polyline (con mouse en el
-// viewer), se regenera el script CLI con sintaxis awatif (bloques
+// viewer), se regenera el script CLI con sintaxis de bloques (bloques
 // nodes/elements). Eso hace que el cad-draw y cli-modeler queden
 // sincronizados sin código mouse handler custom de mi parte.
 van.derive(() => {

@@ -6,8 +6,8 @@
  *
  * ── Por qué existe (11-sep-2026) ────────────────────────────────────────────────
  * Grabando un tutorial, un pórtico plano visto DE FRENTE no enseñaba su momento: el 3D
- * dibujaba V2 y M3 en horizontal, fuera del plano del pórtico. Era la tríada VIEJA de
- * awatif (`getTransformationMatrixBeam`: eje y horizontal, z hacia arriba), que se
+ * dibujaba V2 y M3 en horizontal, fuera del plano del pórtico. Era la tríada de antes
+ * (`getTransformationMatrixBeam`: eje y horizontal, z hacia arriba), que se
  * quedó en el visor cuando el cálculo pasó a los ejes de CSI (eje 2 hacia arriba). Y
  * el momento salía con el signo contrario al de ETABS: en un pórtico con carga de
  * gravedad marcaba +16 en los extremos de la viga y −21 en el centro; ETABS da −16

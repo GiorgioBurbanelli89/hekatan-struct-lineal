@@ -2,7 +2,7 @@
  * calcExportStandalone.ts — Export full standalone FEM scripts
  *
  * Generates complete MATLAB/Octave (.m) or Python/NumPy (.py) scripts
- * with ALL FEM functions implemented (no awatif dependency).
+ * with ALL FEM functions implemented (no external dependency).
  * The exported script is independently verifiable.
  *
  * Includes: beam_stiffness_3d, transform_3d, assemble, apply_bcs, solve

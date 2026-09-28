@@ -1,5 +1,5 @@
 /**
- * Awatif Viewer Theme System
+ * Hekatan Viewer Theme System
  * Supports dark (default) and light themes.
  */
 

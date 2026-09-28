@@ -1,6 +1,6 @@
 /**
  * ETABS .e2k File Parser
- * Converts ETABS text model files into awatif mesh data.
+ * Converts ETABS text model files into Hekatan mesh data.
  *
  * Supported sections:
  *   CONTROLS (units), STORIES, MATERIAL PROPERTIES, FRAME SECTIONS,

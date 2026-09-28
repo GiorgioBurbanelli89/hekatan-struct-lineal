@@ -5,6 +5,7 @@ import { Lut } from "three/addons/math/Lut.js";
 import van, { State } from "vanjs-core";
 import { fixedColorMapRange } from "../viewer/getViewer";
 import { pielDeSolidos } from "../viewer/objects/utils/solidos";
+import { versionCorte, mostrarSegunCorte } from "../viewer/objects/utils/corteSolidos";
 
 // CSI contour colormap — EXTRAÍDO (no inventado) de la tabla "OPTIONS - COLORS - OUTPUT",
 // fila "Screen"/"Screen Classic", de archivos escritos por los TRES programas (19-sep-2026):
@@ -270,6 +271,7 @@ export function getColorMap(
   // Marcar como área shell con colormap para que setupShellHoverTooltip filtre
   // SOLO los Q4 reales (no cilindros de frames con userData.isFrameSection).
   colorMap.userData.isShellArea = true;
+  colorMap.userData.pintaSolidos = true;   // con sólidos, el corte va por elementos (getViewer)
   colorMap.name = "__hekatan_shell_colormap";
 
   // Update — al cambiar nodes/elements/values, regenerar geometría + scalar attribute
@@ -298,7 +300,9 @@ export function getColorMap(
     });
     // Sólidos H8: se pinta su PIEL (las caras de un solo elemento). Los valores ya van por
     // nudo, así que basta añadir los triángulos de esas caras al mismo índice.
-    for (const c of pielDeSolidos(elements.val)) {
+    versionCorte.val;            // con un corte puesto, el sólido se corta por elementos
+    const piel = pielDeSolidos(elements.val, mostrarSegunCorte(elements.val, nodes.val));
+    for (const c of piel) {
       const [a, b, cc, d] = c.nudos;
       triIndices.push(a, b, cc);
       triIndices.push(a, cc, d);

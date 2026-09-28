@@ -189,12 +189,10 @@ export interface ExampleDef {
    */
   guide?: string[];
   /**
-   * Si se define, este ejemplo NO usa el flujo Tweakpane del workspace.
-   * Es un ejemplo "legacy" del upstream awatif (1d-mesh, 2d-mesh, beams, color-map…)
-   * con su propia UI VanJS toolbar. Al seleccionarlo en el selector, el workspace
-   * muestra un botón "Abrir ejemplo →" que navega a la página standalone
-   * (`/<id>/index.html`). Cuando esto está presente, `params` y `build` son
-   * ignorados (pueden estar vacíos o no existir).
+   * Si se define, el ejemplo todavía trae su PROPIO panel y no usa el flujo del
+   * workspace (`params` + `build`, que se ignoran). Se muestra embebido en el
+   * lienzo, sin salir de la página (`mostrarEjemploEmbebido` en `main.ts`).
+   * Lo que toca es graduarlo a `ExampleDef` y quitarle este campo.
    */
   standaloneUrl?: string;
   params?: Record<string, ParamDef>;
@@ -276,7 +274,7 @@ export interface ExampleDef {
   availableShellResults?: string[];
 }
 
-// ── Import de ejemplos (cada uno en su propia carpeta estilo awatif) ──
+// ── Import de ejemplos (cada uno en su propia carpeta) ──
 import { csiImporter } from "../csi-importer/csiImporter";
 import { ifcViewer } from "../ifc-viewer/ifcViewer";
 import { cliModeler } from "../cli-modeler/cliModeler";
@@ -407,12 +405,12 @@ import { itwTodos } from "../itw/itwTests";
 import { plantillas } from "../plantillas/plantillas";
 // Sólidos H8, dentro del workspace (28-sep-2026)
 import { muroContencionSolido } from "../muro-contencion-solido/muroContencionSolido";
+import { bulboPresionesSuelo } from "../bulbo-presiones-suelo/bulboPresionesSuelo";
 // Los que todavía traen su propio panel y se ven embebidos: quedan por graduar
 import {
   ejemplosConPanelPropio,
   legacyBeams,           // Paz 6.3 Space Frame (FRAME 1D)
   solidCubeFEM,          // Cubo H8 (SOLIDO)
-  bulboPresionesSuelo,   // Bulbo presiones (COMBINADO area+spring)
 } from "./ejemplosConPanelPropio";
 
 export const examplesRegistry: ExampleDef[] = [
@@ -593,6 +591,6 @@ export const examplesRegistry: ExampleDef[] = [
 
   // ── Los que quedan con panel propio (los que no son benchmarks) ────
   ...ejemplosConPanelPropio.filter(e =>
-    e.id !== "beams" && e.id !== "solid-cube-fem" && e.id !== "bulbo-presiones-suelo"
+    e.id !== "beams" && e.id !== "solid-cube-fem"
   ),
 ];

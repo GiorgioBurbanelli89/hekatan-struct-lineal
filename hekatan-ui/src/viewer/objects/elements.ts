@@ -4,6 +4,7 @@ import { Mesh, Element, Node } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
 import { getTheme, onThemeChange } from "../../theme";
 import { pielDeSolidos } from "./utils/solidos";
+import { versionCorte, mostrarSegunCorte } from "./utils/corteSolidos";
 
 // Colores por tipo (activos cuando settings.colorByType=true)
 // Pensados para alto contraste sobre fondo oscuro Y claro.
@@ -155,6 +156,9 @@ export function elements(
   onThemeChange((_n, c) => { solidLines.material.color.setHex(c.elementLine); });
   solidLines.frustumCulled = false;
   solidLines.renderOrder = 3;
+  // En un modelo con sólidos a esta malla no se le aplica el recorte de la tarjeta gráfica:
+  // el corte ya viene hecho por elementos (getViewer.applyClipping).
+  solidLines.userData.pintaSolidos = true;
   group.add(solidLines);
 
   // Solid faces for shell elements (Q4 = 4 nodes, CST = 3 nodes)
@@ -179,6 +183,7 @@ export function elements(
   // Marcar para que setupShellHoverTooltip filtre SOLO esto y no cilindros de
   // frames (que tienen muchos vertices y pueden engañar al raycaster).
   shellMesh.userData.isShellArea = true;
+  shellMesh.userData.pintaSolidos = true;
   shellMesh.name = "__hekatan_shell_area";
   group.add(shellMesh);
 
@@ -247,7 +252,9 @@ export function elements(
     // La PIEL de los sólidos H8: las caras que son de un solo hexaedro. De un sólido se
     // dibuja eso, caras y aristas: con las 12 aristas de CADA elemento y `depthTest: false`
     // el bloque salía como una maraña de alambre en la que no se distinguía el contorno.
-    const piel = pielDeSolidos(elems);
+    // Con un plano de corte puesto, el sólido se corta por ELEMENTOS (ver corteSolidos.ts).
+    versionCorte.val;
+    const piel = pielDeSolidos(elems, mostrarSegunCorte(elems, mesh.nodes?.val ?? nodes));
 
     {
       const verts: number[] = [];

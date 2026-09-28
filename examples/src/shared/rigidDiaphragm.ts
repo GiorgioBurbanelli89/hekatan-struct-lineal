@@ -21,7 +21,7 @@
  *  se agrega un resorte lineal de rigidez muy alta (k_p ≈ 1e10 × k_max_diag)
  *  entre el DOF slave y la expresión master del slave.
  *
- *  Awatif-fem soporta springs nodales vía `deform(..., springsList)` — pero
+ *  hekatan-fem soporta springs nodales vía `deform(..., springsList)` — pero
  *  solo self-stiffness (K[gdof,gdof] += k). Para MPC necesitamos coupling
  *  entre DOFs, lo cual requiere extender deform.cpp OR usar un approach
  *  alternativo: AGREGAR EL MASTER COMO NODO + RIGID LINKS (diagonales

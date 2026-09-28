@@ -541,7 +541,7 @@ function parseLegacyFormat(rawLines: string[]): S2kModel {
 }
 
 // ═══════════════════════════════════════════
-// BUILD AWATIF MODEL (shared by both parsers)
+// BUILD HEKATAN MODEL (shared by both parsers)
 // ═══════════════════════════════════════════
 function buildModel(
   units: { force: string; length: string },

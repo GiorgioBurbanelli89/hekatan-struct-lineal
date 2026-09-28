@@ -402,8 +402,8 @@ export function sections(
     const dx = Math.abs(n2[0] - n1[0]);
     const dy = Math.abs(n2[1] - n1[1]);
     const dz = Math.abs(n2[2] - n1[2]);
-    // Vertical if Z-displacement dominates (Y-up: use index 2 for Z in awatif)
-    // In awatif Y-up: vertical elements go along Y axis
+    // Vertical if Z-displacement dominates (Y-up: use index 2 for Z)
+    // In Y-up: vertical elements go along Y axis
     // Z is vertical for edificio, Y is vertical for beams/3d examples
     return (dz > dx && dz > dy) || (dy > dx && dy > dz);
   }

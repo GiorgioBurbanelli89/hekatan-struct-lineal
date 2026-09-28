@@ -86,7 +86,7 @@ export function frameResults(
       );
       const maxResult = findMax(mesh.analyzeOutputs?.rawVal[resultType]);
       // Los ejes y el signo de ETABS (ver utils/diagramaCSI.ts). Antes iba la tríada
-      // vieja de awatif con un `flipAxis` por tipo: V2 y M3 salían en HORIZONTAL, fuera
+      // vieja con un `flipAxis` por tipo: V2 y M3 salían en HORIZONTAL, fuera
       // del plano del pórtico, y el momento con el signo cambiado.
       const ang = (mesh as any).elementInputs?.rawVal?.localAngles?.get?.(index) ?? 0;
       const ejes = ejesCSI(node1, node2, ang);

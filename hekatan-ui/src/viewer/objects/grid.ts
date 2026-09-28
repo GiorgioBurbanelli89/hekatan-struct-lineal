@@ -6,7 +6,7 @@ export type GridPlane = "xy" | "xz" | "yz";
 /**
  * Grid CAD-style multi-plano con líneas MAYORES y MENORES.
  *
- * Antes (awatif): un único `THREE.GridHelper(size, 20)` rotado a XY.
+ * Antes: un único `THREE.GridHelper(size, 20)` rotado a XY.
  * Ahora:
  *   - 1 a 3 planos simultáneos (XY / XZ / YZ), todos centrados en (0,0,0).
  *   - Cada plano: líneas MAYORES (cada `majorStep`) + MENORES (cada `minorStep`).

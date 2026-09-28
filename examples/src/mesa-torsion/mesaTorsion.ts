@@ -400,7 +400,7 @@ export const mesaTorsion: ExampleDef = {
     lines.push(`  Rigid offsets: ${p.rigidOffsets > 0.5 ? `ON (col top -${(p.hViga/2).toFixed(2)}m, viga ends -${(p.bCol/2).toFixed(2)}m)` : "OFF"}`);
     lines.push(``);
     // Comparación DIRECTA, componente contra su homónima. Aquí había un swap
-    // V2↔V3 / M2↔M3 "por convención awatif Z-up vs ETABS" que dejó de aplicar
+    // V2↔V3 / M2↔M3 "por convención Z-up vs ETABS" que dejó de aplicar
     // cuando la tríada de barra pasó a ser la de CSI: eje 1 = i→j, eje 2 = plano
     // vertical hacia arriba, eje 3 = eje1 × eje2. Medido con los defaults, el
     // swap empeoraba la comparación de 16.9 % a 65.7 % de |Δ| medio, y además
@@ -506,7 +506,7 @@ interface FramePicksByCase {
 /**
  * Calcula los picks |max| de N, V₂, V₃, T, M₂, M₃ sobre los elementos frame
  * (cols + vigas, índices [frameStart..frameEnd)).
- * Convención CSI/awatif:
+ * Convención CSI:
  *   normals    → P  (axial, tracción +)
  *   shearsY    → V₂
  *   shearsZ    → V₃

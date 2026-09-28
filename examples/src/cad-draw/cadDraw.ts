@@ -33,7 +33,7 @@ export const cadDraw: ExampleDef = {
   availableShellResults: [],
   params: {},
   build(_p, states) {
-    // El Drawing NATIVO de hekatan-ui (awatif) maneja todo el mouse via
+    // El Drawing NATIVO de hekatan-ui maneja todo el mouse via
     // drawingPoints/polylines en main.ts. NO necesitamos attachMouseHandler.
     // Tampoco syncToCliScript propio: el van.derive de drawingPoints
     // genera el script CLI automaticamente.

@@ -9,7 +9,7 @@
  *   Simply supported along all four edges
  * Purpose: allow direct comparison between Hekatan Struct Lineal and Calcpad FEM.
  */
-// El paquete se renombro a `hekatan-fem`; `awatif-fem` ya no existe y el build
+// El paquete es `hekatan-fem`; el nombre de antes ya no existe y el build
 // de produccion fallaba entero por esta linea.
 import { plateQ4Solve, modalAnalysis, type Node } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
