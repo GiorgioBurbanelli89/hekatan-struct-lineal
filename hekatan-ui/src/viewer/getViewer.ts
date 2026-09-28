@@ -25,6 +25,7 @@ import { drawing, Drawing } from "./drawing/drawing";
 import { shellResults } from "./objects/shellResults";
 import { frameColorMap } from "./objects/frameColorMap";
 import { setupHover } from "./objects/hover";
+import { tensionEnNudos, type CampoSolido } from "./objects/utils/solidos";
 import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
@@ -1332,12 +1333,27 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       : null;
     const scopeSel = colorMapScope.val;   // dependencia: cambiar el selector recalcula
 
-    // ── Solid Results PRIMARY: cuando solidField está activo (no "none"),
-    // usar la data sólida en lugar de la shell. Los campos sólidos se
-    // mapean al mismo canal nodeVonMises porque el ejemplo populates el
-    // map con S33 / σ / etc. via analyzeOutputs.vonMises.
+    // ── Resultados de SÓLIDO: mandan sobre los de cáscara cuando hay uno elegido ──
+    //
+    // Si el modelo trae `analyzeOutputs.solidStress` (sólidos H8 de verdad, de 8 nudos), el
+    // campo elegido se saca de ahí: cada componente extrapolada de Gauss a los nudos y
+    // promediada en el nudo; ux/uy/uz, de la deformada. Hasta el 28-sep-2026 esto leía SIEMPRE
+    // el canal `vonMises` de cáscara, fuera cual fuera el campo: σzz, τxy y ux pintaban lo que
+    // el ejemplo hubiera metido ahí. Ese camino queda solo para los modelos sin `solidStress`.
     const useSolid = solidField && solidField !== "none";
-    const effectiveResultMap = useSolid ? [nodeVonMises, 0] : resultMapper[field];
+    const tensionesSolido = (ao as any)?.solidStress as Map<number, number[][]> | undefined;
+    const haySolidStress = tensionesSolido instanceof Map && tensionesSolido.size > 0;
+    let effectiveResultMap: any = resultMapper[field as keyof typeof resultMapper];
+    if (useSolid) {
+      if (isSolidDisp) {
+        effectiveResultMap = [mesh.deformOutputs?.val?.deformations,
+                              solidField === "ux" ? 0 : solidField === "uy" ? 1 : 2];
+      } else if (haySolidStress && selloOk) {
+        effectiveResultMap = [tensionEnNudos(mesh.elements.val, tensionesSolido, solidField as CampoSolido), 0];
+      } else {
+        effectiveResultMap = [nodeVonMises, 0];
+      }
+    }
 
     const values: number[] = [];
     mesh.nodes.val.forEach((_, i) => {

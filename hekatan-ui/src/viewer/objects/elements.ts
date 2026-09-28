@@ -3,6 +3,7 @@ import van, { State } from "vanjs-core";
 import { Mesh, Element, Node } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
 import { getTheme, onThemeChange } from "../../theme";
+import { pielDeSolidos } from "./utils/solidos";
 
 // Colores por tipo (activos cuando settings.colorByType=true)
 // Pensados para alto contraste sobre fondo oscuro Y claro.
@@ -11,6 +12,7 @@ const COLOR_BEAM    = new THREE.Color(0x00CCCC);  // cyan — frames horizontale
 const COLOR_ZAPATA  = new THREE.Color(0x00CC44);  // verde — shells de cimentación (z≤0)
 const COLOR_LOSA    = new THREE.Color(0x3388FF);  // azul — shells de losa (z>0)
 const COLOR_TRI     = new THREE.Color(0xFFCC00);  // amarillo — elementos triangulares
+const COLOR_SOLIDO  = new THREE.Color(0xB07CFF);  // violeta — sólidos H8
 
 // Clasificación por geometría
 function isVerticalFrame(n1: Node, n2: Node): boolean {
@@ -143,6 +145,18 @@ export function elements(
   lines.renderOrder = 3;
   group.add(lines);
 
+  // Las aristas de la PIEL de los sólidos van aparte y CON prueba de profundidad: en un
+  // sólido las aristas de las caras de atrás no se tienen que ver a través del cuerpo. (Las
+  // de arriba van sin ella para que una barra no quede tapada por la rejilla.)
+  const solidLines = new THREE.LineSegments(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: t.elementLine, vertexColors: false, depthTest: true, transparent: true, opacity: 1 })
+  );
+  onThemeChange((_n, c) => { solidLines.material.color.setHex(c.elementLine); });
+  solidLines.frustumCulled = false;
+  solidLines.renderOrder = 3;
+  group.add(solidLines);
+
   // Solid faces for shell elements (Q4 = 4 nodes, CST = 3 nodes)
   // Uses vertex colors to differentiate walls (vertical) vs slabs (horizontal)
   const shellMat = new THREE.MeshBasicMaterial({
@@ -230,10 +244,36 @@ export function elements(
       return true;
     };
 
+    // La PIEL de los sólidos H8: las caras que son de un solo hexaedro. De un sólido se
+    // dibuja eso, caras y aristas: con las 12 aristas de CADA elemento y `depthTest: false`
+    // el bloque salía como una maraña de alambre en la que no se distinguía el contorno.
+    const piel = pielDeSolidos(elems);
+
+    {
+      const verts: number[] = [];
+      const hechas = new Set<string>();
+      for (const c of piel) {
+        for (let k = 0; k < 4; k++) {
+          const i = c.nudos[k], j = c.nudos[(k + 1) % 4];
+          const clave = i < j ? `${i},${j}` : `${j},${i}`;
+          if (hechas.has(clave)) continue;
+          hechas.add(clave);
+          const a = nodes[i], b = nodes[j];
+          if (!a || !b) continue;
+          verts.push(...a, ...b);
+        }
+      }
+      solidLines.geometry.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+      (solidLines.material as THREE.LineBasicMaterial).color.copy(
+        colorByType ? COLOR_SOLIDO : new THREE.Color(getTheme().elementLine));
+      solidLines.visible = verts.length > 0 && (settings.edges ? settings.edges.rawVal : true);
+    }
+
     // Wireframe buffer + colores por edge (cuando colorByType=ON)
     const wireVerts: number[] = [];
     const wireCols: number[] = [];
     for (const e of elems) {
+      if (e.length === 8) continue;          // los sólidos ya pusieron las aristas de su piel
       if (!showElement(e)) continue;
       let edgeColor: THREE.Color | null = null;
       if (colorByType) {
@@ -359,6 +399,17 @@ export function elements(
         }
       }
     }
+    // Las caras de la piel de los sólidos, después de las cáscaras.
+    for (const c of piel) {
+      const [a, b, cc, d] = c.nudos;
+      if (!(nodes[a] && nodes[b] && nodes[cc] && nodes[d])) continue;
+      const col = colorByType ? COLOR_SOLIDO
+        : isVerticalQ4(nodes[a], nodes[b], nodes[cc], nodes[d]) ? wallColor : slabColor;
+      faceVerts.push(...nodes[a], ...nodes[b], ...nodes[cc]);
+      faceVerts.push(...nodes[a], ...nodes[cc], ...nodes[d]);
+      faceToElem.push(c.elem, c.elem); faceLocal.push(0, 1);
+      for (let v = 0; v < 6; v++) faceColors.push(col.r, col.g, col.b);
+    }
     shellMesh.userData.faceToElem = faceToElem;
     shellMesh.userData.faceLocal = faceLocal;
     if (faceVerts.length > 0) {
@@ -389,7 +440,10 @@ export function elements(
   // Permite ver el colormap "limpio" sin las líneas de delimitación, o ver
   // sólo las líneas sin el shellMesh fill, etc.
   van.derive(() => {
-    if (settings.edges) lines.visible = settings.edges.val;
+    if (settings.edges) {
+      lines.visible = settings.edges.val;
+      solidLines.visible = settings.edges.val && !!solidLines.geometry.attributes.position?.count;
+    }
   });
 
   // ── Toggle independiente para Caras (shellMesh fill) ──

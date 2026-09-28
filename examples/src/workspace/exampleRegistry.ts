@@ -262,6 +262,11 @@ export interface ExampleDef {
    */
   defaultFrameResult?: string;
   /**
+   * Resultado de SÓLIDO por defecto ("vonMises", "sigmaZZ", "uz"…), para los modelos de
+   * hexaedros H8. El visor lo pinta sobre la piel del sólido desde `analyzeOutputs.solidStress`.
+   */
+  defaultSolidResult?: string;
+  /**
    * Lista explícita de opciones de Shell results que aplican a este ejemplo.
    * El dropdown filtra el resto. Si no se declara, se muestran todas.
    * Ej: placas flexión → ["bendingXX", "bendingYY", "bendingXY", "displacementZ"]
@@ -400,13 +405,14 @@ import { itwTodos } from "../itw/itwTests";
 // La PLANTILLA: no es un ejemplo cerrado, es el punto de partida de un modelo
 // nuevo. La abre el boton "Nuevo modelo" de la portada.
 import { plantillas } from "../plantillas/plantillas";
-// Legacy del upstream awatif (rebrandeados, abren standalone)
+// Sólidos H8, dentro del workspace (28-sep-2026)
+import { muroContencionSolido } from "../muro-contencion-solido/muroContencionSolido";
+// Los que todavía traen su propio panel y se ven embebidos: quedan por graduar
 import {
   ejemplosConPanelPropio,
   legacyBeams,           // Paz 6.3 Space Frame (FRAME 1D)
   solidCubeFEM,          // Cubo H8 (SOLIDO)
   bulboPresionesSuelo,   // Bulbo presiones (COMBINADO area+spring)
-  muroContencionSolido,  // Muro de contencion en solidos H8 (vs SAP2000)
 } from "./ejemplosConPanelPropio";
 
 export const examplesRegistry: ExampleDef[] = [
@@ -585,8 +591,8 @@ export const examplesRegistry: ExampleDef[] = [
   // Falta: coser el modelo (releases, muelles de pilote, links) y que el
   // exportador reparta bien deck y losa por grupo.
 
-  // ── Legacy upstream awatif (resto que no son benchmarks) ────
+  // ── Los que quedan con panel propio (los que no son benchmarks) ────
   ...ejemplosConPanelPropio.filter(e =>
-    e.id !== "beams" && e.id !== "solid-cube-fem" && e.id !== "bulbo-presiones-suelo" && e.id !== "muro-contencion-solido"
+    e.id !== "beams" && e.id !== "solid-cube-fem" && e.id !== "bulbo-presiones-suelo"
   ),
 ];

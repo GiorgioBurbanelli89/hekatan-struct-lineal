@@ -5,9 +5,12 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolverHeks } from "../../tests/lib/heks.mjs";
 
 const DIR = "validation/isse";
-const PY = JSON.parse(readFileSync(`${DIR}/_paridad_py.json`, "utf-8"));
 
 export async function medir() {
+  // Se lee AQUÍ y no al importar: `_paridad_py.json` no está en el repositorio (lo escribe el
+  // lado Python), y leyéndolo arriba `npm test` reventaba entero en una copia recién clonada,
+  // antes de que el caso pudiera decir «falta el JSON, me salto» (28-sep-2026).
+  const PY = JSON.parse(readFileSync(`${DIR}/_paridad_py.json`, "utf-8"));
   const filas = [];
   for (const nom of Object.keys(PY)) {
     const ruta = `${DIR}/_paridad_${nom}.heks`;

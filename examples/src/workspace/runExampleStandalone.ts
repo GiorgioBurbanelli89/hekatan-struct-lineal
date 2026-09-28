@@ -470,7 +470,9 @@ export function runExampleStandalone(ex: ExampleDef) {
     settingsObj: {
       deformedShape: true,
       displayScale: -1.5,    // markers y flechas a 0.5× (no tapan el modelo)
-      shellResults: (ex as any).defaultShellResult ?? "displacementZ",
+      // un modelo de sólidos abre con su campo de sólido, no con uno de cáscara
+      shellResults: ex.defaultShellResult ?? (ex.defaultSolidResult ? "none" : "displacementZ"),
+      solidResults: ex.defaultSolidResult ?? "none",
       gridSize: 10,
       showCotas: true,
     },

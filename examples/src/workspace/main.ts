@@ -969,6 +969,16 @@ function loadExample(ex: ExampleDef) {
     const s = (viewerElm as any).__settings;
     if (s?.displayScale) s.displayScale.val = -6;
   }
+  // El campo de SÓLIDO no se hereda del ejemplo anterior: o lo pide este, o ninguno.
+  {
+    const s = (viewerElm as any).__settings;
+    if (s?.solidResults) s.solidResults.val = ex.defaultSolidResult ?? "none";
+    if (ex.defaultSolidResult) {
+      if (s?.shellResults && !ex.defaultShellResult) s.shellResults.val = "none";
+      if (s?.loads) s.loads.val = true;
+      if (s?.supports) s.supports.val = true;
+    }
+  }
   if (ex.defaultShellResult || ex.defaultFrameResult) {
     const s = (viewerElm as any).__settings;
     if (s?.shellResults) s.shellResults.val = ex.defaultShellResult ?? "none";
@@ -1566,8 +1576,11 @@ const internalOf = (label: string): string => LABEL2INTERNAL_RES[label] ?? label
 
 function ajustarResultadosAlModelo() {
   const elems = (states.elements.rawVal ?? []) as number[][];
-  const nCascaras = elems.filter((e) => e.length >= 3).length;
+  // Cáscara = 3 o 4 nudos. Con `>= 3` un hexaedro de 8 contaba como cáscara y un modelo de
+  // solo sólidos ofrecía M11, F22… que no existen en un sólido.
+  const nCascaras = elems.filter((e) => e.length === 3 || e.length === 4).length;
   const nBarras = elems.filter((e) => e.length === 2).length;
+  const nSolidos = elems.filter((e) => e.length === 8).length;
   const selects = Array.from(viewerElm.querySelectorAll<HTMLSelectElement>("select"));
   const marcar = (sel: HTMLSelectElement | undefined, hay: boolean, que: string) => {
     if (!sel) return;
@@ -1588,8 +1601,11 @@ function ajustarResultadosAlModelo() {
   // el de cáscara es el único con «M11»; el de barra, el único con «Axial Force»
   const selShell = selects.find((s) => Array.from(s.options).some((o) => o.value === "M11"));
   const selFrame = selects.find((s) => Array.from(s.options).some((o) => o.value === "Axial Force"));
+  // el de sólido es el único con «σzz»
+  const selSolid = selects.find((s) => Array.from(s.options).some((o) => o.value === "σzz"));
   marcar(selShell, nCascaras > 0, "cáscaras");
   marcar(selFrame, nBarras > 0, "barras");
+  marcar(selSolid, nSolidos > 0, "sólidos");
 
   // ── Y dentro de las de cáscara, apagar las que ESTE modelo no calcula ──────
   //

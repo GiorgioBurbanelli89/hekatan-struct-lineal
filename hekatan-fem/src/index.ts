@@ -10,6 +10,10 @@ export { modalPazCpp as modalAnalysisPaz } from "./modalPazCpp";
 export { slopeSRM } from "./slopeCpp";
 export type { SlopeInput, SlopeOutput } from "./slopeCpp";
 
+// Sólidos H8 (hexaedro de 8 nudos, Gauss 2×2×2, modos incompatibles de Wilson-Taylor)
+export { hex8Solve, hex8Stress } from "./hex8Cpp";
+export type { Vec3, Hex8, Hex8SolveInput, Hex8SolveOutput } from "./hex8Cpp";
+
 export { plateQ4Solve } from "./plateQ4Cpp";
 export { didacticSolveCpp } from "./didacticCpp";
 export type { DidacticSolverResult, DidacticElementData } from "./didacticCpp";

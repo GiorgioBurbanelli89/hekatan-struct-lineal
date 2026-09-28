@@ -113,7 +113,7 @@ export type ElementInputs = {
   frameFixedEnd?: Map<number, number[]>;
   rigidOffsets?: Map<number, [number, number]>; // [offsetI, offsetJ] rigid zone factors (0-1) at each end
   // END LENGTH OFFSETS de CSI: [offI, offJ, rigidZoneFactor] — longitudes en
-  // unidades del modelo y factor 0-1. NO es `rigidOffsets` (el de awatif, que
+  // unidades del modelo y factor 0-1. NO es `rigidOffsets` (el del fork original, que
   // ALARGA la barra): aqui el brazo va DENTRO de la luz y lo que se acorta es
   // el tramo flexible. Con rz = 0 —el defecto de ETABS— no cambia la rigidez.
   endOffsets?: Map<number, [number, number, number]>;
@@ -263,6 +263,14 @@ export type AnalyzeOutputs = {
   membraneXYjoint?: Map<number, number[]>;
   /** Presión de contacto Winkler/soil (kN/m² o tonf/m²). Usado por zapatas con springs. */
   pressure?: Map<number, number[]>;
+  /**
+   * Tensiones de los SÓLIDOS H8, por elemento: 8 puntos de Gauss × [σxx, σyy, σzz, τxy, τyz, τxz]
+   * (kN/m²). El punto de Gauss g lleva los mismos signos (ξ, η, ζ) que el nudo g del elemento.
+   * El visor las extrapola a los nudos y promedia entre elementos (`hekatan-ui … utils/solidos.ts`).
+   */
+  solidStress?: Map<number, number[][]>;
+  /** Von Mises de los sólidos H8 en sus 8 puntos de Gauss (kN/m²). */
+  solidVonMises?: Map<number, number[]>;
   /**
    * Override opcional del rango [min, max] del colormap por campo específico.
    * Keys: "pressure", "bendingXX", "vonMises", etc. (los del shell results dropdown).

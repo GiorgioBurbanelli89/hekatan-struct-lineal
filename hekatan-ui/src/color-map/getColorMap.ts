@@ -4,6 +4,7 @@ import { Node, Element } from "hekatan-fem";
 import { Lut } from "three/addons/math/Lut.js";
 import van, { State } from "vanjs-core";
 import { fixedColorMapRange } from "../viewer/getViewer";
+import { pielDeSolidos } from "../viewer/objects/utils/solidos";
 
 // CSI contour colormap — EXTRAÍDO (no inventado) de la tabla "OPTIONS - COLORS - OUTPUT",
 // fila "Screen"/"Screen Classic", de archivos escritos por los TRES programas (19-sep-2026):
@@ -248,6 +249,11 @@ export function getColorMap(
     clipping: true,  // habilitar soporte de clipping planes en ShaderMaterial
     depthWrite: true,
     depthTest: true,
+    // Un pelo hacia atrás: las aristas de la piel de un sólido van con prueba de profundidad
+    // y caen en el MISMO plano que la cara; sin esto salen a trozos.
+    polygonOffset: true,
+    polygonOffsetFactor: 1.0,
+    polygonOffsetUnits: 1.0,
   });
 
   // Reconstruir la textura del colormap cuando el usuario cambia la paleta en Settings.
@@ -290,6 +296,14 @@ export function getColorMap(
         faceToElem.push(ei, ei); faceLocal.push(0, 1);
       }
     });
+    // Sólidos H8: se pinta su PIEL (las caras de un solo elemento). Los valores ya van por
+    // nudo, así que basta añadir los triángulos de esas caras al mismo índice.
+    for (const c of pielDeSolidos(elements.val)) {
+      const [a, b, cc, d] = c.nudos;
+      triIndices.push(a, b, cc);
+      triIndices.push(a, cc, d);
+      faceToElem.push(c.elem, c.elem); faceLocal.push(0, 1);
+    }
     colorMap.geometry.setIndex(
       new THREE.Uint32BufferAttribute(triIndices, 1)
     );

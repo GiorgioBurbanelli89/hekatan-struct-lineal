@@ -14,9 +14,12 @@ export function shellResults(
   const colorMap = getColorMap(derivedNodes, mesh.elements, colorMapValues);
 
   // Events
-  // on settings.shellResults update: update viability
+  // Se ve si hay un campo de cáscara O de sólido elegido: el colormap es el mismo objeto. Con
+  // solo `shellResults`, un modelo de sólidos tenía que encender «FVM» de cáscara para pintarse.
   van.derive(() => {
-    colorMap.visible = settings.shellResults.val != "none";
+    const cascara = settings.shellResults.val != "none";
+    const solido = (settings.solidResults?.val ?? "none") != "none";
+    colorMap.visible = cascara || solido;
   });
 
   return colorMap;
