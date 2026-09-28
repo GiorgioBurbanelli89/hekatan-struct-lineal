@@ -27,7 +27,11 @@ export async function empaquetar(fuenteEntry, llave = fuenteEntry) {
   copyFileSync(wasm, join(dir, "deform.wasm"));
   const outfile = join(dir, "bundle.mjs");
   await build({ entryPoints: [join(dir, "entry.ts")], bundle: true, format: "esm",
-                platform: "node", outfile, logLevel: "error" });
+                platform: "node", outfile, logLevel: "error",
+                // En Node no hay `import.meta.env` (lo define Vite): sin esto cualquier modulo
+                // del registro revienta con «reading 'DEV'» (13 casos de la suite, 28-sep-2026).
+                // false = como en el build: fuera el ejemplo que solo existe en `npm run dev`.
+                define: { "import.meta.env.DEV": "false" } });
   const mod = await import(pathToFileURL(outfile).href);
   cache.set(llave, mod);
   return mod;
