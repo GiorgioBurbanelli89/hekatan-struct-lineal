@@ -163,7 +163,6 @@ export default defineConfig({
         // ── FEM demos Q4 (validación) ──
         "shear-wall-q4": "src/shear-wall-q4/index.html",
         "cantilever-beam-q4": "src/cantilever-beam-q4/index.html",
-        "placa-cantilever-q4": "src/placa-cantilever-q4/index.html",
         // ── Geotécnico ──
         "slope-stability": "src/slope-stability/index.html",
         // ── Conexión placa base con columna H (CBFEM-style) ──

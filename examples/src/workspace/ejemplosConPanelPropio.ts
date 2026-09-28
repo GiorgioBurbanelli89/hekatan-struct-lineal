@@ -68,7 +68,8 @@ export const iconicSydneyOpera  = legacy("sydney-opera",         "Sydney Opera H
 // ─── Demos FEM Q4 (validación contra OpenSees/SAP/ETABS) ────────────
 export const demoShearWallQ4    = legacy("shear-wall-q4",        "Muro de Corte Q4",            "2️⃣ Shells · 🕸 Membranas");
 export const demoCantileverQ4   = legacy("cantilever-beam-q4",   "Viga Cantilever Q4",          "2️⃣ Shells · 🧱 Placas");
-export const demoPlacaQ4        = legacy("placa-cantilever-q4",  "Placa Cantilever XY Q4",      "2️⃣ Shells · 🧱 Placas");
+// `placa-cantilever-q4` era el mismo modelo que `placa-xy`, que ya corre dentro del workspace,
+// y no tenía panel de comprobación (solo un console.log): fuera (28-sep-2026).
 
 // ─── Geotécnico ────────────────────────────────────────────────────
 export const demoSlope          = legacy("slope-stability",      "Estabilidad de Talud (SRM)",  "2️⃣ Shells · 🕸 Membranas");
@@ -107,7 +108,6 @@ export const ejemplosConPanelPropio: ExampleDef[] = [
   // FEM demos Q4
   demoShearWallQ4,
   demoCantileverQ4,
-  demoPlacaQ4,
   // Geotécnico
   demoSlope,
   // Conexiones (CBFEM + CFT)
