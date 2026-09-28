@@ -84,7 +84,7 @@ int main()
     nodeInputs.supports[4] = {true,true,true,true,true,true};
     nodeInputs.supports[6] = {true,true,true,true,true,true};
 
-    // Element properties (match the original example beams/main.ts exactly)
+    // Element properties (match the original example beams/pazEjemplo63.ts exactly)
     ElementInputs elementInputs;
     for (int i = 0; i < num_elements; ++i) {
         bool isCol = (i < 4);

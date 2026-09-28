@@ -9,7 +9,7 @@ git cual de los dos numeros es el bueno, y hay que preguntarselo a un tercero.
     python cli/paz_etabs.py
 
 Unidades kip-in-F (enum 3). El modelo es EXACTAMENTE el de
-examples/src/beams/main.ts y cli/paz_check.mjs: mismas coordenadas, mismas
+examples/src/beams/pazEjemplo63.ts y cli/paz_check.mjs: mismas coordenadas, mismas
 secciones pasadas por SetGeneral (no por catalogo, para que se compare el
 SOLVER y no la seccion) y misma densidad.
 """

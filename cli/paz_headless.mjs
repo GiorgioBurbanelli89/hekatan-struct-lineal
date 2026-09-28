@@ -35,7 +35,7 @@ await build({
 });
 const { modalAnalysis } = await import(pathToFileURL(outFile).href);
 
-// ── Modelo: identico al de examples/src/beams/main.ts ──────────────────────
+// ── Modelo: identico al de examples/src/beams/pazEjemplo63.ts ──────────────────────
 const E = 29500, nu = 0.3, G = E / (2 * (1 + nu));
 const H = 180, BX = 114, BY = 240;
 const RHO = 490 / 1000 / 12 ** 3 / 386.4;

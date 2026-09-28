@@ -48,7 +48,7 @@ const SITIO = PUB ? "https://giorgioburbanelli89.github.io/hekatan-struct-lineal
 // Los ejemplos de sólidos del workspace. `ux` = el campo de desplazamiento que más se mueve.
 const EJEMPLOS = (process.argv.slice(2).filter((a) => a !== "publico").length
   ? process.argv.slice(2).filter((a) => a !== "publico")
-  : ["muro-contencion-solido"]);
+  : ["muro-contencion-solido", "bulbo-presiones-suelo", "solid-cube-fem", "columna-cft-h8"]);
 const CAMPOS = ["vonMises", "sigmaXX", "sigmaZZ", "tauXZ", "ux", "uz"];
 const COMP = { ux: 0, uy: 1, uz: 2 };
 
@@ -87,10 +87,13 @@ for (const id of EJEMPLOS) {
     };
   });
   ok(!m.marco, "está dentro del workspace, sin marco embebido");
-  ok(m.hex > 0, "el modelo son hexaedros de 8 nudos", `${m.nudos} nudos, ${m.hex} hexaedros, ${m.otros} de otro tipo`);
+  ok(m.hex > 0, "el modelo tiene hexaedros de 8 nudos", `${m.nudos} nudos, ${m.hex} hexaedros, ${m.otros} de otro tipo`);
   ok(m.deformados === m.nudos && m.nan === 0, "deformada en todos los nudos y sin NaN", `${m.deformados} nudos, ${m.nan} NaN`);
   ok(m.conTension === m.hex, "tensiones en todos los hexaedros", `${m.conTension} de ${m.hex}`);
-  ok(m.campoAlAbrir && m.campoAlAbrir !== "none", "abre con un campo de sólido elegido", String(m.campoAlAbrir));
+  // un modelo MIXTO (tubo de acero relleno de hormigón) puede abrir con el campo de sus cáscaras
+  if (m.otros === 0) ok(m.campoAlAbrir && m.campoAlAbrir !== "none", "abre con un campo de sólido elegido", String(m.campoAlAbrir));
+  else console.log(`    modelo mixto: abre con «${m.campoAlAbrir}» de sólido`);
+  await pag.screenshot({ path: join(OUT, `${id}_al_abrir${PUB ? "_publico" : ""}.png`) });
   ok(errores.length === 0, "sin errores de JavaScript", errores[0] ?? "");
 
   const rangos = {};

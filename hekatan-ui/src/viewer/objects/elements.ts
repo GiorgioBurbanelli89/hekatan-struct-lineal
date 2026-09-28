@@ -174,9 +174,11 @@ export function elements(
     // los mismos planos Q4). Patrón estándar Three.js: fill atrás, wireframe
     // adelante. Esto elimina los puntitos pixelados que aparecían cuando
     // colormap y shellMesh peleaban por el z-buffer.
+    // (2 y no 1: el colormap lleva 1 para dejar delante las aristas de la piel de los
+    // sólidos, y estas caras lisas tienen que seguir quedando DETRÁS del colormap.)
     polygonOffset: true,
-    polygonOffsetFactor: 1.0,
-    polygonOffsetUnits: 1.0,
+    polygonOffsetFactor: 2.0,
+    polygonOffsetUnits: 2.0,
   });
   const shellMesh = new THREE.Mesh(new THREE.BufferGeometry(), shellMat);
   shellMesh.frustumCulled = false;
@@ -431,8 +433,13 @@ export function elements(
         new THREE.Float32BufferAttribute(faceColors, 3)
       );
       shellMesh.geometry.computeVertexNormals();
-      // Visibilidad final = hay geometria AND toggle faces ON
-      shellMesh.visible = settings.faces ? settings.faces.rawVal : true;
+      // Visibilidad final = hay geometria AND toggle faces ON AND no hay un colormap puesto.
+      // Sin la tercera condición, al redibujar la malla con un resultado elegido las caras de
+      // color liso volvían a salir ENCIMA del colormap y lo dejaban lavado (se vio en la
+      // columna CFT con cáscaras y sólidos, 28-sep-2026).
+      const conResultado = (settings.shellResults?.rawVal ?? "none") !== "none"
+        || (settings.solidResults?.rawVal ?? "none") !== "none";
+      shellMesh.visible = (settings.faces ? settings.faces.rawVal : true) && !conResultado;
     } else {
       shellMesh.visible = false;
     }

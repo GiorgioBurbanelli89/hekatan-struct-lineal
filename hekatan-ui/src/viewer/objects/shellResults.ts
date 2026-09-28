@@ -11,7 +11,13 @@ export function shellResults(
   colorMapValues: State<number[]>
 ): THREE.Object3D {
   // Init
-  const colorMap = getColorMap(derivedNodes, mesh.elements, colorMapValues);
+  // El colormap va por NUDO y enseña UNA familia cada vez: con un campo de sólido elegido se
+  // pinta la piel de los hexaedros; si no, las cáscaras. En un modelo mixto (tubo de acero
+  // relleno de hormigón) los dos comparten nudos, y pintar las cáscaras con el valor del
+  // sólido sería enseñar en el acero la tensión del hormigón.
+  const familia = van.derive<"cascara" | "solido">(() =>
+    (settings.solidResults?.val ?? "none") !== "none" ? "solido" : "cascara");
+  const colorMap = getColorMap(derivedNodes, mesh.elements, colorMapValues, familia);
 
   // Events
   // Se ve si hay un campo de cáscara O de sólido elegido: el colormap es el mismo objeto. Con

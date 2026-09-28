@@ -167,7 +167,7 @@ Esto significa:
   horizontal es la flexión VERTICAL, o sea el eje FUERTE (Iz AISC).
 - `momentsOfInertiaY` = **I22** = flexión en el plano 1-3 (V3, M2), el débil.
 
-En `beams/main.ts`:
+En `beams/pazEjemplo63.ts`:
 ```typescript
 momentsOfInertiaY: eMap(COL_Iy, GIR_Iy),  // weak axis → I22
 momentsOfInertiaZ: eMap(COL_Iz, GIR_Iz),  // strong axis → I33
@@ -610,11 +610,11 @@ formulación de placa» que estuvo abierto un mes era el SIGNO del momento (ver 
 
 ## Validación del solver modal contra ETABS 22
 
-Ejemplo de referencia: **Paz & Leigh 6.3 Space Frame** (`examples/src/beams/main.ts`).
+Ejemplo de referencia: **Paz & Leigh 6.3 Space Frame** (`examples/src/beams/pazEjemplo63.ts`).
 
 | Solver | Archivo | Descripción |
 |--------|---------|-------------|
-| WASM browser | `examples/src/beams/main.ts` | Eigen C++ → emscripten → browser |
+| WASM browser | `examples/src/beams/pazEjemplo63.ts` | Eigen C++ → emscripten → browser |
 | WASM CLI | `cli_modal.mjs` | Eigen C++ → emscripten → Node.js |
 | C++ nativo | `cli_modal_native.cpp` | Eigen C++ → g++ → exe standalone |
 | Python/SciPy | `test_modal_comparison.py` | Reimplementación + K de OpenSees |

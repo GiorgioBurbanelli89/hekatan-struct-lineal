@@ -201,7 +201,9 @@ export function robustRange(valid: number[]): [number, number] {
 export function getColorMap(
   nodes: State<Node[]>,
   elements: State<Element[]>,
-  values: State<number[]>
+  values: State<number[]>,
+  /** Qué familia se pinta: las cáscaras o la piel de los sólidos. Sin ella, las dos. */
+  familia?: State<"cascara" | "solido">
 ): THREE.Mesh {
   // Fallback Lut (no usado pero conservado para compatibilidad)
   const lut = new Lut();
@@ -288,7 +290,9 @@ export function getColorMap(
     // en el dual el hover decia «Nodo 420» de un piso intermedio con el cursor en la azotea).
     const faceToElem: number[] = [];
     const faceLocal: number[] = [];   // 0 = triangulo [0,1,2] del elemento, 1 = [0,2,3]
+    const fam = familia?.val;
     elements.val.forEach((e, ei) => {
+      if (fam === "solido") return;          // con un campo de sólido, las cáscaras no se pintan
       if (e.length === 3) {
         triIndices.push(e[0], e[1], e[2]);
         faceToElem.push(ei); faceLocal.push(0);
@@ -301,7 +305,7 @@ export function getColorMap(
     // Sólidos H8: se pinta su PIEL (las caras de un solo elemento). Los valores ya van por
     // nudo, así que basta añadir los triángulos de esas caras al mismo índice.
     versionCorte.val;            // con un corte puesto, el sólido se corta por elementos
-    const piel = pielDeSolidos(elements.val, mostrarSegunCorte(elements.val, nodes.val));
+    const piel = fam === "cascara" ? [] : pielDeSolidos(elements.val, mostrarSegunCorte(elements.val, nodes.val));
     for (const c of piel) {
       const [a, b, cc, d] = c.nudos;
       triIndices.push(a, b, cc);

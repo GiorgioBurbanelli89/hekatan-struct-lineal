@@ -406,12 +406,42 @@ import { plantillas } from "../plantillas/plantillas";
 // Sólidos H8, dentro del workspace (28-sep-2026)
 import { muroContencionSolido } from "../muro-contencion-solido/muroContencionSolido";
 import { bulboPresionesSuelo } from "../bulbo-presiones-suelo/bulboPresionesSuelo";
-// Los que todavía traen su propio panel y se ven embebidos: quedan por graduar
-import {
-  ejemplosConPanelPropio,
-  legacyBeams,           // Paz 6.3 Space Frame (FRAME 1D)
-  solidCubeFEM,          // Cubo H8 (SOLIDO)
-} from "./ejemplosConPanelPropio";
+import { columnaVigaSolidos } from "../solid-cube-fem/columnaVigaSolidos";
+import { columnaCftH8 } from "../columna-cft-h8/columnaCftH8";
+// GRADUADOS el 28-sep-2026: traían su propio panel y se veían en un marco. Ahora corren dentro
+// del workspace. Cada uno con su test `tests/casos/graduado_<id>.mjs`.
+import { pazEjemplo63 } from "../beams/pazEjemplo63";
+import { axialBar } from "../axial-bar/axialBar";
+import { gatewayArch } from "../gateway-arch/gatewayArch";
+import { twistedTower } from "../twisted-tower/twistedTower";
+import { burjKhalifa } from "../burj-khalifa/burjKhalifa";
+import { cableStayedBridge } from "../cable-stayed-bridge/cableStayedBridge";
+import { shearWallQ4 } from "../shear-wall-q4/shearWallQ4";
+import { cantileverBeamQ4 } from "../cantilever-beam-q4/cantileverBeamQ4";
+import { sydneyOpera } from "../sydney-opera/sydneyOpera";
+import { plateQ4 } from "../plate-q4/plateQ4";
+import { vigaDobleT } from "../viga-doble-t/vigaDobleT";
+import { boltHoleDetail } from "../bolt-hole-detail/boltHoleDetail";
+import { conexionDiafragmaCft } from "../conexion-diafragma-cft/conexionDiafragmaCft";
+import { tableroPuente } from "../tablero-puente/tableroPuente";
+import { placaBaseH } from "../placa-base-h/placaBaseH";
+import { placaBaseHueca } from "../placa-base-hueca/placaBaseHueca";
+import { placaBaseCft } from "../placa-base-cft/placaBaseCft";
+import { slopeStability } from "../slope-stability/slopeStability";
+// El único que sigue con su propio panel
+import { ejemplosConPanelPropio } from "./ejemplosConPanelPropio";
+
+/** Los graduados que no son benchmark, en el orden en que salían antes en el selector. */
+const graduados: ExampleDef[] = [
+  axialBar, plateQ4,
+  gatewayArch, cableStayedBridge, twistedTower, burjKhalifa, sydneyOpera,
+  shearWallQ4, cantileverBeamQ4,
+  slopeStability,
+  placaBaseH, boltHoleDetail, conexionDiafragmaCft, placaBaseHueca, placaBaseCft,
+  columnaCftH8,
+  vigaDobleT,
+  tableroPuente,
+];
 
 export const examplesRegistry: ExampleDef[] = [
   plantillas,             // 📐 Nuevo modelo → Plantillas
@@ -536,7 +566,7 @@ export const examplesRegistry: ExampleDef[] = [
   benchmarkSteelCantilever,    // Frame · Columna ACERO Cantilever (HSS hueco)
   benchmarkConcreteCantilever, // Frame · Columna HORMIGÓN Cantilever (rectangular)
   benchmarkCftCantilever,      // Frame · Columna CFT Cantilever (HSS + concrete fill)
-  legacyBeams,                 // Paz 6.3 Space Frame (validación 4 solvers)
+  pazEjemplo63,                // Paz 6.3 Space Frame (validación 4 solvers)
   // ── 6) Benchmarks Paz (Mario Paz "Structural Dynamics" 6ª ed) ──
   // 1-DOF / time history canónicos
   benchmarkPaz4_1,             // 1-DOF rectangular impulse
@@ -562,7 +592,7 @@ export const examplesRegistry: ExampleDef[] = [
   slabBeamsColumns,        // 8) Slab + vigas perimetrales + columnas (edificio 1 piso)
 
   // ── 3) SÓLIDOS (3D) ─────────────────────────────────────────────
-  solidCubeFEM,            // Cubo Sólido H8 (validación CalculiX)
+  columnaVigaSolidos,      // Nudo columna-viga en sólidos H8 (id solid-cube-fem)
 
   // ── 4) COMBINADOS — Area + Spring + Frame ─────────────────────
   zapataAisladaValidacion, // Zapata aislada (Area + Winkler springs + Frame)
@@ -589,8 +619,8 @@ export const examplesRegistry: ExampleDef[] = [
   // Falta: coser el modelo (releases, muelles de pilote, links) y que el
   // exportador reparta bien deck y losa por grupo.
 
-  // ── Los que quedan con panel propio (los que no son benchmarks) ────
-  ...ejemplosConPanelPropio.filter(e =>
-    e.id !== "beams" && e.id !== "solid-cube-fem"
-  ),
+  // ── Los graduados el 28-sep-2026 ────
+  ...graduados,
+  // ── Lo único que queda con panel propio ────
+  ...ejemplosConPanelPropio,
 ];
