@@ -1,4 +1,4 @@
-"""Data model — 1:1 port de awatif v2 data-model.ts.
+"""Data model — 1:1 port del data-model.ts del fork original v2.
 
 Convención DOFs por nodo: [Ux, Uy, Uz, Rx, Ry, Rz] (6).
 Sin Model builder, sin Section/Material helpers — solo data raw.
@@ -70,7 +70,7 @@ class NodeInputs:
     diaphragms: dict[int, int] = field(default_factory=dict)
 
 
-# ─── ElementInputs (mirrors awatif v2) ─────────────────────────────────────
+# ─── ElementInputs (mirrors the original fork v2) ──────────────────────────
 @dataclass
 class ElementInputs:
     elasticities:              dict[int, float] = field(default_factory=dict)
@@ -92,7 +92,7 @@ class ElementInputs:
     frame_loads:               dict[int, tuple[float, float, float]] = field(default_factory=dict)
     rigid_offsets:             dict[int, tuple[float, float]] = field(default_factory=dict)
     # END LENGTH OFFSETS de CSI: (off_I, off_J, rigid_zone_factor) en metros y
-    # factor 0-1. NO es `rigid_offsets` (el de awatif, que ALARGA la barra):
+    # factor 0-1. NO es `rigid_offsets` (el del fork original, que ALARGA la barra):
     # aquí el brazo va DENTRO de la luz y lo que se acorta es el tramo flexible.
     # Con rz = 0 —el defecto de ETABS— no cambia la rigidez: sólo el peso propio
     # de las vigas y la estación de reporte de esfuerzos.

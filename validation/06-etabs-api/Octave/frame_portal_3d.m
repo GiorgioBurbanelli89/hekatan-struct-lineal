@@ -1,7 +1,7 @@
 % Frame 3D Portal — Replica del Test 2 de HekatanLab CLI
 % =======================================================
 %
-% Validación cruzada: HekatanLab (awatif-fem upstream) vs Octave 10.1.0.
+% Validación cruzada: HekatanLab (hekatan-fem) vs Octave 10.1.0.
 % Mismo modelo exacto, ambos resuelven el sistema lineal K·u = F.
 %
 % Modelo: portal 5m × 3m alto, 2 columnas + 1 viga, carga lateral 10 kN.

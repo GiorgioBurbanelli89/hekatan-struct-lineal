@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "hekatan-struct-py"
 version = "0.1.0"
-description = "Hekatan Struct — extensions on top of awatif-py: Winkler springs, rigid diaphragm, edificios paramétricos, zapatas, validación ETABS"
+description = "Hekatan Struct — Python engine: Winkler springs, rigid diaphragm, edificios paramétricos, zapatas, validación ETABS"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
   { name = "GiorgioBurbanelli89", email = "jbjazzjuventus1989@gmail.com" },
 ]
-keywords = ["fem", "structural", "engineering", "hekatan", "awatif", "etabs", "ecuador"]
+keywords = ["fem", "structural", "engineering", "hekatan", "etabs", "ecuador"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",

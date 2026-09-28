@@ -49,7 +49,7 @@ static Eigen::MatrixXd getLocalMassMatrixFramePaz(
     }
     else
     {
-        // Default (awatif): Ip = Iy + Iz
+        // Default (Hekatan): Ip = Iy + Iz
         rI0_A = (Iy + Iz) / A;
     }
 

@@ -6,7 +6,7 @@ Compares modal analysis results between:
   1. OpenSees (OpenSeesPy)
   2. SciPy (generalized eigenvalue problem)
   3. Textbook reference (Paz & Leigh, Example 6.3)
-  4. Awatif (user provides results from browser)
+  4. Hekatan (user provides results from browser)
 
 Model: Example 6.3 — Space Frame (Dynamics of Structures, Paz & Leigh)
 Units: kip, in, sec
@@ -15,7 +15,7 @@ Usage:
   python test_modal_comparison.py              # Run all comparisons
   python test_modal_comparison.py --opensees   # OpenSees only
   python test_modal_comparison.py --scipy      # SciPy only
-  python test_modal_comparison.py --awatif F1 F2 F3 ...  # Compare with awatif freqs
+  python test_modal_comparison.py --awatif F1 F2 F3 ...  # Compare with Hekatan freqs
 """
 
 import sys
@@ -104,7 +104,7 @@ def run_opensees():
     for n in FIXED_NODES:
         ops.fix(n+1, 1, 1, 1, 1, 1, 1)
 
-    # Match awatif's transformation: vecxz=(-1,0,0) → local_y=Y, local_z=-X
+    # Match Hekatan's transformation: vecxz=(-1,0,0) → local_y=Y, local_z=-X
     ops.geomTransf('Linear', 1, -1.0, 0.0, 0.0)  # columns
     ops.geomTransf('Linear', 2, 0.0, 0.0, 1.0)    # horizontal beams
 
@@ -121,7 +121,7 @@ def run_opensees():
                      A, E, G, J, Iy_os, Iz_os, transf,
                      '-mass', RHO * A, '-cMass')
 
-    # --- Extract K from OpenSees C++ (proven identical to awatif) ---
+    # --- Extract K from OpenSees C++ (proven identical to Hekatan) ---
     ops.system('FullGeneral')
     ops.numberer('Plain')
     ops.constraints('Plain')
@@ -133,7 +133,7 @@ def run_opensees():
     K_os = np.array(ops.printA('-ret')).reshape(n_sys, n_sys)
     ops.wipe()
 
-    # --- Build M with correct Ip formulation (matching awatif C++) ---
+    # --- Build M with correct Ip formulation (matching Hekatan C++) ---
     ndof = len(NODES) * 6
     M_global = np.zeros((ndof, ndof))
     for ni, nj, etype in ELEMENTS:
@@ -223,11 +223,11 @@ def local_stiffness_frame(E, G, A, Iz, Iy, J, L):
 
 
 def local_mass_frame(rho, A, Iz, Iy, L):
-    """12x12 consistent mass matrix for 3D frame element (matches awatif C++)."""
+    """12x12 consistent mass matrix for 3D frame element (matches Hekatan C++)."""
     m = rho * A * L / 420.0
     M = np.zeros((12, 12))
 
-    # Polar moment of inertia ratio (matches awatif getLocalMassMatrix.cpp)
+    # Polar moment of inertia ratio (matches Hekatan getLocalMassMatrix.cpp)
     Ip = Iy + Iz
     rIp_A = Ip / A
 
@@ -235,7 +235,7 @@ def local_mass_frame(rho, A, Iz, Iy, L):
     M[0,0] = M[6,6] = 140*m
     M[0,6] = M[6,0] = 70*m
 
-    # Torsion (awatif uses Ip/A factor, not simplified)
+    # Torsion (Hekatan uses Ip/A factor, not simplified)
     M[3,3] = M[9,9] = 140 * rIp_A * m
     M[3,9] = M[9,3] = 70 * rIp_A * m
 
@@ -263,8 +263,8 @@ def transformation_matrix_3d(n1, n2):
 
     lx = np.array([dx, dy, dz]) / L
 
-    # Choose reference vector for local y-axis (match awatif's getTransformationMatrix.cpp)
-    # Vertical columns: awatif uses lambda = [0,0,1; 0,1,0; -1,0,0]
+    # Choose reference vector for local y-axis (match Hekatan's getTransformationMatrix.cpp)
+    # Vertical columns: Hekatan uses lambda = [0,0,1; 0,1,0; -1,0,0]
     # → ref=(-1,0,0) gives ly=cross(ref,lx)=[0,1,0]=Y, lz=cross(lx,ly)=[-1,0,0]=-X
     if abs(lx[2]) > 0.95:  # near-vertical element
         ref = np.array([-1.0, 0.0, 0.0])
@@ -296,7 +296,7 @@ def run_scipy():
     M_global = np.zeros((ndof, ndof))
 
     for ni, nj, etype in ELEMENTS:
-        # Match awatif convention: momentsOfInertiaZ = weak axis, momentsOfInertiaY = strong axis
+        # Match Hekatan convention: momentsOfInertiaZ = weak axis, momentsOfInertiaY = strong axis
         if etype == 'col':
             A, Iz, Iy, J = COL_A, COL_Iy, COL_Iz, COL_J  # Iz=weak(391), Iy=strong(5630)
         else:
@@ -399,7 +399,7 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
 
     header = f"  {'Mode':>4}  {'OpenSees':>12}  {'SciPy':>12}"
     if awatif_freq:
-        header += f"  {'Awatif':>12}  {'OS vs SP %':>10}  {'OS vs AW %':>10}"
+        header += f"  {'Hekatan':>12}  {'OS vs SP %':>10}  {'OS vs AW %':>10}"
     else:
         header += f"  {'OS vs SP %':>10}"
     print(header)
@@ -438,7 +438,7 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
         max_diff_aw = np.max(np.abs(os_arr - aw_arr) / os_arr * 100)
         max_diff_sp = np.max(np.abs(os_arr - sp_arr) / os_arr * 100)
         print(f"  Max difference OpenSees vs SciPy:  {max_diff_sp:.2f}%")
-        print(f"  Max difference OpenSees vs Awatif: {max_diff_aw:.2f}%")
+        print(f"  Max difference OpenSees vs Hekatan: {max_diff_aw:.2f}%")
         if max_diff_aw < 1.0:
             print("  RESULT: EXCELLENT agreement (< 1%)")
         elif max_diff_aw < 5.0:
@@ -452,7 +452,7 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
         print(f"  Max difference OpenSees vs SciPy: {max_diff:.2f}%")
 
     print()
-    print("  To compare with Awatif, run:")
+    print("  To compare with Hekatan, run:")
     print("    python test_modal_comparison.py --awatif 1.234 2.345 3.456 ...")
     print("  (paste frequencies from the browser modal table)")
 
@@ -473,7 +473,7 @@ def main():
     if '--awatif' in args:
         idx = args.index('--awatif')
         awatif_freq = [float(x) for x in args[idx+1:]]
-        print(f"\n  Awatif frequencies provided: {awatif_freq}")
+        print(f"\n  Hekatan frequencies provided: {awatif_freq}")
 
     if '--opensees' in args:
         run_sp = '--scipy' in args

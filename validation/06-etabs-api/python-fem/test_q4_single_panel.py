@@ -112,7 +112,7 @@ for j in range(ny):
 
 K = sparse.coo_matrix((vals, (rows, cols)), shape=(nDofs, nDofs)).tocsc()
 
-# ===== TEST A: SS on all edges (like awatif bcType="simply-supported") =====
+# ===== TEST A: SS on all edges (like Hekatan bcType="simply-supported") =====
 print("=" * 60)
 print("TEST A: Simply Supported on all edges (w=0)")
 edge_dofs = []

@@ -2,7 +2,7 @@
  * DKT: el Shell-Thin de los TRIANGULOS (22-sep-2026).
  *
  * Hasta hoy `shelltype thin` solo llegaba a los cuadrilateros (DKQ); los triangulos seguian con la
- * placa GRUESA de awatif (CS-DSG3). La malla GENERAL de ETABS (Quad_Build) mete triangulos entre
+ * placa GRUESA del fork original (CS-DSG3). La malla GENERAL de ETABS (Quad_Build) mete triangulos entre
  * los cuadrilateros, asi que sobre esa malla Hekatan Thin se iba hasta un 2 % del maximo.
  * Con la DKT (Batoz, Bathe & Ho 1980; `hekatan-fem/src/cpp/utils/plateDKT.h`):
  *

@@ -9,7 +9,7 @@ implementados o referenciados en este proyecto:
 |--------|-------|--------|-------|
 | Rigidez Lateral (condensada) | Roberto Aguiar Falconi | Libro: Analisis Sismico de Edificios, ESPE Ecuador 2008 | Piso (1-3 DOF/piso) |
 | Rigidez Directa 3D | Mario Paz | Libro: Structural Dynamics 6th Ed, Springer 2019 | Nudo (6 DOF/nudo) |
-| Awatif FEM | Clone awatif + modal del usuario | Eigen C++/WASM | Nudo (6 DOF/nudo) |
+| Hekatan FEM | Motor FEM de Hekatan Struct + modal del usuario | Eigen C++/WASM | Nudo (6 DOF/nudo) |
 
 ---
 
@@ -156,7 +156,7 @@ Reduccion: eliminar DOFs fijos → Kf, Mf
 ### Diferencia clave en masa torsional
 ```
 Paz:    usa I0 explicito  (I0 dado en tabla, puede ser != Iy+Iz)
-Awatif: usa Ip = Iy + Iz  (perpendicular axis theorem, correcto para secciones reales)
+Hekatan: usa Ip = Iy + Iz  (perpendicular axis theorem, correcto para secciones reales)
 
 Para secciones reales AISC:  Ip = Iy + Iz  siempre
 Para ejemplos pedagogicos:   I0 puede ser un valor ficticio
@@ -168,11 +168,11 @@ Para ejemplos pedagogicos:   I0 puede ser un valor ficticio
   - Ejemplo 13.1: linea ~24030
   - SpaceFrameElement MATLAB: linea ~24169
   - SpaceConsMass MATLAB: linea ~24217
-- `clon awatif/cli_paz13_1.cpp` — implementacion C++ del Ejemplo 13.1 (3 solvers)
+- `clon-fork-original/cli_paz13_1.cpp` — implementacion C++ del Ejemplo 13.1 (3 solvers)
 
 ---
 
-## 3. Metodo Awatif — FEM Completo en C++/WASM
+## 3. Metodo Hekatan — FEM Completo en C++/WASM
 
 ### Filosofia
 Igual que Paz pero automatizado: transformacion automatica de ejes (sin punto de referencia), matrices sparse, compilado a WASM para browser/Node.js.
@@ -208,30 +208,30 @@ Columna vertical (eje local x = global Z):
     local_z = [-1, 0, 0]    → global -X
 
 Consecuencia:
-    momentsOfInertiaZ en awatif = eje debil (Iy AISC)
-    momentsOfInertiaY en awatif = eje fuerte (Iz AISC)
+    momentsOfInertiaZ en Hekatan = eje debil (Iy AISC)
+    momentsOfInertiaY en Hekatan = eje fuerte (Iz AISC)
 ```
 
 ### Archivos C++
-- `clon awatif/hekatan-fem/src/cpp/modal.cpp` — solver modal default
-- `clon awatif/hekatan-fem/src/cpp/modal_paz.cpp` — solver alternativo (con I0)
-- `clon awatif/hekatan-fem/src/cpp/utils/getLocalStiffnessMatrix.cpp`
-- `clon awatif/hekatan-fem/src/cpp/utils/getLocalMassMatrix.cpp` — masa con Ip=Iy+Iz
-- `clon awatif/hekatan-fem/src/cpp/utils/getLocalMassMatrixPaz.cpp` — masa con I0
-- `clon awatif/hekatan-fem/src/cpp/utils/getTransformationMatrix.cpp`
-- `clon awatif/hekatan-fem/src/cpp/utils/getGlobalStiffnessMatrix.cpp`
-- `clon awatif/hekatan-fem/src/cpp/utils/getGlobalMassMatrix.cpp`
-- `clon awatif/hekatan-fem/src/cpp/utils/getGlobalMassMatrixPaz.cpp`
-- `clon awatif/hekatan-fem/src/cpp/data-model.h`
+- `clon-fork-original/hekatan-fem/src/cpp/modal.cpp` — solver modal default
+- `clon-fork-original/hekatan-fem/src/cpp/modal_paz.cpp` — solver alternativo (con I0)
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getLocalStiffnessMatrix.cpp`
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getLocalMassMatrix.cpp` — masa con Ip=Iy+Iz
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getLocalMassMatrixPaz.cpp` — masa con I0
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getTransformationMatrix.cpp`
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getGlobalStiffnessMatrix.cpp`
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getGlobalMassMatrix.cpp`
+- `clon-fork-original/hekatan-fem/src/cpp/utils/getGlobalMassMatrixPaz.cpp`
+- `clon-fork-original/hekatan-fem/src/cpp/data-model.h`
 
 ### Archivos TypeScript
-- `clon awatif/hekatan-fem/src/modalCpp.ts` — wrapper default
-- `clon awatif/hekatan-fem/src/modalPazCpp.ts` — wrapper alternativo
-- `clon awatif/hekatan-fem/src/data-model.ts`
+- `clon-fork-original/hekatan-fem/src/modalCpp.ts` — wrapper default
+- `clon-fork-original/hekatan-fem/src/modalPazCpp.ts` — wrapper alternativo
+- `clon-fork-original/hekatan-fem/src/data-model.ts`
 
 ### CLI nativos (g++)
-- `clon awatif/cli_modal_native.cpp` — Ejemplo 6.3 (Paz & Leigh)
-- `clon awatif/cli_paz13_1.cpp` — Ejemplo 13.1 Mario Paz (3 solvers comparados)
+- `clon-fork-original/cli_modal_native.cpp` — Ejemplo 6.3 (Paz & Leigh)
+- `clon-fork-original/cli_paz13_1.cpp` — Ejemplo 13.1 Mario Paz (3 solvers comparados)
 
 ---
 
@@ -243,11 +243,11 @@ Consecuencia:
 |--------|-------------------|-----------------|
 | Aguiar plano | 6 (1/piso) | 6 laterales |
 | Aguiar espacial | 18 (3/piso) | 18 (lateral X, lateral Y, torsion) |
-| Paz/Awatif | ~168 (28 nudos libres x 6) | 168 (todos: lateral, torsional, vertical, axial, rotacional) |
+| Paz/Hekatan | ~168 (28 nudos libres x 6) | 168 (todos: lateral, torsional, vertical, axial, rotacional) |
 
 ### Que captura cada uno
 
-| Efecto | Aguiar plano | Aguiar espacial | Paz/Awatif |
+| Efecto | Aguiar plano | Aguiar espacial | Paz/Hekatan |
 |--------|-------------|----------------|------------|
 | Traslacion lateral | Si | Si | Si |
 | Torsion de piso | No | Si | Si |
@@ -267,7 +267,7 @@ Los 3 metodos dan **practicamente el mismo resultado** para:
 La condensacion estatica de Aguiar es **exacta** para cargas estaticas y
 **excelente aproximacion** para los primeros modos dinamicos.
 
-### Cuando se necesita Paz/Awatif
+### Cuando se necesita Paz/Hekatan
 - Estructura irregular en planta (torsion significativa)
 - Estructura sin diafragma rigido
 - No es un "edificio" (puente, torre, portico espacial)
@@ -281,9 +281,9 @@ La condensacion estatica de Aguiar es **exacta** para cargas estaticas y
 ### Ejemplo 13.1 Mario Paz (cli_paz13_1.exe)
 
 5 nodos, 4 elementos, nudo central libre (6 DOF).
-Ejecutar: `cd "clon awatif" && ./cli_paz13_1.exe`
+Ejecutar: `cd "clon-fork-original" && ./cli_paz13_1.exe`
 
-| Modo | Paz exacto (Hz) | Awatif Ip (Hz) | Awatif+I0 (Hz) | Diff max |
+| Modo | Paz exacto (Hz) | Hekatan Ip (Hz) | Hekatan+I0 (Hz) | Diff max |
 |------|-----------------|----------------|----------------|----------|
 | 1 | 12.7910 | 12.8185 | 12.8293 | 0.30% |
 | 2 | 12.8557 | 12.8448 | 12.8557 | 0.09% |
@@ -298,7 +298,7 @@ M difiere 3.17% por I0 vs Ip y orientacion de transformacion.
 ### Ejemplo 6.3 Paz & Leigh (cli_modal_native.exe)
 
 8 nodos, 8 elementos, 4 columnas + 4 vigas.
-Ejecutar: `cd "clon awatif" && ./cli_modal_native.exe`
+Ejecutar: `cd "clon-fork-original" && ./cli_modal_native.exe`
 
 | Modo | Freq (Hz) | Dominante |
 |------|-----------|-----------|
@@ -317,7 +317,7 @@ Validado con 4 solvers: WASM browser, WASM Node, C++ nativo, Python/SciPy.
 
 ### C++ nativo (Ejemplo 13.1 Paz)
 ```bash
-cd "clon awatif"
+cd "clon-fork-original"
 g++ -O2 -std=c++17 -static-libgcc -static-libstdc++ \
     -I hekatan-fem/src/cpp/eigen \
     cli_paz13_1.cpp \
@@ -334,7 +334,7 @@ g++ -O2 -std=c++17 -static-libgcc -static-libstdc++ \
 
 ### WASM (requiere emsdk)
 ```bash
-cd "clon awatif/hekatan-fem"
+cd "clon-fork-original/hekatan-fem"
 source ../../emsdk/emsdk_env.sh
 npm run build
 # Exporta: _deform, _modal, _modal_paz
@@ -344,7 +344,7 @@ npm run build
 
 ## 7. Proximos pasos
 
-- [ ] Implementar `buildingFromSpans(sv_x, sv_y, sp)` en awatif — genera nodos/elementos 3D a partir de vectores de vanos/pisos (como geometria_volcar pero para el solver completo)
+- [ ] Implementar `buildingFromSpans(sv_x, sv_y, sp)` en Hekatan — genera nodos/elementos 3D a partir de vectores de vanos/pisos (como geometria_volcar pero para el solver completo)
 - [ ] Agregar espectro sismico NEC-15 / CEC-2000 como post-proceso del analisis modal
-- [ ] Comparar resultados Aguiar condensado vs Awatif completo para un mismo edificio
-- [ ] Implementar combinacion modal CQC/SRSS en awatif
+- [ ] Comparar resultados Aguiar condensado vs Hekatan completo para un mismo edificio
+- [ ] Implementar combinacion modal CQC/SRSS en Hekatan

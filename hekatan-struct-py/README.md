@@ -1,101 +1,82 @@
-# awatif-py
+# hekatan-struct-py
 
-**Parametric structural FEM in pure Python.** Python port of [awatif v2](https://github.com/madil4/awatif) with frames, shells, modal analysis, Winkler springs, PyVista 3D viewer and ipywidgets sliders.
+Motor Python de **Hekatan Struct**. Implementa el mismo solver que el motor
+TypeScript/C++ (`hekatan-fem`): frames 3D, shells Q4, análisis modal, muelles
+Winkler, diafragma rígido, offsets rígidos estilo CSI — sin un `Model` builder:
+trabaja directo sobre `nodes`/`elements`/`NodeInputs`/`ElementInputs` (raw),
+igual que el motor JS.
+
+## Instalación
 
 ```bash
-pip install awatif-py            # core (numpy + scipy)
-pip install awatif-py[viewer]    # + PyVista 3D
-pip install awatif-py[sliders]   # + ipywidgets / trame web app
-pip install awatif-py[all]       # everything
+pip install -e .                 # core (numpy + scipy)
+pip install -e ".[viewer]"       # + PyVista 3D
+pip install -e ".[sliders]"      # + ipywidgets / trame web app
+pip install -e ".[dev]"          # + pytest
 ```
 
-## Quick start
+## Uso mínimo
+
+Leer un modelo `.heks` (el mismo formato que usa el resto de Hekatan Struct)
+y resolverlo:
 
 ```python
-import numpy as np
-from awatif import Model, deform, analyze
-from awatif.viewer import View
+from hekatan_struct.heks import leer_heks, resolver_heks
 
-m = Model()
+m = leer_heks("mi_modelo.heks")
+res = resolver_heks(m)            # DeformOutputs: .deformations, .reactions
 
-# Geometría
-m.node(0, 0, 0); m.node(0, 0, 4)              # base + top
-m.frame(0, 1, section="rect", b=0.4, h=0.4)   # columna 40×40 C40
-
-# Material
-m.material("conc", E=2.486e8, nu=0.20, gamma=23.57)
-m.assign_material("conc", to_all_elements=True)
-
-# Apoyos + cargas
-m.support(0, ux=True, uy=True, uz=True)  # pinned base
-m.load(1, fx=10)                          # 10 kN horizontal en top
-
-# Static
-res = deform(m)
-M, V, P = analyze(m, res)
-print(f"Tip displacement Ux: {res.U[1*6+0]*1000:.3f} mm")
-
-# 3D viewer
-View(m, deformed=res).show()
+# Desplazamiento del nudo 1 (Ux, Uy, Uz, Rx, Ry, Rz)
+print(res.deformations[1])
 ```
 
-## Features
+También se puede armar el modelo a mano, sin `.heks`, con la misma firma
+que el motor JS:
 
-- **Frame 3D elements** (Euler-Bernoulli, 12 DOF) con local axes CSI-convention
-- **Shell Q4** (Mindlin-Reissner bending + plane stress membrane, 24 DOF)
-- **Modal eigen analysis** (lumped o consistent mass)
-- **Winkler springs** nodales (cimentaciones)
-- **Rigid diaphragm** constraint (master-slave penalty)
-- **Rigid offsets** y **cardinal points** estilo CSI ETABS
-- **Lumped mass** CSI §4.12 (no rotational, ignora restrained)
-- **3D viewer** PyVista (geometría, deformada, modos, colormaps)
-- **Sliders paramétricos** via ipywidgets (Jupyter) y trame (web app standalone)
+```python
+from hekatan_struct import deform, analyze, NodeInputs, ElementInputs
 
-## API design
-
-Espejo el API de [awatif v2 JS](https://github.com/madil4/awatif/tree/main/packages/fem):
-
-| awatif JS                  | awatif-py                   |
-|---|---|
-| `deform(nodes, elements, nodeInputs, elementInputs)` | `deform(model)` |
-| `analyze(...)`             | `analyze(model, deform_result)` |
-| `modalAnalysis(...)`       | `modal(model, n_modes=12)` |
-| `getViewer({ mesh })`      | `View(model).show()` |
-
-## Examples
-
-```bash
-cd awatif-py/examples
-python cantilever_3d.py                    # cantilever con tip load
-python simply_supported_beam.py            # viga simplemente apoyada
-python mesa_torsion.py                     # validación ETABS Mesa Torsión
-python edificio_aporticado.py              # building parametric
-jupyter notebook sliders_cantilever.ipynb  # ipywidgets demo
+nodes = [(0.0, 0.0, 0.0), (0.0, 0.0, 4.0)]
+elements = [[0, 1]]
+ni = NodeInputs(supports={0: (True,) * 6})
+ei = ElementInputs(
+    elasticities={0: 2.486e7}, shear_moduli={0: 1.0e7},
+    areas={0: 0.16}, moments_of_inertia_y={0: 2.13e-3},
+    moments_of_inertia_z={0: 2.13e-3}, torsional_constants={0: 3.6e-3},
+)
+res = deform(nodes, elements, ni, ei)
+out = analyze(nodes, elements, ei, res)
 ```
+
+## Extensiones (no están en el motor JS)
+
+`apply_selfweight`, `apply_rigid_diaphragm`, `apply_cardinal_point_8`,
+`apply_stiffness_modifiers`, `compute_picks`, `compare_picks` — ver
+`src/hekatan_struct/extensions.py`.
 
 ## Tests
 
+Los tests importan `hekatan_struct` desde `src/`, así que hay que exponer
+esa ruta (o instalar el paquete en modo editable):
+
 ```bash
-pip install awatif-py[dev]
-pytest                              # all
-pytest -m "not slow"                # exclude slow tests
-pytest -m validation                # only validation vs ETABS/SAP/OpenSees
+PYTHONPATH=src python -m pytest tests -q
+PYTHONPATH=src python -m pytest tests -m "not slow" -q      # sin los lentos
+PYTHONPATH=src python -m pytest tests -m validation -q      # solo cruce vs ETABS/SAP/OpenSees
 ```
 
-## Status
+En Windows PowerShell:
 
-**v0.1.0 — Alpha**. Feature parity with awatif v2 ongoing. Production usage at own risk.
+```powershell
+$env:PYTHONPATH = "src"; python -m pytest tests -q
+```
 
-Roadmap:
-- [x] Frame 3D static
-- [ ] Shell Q4 static
-- [ ] Modal eigen (lumped + consistent)
-- [ ] Winkler springs
-- [ ] Rigid diaphragm
-- [ ] PyVista viewer
-- [ ] ipywidgets sliders
-- [ ] trame web app
+## Estado
 
-## License
+**v0.1.0 — Alpha.** El oráculo de referencia es el motor TypeScript/C++
+(`hekatan-fem`), no un motor externo: `tests/test_oraculo_ts.py` compara
+ambos nudo a nudo.
+
+## Licencia
 
 MIT

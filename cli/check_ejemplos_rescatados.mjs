@@ -32,7 +32,7 @@ const CON_STANDALONE = args.includes("--standalone");
 const filtros = args.filter((a) => !a.startsWith("--"));
 
 // id → carpeta (la página standalone). Los dos «-parametrico» no llevan el id de
-// carpeta porque `diagrid/` y `pergola/` ya son las páginas de awatif.
+// carpeta porque `diagrid/` y `pergola/` ya son las páginas heredadas del fork original.
 const RESCATADOS = [
   ["arco", "arco"], ["eiffel", "eiffel"], ["puente", "puente-reticular"],
   ["burj", "burj"], ["twisted", "twisted"], ["diagrid", "diagrid-parametrico"],

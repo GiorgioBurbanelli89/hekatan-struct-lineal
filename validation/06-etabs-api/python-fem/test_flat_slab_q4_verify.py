@@ -1,6 +1,6 @@
 """
 Verification: Flat Slab Q4 with point column supports
-Compare OpenSees ShellMITC4 vs awatif WASM result
+Compare OpenSees ShellMITC4 vs Hekatan WASM result
 
 Mesh: 26x16 Q4 elements on 15.6×9.6m plate
 Columns at grid intersections: x=[0, 3.6, 7.8, 12, 15.6], y=[0, 3, 6.6, 9.6]
@@ -144,9 +144,9 @@ x_check, y_check = i_check * dx, j_check * dy
 w_check = ops.nodeDisp(nTag_check, 3)
 print(f"\nNode ({x_check:.2f}, {y_check:.2f}): w = {w_check:.6e}")
 
-# Compare with awatif
+# Compare with Hekatan
 awatif_w229 = 1.1744e-3
-print(f"Awatif node 229 (7.80, 4.80): w = {awatif_w229:.6e}")
+print(f"Hekatan node 229 (7.80, 4.80): w = {awatif_w229:.6e}")
 print(f"Difference: {abs(w_check - awatif_w229):.6e}")
 
 # Check a few more interior nodes

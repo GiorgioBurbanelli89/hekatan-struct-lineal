@@ -1,5 +1,5 @@
 """
-Comparacion muro de contencion: awatif vs OpenSees
+Comparacion muro de contencion: Hekatan vs OpenSees
 3 modelos:
   0 - Rankine (Ka): presion triangular en fuste
   1 - Suelo continuo: muro+suelo como continuo, gravedad
@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 
-# ── Parametros (mismos que en awatif) ──
+# ── Parametros (mismos que en Hekatan) ──
 H = 4.0        # altura fuste
 B = 3.0        # base total
 tw = 0.3       # espesor fuste
@@ -224,7 +224,7 @@ def run_model(mode):
         ops.timeSeries('Linear', 1)
         ops.pattern('Plain', 1, 1)
 
-        # Apply body force via nodal loads (same as awatif: gamma*area/3 per node)
+        # Apply body force via nodal loads (same as Hekatan: gamma*area/3 per node)
         for (i0, i1, i2) in all_elems:
             x0, y0 = all_nodes[i0]
             x1, y1 = all_nodes[i1]
@@ -379,7 +379,7 @@ mode_labels = ["Rankine (Ka)", "Suelo continuo", "Interfaz"]
 awatif_results = [9.8318e-4, 1.4338e-3, 4.0793e-3]  # from browser console
 
 print("=" * 60)
-print("MURO DE CONTENCION: awatif vs OpenSees")
+print("MURO DE CONTENCION: Hekatan vs OpenSees")
 print("=" * 60)
 print(f"H={H}m, B={B}m, tw={tw}m, tb={tb}m")
 print(f"E_conc={E_conc} kPa, nu={nu_conc}")
@@ -401,7 +401,7 @@ for mode in range(3):
     coords = np.array(coords)
 
     print(f"  OpenSees:  max|u| = {max_disp:.6e} m")
-    print(f"  Awatif:    max|u| = {awatif_results[mode]:.6e} m")
+    print(f"  Hekatan:    max|u| = {awatif_results[mode]:.6e} m")
     diff = abs(max_disp - awatif_results[mode]) / max(awatif_results[mode], 1e-15) * 100
     print(f"  Diferencia: {diff:.2f}%")
     print(f"  Nodos: {len(coords)}")
@@ -421,7 +421,7 @@ for mode in range(3):
     tcf = ax.tricontourf(triang, disp_mag, levels=20, cmap='jet')
     ax.triplot(triang, 'w-', linewidth=0.3, alpha=0.5)
     plt.colorbar(tcf, ax=ax, label='|u| (m)')
-    ax.set_title(f'{mode_labels[mode]}\nmax|u|={max_disp:.4e} m\n(awatif: {awatif_results[mode]:.4e})')
+    ax.set_title(f'{mode_labels[mode]}\nmax|u|={max_disp:.4e} m\n(Hekatan: {awatif_results[mode]:.4e})')
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
     ax.set_aspect('equal')

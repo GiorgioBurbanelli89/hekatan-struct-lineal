@@ -1,5 +1,5 @@
 """
-Comparacion Self-Weight: Awatif Clone vs OpenSeesPy
+Comparacion Self-Weight: Hekatan Clone vs OpenSeesPy
 Modelo: 1 piso, 2x2 vanos, frames + losa + muros
 Verifica que el peso propio se calcula correctamente
 """
@@ -191,5 +191,5 @@ print(f"\n  Total Rz (reactions):  {total_Rz:.2f} kN")
 print(f"  Total weight (calc):  {total_weight:.2f} kN")
 print(f"  Ratio Rz/W: {total_Rz/total_weight:.4f} (should be ~1.0)")
 
-print("\n  Use these values to compare with awatif clone")
+print("\n  Use these values to compare with Hekatan clone")
 print("="*55)

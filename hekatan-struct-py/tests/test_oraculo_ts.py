@@ -129,7 +129,7 @@ def casos():
                                   loads={1: [0, 0, -10, 0, 0, 0]},
                                   rigidOffsets={0: [0.10, 0.15]},
                                   analyze=True)
-    # 8. END LENGTH OFFSETS de CSI (`endOffsets`), que NO son los de awatif: el
+    # 8. END LENGTH OFFSETS de CSI (`endOffsets`), que NO son los del fork original: el
     #    brazo va DENTRO de la luz. Aqui los dos motores tienen que coincidir
     #    tambien en barra OBLICUA, porque el TS ya lo aplica sobre la K LOCAL.
     c["endoffset_voladizo_rz1"] = _base([[0, 0, 0], [6, 0, 0]], [[0, 1]],

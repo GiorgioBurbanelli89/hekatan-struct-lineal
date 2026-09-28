@@ -95,7 +95,7 @@ const ptr=mod.HEAPU32[pDO/4];
 const d=sz>0?Array.from(mod.HEAPF64.subarray(ptr/8,ptr/8+sz)):[];
 
 console.log("=".repeat(60));
-console.log("  Awatif Clone: 1 piso, 1 vano, frames + losa Q4");
+console.log("  Hekatan Clone: 1 piso, 1 vano, frames + losa Q4");
 console.log("=".repeat(60));
 console.log(`  Loads identical to OpenSees test`);
 console.log();
@@ -134,13 +134,13 @@ for(let i=4;i<=7;i++){
 const uz4 = deforms.get(4)?.[2] ?? 0;
 const uz_ops = ops_ref[0][2];
 console.log();
-console.log(`  uz node 4 (awatif): ${(uz4*1000).toFixed(4)} mm`);
+console.log(`  uz node 4 (Hekatan): ${(uz4*1000).toFixed(4)} mm`);
 console.log(`  uz node 5 (OPS):    ${(uz_ops*1000).toFixed(4)} mm`);
 console.log(`  Direction: ${uz4 < 0 ? "DOWN (correct)" : "UP (WRONG!)"}`);
 
 if(uz4 < 0 && Math.abs(uz4) > 1e-8){
   const ratio = uz4 / uz_ops;
-  console.log(`  Ratio awatif/OPS: ${ratio.toFixed(4)}`);
+  console.log(`  Ratio Hekatan/OPS: ${ratio.toFixed(4)}`);
 }
 
 console.log("=".repeat(60));

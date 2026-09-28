@@ -142,7 +142,7 @@ Después de aplicar el fix y recompilar a WASM:
 
 ## Notas adicionales
 
-- El bug es histórico de awatif (upstream); existe desde la introducción del Q4 shell.
+- El bug es histórico del fork original (upstream); existe desde la introducción del Q4 shell.
 - Existe en plate_q4 también (ver `plate_q4/kirchhoff_q4.cpp` líneas con misma convención β).
 - Para `plateQ4Solve()` (función pública de placa pura sin frames) el bug es invisible — los resultados de w son correctos.
 - Para `deform()` con shells+frames mezclados, el bug es visible y crítico.

@@ -46,7 +46,7 @@ states.elementInputs.val = {
 | **Hekatan WASM DKMQ Katili** | **−2.958** (−5.5% vs SAP) ✅ |
 | PyNite DKMQ (referencia open-source) | −2.92 (+1.3% vs Hekatan) 🎯 |
 | OpenSees ShellMITC4 | −2.56 |
-| Awatif MITC3 (mesh fino) | −2.55 |
+| Fork original MITC3 (mesh fino) | −2.55 |
 
 Hekatan DKMQ está alineado con SAP **mucho mejor** que con la formulación default
 (Hughes-Brezzi Q4) que daba w = −1.98 mm.

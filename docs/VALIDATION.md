@@ -13,7 +13,7 @@
 | **OpenSees TCL** | open-source académico (UC Berkeley) | 3.5.x | mismo solver, otra interfaz (control) | ✅ ejecutándose |
 | **SciPy** | open-source científico Python | v1.16+ | eig generalizado independiente | ✅ ejecutándose |
 | **GNU Octave** | open-source MATLAB-compatible | v10.1.0 | reimplementación pura independiente | ✅ ejecutándose |
-| **HekatanLab Web** | open-source (browser MATLAB) | v1.0 | calculadora-tipo-MATLAB con awatif-fem upstream | ✅ CLI ejecutándose |
+| **HekatanLab Web** | open-source (browser MATLAB) | v1.0 | calculadora-tipo-MATLAB con hekatan-fem upstream | ✅ CLI ejecutándose |
 | **ETABS 22** | comercial (CSI) | 22.x | referencia industrial | ✅ Python COM API |
 | **SAP2000** | comercial (CSI) | 25.x | referencia industrial | ⚠️ parcial (Q4) |
 | **CalculiX** | open-source FEM (industrial) | v2.21 | validación 3D solid/shell | 🟡 .inp generado, sin run |
@@ -148,7 +148,7 @@ Ver `validation/octave/paz_6_3_modal.m` para la reimplementación Octave (2 func
 
 Modelo: portal 5m × 3m, carga lateral 10 kN, perfil A=0.04 m², I=1.33e-4 m⁴.
 
-| Variable | HekatanLab (math.js + awatif-fem) | Octave (reimplementación pura) | Δ% |
+| Variable | HekatanLab (math.js + hekatan-fem) | Octave (reimplementación pura) | Δ% |
 |---|---|---|---|
 | Node 1 ux (m) | 6.673629e-1 | 6.6736e-01 | **0.000%** |
 | Node 1 uz (m) | 8.381604e-4 | 8.3816e-04 | **0.000%** |

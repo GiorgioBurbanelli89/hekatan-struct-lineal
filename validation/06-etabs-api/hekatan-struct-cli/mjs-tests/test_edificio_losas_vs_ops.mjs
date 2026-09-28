@@ -169,7 +169,7 @@ const opsRef = {
 };
 
 console.log("\n" + "=".repeat(65));
-console.log("  COMPARACION: Awatif Clone vs OpenSees (edificio + losa Q4)");
+console.log("  COMPARACION: Hekatan Clone vs OpenSees (edificio + losa Q4)");
 console.log("=".repeat(65));
 
 // Corner nodes (on grid intersections = connected to columns)
@@ -180,7 +180,7 @@ const corners = [
   { name: "Corner (0,3)", awIdx: topNid[`0,${(ny-1)*nSub}`], ops: opsRef.corner_03 },
 ];
 
-console.log(`\n  ${"Nodo".padEnd(16)} ${"Awatif ux mm".padEnd(14)} ${"OPS ux mm".padEnd(12)} ${"Awatif uz mm".padEnd(14)} ${"OPS uz mm".padEnd(12)} ${"uz ratio"}`);
+console.log(`\n  ${"Nodo".padEnd(16)} ${"Hekatan ux mm".padEnd(14)} ${"OPS ux mm".padEnd(12)} ${"Hekatan uz mm".padEnd(14)} ${"OPS uz mm".padEnd(12)} ${"uz ratio"}`);
 console.log("  " + "-".repeat(80));
 
 for(const c of corners){

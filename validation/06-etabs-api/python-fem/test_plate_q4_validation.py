@@ -483,7 +483,7 @@ print()
 # ============================================================================
 #  PASO 11: COMPARACION CON RESULTADOS WASM
 # ============================================================================
-print("PASO 11: Comparacion con resultados WASM (awatif)")
+print("PASO 11: Comparacion con resultados WASM (Hekatan)")
 print("-" * 50)
 
 # Valores del WASM (obtenidos del browser)

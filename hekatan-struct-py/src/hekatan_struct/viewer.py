@@ -1,17 +1,17 @@
-"""3D Viewer — espejo de getViewer() de awatif v2 (Three.js → PyVista).
+"""3D Viewer — espejo de getViewer() del fork original v2 (Three.js → PyVista).
 
 Renderiza geometría (frames + shells), deformada, supports, loads en una ventana
 PyVista standalone con sliders interactivos VTK.
 
 Equivalencia conceptual:
 
-    awatif v2 JS:        getViewer({ mesh, settingsObj }).appendChild(document.body)
-    awatif-py:           View(nodes, elements, ...).show()
+    fork original v2 JS: getViewer({ mesh, settingsObj }).appendChild(document.body)
+    hekatan_struct:       View(nodes, elements, ...).show()
 
 API mínimo:
 
-    from awatif import deform, NodeInputs, ElementInputs
-    from awatif.viewer import View
+    from hekatan_struct import deform, NodeInputs, ElementInputs
+    from hekatan_struct.viewer import View
 
     # ... define modelo ...
     out = deform(nodes, elements, ni, ei)
@@ -42,7 +42,7 @@ from .elements.frame import frame_local_axes_csi
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Helpers — convertir geometría awatif a PyVista PolyData/UnstructuredGrid
+# Helpers — convertir geometría a PyVista PolyData/UnstructuredGrid
 # ═══════════════════════════════════════════════════════════════════════════
 def _frames_to_lines(nodes: Sequence[Node], elements: Sequence[Element]) -> Optional["pv.PolyData"]:
     """Frames (2-nodos) → líneas PyVista."""
@@ -302,7 +302,7 @@ def _load_arrows(nodes: Sequence[Node], node_inputs: NodeInputs,
 # View class
 # ═══════════════════════════════════════════════════════════════════════════
 class View:
-    """Viewer 3D PyVista — espejo de getViewer() de awatif v2.
+    """Viewer 3D PyVista — espejo de getViewer() del fork original v2.
 
     Args:
         nodes, elements: geometría del modelo
@@ -323,7 +323,7 @@ class View:
     ):
         if not HAS_PYVISTA:
             raise ImportError(
-                "pyvista no instalado. pip install awatif-py[viewer]"
+                "pyvista no instalado. pip install hekatan-struct-py[viewer]"
             )
         self.nodes = list(nodes)
         self.elements = list(elements)

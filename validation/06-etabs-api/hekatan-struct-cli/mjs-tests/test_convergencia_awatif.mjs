@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Convergencia de malla: awatif clone vs OpenSees
+ * Convergencia de malla: Hekatan clone vs OpenSees
  * Misma placa, diferentes subdivisiones
  */
 import { readFileSync } from "fs";
@@ -27,13 +27,13 @@ const opsRef = {
 };
 
 console.log("=".repeat(65));
-console.log("  CONVERGENCIA: Awatif Clone vs OpenSees (Shell Q4)");
+console.log("  CONVERGENCIA: Hekatan Clone vs OpenSees (Shell Q4)");
 console.log("=".repeat(65));
 console.log(`  Placa ${Lx}x${Ly}m, t=${t}m, q=${q} kN/m2\n`);
 
 const meshes = [2, 3, 4, 6, 8, 10];
 
-console.log(`  ${"nDiv".padEnd(6)} ${"Elems".padEnd(7)} ${"Awatif mm".padEnd(12)} ${"OPS mm".padEnd(10)} ${"Ratio".padEnd(8)}`);
+console.log(`  ${"nDiv".padEnd(6)} ${"Elems".padEnd(7)} ${"Hekatan mm".padEnd(12)} ${"OPS mm".padEnd(10)} ${"Ratio".padEnd(8)}`);
 console.log("  " + "-".repeat(45));
 
 for (const nDiv of meshes) {
@@ -106,5 +106,5 @@ for (const nDiv of meshes) {
   }
 }
 
-console.log("\n  Ratio = Awatif / OpenSees (1.0 = identico)");
+console.log("\n  Ratio = Hekatan / OpenSees (1.0 = identico)");
 console.log("=".repeat(65));

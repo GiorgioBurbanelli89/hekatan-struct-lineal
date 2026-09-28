@@ -137,8 +137,8 @@ MAPA = {
 
 RE_CAT = re.compile(u'(\\bcategory:\\s*)"([^"]*)"')
 RE_ID = re.compile(u'(\\bid:\\s*)"([^"]*)"')
-# Los ejemplos heredados del upstream no escriben `category:`: se registran con
-# `legacy("id", "nombre", "categoria")` en legacyAwatif.ts. Si no se toca aqui,
+# Los ejemplos heredados del fork original no escriben `category:`: se registran con
+# `legacy("id", "nombre", "categoria")` en ejemplosConPanelPropio.ts. Si no se toca aqui,
 # la mitad del arbol se queda con los nombres viejos y el desplegable sale con
 # dos taxonomias mezcladas (comprobado abriendo el bundle: salian "Puentes",
 # "Geotecnico", "Columnas FEM 3D"... al lado de las nuevas).

@@ -551,9 +551,9 @@ del sistema y dejarlo en 0: es el `getZerosIndices` de `deform.cpp`. Con él
 dentro no falla ese GDL, falla el modelo entero — `galpon_lc.heks` daba NaN en
 los 609 nudos por 9 GDL huérfanos de 3 nudos que solo tocan zinc sin flexión.
 
-⚠️ `awatif-py/` es OTRO paquete (el fork original). Los tests que hacen
-`from awatif import ...` **no** prueban este motor; los de éste importan
-`hekatan_struct`. `pytest tests` → **69 pasan**, 1 skip, 2 xfail.
+⚠️ El paquete Python del fork original (`awatif-py/`) se eliminó del repo el
+28-sep-2026; el motor Python de este proyecto es `hekatan-struct-py` y sus
+tests importan `hekatan_struct`. `pytest tests` → **69 pasan**, 1 skip, 2 xfail.
 
 ## Suite de regresión: `npm test`
 
@@ -730,7 +730,7 @@ frame en 6600 nudos (→ 10-15 fps si > 1500/4000 nudos); el rango del colormap 
 muros Y / losas, y F22 por defecto en plantillas con muros); leyenda recortada (`white-space: nowrap`)
 y con nueve «0» sin valores (oculta); el panel de IA sondeaba `localhost:11434` en cada regeneración
 (cacheado, solo en localhost); `legacy("diagrid")`/`("pergola")` pisaban el id del ejemplo paramétrico
-(→ `<id>-awatif`). Abierto: `estructura-mixta` deja 35 nudos sueltos y `deform` vacío (NaN en el visor).
+(→ `<id>-legado`). Abierto: `estructura-mixta` deja 35 nudos sueltos y `deform` vacío (NaN en el visor).
 
 ### Cómo COMPROBAR que el deploy lleva el arreglo
 
@@ -895,7 +895,7 @@ meterlos en el WASM sería mantener tres mapas más sin añadir un dato nuevo.
 - `colorMapRanges` es por-campo (`{ pressure: [min,max] }`), no global — otros shell results mantienen auto-escala
 - `deformScale` se auto-computa en cada `loadExample`/`rebuild` — el usuario puede sobreescribir desde el slider pero se pierde al siguiente rebuild
 - Git-Bash de Windows convierte `/hekatan-struct-lineal/` a ruta absoluta Windows — usar `MSYS_NO_PATHCONV=1` al build
-- El servidor dev corre en **localhost:4600** (no 4640 como el awatif original)
+- El servidor dev corre en **localhost:4600** (no 4640 como en el fork original)
 
 ## Edificio aporticado: losa COSIDA a las vigas y muros de CÁSCARA (2-sep-2026)
 

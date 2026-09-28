@@ -272,7 +272,7 @@ export function deformCpp(
     shearAreasZ.keysPtr,
     shearAreasZ.valuesPtr,
     shearAreasZ.size,
-    // NOTE: `rigidOffsets` (los de awatif) no llega al C++. Los brazos rigidos de
+    // NOTE: `rigidOffsets` (los del fork original) no llega al C++. Los brazos rigidos de
     // CSI son `endOffsets` y van al final de la llamada. Los RELEASES van mas abajo,
     // detras del angulo de eje local.
     // Springs (Winkler): flat [node, dof, k, ...] array

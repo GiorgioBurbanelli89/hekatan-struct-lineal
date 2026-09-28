@@ -1,7 +1,7 @@
 {
   "name": "hekatan-mesh",
   "version": "1.0.1",
-  "description": "Hekatan Mesh — fork of awatif-mesh",
+  "description": "Hekatan Mesh — the meshing engine of Hekatan Struct",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

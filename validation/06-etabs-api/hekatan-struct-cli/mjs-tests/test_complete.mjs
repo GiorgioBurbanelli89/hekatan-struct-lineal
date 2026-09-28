@@ -62,7 +62,7 @@ function test(name,fn){
 }
 
 console.log("=".repeat(65));
-console.log("  AWATIF CLONE — TEST COMPLETO DE TODOS LOS EJEMPLOS");
+console.log("  HEKATAN CLONE — TEST COMPLETO DE TODOS LOS EJEMPLOS");
 console.log("=".repeat(65));
 
 // ═══════════════════════════════════════════════════

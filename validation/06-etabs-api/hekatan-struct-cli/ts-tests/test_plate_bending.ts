@@ -64,7 +64,7 @@ try {
   const D = 2e7 * 0.1**3 / (12 * (1 - 0.3**2));
   const w_analytical = 0.01160 * 1 * 1**2 / D;
   
-  console.log(`\nAwatif w_center: ${wy.toExponential(6)} m`);
+  console.log(`\nHekatan w_center: ${wy.toExponential(6)} m`);
   console.log(`Analytical:      ${(-w_analytical).toExponential(6)} m`);
   console.log(`Error: ${(Math.abs(Math.abs(wy) - w_analytical) / w_analytical * 100).toFixed(1)}%`);
   

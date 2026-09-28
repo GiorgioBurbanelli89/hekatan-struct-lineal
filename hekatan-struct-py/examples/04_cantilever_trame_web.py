@@ -1,6 +1,6 @@
 """Ejemplo 04 — Cantilever en web app (trame + vuetify).
 
-Web app que corre en localhost:8080 con UI vuetify (look awatif v2 web):
+Web app que corre en localhost:8080 con UI vuetify (look del fork original v2 web):
   - 3D viewer izquierda
   - Panel de sliders derecha
   - Update en tiempo real

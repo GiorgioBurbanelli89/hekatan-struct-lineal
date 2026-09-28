@@ -4,7 +4,7 @@
  *
  * TWO implementations side by side:
  *   (A) Exact Paz MATLAB translation (with I0, reference point)
- *   (B) Awatif FEM functions (with Ip = Iy+Iz, automatic orientation)
+ *   (B) Hekatan FEM functions (with Ip = Iy+Iz, automatic orientation)
  *
  * Build:
  *   g++ -O2 -std=c++17 -static-libgcc -static-libstdc++ \
@@ -284,10 +284,10 @@ int main()
     Eigen::MatrixXd eigenvectors_paz = solver_paz.eigenvectors();
 
     // ========================================================================
-    // (B) AWATIF — Assemble K and M using awatif functions
+    // (B) HEKATAN — Assemble K and M using Hekatan functions
     // ========================================================================
 
-    // Convert to awatif data structures
+    // Convert to Hekatan data structures
     std::vector<Node> awNodes = {
         {0, 0, 0}, {0, 0, -200}, {0, 200, 0}, {-200, 0, 0}, {0, -200, 0}
     };
@@ -309,7 +309,7 @@ int main()
         elementInputs.elasticities[i] = E;
         elementInputs.shearModuli[i]  = G;
         elementInputs.areas[i]        = type13 ? A1 : A2;
-        // awatif convention: momentsOfInertiaZ/Y
+        // Hekatan convention: momentsOfInertiaZ/Y
         // Since Iy=Iz for all elements, orientation doesn't matter
         elementInputs.momentsOfInertiaY[i] = type13 ? Iz1 : Iz2;
         elementInputs.momentsOfInertiaZ[i] = type13 ? Iy1 : Iy2;
@@ -427,16 +427,16 @@ int main()
         std::cout << std::endl;
     }
 
-    // --- (B) Awatif frequencies ---
+    // --- (B) Hekatan frequencies ---
     std::cout << "\n" << std::string(78, '=') << std::endl;
-    std::cout << "  (B) AWATIF (Ip=Iy+Iz for torsional mass)" << std::endl;
+    std::cout << "  (B) HEKATAN (Ip=Iy+Iz for torsional mass)" << std::endl;
     std::cout << "  Ip/A vs I0/A: Mem 1,3 → " << (Iy1+Iz1)/A1 << " vs " << I0_1/A1
               << "  |  Mem 2,4 → " << (Iy2+Iz2)/A2 << " vs " << I0_2/A2 << std::endl;
     std::cout << std::string(78, '-') << std::endl;
 
-    // Print awatif system matrices for comparison
-    printMatrix("Kf (Awatif)", Kf_aw, 4);
-    printMatrix("Mf (Awatif)", Mf_aw, 4);
+    // Print Hekatan system matrices for comparison
+    printMatrix("Kf (Hekatan)", Kf_aw, 4);
+    printMatrix("Mf (Hekatan)", Mf_aw, 4);
 
     std::cout << std::endl;
     std::cout << "  " << std::setw(4) << "Mode"
@@ -463,8 +463,8 @@ int main()
         std::cout << "  " << std::setw(14) << T << std::endl;
     }
 
-    // Awatif mode shapes
-    std::cout << std::endl << "  Mode Shapes (Awatif):" << std::endl;
+    // Hekatan mode shapes
+    std::cout << std::endl << "  Mode Shapes (Hekatan):" << std::endl;
     std::cout << "  " << std::setw(4) << "DOF";
     for (int m = 0; m < numAw; ++m)
         std::cout << std::setw(12) << ("Mode " + std::to_string(m+1));
@@ -483,7 +483,7 @@ int main()
     std::cout << std::endl;
     std::cout << "  " << std::setw(4) << "Mode"
               << "  " << std::setw(14) << "Paz (Hz)"
-              << "  " << std::setw(14) << "Awatif (Hz)"
+              << "  " << std::setw(14) << "Hekatan (Hz)"
               << "  " << std::setw(14) << "Diff (%)" << std::endl;
     std::cout << "  " << std::string(50, '-') << std::endl;
 
@@ -492,7 +492,7 @@ int main()
         double w2_paz = eigenvalues_paz(i);
         double f_paz = std::sqrt(std::max(0.0, w2_paz)) / (2.0 * M_PI);
 
-        // Find corresponding awatif mode
+        // Find corresponding Hekatan mode
         while (modeAw < numAw && eigenvalues_aw(modeAw) < 1e-10) modeAw++;
         double f_aw = 0;
         if (modeAw < numAw) {
@@ -517,7 +517,7 @@ int main()
     std::cout << "  ||Mf_paz - Mf_aw|| / ||Mf_paz|| = " << Mdiff << "%" << std::endl;
 
     // ========================================================================
-    // (C) AWATIF + PAZ MASS (I0 explicit via polarMomentsOfInertia)
+    // (C) HEKATAN + PAZ MASS (I0 explicit via polarMomentsOfInertia)
     // ========================================================================
 
     // Add I0 to elementInputs
@@ -537,14 +537,14 @@ int main()
     Eigen::VectorXd eigenvalues_awpaz = solver_awpaz.eigenvalues();
 
     std::cout << "\n" << std::string(78, '=') << std::endl;
-    std::cout << "  (C) AWATIF + PAZ MASS (polarMomentsOfInertia = I0)" << std::endl;
+    std::cout << "  (C) HEKATAN + PAZ MASS (polarMomentsOfInertia = I0)" << std::endl;
     std::cout << std::string(78, '-') << std::endl;
 
     std::cout << std::endl;
     std::cout << "  " << std::setw(4) << "Mode"
               << "  " << std::setw(14) << "Freq (Hz)"
               << "  " << std::setw(14) << "vs Paz (%)"
-              << "  " << std::setw(14) << "vs Awatif (%)" << std::endl;
+              << "  " << std::setw(14) << "vs Hekatan (%)" << std::endl;
     std::cout << "  " << std::string(50, '-') << std::endl;
 
     int mc = 0;
@@ -555,7 +555,7 @@ int main()
 
         double f_paz = std::sqrt(std::max(0.0, eigenvalues_paz(mc))) / (2.0 * M_PI);
 
-        // Find corresponding awatif default mode
+        // Find corresponding Hekatan default mode
         double f_aw = 0;
         if (mc < 6) {
             int maw = 0;

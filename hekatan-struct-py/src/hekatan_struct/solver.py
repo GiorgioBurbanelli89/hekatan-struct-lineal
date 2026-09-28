@@ -1,4 +1,4 @@
-"""Static + Modal solver — espejo de awatif v2 deform/analyze/modalAnalysis.
+"""Static + Modal solver — espejo del fork original v2 deform/analyze/modalAnalysis.
 
 API espejo del JS:
     deform(nodes, elements, nodeInputs, elementInputs) → DeformOutputs
@@ -519,7 +519,7 @@ def deform(
     *,
     sparse: bool | None = None,
 ) -> DeformOutputs:
-    """Análisis lineal estático. Espejo de awatif v2 deform().
+    """Análisis lineal estático. Espejo del fork original v2 deform().
 
     `sparse`: None = decide por tamaño (disperso a partir de 3000 GDL),
     True/False = forzarlo. Los dos caminos dan el MISMO resultado; solo cambia
@@ -748,7 +748,7 @@ def analyze(
     element_inputs: ElementInputs,
     deform_outputs: DeformOutputs,
 ) -> AnalyzeOutputs:
-    """Recupera esfuerzos internos por elemento. Espejo de awatif v2 analyze()."""
+    """Recupera esfuerzos internos por elemento. Espejo del fork original v2 analyze()."""
     out = AnalyzeOutputs()
     # Reconstruir U global desde deformations
     n = len(nodes)
@@ -795,7 +795,7 @@ def modal_analysis(
     *,
     lumped: bool = True,
 ) -> ModalOutputs:
-    """Modal eigen K - λM. Espejo de awatif v2 modalAnalysis()."""
+    """Modal eigen K - λM. Espejo del fork original v2 modalAnalysis()."""
     K = _assemble_K(nodes, elements, element_inputs)
     if not lumped:
         raise NotImplementedError("Consistent mass not implemented yet")

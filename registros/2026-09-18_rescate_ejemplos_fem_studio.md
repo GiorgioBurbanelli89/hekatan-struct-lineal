@@ -34,7 +34,7 @@ prueba.
   `edificio-aporticado`), con nombre honesto y genérico.
 - **Stubs `legacy("diagrid")` y `legacy("pergola")` fuera**: tenían el MISMO id
   que los paramétricos y dos entradas con el mismo id dejan `?t=diagrid` en
-  blanco (ya pasó el 6-sep-2026). Las páginas de awatif siguen en `/diagrid/` y
+  blanco (ya pasó el 6-sep-2026). Las páginas heredadas del fork original siguen en `/diagrid/` y
   `/pergola/`; los paramétricos van en `diagrid-parametrico/` y
   `pergola-parametrica/`.
 - **`plate-thick-validacion` repuesto** (lo borró de refilón el commit

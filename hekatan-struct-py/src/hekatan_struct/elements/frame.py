@@ -250,7 +250,7 @@ def frame_self_weight_length(p_i, p_j, off_i: float = 0.0, off_j: float = 0.0,
 def frame_end_offset_matrix(lr_i: float, lr_j: float) -> np.ndarray:
     """Brazo rígido de un *end length offset* de CSI: u_flexible = R · u_nudo.
 
-    ⚠️ NO es `frame_rigid_offset_matrix`. Aquella es la de awatif: el brazo sale
+    ⚠️ NO es `frame_rigid_offset_matrix`. Aquella es la del fork original: el brazo sale
     hacia AFUERA y ALARGA la barra. El de CSI va hacia ADENTRO — el brazo está
     contenido en la luz `L`, y lo que se acorta es el tramo flexible:
 

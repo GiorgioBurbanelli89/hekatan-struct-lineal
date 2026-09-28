@@ -1,6 +1,6 @@
 """Cantilever vertical bajo carga lateral — PL³/3EI clásico.
 
-API espejo awatif v2 (misma firma): raw nodes/elements/nodeInputs/elementInputs sin Model builder.
+API espejo del fork original v2 (misma firma): raw nodes/elements/nodeInputs/elementInputs sin Model builder.
 """
 import numpy as np
 import pytest
@@ -18,7 +18,7 @@ P = 10.0
 
 @pytest.fixture
 def cantilever_inputs():
-    """Construye nodes/elements/inputs igual que ejemplo awatif v2 JS."""
+    """Construye nodes/elements/inputs igual que ejemplo del fork original v2 JS."""
     nodes = [(0.0, 0.0, 0.0), (0.0, 0.0, L)]
     elements = [[0, 1]]
     A_sec = B * H

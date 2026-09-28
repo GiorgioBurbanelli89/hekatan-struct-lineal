@@ -106,7 +106,7 @@ html=svg+`<div style="font-family:Consolas,monospace;font-size:13px;margin-top:6
 document.getElementById("__ID__").innerHTML=html;
 }catch(e){document.getElementById("__ID__").innerText=`Error Hekatan: `+e+` | `+(e.stack||``);}})();'''
 
-# ---- JS_END3D: mismo marshalling (con secciones por-elemento via self.emat) + viewer 3D Three.js estilo awatif ----
+# ---- JS_END3D: mismo marshalling (con secciones por-elemento via self.emat) + viewer 3D Three.js estilo Hekatan ----
 JS_END3D = r'''
 st("resolviendo FEM ("+nodes.length+" nodos, "+elements.length+" elementos)...");
 var elemIdx=[];for(var i=0;i<elements.length;i++){for(var k=0;k<elements[i].length;k++)elemIdx.push(elements[i][k]);}
@@ -129,7 +129,7 @@ var dOut=mod._malloc(4),dSz=mod._malloc(4),rOut=mod._malloc(4),rSz=mod._malloc(4
 mod._deform(nodesPtr,nodes.length,elementsPtr,elemIdx.length,elemSizesPtr,elements.length,supKeysPtr,supValsPtr,supKeys.length,ldKeysPtr,ldValsPtr,ldKeys.length,el.k,el.v,el.s,ar.k,ar.v,ar.s,mz.k,mz.v,mz.s,my.k,my.v,my.s,sm.k,sm.v,sm.s,to.k,to.v,to.s,th.k,th.v,th.s,po.k,po.v,po.s,eo.k,eo.v,eo.s,say.k,say.v,say.s,saz.k,saz.v,saz.s,springsPtr,0,pf.k,pf.v,pf.s,dt.k,dt.v,dt.s,ds.k,ds.v,ds.s,dOut,dSz,rOut,rSz);
 var dPtr=mod.HEAPU32[dOut/4],dN=mod.HEAPU32[dSz/4];var df=new Float64Array(mod.HEAPF64.buffer,dPtr,dN);
 var U=new Map();for(var i=0;i<dN;i+=7){U.set(df[i],[df[i+1],df[i+2],df[i+3]]);}
-st("cargando viewer 3D (Three.js, estilo awatif)...");
+st("cargando viewer 3D (Three.js, estilo Hekatan)...");
 var div=document.getElementById("__ID__");div.innerHTML=``;
 var s1=document.createElement("script");s1.src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js";
 s1.onload=function(){var s2=document.createElement("script");s2.src="https://cdn.jsdelivr.net/npm/three@0.145.0/examples/js/controls/OrbitControls.js";s2.onload=build3D;s2.onerror=function(){div.innerText="No se pudo cargar OrbitControls (sin internet?)";};document.head.appendChild(s2);};
@@ -164,7 +164,7 @@ supdat.forEach(function(v,k){var n=nodes[k];if(!n)return;var ch=diag*0.06;var co
 scn.add(new THREE.AxesHelper(diag*0.2));
 function anim(){requestAnimationFrame(anim);ctrl.update();ren.render(scn,cam);}anim();
 var info=document.createElement("div");info.style.cssText="font-family:Consolas,monospace;font-size:12px;margin-top:6px;color:#333";
-info.innerHTML="Mesa-torsion 3D (Three.js, estilo awatif) — "+nodes.length+" nodos, "+elements.length+" elementos ("+(pos.length/18)+" shells). Desplaz. max: "+umax.toExponential(3)+" m. Color = uz. Deformada x"+(dsc>0?dsc.toFixed(0):0)+". Arrastra=rota, rueda=zoom.";
+info.innerHTML="Mesa-torsion 3D (Three.js, estilo Hekatan) — "+nodes.length+" nodos, "+elements.length+" elementos ("+(pos.length/18)+" shells). Desplaz. max: "+umax.toExponential(3)+" m. Color = uz. Deformada x"+(dsc>0?dsc.toFixed(0):0)+". Arrastra=rota, rueda=zoom.";
 div.appendChild(info);
 }
 }catch(e){document.getElementById("__ID__").innerText=`Error Hekatan 3D: `+e+` | `+(e.stack||``);}})();'''
@@ -220,7 +220,7 @@ div.appendChild(info);
 }
 }catch(e){document.getElementById("__ID__").innerText=`Error Hekatan Plotly: `+e+` | `+(e.stack||``);}})();'''
 
-# ---- JS_END3D_FORCES: solve + fuerzas internas de frames (N,Vy,Vz,T,My,Mz) + diagramas 3D awatif + tabla ----
+# ---- JS_END3D_FORCES: solve + fuerzas internas de frames (N,Vy,Vz,T,My,Mz) + diagramas 3D Hekatan + tabla ----
 JS_END3D_FORCES = r'''
 st("resolviendo FEM ("+nodes.length+" nodos, "+elements.length+" elementos)...");
 var elemIdx=[];for(var i=0;i<elements.length;i++){for(var k=0;k<elements[i].length;k++)elemIdx.push(elements[i][k]);}
@@ -679,7 +679,7 @@ cpd = (
 "#def hk_cantilever$(LL$; HH$; NX$; NY$; E$; NU$; T$; P$) = '" + CANTI + "\n"
 '"end: resuelve con el solver real y dibuja (contorno si hay shells, deformada si frames)\n'
 "#def hekatan_end$(id$) = '" + JS_END.replace("__ID__", "id$") + "</script>\n"
-'"end3d: resuelve y muestra el modelo en 3D orbitable (Three.js, estilo awatif)\n'
+'"end3d: resuelve y muestra el modelo en 3D orbitable (Three.js, estilo Hekatan)\n'
 "#def hekatan_end3d$(id$) = '" + JS_END3D.replace("__ID__", "id$") + "</script>\n"
 '"end3d_plotly: resuelve y muestra mesh3d en Plotly (barra de color + hover con valores)\n'
 "#def hekatan_end3d_plotly$(id$) = '" + JS_END3D_PLOTLY.replace("__ID__", "id$") + "</script>\n"

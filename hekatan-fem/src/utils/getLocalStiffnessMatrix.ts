@@ -146,8 +146,8 @@ function invertSmall(M: number[][]): number[][] | null {
 
 /**
  * Brazo rigido de un END LENGTH OFFSET de CSI: u_extremo_flexible = R * u_nudo.
- * El brazo va hacia ADENTRO (esta contenido en la luz L), al reves que el de
- * awatif (`buildRigidOffsetMatrix`, que alarga la barra).
+ * El brazo va hacia ADENTRO (esta contenido en la luz L), al reves que el
+ * del fork original (`buildRigidOffsetMatrix`, que alarga la barra).
  *   extremo I (a +lrI del nudo I):  u2 = u2 + lrI*r3 ,  u3 = u3 - lrI*r2
  *   extremo J (a -lrJ del nudo J):  u2 = u2 - lrJ*r3 ,  u3 = u3 + lrJ*r2
  */

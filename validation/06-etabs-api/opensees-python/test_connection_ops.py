@@ -1,6 +1,6 @@
 """
 Test exacto: 1 piso, 1 vano, frames + 1 losa Q4
-Compara desplazamientos OpenSees vs lo que debe dar awatif
+Compara desplazamientos OpenSees vs lo que debe dar Hekatan
 """
 import openseespy.opensees as ops
 import numpy as np
@@ -107,7 +107,7 @@ for n in [5,6,7,8]:
     print(f"  Node {n}: ux={d[0]*1000:.4f}mm  uy={d[1]*1000:.4f}mm  uz={d[2]*1000:.4f}mm")
 
 print()
-print("  --- VALORES DE REFERENCIA PARA AWATIF ---")
+print("  --- VALORES DE REFERENCIA PARA HEKATAN ---")
 for n in [5,6,7,8]:
     d = ops.nodeDisp(n)
     print(f"  node[{n-5}] = [{d[0]:.8e}, {d[1]:.8e}, {d[2]:.8e}, {d[3]:.8e}, {d[4]:.8e}, {d[5]:.8e}]")

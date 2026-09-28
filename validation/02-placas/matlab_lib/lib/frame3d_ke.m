@@ -2,7 +2,7 @@ function [ke_g, Tmat, L_e] = frame3d_ke(E, G, A, J, Iy, Iz, p1, p2)
 % frame3d_ke  Matriz de rigidez 12x12 de elemento viga 3D en coords globales
 %   [ke_g, Tmat, L_e] = frame3d_ke(E, G, A, J, Iy, Iz, p1, p2)
 %
-% Convención (Hekatan Struct / Awatif / OpenSees-like):
+% Convención (Hekatan Struct / OpenSees-like):
 %   - DOFs por nodo: [u, v, w, theta_x, theta_y, theta_z]
 %   - local_x = direccion del elemento (de p1 a p2)
 %   - Si el elemento NO es vertical: local_z = +Z global (eje vertical),

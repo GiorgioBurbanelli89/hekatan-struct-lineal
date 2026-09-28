@@ -94,7 +94,7 @@ Modo  Hekatan(Hz)  OpenSees(Hz)  ETABS(Hz)  Python(Hz)
 
 ## Repositorios
 
-- **Hekatan source**: https://github.com/GiorgioBurbanelli89/awatif-workspace.git
+- **Hekatan source**: https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal.git
 - **Hekatan deploy**: https://giorgioburbanelli89.github.io/hekatan-struct/
 - **Workspace ejemplo**: https://giorgioburbanelli89.github.io/hekatan-struct/workspace/?t=edificio-aporticado
 

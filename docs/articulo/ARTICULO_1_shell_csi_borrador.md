@@ -6,7 +6,7 @@ SAP2000/ETABS en un motor abierto de elementos finitos
 **Título alternativo:** Un elemento de cáscara reproducible: la formulación de CSI reconstruida
 por rigidez, verificada con patch test y convergencia, y validada nudo a nudo contra SAP2000 y ETABS
 
-**Autores:** Jorge … (Hekatan) · … · agradecimiento a Ganchovski (Calcpad) y a Awatif donde toque.
+**Autores:** Jorge … (Hekatan) · … · agradecimiento a Ganchovski (Calcpad) y al proyecto del que partió este motor (fork original) donde toque.
 
 **Palabras clave:** elemento de cáscara, drilling, Reissner–Mindlin, DKQ, identificación de
 formulación, verificación, SAP2000, ETABS, software abierto.

@@ -1,6 +1,6 @@
 """
 Comparación Modal: Edificio 2x2 vanos, 3 pisos con muros de corte
-Awatif Clone (WASM) vs OpenSeesPy
+Hekatan Clone (WASM) vs OpenSeesPy
 
 Modelo:
 - 2 vanos X = 5m, 2 vanos Y = 4m, 3 pisos h = 3m
@@ -293,7 +293,7 @@ for mode in range(1, nModes + 1):
         print(f"  {mode:<4} {'N/A':<8} {'N/A':<8} {'N/A':<8}")
 
 print("\n===================================================")
-print("  Compare these values with awatif clone -> Modal")
+print("  Compare these values with Hekatan clone -> Modal")
 print("===================================================")
 
 # Also solve without walls for comparison

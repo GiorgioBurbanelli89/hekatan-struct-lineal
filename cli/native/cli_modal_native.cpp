@@ -1,6 +1,6 @@
 /**
  * cli_modal_native.cpp — Standalone C++ Modal Analysis (Eigen native)
- * Same code as awatif WASM but compiled natively with g++.
+ * Same code as the Hekatan FEM WASM but compiled natively with g++.
  * Example 6.3 Space Frame (Paz & Leigh) — No diagonals
  *
  * Build:
@@ -84,7 +84,7 @@ int main()
     nodeInputs.supports[4] = {true,true,true,true,true,true};
     nodeInputs.supports[6] = {true,true,true,true,true,true};
 
-    // Element properties (match awatif beams/main.ts exactly)
+    // Element properties (match the original example beams/main.ts exactly)
     ElementInputs elementInputs;
     for (int i = 0; i < num_elements; ++i) {
         bool isCol = (i < 4);
@@ -99,7 +99,7 @@ int main()
     }
 
     // ========================================================================
-    // ASSEMBLE K and M (using awatif's exact C++ functions)
+    // ASSEMBLE K and M (using Hekatan's exact C++ functions)
     // ========================================================================
 
     int dof = nodes.size() * 6;

@@ -25,7 +25,7 @@ const elementInputs = {
   poissonsRatios: new Map([[0, 0.2]]),
 };
 
-console.log("=== AWATIF Shell Q4 vs ETABS ShellThick ===");
+console.log("=== HEKATAN Shell Q4 vs ETABS ShellThick ===");
 console.log("Wall: 1m x 1m, t=0.1m, E=2e7, nu=0.2, 10 tonf lateral");
 console.log();
 
@@ -50,7 +50,7 @@ try {
   const etabs = 2.6036e-5;
   console.log("\n=== COMPARISON ===");
   console.log(`ETABS ShellThick: Ux = ${etabs.toExponential(6)} m`);
-  console.log(`Awatif Shell Q4:  Ux = ${ux.toExponential(6)} m`);
+  console.log(`Hekatan Shell Q4:  Ux = ${ux.toExponential(6)} m`);
   console.log(`Error: ${(Math.abs(ux - etabs)/etabs*100).toFixed(2)}%`);
 } catch (e: any) {
   console.error("ERROR:", e.message);

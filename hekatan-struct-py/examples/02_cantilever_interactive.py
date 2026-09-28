@@ -1,4 +1,4 @@
-"""Ejemplo 02 — Cantilever con SLIDERS interactivos (feel awatif v2).
+"""Ejemplo 02 — Cantilever con SLIDERS interactivos (feel del fork original v2).
 
 Al mover los sliders, el modelo se rebuildea + resuelve + actualiza viewer en
 tiempo real.

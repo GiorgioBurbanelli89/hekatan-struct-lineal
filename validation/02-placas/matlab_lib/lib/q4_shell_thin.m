@@ -15,7 +15,7 @@ function ke = q4_shell_thin(E, nu, t, ce)
 %           DOFs por nodo: [u, v, w, theta_x, theta_y, theta_z]
 %
 % Construcción: superposición de Q4 plane stress (membrana) + Q4 placa Kirchhoff
-% (out-of-plane). Los 6 DOFs por nodo se ordenan estilo Awatif/Hekatan.
+% (out-of-plane). Los 6 DOFs por nodo se ordenan estilo Hekatan.
 % theta_z (drilling DOF) se le asigna una rigidez pequeña (alphaDrill * Ke_max)
 % para evitar singularidad — convención común en shells lineales.
 %

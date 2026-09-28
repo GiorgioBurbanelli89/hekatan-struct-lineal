@@ -56,7 +56,7 @@ printf("  sigma (kN/m2)      %.6e        %.6e        %.4f%%\n", sigma_octave, si
   100*(sigma_octave - sigma_analytic)/sigma_analytic);
 
 % Comparacion vs Hekatan WASM (esperado: 0% diff porque Hekatan usa misma formulacion lineal)
-% Hekatan/awatif: barra-axial example reporta delta = 2.3810e-04 m con mismos params
+% Hekatan: barra-axial example reporta delta = 2.3810e-04 m con mismos params
 hekatan_delta = 2.380952e-04;
 delta_hk_diff = 100*(delta_octave - hekatan_delta)/hekatan_delta;
 printf("\n  Octave vs Hekatan WASM (mismos params):\n");

@@ -124,7 +124,7 @@ console.log(`  Calcpad (BFS):   w=${CP.w}       mm  Mx=${CP.Mx}      My=${CP.My}
 
 for (const [name, theory] of [["Kirchhoff (thin)", 1], ["Mindlin-Reissner (thick)", 0]]) {
   console.log(`\n${"─".repeat(72)}`);
-  console.log(`  Awatif plateQ4 — ${name}`);
+  console.log(`  Hekatan plateQ4 — ${name}`);
   console.log(`${"─".repeat(72)}`);
 
   const r = runPlateQ4(E, nu, t, q, Lx, Ly, nx, ny, theory);

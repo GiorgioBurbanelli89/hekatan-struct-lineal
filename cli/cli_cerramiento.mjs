@@ -460,7 +460,7 @@ function buildSvg() {
     const tx = dx / L, tz = dz / L;
     // Perpendicular: rotar 90° en sentido antihorario → (-tz, tx) en XZ
     const nx_p = -tz, nz_p = tx;
-    // Convención de signo: en awatif/hekatan f_local[4..5] y f_local[10..11]
+    // Convención de signo: en Hekatan f_local[4..5] y f_local[10..11]
     // son los momentos de extremo. Para que el diagrama quede del "lado
     // tracción" del elemento, -valor en extremo i y +valor en extremo j.
     const M_i = -pickI(r);
@@ -514,7 +514,7 @@ console.log("─".repeat(80));
 console.log(`  Nodos: ${nodes.length}   Elementos: ${elements.length}   Apoyos: ${supports.size}   Nodos cargados: ${loads.size}`);
 console.log("─".repeat(80));
 
-// Convención awatif (eje vertical Z+):
+// Convención Hekatan (eje vertical Z+):
 //   COLUMNAS: local_x=+Z, local_y=+Y, local_z=-X
 //     · bendingsY (My) = flexión en plano XZ → columna se flexa en X ("bend in X")
 //     · bendingsZ (Mz) = flexión en plano YZ → columna se flexa en Y ("bend in Y")

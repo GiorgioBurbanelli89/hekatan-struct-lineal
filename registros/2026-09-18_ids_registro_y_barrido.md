@@ -130,7 +130,7 @@ tocó más. Lo que cambió:
   `placa-base-h` / `-hueca` / `-cft`, `columna-cft-h8`, `conexion-diafragma-cft`,
   `tablero-puente`, `viga-doble-t`, `bolt-hole-detail`, `slab-designer`,
   `ifc-viewer`, `calc-editor`, `cad-editor`, `report`, `drawing`, `fem-explained`
-  y los legacy de awatif.
+  y los legacy del fork original.
 - Y `arco`, recién registrado.
 - **Con modal: 57** de los 144.
 

@@ -313,7 +313,7 @@ if (sectionText["WALL PROPERTIES"]) {
 }
 
 // Reconstruir
-const lines = ["$ File exported from Awatif FEM Studio (post-processed)\r\n"];
+const lines = ["$ File exported from Hekatan FEM Studio (post-processed)\r\n"];
 for (const h of sectionOrder) {
   if (sectionText[h]) {
     lines.push(sectionText[h]);
