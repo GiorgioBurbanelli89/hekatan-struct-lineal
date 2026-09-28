@@ -4233,7 +4233,6 @@ function buildParamsPane() {
     "4️⃣ Mixtos · 🌉 Puentes e icónicos",
     "4️⃣ Mixtos · 🌀 Drilling ITW",
     "🧪 Utilidades",
-    "🗄 Legacy",
   ];
   const sortedCats = [
     ...categoryOrder.filter((c) => allCategories.includes(c)),

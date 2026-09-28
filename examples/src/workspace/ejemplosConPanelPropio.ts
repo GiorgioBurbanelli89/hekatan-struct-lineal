@@ -35,42 +35,22 @@ function legacy(id: string, name: string, category: string, benchmark = false): 
   };
 }
 
-// ─── FEM básico ──────────────────────────────────────────────────────
-export const legacy1dMesh       = legacy("1d-mesh",       "Hekatan – 1D Mesh",          "1️⃣ Frames · 🎯 2 GDL Flexión");
-export const legacy2dMesh       = legacy("2d-mesh",       "Hekatan – 2D Mesh",          "2️⃣ Shells · 🧱 Placas");
-export const legacy3dStructure  = legacy("3d-structure",  "Hekatan – 3D Structure",     "1️⃣ Frames · 🎯 6 GDL Espacial");
+// 28-sep-2026 — FUERA los 13 ejemplos heredados del proyecto de origen (1d-mesh,
+// 2d-mesh, 3d-structure, truss, advanced-truss, building, plate, color-map,
+// curves, drawing, tables, slab-designer, report): eran demos del fork, no
+// ejemplos de Hekatan, y lo que hacian ya lo hace el workspace (cercha → `truss-gen`,
+// placa → `plate-thin`/`plate-thick`, edificio → `edificio-aporticado`). Y fuera
+// `cad-editor`: el dibujo vive dentro del workspace (`cad-draw`, `new-blank`).
 
-// ─── Frames y trusses ────────────────────────────────────────────────
-export const legacyAxialBar     = legacy("axial-bar",     "Hekatan – Axial Bar",        "1️⃣ Frames · 🎯 1 GDL Axial");
-export const legacyTruss        = legacy("truss",         "Hekatan – Truss",            "1️⃣ Frames · 🎯 6 GDL Espacial");
-export const legacyAdvancedTruss= legacy("advanced-truss","Hekatan – Advanced Truss",   "1️⃣ Frames · 🎯 6 GDL Espacial");
+// ─── Frames ──────────────────────────────────────────────────────────
+export const legacyAxialBar     = legacy("axial-bar",     "Barra axial",                "1️⃣ Frames · 🎯 1 GDL Axial");
 export const legacyBeams        = legacy("beams",         "Paz 6.3 Space Frame (validación 4 solvers)", "1️⃣ Frames · 🎯 n GDL Sistemas", true);
 
-// ─── Edificios ──────────────────────────────────────────────────────
-export const legacyBuilding     = legacy("building",      "Hekatan – Building (upstream)", "4️⃣ Mixtos · 🏢 Edificios");
-
 // ─── Placas ─────────────────────────────────────────────────────────
-export const legacyPlate        = legacy("plate",         "Hekatan – Plate (legacy)",   "2️⃣ Shells · 🧱 Placas");
-export const legacyPlateQ4      = legacy("plate-q4",      "Hekatan – Plate Q4 Studio",  "2️⃣ Shells · 🧱 Placas");
-
-// ─── Visualización / didácticos ─────────────────────────────────────
-export const legacyColorMap     = legacy("color-map",     "Hekatan – Color Map demo",   "🗄 Legacy");
-export const legacyCurves       = legacy("curves",        "Hekatan – Curves demo",      "🗄 Legacy");
-export const legacyDrawing      = legacy("drawing",       "Hekatan – Drawing canvas",   "🗄 Legacy");
-export const legacyTables       = legacy("tables",        "Hekatan – Tables demo",      "🗄 Legacy");
-
-// ─── Editores (CAD / cálculo / losas) ───────────────────────────────
-export const legacyCadEditor    = legacy("cad-editor",    "Hekatan – CAD Editor",       "🧪 Utilidades");
-// `calc-editor` NO es una pagina: `examples/src/calc-editor/` solo tiene
-// modulos (`calcPanel.ts` y compania) que cargan las FEM Tools y el panel de
-// tutoriales. No hay `index.html` ni entrada en `examples/vite.config.ts`, asi
-// que este stub apuntaba a `../calc-editor/` = **404**. Fuera del selector
-// (18-sep-2026).
-export const legacySlabDesigner = legacy("slab-designer", "Hekatan – Slab Designer",    "🧪 Utilidades");
+export const legacyPlateQ4      = legacy("plate-q4",      "Placa Q4 — estudio",         "2️⃣ Shells · 🧱 Placas");
 
 // ─── Educativo ──────────────────────────────────────────────────────
-export const legacyFemExplained = legacy("fem-explained", "Hekatan – FEM Explained",    "🗄 Legacy");
-export const legacyReport       = legacy("report",        "Hekatan – Report (Calcpad)", "🗄 Legacy");
+export const legacyFemExplained = legacy("fem-explained", "FEM paso a paso",            "🧪 Utilidades");
 
 // ─── Estructuras emblemáticas (extraídas de getCad3d.ts) ────────────
 export const iconicGatewayArch  = legacy("gateway-arch",         "Gateway Arch",                "4️⃣ Mixtos · 🌉 Puentes e icónicos");
@@ -83,7 +63,7 @@ export const iconicSydneyOpera  = legacy("sydney-opera",         "Sydney Opera H
 // abria el stub, no el ejemplo. El comentario decia "hasta que se registre
 // moreExamples". Ya esta: los 21 viven en su carpeta y estan en el registry
 // (18-sep-2026), asi que los stubs se van y el id vuelve a su dueno. Las paginas
-// `/diagrid/` y `/pergola/` siguen existiendo y se pueden abrir por URL directa.
+// viejas `/diagrid/` y `/pergola/` se quitaron del todo el 28-sep-2026.
 
 // ─── Demos FEM Q4 (validación contra OpenSees/SAP/ETABS) ────────────
 export const demoShearWallQ4    = legacy("shear-wall-q4",        "Muro de Corte Q4",            "2️⃣ Shells · 🕸 Membranas");
@@ -114,26 +94,12 @@ export const solidCubeFEM       = legacy("solid-cube-fem",       "Cubo Sólido H
 export const bulboPresionesSuelo= legacy("bulbo-presiones-suelo","Bulbo de Presiones — Serquen SF-70",            "3️⃣ Sólidos", true);
 export const muroContencionSolido = legacy("muro-contencion-solido","Muro de contención en SÓLIDOS H8 (vs SAP2000)",  "3️⃣ Sólidos", true);
 
-/** Array completo de los 19+11 ejemplos legacy para registrar de un golpe. */
+/** Los que quedan por GRADUAR a `ExampleDef` (params + build). */
 export const ejemplosConPanelPropio: ExampleDef[] = [
-  legacy1dMesh,
-  legacy2dMesh,
-  legacy3dStructure,
   legacyAxialBar,
-  legacyTruss,
-  legacyAdvancedTruss,
   legacyBeams,
-  legacyBuilding,
-  legacyPlate,
   legacyPlateQ4,
-  legacyColorMap,
-  legacyCurves,
-  legacyDrawing,
-  legacyTables,
-  legacyCadEditor,
-  legacySlabDesigner,
   legacyFemExplained,
-  legacyReport,
   // Iconic structures
   iconicGatewayArch,
   iconicCableBridge,
