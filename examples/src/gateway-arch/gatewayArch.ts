@@ -128,7 +128,8 @@ const P = (folder: string, label: string, def: number, min: number, max: number,
 export const gatewayArch: ExampleDef = {
   id: "gateway-arch",
   name: "Gateway Arch",
-  category: "4️⃣ Mixtos · 🌉 Puentes e icónicos",
+  // solo barras (101): la categoría la manda el tipo de elemento MEDIDO, no el tema
+  category: "1️⃣ Frames · 🎯 6 GDL Espacial",
   defaultFrameResult: "contour:normals",
   params: {
     H:     P("Geometría", "Altura H (m)", 20, 5, 50, 1),

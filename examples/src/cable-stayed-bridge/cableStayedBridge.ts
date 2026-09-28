@@ -195,7 +195,8 @@ const P = (folder: string, label: string, def: number, min: number, max: number,
 export const cableStayedBridge: ExampleDef = {
   id: "cable-stayed-bridge",
   name: "Puente Atirantado",
-  category: "4️⃣ Mixtos · 🌉 Puentes e icónicos",
+  // solo barras (87): la categoría la manda el tipo de elemento MEDIDO, no el tema
+  category: "1️⃣ Frames · 🎯 6 GDL Espacial",
   defaultFrameResult: "contour:normals",
   params: {
     span:     P("Geometría", "Luz total (m)", 60, 20, 200, 5),
