@@ -46,12 +46,10 @@ La interfaz está en `examples/src/workspace/exampleRegistry.ts` (`ExampleDef`, 
 8. **Id, nombre y categoría**: los del registro actual (`ejemplosConPanelPropio.ts`). La
    categoría la manda el TIPO DE ELEMENTO: barras → `1️⃣ Frames`, cáscaras → `2️⃣ Shells`,
    hexaedros → `3️⃣ Sólidos`, mezcla → `4️⃣ Mixtos`.
-9. **`main.ts` queda en tres líneas**:
-   ```ts
-   import { miEjemplo } from "./miEjemplo";
-   import { runExampleStandalone } from "../workspace/runExampleStandalone";
-   runExampleStandalone(miEjemplo);
-   ```
+9. **No hay página propia.** El ejemplo NO lleva `main.ts` ni `index.html`: se abre con
+   `/workspace/?t=<id>`. Se registra en `examples/src/workspace/exampleRegistry.ts` y, si su
+   carpeta tenía dirección propia, se añade a `PAGINAS_DE_ANTES` en `examples/vite.config.ts`
+   para que el enlace viejo redirija.
 10. **Español**, léxico de ingeniería, sin la palabra del proyecto de origen.
 
 ## Cómo se comprueba

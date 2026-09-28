@@ -6,14 +6,13 @@ Fork de [awatif v2.0.0](https://github.com/madil4/awatif) extendido con análisi
 
 ## Arquitectura del workspace
 
-Cada ejemplo vive en su propia carpeta (`examples/src/<id>/`) con `index.html` + `main.ts` + `<name>.ts` y **exporta un `ExampleDef`** que el workspace registra en `exampleRegistry.ts`.
+**Un solo entorno: el workspace.** Cada ejemplo vive en su carpeta (`examples/src/<id>/<name>.ts`) y **exporta un `ExampleDef`** que el workspace registra en `exampleRegistry.ts`. No hay páginas por ejemplo: el build compila el workspace (y `fem-explained`, la única lección que aún trae su interfaz) y deja una redirección en cada dirección de antes (`PAGINAS_DE_ANTES` en `examples/vite.config.ts`).
 
 ```
 examples/src/
 ├── workspace/                  ← hub principal
 │   ├── main.ts                 (Tweakpane unificado: selector + params + modal)
 │   ├── exampleRegistry.ts      (ExampleDef interface + lista)
-│   ├── runExampleStandalone.ts (runner para páginas standalone /zapata-aislada/)
 │   └── units.ts                (forceUnit/dispUnit persistidos en localStorage)
 ├── zapata-aislada/             ← Ecuador NEC-SE-GC con selector tipo suelo
 ├── zapata-viga-amarre/         ← medianera + viga + centrada, Winkler 3D
@@ -26,9 +25,8 @@ examples/src/
 └── beams/                      ← Paz 6.3 (validación modal, ver abajo)
 ```
 
-Todos los ejemplos son cargables desde el workspace:
-- URL directa: `/workspace/?t=zapata-aislada`
-- Página standalone compilada: `/zapata-aislada/`, `/edificio-aporticado/`, etc.
+Todos los ejemplos se abren desde el workspace: `/workspace/?t=zapata-aislada`.
+La dirección de antes, `/zapata-aislada/`, redirige ahí.
 
 ### Interfaz `ExampleDef` (examples/src/workspace/exampleRegistry.ts)
 
@@ -784,23 +782,19 @@ source /c/Users/j-b-j/emsdk/emsdk_env.sh
 
 ## Cómo agregar un ejemplo nuevo
 
-1. Crear `examples/src/<id>/<name>.ts` exportando `ExampleDef`
-2. Crear `examples/src/<id>/main.ts`:
-   ```ts
-   import { <name> } from "./<name>";
-   import { runExampleStandalone } from "../workspace/runExampleStandalone";
-   runExampleStandalone(<name>);
-   ```
-3. Crear `examples/src/<id>/index.html` (wrapper mínimo)
-4. Registrar en `examples/src/workspace/exampleRegistry.ts`:
+**Todo vive en el workspace** (28-sep-2026): un ejemplo NO lleva página propia, ni `main.ts` ni
+`index.html`. Se abre con `/workspace/?t=<id>`.
+
+1. Crear `examples/src/<id>/<name>.ts` exportando `ExampleDef`, con la malla en una función pura.
+2. Registrar en `examples/src/workspace/exampleRegistry.ts`:
    ```ts
    import { <name> } from "../<id>/<name>";
    export const examplesRegistry: ExampleDef[] = [..., <name>];
    ```
-5. Agregar entry en `examples/vite.config.ts`:
-   ```ts
-   "<id>": "src/<id>/index.html",
-   ```
+3. `node cli/gen_ids_deploy.mjs` (regenera `cli/shots/deploy/_ids.txt`) y `node tests/run.mjs listas`.
+4. Un test del ejemplo en `tests/casos/`, con otro programa de árbitro.
+
+Para pasar al workspace un ejemplo que todavía traiga su panel: `docs/GRADUAR_UN_EJEMPLO.md`.
 
 ## Git remotes
 
