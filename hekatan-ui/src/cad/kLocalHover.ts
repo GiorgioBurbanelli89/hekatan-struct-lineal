@@ -10,12 +10,14 @@
  * El visor avisa con el evento `hk:hover` (lo lanza `viewer/objects/hover.ts`).
  */
 import { abrirHoja } from "./hojaLisp";
-import { comprobar, corto, datosBarra, elementosDelModelo, GDL, hojaBarra, kLocalBarra } from "./kLocalBarra";
+import { comprobar, comprobarLetras, corto, datosBarra, elementosDelModelo, GDL, hojaBarra, kLetras, kLocalBarra } from "./kLocalBarra";
+import { comprobarPano, datosPano, formulacionPano, GDL_FLEXION, GDL_MEMBRANA, hojaPano } from "./kLocalPano";
 
 const ESPERA = 450;          // ms quieto sobre la barra antes de abrir
 const W = () => window as any;
 let tarjeta: HTMLDivElement | null = null;
-let reloj = 0, cierre = 0, abierta = -1, dentro = false;
+let reloj = 0, cierre = 0, abierta = "", dentro = false;
+let vista: "numeros" | "letras" = "numeros";   // lo que se ve de la barra; se recuerda entre barras
 let activo = true;
 
 const CSS = `
@@ -42,6 +44,12 @@ const CSS = `
 #hk-klocal button{margin-left:auto;cursor:pointer;background:#0b4fa8;color:#fff;border:0;border-radius:5px;
   padding:4px 10px;font:600 12px 'Segoe UI',sans-serif}
 #hk-klocal .u{color:#6b6257;font-size:11px}
+#hk-klocal .tabs{display:flex;gap:4px;justify-content:center;margin:2px 0 6px}
+#hk-klocal .tabs button{margin:0;background:#efe7d4;color:#3d3727;border:1px solid #cdbf9a;font-weight:500}
+#hk-klocal .tabs button.on{background:#0b4fa8;color:#fff;border-color:#0b4fa8}
+#hk-klocal td.l{font-style:italic;color:#0b4fa8} #hk-klocal td.l.n{color:#a32b1e}
+#hk-klocal .ley{font:12px Georgia,serif;color:#12305e;text-align:center;margin-top:6px;line-height:1.55}
+#hk-klocal .bl{font:600 12px 'Segoe UI',sans-serif;color:#3d3727;text-align:center;margin:8px 0 2px}
 `;
 
 function crear(): HTMLDivElement {
@@ -58,7 +66,7 @@ function crear(): HTMLDivElement {
 
 function cerrar(): void {
   if (tarjeta) tarjeta.style.display = "none";
-  abierta = -1;
+  abierta = "";
 }
 function cerrarLuego(ms: number): void {
   clearTimeout(cierre);
@@ -78,9 +86,22 @@ function pintar(idx: number, x: number, y: number): void {
   if (!tarjeta) tarjeta = crear();
   const c = comprobar(K, d.L);
   const cab = GDL.concat(GDL).map((g, j) => `<th class="${j === 6 ? "s" : ""}">${sub(g)}${j > 5 ? "′" : ""}</th>`).join("");
+  const Lt = kLetras();
+  const letra = (t: string) => t === "0" ? "0" : (t.startsWith("-") ? "−" : "") + t.replace(/^-/, "").replace(/^k_(\w+)$/, "k<sub>$1</sub>");
   const filas = K.map((f, i) =>
     `<tr class="${i === 6 ? "s" : ""}"><th class="f">${sub(GDL[i % 6])}${i > 5 ? "′" : ""}</th>` +
-    f.map((v, j) => `<td class="${Math.abs(v) < 1e-9 ? "c" : ""}${j === 6 ? " s" : ""}">${corto(v)}</td>`).join("") + "</tr>").join("");
+    f.map((v, j) => vista === "letras"
+      ? `<td class="${Lt[i][j] === "0" ? "c" : "l"}${Lt[i][j].startsWith("-") ? " n" : ""}${j === 6 ? " s" : ""}">${letra(Lt[i][j])}</td>`
+      : `<td class="${Math.abs(v) < 1e-9 ? "c" : ""}${j === 6 ? " s" : ""}">${corto(v)}</td>`).join("") + "</tr>").join("");
+  const cl = comprobarLetras(d, K);
+  const Ls = d.brazos ? "L<sub>f</sub>" : "L";
+  const leyenda = vista !== "letras" ? "" :
+    `<div class="ley"><i>k</i><sub>a</sub> = <i>EA/L</i> · <i>k</i><sub>t</sub> = <i>GJ/L</i> · ` +
+    `<i>k</i><sub>v</sub> = 12<i>EI</i>/(${Ls}³(1+φ)) · <i>k</i><sub>m</sub> = 6<i>EI</i>/(${Ls}²(1+φ)) · ` +
+    `<i>k</i><sub>g</sub> = (4+φ)<i>EI</i>/(${Ls}(1+φ)) · <i>k</i><sub>c</sub> = (2−φ)<i>EI</i>/(${Ls}(1+φ))<br>` +
+    `subíndice 3: plano 1-2 (<i>I</i><sub>33</sub>, φ<sub>3</sub>) · subíndice 2: plano 1-3 (<i>I</i><sub>22</sub>, φ<sub>2</sub>) · φ = 12<i>EI</i>/(<i>GA</i><sub>s</sub>${Ls}²)<br>` +
+    (cl.aplica ? `<span class="${cl.difRel < 1e-9 ? "ok" : "mal"}">${cl.difRel < 1e-9 ? "✓" : "✕"} con los números de esta barra da la matriz del solver</span>`
+      : `<span class="u">esta barra tiene ${d.liberaciones ? "liberaciones" : "brazos rígidos"}: el solver usa la matriz ${d.liberaciones ? "condensada" : "con los brazos"} (pestaña «Con números»)</span>`) + `</div>`;
   tarjeta.innerHTML =
     `<h4>Matriz de rigidez local · barra ${d.idx + 1}</h4>` +
     `<div class="sub">nudo ${d.n1} → nudo ${d.n2} · ${d.formulacion}</div>` +
@@ -92,13 +113,25 @@ function pintar(idx: number, x: number, y: number): void {
     dato("J", num(d.J), "m⁴") + dato("φ<sub>3</sub>", num(d.phi3), "") + dato("φ<sub>2</sub>", num(d.phi2), "") +
     dato("ángulo", num(d.ang), "°") +
     `</div>` +
-    `<div class="mat"><b>K</b><span>=</span><table><tr><th></th>${cab}</tr>${filas}</table></div>` +
+    `<div class="tabs"><button data-v="numeros" class="${vista === "numeros" ? "on" : ""}">Con números</button>` +
+    `<button data-v="letras" class="${vista === "letras" ? "on" : ""}">En letras</button></div>` +
+    `<div class="mat"><b>K</b><span>=</span><table><tr><th></th>${cab}</tr>${filas}</table></div>` + leyenda +
     `<div class="pie"><span class="u">kN y m · ejes de la barra · ′ = nudo final</span>` +
     `<span class="${c.simetrica ? "ok" : "mal"}">${c.simetrica ? "✓" : "✕"} simétrica</span>` +
     `<span class="${c.rigido ? "ok" : "mal"}">${c.rigido ? "✓" : "✕"} sólido rígido sin fuerza</span>` +
     `<button id="hk-klocal-hoja">Hoja completa en Hekatan LISP</button></div>`;
   tarjeta.style.display = "block";
-  // al lado del cursor, y siempre ENTERA dentro de la ventana
+  colocar(x, y);
+  abierta = "frame:" + idx;
+  (tarjeta.querySelector("#hk-klocal-hoja") as HTMLButtonElement).onclick = () => abrirHojaBarra(idx);
+  tarjeta.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => {
+    b.onclick = () => { vista = b.dataset.v as any; pintar(idx, x, y); };
+  });
+}
+
+/** Coloca la tarjeta al lado del cursor, siempre ENTERA dentro de la ventana. */
+function colocar(x: number, y: number): void {
+  if (!tarjeta) return;
   const r = tarjeta.getBoundingClientRect();
   let px = x + 18, py = y + 18;
   if (px + r.width > window.innerWidth - 8) px = Math.max(8, x - r.width - 18);
@@ -107,8 +140,60 @@ function pintar(idx: number, x: number, y: number): void {
   if (py + r.height > window.innerHeight - 8) py = Math.max(8, window.innerHeight - r.height - 8);
   tarjeta.style.left = px + "px";
   tarjeta.style.top = py + "px";
-  abierta = idx;
-  (tarjeta.querySelector("#hk-klocal-hoja") as HTMLButtonElement).onclick = () => abrirHojaBarra(idx);
+}
+
+/** Tabla de un bloque del paño (flexión o membrana), 3n × 3n. */
+function tablaPano(K: number[][], gdl: string[], nudos: number[]): string {
+  const et = nudos.flatMap((n) => gdl.map((g) => `${g}<sub>${n}</sub>`));
+  const nn = gdl.length;
+  const cab = et.map((g, j) => `<th class="${j > 0 && j % nn === 0 ? "s" : ""}">${g}</th>`).join("");
+  const filas = K.map((f, i) =>
+    `<tr class="${i > 0 && i % nn === 0 ? "s" : ""}"><th class="f">${et[i]}</th>` +
+    f.map((v, j) => `<td class="${Math.abs(v) < 1e-9 ? "c" : ""}${j > 0 && j % nn === 0 ? " s" : ""}">${corto(v)}</td>`).join("") + "</tr>").join("");
+  return `<table><tr><th></th>${cab}</tr>${filas}</table>`;
+}
+
+/** La tarjeta de un PAÑO: sus dos matrices (placa y membrana), la formulación y las D en letras. */
+function pintarPano(idx: number, x: number, y: number): void {
+  const d = datosPano(W().__hekatanStates, idx);
+  if (!d) return;
+  if (!tarjeta) tarjeta = crear();
+  const f = formulacionPano(d);
+  const c = comprobarPano(d.k);
+  const thin = d.tipoPlaca === 1;
+  const nulos = (v: number | null) => v === null ? "" : `<span class="${v === 3 ? "ok" : "mal"}">${v === 3 ? "✓" : "✕"} ${v} modos de energía nula${v === 3 ? "" : " (deberían ser 3: hay un mecanismo)"}</span>`;
+  tarjeta.innerHTML =
+    `<h4>Matriz de rigidez local · paño ${d.idx + 1}</h4>` +
+    `<div class="sub">nudos ${d.nudos.join(" · ")} · ${f.placa}</div>` +
+    `<div class="sub">${f.membrana}</div>` +
+    `<div class="datos">` +
+    dato("E", num(d.E), "kN/m²") + dato("ν", num(d.nu), "") + dato("t", num(d.t), "m") + dato("G", num(d.G), "kN/m²") +
+    dato("área", num(d.k.area), "m²") + `</div>` +
+    `<div class="ley"><i>D</i><sub>b</sub> = <i>Et</i>³/(12(1−ν²))·[1 ν 0; ν 1 0; 0 0 (1−ν)/2]` +
+    (thin ? "" : ` · <i>D</i><sub>s</sub> = ⁵⁄₆·<i>Gt</i>·[1 0; 0 1]`) +
+    ` · <i>D</i><sub>m</sub> = <i>Et</i>/(1−ν²)·[1 ν 0; ν 1 0; 0 0 (1−ν)/2]<br>` +
+    `<i>K</i> = ∫ <i>B</i>ᵀ<i>DB</i> d<i>A</i> ≈ Σ <i>B</i>ᵀ<i>DB</i>·det<i>J</i>·peso, en puntos de Gauss` +
+    (d.modificadores ? `<br><span class="mal">modificadores ${d.modificadores.join("/")}: esta matriz es la SIN modificar</span>` : "") + `</div>` +
+    (d.k.aviso ? `<div class="sub mal">${d.k.aviso}</div>` : "") +
+    (d.k.flexion ? `<div class="bl">Placa (flexión)</div><div class="mat"><b>K<sub>b</sub></b><span>=</span>${tablaPano(d.k.flexion, GDL_FLEXION, d.nudos)}</div>` : "") +
+    (d.k.membrana ? `<div class="bl">Membrana (en su plano)</div><div class="mat"><b>K<sub>m</sub></b><span>=</span>${tablaPano(d.k.membrana, GDL_MEMBRANA, d.nudos)}</div>` : "") +
+    `<div class="pie"><span class="u">kN y m · ejes del elemento</span>` +
+    `<span class="${c.simetrica ? "ok" : "mal"}">${c.simetrica ? "✓" : "✕"} simétrica</span>` +
+    nulos(c.nulosFlexion) +
+    `<button id="hk-klocal-hoja">Hoja completa en Hekatan LISP</button></div>`;
+  tarjeta.style.display = "block";
+  colocar(x, y);
+  abierta = "shell:" + idx;
+  (tarjeta.querySelector("#hk-klocal-hoja") as HTMLButtonElement).onclick = () => abrirHojaPano(idx);
+}
+
+/** La deducción del paño, en el motor de Hekatan LISP. */
+export function abrirHojaPano(idx: number): string {
+  const d = datosPano(W().__hekatanStates, idx);
+  if (!d) return "No pude leer ese paño.";
+  abrirHoja(`K local · paño ${d.idx + 1}`, "```hoja\n" + hojaPano(d) + "\n```", 900);
+  cerrar();
+  return `Paño ${d.idx + 1}: hoja abierta.`;
 }
 
 /** La deducción entera, en el motor de Hekatan LISP. */
@@ -130,17 +215,20 @@ export function arrancarKLocalHover(): void {
     activar: (v: boolean) => { activo = v; if (!v) cerrar(); },
     hoja: abrirHojaBarra,
     abierta: () => abierta,
-    // para pruebas y para el agente: la tarjeta de una barra sin tener que poner el cursor
+    // para pruebas y para el agente: la tarjeta sin tener que poner el cursor
     ver: (idx: number, x = 300, y = 200) => pintar(idx, x, y),
+    verPano: (idx: number, x = 300, y = 200) => pintarPano(idx, x, y),
+    hojaPano: abrirHojaPano,
+    vista: (v: "numeros" | "letras") => { vista = v; },
     datos: (idx: number) => datosBarra(W().__hekatanStates, idx),
     matriz: (idx: number) => kLocalBarra(W().__hekatanStates, idx),
   };
   window.addEventListener("hk:hover", (ev: any) => {
     const h = ev.detail;
     clearTimeout(reloj);
-    if (!activo || !h || h.type !== "frame") { if (!dentro) cerrarLuego(300); return; }
-    if (h.idx === abierta) { clearTimeout(cierre); return; }
+    if (!activo || !h || (h.type !== "frame" && h.type !== "shell")) { if (!dentro) cerrarLuego(300); return; }
+    if (h.type + ":" + h.idx === abierta) { clearTimeout(cierre); return; }
     clearTimeout(cierre);
-    reloj = window.setTimeout(() => pintar(h.idx, h.x, h.y), ESPERA);
+    reloj = window.setTimeout(() => (h.type === "frame" ? pintar : pintarPano)(h.idx, h.x, h.y), ESPERA);
   });
 }

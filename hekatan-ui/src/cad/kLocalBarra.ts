@@ -94,6 +94,62 @@ export function kLocalBarra(st: any, idx: number): number[][] | null {
   return K && K.length === 12 ? K : null;
 }
 
+/**
+ * La matriz EN LETRAS de la barra continua (sin liberaciones ni brazos rígidos), 12 × 12, con el
+ * orden de gdl del solver: u₁ u₂ u₃ r₁ r₂ r₃ del nudo inicial y los mismos del final.
+ *   plano 1-2 (u₂, r₃): inercia I₃₃ y φ₃ → k_v3, k_m3, k_g3, k_c3
+ *   plano 1-3 (u₃, r₂): inercia I₂₂ y φ₂ → k_v2, k_m2, k_g2, k_c2 (el signo del acoplamiento se da
+ *   vuelta porque r₂ positivo baja u₃)
+ * No es una matriz de libro puesta al lado: `comprobarLetras` la llena con los números de la barra y
+ * la compara con la del solver entrada a entrada.
+ */
+export function kLetras(): string[][] {
+  const K = Array.from({ length: 12 }, () => new Array<string>(12).fill("0"));
+  const s = (i: number, j: number, v: string) => {
+    K[i][j] = v;
+    K[j][i] = v;
+  };
+  const neg = (v: string) => (v.startsWith("-") ? v.slice(1) : "-" + v);
+  s(0, 0, "k_a"); s(6, 6, "k_a"); s(0, 6, neg("k_a"));
+  s(3, 3, "k_t"); s(9, 9, "k_t"); s(3, 9, neg("k_t"));
+  s(1, 1, "k_v3"); s(7, 7, "k_v3"); s(1, 7, neg("k_v3"));
+  s(5, 5, "k_g3"); s(11, 11, "k_g3"); s(5, 11, "k_c3");
+  s(1, 5, "k_m3"); s(1, 11, "k_m3"); s(5, 7, neg("k_m3")); s(7, 11, neg("k_m3"));
+  s(2, 2, "k_v2"); s(8, 8, "k_v2"); s(2, 8, neg("k_v2"));
+  s(4, 4, "k_g2"); s(10, 10, "k_g2"); s(4, 10, "k_c2");
+  s(2, 4, neg("k_m2")); s(2, 10, neg("k_m2")); s(4, 8, "k_m2"); s(8, 10, "k_m2");
+  return K;
+}
+
+/** El valor de cada término con los datos de la barra (Timoshenko; φ = 0 da Euler-Bernoulli). */
+export function terminos(d: DatosBarra): Record<string, number> {
+  const Lf = d.Lf, t: Record<string, number> = { k_a: (d.E * d.A) / d.L, k_t: (d.G * d.J) / d.L };
+  for (const [s, I, phi] of [["3", d.I33, d.phi3], ["2", d.I22, d.phi2]] as const) {
+    t["k_v" + s] = (12 * d.E * I) / (Lf ** 3 * (1 + phi));
+    t["k_m" + s] = (6 * d.E * I) / (Lf ** 2 * (1 + phi));
+    t["k_g" + s] = (4 * d.E * I * (1 + phi / 4)) / (Lf * (1 + phi));
+    t["k_c" + s] = (2 * d.E * I * (1 - phi / 2)) / (Lf * (1 + phi));
+  }
+  return t;
+}
+
+/**
+ * La matriz en letras llenada con los números de ESTA barra, contra la del solver. Solo vale para
+ * la barra continua: con liberaciones o brazos rígidos el solver condensa o traslada y la matriz
+ * ya no es la de las letras (se dice, no se compara).
+ */
+export function comprobarLetras(d: DatosBarra, K: number[][]): { aplica: boolean; difRel: number } {
+  if (d.liberaciones || d.brazos) return { aplica: false, difRel: NaN };
+  const L = kLetras(), t = terminos(d);
+  let mx = 0, dif = 0;
+  for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) {
+    const s = L[i][j], v = s === "0" ? 0 : s.startsWith("-") ? -t[s.slice(1)] : t[s];
+    mx = Math.max(mx, Math.abs(K[i][j]));
+    dif = Math.max(dif, Math.abs(v - K[i][j]));
+  }
+  return { aplica: true, difRel: mx > 0 ? dif / mx : 0 };
+}
+
 /** Dos comprobaciones sobre la matriz que se enseña (no sobre una fórmula). */
 export function comprobar(K: number[][], L: number): { simetrica: boolean; asim: number; rigido: boolean; residuo: number } {
   let mx = 0, asim = 0;
@@ -208,6 +264,25 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
       `k_c = 2*E*I/${Ls}`,
     );
   }
+  {
+    const L = kLetras();
+    const fila = (i: number, c0: number) => L[i].slice(c0, c0 + 6).join(", ");
+    const blk = (f0: number, c0: number) => "[" + [0, 1, 2, 3, 4, 5].map((r) => fila(f0 + r, c0)).join("; ") + "]";
+    T.push(
+      "",
+      "## 1b · La matriz en letras",
+      "#: Con esos términos se arma la matriz entera. El subíndice dice el plano: **3** es la flexión en el plano 1-2 (inercia I_{33}, parámetro φ_{3}) y **2** la del plano 1-3 (inercia I_{22}, φ_{2}). Orden de filas y columnas: u₁ u₂ u₃ r₁ r₂ r₃ del nudo inicial y los mismos del final. Los términos axial y de torsión ya se ven con sus letras.",
+      "#: **Nudo inicial con nudo inicial:**",
+      "K_ii = " + blk(0, 0),
+      "#: **Nudo inicial con nudo final:**",
+      "K_ij = " + blk(0, 6),
+      "#: **Nudo final con nudo final:**",
+      "K_jj = " + blk(6, 6),
+      "#: Cada letra sale de la fórmula de arriba con I y φ de su plano: por ejemplo, k_{v3} es k_{v} con I_{33} y φ_{3}. En el plano 1-3 el acoplamiento k_{m2} cambia de signo: un giro r₂ positivo baja u₃.",
+    );
+    if (d.liberaciones || d.brazos)
+      T.push("#: Esta barra tiene " + (d.liberaciones ? "liberaciones" : "brazos rígidos") + ": la matriz en letras es la de la barra continua; la que usa el solver (sección 4) ya lleva " + (d.liberaciones ? "la condensación estática" : "los brazos") + ".");
+  }
   T.push(
     "",
     "## 2 · Los datos de esta barra",
@@ -263,6 +338,8 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
     "K_jj = " + bloque(K, 6, 6),
     `#: **Comprobaciones sobre esta matriz:** es simétrica (${c.simetrica ? "sí" : "NO"}) y los seis movimientos de sólido rígido no generan fuerza (${c.rigido ? "sí" : "NO"}).`,
   );
+  const cl = comprobarLetras(d, K);
+  if (cl.aplica) T.push(`#: **La matriz en letras con estos números es la del solver:** ${cl.difRel < 1e-9 ? "sí" : "NO"} (la mayor diferencia es ${cl.difRel < 1e-12 ? "menor que una billonésima" : lit(cl.difRel * 100, 3) + " %"} del mayor término).`);
   if (modelo.length) {
     T.push("", "## 5 · Los elementos que usa este modelo", "#| Elemento | Cantidad | Formulación |", "#|---|---:|---|");
     for (const m of modelo) T.push(`#| ${m.tipo} | ${m.n} | ${m.formulacion} |`);

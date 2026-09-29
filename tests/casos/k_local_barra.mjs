@@ -94,6 +94,11 @@ export async function correr() {
       const cmp = tj.comprobar(K, d.L);
       filas.push({ que: `${c.nombre}: simétrica y sólido rígido sin fuerza`, medido: Math.max(cmp.asim, cmp.residuo), limite: 1e-9,
                    ok: cmp.simetrica && cmp.rigido, detalle: `asimetría ${cmp.asim.toExponential(2)} · residuo ${cmp.residuo.toExponential(2)}` });
+      // la matriz EN LETRAS, llenada con los números de la barra, tiene que ser la del solver
+      const cl = tj.comprobarLetras(d, K);
+      filas.push({ que: `${c.nombre}: matriz en letras = la del solver`, medido: cl.aplica ? cl.difRel * 100 : 0,
+                   limite: 1e-7, ok: cl.aplica ? cl.difRel < 1e-9 : !!d.brazos,
+                   detalle: cl.aplica ? "k_a, k_t, k_v, k_m, k_g, k_c con I y φ de cada plano" : "con brazos rígidos la matriz final ya no es la de las letras" });
       // la hoja tiene que salir en el lenguaje simple: ni una palabra de LISP crudo
       const hoja = tj.hojaBarra(d, K, tj.elementosDelModelo(st));
       const crudo = /\(defun|\(setq|\(let\b|macrolet|\(car |\(cadr |```/.test(hoja);
