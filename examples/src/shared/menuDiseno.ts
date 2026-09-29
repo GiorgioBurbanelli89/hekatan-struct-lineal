@@ -7,6 +7,7 @@
  * propio queda oculto.
  */
 import { FUNDAMENTOS, mostrarFundamento } from "./fundamentos";
+import { exportarFortran } from "./fortranExporter";
 type Entrada = { id: string; icono: string; titulo: string; detalle: string; abrir: () => void; orden: number };
 const menus: Record<string, Entrada[]> = {
   analisis: [
@@ -46,6 +47,10 @@ const menus: Record<string, Entrada[]> = {
       detalle: "Líneas → barras con sus nudos; 3DFACE → áreas. Salta ejes, cotas y textos.", abrir: () => pulsar("Importar DWG/DXF (3D", "DWG") },
     { id: "idwgxz", orden: 8, icono: "📥", titulo: "Importar DWG / DXF como alzado (XZ)",
       detalle: "Un pórtico dibujado en 2D: la Y del plano pasa a ser la altura Z.", abrir: () => pulsar("como alzado (XZ)", "DWG") },
+    // FORTRAN (29-sep-2026): los resultados ACTIVOS del visor en un .f90 que compila con gfortran
+    // y se abre en Hekatan Fortran (shared/fortranExporter.ts).
+    { id: "f90", orden: 9, icono: "🧾", titulo: "Fortran (.f90) — resultados activos",
+      detalle: "Lo que se ve (nudo, barra, cáscara, sólido) en un programa de Fortran que compila con gfortran.", abrir: () => exportarFortran() },
   ],
 };
 
