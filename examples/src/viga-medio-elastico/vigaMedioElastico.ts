@@ -194,7 +194,9 @@ export const vigaMedioElastico: ExampleDef = {
     // ── Estados ──
     states.nodes.val = nodes;
     states.elements.val = elements;
-    const ni: NodeInputs = { supports, loads };
+    // Los muelles tambien en nodeInputs (como las zapatas): sin ellos el equilibrio y el .f2k/.heks
+    // no veian el suelo (ΣR = 0.349 de 1.000, barrido 29-sep-2026). `deform` los recibe aparte.
+    const ni: NodeInputs = { supports, loads, springs: springsList } as any;
     const ei: ElementInputs = {
       elasticities, shearModuli, areas,
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy,

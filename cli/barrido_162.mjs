@@ -127,7 +127,10 @@ async function medirEnPagina(p) {
     if (!st || out.embebido) return out;
     const nodes = st.nodes?.val ?? [];
     const elements = st.elements?.val ?? [];
-    const loads = st.nodeInputs?.val?.loads;
+    // Las zapatas de placa (f2kDelPlateQ4) dibujan solo la carga de columna en `loads`; lo que recibe
+    // el solver (columna + PESO PROPIO) va en `loadsSolver`. Con `loads`, guerra-ej1 salia con un
+    // 10.62 % «perdido» que era justo el peso propio, 126.06 kN (29-sep-2026).
+    const loads = st.nodeInputs?.val?.loadsSolver ?? st.nodeInputs?.val?.loads;
     const sup = st.nodeInputs?.val?.supports;
     const def = st.deformOutputs?.val?.deformations;
     const rea = st.deformOutputs?.val?.reactions;
@@ -214,6 +217,33 @@ async function medirEnPagina(p) {
             dy: [-(1 - x), -(1 + x), (1 + x), (1 - x)].map((v) => v / 4), w: 1 }))
         : [[1 / 6, 1 / 6], [2 / 3, 1 / 6], [1 / 6, 2 / 3]].map(([x, y]) => ({
             N: [1 - x - y, x, y], dx: [-1, 1, 0], dy: [-1, 0, 1], w: 1 / 6 }));
+      // gdl -3 = muelle de área NODAL: cada nudo recibe ks·∫N_k dA y, con «compresion», el solver
+      // apaga el NUDO que se levanta. Integrarlo por puntos de Gauss (como el -1) apagaba el punto, no
+      // el nudo: zapata-excentrica daba suelo 623.706 para Q = 606 (29-sep-2026).
+      if (m.dof === -3) {
+        const trib = e.map(() => 0);
+        let nx = 0, ny = 0, nz = 0;
+        for (const q of puntos) {
+          const a = [0, 0, 0], b = [0, 0, 0];
+          for (let k = 0; k < e.length; k++) for (let c = 0; c < 3; c++) { a[c] += q.dx[k] * P[k][c]; b[c] += q.dy[k] * P[k][c]; }
+          const n = cruz(a, b), J = Math.hypot(n[0], n[1], n[2]);
+          if (!(J > 0)) continue;
+          nx += n[0]; ny += n[1]; nz += n[2];
+          for (let k = 0; k < e.length; k++) trib[k] += q.N[k] * J * q.w;
+        }
+        const Ln = Math.hypot(nx, ny, nz);
+        if (!(Ln > 0)) continue;
+        const nh = [nx / Ln, ny / Ln, nz / Ln];
+        for (let k = 0; k < e.length; k++) {
+          const uk = U[k];
+          if (soloCompresion && (uk[2] ?? 0) > 0) continue;   // nudo levantado: su muelle está apagado
+          const wn = (uk[0] ?? 0) * nh[0] + (uk[1] ?? 0) * nh[1] + (uk[2] ?? 0) * nh[2];
+          if (!Number.isFinite(wn)) continue;
+          for (let c = 0; c < 3; c++) sS[c] += -m.k * wn * trib[k] * nh[c];
+        }
+        nMuelles++;
+        continue;
+      }
       for (const q of puntos) {
         const a = [0, 0, 0], b = [0, 0, 0], u = [0, 0, 0];
         for (let k = 0; k < e.length; k++) for (let c = 0; c < 3; c++) {
