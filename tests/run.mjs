@@ -24,8 +24,19 @@ const archivos = readdirSync(join(AQUI, "casos")).filter(f => f.endsWith(".mjs")
 let fallos = 0, total = 0;
 const t0 = Date.now();
 
+// Un temporizador que un ejemplo deja armado (un menu que se monta «dentro de un rato») dispara
+// cuando ya corre OTRO caso, con el `document` de mentira de ese caso, y tumbaba la suite entera:
+// el 28-sep-2026 moria en `unidades-densidad` y los casos de detras no corrian nunca. Se anota
+// como UN fallo, con el caso que corria cuando salto, y la suite sigue.
+let casoActual = "(arranque)";
+const fueraDeCaso = [];
+const anotar = (e) => fueraDeCaso.push(`${casoActual}: ${e?.message ?? e}`);
+process.on("uncaughtException", anotar);
+process.on("unhandledRejection", anotar);
+
 for (const archivo of archivos) {
   const caso = await import(pathToFileURL(join(AQUI, "casos", archivo)).href);
+  casoActual = caso.nombre;
   // el filtro casa con el NOMBRE del caso o con el del fichero: los nombres van
   // con guion ("placa-opensees-vs-sap2000") y los ficheros con guion bajo, y no
   // tiene sentido que `node tests/run.mjs placa_opensees` no encuentre el suyo.
@@ -50,6 +61,12 @@ for (const archivo of archivos) {
     console.log(`   ${marca} ${f.que.padEnd(22)} ${medido.padStart(10)}  (limite ${limite})` +
                 (f.detalle ? `   ${f.detalle}` : ""));
   }
+}
+
+if (fueraDeCaso.length) {
+  console.log(`\n── fuera-de-caso ${"─".repeat(47)}`);
+  console.log("   excepciones que saltaron FUERA de un caso (temporizadores que dejo armados un ejemplo)");
+  for (const f of new Set(fueraDeCaso)) { total++; fallos++; console.log(`   FALLA ${f}`); }
 }
 
 const seg = ((Date.now() - t0) / 1000).toFixed(1);
