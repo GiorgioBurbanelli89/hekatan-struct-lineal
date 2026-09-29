@@ -21,7 +21,8 @@
  *      tanda entera.
  *   5. NO NAVEGA: abierto desde el selector (`__hekatanLoadExampleById`, el
  *      mismo camino que el desplegable), la URL no puede cambiar de pagina.
- *   6. La pagina standalone `/<id>/` carga sin errores.
+ *   6. La direccion de antes `/<id>/`, si existe, redirige al workspace sin errores
+ *      (404 = el id nunca tuvo pagina propia: no es fallo).
  *
  * Escribe UNA LINEA JSON por id, segun termina, en
  * `cli/shots/barrido162/resultados.jsonl`. Si algo corta, se reanuda solo: los
@@ -321,10 +322,16 @@ async function unId(nav, id) {
     r.standaloneCanvas = await p.evaluate(() => !!document.querySelector("canvas"));
     r.standalonePageerror = e2.length;
     r.standaloneConsoleError = c2.length;
-    if (r.standaloneStatus && r.standaloneStatus >= 400) r.fallos.push(`standalone HTTP ${r.standaloneStatus}`);
+    // Todo vive en el workspace: no hay pagina por ejemplo. Un 404 es un id que nunca tuvo
+    // direccion propia (bien). Un 200 es una direccion de antes y tiene que REDIRIGIR al
+    // workspace; `fem-explained` es la unica que conserva su pagina.
+    r.standaloneRedirige = /\/workspace\/.*[?&]t=/.test(p.url());
+    if (r.standaloneStatus === 404) r.standaloneSinPagina = true;
+    else if (r.standaloneStatus && r.standaloneStatus >= 400) r.fallos.push(`standalone HTTP ${r.standaloneStatus}`);
     else {
       if (e2.length) r.fallos.push(`standalone pageerror: ${e2[0]}`);
       if (!r.standaloneCanvas) r.fallos.push("standalone sin <canvas>");
+      if (!r.standaloneRedirige && id !== "fem-explained") r.fallos.push(`la direccion de antes no redirige al workspace: ${p.url()}`);
     }
   } catch (e) { r.fallos.push(`standalone: ${String(e).slice(0, 100)}`); }
   await p.close();
