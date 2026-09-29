@@ -967,7 +967,7 @@ export const plantillas: ExampleDef = {
     }
     if (!nodes?.length || !elements?.length || !ni?.supports?.size || !ei?.densities?.size) return;
     const dofM = nodes.length * 6;
-    (window as any).__hekatanModalInfo = { dof: dofM, nudos: nodes.length, malla: msM };
+    (window as any).__hekatanModalInfo = { dof: dofM, nudos: nodes.length, malla: msM, tope: topeModal() };
     // ── Techo de tamaño ──────────────────────────────────────────────────────
     // Por encima de cierto tamaño el solver modal NO lanza un error que se pueda
     // atrapar: se queda sin memoria y se lleva la PESTAÑA por delante. Un aviso de

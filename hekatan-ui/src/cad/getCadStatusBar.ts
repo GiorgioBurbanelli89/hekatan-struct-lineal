@@ -157,11 +157,17 @@ export function addCadStatusBar(): HTMLElement {
     if (bOsnap) bOsnap.textContent = "OSNAP F3 ▾";
   }
 
+  // Contador de nudos y grados de libertad del modelo en pantalla (6 por nudo).
+  // El modal tiene un tope de GDL (plantillas.ts): aqui se ve ANTES de correrlo.
+  const gdl = document.createElement("span");
+  gdl.id = "hk-statusbar-gdl";
+  gdl.style.cssText = "color:var(--hk-suave, #94a3b8);";
+
   const unidades = document.createElement("span");
   unidades.textContent = "m · kN";
   unidades.style.cssText = "color:#475569;";
 
-  barra.append(coords, msg, plano, conm, unidades);
+  barra.append(coords, msg, gdl, plano, conm, unidades);
   document.body.appendChild(barra);
 
   // El viejo cartel centrado (#hk-cad-status) queda escondido: su texto va aquí.
@@ -186,6 +192,16 @@ export function addCadStatusBar(): HTMLElement {
       const z = Number(st.workZ ?? 0);
       plano.textContent = `Plano ${p}${Math.abs(z) > 1e-9 ? ` · Z=${z} m` : ""}`;
     }
+    const nN = Number(W.__hekatanStates?.nodes?.val?.length ?? 0);
+    const mil = (v: number) => v.toLocaleString("es").replace(/\./g, " ");
+    const info = W.__hekatanModalInfo;
+    const esModal = !!info?.tope && info.nudos === nN;
+    const pasa = esModal && nN * 6 > info.tope;
+    const tG = nN ? `${mil(nN)} nudos · ${mil(nN * 6)} GDL` + (esModal ? ` · tope modal ${mil(info.tope)}` : "") : "";
+    if (gdl.textContent !== tG) gdl.textContent = tG;
+    gdl.style.color = pasa ? "#f87171" : "var(--hk-suave, #94a3b8)";
+    gdl.title = "Grados de libertad = 6 por nudo (3 desplazamientos + 3 giros)" +
+      (pasa ? ". Pasa del tope del modal: suba la malla del modal o baje pisos / ejes" : "");
     const t = String(W.__hekatanCadStatusText ?? "").split("   |   ")[0];
     if (t && msg.textContent !== t) msg.textContent = t;
   };
