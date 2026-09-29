@@ -121,6 +121,44 @@ export function kLetras(): string[][] {
   return K;
 }
 
+/**
+ * La FÓRMULA de cada término, para escribirla dentro de la matriz (Jorge, 29-sep-2026: «en la matriz de
+ * rigidez no estás colocando las fórmulas»). Sintaxis de la hoja de Hekatan LISP. `Ls` es la longitud
+ * de la flexión: L, o L_f con brazos rígidos (el axil y la torsión van siempre con L).
+ */
+export function formulaLisp(nombre: string, Ls = "L"): string {
+  const neg = nombre.startsWith("-"), k = nombre.replace(/^-/, "");
+  if (k === "0") return "0";
+  const pl = k.slice(-1), I = pl === "3" ? "I_33" : "I_22", f = pl === "3" ? "phi_3" : "phi_2";
+  const t: Record<string, string> = {
+    k_a: "E*A/L", k_t: "G*J/L",
+    ["k_v" + pl]: `12*E*${I}/(${Ls}^3*(1 + ${f}))`,
+    ["k_m" + pl]: `6*E*${I}/(${Ls}^2*(1 + ${f}))`,
+    ["k_g" + pl]: `(4 + ${f})*E*${I}/(${Ls}*(1 + ${f}))`,
+    ["k_c" + pl]: `(2 - ${f})*E*${I}/(${Ls}*(1 + ${f}))`,
+  };
+  const x = t[k] ?? k;
+  return neg ? `-(${x})` : x;
+}
+
+/** La misma fórmula en HTML compacto (fracción apilada), para la tarjeta del visor. */
+export function formulaHtml(nombre: string, Ls = "L"): string {
+  const neg = nombre.startsWith("-"), k = nombre.replace(/^-/, "");
+  if (k === "0") return "0";
+  const fr = (a: string, b: string) =>
+    `<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+  const pl = k.slice(-1), I = `<i>I</i><sub>${pl === "3" ? "33" : "22"}</sub>`, f = `φ<sub>${pl}</sub>`;
+  const L = Ls === "L" ? "<i>L</i>" : "<i>L</i><sub>f</sub>";
+  const t: Record<string, string> = {
+    k_a: fr("<i>EA</i>", "<i>L</i>"), k_t: fr("<i>GJ</i>", "<i>L</i>"),
+    ["k_v" + pl]: fr(`12<i>E</i>${I}`, `${L}³(1+${f})`),
+    ["k_m" + pl]: fr(`6<i>E</i>${I}`, `${L}²(1+${f})`),
+    ["k_g" + pl]: fr(`(4+${f})<i>E</i>${I}`, `${L}(1+${f})`),
+    ["k_c" + pl]: fr(`(2−${f})<i>E</i>${I}`, `${L}(1+${f})`),
+  };
+  return (neg ? "−" : "") + (t[k] ?? k);
+}
+
 /** El valor de cada término con los datos de la barra (Timoshenko; φ = 0 da Euler-Bernoulli). */
 export function terminos(d: DatosBarra): Record<string, number> {
   const Lf = d.Lf, t: Record<string, number> = { k_a: (d.E * d.A) / d.L, k_t: (d.G * d.J) / d.L };
@@ -223,6 +261,21 @@ const bloque = (K: number[][], f0: number, c0: number) =>
  * La hoja de Hekatan LISP, en el lenguaje SIMPLE de la hoja (nada de defun): primero las fórmulas
  * en letras, después con los números de esta barra, y la matriz que usa el solver.
  */
+/** Hoja SIMBÓLICA: los términos y la matriz con sus fórmulas, sin números. */
+export function hojaBarraSimbolica(d: DatosBarra, K: number[][]): string {
+  const t = hojaBarra(d, K).split("\n");
+  const i = t.findIndex((l) => l.startsWith("## 3 · Los datos"));
+  return [...t.slice(0, i), "#: La misma matriz con los números de esta barra está en la **formulación numérica**."].join("\n")
+    .replace(/^# Matriz de rigidez local · barra (\d+)/m, "# Matriz de rigidez local · barra $1 · formulación simbólica");
+}
+
+/** Hoja NUMÉRICA: los datos de la barra, cada término con números y la matriz que usa el solver. */
+export function hojaBarraNumerica(d: DatosBarra, K: number[][], modelo: { tipo: string; n: number; formulacion: string }[] = []): string {
+  const t = hojaBarra(d, K, modelo).split("\n");
+  const i = t.findIndex((l) => l.startsWith("## 3 · Los datos"));
+  return [t[0].replace(/(barra \d+)/, "$1 · formulación numérica"), t[1], t[2], "", ...t.slice(i)].join("\n");
+}
+
 export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; n: number; formulacion: string }[] = []): string {
   const timo = d.phi2 > 0 || d.phi3 > 0;
   const c = comprobar(K, d.L);
@@ -265,27 +318,28 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
     );
   }
   {
-    const L = kLetras();
+    const L = kLetras().map((f) => f.map((x) => formulaLisp(x, Ls)));
     const fila = (i: number, c0: number) => L[i].slice(c0, c0 + 6).join(", ");
     const blk = (f0: number, c0: number) => "[" + [0, 1, 2, 3, 4, 5].map((r) => fila(f0 + r, c0)).join("; ") + "]";
     T.push(
       "",
-      "## 1b · La matriz en letras",
-      "#: Con esos términos se arma la matriz entera. El subíndice dice el plano: **3** es la flexión en el plano 1-2 (inercia I_{33}, parámetro φ_{3}) y **2** la del plano 1-3 (inercia I_{22}, φ_{2}). Orden de filas y columnas: u₁ u₂ u₃ r₁ r₂ r₃ del nudo inicial y los mismos del final. Los términos axial y de torsión ya se ven con sus letras.",
+      "## 2 · La matriz de rigidez, con sus fórmulas",
+      "#: Con esos términos se arma la matriz entera. En cada casilla va su fórmula. El subíndice dice el plano: **33** es la flexión en el plano 1-2 (inercia I_{33}, parámetro φ_{3}) y **22** la del plano 1-3 (inercia I_{22}, φ_{2}). Orden de filas y columnas: u₁ u₂ u₃ r₁ r₂ r₃ del nudo inicial y los mismos del final.",
       "#: **Nudo inicial con nudo inicial:**",
       "K_ii = " + blk(0, 0),
       "#: **Nudo inicial con nudo final:**",
       "K_ij = " + blk(0, 6),
       "#: **Nudo final con nudo final:**",
       "K_jj = " + blk(6, 6),
-      "#: Cada letra sale de la fórmula de arriba con I y φ de su plano: por ejemplo, k_{v3} es k_{v} con I_{33} y φ_{3}. En el plano 1-3 el acoplamiento k_{m2} cambia de signo: un giro r₂ positivo baja u₃.",
+      "#: Los parámetros de cortante de cada plano (con A_{s2} en el plano 1-2 y A_{s3} en el 1-3): φ_{3} = 12·E·I_{33}/(G·A_{s2}·L²) y φ_{2} = 12·E·I_{22}/(G·A_{s3}·L²). Con φ = 0 queda la viga de Euler-Bernoulli: 12EI/L³, 6EI/L², 4EI/L y 2EI/L.",
+      "#: En el plano 1-3 el acoplamiento cambia de signo: un giro r₂ positivo baja u₃.",
     );
     if (d.liberaciones || d.brazos)
-      T.push("#: Esta barra tiene " + (d.liberaciones ? "liberaciones" : "brazos rígidos") + ": la matriz en letras es la de la barra continua; la que usa el solver (sección 4) ya lleva " + (d.liberaciones ? "la condensación estática" : "los brazos") + ".");
+      T.push("#: Esta barra tiene " + (d.liberaciones ? "liberaciones" : "brazos rígidos") + ": la matriz en letras es la de la barra continua; la que usa el solver (sección 5) ya lleva " + (d.liberaciones ? "la condensación estática" : "los brazos") + ".");
   }
   T.push(
     "",
-    "## 2 · Los datos de esta barra",
+    "## 3 · Los datos de esta barra",
     "#| Dato | Valor | Dato | Valor |",
     "#|---|---:|---|---:|",
     `#| Largo L | ${n(d.L, 4)} m | Módulo E | ${lit(d.E)} kN/m² |`,
@@ -307,7 +361,7 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
   const L = lit(d.L), Lf = lit(d.Lf), E = lit(d.E), G = lit(d.G);
   T.push(
     "",
-    "## 3 · Los términos, con números",
+    "## 4 · Los términos, con números",
     `k_a = dec(${E}*${lit(d.A)}/${L}, 2) [kN/m] 'axial`,
     `k_t = dec(${G}*${lit(d.J)}/${L}, 2) [kN·m] 'torsión`,
     "#: Flexión en el plano 1-2 (inercia I_{33}, cortante V_{2}):",
@@ -327,7 +381,7 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
   plano(d.I22, d.phi2, "2");
   T.push(
     "",
-    "## 4 · La matriz que usa el solver",
+    "## 5 · La matriz que usa el solver",
     "#: Orden de filas y columnas: u₁ u₂ u₃ r₁ r₂ r₃ del nudo inicial y los mismos seis del nudo final. Unidades: kN y m.",
     "#: La matriz de doce por doce se lee en cuatro bloques de seis por seis: las fuerzas de un nudo por los desplazamientos de un nudo.",
     "#: **Nudo inicial con nudo inicial:**",
@@ -341,7 +395,7 @@ export function hojaBarra(d: DatosBarra, K: number[][], modelo: { tipo: string; 
   const cl = comprobarLetras(d, K);
   if (cl.aplica) T.push(`#: **La matriz en letras con estos números es la del solver:** ${cl.difRel < 1e-9 ? "sí" : "NO"} (la mayor diferencia es ${cl.difRel < 1e-12 ? "menor que una billonésima" : lit(cl.difRel * 100, 3) + " %"} del mayor término).`);
   if (modelo.length) {
-    T.push("", "## 5 · Los elementos que usa este modelo", "#| Elemento | Cantidad | Formulación |", "#|---|---:|---|");
+    T.push("", "## 6 · Los elementos que usa este modelo", "#| Elemento | Cantidad | Formulación |", "#|---|---:|---|");
     for (const m of modelo) T.push(`#| ${m.tipo} | ${m.n} | ${m.formulacion} |`);
   }
   return T.join("\n");

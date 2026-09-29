@@ -10,8 +10,8 @@
  * El visor avisa con el evento `hk:hover` (lo lanza `viewer/objects/hover.ts`).
  */
 import { abrirHoja } from "./hojaLisp";
-import { comprobar, comprobarLetras, corto, datosBarra, elementosDelModelo, GDL, hojaBarra, kLetras, kLocalBarra } from "./kLocalBarra";
-import { comprobarPano, datosPano, formulacionPano, GDL_FLEXION, GDL_MEMBRANA, hojaPano } from "./kLocalPano";
+import { comprobar, comprobarLetras, corto, datosBarra, elementosDelModelo, formulaHtml, GDL, hojaBarraNumerica, hojaBarraSimbolica, kLetras, kLocalBarra } from "./kLocalBarra";
+import { comprobarPano, datosPano, formulacionPano, formulaMembrana, formulaPlaca, GDL_FLEXION, GDL_MEMBRANA, hojaPanoNumerica, hojaPanoSimbolica } from "./kLocalPano";
 
 const ESPERA = 450;          // ms quieto sobre la barra antes de abrir
 const W = () => window as any;
@@ -49,6 +49,19 @@ const CSS = `
 #hk-klocal .tabs button.on{background:#0b4fa8;color:#fff;border-color:#0b4fa8}
 #hk-klocal td.l{font-style:italic;color:#0b4fa8} #hk-klocal td.l.n{color:#a32b1e}
 #hk-klocal .ley{font:12px Georgia,serif;color:#12305e;text-align:center;margin-top:6px;line-height:1.55}
+#hk-klocal .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.05}
+#hk-klocal .fr>span:first-child{border-bottom:1px solid currentColor;padding:0 2px}
+#hk-klocal table.fx td{font-size:10.5px;padding:2px 5px;color:#0b4fa8}
+#hk-klocal table.fx td.n{color:#a32b1e} #hk-klocal .itw{color:#8a6d1e;font-style:italic}
+#hk-klocal .hojas{display:flex;gap:6px;margin-left:auto}
+#hk-klocal .bloques{display:flex;flex-wrap:wrap;gap:10px 22px;justify-content:center;align-items:flex-start}
+#hk-klocal table.fx td{white-space:nowrap}
+#hk-klocal table.mapa{border:0;font:12px Georgia,serif;color:#12305e;border-collapse:collapse}
+#hk-klocal table.mapa td,#hk-klocal table.mapa th{border:1px solid #d8cdb0;padding:3px 7px;text-align:center}
+#hk-klocal table.mapa th{font:11px 'Segoe UI',sans-serif;color:#6b6257}
+#hk-klocal table.mapa td.d{background:#efe7d4}
+#hk-klocal .hojas button{margin:0}
+#hk-klocal .hojas button.sim{background:#6b3fa0}
 #hk-klocal .bl{font:600 12px 'Segoe UI',sans-serif;color:#3d3727;text-align:center;margin:8px 0 2px}
 `;
 
@@ -87,7 +100,9 @@ function pintar(idx: number, x: number, y: number): void {
   const c = comprobar(K, d.L);
   const cab = GDL.concat(GDL).map((g, j) => `<th class="${j === 6 ? "s" : ""}">${sub(g)}${j > 5 ? "′" : ""}</th>`).join("");
   const Lt = kLetras();
-  const letra = (t: string) => t === "0" ? "0" : (t.startsWith("-") ? "−" : "") + t.replace(/^-/, "").replace(/^k_(\w+)$/, "k<sub>$1</sub>");
+  // «En letras» = la FÓRMULA de cada término en su casilla (no solo su nombre)
+  const LsF = d.brazos ? "Lf" : "L";
+  const letra = (t: string) => formulaHtml(t, LsF);
   const filas = K.map((f, i) =>
     `<tr class="${i === 6 ? "s" : ""}"><th class="f">${sub(GDL[i % 6])}${i > 5 ? "′" : ""}</th>` +
     f.map((v, j) => vista === "letras"
@@ -96,10 +111,7 @@ function pintar(idx: number, x: number, y: number): void {
   const cl = comprobarLetras(d, K);
   const Ls = d.brazos ? "L<sub>f</sub>" : "L";
   const leyenda = vista !== "letras" ? "" :
-    `<div class="ley"><i>k</i><sub>a</sub> = <i>EA/L</i> · <i>k</i><sub>t</sub> = <i>GJ/L</i> · ` +
-    `<i>k</i><sub>v</sub> = 12<i>EI</i>/(${Ls}³(1+φ)) · <i>k</i><sub>m</sub> = 6<i>EI</i>/(${Ls}²(1+φ)) · ` +
-    `<i>k</i><sub>g</sub> = (4+φ)<i>EI</i>/(${Ls}(1+φ)) · <i>k</i><sub>c</sub> = (2−φ)<i>EI</i>/(${Ls}(1+φ))<br>` +
-    `subíndice 3: plano 1-2 (<i>I</i><sub>33</sub>, φ<sub>3</sub>) · subíndice 2: plano 1-3 (<i>I</i><sub>22</sub>, φ<sub>2</sub>) · φ = 12<i>EI</i>/(<i>GA</i><sub>s</sub>${Ls}²)<br>` +
+    `<div class="ley">φ<sub>3</sub> = 12<i>EI</i><sub>33</sub>/(<i>GA</i><sub>s2</sub>${Ls}²) · φ<sub>2</sub> = 12<i>EI</i><sub>22</sub>/(<i>GA</i><sub>s3</sub>${Ls}²) · con φ = 0, Euler-Bernoulli<br>` +
     (cl.aplica ? `<span class="${cl.difRel < 1e-9 ? "ok" : "mal"}">${cl.difRel < 1e-9 ? "✓" : "✕"} con los números de esta barra da la matriz del solver</span>`
       : `<span class="u">esta barra tiene ${d.liberaciones ? "liberaciones" : "brazos rígidos"}: el solver usa la matriz ${d.liberaciones ? "condensada" : "con los brazos"} (pestaña «Con números»)</span>`) + `</div>`;
   tarjeta.innerHTML =
@@ -115,15 +127,19 @@ function pintar(idx: number, x: number, y: number): void {
     `</div>` +
     `<div class="tabs"><button data-v="numeros" class="${vista === "numeros" ? "on" : ""}">Con números</button>` +
     `<button data-v="letras" class="${vista === "letras" ? "on" : ""}">En letras</button></div>` +
-    `<div class="mat"><b>K</b><span>=</span><table><tr><th></th>${cab}</tr>${filas}</table></div>` + leyenda +
+    `<div class="mat"><b>K</b><span>=</span><table class="${vista === "letras" ? "fx" : ""}"><tr><th></th>${cab}</tr>${filas}</table></div>` + leyenda +
     `<div class="pie"><span class="u">kN y m · ejes de la barra · ′ = nudo final</span>` +
     `<span class="${c.simetrica ? "ok" : "mal"}">${c.simetrica ? "✓" : "✕"} simétrica</span>` +
     `<span class="${c.rigido ? "ok" : "mal"}">${c.rigido ? "✓" : "✕"} sólido rígido sin fuerza</span>` +
-    `<button id="hk-klocal-hoja">Hoja completa en Hekatan LISP</button></div>`;
+    `<span class="hojas"><button class="sim" id="hk-klocal-sim">📐 Formulación simbólica</button>` +
+    `<button id="hk-klocal-num">🔢 Formulación numérica</button></span></div>`;
   tarjeta.style.display = "block";
   colocar(x, y);
   abierta = "frame:" + idx;
-  (tarjeta.querySelector("#hk-klocal-hoja") as HTMLButtonElement).onclick = () => abrirHojaBarra(idx);
+  // las DOS hojas se generan al abrir la tarjeta; cada botón abre la suya
+  const hojas = hojasBarra(idx);
+  (tarjeta.querySelector("#hk-klocal-sim") as HTMLButtonElement).onclick = () => mostrar(hojas?.sim);
+  (tarjeta.querySelector("#hk-klocal-num") as HTMLButtonElement).onclick = () => mostrar(hojas?.num);
   tarjeta.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => {
     b.onclick = () => { vista = b.dataset.v as any; pintar(idx, x, y); };
   });
@@ -182,37 +198,122 @@ function pintarPano(idx: number, x: number, y: number): void {
     `<i>K</i> = ∫ <i>B</i>ᵀ<i>DB</i> d<i>A</i> ≈ Σ <i>B</i>ᵀ<i>DB</i>·det<i>J</i>·peso, en puntos de Gauss` +
     (d.modificadores ? `<br><span class="mal">modificadores ${d.modificadores.join("/")}: esta matriz es la SIN modificar</span>` : "") + `</div>` +
     (d.k.aviso ? `<div class="sub mal">${d.k.aviso}</div>` : "") +
-    (d.k.flexion ? `<div class="bl">Placa (flexión)</div><div class="mat"><b>K<sub>b</sub></b><span>=</span>${tablaPano(d.k.flexion, GDL_FLEXION, d.nudos)}</div>` : "") +
-    (d.k.membrana ? `<div class="bl">Membrana (en su plano)</div><div class="mat"><b>K<sub>m</sub></b><span>=</span>${tablaPano(d.k.membrana, GDL_MEMBRANA, d.nudos)}</div>` : "") +
+    `<div class="tabs"><button data-v="numeros" class="${vista === "numeros" ? "on" : ""}">Con números</button>` +
+    `<button data-v="letras" class="${vista === "letras" ? "on" : ""}">En letras</button></div>` +
+    (vista === "letras"
+      ? `<div class="ley">En cada casilla, su integrando: <i>K</i> = ∫ (casilla) d<i>A</i> · <i>a</i><sub>i</sub> = ∂<i>N</i><sub>i</sub>/∂<i>x</i>, <i>b</i><sub>i</sub> = ∂<i>N</i><sub>i</sub>/∂<i>y</i> · ` +
+        `<i>c</i> = (1−ν)/2 · <i>D</i>₀ = <i>Et</i>³/(12(1−ν²))` + (thin ? "" : ` · <i>S</i> = ⁵⁄₆<i>Gt</i>`) + ` · <i>M</i> = <i>Et</i>/(1−ν²)<br>` +
+        `<span class="u">Placa de Mindlin y membrana de libro; ${thin ? "la DKQ no tiene cortante y su flexión es Kirchhoff discreto" : "el MITC4 cambia el cortante y suma modos incompatibles"}: los números exactos, en «Con números».</span></div>` +
+        `<div class="bloques">` +
+        `<div><div class="bl">Placa (flexión${thin ? "" : " + cortante"}) · bloque nudo <i>i</i> – nudo <i>j</i></div>` +
+        `<div class="mat"><b>K<sub>b,ij</sub></b><span>=</span>${bloqueGenerico((r, q) => formulaPlaca(r, 3 + q, !thin).html, GDL_FLEXION)}</div></div>` +
+        `<div><div class="bl">Membrana · bloque nudo <i>i</i> – nudo <i>j</i></div>` +
+        `<div class="mat"><b>K<sub>m,ij</sub></b><span>=</span>${bloqueGenerico((r, q) => formulaMembrana(r, 3 + q).html, GDL_MEMBRANA)}</div></div>` +
+        `<div><div class="bl">Dónde va cada bloque en la ${3 * d.p.length} × ${3 * d.p.length}</div>${mapaBloques(d.p.length)}</div>` +
+        `</div>`
+      : (d.k.flexion ? `<div class="bl">Placa (flexión)</div><div class="mat"><b>K<sub>b</sub></b><span>=</span>${tablaPano(d.k.flexion, GDL_FLEXION, d.nudos)}</div>` : "") +
+        (d.k.membrana ? `<div class="bl">Membrana (en su plano)</div><div class="mat"><b>K<sub>m</sub></b><span>=</span>${tablaPano(d.k.membrana, GDL_MEMBRANA, d.nudos)}</div>` : "")) +
     `<div class="pie"><span class="u">kN y m · ejes del elemento</span>` +
     `<span class="${c.simetrica ? "ok" : "mal"}">${c.simetrica ? "✓" : "✕"} simétrica</span>` +
     nulos(c.nulosFlexion) +
-    `<button id="hk-klocal-hoja">Hoja completa en Hekatan LISP</button></div>`;
+    `<span class="hojas"><button class="sim" id="hk-klocal-sim">📐 Formulación simbólica</button>` +
+    `<button id="hk-klocal-num">🔢 Formulación numérica</button></span></div>`;
   tarjeta.style.display = "block";
   colocar(x, y);
   abierta = "shell:" + idx;
-  (tarjeta.querySelector("#hk-klocal-hoja") as HTMLButtonElement).onclick = () => abrirHojaPano(idx);
+  const hojas = hojasPano(idx);
+  (tarjeta.querySelector("#hk-klocal-sim") as HTMLButtonElement).onclick = () => mostrar(hojas?.sim);
+  (tarjeta.querySelector("#hk-klocal-num") as HTMLButtonElement).onclick = () => mostrar(hojas?.num);
+  tarjeta.querySelectorAll<HTMLButtonElement>(".tabs button").forEach((b) => {
+    b.onclick = () => { vista = b.dataset.v as any; pintarPano(idx, x, y); };
+  });
 }
 
-/** La deducción del paño, en el motor de Hekatan LISP. */
-export function abrirHojaPano(idx: number): string {
-  const d = datosPano(W().__hekatanStates, idx);
-  if (!d) return "No pude leer ese paño.";
-  abrirHoja(`K local · paño ${d.idx + 1}`, "```hoja\n" + hojaPano(d) + "\n```", 900);
-  cerrar();
-  return `Paño ${d.idx + 1}: hoja abierta.`;
+/**
+ * El bloque 3 × 3 nudo i – nudo j, con subíndices i y j (el mismo para los 16 pares de nudos). Se arma con
+ * la fórmula del par (1, 2) y se cambian ₁ → ᵢ y ₂ → ⱼ: así es LA MISMA fórmula que prueba el test.
+ */
+function bloqueGenerico(f: (r: number, c: number) => string, gdl: string[]): string {
+  const ij = (h: string) => h.replace(/₁/g, "ᵢ").replace(/₂/g, "ⱼ");
+  const cab = gdl.map((g) => `<th>${g}<sub>j</sub></th>`).join("");
+  let filas = "";
+  for (let r = 0; r < 3; r++) {
+    filas += `<tr><th class="f">${gdl[r]}<sub>i</sub></th>`;
+    for (let q = 0; q < 3; q++) {
+      const h = ij(f(r, q));
+      filas += `<td class="${h === "0" ? "c" : h.startsWith("−") ? "n" : ""}">${h}</td>`;
+    }
+    filas += "</tr>";
+  }
+  return `<table class="fx"><tr><th></th>${cab}</tr>${filas}</table>`;
 }
 
-/** La deducción entera, en el motor de Hekatan LISP. */
-export function abrirHojaBarra(idx: number): string {
+/** Mapa de bloques: la matriz del paño son n × n bloques K_ij de 3 × 3. */
+function mapaBloques(n: number): string {
+  const SUB = "₀₁₂₃₄₅₆₇₈₉";
+  let h = `<table class="mapa"><tr><th></th>${Array.from({ length: n }, (_, j) => `<th>nudo ${j + 1}</th>`).join("")}</tr>`;
+  for (let i = 0; i < n; i++) {
+    h += `<tr><th>nudo ${i + 1}</th>`;
+    for (let j = 0; j < n; j++) h += `<td class="${i === j ? "d" : ""}"><i>K</i>${SUB[i + 1]}${SUB[j + 1]}</td>`;
+    h += "</tr>";
+  }
+  return h + `</table><div class="u" style="margin-top:4px">cada casilla es un bloque 3 × 3 con i = fila, j = columna</div>`;
+}
+
+/** 3n × 3n con la FÓRMULA de cada casilla (HTML), con las mismas cabeceras que la de números. */
+function tablaFormulas(f: (r: number, c: number) => string, gdl: string[], nudos: number[]): string {
+  const nn = gdl.length, N = nn * nudos.length;
+  const et = nudos.flatMap((_, k) => gdl.map((g) => `${g}<sub>${k + 1}</sub>`));
+  const cab = et.map((g, j) => `<th class="${j > 0 && j % nn === 0 ? "s" : ""}">${g}</th>`).join("");
+  let filas = "";
+  for (let r = 0; r < N; r++) {
+    filas += `<tr class="${r > 0 && r % nn === 0 ? "s" : ""}"><th class="f">${et[r]}</th>`;
+    for (let q = 0; q < N; q++) {
+      const h = f(r, q);
+      filas += `<td class="${h === "0" ? "c" : h.startsWith("−") ? "n" : ""}${q > 0 && q % nn === 0 ? " s" : ""}">${h}</td>`;
+    }
+    filas += "</tr>";
+  }
+  return `<table class="fx"><tr><th></th>${cab}</tr>${filas}</table>`;
+}
+
+/** Las dos hojas de una barra (se generan al abrir la tarjeta). */
+function hojasBarra(idx: number): { sim: [string, string]; num: [string, string] } | null {
   const st = W().__hekatanStates;
   const d = datosBarra(st, idx);
   const K = d ? kLocalBarra(st, idx) : null;
-  if (!d || !K) return "No pude leer esa barra.";
-  const hoja = hojaBarra(d, K, elementosDelModelo(st));
-  abrirHoja(`K local · barra ${d.idx + 1}`, "```hoja\n" + hoja + "\n```", 900);
+  if (!d || !K) return null;
+  return {
+    sim: [`K local · barra ${d.idx + 1} · simbólica`, hojaBarraSimbolica(d, K)],
+    num: [`K local · barra ${d.idx + 1} · numérica`, hojaBarraNumerica(d, K, elementosDelModelo(st))],
+  };
+}
+/** Las dos hojas de un paño (se generan al abrir la tarjeta). */
+function hojasPano(idx: number): { sim: [string, string]; num: [string, string] } | null {
+  const d = datosPano(W().__hekatanStates, idx);
+  if (!d) return null;
+  return {
+    sim: [`K local · paño ${d.idx + 1} · simbólica`, hojaPanoSimbolica(d)],
+    num: [`K local · paño ${d.idx + 1} · numérica`, hojaPanoNumerica(d)],
+  };
+}
+function mostrar(h?: [string, string]): string {
+  if (!h) return "No pude armar la hoja.";
+  abrirHoja(h[0], "```hoja\n" + h[1] + "\n```", 1100);
   cerrar();
-  return `Barra ${d.idx + 1}: hoja abierta.`;
+  return h[0] + ": hoja abierta.";
+}
+
+/** La deducción del paño, en el motor de Hekatan LISP. */
+export function abrirHojaPano(idx: number, cual: "sim" | "num" = "num"): string {
+  const h = hojasPano(idx);
+  return h ? mostrar(h[cual]) : "No pude leer ese paño.";
+}
+
+/** La deducción entera, en el motor de Hekatan LISP. */
+export function abrirHojaBarra(idx: number, cual: "sim" | "num" = "num"): string {
+  const h = hojasBarra(idx);
+  return h ? mostrar(h[cual]) : "No pude leer esa barra.";
 }
 
 /** Arranca la escucha. Se llama una vez desde el workspace. */
@@ -226,6 +327,7 @@ export function arrancarKLocalHover(): void {
     ver: (idx: number, x = 300, y = 200) => pintar(idx, x, y),
     verPano: (idx: number, x = 300, y = 200) => pintarPano(idx, x, y),
     hojaPano: abrirHojaPano,
+    hojasBarra, hojasPano,
     vista: (v: "numeros" | "letras") => { vista = v; },
     datos: (idx: number) => datosBarra(W().__hekatanStates, idx),
     matriz: (idx: number) => kLocalBarra(W().__hekatanStates, idx),

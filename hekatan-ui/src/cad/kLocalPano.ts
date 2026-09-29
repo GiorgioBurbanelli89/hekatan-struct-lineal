@@ -80,6 +80,71 @@ export function kPano6(k: KPano): number[][] | null {
 }
 
 export const GDL_FLEXION = ["w", "θ₁", "θ₂"];
+
+/**
+ * La FÓRMULA de cada casilla de la matriz local del paño, puesta en su posición (Jorge, 29-sep-2026:
+ * «posicionada en su matriz de rigidez local», tanto en placas como en barras).
+ *
+ * Una placa no tiene fórmula cerrada por casilla: cada término es una integral en el paño. Lo que SÍ es
+ * exacto es el INTEGRANDO de cada casilla, con las derivadas de las funciones de forma:
+ *     a_i = ∂N_i/∂x,  b_i = ∂N_i/∂y,  c = (1 − ν)/2,  D₀ = E·t³/(12(1 − ν²)),  S = (5/6)·G·t,  M = E·t/(1 − ν²)
+ * y K_(fila,col) = ∫ integrando dA (con Gauss: Σ integrando·det J·peso).
+ *
+ * Cinemática de la placa, la del solver (comentario de getBendingK en shellQ4.cpp):
+ *     κxx = −∂θ₂/∂x,  κyy = +∂θ₁/∂y,  κxy = ∂θ₁/∂x − ∂θ₂/∂y,  γxz = ∂w/∂x − θ₂,  γyz = ∂w/∂y + θ₁
+ * de donde B_b,i = [[0,0,−a_i],[0,b_i,0],[0,a_i,−b_i]] y B_s,i = [[a_i,0,−N_i],[b_i,N_i,0]], y el bloque
+ * B_iᵀ·D·B_j desarrollado es lo de abajo. Test: `k-local-pano` lo compara con el producto de matrices.
+ *
+ * ⚠️ Es la placa de Mindlin de libro. El MITC4 cambia el cortante (lo interpola desde puntos de los
+ * lados) y suma modos incompatibles a la flexión; la DKQ no tiene cortante y su flexión sale de
+ * Kirchhoff discreto. Por eso los NÚMEROS del solver están en la formulación numérica.
+ */
+export function formulaPlaca(fila: number, col: number, gruesa = true): { lisp: string; html: string } {
+  const i = Math.floor(fila / 3) + 1, j = Math.floor(col / 3) + 1, p = fila % 3, q = col % 3;
+  const a = (k: number) => `a_${k}`, b = (k: number) => `b_${k}`, N = (k: number) => `N_${k}`;
+  // [flexión, cortante] del integrando, en LISP
+  const flex: Record<string, string> = {
+    "11": `D_0*(${b(i)}*${b(j)} + c*${a(i)}*${a(j)})`,
+    "12": `-D_0*(nu*${b(i)}*${a(j)} + c*${a(i)}*${b(j)})`,
+    "21": `-D_0*(nu*${a(i)}*${b(j)} + c*${b(i)}*${a(j)})`,
+    "22": `D_0*(${a(i)}*${a(j)} + c*${b(i)}*${b(j)})`,
+  };
+  const cort: Record<string, string> = {
+    "00": `S*(${a(i)}*${a(j)} + ${b(i)}*${b(j)})`,
+    "01": `S*${b(i)}*${N(j)}`, "02": `-S*${a(i)}*${N(j)}`,
+    "10": `S*${N(i)}*${b(j)}`, "11": `S*${N(i)}*${N(j)}`,
+    "20": `-S*${N(i)}*${a(j)}`, "22": `S*${N(i)}*${N(j)}`,
+  };
+  const k = `${p}${q}`;
+  const partes = [flex[k], gruesa ? cort[k] : undefined].filter(Boolean) as string[];
+  const lisp = partes.length ? partes.join(" + ").replace(/\+ -/g, "- ") : "0";
+  return { lisp, html: aHtml(lisp) };
+}
+
+/** Membrana [u₁, u₂] de libro (Q4 en tensión plana); el giro θ₃ es la parte de Allman del ITW. */
+export function formulaMembrana(fila: number, col: number): { lisp: string; html: string } {
+  const i = Math.floor(fila / 3) + 1, j = Math.floor(col / 3) + 1, p = fila % 3, q = col % 3;
+  if (p === 2 || q === 2) {
+    const t = p === 2 && q === 2 ? "ITW" : "Allman";
+    return { lisp: t, html: `<span class="itw">${t}</span>` };
+  }
+  const f: Record<string, string> = {
+    "00": `M*(a_${i}*a_${j} + c*b_${i}*b_${j})`,
+    "01": `M*(nu*a_${i}*b_${j} + c*b_${i}*a_${j})`,
+    "10": `M*(nu*b_${i}*a_${j} + c*a_${i}*b_${j})`,
+    "11": `M*(b_${i}*b_${j} + c*a_${i}*a_${j})`,
+  };
+  const lisp = f[`${p}${q}`];
+  return { lisp, html: aHtml(lisp) };
+}
+
+/** De la sintaxis LISP a HTML corto: a_1 → a₁, D_0 → D₀, nu → ν, * → ·. */
+function aHtml(x: string): string {
+  const SUB = "₀₁₂₃₄₅₆₇₈₉";
+  return x.replace(/([aNb])_(\d)/g, (_m, l, d) => `<i>${l}</i>${SUB[+d]}`)
+    .replace(/D_0/g, "<i>D</i>₀").replace(/\bnu\b/g, "ν").replace(/\bc\b/g, "<i>c</i>")
+    .replace(/\bS\b/g, "<i>S</i>").replace(/\bM\b/g, "<i>M</i>").replace(/\*/g, "·").replace(/-/g, "−");
+}
 export const GDL_MEMBRANA = ["u₁", "u₂", "θ₃"];
 
 /** Texto de la formulación de este paño, con su cita. */
@@ -126,10 +191,8 @@ export function hojaPano(d: DatosPano): string {
   if (q4) {
     T.push(
       "#: El paño real se dibuja sobre un cuadrado de referencia con coordenadas {xi} y {eta} entre −1 y 1. Cada función de forma vale 1 en su nudo y 0 en los otros tres:",
-      "N_1 = (1 - xi)*(1 - eta)/4",
-      "N_2 = (1 + xi)*(1 - eta)/4",
-      "N_3 = (1 + xi)*(1 + eta)/4",
-      "N_4 = (1 - xi)*(1 + eta)/4",
+      // en PROSA: si se definen como ecuación, el motor las sustituye dentro de la matriz de la sección 5
+      "#: N_{1} = (1 − ξ)·(1 − η)/4 · N_{2} = (1 + ξ)·(1 − η)/4 · N_{3} = (1 + ξ)·(1 + η)/4 · N_{4} = (1 − ξ)·(1 + η)/4",
       "#: Cualquier punto del paño es la suma de los nudos pesados con esas funciones: x = Σ N_{i}·x_{i}, y = Σ N_{i}·y_{i}.",
       "",
       "## 2 · El jacobiano: del cuadrado al paño real",
@@ -239,6 +302,56 @@ export function hojaPano(d: DatosPano): string {
   const c = comprobarPano(d.k);
   T.push(`#: **Comprobaciones sobre esta matriz:** simétrica (${c.simetrica ? "sí" : "NO"}); modos de energía nula de la placa: ${c.nulosFlexion ?? "—"} (tiene que haber 3: bajar el paño y girarlo sobre sus dos ejes); de la membrana: ${c.nulosMembrana ?? "—"} (3: dos traslaciones en el plano y el giro).`);
   return T.join("\n");
+}
+
+/**
+ * La matriz de fórmulas por BLOQUES NUDO i – NUDO j (3 × 3): el bloque K_b12 son las filas del nudo 1 y las
+ * columnas del nudo 2. Así cada fórmula queda en su posición y la hoja no se sale del papel (6 columnas
+ * de fórmulas largas no caben). Solo la mitad de arriba: la matriz es simétrica.
+ */
+const bloquesFormula = (f: (r: number, c: number) => { lisp: string }, n: number, nombre: string, T: string[]) => {
+  for (let i = 0; i < n; i++) for (let j = i; j < n; j++) {
+    const filas: string[] = [];
+    for (let r = 3 * i; r < 3 * i + 3; r++) {
+      const cel: string[] = [];
+      for (let c = 3 * j; c < 3 * j + 3; c++) cel.push(f(r, c).lisp);
+      filas.push(cel.join(", "));
+    }
+    T.push(`${nombre}${i + 1}${j + 1} = [${filas.join("; ")}]`);
+  }
+  T.push(`#: Los bloques de debajo de la diagonal son los de arriba traspuestos: ${nombre.replace(/_/, "_{")}ji} = ${nombre.replace(/_/, "_{")}ij}ᵀ.`);
+};
+
+/** Hoja SIMBÓLICA del paño: funciones de forma, jacobiano, D, la integral y las dos matrices con sus fórmulas. */
+export function hojaPanoSimbolica(d: DatosPano): string {
+  const t = hojaPano(d).split("\n");
+  const i = t.findIndex((l) => l.startsWith("## 5 · Los datos"));
+  const n = d.p.length, gruesa = d.tipoPlaca !== 1;
+  const orden = (g: string[]) => d.nudos.map((_, k) => g.map((q) => `${q}(${k + 1})`).join(" ")).join(" · ");
+  const T = t.slice(0, i);
+  T[0] = T[0] + " · formulación simbólica";
+  T.push(
+    "",
+    "## 5 · La matriz de rigidez, con sus fórmulas en su posición",
+    "#: En cada casilla va el integrando: K = ∫ (casilla) dA. Con a_{i} = ∂N_{i}/∂x y b_{i} = ∂N_{i}/∂y de cada nudo (numerados 1 a " + n + " dentro del paño), c = (1 − ν)/2, D_{0} = E·t³/(12·(1 − ν²)), S = (5/6)·G·t y M = E·t/(1 − ν²).",
+    `#: **Placa** (${3 * n} × ${3 * n}), filas y columnas: ${orden(["w", "θ1", "θ2"])}.` + (gruesa ? " Cada casilla suma la flexión (D_{0}) y el cortante (S)." : " Placa delgada: solo flexión (D_{0})."),
+  );
+  T.push("#: Cada bloque es de 3 × 3: filas w, θ1, θ2 del nudo i; columnas w, θ1, θ2 del nudo j.");
+  bloquesFormula((r, c) => formulaPlaca(r, c, gruesa), n, "K_b", T);
+  T.push(`#: **Membrana** (${3 * n} × ${3 * n}), filas y columnas: ${orden(["u1", "u2", "θ3"])}. Las casillas del giro θ₃ (Allman, ITW) salen de la interpolación de Allman por los lados más la penalización γ·(θ₃ − giro del sólido): no tienen una fórmula corta.`);
+  T.push("#: Cada bloque es de 3 × 3: filas u1, u2, θ3 del nudo i; columnas u1, u2, θ3 del nudo j.");
+  bloquesFormula((r, c) => formulaMembrana(r, c), n, "K_m", T);
+  T.push(
+    `#: **Ojo:** son las fórmulas de la placa de Mindlin y de la membrana de libro. ${d.tipoPlaca === 1 ? "La DKQ no tiene cortante y su flexión sale de Kirchhoff discreto (Batoz y Tahar)" : "El MITC4 interpola el cortante desde puntos de los lados (Bathe y Dvorkin) y suma a la flexión cuatro modos incompatibles que se condensan"}. Los números exactos del solver están en la **formulación numérica**.`,
+  );
+  return T.join("\n");
+}
+
+/** Hoja NUMÉRICA del paño: sus datos, las D con números, det J en Gauss y la matriz del solver. */
+export function hojaPanoNumerica(d: DatosPano): string {
+  const t = hojaPano(d).split("\n");
+  const i = t.findIndex((l) => l.startsWith("## 5 · Los datos"));
+  return [t[0] + " · formulación numérica", t[1], t[2], t[3], "", ...t.slice(i)].join("\n");
 }
 
 /** Autovalores de una matriz simétrica (Jacobi cíclico). Chica: 12 × 12. */

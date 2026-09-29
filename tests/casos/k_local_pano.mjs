@@ -106,5 +106,33 @@ export async function correr() {
     filas.push({ crudo: true, que: `${c.nombre}: hoja LISP (letras + números, sin notación científica)`, medido: okHoja ? "bien" : "mal",
       limite: "bien", ok: okHoja, detalle: "" });
   }
+  // Las FÓRMULAS de cada casilla (tarjeta «En letras» y hoja simbólica) contra el producto B_iᵀ·D·B_j
+  // hecho con matrices, con valores al azar de a_i, b_i, N_i. Si una casilla está mal puesta o con otro
+  // signo, sale aquí.
+  {
+    const rnd = (() => { let x = 7; return () => ((x = (x * 16807) % 2147483647) / 2147483647) * 2 - 1; })();
+    const v = { D_0: 3.7, S: 2.3, M: 5.1, nu: 0.23, c: (1 - 0.23) / 2 };
+    const a = [0, rnd(), rnd(), rnd(), rnd()], b = [0, rnd(), rnd(), rnd(), rnd()], N = [0, rnd(), rnd(), rnd(), rnd()];
+    const evalua = (f) => Function("a", "b", "N", "D_0", "S", "M", "nu", "c",
+      "return " + f.replace(/([abN])_(\d)/g, "$1[$2]").replace(/\^/g, "**"))(a, b, N, v.D_0, v.S, v.M, v.nu, v.c);
+    const Db = [[1, v.nu, 0], [v.nu, 1, 0], [0, 0, v.c]].map((f) => f.map((x) => x * v.D_0));
+    const Dm = [[1, v.nu, 0], [v.nu, 1, 0], [0, 0, v.c]].map((f) => f.map((x) => x * v.M));
+    const Bb = (i) => [[0, 0, -a[i]], [0, b[i], 0], [0, a[i], -b[i]]];      // [w, θ1, θ2]
+    const Bs = (i) => [[a[i], 0, -N[i]], [b[i], N[i], 0]];
+    const Bm = (i) => [[a[i], 0], [0, b[i]], [b[i], a[i]]];                  // [u1, u2]
+    const BtDB = (Bi, D, Bj) => Bi[0].map((_, p) => Bj[0].map((__, q) => {
+      let s = 0; for (let r = 0; r < Bi.length; r++) for (let t = 0; t < Bj.length; t++) s += Bi[r][p] * D[r][t] * Bj[t][q]; return s; }));
+    let peorP = 0, peorM = 0, peorT = 0;
+    for (let fila = 0; fila < 12; fila++) for (let col = 0; col < 12; col++) {
+      const i = Math.floor(fila / 3) + 1, j = Math.floor(col / 3) + 1, p = fila % 3, q = col % 3;
+      const ref = BtDB(Bb(i), Db, Bb(j))[p][q] + BtDB(Bs(i), [[v.S, 0], [0, v.S]], Bs(j))[p][q];
+      peorP = Math.max(peorP, Math.abs(evalua(pn.formulaPlaca(fila, col, true).lisp) - ref));
+      peorT = Math.max(peorT, Math.abs(evalua(pn.formulaPlaca(fila, col, false).lisp) - BtDB(Bb(i), Db, Bb(j))[p][q]));
+      if (p < 2 && q < 2) peorM = Math.max(peorM, Math.abs(evalua(pn.formulaMembrana(fila, col).lisp) - BtDB(Bm(i), Dm, Bm(j))[p][q]));
+    }
+    filas.push({ crudo: true, que: "fórmulas de la placa gruesa en su casilla = B_iᵀ·D·B_j (flexión + cortante)", medido: peorP.toExponential(1), limite: "< 1e-12", ok: peorP < 1e-12, detalle: "144 casillas" });
+    filas.push({ crudo: true, que: "fórmulas de la placa delgada (solo flexión) = B_iᵀ·D_b·B_j", medido: peorT.toExponential(1), limite: "< 1e-12", ok: peorT < 1e-12, detalle: "144 casillas" });
+    filas.push({ crudo: true, que: "fórmulas de la membrana [u1, u2] = B_iᵀ·D_m·B_j", medido: peorM.toExponential(1), limite: "< 1e-12", ok: peorM < 1e-12, detalle: "64 casillas; θ3 = Allman/ITW" });
+  }
   return filas;
 }
