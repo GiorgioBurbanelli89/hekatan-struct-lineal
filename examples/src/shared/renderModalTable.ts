@@ -1,4 +1,5 @@
 import { ModalOutputs } from "hekatan-fem";
+import { barraGdl } from "hekatan-ui/src/modalPanel/getModalPanel";
 
 export interface ModalTableConfig {
   /** Title shown above the table, e.g. "Example 6.3 Space Frame" */
@@ -7,6 +8,8 @@ export interface ModalTableConfig {
   properties?: string[];
   /** SVG del espectro NEC-15 (Sa vs T) insertado en el cuerpo del panel. */
   spectrumHtml?: string;
+  /** GDL del modal frente al tope de la app: se pinta como barra arriba de la tabla (29-sep-2026). */
+  gdl?: { usados: number; tope: number; nudos?: number; malla?: number };
 }
 
 /**
@@ -135,6 +138,7 @@ export function createModalPanel() {
 </div>
 <div id="modal-body" style="padding:0 12px 10px 12px;">
   <div style="color:var(--mt-err); font-weight:bold; font-size:13px; padding:6px 0">✗ El análisis modal NO se ejecutó</div>
+  ${config.gdl ? barraGdl(config.gdl) : ""}
   <div style="color:var(--mt-avis); font-size:11px; line-height:1.5">${motivo}</div>
 </div>`;
       return;
@@ -199,6 +203,7 @@ export function createModalPanel() {
     // de NEC/cortante/derivas/combos (config.properties) y el espectro NO se renderizan —
     // viven en el menú "📋 Tablas" de Analysis Outputs y en el panel de espectro.
     // width:0 + min-width:100%: el aviso se acomoda al ancho de la tabla en vez de estirar la ventana
+    if (config.gdl) html += barraGdl(config.gdl);
     html += `<div style="padding:2px 0 4px 0; font-weight:bold; font-size:11px; line-height:1.4; width:0; min-width:100%">${dictamen}</div>`;
 
     // nowrap: el «✓» de ΣUx partía la celda y cada fila salía del doble de alto

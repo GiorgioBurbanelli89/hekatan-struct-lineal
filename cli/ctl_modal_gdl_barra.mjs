@@ -1,0 +1,21 @@
+// La tabla del modal enseña los GDL usados frente al tope: verde, y roja cuando se pasa.
+import puppeteer from "puppeteer";
+import { mkdirSync } from "node:fs";
+const BASE = process.argv[2] || "http://localhost:4600";
+const DIR = "cli/shots/ctl_modal_gdl_barra"; mkdirSync(DIR, { recursive: true });
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+const err = []; pag.on("pageerror", (e) => err.push(e.message));
+let fallos = 0; const ok = (c, t) => { console.log(`${c ? "ok  " : "FALLA"} ${t}`); if (!c) fallos++; };
+await pag.goto(`${BASE}/workspace/index.html?t=plantillas`, { waitUntil: "networkidle2", timeout: 180000 });
+await pag.waitForFunction(() => !!window.__hekatanRunModalAnimate, { timeout: 120000 }); await espera(5000);
+const leer = () => pag.evaluate(() => { const b = document.querySelector(".hk-modal-gdl"); return b ? { txt: b.innerText.replace(/\s+/g, " "), color: b.querySelector("b")?.style.color } : null; });
+await pag.evaluate(() => { const c = [...document.querySelectorAll("label,.tp-lblv")].find((e) => /Tabla de modos/.test(e.textContent)); c?.parentElement?.querySelector("input[type=checkbox]")?.click(); window.__hekatanRunModalAnimate(); }); await espera(8000);
+let r = await leer(); await pag.screenshot({ path: `${DIR}/01_dentro.png` });
+ok(r && /dentro del tope/.test(r.txt), "modal que cabe: " + r?.txt);
+await pag.evaluate(() => { window.__hekatanModalStop?.(); window.__hekatanDofMaxModal = 1500; window.__hekatanRunModalAnimate(); }); await espera(6000);
+r = await leer(); await pag.screenshot({ path: `${DIR}/02_pasa.png` });
+ok(r && /pasa del tope/.test(r.txt) && /239|ef4444/.test(r.color), "modal que no cabe: " + r?.txt + " · " + r?.color);
+ok(err.length === 0, "0 errores " + err.join(" | "));
+await nav.close(); process.exit(fallos ? 1 : 0);

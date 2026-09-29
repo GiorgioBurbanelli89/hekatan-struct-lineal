@@ -978,6 +978,7 @@ export const plantillas: ExampleDef = {
       try {
         modalPanel.render({ frequencies: [], modeShapes: [], massParticipation: [] }, {
           title: "Plantilla",
+          gdl: { usados: dofM, tope: topeModal(), nudos: nodes.length, malla: msM },
           properties: [
             `⚠ Modelo demasiado grande para el modal: ${dofM.toLocaleString()} GDL ` +
             `(${nodes.length.toLocaleString()} nudos, malla ${msM} m).`,
@@ -1007,6 +1008,7 @@ export const plantillas: ExampleDef = {
       const T1 = out.frequencies?.[0] ? 1 / out.frequencies[0] : NaN;
       modalPanel.render(out, {
         title: `Plantilla · ${NOM[Math.round(p.tipo)] ?? ""}`,
+        gdl: { usados: dofM, tope: topeModal(), nudos: nodes.length, malla: msM },
         properties: [
           `${nodes.length} nudos · ${elements.length} elementos` +
             (remallado ? `  ·  malla del modal ${msM} m (la de pantalla es ${p.ms} m)` : ""),
@@ -1025,6 +1027,7 @@ export const plantillas: ExampleDef = {
       try {
         modalPanel.render({ frequencies: [], modeShapes: [], massParticipation: [] }, {
           title: "Plantilla",
+          gdl: { usados: dofM, tope: topeModal(), nudos: nodes.length, malla: msM },
           properties: [
             `⚠ El modal no salio con esta malla: ${e?.message ?? "error del solver"}.`,
             `${nodes.length} nudos · ${dofM.toLocaleString()} GDL · malla del modal ${msM} m.`,

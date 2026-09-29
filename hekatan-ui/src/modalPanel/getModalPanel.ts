@@ -20,6 +20,29 @@ export interface ModalPanelMeta {
   title?: string;
   /** Properties description (E, ρ, sections, etc.) */
   properties?: string[];
+  /**
+   * Medidor de TAMAÑO del modal: grados de libertad usados frente al tope que admite la app.
+   * Jorge, 29-sep-2026: «cuando estemos en el límite, que se refleje en la tabla del modal». Se
+   * pinta una barra: verde hasta el 70 %, ámbar hasta el tope, roja por encima (el modal no corre).
+   */
+  gdl?: { usados: number; tope: number; nudos?: number; malla?: number };
+}
+
+/** La barra de GDL del modal (HTML). Pública para las pruebas. */
+export function barraGdl(g: NonNullable<ModalPanelMeta["gdl"]>): string {
+  const f = g.tope > 0 ? g.usados / g.tope : 0;
+  const pct = Math.round(f * 100);
+  const color = f > 1 ? "#ef4444" : f > 0.7 ? "#f59e0b" : "#22c55e";
+  const mil = (v: number) => Math.round(v).toLocaleString("es").replace(/\./g, " ");
+  const dice = f > 1 ? "pasa del tope: el modal no se calcula"
+    : f > 0.7 ? "cerca del tope" : "dentro del tope";
+  return `<div class="hk-modal-gdl" style="margin:6px 0 4px;font:11px Consolas,monospace">` +
+    `<div style="display:flex;justify-content:space-between;gap:8px;color:#cbd5e1">` +
+    `<span>GDL del modal: <b style="color:${color}">${mil(g.usados)}</b> de ${mil(g.tope)}` +
+    (g.nudos ? ` · ${mil(g.nudos)} nudos` : "") + (g.malla ? ` · malla ${g.malla} m` : "") + `</span>` +
+    `<span style="color:${color}">${pct} % · ${dice}</span></div>` +
+    `<div style="height:7px;background:#1e293b;border-radius:4px;overflow:hidden;margin-top:3px">` +
+    `<div style="height:100%;width:${Math.min(100, pct)}%;background:${color}"></div></div></div>`;
 }
 
 export interface ModalPanelOptions {
@@ -190,7 +213,8 @@ export function createModalPanel(opts: ModalPanelOptions = {}): ModalPanelApi {
   function update(out: ModalOutputs, meta?: ModalPanelMeta) {
     lastOut = out;
     if (meta?.title) titleEl.textContent = `📈 ${meta.title}`;
-    propsEl.innerHTML = (meta?.properties ?? []).map((p) => `<div>${escapeHtml(p)}</div>`).join("");
+    propsEl.innerHTML = (meta?.gdl ? barraGdl(meta.gdl) : "") +
+      (meta?.properties ?? []).map((p) => `<div>${escapeHtml(p)}</div>`).join("");
     // Render table
     renderTable(tableContainer, out, asceEl, setMode);
     // Slider range
