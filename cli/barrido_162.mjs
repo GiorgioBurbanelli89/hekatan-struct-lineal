@@ -32,6 +32,13 @@ import puppeteer from "puppeteer";
 import { mkdirSync, existsSync, readFileSync, appendFileSync, writeFileSync, statSync } from "node:fs";
 
 const args = process.argv.slice(2);
+if (args.includes("--help") || args.includes("-h")) {
+  console.log(["node cli/barrido_162.mjs [--desde N] [--hasta N] [--tanda N] [--base URL] [--maxmodal N] [--solo id1,id2]",
+    "  Mide cada ejemplo del registro (equilibrio con reacciones y suelo, modal, navegacion).",
+    "  Se reanuda solo: los ids que ya estan en cli/shots/barrido162/resultados.jsonl se saltan.",
+    "  --solo repite esos ids aunque ya esten medidos (van a cli/shots/barrido162/solo.jsonl)."].join(String.fromCharCode(10)));
+  process.exit(0);
+}
 const flag = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const BASE   = flag("--base", "http://localhost:4600");
 const TANDA  = parseInt(flag("--tanda", "10"), 10);
@@ -40,7 +47,9 @@ const HASTA  = parseInt(flag("--hasta", "9999"), 10);
 const MAX_NUDOS_MODAL = parseInt(flag("--maxmodal", "900"), 10);
 const CHROME = process.env.PUPPETEER_EXECUTABLE_PATH;
 
-const SALIDA = "cli/shots/barrido162/resultados.jsonl";
+const SOLO = flag("--solo", "").split(",").map((x) => x.trim()).filter(Boolean);
+// `--solo` repite unos ids en un fichero APARTE: no mezcla dos medidas del mismo id en el jsonl
+const SALIDA = SOLO.length ? "cli/shots/barrido162/solo.jsonl" : "cli/shots/barrido162/resultados.jsonl";
 const CENTINELA = "cli/shots/barrido162/centinela.json";
 mkdirSync("cli/shots/barrido162", { recursive: true });
 
@@ -85,7 +94,7 @@ const yaHechos = new Set(
     : []
 );
 
-const IDS = TODOS.slice(DESDE, HASTA).filter((id) => !yaHechos.has(id));
+const IDS = SOLO.length ? SOLO : TODOS.slice(DESDE, HASTA).filter((id) => !yaHechos.has(id));
 console.log(`[barrido] ${IDS.length} ids por hacer de ${TODOS.length} (${yaHechos.size} ya en el jsonl)`);
 
 const TOL_EQ = 0.005;     // 0.5 % de la carga aplicada en nudos libres
@@ -172,9 +181,59 @@ async function medirEnPagina(p) {
     rea?.forEach((r) => {
       for (let k = 0; k < 3; k++) { const v = r?.[k] ?? 0; if (Number.isFinite(v)) sR[k] += v; }
     });
+    // EL SUELO. Una zapata sobre muelles (Winkler) deja libre el vertical en sus apoyos: la carga
+    // vertical la devuelve el suelo, no una reaccion. Sin contarlo, `estribo-puente` salia con el
+    // 100 % de la carga vertical «perdida» y estaba en equilibrio (29-sep-2026: suelo 10003.663 kN
+    // = carga 10003.663 kN). Muelle nodal: -k*u. Muelle de area: -ks * integral(w dA) por la normal
+    // del paño (gdl -1 consistente y -3 nodal suman lo mismo). Los gdl -2 y -4 son ataduras de
+    // nudo colgado, no suelo.
+    const sS = [0, 0, 0];
+    const muelles = st.nodeInputs?.val?.springs ?? [];
+    const deArea = st.elementInputs?.val?.areaSpringsExport;
+    const g = 1 / Math.sqrt(3);
+    let nMuelles = 0;
+    for (const m of Array.isArray(muelles) ? muelles : []) {
+      if (!(Math.abs(m?.k) > 0)) continue;
+      if (m.node >= 0) {
+        if (m.dof >= 0 && m.dof < 3) {
+          const u = def?.get(m.node)?.[m.dof];
+          if (Number.isFinite(u)) { sS[m.dof] += -m.k * u; nMuelles++; }
+        }
+        continue;
+      }
+      if (m.dof !== -1 && m.dof !== -3) continue;
+      const iE = -(m.node + 1), e = elements[iE];
+      if (!e || (e.length !== 4 && e.length !== 3)) continue;
+      const P = e.map((n) => nodes[n]), U = e.map((n) => def?.get(n) ?? [0, 0, 0]);
+      const soloCompresion = !!deArea?.get?.(iE)?.comp;
+      const cruz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+      const puntos = e.length === 4
+        ? [[-g, -g], [g, -g], [g, g], [-g, g]].map(([x, y]) => ({
+            N: [(1 - x) * (1 - y), (1 + x) * (1 - y), (1 + x) * (1 + y), (1 - x) * (1 + y)].map((v) => v / 4),
+            dx: [-(1 - y), (1 - y), (1 + y), -(1 + y)].map((v) => v / 4),
+            dy: [-(1 - x), -(1 + x), (1 + x), (1 - x)].map((v) => v / 4), w: 1 }))
+        : [[1 / 6, 1 / 6], [2 / 3, 1 / 6], [1 / 6, 2 / 3]].map(([x, y]) => ({
+            N: [1 - x - y, x, y], dx: [-1, 1, 0], dy: [-1, 0, 1], w: 1 / 6 }));
+      for (const q of puntos) {
+        const a = [0, 0, 0], b = [0, 0, 0], u = [0, 0, 0];
+        for (let k = 0; k < e.length; k++) for (let c = 0; c < 3; c++) {
+          a[c] += q.dx[k] * P[k][c]; b[c] += q.dy[k] * P[k][c]; u[c] += q.N[k] * (U[k][c] ?? 0);
+        }
+        const n = cruz(a, b), J = Math.hypot(n[0], n[1], n[2]);
+        if (!(J > 0)) continue;
+        const wn = (u[0] * n[0] + u[1] * n[1] + u[2] * n[2]) / J;
+        if (!Number.isFinite(wn)) continue;
+        if (soloCompresion && u[2] > 0) continue;          // levantado: el suelo no tira
+        // fuerza = −ks·w·n̂·dA, con dA = J·peso y n̂ = n/J
+        for (let c = 0; c < 3; c++) sS[c] += -m.k * wn * n[c] * q.w;
+      }
+      nMuelles++;
+    }
     out.sFtotal = sF;
     out.sFlibres = sFlib;
     out.sReac = sR;
+    out.sSuelo = sS;
+    out.nMuelles = nMuelles;
     return out;
   });
 }
@@ -253,14 +312,14 @@ async function unId(nav, id) {
       // equilibrio por componente
       const nom = ["X", "Y", "Z"];
       r.residuo = [null, null, null];
-      if (info.nReac > 0) {
+      if (info.nReac > 0 || info.nMuelles > 0) {
         for (let k = 0; k < 3; k++) {
-          const F = info.sFtotal[k], R = info.sReac[k];
+          const F = info.sFtotal[k], R = info.sReac[k], S = info.sSuelo?.[k] ?? 0;
           if (Math.abs(F) < 1e-9) continue;
-          const res = Math.abs(R + F) / Math.abs(F);
+          const res = Math.abs(R + S + F) / Math.abs(F);
           r.residuo[k] = res;
           if (res > TOL_EQ)
-            r.fallos.push(`equilibrio ${nom[k]}: ΣR=${R.toFixed(3)} + ΣF(total)=${F.toFixed(3)} deja ${(res * 100).toFixed(2)} % — carga perdida en GDL sin rigidez?`);
+            r.fallos.push(`equilibrio ${nom[k]}: ΣR=${R.toFixed(3)} + suelo=${S.toFixed(3)} + ΣF(total)=${F.toFixed(3)} deja ${(res * 100).toFixed(2)} % — carga perdida en GDL sin rigidez?`);
         }
       } else if (info.nNodes > 0) {
         r.sinReacciones = true;   // Winkler puro / sin apoyos: no se puede medir asi
