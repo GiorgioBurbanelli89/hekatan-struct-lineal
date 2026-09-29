@@ -96,32 +96,33 @@ def fortran():
     return im.convert("RGB")
 
 
-esc = json.load(open(os.path.join(D, "escenas.json"), encoding="utf-8"))
-cuadros, tiempos = [], []
-cuadros.append(negro([("Hekatan Struct", f_tit, (255, 255, 255)), ("novedades · 29-sep-2026", f_es, AMBAR)],
-                     "GDL del modal · matriz local de placas y barras · Exportar a Fortran",
-                     "Modal DOFs · shell & frame local stiffness · Fortran export")); tiempos.append(2400)
-vistos = set()
-for e in esc:
-    if (e["f"], e["es"]) in vistos or any(x["es"] == e["es"] and x is not e and esc.index(x) < esc.index(e) for x in esc):
-        continue                      # fotograma repetido de la misma escena
-    vistos.add((e["f"], e["es"]))
-    cuadros.append(escena(e["f"], e["es"], e["en"], e["marco"])); tiempos.append(e["dur"])
-cuadros.append(fortran()); tiempos.append(4200)
-cuadros.append(negro([("Hekatan Struct", f_tit, (255, 255, 255)),
-                      ("giorgioburbanelli89.github.io/hekatan-struct-lineal", f_en, (170, 180, 195))],
-                     "Ya disponible en el sitio público", "Available now on the public site")); tiempos.append(2600)
+if __name__ == "__main__":
+    esc = json.load(open(os.path.join(D, "escenas.json"), encoding="utf-8"))
+    cuadros, tiempos = [], []
+    cuadros.append(negro([("Hekatan Struct", f_tit, (255, 255, 255)), ("novedades · 29-sep-2026", f_es, AMBAR)],
+                         "GDL del modal · matriz local de placas y barras · Exportar a Fortran",
+                         "Modal DOFs · shell & frame local stiffness · Fortran export")); tiempos.append(2400)
+    vistos = set()
+    for e in esc:
+        if (e["f"], e["es"]) in vistos or any(x["es"] == e["es"] and x is not e and esc.index(x) < esc.index(e) for x in esc):
+            continue                      # fotograma repetido de la misma escena
+        vistos.add((e["f"], e["es"]))
+        cuadros.append(escena(e["f"], e["es"], e["en"], e["marco"])); tiempos.append(e["dur"])
+    cuadros.append(fortran()); tiempos.append(4200)
+    cuadros.append(negro([("Hekatan Struct", f_tit, (255, 255, 255)),
+                          ("giorgioburbanelli89.github.io/hekatan-struct-lineal", f_en, (170, 180, 195))],
+                         "Ya disponible en el sitio público", "Available now on the public site")); tiempos.append(2600)
 
-os.makedirs(os.path.join(D, "fotogramas"), exist_ok=True)
-for i, c in enumerate(cuadros):
-    c.save(os.path.join(D, "fotogramas", f"f{i:02d}.png"))
-# hoja de contacto para REVISAR (a mí no me sirve el GIF)
-tw, th = 640, 360
-hoja = Image.new("RGB", (tw * 3, th * ((len(cuadros) + 2) // 3)), (40, 40, 40))
-for i, c in enumerate(cuadros):
-    hoja.paste(c.resize((tw, th), Image.LANCZOS), ((i % 3) * tw, (i // 3) * th))
-hoja.save(os.path.join(D, "_hoja.png"))
-pal = [c.convert("P", palette=Image.ADAPTIVE, colors=128) for c in cuadros]
-out = os.path.join(D, "HEKATAN_STRUCT_NOVEDADES_29SEP.gif")
-pal[0].save(out, save_all=True, append_images=pal[1:], duration=tiempos, loop=0, optimize=True)
-print(out, len(cuadros), "cuadros", round(os.path.getsize(out) / 2**20, 2), "MB")
+    os.makedirs(os.path.join(D, "fotogramas"), exist_ok=True)
+    for i, c in enumerate(cuadros):
+        c.save(os.path.join(D, "fotogramas", f"f{i:02d}.png"))
+    # hoja de contacto para REVISAR (a mí no me sirve el GIF)
+    tw, th = 640, 360
+    hoja = Image.new("RGB", (tw * 3, th * ((len(cuadros) + 2) // 3)), (40, 40, 40))
+    for i, c in enumerate(cuadros):
+        hoja.paste(c.resize((tw, th), Image.LANCZOS), ((i % 3) * tw, (i // 3) * th))
+    hoja.save(os.path.join(D, "_hoja.png"))
+    pal = [c.convert("P", palette=Image.ADAPTIVE, colors=128) for c in cuadros]
+    out = os.path.join(D, "HEKATAN_STRUCT_NOVEDADES_29SEP.gif")
+    pal[0].save(out, save_all=True, append_images=pal[1:], duration=tiempos, loop=0, optimize=True)
+    print(out, len(cuadros), "cuadros", round(os.path.getsize(out) / 2**20, 2), "MB")
