@@ -36,7 +36,7 @@ globalThis.__hekatanDofMaxModal = 1e9;   // sin tope: se quiere ver dónde revie
 const tam = process.argv.slice(2).map((s) => s.split(",").map(Number));
 for (const [nx, ny, pisos] of tam) {
   const p = {}; for (const [k, d] of Object.entries(plantillas.params)) p[k] = d.default;
-  Object.assign(p, { tipo: 6, nx, ny, pisos });
+  Object.assign(p, { tipo: 6, nx, ny, pisos, rz: Number(process.env.RZ ?? 0) });
   const estado = (v) => ({ get val() { return v; }, set val(x) { v = x; }, get rawVal() { return v; } });
   const st = { nodes: estado([]), elements: estado([]), nodeInputs: estado({}), elementInputs: estado({}),
     deformOutputs: estado({}), analyzeOutputs: estado({}), objects3D: estado([]) };

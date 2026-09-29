@@ -45,6 +45,7 @@
  * necesita un widget entero, y `0, 6, 12, 18` se teclea más rápido de lo que se
  * rellena una tabla.
  */
+import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import { deform, analyze, modalAnalysis, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { ecHormigonNEC } from "../shared/materials";
@@ -241,6 +242,9 @@ const PARAMS = {
   // Dead 136.8 = 144.0 - 4 vigas x 2 x 0.25 m; y +2.88 % en los periodos del Paz 6.3. Las columnas
   // no se descuentan. Con 1 (defecto, ETABS) la viga pesa y masa con L - b_col; con 0 = SAP2000.
   offsets: { default: 1, min: 0, max: 1, step: 1, label: "brazos rígidos (1 ETABS · 0 SAP2000)", options: { "ETABS (automáticos: solo peso y masa)": 1, "Ninguno (SAP2000)": 0 }, folder: "🔩 Secciones" },
+  // Factor de zona rígida RZ de ETABS (Assign > Frame > End Length Offsets). 0 = el de ETABS por defecto:
+  // el brazo existe pero no rigidiza. 1 = todo el brazo rígido. Solo con «brazos rígidos = ETABS».
+  rz: { default: 0, min: 0, max: 1, step: 0.05, label: "factor de zona rígida RZ (0 ETABS)", folder: "🔩 Secciones" },
   bviga: { default: 0.30, min: 0.15, max: 0.8, step: 0.05, label: "viga, ancho (m)", folder: "🔩 Secciones" },
   hviga: { default: 0.50, min: 0.2, max: 1.2, step: 0.05, label: "viga, canto (m)", folder: "🔩 Secciones" },
   tlosa: { default: 0.20, min: 0.08, max: 0.6, step: 0.01, label: "losa, espesor (m)", folder: "🔩 Secciones" },
@@ -908,7 +912,11 @@ export const plantillas: ExampleDef = {
       momentsOfInertiaY, momentsOfInertiaZ, torsionalConstants,
       thicknesses, shearAreasY, shearAreasZ, plateFormulations,
       membraneModifiers, shellModifiers,
-    };
+      // brazos rigidos automaticos de ETABS: viga ½ b_col por extremo con columna, columna h_viga arriba
+      ...(Math.round((p as any).offsets ?? 1) === 1 ? { endOffsets: brazosAutomaticosETABS(
+        nodes as any, elements as any, (e) => (clase[e] === "col" ? "col" : clase[e] === "viga" ? "viga" : null),
+        () => p.bcol, () => p.hviga, Math.min(1, Math.max(0, (p as any).rz ?? 0))) } : {}),
+    } as any;
     states.objects3D.val = [];
 
     // `__soloModelo`: lo usa `runModal` para armar la malla gruesa del modal sin

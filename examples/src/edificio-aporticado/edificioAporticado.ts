@@ -12,6 +12,7 @@ import { computeHinges, buildHingeObjects3D, summarizeHinges } from "../shared/p
 import { designAllFootings, classifyFootingType, type FootingType } from "../shared/footingDesign";
 import * as THREE from "three";
 import { ecHormigonACI } from "../shared/materials";
+import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 
 // Densidad de MASA del concreto, NO peso específico.
 // CSI Manual §4.12: "Mass values must be given in consistent mass units (W/g)".
@@ -136,6 +137,8 @@ export const edificioAporticado: ExampleDef = {
     // brazos rigidos AUTOMATICOS de ETABS: RZ = 0, pero la viga no pesa ni masa el tramo dentro de la
     // columna (medio lado en la direccion de la viga, a cada extremo con columna). Medido 8-sep-2026.
     offsets: PE("Apoyo", "Brazos rígidos", 1, { "ETABS (automáticos: solo peso y masa)": 1, "Ninguno (SAP2000)": 0 }),
+    // factor de zona rigida RZ de ETABS: 0 (defecto de ETABS) = el brazo no rigidiza; 1 = todo rigido
+    rz:       P("Apoyo", "Factor de zona rígida RZ (0 ETABS)", 0, 0, 1, 0.05),
 
     // ── Cargas (patrones tipo FEM Studio) ──
     CM:       P("Cargas", "CM (kN/nodo)", -5,   -30, 0,    0.5),
@@ -1054,6 +1057,12 @@ export const edificioAporticado: ExampleDef = {
       densities, poissonsRatios: poissons, thicknesses,
       membraneModifiers, bendingModifiers, plateFormulations,
       ...(esCft || esTuboCotas || esPerfilI ? { shearAreasY, shearAreasZ, sectionShapes } : {}),
+      // brazos rigidos automaticos de ETABS: viga ½ lado de columna (en su direccion), columna canto de viga arriba
+      ...(Math.round((p as any).offsets ?? 1) === 1 ? { endOffsets: brazosAutomaticosETABS(
+        nodes as any, elements as any, (e) => (colIdx.has(e) ? "col" : beamIdx.has(e) ? "viga" : null),
+        (e, _n, enX) => { const cp = colPropsAt(Math.min(elementFloor.get(e) ?? 0, 7)); return enX ? cp.b : cp.h; },
+        (e) => (esPerfilI && secBeamIdx.has(e) ? (p.vigSecH ?? 0.30) : (vigaH_piso[Math.min(elementFloor.get(e) ?? 0, 7)] ?? p.vigaH)),
+        Math.min(1, Math.max(0, (p as any).rz ?? 0))) } : {}),
     } as any;
     const deformOut = deform(nodes, elements, states.nodeInputs.val, states.elementInputs.val);
     states.deformOutputs.val = deformOut;

@@ -52,6 +52,7 @@
  *   load 2 0 0 -100
  *   solve
  */
+import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
@@ -120,6 +121,9 @@ interface ParsedModel {
   /** `rigidzone <f>`: el factor de zona rígida de TODAS las barras con `endoffset`
    *  (0 = ETABS por defecto, no rigidiza). `rigidzone off` = sin brazos (SAP2000). */
   rigidZone?: number | "off";
+  /** `rigidzone auto [f]`: brazos AUTOMATICOS de ETABS por conectividad (viga ½ lado de columna, columna
+   *  canto de viga arriba) en las barras sin `endoffset`, con factor f (0 por defecto, como ETABS). */
+  rigidZoneAuto?: number;
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -673,7 +677,11 @@ export function parseCliCommands(text: string): ParsedModel {
         case "zonarigida": {
           const v = (tokens[1] ?? "").toLowerCase();
           if (["off", "no", "none", "ninguno", "sap", "sap2000"].includes(v)) m.rigidZone = "off";
-          else {
+          else if (["auto", "automatico", "automatic", "etabs"].includes(v)) {
+            const f = parseFloat(tokens[2] ?? "0");
+            if (isFinite(f) && f >= 0 && f <= 1) m.rigidZoneAuto = f;
+            else m.errors.push(`rigidzone auto: el factor va entre 0 y 1 (rigidzone auto 0.5)`);
+          } else {
             const f = parseFloat(v);
             if (isFinite(f) && f >= 0 && f <= 1) m.rigidZone = f;
             else m.errors.push(`rigidzone: se esperaba un factor entre 0 y 1, u "off" (sin brazos)`);
@@ -1448,6 +1456,28 @@ export const cliModeler: ExampleDef = {
         sectionShapes.set(eIdx, { type: "CFT", b: cftF.b, h: cftF.h, tw: cftF.tw, tf: cftF.t, fillE: cftF.Ec, fillRho: cftF.rhoC, steelRho: f.rho ?? 7.85,
           name: f.sec ?? `CFT ${mm(cftF.h)}X${mm(cftF.b)}X${mm(cftF.t)}${cftF.tw !== cftF.t ? `X${mm(cftF.tw)}` : ""}` });
       }
+    }
+    // `rigidzone auto [f]`: brazos AUTOMATICOS de ETABS («Automatic from Connectivity») en las barras
+    // que no traen `endoffset`. Columna = barra vertical (< 20° de la vertical), viga = horizontal
+    // (< 20°). Medidas: canto y ancho declarados (tokens D B, perfiles I/tubo) o, si no hay, el
+    // rectangulo equivalente de A e I (h = √(12·I33/A), b = √(12·I22/A)).
+    if (m.rigidZoneAuto !== undefined && m.rigidZone !== "off") {
+      const rzA = typeof m.rigidZone === "number" ? m.rigidZone : m.rigidZoneAuto;
+      const inclin = (e: number) => {
+        const [a, b] = elements[e]; const d = [0, 1, 2].map((c) => nodes[b][c] - nodes[a][c]);
+        return Math.atan2(Math.abs(d[2]), Math.hypot(d[0], d[1])) * 180 / Math.PI;   // 0 horizontal, 90 vertical
+      };
+      const canto = (e: number) => cantos.get(e) ?? Math.sqrt(12 * (I33.get(e) ?? 0) / (areas.get(e) || 1));
+      const ancho = (e: number) => anchos.get(e) ?? Math.sqrt(12 * (I22.get(e) ?? 0) / (areas.get(e) || 1));
+      const auto = brazosAutomaticosETABS(nodes as any, elements as any,
+        (e) => (elements[e]?.length !== 2 ? null : inclin(e) > 70 ? "col" : inclin(e) < 20 ? "viga" : null),
+        // columna con angulo 0: el canto (t3) va por el eje local 2 = X global; girada 90°, por Y
+        (e, _n, enX) => { const g = ((localAngles.get(e) ?? 0) % 180 + 180) % 180; const girada = Math.abs(g - 90) < 45;
+                          return (enX !== girada) ? canto(e) : ancho(e); },
+        (e) => canto(e), rzA);
+      let nAuto = 0;
+      for (const [e, v] of auto) if (!endOffsets.has(e)) { endOffsets.set(e, v); nAuto++; }
+      if (nAuto) console.log(`[CLI Modeler] rigidzone auto: ${nAuto} barras con brazos de ETABS (RZ = ${rzA})`);
     }
     // ── Cruces de barras SIN nudo comun (las X de arriostramiento) ─────────────
     // ETABS parte las dos barras en el cruce y les pone un nudo (MESHATINTERSECTIONS

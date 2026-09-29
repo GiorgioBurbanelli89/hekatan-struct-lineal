@@ -263,7 +263,18 @@ Tests: `node tests/run.mjs brazos-rigidos` (31 filas, voladizos), `node tests/ru
 `validation/brazos-rigidos/ref_portico_csi.py etabs|sap` → `tests/datos/brazos_portico_<prog>.json`
 (el test toma el de SAP2000 solo si existe). ⚠️ `cli/native/main_modal_native.cpp` declara una
 firma VIEJA de `modal` (sin `etabs_wall_joint` ni las salidas espectrales): hay que ponerla al día
-antes de volver a usarlo. Las plantillas (`offsets`) siguen con RZ = 0 (solo peso y masa).
+antes de volver a usarlo.
+
+**Brazos AUTOMÁTICOS (29-sep-2026)** — `examples/src/shared/brazosAutomaticos.ts`, la regla que dio
+ETABS en la sonda del 8-sep (`validation/isse/ETABS_DEFECTOS_QUE_ANADE.md`): viga ½ lado de columna
+(en su dirección) por extremo con columna; columna el canto ENTERO de la viga arriba, 0 abajo.
+- `plantillas` y `edificio-aporticado`: con `offsets` = ETABS ponen esos `endOffsets` y el control
+  **RZ** (`rz`, 0 por defecto = ETABS). Con RZ = 0 las 8 plantillas siguen = ETABS a 0.000 %.
+- `.heks`: `rigidzone auto [f]` los calcula en las barras sin `endoffset` (columna = < 20° de la
+  vertical, viga = < 20° de la horizontal; medidas de los tokens D B / perfiles, o el rectángulo
+  equivalente de A e I). `rigidzone off` manda sobre `auto`.
+- Tests: `node tests/run.mjs brazos-automaticos` (7 filas), `node cli/ctl_brazos_rz.mjs [--base]` (app).
+- ⏳ Falta un árbitro de ETABS con RZ > 0 en un edificio entero (la ley y la colocación sí están medidas).
 
 ## La membrana: elemento ITW 1990 (drilling)
 
