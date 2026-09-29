@@ -86,6 +86,9 @@ const POR_SITIO = [
   ...CTL.map((f) => guion("interfaz", f, {
     // los que ya sabían ir al público lo hacen por su argumento: así no levantan su servidor
     args: (d) => (d === "publico" && fuenteDe(f).includes('=== "publico"') ? ["publico"] : []),
+    // Medido el 29-sep-2026: ctl_modal_parametros, solo, tarda 918 s con la máquina cargada y pasa 66/66.
+    // Con el límite general de 900 s salía «COLGADO» sin estarlo.
+    ...(f === "ctl_modal_parametros.mjs" ? { tiempo: 2400 } : {}),
   })),
   guion("interfaz", "check_panel_tabla.mjs", { args: () => ["local"] }),
   // ejemplos
