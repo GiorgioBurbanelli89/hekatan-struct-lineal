@@ -1,5 +1,5 @@
 import puppeteer from "puppeteer";
-const B = "http://localhost:4790/hekatan-struct-lineal";
+const B = process.env.B || "http://localhost:4790/hekatan-struct-lineal";
 const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--enable-webgl"] });
 for (const u of [B + "/eiffel/", B + "/zapata-aislada/", B + "/workspace/?m=2by5mBd4y2Vv3OLX&t=new-blank"]) {
   const p = await nav.newPage(); const e = []; p.on("pageerror", (x) => e.push(x.message));
