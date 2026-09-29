@@ -58,3 +58,31 @@ for (const s of ids) {
 }
 console.log(`zapata: ${areaZap.toFixed(3)} m² · asiento entre ${(wmin * 1000).toFixed(3)} y ${(wmax * 1000).toFixed(3)} mm`);
 console.log(`Q suelo (ks·∫w dA) = ${Q.toFixed(3)} kN hacia arriba`);
+
+// ── para el cálculo a mano: resultante del suelo, su momento y las presiones ──
+{
+  const puntos = [];                // (x, y, q) en Gauss
+  let N = 0, Mx = 0, My = 0;
+  for (const s of ids) {
+    const e = m.elements[idxDe.get(s)];
+    const P = e.map((k) => m.nodes[k]), w = e.map((k) => U.get(k)?.[2] ?? 0);
+    for (const xi of [-g, g]) for (const et of [-g, g]) {
+      const Nf = [(1 - xi) * (1 - et), (1 + xi) * (1 - et), (1 + xi) * (1 + et), (1 - xi) * (1 + et)].map((v) => v / 4);
+      const dx = [-(1 - et), (1 - et), (1 + et), -(1 + et)].map((v) => v / 4);
+      const de = [-(1 - xi), -(1 + xi), (1 + xi), (1 - xi)].map((v) => v / 4);
+      let a = 0, b = 0, c = 0, d = 0, wg = 0, xg = 0, yg = 0;
+      for (let k = 0; k < 4; k++) { a += dx[k] * P[k][0]; b += dx[k] * P[k][1]; c += de[k] * P[k][0]; d += de[k] * P[k][1]; wg += Nf[k] * w[k]; xg += Nf[k] * P[k][0]; yg += Nf[k] * P[k][1]; }
+      const J = Math.abs(a * d - b * c), q = -muelles.get(s) * wg;
+      N += q * J; Mx += q * J * yg; My += q * J * xg;
+    }
+  }
+  const qn = [];
+  for (const s of ids) for (const k of m.elements[idxDe.get(s)]) qn.push({ y: m.nodes[k][1], x: m.nodes[k][0], q: -muelles.get(s) * (U.get(k)?.[2] ?? 0) });
+  const porY = new Map();
+  for (const r of qn) if (Math.abs(r.x - 5) < 1e-6) porY.set(r.y, r.q);
+  const out = { sF, sR, N, yN: Mx / N, xN: My / N, qmax: Math.max(...qn.map((r) => r.q)), qmin: Math.min(...qn.map((r) => r.q)),
+    perfilCentro: [...porY.entries()].sort((a, b) => a[0] - b[0]),
+    coronaUy: Math.max(...m.nodes.map((p, k) => (Math.abs(p[2] - Math.max(...m.nodes.map((q) => q[2]))) < 1e-9 ? Math.abs(U.get(k)?.[1] ?? 0) : 0))) };
+  writeFileSync(`cli/shots/estribo/${id}_struct.json`, JSON.stringify(out, null, 1));
+  console.log("resultante del suelo: N =", N.toFixed(3), "kN en y =", out.yN.toFixed(4), "m, x =", out.xN.toFixed(4), "m · q entre", out.qmin.toFixed(2), "y", out.qmax.toFixed(2), "kPa");
+}

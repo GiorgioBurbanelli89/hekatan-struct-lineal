@@ -1,0 +1,78 @@
+# Estribo de puente · cálculo a mano contra Hekatan Struct
+#: Ejemplo **estribo-puente** de Hekatan Struct con sus valores por defecto: pantalla de 10 m de ancho y 6 m de alto, aletas de 4 m, zapata de 1 m de espesor con puntera de 1.5 m, relleno granular y la reacción del tablero. Se calcula a mano, sin mirar el modelo, y al final se compara con lo que da Struct.
+#: Ejes: x a lo largo del estribo, y hacia el relleno (la puntera queda en y negativo), z hacia arriba. Unidades: kN y m.
+
+## 1 · Las fórmulas, en letras
+#: **Coeficiente de empuje activo de Rankine** (muro liso y relleno horizontal):
+K_a = tan(pi/4 - phi/2)^2
+#: **Empuje del relleno**: la presión crece lineal con la profundidad, así que el empuje es el área de un triángulo, aplicado a un tercio de la altura:
+E_s = 1/2*K_a*gamma*H^2*B
+#: **Empuje de la sobrecarga**: presión constante, aplicada a media altura:
+E_q = K_a*q*H*B
+#: Las **aletas** reciben el mismo empuje, pero una hacia −x y la otra hacia +x: se anulan entre sí y no entran en el equilibrio del estribo.
+#: **Momento de vuelco** de las fuerzas horizontales respecto a la base, con el frenado F_{h} del tablero en la coronación:
+M_h = E_s*H/3 + E_q*H/2 + F_h*H
+#: **Resultante del suelo**: la carga vertical total V, y dónde cae (y_{N}) según el equilibrio de momentos. Excentricidad respecto al centro de la zapata y presión con zapata rígida (Navier):
+y_N = (M_v - M_h)/V
+q_max = V/(B*L)*(1 + 6*e_c/L)
+q_min = V/(B*L)*(1 - 6*e_c/L)
+#: **Deslizamiento**: el rozamiento de la base contra el empuje total. Hipótesis: rozamiento base-suelo δ = ⅔·φ.
+FS_d = V*tan(delta)/H_t
+
+## 2 · Los datos
+B = 10 [m] 'ancho del estribo
+H = 6 [m] 'alto de la pantalla
+L_a = 4 [m] 'largo de las aletas (y del talón)
+t_p = 0.6 [m] 'espesor de la pantalla
+t_a = 0.4 [m] 'espesor de las aletas
+t_z = 1 [m] 'espesor de la zapata
+p_u = 1.5 [m] 'puntera
+L = 5.5 [m] 'largo de la zapata, puntera + talón
+gamma = 19 [kN/m³] 'peso del relleno
+phi = 32*pi/180 'ángulo de rozamiento del relleno (32°)
+q = 12 [kPa] 'sobrecarga
+g_c = 2.4*9.80665 [kN/m³] 'peso del hormigón (2.4 t/m³)
+R_v = 3000 [kN] 'reacción vertical del tablero
+F_h = 300 [kN] 'frenado
+
+## 3 · Las fuerzas
+K_a = dec(tan(pi/4 - phi/2)^2, 5)
+E_s = dec(1/2*K_a*gamma*H^2*B, 3) [kN]
+E_q = dec(K_a*q*H*B, 3) [kN]
+H_t = dec(E_s + E_q + F_h, 3) [kN] 'horizontal total
+M_h = dec(E_s*H/3 + E_q*H/2 + F_h*H, 3) [kN·m]
+#: Pesos, con las superficies medias de cada pieza (como el modelo de cáscaras) y dónde caen en y:
+W_p = dec(B*H*t_p*g_c, 3) [kN] 'pantalla, en y = 0
+W_a = dec(2*L_a*H*t_a*g_c, 3) [kN] 'aletas, en y = L_a/2
+W_z = dec(B*L*t_z*g_c, 3) [kN] 'zapata, en y = 1.25
+#: **Tierra sobre el talón.** El modelo la reparte en los nudos del talón con y > 0: el medio paño pegado a la pantalla (0.5 m) queda sin tierra. La que hay de verdad va desde la cara de la pantalla (0.3 m) hasta el final de las aletas y entre sus caras interiores:
+W_t = dec((gamma*H + q)*B*(L_a - 0.5), 3) [kN] 'como el modelo, en y = 2.25
+W_tr = dec((gamma*H + q)*(B - t_a)*(L_a - t_p/2), 3) [kN] 'la real
+V = dec(R_v + W_p + W_a + W_z + W_t, 3) [kN]
+
+## 4 · Estabilidad con zapata rígida
+M_v = dec(W_a*L_a/2 + W_z*1.25 + W_t*2.25, 3) [kN·m] 'momento de los pesos respecto a y = 0
+y_N = dec((M_v - M_h)/V, 4) [m]
+#: Excentricidad respecto al centro de la zapata (y = 1.25), con el y_{N} de la línea de arriba:
+e_c = dec(1.25 - 0.7876, 4) [m] 'hacia la puntera
+L_6 = dec(L/6, 4) [m]
+#: e_{c} < L/6: toda la base queda comprimida, el estribo no se levanta.
+q_m = dec(V/(B*L), 2) [kPa] 'presión media
+q_max = dec(q_m*(1 + 6*e_c/L), 2) [kPa]
+q_min = dec(q_m*(1 - 6*e_c/L), 2) [kPa]
+FS_v = dec((M_v + V*p_u)/M_h, 2) 'vuelco, respecto al borde de la puntera
+delta = 2/3*phi
+FS_d = dec(V*tan(delta)/H_t, 2) 'deslizamiento
+
+## 5 · Contra Hekatan Struct
+#| Magnitud | A mano | Hekatan Struct | Diferencia |
+#|---|---:|---:|---:|
+#| Carga horizontal (kN) | 1572.050 | 1572.052 | 0.0001 % |
+#| Carga vertical (kN) | 10003.663 | 10003.663 | 0.0000 % |
+#| Reacción del suelo, vertical (kN) | 10003.663 | 10003.663 | 0.0000 % |
+#| Resultante del suelo, y (m) | 0.7876 | 0.8066 | 19 mm |
+#| Presión máxima (kPa) | 273.6 (rígida) | 268.9 (flexible) | −1.7 % |
+#| Presión mínima (kPa) | 90.1 (rígida) | 83.7 (flexible) | −7.1 % |
+#: **Los 19 mm de la resultante son del reparto de las cargas en los nudos, no del solver.** El empuje triangular repartido en 8 alturas da un momento de 4532.49 en vez de 4565.33 (3 mm), y la tierra repartida en los nudos del talón cae en y = 2.286 en vez de 2.25 (16 mm). Con las mismas cargas nodales, la mano da 0.8066 m, igual que Struct. Con malla más fina, las dos tienden a 0.7877 m.
+#: **Las presiones difieren porque la zapata de Struct es flexible** (placa sobre muelles, k_{s} = 40000 kN/m³) y la de la mano es rígida: la flexible reparte algo menos hacia los bordes.
+#: **Lo que el modelo NO comprueba:** el deslizamiento (Struct fija u_{x}, u_{y} en toda la base: la fuerza horizontal va entera a los apoyos) y la presión admisible del suelo (no es un dato del ejemplo). Por eso van a mano: FS_{d} con δ = ⅔·φ, y q_{max} hay que compararla con la q_{adm} del estudio de suelos.
