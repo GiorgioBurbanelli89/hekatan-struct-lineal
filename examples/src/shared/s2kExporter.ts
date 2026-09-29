@@ -12,6 +12,7 @@
  */
 import type { Node, Element, NodeInputs, ElementInputs } from "hekatan-fem";
 import { muellesParaExportar } from "./muellesParaExportar";
+import { gdlDisponibles } from "./gdlDisponibles";
 
 /** Capa de un Shell-Layered. */
 export interface S2kLayer {
@@ -103,8 +104,12 @@ export function exportS2k(input: S2kExportInput): string {
   blank();
 
   // ── ACTIVE DEGREES OF FREEDOM ──
+  // los seis, salvo en una membrana plana: ahí solo los del plano (shared/gdlDisponibles.ts)
   push(`TABLE:  "ACTIVE DEGREES OF FREEDOM"`);
-  push(`   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes`);
+  {
+    const g = gdlDisponibles(nodes, elements, elementInputs);
+    push("   " + ["UX", "UY", "UZ", "RX", "RY", "RZ"].map((n, k) => `${n}=${g[k] ? "Yes" : "No"}`).join("   "));
+  }
   blank();
 
   // ── Separate frames and shells ──

@@ -9,6 +9,7 @@
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
 import type { E2kModel } from "./e2kParser";
 import { muellesParaExportar } from "./muellesParaExportar";
+import { gdlDisponibles } from "./gdlDisponibles";
 
 export interface ExportE2kInput {
   nodes: Node[];
@@ -1997,7 +1998,11 @@ function exportFromScratch(input: ExportE2kInput): string {
   //     PDELTA METHOD "NON_ITERATIVE_BASED_ON_MASS"  MASSSOURCE "MsSrc1"
   //   Lo dejamos en NONE para el caso default lineal.
   lines.push(`$ ANALYSIS OPTIONS`);
-  lines.push(`  ACTIVEDOF "UX UY UZ RX RY RZ"  `);
+  // …salvo en una membrana plana: ahí solo los del plano (shared/gdlDisponibles.ts)
+  {
+    const g = gdlDisponibles(nodes, elements, elementInputs);
+    lines.push(`  ACTIVEDOF "${["UX", "UY", "UZ", "RX", "RY", "RZ"].filter((_n, k) => g[k]).join(" ")}"  `);
+  }
   lines.push(`  PDELTA  METHOD "NONE"  `);
   lines.push(``);
 
