@@ -274,7 +274,8 @@ ETABS en la sonda del 8-sep (`validation/isse/ETABS_DEFECTOS_QUE_ANADE.md`): vig
   vertical, viga = < 20° de la horizontal; medidas de los tokens D B / perfiles, o el rectángulo
   equivalente de A e I). `rigidzone off` manda sobre `auto`.
 - Tests: `node tests/run.mjs brazos-automaticos` (7 filas), `node cli/ctl_brazos_rz.mjs [--base]` (app).
-- ⏳ Falta un árbitro de ETABS con RZ > 0 en un edificio entero (la ley y la colocación sí están medidas).
+- La LEY contra SAP2000 (juez) y ETABS: `brazos-portico` 57/57 a 0.000 % (29-sep, `brazos_portico_sap2000.json`).
+- ⏳ Falta el edificio entero con RZ > 0: primero SAP2000 (con los brazos escritos), luego ETABS.
 
 ## La membrana: elemento ITW 1990 (drilling)
 
