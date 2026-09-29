@@ -360,7 +360,10 @@ const PARAMS = {
 // nada. Umbral más bajo que el de test-m (20 s) porque aquí se cambia de
 // plantilla con un clic y no hay «Correr» de por medio.
 const segDeform = (dof: number) => 3.77e-10 * Math.pow(dof, 2.05);
-const segModal = (dof: number) => 2.07e-11 * Math.pow(dof, 2.5);
+// Modal: medido el 29-sep-2026 en Chrome con el dual y el solver de hoy (subespacio disperso):
+// 24 600 GDL 3 s · 62 640 GDL 14 s · 102 216 GDL 22 s → ~ GDL^1.4. La curva de antes (GDL^2.5) era
+// del modal viejo y daba 69 s donde tarda 22.
+const segModal = (dof: number) => 3 * Math.pow(dof / 24600, 1.4);
 const SEG_CONFIRMAR = 5;
 
 /** Pregunta si vale la pena seguir. `true` = seguir. Sin `confirm` (Node), sigue. */
@@ -375,11 +378,23 @@ const SEG_CONFIRMAR = 5;
  *     6x6x6         5 812         34 872 GDL   ✓
  *     7x7x6                                    ✗ se muere la pestaña
  *
- * Se deja en 40 000: por encima del mayor que aguantó y por debajo del que mata.
- * Es el techo de una máquina modesta con el render por software; el que tenga más
- * puede subirlo desde la consola con `window.__hekatanDofMaxModal = 60000`.
+ * Se dejó en 40 000: por encima del mayor que aguantó y por debajo del que mata.
+ *
+ * ⚠️ 29-sep-2026: ESA TABLA ERA DEL MODAL VIEJO. Con el de hoy (subespacio con LDLT disperso) y
+ * medido de nuevo — `cli/_modal_memoria.mjs` (Node) y `cli/ctl_modal_techo_sin_tope.mjs` (Chrome,
+ * pestaña con render por software, esta máquina de 16 GB):
+ *
+ *     malla 1.25 m   nudos     GDL       Node              Chrome
+ *     6x6x6           4 100    24 600    1.3 s             3 s,  heap JS 129 MB
+ *     8x8x8          10 440    62 640    4.8 s  ~200 MB    14 s, heap JS 157 MB
+ *     10x10x8        17 036   102 216    8.7 s  ~370 MB    22 s, heap JS 468 MB, la página responde
+ *     12x12x12       37 784   226 704   27.7 s  ~830 MB    (no medido en Chrome)
+ *
+ * T₁ igual en Node y en Chrome en los tres. Se sube a 100 000: el mayor medido en la pestaña. Por
+ * encima el WASM aguanta (Node), pero no se ha medido la pestaña; se puede subir desde la consola
+ * con `window.__hekatanDofMaxModal = 200000`.
  */
-const DOF_MAX_MODAL_DEFECTO = 40000;
+const DOF_MAX_MODAL_DEFECTO = 100000;
 const topeModal = () =>
   Number((window as any).__hekatanDofMaxModal) || DOF_MAX_MODAL_DEFECTO;
 

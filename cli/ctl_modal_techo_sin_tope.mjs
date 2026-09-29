@@ -53,15 +53,19 @@ for (const [nx, ny, pisos, ms] of TAM) {
     }, { nx, ny, pisos, ms });
     await espera(15000);
     const t0 = Date.now();
-    await pag.evaluate(() => window.__hekatanRunModalAnimate?.());
+    await pag.evaluate(() => { window.__antes = window.__hekatanModalResults?.(); window.__hekatanRunModalAnimate?.(); });
     // esperar a que el panel diga T₁ (o un aviso), hasta 5 min
-    await pag.waitForFunction(() => /T₁ = [0-9.]+ s|no se ejecutó|no salio/.test(document.body.textContent), { timeout: 300000, polling: 1000 });
+    // terminó = hay resultados modales NUEVOS (con frecuencias), o el panel dice que no corrió
+    await pag.waitForFunction(() => { const r = window.__hekatanModalResults?.();
+      return (r && r !== window.__antes && r.frequencies?.length) || /no se ejecutó|no salio/.test(document.body.textContent); },
+      { timeout: 300000, polling: 1000 });
     const seg = (Date.now() - t0) / 1000;
     await espera(5000);                                       // que anime un rato
     const r = await pag.evaluate(() => ({
       info: window.__hekatanModalInfo,
       heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 2 ** 20) : -1,
-      panel: document.body.textContent.match(/T₁ = [0-9.]+ s|no se ejecutó[^\n]*|no salio[^\n]*/)?.[0],
+      panel: (() => { const f = window.__hekatanModalResults?.()?.frequencies;
+        return f?.length ? "T1 = " + (1 / f[0]).toFixed(4) + " s" : (document.body.textContent.match(/no se ejecutó[^\n]{0,80}|no salio[^\n]{0,80}/)?.[0] ?? "sin modos"); })(),
     }));
     // ¿la página sigue respondiendo con la animación en marcha?
     const t1 = Date.now();
