@@ -51,6 +51,9 @@ const EXENTOS_EQUILIBRIO = new Set([
   "guerra-ej6-zapata-unida-viga-amarre",
   "guerra-ej7-viga-cimentacion-new", "guerra-ej8-losa-cimentacion",
   "viga-cim-guerra-ej7", "viga-cim-guerra-ej7-tinv",
+  // el muro de la serie de vídeos: base sobre muelles de balasto (su equilibrio, con los
+  // muelles, lo mide `cli/muro_manabi_dump.mjs`: cierra a 1e-9 %)
+  "muro-manabi",
   // Winkler SIN TRACCIÓN (levantamiento): la carga la toman los muelles que siguen en contacto
   "zapata-excentrica", "zapata-levantamiento",
   // plateQ4Solve: no hay `reactions` que sumar
@@ -212,7 +215,7 @@ export async function correr() {
   filas.push({
     que: "equilibrio global (SumaF + SumaR = 0)",
     medido: desequilibrados.length, limite: 0, ok: desequilibrados.length === 0,
-    detalle: desequilibrados.length ? desequilibrados.slice(0, 5).join(" · ")
+    detalle: desequilibrados.length ? desequilibrados.slice(0, 12).join(" · ")
       : `${E.filter((e) => !EXENTOS_EQUILIBRIO.has(e.id) && e.tieneReac && e.nCargas).length} ejemplos cierran`,
   });
 
