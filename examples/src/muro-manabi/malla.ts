@@ -263,6 +263,14 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
     const k0 = zs.indexOf(rd(p.tf));
     for (let j = 0; j < ys.length; j++)
       empujeEnLinea(zs.slice(k0), (k) => fus(k0 + k, j), wy[j], (k) => xb - nodes[fus(k0 + k, j)][0]);
+    // El apoyo en x está en la BASE de la zapata (z = 0) y los nudos de la cáscara en su plano medio
+    // (z = tf/2): la reacción, −ΣFx, tiene tf/2 de brazo y ese par se pone en los nudos del apoyo.
+    // MEDIDO (28-sep-2026, sismo): sin el par la presión máxima salía 75.3 kPa contra 84.7 de la
+    // membrana y del sólido; con él, 84.8. Y la membrana con el apoyo subido a z = tf/2 da 75.2.
+    for (const pat of PATRONES) {
+      const Fx = C.suma(pat)[0];
+      for (let j = 0; j < ys.length; j++) C.mas(pat, zap(0, j), 4, (Fx * p.tf / 2 * wy[j]) / p.L);
+    }
     nudoCoronacion = fus(zs.length - 1, jm);
     // faja de muro: las dos caras de los extremos (y = 0, y = L) son planos de simetría. Ahí nada se
     // mueve a lo largo (uy) ni gira fuera del plano x–z (rx, rz); los nudos de dentro quedan libres
