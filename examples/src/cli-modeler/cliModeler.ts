@@ -56,6 +56,7 @@ import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
+import { resolverSoloCompresion, pesosAreaNudos } from "../shared/muellesSoloCompresion";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
 import { deform, analyze, modalAnalysis, cargaUniformeBarra, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
@@ -203,7 +204,8 @@ interface ParsedModel {
    *  (Jorge, 14-sep-2026: «case usa dead y combo usa combinaciones»). */
   loadsPat: Map<string, Map<number, [number, number, number, number, number, number]>>;
   frameLoadsPat: Map<string, Map<number, [number, number, number]>>;
-  springs: Array<{ node: number; dof: number; k: number }>;
+  /** `spring <nudo> <gdl> <k> [compresion]`: con `compresion` el muelle solo empuja (ley Gap de CSI). */
+  springs: Array<{ node: number; dof: number; k: number; comp?: boolean }>;
   /** Masa concentrada en un nudo, en toneladas — la que NO sale del peso propio.
    *  En ETABS la fuente de masa son dos interruptores: `INCLUDEELEMENTS`
    *  (rho*A*L) e `INCLUDELOADS` (patrones de carga entre g). El CIMENTAC del GAD
@@ -885,7 +887,8 @@ export function parseCliCommands(text: string): ParsedModel {
           const dofName = (tokens[2] ?? "uz").toLowerCase();
           const dof = DOF_NAMES[dofName] ?? 2;
           const k = parseFloat(tokens[3] ?? "1000");
-          m.springs.push({ node: nodeId, dof, k });
+          const comp = tokens.slice(4).some(t => /^(compresion|compression|compressiononly|solocompresion)$/i.test(t));
+          m.springs.push({ node: nodeId, dof, k, ...(comp ? { comp: true } : {}) });
           break;
         }
         // diaph <nudo> <idDiafragma>  — diafragma rigido (ata Ux, Uy, Rz)
@@ -1751,15 +1754,58 @@ export const cliModeler: ExampleDef = {
       });
     }
     const springsList: Array<{node:number; dof:number; k:number}> = [];
+    // Muelles SOLO COMPRESIÓN (suelo que no tira): el solve itera con la ley Gap de CSI sobre
+    // `springsComp` (uno por nudo). En `springsList` siguen como siempre (lineales, todos activos):
+    // de ahí leen el modal y los exportadores; `sustituidos` son los registros que el solve cambia.
+    // (Traído de la rama zapata-levantamiento, ecdcb6059, el 29-sep-2026: en main no estaba y el
+    // sitio público resolvía LINEAL las zapatas con `compresion`.)
+    const springsComp: Array<{node:number; dof:number; k:number}> = [];
+    const sustituidos = new Set<{node:number; dof:number; k:number}>();
+    const compPorNudo = new Map<number, number>();         // nudo -> k (uz) de muelles de área comp
     for (const sp of m.springs) {
       const idx = idToIdx.get(sp.node);
-      if (idx !== undefined) springsList.push({ node: idx, dof: sp.dof, k: sp.k });
+      if (idx === undefined) continue;
+      const rec = { node: idx, dof: sp.dof, k: sp.k };
+      springsList.push(rec);
+      if (sp.comp) { springsComp.push({ ...rec }); sustituidos.add(rec); }
     }
     // Muelles de AREA: registro con nudo negativo = -(elemento+1); gdl -1 consistente, -3 nodal
+    const areaSpringsComp = new Set<number>();              // ids de shell con `compresion` ya repartidos
     for (const as of m.areaSprings) {
       const eIdx = shellIdxOf.get(as.id);
       if (eIdx === undefined) { m.errors.push(`areaspring ${as.id}: no existe esa cascara`); continue; }
+      if (as.comp) {
+        // El Gap de CSI es un muelle POR NUDO (SAP2000/ETABS/SAFE reparten el de área por ∫N_i dA).
+        // Solo para cáscaras horizontales (normal ±z), que es el caso de zapatas y losas de cimentación.
+        const el = elements[eIdx] as number[];
+        const P = el.map((n) => nodes[n] as number[]);
+        const horizontal = P.every((q) => Math.abs(q[2] - P[0][2]) < 1e-9);
+        if (horizontal) {
+          const w = pesosAreaNudos(P);
+          el.forEach((n, i) => compPorNudo.set(n, (compPorNudo.get(n) ?? 0) + as.ks * w[i]));
+          areaSpringsComp.add(as.id);
+          // lineal y nodal (-3) para el modal: el Gap lineal «cerrado» es k (CSI, Linear Effective Stiffness)
+          const rec = { node: -(eIdx + 1), dof: -3, k: as.ks };
+          springsList.push(rec); sustituidos.add(rec);
+          continue;
+        }
+        m.errors.push(`areaspring ${as.id} compresion: solo en cáscaras horizontales; se toma LINEAL`);
+      }
       springsList.push({ node: -(eIdx + 1), dof: as.nodal ? -3 : -1, k: as.ks });
+    }
+    for (const [n, k] of compPorNudo) springsComp.push({ node: n, dof: 2, k });
+    // Todos los muelles de área horizontales repartidos a nudos (∫N_i dA): para exportar a programas que
+    // solo tienen resortes de nudo (OpenSees de la zapata).
+    {
+      const porNudo = new Map<number, { k: number; comp: boolean }>();
+      for (const as of m.areaSprings) {
+        const eIdx = shellIdxOf.get(as.id); if (eIdx === undefined) continue;
+        const el = elements[eIdx] as number[]; const P = el.map((n) => nodes[n] as number[]);
+        if (!P.every((q) => Math.abs(q[2] - P[0][2]) < 1e-9)) continue;
+        const w = pesosAreaNudos(P);
+        el.forEach((n, i) => { const o = porNudo.get(n) ?? { k: 0, comp: !!as.comp }; o.k += as.ks * w[i]; porNudo.set(n, o); });
+      }
+      (window as any).__hekatanCliMuellesNodales = [...porNudo].map(([node, o]) => ({ node, k: o.k, comp: o.comp }));
     }
     // `edge etabs`: nudos colgados sobre aristas de cascara -> registro gdl -2, k = indice del nudo
     if (m.edgeEtabs) {
@@ -1961,10 +2007,33 @@ export const cliModeler: ExampleDef = {
         // en Live, en «Servicio D+L» y en «1.4D». `states.nodeInputs.loads` queda sin escalar:
         // de ahí exportan el e2k/s2k las cargas por patrón.
         const cargasCaso = cargasDelCaso({ Dead: loads, ...Object.fromEntries(loadsOtros) });
-        states.deformOutputs.val = deform(
+        const resolverCon = (sp: Array<{node:number; dof:number; k:number}>) => deform(
           nodes, elements, { ...states.nodeInputs.val, loads: cargasCaso } as any, states.elementInputs.val,
-          springsList.length ? springsList : undefined,
+          sp.length ? sp : undefined,
         );
+        (window as any).__hekatanCliContacto = null;
+        (window as any).__hekatanCliContactoIter = null;
+        if (springsComp.length) {
+          // ley Gap: resolver, apagar los muelles en tracción, volver a resolver hasta que el contacto no cambie
+          const fijos = springsList.filter((s) => !sustituidos.has(s));
+          // cada vuelta queda guardada (uz de todos los nudos + qué muelles estaban activos) para el Tutor FEM
+          const vueltas: Array<{ activo: boolean[]; uz: Float64Array }> = [];
+          const r = resolverSoloCompresion(resolverCon, fijos, springsComp, 60, (_it, out, activo) => {
+            const uz = new Float64Array(nodes.length);
+            for (let i = 0; i < nodes.length; i++) uz[i] = out.deformations?.get(i)?.[2] ?? 0;
+            vueltas.push({ activo: [...activo], uz });
+          });
+          (window as any).__hekatanCliContactoIter = { nodos: springsComp.map((s) => s.node), k: springsComp.map((s) => s.k), vueltas };
+          states.deformOutputs.val = r.deformOutputs;
+          const nAct = r.activo.filter(Boolean).length;
+          (window as any).__hekatanCliContacto = { convergio: r.convergio, iteraciones: r.iteraciones,
+            historial: r.historial, nudosEnContacto: nAct, nudosConMuelle: springsComp.length, mensaje: r.mensaje ?? null };
+          console.log(`[CLI Modeler] suelo solo compresión: ${nAct}/${springsComp.length} nudos en contacto, ` +
+                      `${r.iteraciones} iteraciones (${r.historial.join(" → ")})${r.convergio ? "" : " — " + r.mensaje}`);
+          if (!r.convergio) m.errors.push(`suelo solo compresión: ${r.mensaje}`);
+        } else {
+          states.deformOutputs.val = resolverCon(springsList);
+        }
         // Y los RESULTADOS: momentos, cortantes, tensiones. El CLI solo corria
         // `deform` (desplazamientos), asi que `analyzeOutputs` quedaba vacio y
         // los paneles de «Frame results» y «Shell results» no tenian nada que
@@ -1993,7 +2062,9 @@ export const cliModeler: ExampleDef = {
               if (eIdx === undefined) continue;
               const el = elements[eIdx] as number[];
               const vals = el.map((n) => {
-                const uz = U.get(n)?.[2] ?? 0;
+                const uz0 = U.get(n)?.[2] ?? 0;
+                // solo compresión: donde la zapata se levanta (uz > 0) el suelo no empuja, p = 0
+                const uz = asr.comp && areaSpringsComp.has(asr.id) ? Math.min(0, uz0) : uz0;
                 const p = asr.ks * uz;              // kN/m³ · m = kN/m² (compresión < 0)
                 if (p < pmin) pmin = p;
                 if (p > pmax) pmax = p;

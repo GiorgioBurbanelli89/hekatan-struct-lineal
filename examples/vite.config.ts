@@ -23,6 +23,9 @@ const PAGINAS_DE_ANTES: Record<string, string> = {
   "plate-q4": "plate-q4",
   "zapata-viga-amarre": "zapata-viga-amarre",
   "zapata-aislada": "zapata-aislada",
+  // pagina suelta vieja que dejo en gh-pages el deploy de la rama zapata-levantamiento (21-sep): cargaba su
+  // propio JS viejo; ahora redirige al workspace, que ya lleva la ley Gap (29-sep-2026)
+  "zapata-excentrica": "zapata-excentrica",
   "zapata-aislada-validacion": "zapata-aislada-validacion",
   "safe-bench-losa-cimentacion": "safe-bench-losa-cimentacion",
   "safe-bench-viga-cimentacion": "safe-bench-viga-cimentacion",
