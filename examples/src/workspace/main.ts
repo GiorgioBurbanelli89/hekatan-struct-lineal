@@ -547,6 +547,33 @@ const states: BuildStates = {
 // ── Example runner ──
 let currentExample: ExampleDef | null = null;
 let currentParams: Record<string, number> = {};
+
+// ── 🔗 COMPARTIR el ejemplo abierto (Jorge, 29-sep-2026: «falta un botón que al presionar compartir se
+// comparta el link de ese ejemplo»). El enlace es `workspace/?t=<id>` y, si se tocaron parámetros,
+// `&p=<los que cambiaron>` (JSON → base64url): corto y legible, no el modelo entero. Un modelo dibujado
+// o traído por .heks no es un ejemplo con parámetros: ahí va el enlace con el modelo dentro (#h=).
+const aB64 = (s: string) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const deB64 = (s: string) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+function paramsCambiados(): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, d] of Object.entries(currentExample?.params ?? {})) {
+    const v = currentParams[k];
+    if (typeof v === "number" && Number.isFinite(v) && Math.abs(v - (d as any).default) > 1e-12) out[k] = v;
+  }
+  return out;
+}
+async function enlaceEjemplo(): Promise<{ url: string; tipo: "ejemplo" | "modelo" }> {
+  const id = currentExample?.id;
+  const sinParams = !id || id === "new-blank" || id === "cli-modeler" || !!URL_HEKS;
+  const conModelo = (window as any).__hekatanEnlaceModelo as (() => Promise<string>) | undefined;
+  if (sinParams && conModelo) return { url: await conModelo(), tipo: "modelo" };
+  const u = new URL(window.location.origin + window.location.pathname);
+  if (id) u.searchParams.set("t", id);
+  const cambiados = paramsCambiados();
+  if (Object.keys(cambiados).length) u.searchParams.set("p", aB64(JSON.stringify(cambiados)));
+  return { url: u.toString(), tipo: "ejemplo" };
+}
+(window as any).__hekatanEnlaceEjemplo = enlaceEjemplo;
 let currentPane: Pane | null = null;
 // ── Modal animation state (compartido para todos los ejemplos con hasModal=true) ──
 // modeIdx es 1-INDEXADO para que la UI muestre "Modo 1, 2, 3..." en vez de "0, 1, 2...".
@@ -9221,6 +9248,22 @@ if (!urlT) {
     examplesRegistry[0];
 if (initialEx) {
   loadExample(initialEx);
+  // ── &p= del botón Compartir: los parámetros que había cambiado quien mandó el enlace ──
+  {
+    const pTxt = new URLSearchParams(window.location.search).get("p");
+    if (pTxt) {
+      try {
+        const pv = JSON.parse(deB64(pTxt)) as Record<string, number>;
+        const validos = Object.entries(pv).filter(([k, v]) => k in (initialEx.params ?? {}) && Number.isFinite(Number(v)));
+        if (validos.length) setTimeout(() => {
+          for (const [k, v] of validos) currentParams[k] = Number(v);
+          buildParamsPane();
+          rebuild();
+          console.log(`✅ Enlace compartido: ${validos.length} parámetros aplicados (${validos.map(([k, v]) => `${k}=${v}`).join(", ")})`);
+        }, 300);
+      } catch (e) { console.warn("[compartir] el parámetro p= del enlace no se pudo leer:", e); }
+    }
+  }
   // `new-blank` NO esta vacio: dibuja un modelo de demostracion (4 nodos, 2
   // columnas, 1 viga). Con modelo por enlace se veia aparecer ese primero y
   // despues el de verdad — parecia que la pagina cargaba tres veces. Se

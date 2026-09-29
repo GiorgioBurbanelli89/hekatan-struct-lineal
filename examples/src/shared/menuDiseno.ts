@@ -124,6 +124,12 @@ function montar(): void {
   st.textContent = "#hk-cad-tit button{white-space:nowrap}" +
     "@media (max-width:1100px){#hk-cad-tit .marca{display:none}}" +
     "@media (max-width:1150px){#hk-fundamentos-btn .ft{display:none}}" +
+    "@media (max-width:1280px){#hk-compartir-btn .ft{display:none}}" +
+    // con 🔗 Compartir la barra pedía 30 px más: a 900 px «Franjas» se salía de la pantalla (medido,
+    // cli/_barra_desborde.mjs). Por debajo de 1000 px el Tutorial queda solo con su icono.
+    "@media (max-width:1000px){#hk-cad-tit .ft1000{display:none}}" +
+    "@media (max-width:880px){#hk-cad-tit .ft880{display:none}}" +
+    "@media (max-width:860px){#hk-cad-tit #toolbar .btn-icon:has(img){display:none!important}}" +
     "@media (max-width:1050px){#hk-cad-tit .piel{padding:3px 6px}#hk-fundamentos-btn .ar{display:none}}" +
     "@media (max-width:900px){#hk-cad-tit .doc{display:none}#hk-menus{margin-left:4px!important}#hk-cad-tit .piel{padding:3px 6px}}";
   document.head.appendChild(st);
@@ -164,6 +170,29 @@ function montar(): void {
     }
   };
   ponerMenus();   // los menus, siempre; no dependen de Menu/Volver
+  // «🎬 Tutorial»: el texto en un span para poder dejar solo el icono en pantallas angostas
+  // Tutorial, Claro y Franjas: el texto en un span para dejar solo el icono en pantallas angostas
+  const corto = (buscar: () => HTMLElement | null | undefined, clase: string, n = 0) => {
+    const t = buscar();
+    if (!t) { if (n < 15) setTimeout(() => corto(buscar, clase, n + 1), 400); return; }
+    if (t.querySelector(".ft")) return;
+    const m = (t.textContent || "").trim().match(/^(\S+)\s+(.*)$/);
+    if (!m) return;
+    t.innerHTML = `${m[1]}<span class="ft ${clase}"> ${m[2]}</span>`;
+    if (!t.title) t.title = m[2];
+  };
+  corto(() => document.getElementById("hk-cad-tutorial"), "ft1000");
+  corto(() => [...document.querySelectorAll<HTMLElement>("#hk-cad-tit .der button")].find((b) => /Claro|Oscuro/.test(b.textContent || "")), "ft880");
+  corto(() => document.getElementById("hk-franjas-btn"), "ft880");
+  // 🔗 Compartir: a la vista, al lado de los menús (antes solo existía dentro de «💻 CLI Comandos»)
+  {
+    const b = document.createElement("button");
+    b.id = "hk-compartir-btn"; b.className = "piel";
+    b.innerHTML = `🔗<span class="ft"> Compartir</span>`;
+    b.title = "Copiar el enlace de este ejemplo (con los parámetros que cambiaste)";
+    b.onclick = (ev) => { ev.stopPropagation(); compartir(b); };
+    barra.appendChild(b);
+  }
   traer();
   // Orden de la barra: Menu · Volver · Analisis · Diseno · Exportar.
   // Como los menus se montan primero (ya no esperan a nadie), Menu y Volver
@@ -186,6 +215,34 @@ function montar(): void {
 }
 
 function cerrar() { menuAbierto?.remove(); menuAbierto = null; }
+
+/** Copia el enlace del ejemplo y lo dice en un aviso bajo el botón (se ve y se puede copiar a mano). */
+async function compartir(btn: HTMLElement): Promise<void> {
+  const W = window as any;
+  document.getElementById("hk-compartir-aviso")?.remove();
+  let r: { url: string; tipo: string };
+  try { r = await W.__hekatanEnlaceEjemplo(); } catch (e: any) { r = { url: "", tipo: "error: " + (e?.message ?? e) }; }
+  let copiado = false;
+  if (r.url) { try { await navigator.clipboard.writeText(r.url); copiado = true; } catch { /* sin permiso: se copia a mano */ } }
+  const a = document.createElement("div");
+  a.id = "hk-compartir-aviso";
+  a.style.cssText = "position:fixed;z-index:1001;width:min(460px,calc(100vw - 16px));background:rgba(24,28,34,.98);color:#e8e8e8;" +
+    "border:1px solid #22c55e;border-radius:6px;font:12px sans-serif;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.45)";
+  const txt = !r.url ? `No se pudo crear el enlace (${r.tipo}).`
+    : (copiado ? "✓ Enlace copiado" : "Copia el enlace") +
+      (r.tipo === "modelo" ? " — lleva el modelo dentro: quien lo abra lo ve y lo calcula en su navegador." : " — abre este ejemplo con los mismos parámetros.");
+  a.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><b style="color:${r.url ? "#22c55e" : "#f87171"}">${txt}</b>` +
+    `<button data-x style="margin-left:auto;background:transparent;color:#9aa;border:0;cursor:pointer;font-size:14px">✕</button></div>` +
+    (r.url ? `<input readonly style="width:100%;margin-top:6px;box-sizing:border-box;background:#11161d;color:#cfe;border:1px solid #334;border-radius:4px;padding:4px;font:11px Consolas,monospace">` : "");
+  document.body.appendChild(a);
+  const inp = a.querySelector("input");
+  if (inp) { inp.value = r.url; inp.onfocus = () => inp.select(); }
+  (a.querySelector("[data-x]") as HTMLButtonElement).onclick = () => a.remove();
+  const rc = btn.getBoundingClientRect();
+  a.style.top = rc.bottom + 6 + "px";
+  a.style.left = Math.max(8, Math.min(rc.left, innerWidth - a.offsetWidth - 8)) + "px";
+  setTimeout(() => a.remove(), 12000);
+}
 function abrirMenu(k: string, btn: HTMLButtonElement) {
   const eraEste = menuAbierto?.dataset.menu === k; cerrar(); if (eraEste) return;
   const m = document.createElement("div");
