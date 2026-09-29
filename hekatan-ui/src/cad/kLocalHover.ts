@@ -161,7 +161,14 @@ function pintarPano(idx: number, x: number, y: number): void {
   const f = formulacionPano(d);
   const c = comprobarPano(d.k);
   const thin = d.tipoPlaca === 1;
-  const nulos = (v: number | null) => v === null ? "" : `<span class="${v === 3 ? "ok" : "mal"}">${v === 3 ? "✓" : "✕"} ${v} modos de energía nula${v === 3 ? "" : " (deberían ser 3: hay un mecanismo)"}</span>`;
+  // El triángulo grueso (CS-DSG3) suelto tiene 4: su cortante se suaviza en todo el triángulo. En malla
+  // no aparece (losa 16×16 a 1 % de OpenSees ASDShellT3), pero se dice, no se esconde.
+  const t3 = d.p.length === 3 && d.tipoPlaca !== 1;
+  const nulos = (v: number | null) => v === null ? "" : v === 3
+    ? `<span class="ok">✓ 3 modos de energía nula</span>`
+    : t3 && v === 4
+      ? `<span class="u">4 modos de energía nula: el CS-DSG3 suelto tiene uno de más; en malla no aparece</span>`
+      : `<span class="mal">✕ ${v} modos de energía nula (deberían ser 3)</span>`;
   tarjeta.innerHTML =
     `<h4>Matriz de rigidez local · paño ${d.idx + 1}</h4>` +
     `<div class="sub">nudos ${d.nudos.join(" · ")} · ${f.placa}</div>` +

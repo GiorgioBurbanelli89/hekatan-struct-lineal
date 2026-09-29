@@ -90,7 +90,7 @@ export function formulacionPano(d: DatosPano): { placa: string; membrana: string
     : t === 3 ? "placa DKMQ (Katili, 1993)"
     : t === 4 ? "placa DSE (Wilson, cap. 8)"
     : d.p.length === 4 ? "Shell-Thick: placa MITC4 (Bathe y Dvorkin, 1985) con modos incompatibles de Wilson"
-    : "Shell-Thick (triángulo)";
+    : "Shell-Thick en triángulo: placa CS-DSG3 (Nguyen-Thoi et al., 2012), cortante suavizado en las tres subceldas";
   const membrana = d.tipoDrill === 13
     ? "membrana con giro de Ibrahimbegović, Taylor y Wilson (1990), Gauss 2×2, penalización γ = 0.4·G y estabilización del reloj de arena"
     : `membrana con giro, tipo ${d.tipoDrill}`;

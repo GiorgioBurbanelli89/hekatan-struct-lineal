@@ -40,11 +40,12 @@ const CASOS = [
   { nombre: "Shell-Thin (DKQ), trapecio horizontal", P: [[0, 0, 0], [4, 0, 0], [3.2, 2.5, 0], [0.6, 2.2, 0]], tipo: 1, fijos: [0, 3] },
   { nombre: "Shell-Thick, paño inclinado en 3D", P: [[0, 0, 0], [3, 0, 0.8], [3, 2, 0.8], [0, 2, 0]], tipo: 0, fijos: [0, 3] },
   { nombre: "Shell-Thick, muro vertical", P: [[0, 0, 0], [3, 0, 0], [3, 0, 2.5], [0, 0, 2.5]], tipo: 0, fijos: [0, 1] },
-  // ⚠️ Con UN solo nudo fijo el triángulo no se puede comparar: su placa tiene un modo de energía
-  // nula de más (29-sep-2026: 4 autovalores a 1e-16 en todas las geometrías y espesores,
-  // `cli/_t3_modos_nulos.mjs`), el sistema queda singular y cada solución es una cualquiera (75 %).
-  // Con dos nudos fijos el mecanismo queda atado y la tarjeta = WASM a 1e-12 %.
-  { nombre: "Shell-Thick, triángulo", P: [[0, 0, 0], [2, 0, 0], [0.5, 1.5, 0]], tipo: 0, fijos: [0, 1], mecanismo: true },
+  // ⚠️ El triángulo Thick es el CS-DSG3 (Nguyen-Thoi et al. 2012): el cortante de sus tres subceldas
+  // se SUAVIZA sobre todo el triángulo (un solo B_s constante, rango 2). Suelto tiene 4 modos de
+  // energía nula, no 3 (`cli/_t3_modos_nulos.mjs`); con UN solo nudo fijo el sistema es singular
+  // (75 % entre dos soluciones). En MALLA ese modo no aparece: losa apoyada 16×16 sin un NaN y a
+  // 1.0 % de OpenSees ASDShellT3 (`cli/_t3_malla_losa.mjs` y `_t3_malla_losa_ops.py`, 29-sep-2026).
+  { nombre: "Shell-Thick, triángulo", P: [[0, 0, 0], [2, 0, 0], [0.5, 1.5, 0]], tipo: 0, fijos: [0, 1], csdsg3: true },
 ];
 const E = 2.2e7, NU = 0.2, T = 0.2;
 const CARGA = [15, -8, 20, 3, -4, 2.5];
@@ -89,11 +90,11 @@ export async function correr() {
     filas.push({ crudo: true, que: `${c.nombre}: desplazamientos, tarjeta vs WASM`, medido: `${(rel * 100).toExponential(2)} %`,
       limite: "1e-6 %", ok: rel < 1e-8, detalle: `${d.k.formulacion}` });
     const cp = pn.comprobarPano(d.k);
-    // En ROJO a propósito en el triángulo Thick: es un defecto del SOLVER (su placa tiene un
-    // mecanismo), no de la tarjeta, y arreglarlo cambia el modelo: decide Jorge. La tarjeta lo dice.
-    filas.push({ crudo: true, que: `${c.nombre}: simétrica y 3 + 3 modos nulos`, medido: `${cp.simetrica ? "sí" : "no"} · ${cp.nulosFlexion} + ${cp.nulosMembrana}`,
-      limite: "sí · 3 + 3", ok: cp.simetrica && cp.nulosFlexion === 3 && cp.nulosMembrana === 3,
-      detalle: c.mecanismo ? "defecto del solver: la placa gruesa triangular tiene un modo de energía nula de más" : "" });
+    // El CS-DSG3 suelto tiene 4 modos nulos en la placa (ver arriba): es su formulación, no un error.
+    const nulosPlaca = c.csdsg3 ? 4 : 3;
+    filas.push({ crudo: true, que: `${c.nombre}: simétrica y ${nulosPlaca} + 3 modos nulos`, medido: `${cp.simetrica ? "sí" : "no"} · ${cp.nulosFlexion} + ${cp.nulosMembrana}`,
+      limite: `sí · ${nulosPlaca} + 3`, ok: cp.simetrica && cp.nulosFlexion === nulosPlaca && cp.nulosMembrana === 3,
+      detalle: c.csdsg3 ? "CS-DSG3 suelto: un modo de más, que en malla no aparece" : "" });
     // la hoja se arma sin reventar y lleva sus secciones
     const h = pn.hojaPano(d);
     const okHoja = /D_b = E\*t\^3/.test(h) && /## 7/.test(h) && !/NaN|undefined|e[+-]\d/.test(h.replace(/^#.*$/gm, ""));
