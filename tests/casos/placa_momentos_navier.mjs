@@ -67,7 +67,7 @@ export const nombre = "placa-momentos-navier";
 export const descripcion =
   "Los MOMENTOS de la placa Q4 contra la serie de Navier, no solo la flecha";
 
-export async function correr() {
+async function resolver(thin) {
   const dir = mkdtempSync(join(tmpdir(), "hkPlaca-"));
   const L = [];
   const id = new Map();
@@ -83,6 +83,7 @@ export async function correr() {
       ns++;
       L.push(`shell ${ns} ${id.get(k(i, j))} ${id.get(k(i + 1, j))} ` +
              `${id.get(k(i + 1, j + 1))} ${id.get(k(i, j + 1))} ${T} ${E} ${NU} 0`);
+      if (thin) L.push(`shelltype ${ns} thin`);
       L.push(`areaload ${ns} ${Q}`);
     }
   for (let i = 0; i <= N; i++)
@@ -97,7 +98,42 @@ export async function correr() {
 
   const ruta = join(dir, "placa.heks");
   writeFileSync(ruta, L.join("\n") + "\n", "utf-8");
-  const r = await resolverHeks(ruta);
+  return resolverHeks(ruta);
+}
+
+/**
+ * Joint a joint contra SAP2000 (AreaForceShell: M11 M22 M12 en los 4 joints de cada cascara, sin
+ * promediar) contra bendingXXjoint de analyze(). Devuelve el peor en % del |M| maximo y el M11 medio
+ * de SAP en el nudo central.
+ */
+function vsSap(r, archivo, c) {
+  const nodes = r.nodes, a = r.analyzeOutputs ?? {};
+  const S = JSON.parse(readFileSync(new URL(`../datos/${archivo}`, import.meta.url), "utf-8").replace(/NaN/g, "null"));
+  const porNombre = new Map(S.puntos.map((p) => [p.n, p]));
+  const k3 = (x, y, z) => [x, y, z].map((v) => Math.round(v * 1000)).join(",");
+  const idx = new Map();
+  r.elements.forEach((el, i) => { if (el.length === 4) idx.set(k3(...[0, 1, 2].map((d) => el.reduce((s, n) => s + nodes[n][d], 0) / 4)), i); });
+  let nJ = 0, peor = 0, maxM = 1e-12, centroS = null;
+  const enNudoS = new Map();
+  for (const ar of S.areas || []) {
+    const pts = ar.pts.map((p) => porNombre.get(p)).filter(Boolean); if (pts.length !== 4) continue;
+    const cc = [0, 1, 2].map((d) => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / 4);
+    const i = idx.get(k3(...cc)), fe = (S.shells || {})[ar.n]; if (i === undefined || !fe) continue;
+    const el = r.elements[i];
+    const hj = [a.bendingXXjoint?.get(i), a.bendingYYjoint?.get(i), a.bendingXYjoint?.get(i)]; if (!hj[0]) continue;
+    for (const v of fe) {
+      const p = porNombre.get(v[0]); const pos = el.findIndex((n) => k3(...nodes[n]) === k3(p.x, p.y, p.z)); if (pos < 0) continue;
+      nJ++;
+      for (const [q, k] of [[0, 4], [1, 5], [2, 6]]) { maxM = Math.max(maxM, Math.abs(v[k])); peor = Math.max(peor, Math.abs(v[k] - hj[q][pos])); }
+      const kn = k3(...nodes[el[pos]]); (enNudoS.get(kn) ?? enNudoS.set(kn, []).get(kn)).push(v[4]);
+    }
+  }
+  const l = enNudoS.get(k3(c, c, 0)); if (l) centroS = l.reduce((s, q) => s + q, 0) / l.length;
+  return { nJ, peorPct: nJ ? (100 * peor) / maxM : NaN, maxM, centroS };
+}
+
+export async function correr() {
+  const r = await resolver(false);
 
   // momento medio en cada nudo, de las cascaras que lo tocan
   const nodes = r.nodes;
@@ -168,45 +204,47 @@ export async function correr() {
     detalle: `centro ${centro.toFixed(3)} contra borde ${borde.toFixed(3)} (razon ${razon.toFixed(2)}, hace falta > 1.5)`,
   });
 
-  // 5) SAP2000 24, la misma placa por .s2k (validation/isse/placa_navier), JOINT
-  //    A JOINT: AreaForceShell (M11 M22 M12 en los 4 joints de cada cascara, sin
-  //    promediar) contra bendingXXjoint de analyze(). Es el arbitro que decide
-  //    la recuperacion de esfuerzos del Shell-Thick, no la serie de Navier.
+  // 5) SAP2000 (el JUEZ), la misma placa por .s2k, joint a joint.
+  //    · Shell-THIN: la DKQ de Hekatan es la de CSI (Batoz & Tahar) -> tiene que dar 0.000 %.
+  //    · Shell-THICK: hasta el 15-sep-2026 daba 0.026 % con una placa gruesa AJUSTADA a CSI; se retiro
+  //      (decision de Jorge: solo formulaciones publicadas, cecc37905). Con la MITC4 + modos de Wilson
+  //      publicada queda 2.9 % en el nudo central y 43 % en el peor joint: INCONCLUSO y escrito, no
+  //      tapado. El tope es lo medido el 29-sep-2026, para que avise si EMPEORA.
   {
-    const S = JSON.parse(readFileSync(new URL("../datos/placa_navier_sap2000.json", import.meta.url), "utf-8").replace(/\bNaN\b/g, "null"));
-    const porNombre = new Map(S.puntos.map((p) => [p.n, p]));
-    const k3 = (x, y, z) => [x, y, z].map((v) => Math.round(v * 1000)).join(",");
-    const idx = new Map();
-    r.elements.forEach((el, i) => { if (el.length === 4) idx.set(k3(...[0, 1, 2].map((d) => el.reduce((s, n) => s + nodes[n][d], 0) / 4)), i); });
-    let nJ = 0, peor = 0, maxM = 1e-12, centroS = null;
-    const enNudoS = new Map();
-    for (const ar of S.areas || []) {
-      const pts = ar.pts.map((p) => porNombre.get(p)).filter(Boolean); if (pts.length !== 4) continue;
-      const cc = [0, 1, 2].map((d) => pts.reduce((s, p) => s + [p.x, p.y, p.z][d], 0) / 4);
-      const i = idx.get(k3(...cc)), fe = (S.shells || {})[ar.n]; if (i === undefined || !fe) continue;
-      const el = r.elements[i];
-      const hj = [a.bendingXXjoint?.get(i), a.bendingYYjoint?.get(i), a.bendingXYjoint?.get(i)]; if (!hj[0]) continue;
-      for (const v of fe) {
-        const p = porNombre.get(v[0]); const pos = el.findIndex((n) => k3(...nodes[n]) === k3(p.x, p.y, p.z)); if (pos < 0) continue;
-        nJ++;
-        for (const [q, k] of [[0, 4], [1, 5], [2, 6]]) { maxM = Math.max(maxM, Math.abs(v[k])); peor = Math.max(peor, Math.abs(v[k] - hj[q][pos])); }
-        const kn = k3(...nodes[el[pos]]); (enNudoS.get(kn) ?? enNudoS.set(kn, []).get(kn)).push(v[4]);
-      }
-    }
-    const l = enNudoS.get(k3(c, c, 0)); if (l) centroS = l.reduce((s, q) => s + q, 0) / l.length;
-    const d5 = nJ ? (100 * peor) / maxM : NaN;
+    const rt = await resolver(true);
+    const mxT = (() => {
+      const e = new Map();
+      rt.elements.forEach((el, i) => { const v = rt.analyzeOutputs?.bendingXX?.get?.(i); if (!v) return;
+        el.forEach((n, p) => { const q = rt.nodes[n]; if (Math.abs(q[0] - c) < 1e-6 && Math.abs(q[1] - c) < 1e-6) e.set(i, v[p]); }); });
+      const v = [...e.values()]; return v.reduce((s, q) => s + q, 0) / v.length;
+    })();
+    const t = vsSap(rt, "placa_navier_thin_sap2000.json", c);
     filas.push({
-      que: "joints M11/M22/M12 vs SAP2000 (AreaForceShell)",
-      medido: d5, limite: 0.1,
-      ok: Number.isFinite(d5) && d5 <= 0.1 && nJ >= 256,
-      detalle: `${nJ} joints, peor ${d5.toFixed(4)} % del |M| max ${maxM.toFixed(3)}`,
+      que: "Shell-THIN: joints M11/M22/M12 vs SAP2000",
+      medido: t.peorPct, limite: 0.1,
+      ok: Number.isFinite(t.peorPct) && t.peorPct <= 0.1 && t.nJ >= 256,
+      detalle: `${t.nJ} joints, peor ${t.peorPct.toFixed(4)} % del |M| max ${t.maxM.toFixed(3)}`,
     });
-    const d6 = centroS != null ? (100 * (mx - centroS)) / centroS : NaN;
+    const dT = t.centroS != null ? (100 * (mxT - t.centroS)) / t.centroS : NaN;
     filas.push({
-      que: "M11 en el nudo central vs SAP2000",
-      medido: d6, limite: 0.1,
-      ok: Number.isFinite(d6) && Math.abs(d6) <= 0.1,
-      detalle: `${mx.toFixed(4)} vs ${centroS != null ? centroS.toFixed(4) : "?"} (media de los 4 joints de SAP)`,
+      que: "Shell-THIN: M11 en el nudo central vs SAP2000",
+      medido: dT, limite: 0.1,
+      ok: Number.isFinite(dT) && Math.abs(dT) <= 0.1,
+      detalle: `${mxT.toFixed(4)} vs ${t.centroS != null ? t.centroS.toFixed(4) : "?"}`,
+    });
+    const g = vsSap(r, "placa_navier_sap2000.json", c);
+    filas.push({
+      que: "Shell-THICK vs SAP2000, joints (INCONCLUSO: formulacion publicada != CSI; tope = medido)",
+      medido: g.peorPct, limite: 45,
+      ok: Number.isFinite(g.peorPct) && g.peorPct <= 45 && g.nJ >= 256,
+      detalle: `${g.nJ} joints, peor ${g.peorPct.toFixed(4)} % del |M| max ${g.maxM.toFixed(3)}`,
+    });
+    const d6 = g.centroS != null ? (100 * (mx - g.centroS)) / g.centroS : NaN;
+    filas.push({
+      que: "Shell-THICK vs SAP2000, M11 nudo central (INCONCLUSO; tope = medido)",
+      medido: d6, limite: 3.5,
+      ok: Number.isFinite(d6) && Math.abs(d6) <= 3.5,
+      detalle: `${mx.toFixed(4)} vs ${g.centroS != null ? g.centroS.toFixed(4) : "?"} (media de los 4 joints de SAP)`,
     });
   }
 
