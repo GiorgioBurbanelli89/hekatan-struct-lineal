@@ -217,6 +217,7 @@ import { montarLanzadorAgente } from "hekatan-ui/src/cad/aiAgent";
 import { abrirScriptCad } from "hekatan-ui/src/cad/scriptCad";
 import { arrancarCajaNegra } from "hekatan-ui/src/cad/cajaNegra";
 import { arrancarKLocalHover, abrirHojaBarra } from "hekatan-ui/src/cad/kLocalHover";
+import { barraGdl } from "hekatan-ui/src/modalPanel/getModalPanel";
 import { montarBotonGrabar } from "hekatan-ui/src/cad/grabar";
 import { montarBotonGif } from "hekatan-ui/src/cad/grabarGif";
 import { montarBotonSeccion, mostrarSeccionConAviso } from "hekatan-ui/src/cad/cuadroSeccion";
@@ -7142,7 +7143,36 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       modalPanel.div.style.display = __modalTableShown ? "block" : "none";
       if (currentExample!.runModal) currentExample!.runModal(toSIParams(), states, captureModalPanel);
     };
-    fModal.addButton({ title: "▶ Correr modal + animar" }).on("click", runModalAnimate);
+    const __btnModal = fModal.addButton({ title: "▶ Correr modal + animar" });
+    __btnModal.on("click", runModalAnimate);
+    // ── GDL del modal, A LA VISTA (Jorge, 29-sep-2026: «debe salir en un lugar que se vea») ──
+    // Justo debajo del botón que lo corre. Antes solo estaba en la tabla de modos (cerrada por
+    // defecto) y en la barra de estado. Antes de correr: los GDL del modelo en pantalla; después:
+    // los del modal (la plantilla lo REMALLA a «malla del modal», que suele ser más gruesa) contra
+    // el tope. Verde / ámbar / rojo, y rojo = el modal no se calcula.
+    {
+      const caja = document.createElement("div");
+      caja.id = "hk-modal-gdl-panel";
+      caja.style.cssText = "padding:2px 8px 6px";
+      __btnModal.element.after(caja);
+      const W = window as any;
+      let ultimo = "";
+      const pintar = () => {
+        if (!caja.isConnected) { clearInterval(reloj); return; }
+        if (__btnModal.element.nextElementSibling !== caja) __btnModal.element.after(caja);
+        const nN = states.nodes.val?.length ?? 0;
+        const info = W.__hekatanModalInfo;
+        const tope = Number(W.__hekatanDofMaxModal) || info?.tope || 0;
+        const html = info?.dof && info.tope && info.ejemplo === currentExample?.id
+          ? barraGdl({ usados: info.dof, tope: info.tope, nudos: info.nudos, malla: info.malla })
+          : tope
+            ? barraGdl({ usados: nN * 6, tope, nudos: nN })
+            : `<div class="hk-modal-gdl" style="font:11px Consolas,monospace;color:#94a3b8">GDL del modelo: ${(nN * 6).toLocaleString("es").replace(/\./g, " ")} · ${nN.toLocaleString("es").replace(/\./g, " ")} nudos</div>`;
+        if (html !== ultimo) { caja.innerHTML = html; ultimo = html; }
+      };
+      const reloj = setInterval(pintar, 500);
+      pintar();
+    }
     // Toggle "Mostrar tabla": el panel/tabla modal solo aparece si el usuario lo activa.
     const __tblProxy = { show: __modalTableShown };
     const __tblBind = fModal.addBinding(__tblProxy, "show",

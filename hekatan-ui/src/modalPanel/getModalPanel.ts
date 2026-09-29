@@ -36,13 +36,14 @@ export function barraGdl(g: NonNullable<ModalPanelMeta["gdl"]>): string {
   const mil = (v: number) => Math.round(v).toLocaleString("es").replace(/\./g, " ");
   const dice = f > 1 ? "pasa del tope: el modal no se calcula"
     : f > 0.7 ? "cerca del tope" : "dentro del tope";
-  return `<div class="hk-modal-gdl" style="margin:6px 0 4px;font:11px Consolas,monospace">` +
-    `<div style="display:flex;justify-content:space-between;gap:8px;color:#cbd5e1">` +
-    `<span>GDL del modal: <b style="color:${color}">${mil(g.usados)}</b> de ${mil(g.tope)}` +
-    (g.nudos ? ` · ${mil(g.nudos)} nudos` : "") + (g.malla ? ` · malla ${g.malla} m` : "") + `</span>` +
-    `<span style="color:${color}">${pct} % · ${dice}</span></div>` +
-    `<div style="height:7px;background:#1e293b;border-radius:4px;overflow:hidden;margin-top:3px">` +
-    `<div style="height:100%;width:${Math.min(100, pct)}%;background:${color}"></div></div></div>`;
+  return `<div class="hk-modal-gdl" style="margin:6px 0 4px;font:11px Consolas,monospace;color:#cbd5e1">` +
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">` +
+    `<span>GDL del modal <b style="color:${color};font-size:13px">${mil(g.usados)}</b> / ${mil(g.tope)}</span>` +
+    `<b style="color:${color}">${pct} %</b></div>` +
+    `<div style="height:8px;background:#1e293b;border-radius:4px;overflow:hidden;margin:3px 0">` +
+    `<div style="height:100%;width:${Math.max(2, Math.min(100, pct))}%;background:${color}"></div></div>` +
+    `<div style="color:${color}">${dice}</div>` +
+    `<div style="color:#64748b">${[g.nudos ? `${mil(g.nudos)} nudos` : "", g.malla ? `malla ${g.malla} m` : ""].filter(Boolean).join(" · ")}</div></div>`;
 }
 
 export interface ModalPanelOptions {
