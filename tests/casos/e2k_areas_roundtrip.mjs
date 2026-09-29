@@ -87,7 +87,10 @@ export function ciclo(id) {
   return {
     id,
     nShells,
-    espesores: uniq(ei.thicknesses, v => +v.toFixed(6)).sort((a,b)=>a-b),
+    // solo las CASCARAS: las placas base guardan thicknesses = 0 tambien en sus BARRAS (pernos,
+    // columna) y el .e2k no les da espesor al releer; ese 0 no es una cascara perdida (29-sep-2026)
+    espesores: uniq(new Map([...(ei.thicknesses ?? new Map())].filter(([i]) => {
+      const e = st.elements.val[i]; return e && (e.length === 3 || e.length === 4); })), v => +v.toFixed(6)).sort((a,b)=>a-b),
     leidos: m.elements.filter(e => e.length === 3 || e.length === 4).length,
     espLeidos: uniq(m.elementInputs?.thicknesses, v => +v.toFixed(6)).sort((a,b)=>a-b),
     areasVistas: m.info.nAreas,
