@@ -422,7 +422,8 @@ const ratioFmt = (r: number) => r < 1 ? `${r.toFixed(2)} ✓` : r < 1.2 ? `${r.t
 export const placaBaseHueca: ExampleDef = {
   id: "placa-base-hueca",
   name: "Placa Base + Columna HSS Hueca (acero)",
-  category: "2️⃣ Shells · 🔩 Conexiones",
+  // cáscaras + barras (los pernos): Mixtos. La categoría la manda el tipo de elemento MEDIDO
+  category: "4️⃣ Mixtos · 🔩 Conexiones",
   defaultShellResult: "vonMises",
   viewFrom: [1, -1, 1],
   params: {

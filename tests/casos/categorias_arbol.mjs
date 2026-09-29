@@ -130,7 +130,7 @@ export async function correr() {
   filas.push({
     que: "el tipo de elemento declarado = el MEDIDO",
     medido: mienten.length, limite: 0, ok: mienten.length === 0,
-    detalle: mienten.length ? mienten.slice(0, 4).join(" | ")
+    detalle: mienten.length ? mienten.slice(0, 12).join(" | ")
                             : `${medibles} ejemplos construidos y contados`,
   });
 

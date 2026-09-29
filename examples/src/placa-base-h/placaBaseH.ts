@@ -461,7 +461,8 @@ const ratioFmt = (r: number) => r < 1.0 ? `${r.toFixed(2)} ✓` : r < 1.2 ? `${r
 export const placaBaseH: ExampleDef = {
   id: "placa-base-h",
   name: "Placa Base + Columna H (CBFEM)",
-  category: "2️⃣ Shells · 🔩 Conexiones",
+  // cáscaras + barras (los pernos): Mixtos. La categoría la manda el tipo de elemento MEDIDO
+  category: "4️⃣ Mixtos · 🔩 Conexiones",
   defaultShellResult: "vonMises",
   viewFrom: [1, -1, 1],
   params: {

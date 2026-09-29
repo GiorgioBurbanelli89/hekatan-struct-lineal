@@ -161,7 +161,8 @@ const P = (folder: string, label: string, def: number, min: number, max: number,
 export const burjKhalifa: ExampleDef = {
   id: "burj-khalifa",
   name: "Burj Khalifa style",
-  category: "4️⃣ Mixtos · 🌉 Puentes e icónicos",
+  // solo barras: la categoría la manda el tipo de elemento MEDIDO, no el tema
+  category: "1️⃣ Frames · 🎯 6 GDL Espacial",
   defaultFrameResult: "contour:normals",
   params: {
     nFloors:    P("Geometría", "Pisos", 20, 8, 50, 1),

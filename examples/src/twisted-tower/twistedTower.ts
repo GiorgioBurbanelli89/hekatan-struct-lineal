@@ -159,7 +159,8 @@ const P = (folder: string, label: string, def: number, min: number, max: number,
 export const twistedTower: ExampleDef = {
   id: "twisted-tower",
   name: "Torre Retorcida",
-  category: "4️⃣ Mixtos · 🌉 Puentes e icónicos",
+  // solo barras: la categoría la manda el tipo de elemento MEDIDO, no el tema
+  category: "1️⃣ Frames · 🎯 6 GDL Espacial",
   defaultFrameResult: "contour:normals",
   params: {
     nFloors:       P("Geometría", "Pisos", 12, 4, 30, 1),

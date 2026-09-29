@@ -405,6 +405,7 @@ import { itwTodos } from "../itw/itwTests";
 import { plantillas } from "../plantillas/plantillas";
 // Sólidos H8, dentro del workspace (28-sep-2026)
 import { muroContencionSolido } from "../muro-contencion-solido/muroContencionSolido";
+import { muroManabi } from "../muro-manabi/muroManabi";
 import { bulboPresionesSuelo } from "../bulbo-presiones-suelo/bulboPresionesSuelo";
 import { columnaVigaSolidos } from "../solid-cube-fem/columnaVigaSolidos";
 import { columnaCftH8 } from "../columna-cft-h8/columnaCftH8";
@@ -598,6 +599,7 @@ export const examplesRegistry: ExampleDef[] = [
   zapataAisladaValidacion, // Zapata aislada (Area + Winkler springs + Frame)
   bulboPresionesSuelo,     // Bulbo de Presiones — Serquen SF-70
   muroContencionSolido,    // Muro de contencion en solidos H8 — vs SAP2000 (2-sep-2026)
+  muroManabi,              // El muro de la serie de videos: membrana, cascara y solido (28-sep-2026)
   benchmark3way,           // Shell+Frame DOF mismatch (Area + Frame)
   benchmarkCft,            // CFT cols + I-beams + losa (Area + Frame composite)
   mesaTorsion,             // 🌀 Mesa de torsión (validación ETABS — Gabriela/Seproinca 2020)

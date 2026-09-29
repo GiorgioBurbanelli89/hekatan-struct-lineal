@@ -221,7 +221,8 @@ const F = (folder: string, label: string, def: number, min: number, max: number,
 export const boltHoleDetail: ExampleDef = {
   id: "bolt-hole-detail",
   name: "Detalle Perno + Orificio (Kirsch)",
-  category: "2️⃣ Shells · 🔩 Conexiones",
+  // cáscaras + barras (los pernos): Mixtos. La categoría la manda el tipo de elemento MEDIDO
+  category: "4️⃣ Mixtos · 🔩 Conexiones",
   defaultShellResult: "vonMises",
   params: {
     L:       F("Geometría", "L placa (m, lado)", 0.20, 0.10, 0.50, 0.02),
