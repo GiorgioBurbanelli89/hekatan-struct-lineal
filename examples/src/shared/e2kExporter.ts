@@ -620,7 +620,10 @@ function exportFromScratch(input: ExportE2kInput): string {
     // acero salía a 12.5 t/m³ y ETABS contaba el hormigón dos veces (14-sep-2026).
     const shp = (elementInputs as any).sectionShapes?.get(elemIdx);
     if (shp?.type === "CFT" && shp.steelRho > 0) return shp.steelRho * 9.80665;
-    const rho = elementInputs.densities?.get(elemIdx);
+    // Brazos de ETABS: con LENGTHOFF escrito, ETABS descuenta él mismo el peso de la viga dentro del brazo
+    // (medido 29-sep-2026: con la densidad ya rebajada el pórtico 3D daba T 0.4026 contra 0.4121 = doble
+    // descuento). Va la densidad SIN descontar si el ejemplo la da; SAP2000 NO descuenta (el s2k la rebajada).
+    const rho = (elementInputs as any).densidadesSinBrazos?.get(elemIdx) ?? elementInputs.densities?.get(elemIdx);
     if (rho === undefined) return undefined;
     // Heuristica de unidad: > 100 -> kg/m3 (acero 7850); si no, t/m3
     const wEq = rho > 100 ? rho * G_KN_PER_KG : rho * 9.80665;

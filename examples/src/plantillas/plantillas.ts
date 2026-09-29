@@ -716,6 +716,7 @@ export const plantillas: ExampleDef = {
       thicknesses = m<number>(), shearAreasY = m<number>(), shearAreasZ = m<number>(),
       plateFormulations = m<number>(), membraneModifiers = m<number>();
     const shellModifiers = new Map<number, number[]>();
+    const densidadesSinBrazos = new Map<number, number>();
     // La losa y los muros son de HORMIGÓN aunque el pórtico sea de acero: eso es
     // un edificio mixto de verdad, no un edificio de chapa.
     const Eh = ecHormigonNEC(p.fc), NUh = 0.20, RHOh = 24 / G;
@@ -757,6 +758,8 @@ export const plantillas: ExampleDef = {
       }
       elasticities.set(e, E); poissonsRatios.set(e, NU);
       shearModuli.set(e, Gm); densities.set(e, RHO * (c === "viga" ? factorBrazos(e) : 1));
+      // la densidad sin descontar, para el e2k (ETABS descuenta el brazo él mismo)
+      if (c === "viga" && factorBrazos(e) < 1) densidadesSinBrazos.set(e, RHO);
       if (c === "diag") {
         // La diagonal trabaja a AXIL; se deja cuadrada maciza (o tubo si el
         // pórtico es de acero) y con su inercia real, no articulada: articularla
@@ -912,6 +915,7 @@ export const plantillas: ExampleDef = {
       momentsOfInertiaY, momentsOfInertiaZ, torsionalConstants,
       thicknesses, shearAreasY, shearAreasZ, plateFormulations,
       membraneModifiers, shellModifiers,
+      ...(densidadesSinBrazos.size ? { densidadesSinBrazos } : {}),
       // brazos rigidos automaticos de ETABS: viga ½ b_col por extremo con columna, columna h_viga arriba
       ...(Math.round((p as any).offsets ?? 1) === 1 ? { endOffsets: brazosAutomaticosETABS(
         nodes as any, elements as any, (e) => (clase[e] === "col" ? "col" : clase[e] === "viga" ? "viga" : null),

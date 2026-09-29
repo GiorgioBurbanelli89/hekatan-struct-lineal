@@ -254,7 +254,10 @@ export function exportS2k(input: S2kExportInput): string {
       param = { kind: "C", t3: shp.h, t2: shp.b, tf: shp.tf, tw: shp.tw };
     else if (!sd && shp?.type === "2L" && shp.h > 0 && shp.b > 0 && shp.tf > 0 && shp.tw > 0)
       param = { kind: "2L", t3: shp.h, t2: shp.b, tf: shp.tf, tw: shp.tw, dis: shp.dis ?? 0 };
-    const key = `A${A.toPrecision(6)}_Iz${Iz.toPrecision(6)}_s${As2r.toPrecision(6)}_${As3r.toPrecision(6)}${sd ? (sd.D ? `_SDC${sd.D}x${sd.t}` : `_SD${sd.b}x${sd.h}x${sd.t}`) : ""}${param ? `_P${param.kind}${param.t3}x${param.t2}x${param.tf}x${param.tw}x${param.t2b ?? ""}x${param.tfb ?? ""}x${param.dis ?? ""}` : ""}`;
+    const key = `A${A.toPrecision(6)}_Iz${Iz.toPrecision(6)}_s${As2r.toPrecision(6)}_${As3r.toPrecision(6)}${sd ? (sd.D ? `_SDC${sd.D}x${sd.t}` : `_SD${sd.b}x${sd.h}x${sd.t}`) : ""}${param ? `_P${param.kind}${param.t3}x${param.t2}x${param.tf}x${param.tw}x${param.t2b ?? ""}x${param.tfb ?? ""}x${param.dis ?? ""}` : ""}_${matKey}`;
+    // ↑ el MATERIAL en la clave (29-sep-2026): los tramos de viga que tocan columna llevan la densidad
+    // rebajada (brazos de ETABS) y compartian seccion con los centrales: SAP2000 aligeraba las 480
+    // vigas del portico 3D y el periodo salia 4 % corto. SAP NO descuenta masa dentro del brazo (medido).
     if (!frameSecs.has(key)) {
       let h = 0.3, b = 0.3;
       if (A > 0 && Iz > 0) { h = Math.sqrt(12 * Iz / A); b = A / h; }
@@ -466,7 +469,7 @@ export function exportS2k(input: S2kExportInput): string {
       const E = elementInputs.elasticities?.get(i) || 0;
       const matKey = matDe(i).key;
       const formulacion = esMembrana(i) ? 2 : ((elementInputs as any).plateFormulations?.get(i) ?? 0);
-      const key = `t${t.toPrecision(6)}_f${formulacion}`;
+      const key = `t${t.toPrecision(6)}_f${formulacion}_${matKey}`;
       if (!shellSecs.has(key)) shellSecs.set(key, { t, matKey, formulacion });
       const secIdx = [...shellSecs.keys()].indexOf(key) + 1;
       elemToShellSec.set(i, `SSEC${secIdx}`);

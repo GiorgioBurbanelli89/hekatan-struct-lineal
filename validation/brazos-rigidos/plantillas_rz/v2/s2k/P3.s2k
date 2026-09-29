@@ -1,0 +1,407 @@
+File 📐 Plantillas — nuevo modelo (pórtico 2D / 3D / con losa).$2k was saved on m/d/yy at h:mm:ss
+ 
+TABLE:  "ACTIVE DEGREES OF FREEDOM"
+   UX=Yes   UY=Yes   UZ=Yes   RX=Yes   RY=Yes   RZ=Yes
+ 
+TABLE:  "CONNECTIVITY - FRAME"
+   Frame=1   JointI=1   JointJ=17   IsCurved=No
+   Frame=2   JointI=2   JointJ=18   IsCurved=No
+   Frame=3   JointI=3   JointJ=19   IsCurved=No
+   Frame=4   JointI=4   JointJ=20   IsCurved=No
+   Frame=5   JointI=5   JointJ=21   IsCurved=No
+   Frame=6   JointI=6   JointJ=22   IsCurved=No
+   Frame=7   JointI=7   JointJ=23   IsCurved=No
+   Frame=8   JointI=8   JointJ=24   IsCurved=No
+   Frame=9   JointI=9   JointJ=25   IsCurved=No
+   Frame=10   JointI=10   JointJ=26   IsCurved=No
+   Frame=11   JointI=11   JointJ=27   IsCurved=No
+   Frame=12   JointI=12   JointJ=28   IsCurved=No
+   Frame=13   JointI=13   JointJ=29   IsCurved=No
+   Frame=14   JointI=14   JointJ=30   IsCurved=No
+   Frame=15   JointI=15   JointJ=31   IsCurved=No
+   Frame=16   JointI=16   JointJ=32   IsCurved=No
+   Frame=17   JointI=17   JointJ=33   IsCurved=No
+   Frame=18   JointI=18   JointJ=34   IsCurved=No
+   Frame=19   JointI=19   JointJ=35   IsCurved=No
+   Frame=20   JointI=20   JointJ=36   IsCurved=No
+   Frame=21   JointI=21   JointJ=37   IsCurved=No
+   Frame=22   JointI=22   JointJ=38   IsCurved=No
+   Frame=23   JointI=23   JointJ=39   IsCurved=No
+   Frame=24   JointI=24   JointJ=40   IsCurved=No
+   Frame=25   JointI=25   JointJ=41   IsCurved=No
+   Frame=26   JointI=26   JointJ=42   IsCurved=No
+   Frame=27   JointI=27   JointJ=43   IsCurved=No
+   Frame=28   JointI=28   JointJ=44   IsCurved=No
+   Frame=29   JointI=29   JointJ=45   IsCurved=No
+   Frame=30   JointI=30   JointJ=46   IsCurved=No
+   Frame=31   JointI=31   JointJ=47   IsCurved=No
+   Frame=32   JointI=32   JointJ=48   IsCurved=No
+   Frame=33   JointI=33   JointJ=49   IsCurved=No
+   Frame=34   JointI=34   JointJ=50   IsCurved=No
+   Frame=35   JointI=35   JointJ=51   IsCurved=No
+   Frame=36   JointI=36   JointJ=52   IsCurved=No
+   Frame=37   JointI=37   JointJ=53   IsCurved=No
+   Frame=38   JointI=38   JointJ=54   IsCurved=No
+   Frame=39   JointI=39   JointJ=55   IsCurved=No
+   Frame=40   JointI=40   JointJ=56   IsCurved=No
+   Frame=41   JointI=41   JointJ=57   IsCurved=No
+   Frame=42   JointI=42   JointJ=58   IsCurved=No
+   Frame=43   JointI=43   JointJ=59   IsCurved=No
+   Frame=44   JointI=44   JointJ=60   IsCurved=No
+   Frame=45   JointI=45   JointJ=61   IsCurved=No
+   Frame=46   JointI=46   JointJ=62   IsCurved=No
+   Frame=47   JointI=47   JointJ=63   IsCurved=No
+   Frame=48   JointI=48   JointJ=64   IsCurved=No
+   Frame=49   JointI=49   JointJ=65   IsCurved=No
+   Frame=50   JointI=50   JointJ=66   IsCurved=No
+   Frame=51   JointI=51   JointJ=67   IsCurved=No
+   Frame=52   JointI=52   JointJ=68   IsCurved=No
+   Frame=53   JointI=53   JointJ=69   IsCurved=No
+   Frame=54   JointI=54   JointJ=70   IsCurved=No
+   Frame=55   JointI=55   JointJ=71   IsCurved=No
+   Frame=56   JointI=56   JointJ=72   IsCurved=No
+   Frame=57   JointI=57   JointJ=73   IsCurved=No
+   Frame=58   JointI=58   JointJ=74   IsCurved=No
+   Frame=59   JointI=59   JointJ=75   IsCurved=No
+   Frame=60   JointI=60   JointJ=76   IsCurved=No
+   Frame=61   JointI=61   JointJ=77   IsCurved=No
+   Frame=62   JointI=62   JointJ=78   IsCurved=No
+   Frame=63   JointI=63   JointJ=79   IsCurved=No
+   Frame=64   JointI=64   JointJ=80   IsCurved=No
+ 
+TABLE:  "COORDINATE SYSTEMS"
+   Name=GLOBAL   Type=Cartesian   X=0   Y=0   Z=0   AboutZ=0   AboutY=0   AboutX=0
+ 
+TABLE:  "DATABASE FORMAT TYPES"
+   UnitsCurr=Yes   OverrideE=No
+ 
+TABLE:  "FRAME SECTION ASSIGNMENTS"
+   Frame=1   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=2   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=3   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=4   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=5   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=6   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=7   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=8   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=9   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=10   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=11   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=12   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=13   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=14   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=15   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=16   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=17   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=18   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=19   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=20   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=21   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=22   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=23   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=24   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=25   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=26   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=27   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=28   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=29   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=30   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=31   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=32   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=33   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=34   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=35   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=36   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=37   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=38   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=39   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=40   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=41   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=42   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=43   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=44   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=45   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=46   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=47   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=48   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=49   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=50   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=51   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=52   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=53   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=54   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=55   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=56   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=57   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=58   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=59   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=60   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=61   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=62   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=63   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+   Frame=64   AutoSelect=N.A.   AnalSect=SEC1   MatProp=Default
+ 
+TABLE:  "FRAME SECTION PROPERTIES 01 - GENERAL"
+   SectionName=SEC1   Material=MAT_22940519_n0.2000_r2.44732   Shape=General   t3=0.4   t2=0.4   Area=0.16   TorsConst=0.0036096   I33=0.002133333333   I22=0.002133333333   I23=0   AS2=0.1333333333   AS3=0.1333333333 _
+        Color=Blue   FromFile=No   AMod=1   A2Mod=1   A3Mod=1   JMod=1   I2Mod=1   I3Mod=1   MMod=1   WMod=1
+ 
+TABLE:  "JOINT COORDINATES"
+   Joint=1   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=0   SpecialJt=No
+   Joint=2   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=0   SpecialJt=No
+   Joint=3   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=0   SpecialJt=No
+   Joint=4   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=0   SpecialJt=No
+   Joint=5   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=0   SpecialJt=No
+   Joint=6   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=0   SpecialJt=No
+   Joint=7   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=6   Z=0   SpecialJt=No
+   Joint=8   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=6   Z=0   SpecialJt=No
+   Joint=9   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=12   Z=0   SpecialJt=No
+   Joint=10   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=12   Z=0   SpecialJt=No
+   Joint=11   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=12   Z=0   SpecialJt=No
+   Joint=12   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=12   Z=0   SpecialJt=No
+   Joint=13   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=18   Z=0   SpecialJt=No
+   Joint=14   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=18   Z=0   SpecialJt=No
+   Joint=15   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=18   Z=0   SpecialJt=No
+   Joint=16   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=18   Z=0   SpecialJt=No
+   Joint=17   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=3.5   SpecialJt=No
+   Joint=18   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=3.5   SpecialJt=No
+   Joint=19   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=3.5   SpecialJt=No
+   Joint=20   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=3.5   SpecialJt=No
+   Joint=21   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=3.5   SpecialJt=No
+   Joint=22   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=3.5   SpecialJt=No
+   Joint=23   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=6   Z=3.5   SpecialJt=No
+   Joint=24   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=6   Z=3.5   SpecialJt=No
+   Joint=25   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=12   Z=3.5   SpecialJt=No
+   Joint=26   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=12   Z=3.5   SpecialJt=No
+   Joint=27   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=12   Z=3.5   SpecialJt=No
+   Joint=28   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=12   Z=3.5   SpecialJt=No
+   Joint=29   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=18   Z=3.5   SpecialJt=No
+   Joint=30   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=18   Z=3.5   SpecialJt=No
+   Joint=31   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=18   Z=3.5   SpecialJt=No
+   Joint=32   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=18   Z=3.5   SpecialJt=No
+   Joint=33   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=6.5   SpecialJt=No
+   Joint=34   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=6.5   SpecialJt=No
+   Joint=35   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=6.5   SpecialJt=No
+   Joint=36   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=6.5   SpecialJt=No
+   Joint=37   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=6.5   SpecialJt=No
+   Joint=38   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=6.5   SpecialJt=No
+   Joint=39   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=6   Z=6.5   SpecialJt=No
+   Joint=40   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=6   Z=6.5   SpecialJt=No
+   Joint=41   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=12   Z=6.5   SpecialJt=No
+   Joint=42   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=12   Z=6.5   SpecialJt=No
+   Joint=43   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=12   Z=6.5   SpecialJt=No
+   Joint=44   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=12   Z=6.5   SpecialJt=No
+   Joint=45   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=18   Z=6.5   SpecialJt=No
+   Joint=46   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=18   Z=6.5   SpecialJt=No
+   Joint=47   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=18   Z=6.5   SpecialJt=No
+   Joint=48   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=18   Z=6.5   SpecialJt=No
+   Joint=49   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=9.5   SpecialJt=No
+   Joint=50   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=9.5   SpecialJt=No
+   Joint=51   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=9.5   SpecialJt=No
+   Joint=52   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=9.5   SpecialJt=No
+   Joint=53   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=9.5   SpecialJt=No
+   Joint=54   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=9.5   SpecialJt=No
+   Joint=55   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=6   Z=9.5   SpecialJt=No
+   Joint=56   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=6   Z=9.5   SpecialJt=No
+   Joint=57   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=12   Z=9.5   SpecialJt=No
+   Joint=58   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=12   Z=9.5   SpecialJt=No
+   Joint=59   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=12   Z=9.5   SpecialJt=No
+   Joint=60   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=12   Z=9.5   SpecialJt=No
+   Joint=61   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=18   Z=9.5   SpecialJt=No
+   Joint=62   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=18   Z=9.5   SpecialJt=No
+   Joint=63   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=18   Z=9.5   SpecialJt=No
+   Joint=64   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=18   Z=9.5   SpecialJt=No
+   Joint=65   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=0   Z=12.5   SpecialJt=No
+   Joint=66   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=0   Z=12.5   SpecialJt=No
+   Joint=67   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=0   Z=12.5   SpecialJt=No
+   Joint=68   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=0   Z=12.5   SpecialJt=No
+   Joint=69   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=6   Z=12.5   SpecialJt=No
+   Joint=70   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=6   Z=12.5   SpecialJt=No
+   Joint=71   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=6   Z=12.5   SpecialJt=No
+   Joint=72   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=6   Z=12.5   SpecialJt=No
+   Joint=73   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=12   Z=12.5   SpecialJt=No
+   Joint=74   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=12   Z=12.5   SpecialJt=No
+   Joint=75   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=12   Z=12.5   SpecialJt=No
+   Joint=76   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=12   Z=12.5   SpecialJt=No
+   Joint=77   CoordSys=GLOBAL   CoordType=Cartesian   XorR=0   Y=18   Z=12.5   SpecialJt=No
+   Joint=78   CoordSys=GLOBAL   CoordType=Cartesian   XorR=6   Y=18   Z=12.5   SpecialJt=No
+   Joint=79   CoordSys=GLOBAL   CoordType=Cartesian   XorR=12   Y=18   Z=12.5   SpecialJt=No
+   Joint=80   CoordSys=GLOBAL   CoordType=Cartesian   XorR=18   Y=18   Z=12.5   SpecialJt=No
+ 
+TABLE:  "JOINT RESTRAINT ASSIGNMENTS"
+   Joint=1   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=2   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=3   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=4   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=5   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=6   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=7   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=8   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=9   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=10   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=11   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=12   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=13   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=14   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=15   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+   Joint=16   U1=Yes   U2=Yes   U3=Yes   R1=Yes   R2=Yes   R3=Yes
+ 
+TABLE:  "CONSTRAINT DEFINITIONS - DIAPHRAGM"
+   Name=DIAPH1   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH2   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH3   CoordSys=GLOBAL   Axis=Z
+   Name=DIAPH4   CoordSys=GLOBAL   Axis=Z
+ 
+TABLE:  "JOINT CONSTRAINT ASSIGNMENTS"
+   Joint=17   Constraint=DIAPH1
+   Joint=18   Constraint=DIAPH1
+   Joint=19   Constraint=DIAPH1
+   Joint=20   Constraint=DIAPH1
+   Joint=21   Constraint=DIAPH1
+   Joint=22   Constraint=DIAPH1
+   Joint=23   Constraint=DIAPH1
+   Joint=24   Constraint=DIAPH1
+   Joint=25   Constraint=DIAPH1
+   Joint=26   Constraint=DIAPH1
+   Joint=27   Constraint=DIAPH1
+   Joint=28   Constraint=DIAPH1
+   Joint=29   Constraint=DIAPH1
+   Joint=30   Constraint=DIAPH1
+   Joint=31   Constraint=DIAPH1
+   Joint=32   Constraint=DIAPH1
+   Joint=33   Constraint=DIAPH2
+   Joint=34   Constraint=DIAPH2
+   Joint=35   Constraint=DIAPH2
+   Joint=36   Constraint=DIAPH2
+   Joint=37   Constraint=DIAPH2
+   Joint=38   Constraint=DIAPH2
+   Joint=39   Constraint=DIAPH2
+   Joint=40   Constraint=DIAPH2
+   Joint=41   Constraint=DIAPH2
+   Joint=42   Constraint=DIAPH2
+   Joint=43   Constraint=DIAPH2
+   Joint=44   Constraint=DIAPH2
+   Joint=45   Constraint=DIAPH2
+   Joint=46   Constraint=DIAPH2
+   Joint=47   Constraint=DIAPH2
+   Joint=48   Constraint=DIAPH2
+   Joint=49   Constraint=DIAPH3
+   Joint=50   Constraint=DIAPH3
+   Joint=51   Constraint=DIAPH3
+   Joint=52   Constraint=DIAPH3
+   Joint=53   Constraint=DIAPH3
+   Joint=54   Constraint=DIAPH3
+   Joint=55   Constraint=DIAPH3
+   Joint=56   Constraint=DIAPH3
+   Joint=57   Constraint=DIAPH3
+   Joint=58   Constraint=DIAPH3
+   Joint=59   Constraint=DIAPH3
+   Joint=60   Constraint=DIAPH3
+   Joint=61   Constraint=DIAPH3
+   Joint=62   Constraint=DIAPH3
+   Joint=63   Constraint=DIAPH3
+   Joint=64   Constraint=DIAPH3
+   Joint=65   Constraint=DIAPH4
+   Joint=66   Constraint=DIAPH4
+   Joint=67   Constraint=DIAPH4
+   Joint=68   Constraint=DIAPH4
+   Joint=69   Constraint=DIAPH4
+   Joint=70   Constraint=DIAPH4
+   Joint=71   Constraint=DIAPH4
+   Joint=72   Constraint=DIAPH4
+   Joint=73   Constraint=DIAPH4
+   Joint=74   Constraint=DIAPH4
+   Joint=75   Constraint=DIAPH4
+   Joint=76   Constraint=DIAPH4
+   Joint=77   Constraint=DIAPH4
+   Joint=78   Constraint=DIAPH4
+   Joint=79   Constraint=DIAPH4
+   Joint=80   Constraint=DIAPH4
+ 
+TABLE:  "LOAD PATTERN DEFINITIONS"
+   LoadPat=DEAD   DesignType=Dead   SelfWtMult=0
+ 
+TABLE:  "LOAD CASE DEFINITIONS"
+   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes
+ 
+TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"
+   Case=DEAD   LoadType="Load pattern"   LoadName=DEAD   LoadSF=1
+ 
+TABLE:  "JOINT LOADS - FORCE"
+   Joint=17   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=18   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=22   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=21   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=19   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=23   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=20   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=24   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=26   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=25   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=27   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=28   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=30   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=29   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=31   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=32   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=33   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=34   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=38   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=37   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=35   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=39   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=36   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=40   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=42   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=41   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=43   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=44   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=46   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=45   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=47   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=48   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=49   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=50   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=54   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=53   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=51   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=55   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=52   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=56   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=58   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=57   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=59   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=60   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=62   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=61   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=63   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=64   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=65   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=66   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=70   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=69   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=67   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=71   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=68   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=72   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=74   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=73   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=75   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-180   M1=0   M2=0   M3=0
+   Joint=76   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=78   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=77   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+   Joint=79   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-90   M1=0   M2=0   M3=0
+   Joint=80   LoadPat=DEAD   CoordSys=GLOBAL   F1=0   F2=0   F3=-45   M1=0   M2=0   M3=0
+ 
+TABLE:  "MATERIAL PROPERTIES 01 - GENERAL"
+   Material=MAT_22940519_n0.2000_r2.44732   Type=Concrete   SymType=Isotropic   TempDepend=No   Color=Green
+ 
+TABLE:  "MATERIAL PROPERTIES 02 - BASIC MECHANICAL PROPERTIES"
+   Material=MAT_22940519_n0.2000_r2.44732   UnitWeight=24   UnitMass=2.447318911   E1=2.29405192e+7   G12=9.55854969e+6   U12=0.2   A1=9.9E-06
+ 
+TABLE:  "MATERIAL PROPERTIES 03B - CONCRETE DATA"
+   Material=MAT_22940519_n0.2000_r2.44732   Fc=27579   eFc=27579   LtWtConc=No   SSCurveOpt=Mander   SSHysType=Takeda   SFc=0.00222   SCap=0.005   FinalSlope=-0.1   FAngle=0   DAngle=0   CoupModType="Modified Darwin-Pecknold"
+ 
+TABLE:  "PROGRAM CONTROL"
+   ProgramName=SAP2000   Version=24.1.0   CurrUnits="KN, m, C"   SteelCode="AISC 360-16"   ConcCode="ACI 318-19"   AlumCode="AA 2015"   ColdCode=AISI-16   RegenHinge=Yes
+ 
+END TABLE DATA

@@ -939,6 +939,7 @@ export const edificioAporticado: ExampleDef = {
     // medio lado de la columna EN LA DIRECCION DE LA VIGA (b en X, h en Y) del peso y de la masa
     const nudosCol = new Map<number, number>();   // nudo -> piso de la columna que lo toca
     for (const ci of colIdx) for (const n of elements[ci] as unknown as number[]) nudosCol.set(n, elementFloor.get(ci) ?? 0);
+    const densidadesSinBrazos = new Map<number, number>();   // ETABS descuenta el brazo él mismo (e2k)
     const factorBrazos = (i: number) => {
       if (Math.round((p as any).offsets ?? 1) !== 1) return 1;
       const [a, b] = elements[i] as unknown as number[];
@@ -1000,6 +1001,7 @@ export const edificioAporticado: ExampleDef = {
         }
         // Si Mass Source = Loads, density de vigas = 0 (la masa va solo en losa)
         densities.set(i, useMassFromLoads ? 0 : matVigaRho * factorBrazos(i));
+        if (!useMassFromLoads && factorBrazos(i) < 1) densidadesSinBrazos.set(i, matVigaRho);   // para el e2k
       }
     }
 
@@ -1057,6 +1059,7 @@ export const edificioAporticado: ExampleDef = {
       densities, poissonsRatios: poissons, thicknesses,
       membraneModifiers, bendingModifiers, plateFormulations,
       ...(esCft || esTuboCotas || esPerfilI ? { shearAreasY, shearAreasZ, sectionShapes } : {}),
+      ...(densidadesSinBrazos.size ? { densidadesSinBrazos } : {}),
       // brazos rigidos automaticos de ETABS: viga ½ lado de columna (en su direccion), columna canto de viga arriba
       ...(Math.round((p as any).offsets ?? 1) === 1 ? { endOffsets: brazosAutomaticosETABS(
         nodes as any, elements as any, (e) => (colIdx.has(e) ? "col" : beamIdx.has(e) ? "viga" : null),
