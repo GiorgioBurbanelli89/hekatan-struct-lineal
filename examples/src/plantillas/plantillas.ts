@@ -392,13 +392,16 @@ const SEG_CONFIRMAR = 5;
  *     6x6x6           4 100    24 600    1.3 s             3 s,  heap JS 129 MB
  *     8x8x8          10 440    62 640    4.8 s  ~200 MB    14 s, heap JS 157 MB
  *     10x10x8        17 036   102 216    8.7 s  ~370 MB    22 s, heap JS 468 MB, la página responde
- *     12x12x12       37 784   226 704   27.7 s  ~830 MB    (no medido en Chrome)
+ *     10x10x10       21 268   127 608    8.1 s  WASM 509   20 s, heap JS 307 MB, responde
+ *     11x11x11       28 740   172 440       —              89 s, heap JS 630 MB, responde
+ *     12x12x12       37 784   226 704   27 s   WASM 836   61 s, heap JS 360 MB, responde
  *
- * T₁ igual en Node y en Chrome en los tres. Se sube a 100 000: el mayor medido en la pestaña. Por
- * encima el WASM aguanta (Node), pero no se ha medido la pestaña; se puede subir desde la consola
- * con `window.__hekatanDofMaxModal = 200000`.
+ * T₁ igual en Node y en Chrome. (29-sep, tarde) medido en Chrome hasta 226 704 GDL: la página responde
+ * y T₁ = Node. El WASM llega a sus 2 GB hacia ~500 000 GDL (crece ≈ GDL^1.1). Tope subido a 200 000,
+ * con margen bajo lo medido (otras máquinas tienen menos RAM); se puede subir desde la consola con
+ * `window.__hekatanDofMaxModal = 300000`.
  */
-const DOF_MAX_MODAL_DEFECTO = 100000;
+const DOF_MAX_MODAL_DEFECTO = 200000;
 const topeModal = () =>
   Number((window as any).__hekatanDofMaxModal) || DOF_MAX_MODAL_DEFECTO;
 
