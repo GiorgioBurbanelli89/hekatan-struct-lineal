@@ -1651,12 +1651,19 @@ function ajustarResultadosAlModelo() {
       return conValores(ao[interno]);
     };
     for (const o of Array.from(selShell.options)) {
+      // Las opciones de Tweakpane NO llevan atributo `value`: su valor ES su texto. Al añadirle
+      // «(sin datos)» al texto cambiaba también el valor, la opción dejaba de reconocerse y se
+      // quedaba apagada para siempre aunque el modelo cambiara. Se fija el valor antes de tocar el texto.
+      if (!o.hasAttribute("value")) o.setAttribute("value", (o.textContent ?? "").replace(/\s*\(sin datos\)/, ""));
       if (o.value === "none" || o.disabled) continue;
       const interno = internalOf(o.value);
       if (!tieneDatos(interno)) {
         o.disabled = true;
         o.style.color = "#64748b";
         if (!/sin datos/.test(o.textContent ?? "")) o.textContent = `${o.textContent}  (sin datos)`;
+      } else if (/sin datos/.test(o.textContent ?? "")) {
+        // el modelo CAMBIÓ y ahora sí lo calcula (muro-manabi: de membrana a cáscara sobre muelles)
+        o.textContent = (o.textContent ?? "").replace(/\s*\(sin datos\)/, "");
       }
     }
   }
@@ -1676,7 +1683,10 @@ function campoSegunElModelo() {
   const elems = (states.elements.rawVal ?? []) as number[][];
   const haySolidos = elems.some((e) => e.length === 8);
   const hayCascaras = elems.some((e) => e.length === 3 || e.length === 4);
-  const composicion = `${currentExample.id}|${haySolidos}|${hayCascaras}`;
+  // …y los campos que el modelo calcula: al pasar de membrana a cáscara aparece la presión del terreno
+  const ao: any = states.analyzeOutputs.rawVal ?? {};
+  const campos = Object.keys(ao).filter((k) => ao[k] instanceof Map && ao[k].size > 0).sort().join(",");
+  const composicion = `${currentExample.id}|${haySolidos}|${hayCascaras}|${campos}`;
   if (composicion === composicionAnterior) return;
   composicionAnterior = composicion;
   if (s.solidResults) {
