@@ -10,9 +10,10 @@
  *         Vale también para los triángulos con la placa por defecto.
  *   · Shell-Thin Q4 (DKQ, Batoz-Tahar) → aquí, Σ Bᵀ·Db·B·|J| en Gauss 2×2 con `dkqB`
  *       + membrana ITW (`itwMembraneK`, tipo 13 por defecto).
- *   · Lo que el motor resuelve con otra placa (DKMQ = 3, DSE = 4, triángulo DKT del
- *     Shell-Thin) y no se puede leer aún del motor → `flexion = null` y un aviso: no se
- *     enseña una matriz que no es la suya.
+ *   · DKMQ (= 3), DSE (= 4) y el triángulo DKT del Shell-Thin → también LEÍDAS DEL MOTOR
+ *     (29-sep-2026): `didactic_solve` recibe ahora `plateFormulations`, `drillingTypes` y
+ *     `drillingPenaltyScales` al final de sus argumentos y `getLocalStiffnessMatrix` elige la
+ *     misma placa que `deform`. Antes no le llegaban y la tarjeta decía «no disponible».
  *
  * ⚠️ EJES. La K depende del marco en que se escriba. Aquí se usa el del ELEMENTO,
  * el mismo que arma el C++ (`shellQ4.cpp`): eje 1 = v01 + v32 reortogonalizado,
@@ -87,7 +88,8 @@ export interface KPano {
 }
 
 /** La K_local del elemento tal como la arma el motor C++ (`didactic_solve`), con sus ejes. */
-export function kLocalMotor(p: number[][], E: number, nu: number, t: number) {
+export function kLocalMotor(p: number[][], E: number, nu: number, t: number,
+  f: { tipoPlaca?: number; tipoDrill?: number; gammaFac?: number } = {}) {
   const n = p.length;
   const el = [Array.from({ length: n }, (_, i) => i)];
   const fijo = new Map<number, [boolean, boolean, boolean, boolean, boolean, boolean]>();
@@ -95,6 +97,10 @@ export function kLocalMotor(p: number[][], E: number, nu: number, t: number) {
   for (let i = 0; i < n; i++) fijo.set(i, [true, true, i !== 0, true, true, true]);
   const r = didacticSolveCpp(p as any, el as any, { supports: fijo as any, loads: new Map() } as any, {
     elasticities: new Map([[0, E]]), thicknesses: new Map([[0, t]]), poissonsRatios: new Map([[0, nu]]),
+    shearModuli: new Map([[0, E / (2 * (1 + nu))]]),
+    ...(f.tipoPlaca !== undefined ? { plateFormulations: new Map([[0, f.tipoPlaca]]) } : {}),
+    ...(f.tipoDrill !== undefined ? { drillingTypes: new Map([[0, f.tipoDrill]]) } : {}),
+    ...(f.gammaFac !== undefined ? { drillingPenaltyScales: new Map([[0, f.gammaFac]]) } : {}),
   } as any);
   const d = r.elements[0];
   if (!d || d.nDOF !== 6 * n) throw new Error("el motor no devolvió la K del elemento");
@@ -119,7 +125,9 @@ export function kPano(
 ): KPano {
   const n = p.length;
   if (n !== 4 && n !== 3) throw new Error("La K de paño es la de un Q4 o un triángulo.");
-  const tipoPlaca = opts.tipoPlaca ?? 0, tipoDrill = opts.tipoDrill ?? 13;
+  // DKMQ y DSE son de Q4: en un triángulo el motor usa la placa gruesa de siempre (CS-DSG3)
+  const tipoPlaca = n === 3 && (opts.tipoPlaca === 3 || opts.tipoPlaca === 4) ? 0 : (opts.tipoPlaca ?? 0);
+  const tipoDrill = opts.tipoDrill ?? 13;
   const gammaFac = opts.gammaFac ?? 0.4;
   let flexion: number[][] | null = null, membrana: number[][] | null = null, formulacion = "", aviso = "";
   let { ex, ey, ez, xl, yl } = n === 4 ? ejesLocalesQ4(p) : ejesT3(p);
@@ -142,10 +150,18 @@ export function kPano(
     membrana = itwMembraneK(xl, yl, E, nu, t, { tipo: tipoDrill, gammaFac });
     formulacion = "Shell-Thin (DKQ, Batoz-Tahar) + membrana ITW tipo " + tipoDrill;
     if (!membrana) aviso = "La membrana de este paño (drilling " + tipoDrill + ") no se puede enseñar todavía.";
+  } else if ((tipoPlaca === 1 && n === 3) || ((tipoPlaca === 3 || tipoPlaca === 4) && n === 4)) {
+    // leída del motor con SU formulación (didactic_solve recibe plateFormulations)
+    const m = kLocalMotor(p, E, nu, t, { tipoPlaca, tipoDrill, gammaFac });
+    ex = m.lambda[0]; ey = m.lambda[1]; ez = m.lambda[2];
+    flexion = bloque(m.K, n, [2, 3, 4]);
+    membrana = bloque(m.K, n, [0, 1, 5]);
+    const nom = tipoPlaca === 1 ? "Shell-Thin (DKT, Batoz 1980) en triángulo" : tipoPlaca === 3 ? "DKMQ (Katili 1993)" : "DSE (Wilson, cap. 8)";
+    formulacion = nom + " · placa y membrana leídas del motor (didactic_solve)";
   } else {
-    const nom = tipoPlaca === 1 ? "Shell-Thin (DKT) en triángulo" : tipoPlaca === 3 ? "DKMQ (Katili)" : tipoPlaca === 4 ? "DSE (Wilson)" : "placa tipo " + tipoPlaca;
+    const nom = "placa tipo " + tipoPlaca + (n === 3 ? " en triángulo" : "");
     formulacion = nom;
-    aviso = "K no disponible para " + nom + " todavía: el motor la resuelve, pero aún no se puede leer de él.";
+    aviso = "K no disponible para " + nom + ": el motor no la arma para este paño.";
   }
   let a2 = 0;
   for (let i = 0; i < n; i++) { const j = (i + 1) % n; a2 += xl[i] * yl[j] - xl[j] * yl[i]; }

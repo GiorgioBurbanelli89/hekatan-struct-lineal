@@ -34,6 +34,8 @@ export interface SolucionSolido {
   ok: boolean;
   error?: string;
   desplazamientos: Map<number, Vec3>;
+  /** Reacciones en los apoyos [Rx, Ry, Rz] (kN), −PEN·u del solver de sólidos */
+  reacciones: Map<number, Vec3>;
   /** Tensiones por elemento en sus 8 puntos de Gauss: [σxx, σyy, σzz, τxy, τyz, τxz] */
   tensiones: Map<number, number[][]>;
   vonMises: Map<number, number[]>;
@@ -43,7 +45,7 @@ export interface SolucionSolido {
 /** Resuelve el modelo y lo deja en los estados del workspace. */
 export function resolverSolidoEnWorkspace(states: BuildStates, m: ModeloSolido): SolucionSolido {
   const sol: SolucionSolido = {
-    ok: false, desplazamientos: new Map(), tensiones: new Map(), vonMises: new Map(), ms: 0,
+    ok: false, desplazamientos: new Map(), reacciones: new Map(), tensiones: new Map(), vonMises: new Map(), ms: 0,
   };
   try {
     const r = hex8Solve({
@@ -52,6 +54,7 @@ export function resolverSolidoEnWorkspace(states: BuildStates, m: ModeloSolido):
     });
     sol.ok = true;
     sol.desplazamientos = r.displacements;
+    sol.reacciones = r.reactions;
     sol.tensiones = r.stressPerElement;
     sol.vonMises = r.vonMisesPerElement;
     sol.ms = r.elapsedMs;
@@ -85,7 +88,9 @@ export function resolverSolidoEnWorkspace(states: BuildStates, m: ModeloSolido):
     elasticities, poissonsRatios, densities,
     solidIncompatible: m.incompatible !== false,
   } as any;
-  states.deformOutputs.val = { deformations, reactions: new Map() };
+  const reactions = new Map<number, [number, number, number, number, number, number]>();
+  sol.reacciones.forEach(([rx, ry, rz], n) => reactions.set(n, [rx, ry, rz, 0, 0, 0]));
+  states.deformOutputs.val = { deformations, reactions };
   states.analyzeOutputs.val = sol.ok
     ? { solidStress: sol.tensiones, solidVonMises: sol.vonMises }
     : {};

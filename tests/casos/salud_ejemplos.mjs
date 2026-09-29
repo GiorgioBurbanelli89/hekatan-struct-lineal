@@ -138,6 +138,40 @@ export function barrer() {
     const sF = [0,0,0], sR = [0,0,0];
     if (ni.loads) for (const [, v] of ni.loads) for (let i=0;i<3;i++) sF[i] += (v[i]||0);
     if (d.reactions) for (const [, v] of d.reactions) for (let i=0;i<3;i++) sR[i] += (v[i]||0);
+    // EL SUELO tambien reacciona (29-sep-2026): una zapata sobre muelles deja libre el vertical
+    // en sus apoyos y la carga la devuelve el suelo, no un apoyo. Sin esto estribo-puente y
+    // muro-contencion-areas salian «desequilibrados» al 100 % estando en equilibrio.
+    // Muelle nodal: -k*u. De area (gdl -1 consistente, -3 nodal): -ks*w*n*dA en Gauss.
+    {
+      const U = d.deformations, g = 1 / Math.sqrt(3);
+      const deArea = (st.elementInputs.val || {}).areaSpringsExport;
+      for (const m of (Array.isArray(ni.springs) ? ni.springs : [])) {
+        if (!(Math.abs(m && m.k) > 0) || !U) continue;
+        if (m.node >= 0) {
+          const u = U.get(m.node);
+          if (u && m.dof >= 0 && m.dof < 3 && Number.isFinite(u[m.dof])) sR[m.dof] += -m.k * u[m.dof];
+          continue;
+        }
+        if (m.dof !== -1 && m.dof !== -3) continue;
+        const iE = -(m.node + 1), e = els[iE];
+        if (!e || e.length !== 4) continue;
+        const P = e.map((k) => nodes[k]), W = e.map((k) => U.get(k) || [0, 0, 0]);
+        const comp = !!(deArea && deArea.get && deArea.get(iE) && deArea.get(iE).comp);
+        for (const [x, y] of [[-g, -g], [g, -g], [g, g], [-g, g]]) {
+          const N = [(1-x)*(1-y), (1+x)*(1-y), (1+x)*(1+y), (1-x)*(1+y)].map((v) => v / 4);
+          const dx = [-(1-y), (1-y), (1+y), -(1+y)].map((v) => v / 4);
+          const dy = [-(1-x), -(1+x), (1+x), (1-x)].map((v) => v / 4);
+          const a = [0, 0, 0], b = [0, 0, 0], u = [0, 0, 0];
+          for (let k = 0; k < 4; k++) for (let c = 0; c < 3; c++) { a[c] += dx[k]*P[k][c]; b[c] += dy[k]*P[k][c]; u[c] += N[k]*(W[k][c]||0); }
+          const n = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+          const J = Math.hypot(n[0], n[1], n[2]);
+          if (!(J > 0)) continue;
+          const wn = (u[0]*n[0] + u[1]*n[1] + u[2]*n[2]) / J;
+          if (comp && u[2] > 0) continue;
+          for (let c = 0; c < 3; c++) sR[c] += -m.k * wn * n[c];
+        }
+      }
+    }
 
     // Se cuentan solo los nudos que tocan UNA barra y NINGUN shell: la esquina
     // de una malla Q4 toca un solo elemento y eso es normal, no un mecanismo.

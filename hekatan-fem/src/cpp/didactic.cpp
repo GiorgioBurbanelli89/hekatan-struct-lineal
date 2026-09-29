@@ -98,7 +98,16 @@ extern "C"
         // --- Outputs ---
         double **elem_data_ptr_out, int *elem_data_size_out,
         double **k_triplets_ptr_out, int *k_triplets_size_out,
-        double **solution_ptr_out, int *solution_size_out)
+        double **solution_ptr_out, int *solution_size_out,
+
+        // --- Formulacion de la cascara (29-sep-2026) ---
+        // AL FINAL, detras de las salidas, como los brazos rigidos de `deform`: un llamador
+        // viejo pasa menos argumentos, el wasm los rellena con 0 y todo queda como antes
+        // (MITC4 + ITW tipo 13). Sin esto la K de un pano DKMQ, DSE o DKT no se podia leer
+        // del motor: `getLocalStiffnessMatrix` elige la placa por `plateFormulations`.
+        int *plateForm_keys_ptr = nullptr, int *plateForm_values_ptr = nullptr, int num_plateForm = 0,
+        int *drillType_keys_ptr = nullptr, int *drillType_values_ptr = nullptr, int num_drillType = 0,
+        int *drillScale_keys_ptr = nullptr, double *drillScale_values_ptr = nullptr, int num_drillScale = 0)
     {
         // Initialize outputs
         *elem_data_ptr_out = nullptr;
@@ -135,6 +144,12 @@ extern "C"
         elementInputs.poissonsRatios = parseMapFromFlat(poisson_keys_ptr, poisson_values_ptr, num_poisson);
         elementInputs.shearAreasY = parseMapFromFlat(shear_area_y_keys_ptr, shear_area_y_values_ptr, num_shear_area_y);
         elementInputs.shearAreasZ = parseMapFromFlat(shear_area_z_keys_ptr, shear_area_z_values_ptr, num_shear_area_z);
+        if (num_plateForm > 0 && plateForm_keys_ptr)
+            elementInputs.plateFormulations = parseMapIntFromFlat(plateForm_keys_ptr, plateForm_values_ptr, num_plateForm);
+        if (num_drillType > 0 && drillType_keys_ptr)
+            elementInputs.drillingTypes = parseMapIntFromFlat(drillType_keys_ptr, drillType_values_ptr, num_drillType);
+        if (num_drillScale > 0 && drillScale_keys_ptr)
+            elementInputs.drillingPenaltyScales = parseMapFromFlat(drillScale_keys_ptr, drillScale_values_ptr, num_drillScale);
 
         int dof = num_nodes * 6;
 

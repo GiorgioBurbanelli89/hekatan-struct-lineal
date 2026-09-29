@@ -16,6 +16,11 @@ namespace dkmq {
 // ── Local coords (mismo patron que en TS) ──
 struct LocalCoords { Eigen::Vector4d x, y; };
 
+// Los ejes TIENEN que ser los de `getTransformationMatrixShellQ4` (shellQ4.cpp): eje 1 = v01 + v32
+// reortogonalizado, eje 3 = d02 x d13. Hasta el 29-sep-2026 aqui el eje 1 era el lado 1-2: la K se
+// armaba en un marco y el solver la giraba a globales con OTRO. En un rectangulo coinciden; en un
+// trapecio la placa quedaba girada y la solucion cambiaba un 14 % segun la esquina por la que se
+// numeraba el pano (cli/_dkmq_invariancia.mjs).
 inline LocalCoords compute_local_coords(const std::vector<std::vector<double>>& nodes) {
     LocalCoords lc;
     Eigen::Vector3d n1(nodes[0][0], nodes[0][1], nodes[0][2]);
@@ -23,9 +28,10 @@ inline LocalCoords compute_local_coords(const std::vector<std::vector<double>>& 
     Eigen::Vector3d n3(nodes[2][0], nodes[2][1], nodes[2][2]);
     Eigen::Vector3d n4(nodes[3][0], nodes[3][1], nodes[3][2]);
     Eigen::Vector3d v12 = n2 - n1, v13 = n3 - n1, v14 = n4 - n1;
-    Eigen::Vector3d xAxis = v12.normalized();
-    Eigen::Vector3d zAxis = xAxis.cross(v13).normalized();
-    Eigen::Vector3d yAxis = zAxis.cross(xAxis);
+    Eigen::Vector3d zAxis = (n3 - n1).cross(n4 - n2).normalized();
+    Eigen::Vector3d xAxis = (v12 + (n3 - n4)).normalized();
+    Eigen::Vector3d yAxis = zAxis.cross(xAxis).normalized();
+    xAxis = yAxis.cross(zAxis).normalized();
     lc.x << 0.0, v12.dot(xAxis), v13.dot(xAxis), v14.dot(xAxis);
     lc.y << 0.0, v12.dot(yAxis), v13.dot(yAxis), v14.dot(yAxis);
     return lc;
@@ -207,6 +213,13 @@ inline Eigen::Matrix3d Cm_mat(double E, double nu) {
 
 } // namespace dkmq
 
+// La membrana ITW 1990 (12x12: u, v y el drilling JUNTOS), la MISMA de shellQ4.cpp y shellThin.cpp.
+Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
+                               double E, double nu, double t,
+                               const double *mod, double gammaFac, int nGauss,
+                               bool taylorBurbuja, double khg, double wAlpha,
+                               bool proyDrill, int sriVol, bool k0Wilson);
+
 // ── EXPORT principal: getLocalStiffnessMatrixShellQ4_DKMQ ─────────────
 // 24×24 matriz local con DOFs por nodo: u, v, w, θx, θy, θz
 extern "C++" Eigen::MatrixXd getLocalStiffnessMatrixShellQ4_DKMQ(
@@ -261,7 +274,9 @@ extern "C++" Eigen::MatrixXd getLocalStiffnessMatrixShellQ4_DKMQ(
 
     // ── Drilling DOF dispatcher según drillingTypes (default 2 = HB) ──────
     //
-    // ⚠️ ESTE FICHERO SE QUEDÓ ATRÁS. El 19-ago-2026 la membrana pasó al
+    // ✅ 29-sep-2026: YA NO se queda atras: con drillingTypes 13 (defecto) la membrana es la ITW de
+    // shellQ4.cpp, y los ejes son los de la transformacion. Lo de abajo es la HISTORIA:
+    // (antes) ESTE FICHERO SE QUEDÓ ATRÁS. El 19-ago-2026 la membrana pasó al
     // elemento ITW 1990 en `shellQ4.cpp`, en `shellThin.cpp`, en `shellQ4.ts` y
     // en el motor de Python. Aquí NO: sigue con Hughes-Brezzi y además con
     // `drillScale = 1.0`, que es el peor valor medido (con 1.0 el drilling deja
@@ -276,12 +291,16 @@ extern "C++" Eigen::MatrixXd getLocalStiffnessMatrixShellQ4_DKMQ(
     //   0 = penalty 1e-6 legacy
     //   1 = PyNite weak spring  (k = min(diagRot bend)/1000)  [legacy DKMQ]
     //   2 = Hughes-Brezzi 1989 / Ibrahimbegovic-Taylor-Wilson 1990 [DEFAULT]
-    int drillingType = 2;
+    // 29-sep-2026: el defecto pasa de 2 (Hughes-Brezzi con escala 1.0, que bloquea la membrana) a 13,
+    // el de shellQ4.cpp y shellThin.cpp, con la membrana ITW de las dos. Antes un pano DKMQ con
+    // drillingTypes = 13 (lo que pone el resto del motor) se quedaba SIN rigidez de giro en el plano.
+    int drillingType = 13;
     {
         auto it = elementInputs.drillingTypes.find(elementIndex);
         if (it != elementInputs.drillingTypes.end()) drillingType = it->second;
     }
-    double drillScale = 1.0;
+    const bool usaITW = ((drillingType >= 3 && drillingType <= 10) || drillingType == 13);
+    double drillScale = usaITW ? 0.4 : 1.0;
     {
         auto it = elementInputs.drillingPenaltyScales.find(elementIndex);
         if (it != elementInputs.drillingPenaltyScales.end()) drillScale = it->second;
@@ -319,11 +338,29 @@ extern "C++" Eigen::MatrixXd getLocalStiffnessMatrixShellQ4_DKMQ(
     };
     swapRC(3,4); swapRC(9,10); swapRC(15,16); swapRC(21,22);
 
+    // Membrana: ITW (u, v, theta_z juntos) como el resto del motor, o la Q4 8x8 de antes
+    if (usaITW) {
+        const int    ngITW  = (drillingType == 4 || drillingType == 6 || drillingType == 13) ? 2 : 3;
+        const double khgITW = (drillingType == 6 || drillingType == 13) ? 2.0e-4 : 0.0;
+        const bool   taylorITW = (drillingType == 5);
+        const double waITW = (drillingType == 7 || drillingType == 9) ? 0.99 : 0.0;
+        const bool   proyITW = (drillingType == 8 || drillingType == 9 || drillingType == 10 || drillingType == 13);
+        const int    sriITW = (drillingType == 10) ? 2 : 0;
+        const double xm[4] = {lc.x[0], lc.x[1], lc.x[2], lc.x[3]};
+        const double ym[4] = {lc.y[0], lc.y[1], lc.y[2], lc.y[3]};
+        Eigen::MatrixXd Kitw = getMembraneITW(xm, ym, E, nu, t, nullptr, drillScale, ngITW,
+                                              taylorITW, khgITW, waITW, proyITW, sriITW, false);
+        const int gdlM[3] = {0, 1, 5};
+        for (int ni = 0; ni < 4; ni++) for (int nj = 0; nj < 4; nj++)
+            for (int di = 0; di < 3; di++) for (int dj = 0; dj < 3; dj++)
+                k24(ni*6 + gdlM[di], nj*6 + gdlM[dj]) += Kitw(ni*3 + di, nj*3 + dj);
+    } else {
     // Mapping membrana 8→24
     for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) {
         int gi = (i/2)*6 + (i%2);
         int gj = (j/2)*6 + (j%2);
         k24(gi, gj) += k8(i, j);
+    }
     }
 
     // ── Drilling Hughes-Brezzi (default) — se suma al k24 ya con DOFs en

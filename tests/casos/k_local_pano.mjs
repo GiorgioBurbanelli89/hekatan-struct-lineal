@@ -46,6 +46,11 @@ const CASOS = [
   // (75 % entre dos soluciones). En MALLA ese modo no aparece: losa apoyada 16×16 sin un NaN y a
   // 1.0 % de OpenSees ASDShellT3 (`cli/_t3_malla_losa.mjs` y `_t3_malla_losa_ops.py`, 29-sep-2026).
   { nombre: "Shell-Thick, triángulo", P: [[0, 0, 0], [2, 0, 0], [0.5, 1.5, 0]], tipo: 0, fijos: [0, 1], csdsg3: true },
+  // leídas del motor desde el 29-sep-2026 (didactic_solve recibe plateFormulations)
+  { nombre: "DKMQ, trapecio", P: [[0, 0, 0], [4, 0, 0], [3.2, 2.5, 0], [0.6, 2.2, 0]], tipo: 3, fijos: [0, 3] },
+  { nombre: "DSE, trapecio", P: [[0, 0, 0], [4, 0, 0], [3.2, 2.5, 0], [0.6, 2.2, 0]], tipo: 4, fijos: [0, 3] },
+  { nombre: "DSE, paño inclinado", P: [[0, 0, 0], [3, 0, 0.8], [3, 2, 0.8], [0, 2, 0]], tipo: 4, fijos: [0, 3] },
+  { nombre: "Shell-Thin (DKT), triángulo", P: [[0, 0, 0], [2, 0, 0], [0.5, 1.5, 0]], tipo: 1, fijos: [0] },
 ];
 const E = 2.2e7, NU = 0.2, T = 0.2;
 const CARGA = [15, -8, 20, 3, -4, 2.5];
@@ -61,7 +66,7 @@ export async function correr() {
     const n = c.P.length;
     const m = (v) => new Map([[0, v]]);
     const ei = { elasticities: m(E), thicknesses: m(T), poissonsRatios: m(NU), shearModuli: m(E / (2 * (1 + NU))) };
-    if (c.tipo === 1) ei.plateFormulations = m(1);
+    if (c.tipo) ei.plateFormulations = m(c.tipo);
     const sup = new Map(c.fijos.map((i) => [i, [true, true, true, true, true, true]]));
     const libres = c.P.map((_, i) => i).filter((i) => !c.fijos.includes(i));
     const ni = { supports: sup, loads: new Map(libres.map((i) => [i, CARGA])) };
@@ -100,16 +105,6 @@ export async function correr() {
     const okHoja = /D_b = E\*t\^3/.test(h) && /## 7/.test(h) && !/NaN|undefined|e[+-]\d/.test(h.replace(/^#.*$/gm, ""));
     filas.push({ crudo: true, que: `${c.nombre}: hoja LISP (letras + números, sin notación científica)`, medido: okHoja ? "bien" : "mal",
       limite: "bien", ok: okHoja, detalle: "" });
-  }
-  // tipos que el motor resuelve pero no se pueden leer todavía: la tarjeta lo DICE, no enseña otra
-  for (const tp of [3, 4]) {
-    const m = (v) => new Map([[0, v]]);
-    const P = CASOS[0].P;
-    const st = { nodes: { val: P }, elements: { val: [[0, 1, 2, 3]] }, elementInputs: { val: {
-      elasticities: m(E), thicknesses: m(T), poissonsRatios: m(NU), plateFormulations: m(tp) } } };
-    const d = pn.datosPano(st, 0);
-    filas.push({ crudo: true, que: `placa tipo ${tp}: sin matriz inventada`, medido: d?.k?.flexion === null ? "avisa" : "enseña algo",
-      limite: "avisa", ok: d?.k?.flexion === null && /no disponible/.test(d?.k?.aviso ?? ""), detalle: d?.k?.aviso ?? "" });
   }
   return filas;
 }

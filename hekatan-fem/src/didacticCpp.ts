@@ -148,6 +148,19 @@ export function didacticSolveCpp(
   const poisson = processMap(elementInputs.poissonsRatios);
   const shearAreaY = processMap(elementInputs.shearAreasY);
   const shearAreaZ = processMap(elementInputs.shearAreasZ);
+  // formulación de la cáscara: enteros (placa, drilling) y el factor del drilling
+  const processMapInt = (inputMap: Map<number, number> | undefined) => {
+    const keys = inputMap ? Array.from(inputMap.keys()) : [];
+    const values = inputMap ? Array.from(inputMap.values()).map((v) => Math.round(Number(v))) : [];
+    const keysPtr = allocate(keys, Uint32Array, mod.HEAPU32);
+    gc.push(keysPtr);
+    const valuesPtr = allocate(values, Uint32Array, mod.HEAPU32);
+    gc.push(valuesPtr);
+    return { keysPtr, valuesPtr, size: keys.length };
+  };
+  const plateForm = processMapInt((elementInputs as any).plateFormulations);
+  const drillType = processMapInt((elementInputs as any).drillingTypes);
+  const drillScale = processMap((elementInputs as any).drillingPenaltyScales);
 
   // Output pointers (6 pairs: ptr + size)
   const elemDataPtrOut = mod._malloc(4); gc.push(elemDataPtrOut);
@@ -180,6 +193,10 @@ export function didacticSolveCpp(
     elemDataPtrOut, elemDataSizeOut,
     kTripletsPtrOut, kTripletsSizeOut,
     solutionPtrOut, solutionSizeOut,
+    // formulación de la cáscara (al final: el wasm viejo los ignora)
+    plateForm.keysPtr, plateForm.valuesPtr, plateForm.size,
+    drillType.keysPtr, drillType.valuesPtr, drillType.size,
+    drillScale.keysPtr, drillScale.valuesPtr, drillScale.size,
   );
 
   // --- Read outputs ---

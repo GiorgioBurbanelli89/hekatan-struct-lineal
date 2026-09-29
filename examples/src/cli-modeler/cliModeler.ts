@@ -1913,7 +1913,10 @@ export const cliModeler: ExampleDef = {
           const r = hex8Solve({ nodes: nodes as any, elements: elements as any, E: E0, nu: nu0, supports: sup, loads: ld, incompatible: m.solidIncompatible });
           const deformations = new Map<number, number[]>();
           r.displacements.forEach(([ux, uy, uz], n) => deformations.set(n, [ux, uy, uz, 0, 0, 0]));
-          states.deformOutputs.val = { deformations, reactions: new Map() } as any;
+          // reacciones = −PEN·u en los gdl fijos (hex8Cpp.ts); antes salía un Map vacío
+          const reactions = new Map<number, number[]>();
+          r.reactions?.forEach(([rx, ry, rz], n) => reactions.set(n, [rx, ry, rz, 0, 0, 0]));
+          states.deformOutputs.val = { deformations, reactions } as any;
           states.analyzeOutputs.val = { solidStress: r.stressPerElement, solidVonMises: r.vonMisesPerElement } as any;
           console.log(`[CLI Modeler] Solve OK — ${elements.length} solidos H8, ${nodes.length} nodos (${r.elapsedMs.toFixed(0)} ms)`);
         } catch (e: any) { m.errors.push(`hex8Solve: ${e?.message ?? e}`); }

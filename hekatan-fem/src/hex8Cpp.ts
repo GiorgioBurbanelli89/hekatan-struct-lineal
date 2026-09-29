@@ -49,6 +49,13 @@ export interface Hex8SolveOutput {
   displacements: Map<number, Vec3>;
   /** Map element → von Mises stress per Gauss point (8 values) */
   vonMisesPerElement: Map<number, number[]>;
+  /**
+   * Reacciones en los apoyos, nudo → [Rx, Ry, Rz] (kN). El C++ fija los apoyos con un resorte de
+   * penalización PEN sobre la diagonal (`hex8_wasm.cpp`), así que la fuerza que el apoyo hace sobre
+   * la estructura es −PEN·u en cada gdl fijo. Antes no se devolvían y el equilibrio de los modelos
+   * de sólidos no se podía comprobar (29-sep-2026).
+   */
+  reactions: Map<number, Vec3>;
   /** Map element → 6-component stress per Gauss point: [σxx,σyy,σzz,τxy,τyz,τxz][] */
   stressPerElement: Map<number, number[][]>;
   /** Tiempo total del solver en ms (medido en C++) */
@@ -176,8 +183,19 @@ export function hex8Solve(input: Hex8SolveInput): Hex8SolveOutput {
   mod._free(vmDataPtr);
   mod._free(stDataPtr);
 
-  return { displacements, vonMisesPerElement, stressPerElement, elapsedMs };
+  // ── Reacciones: −PEN·u en los gdl fijos. PEN TIENE que ser el de hex8_wasm.cpp ──
+  const reactions = new Map<number, Vec3>();
+  input.supports.forEach((fix, n) => {
+    const u = displacements.get(n);
+    if (!u || !fix.some(Boolean)) return;
+    reactions.set(n, [0, 1, 2].map((k) => (fix[k] ? -HEX8_PEN * u[k] : 0)) as Vec3);
+  });
+
+  return { displacements, reactions, vonMisesPerElement, stressPerElement, elapsedMs };
 }
+
+/** La penalización de los apoyos en `hex8_wasm.cpp` (`const double PEN = 1e15`). */
+export const HEX8_PEN = 1e15;
 
 /**
  * Tensiones de UN H8 ya resuelto — para los solidos que van MEZCLADOS con barras
