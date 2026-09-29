@@ -111,7 +111,7 @@ const tonf = (kN: number) => kN / G;
 
 export const muroManabi: ExampleDef = {
   id: "muro-manabi",
-  name: "Muro de contención de Manabí (membrana · cáscara · sólido)",
+  name: "Muro de contención de Manabí",
   // la categoría es la del modelo por defecto (membrana); la cáscara y el sólido se eligen dentro
   category: "2️⃣ Shells · 🕸 Membranas",
   benchmark: true,

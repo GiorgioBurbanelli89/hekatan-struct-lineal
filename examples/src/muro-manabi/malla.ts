@@ -264,8 +264,14 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
     for (let j = 0; j < ys.length; j++)
       empujeEnLinea(zs.slice(k0), (k) => fus(k0 + k, j), wy[j], (k) => xb - nodes[fus(k0 + k, j)][0]);
     nudoCoronacion = fus(zs.length - 1, jm);
-    // faja de muro: nada se mueve a lo largo (uy) ni gira fuera del plano x–z (rx, rz)
-    nodes.forEach((_, n) => { if (!supports.has(n)) supports.set(n, [false, true, false, true, false, true]); });
+    // faja de muro: las dos caras de los extremos (y = 0, y = L) son planos de simetría. Ahí nada se
+    // mueve a lo largo (uy) ni gira fuera del plano x–z (rx, rz); los nudos de dentro quedan libres
+    // y salen con uy = 0 solos, porque nada cambia a lo largo del muro.
+    nodes.forEach((q, n) => {
+      if (q[1] > 1e-9 && q[1] < p.L - 1e-9) return;
+      const a = supports.get(n) ?? [false, false, false, false, false, false];
+      a[1] = true; a[3] = true; a[5] = true; supports.set(n, a);
+    });
   } else {
     // ── MEMBRANA y SÓLIDO: la sección x–z, tal cual o extruida ─────────────────────────────
     const xs = unir(tramos(0, p.toe, p.ms), tramos(p.toe, xb, p.ms), tramos(xb, B, p.ms));
@@ -318,11 +324,16 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
       empujeEnLinea(zs.slice(kf), (k) => nudo(i1, j, kf + k), wy[j], () => 0);
     }
     nudoCoronacion = nudo(i1, modelo === 0 ? 0 : jm, zs.length - 1);
-    const libre: Apoyo = modelo === 0
-      ? [false, true, false, true, false, true]      // membrana en x–z: fuera uy, rx, rz; queda el giro normal ry
-      : [false, true, false, false, false, false];   // sólido: deformación plana, uy = 0 (no tiene giros)
-    nodes.forEach((_, n) => supports.set(n, [...libre] as Apoyo));
-    for (let j = 0; j < ys.length; j++) { const a = supports.get(nudo(0, j, 0))!; a[0] = true; }
+    // MEMBRANA: es un modelo PLANO (x–z). Fuera del plano (uy, rx, rz) no hay rigidez y el solver saca
+    // esos GDL solo; en SAP2000 y ETABS es «Available DOFs = plano XZ». No se ata nudo a nudo.
+    // SÓLIDO: deformación plana de la faja, uy = 0 en las dos caras de los extremos.
+    if (modelo === 2) nodes.forEach((q, n) => {
+      if (q[1] < 1e-9 || q[1] > p.L - 1e-9) supports.set(n, [false, true, false, false, false, false]);
+    });
+    for (let j = 0; j < ys.length; j++) {
+      const n = nudo(0, j, 0), a = supports.get(n) ?? [false, false, false, false, false, false];
+      a[0] = true; supports.set(n, a);
+    }
     if (modelo === 0 && Math.round(p.dp) === 1) { E = p.E / (1 - p.nu ** 2); nu = p.nu / (1 - p.nu); }
   }
 

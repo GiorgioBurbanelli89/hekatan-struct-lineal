@@ -95,12 +95,6 @@ const PERMITIDOS = {
   "muro-contencion": "membrana plana (X-Z) (idem)",
   "muro-q4": "membrana plana (X-Z) (idem)",
   "viga-q4": "membrana plana (X-Z) (idem)",
-
-  // El muro de la serie de videos (28-sep-2026). Por defecto es la SECCION en el plano X-Z:
-  // ata uy, rx y rz en todos los nudos y deja libres ux, uz y el giro normal ry. En el modelo de
-  // solidos uy = 0 en todos los nudos es la deformacion plana de una faja de muro. La base va
-  // sobre muelles de balasto; de apoyo de verdad solo hay ux en la punta de la puntera.
-  "muro-manabi": "membrana plana (X-Z): se ata uy, rx y rz; la base va sobre muelles",
 };
 
 const FUENTE = `

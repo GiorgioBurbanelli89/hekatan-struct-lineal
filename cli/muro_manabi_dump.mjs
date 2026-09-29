@@ -58,6 +58,8 @@ for (const modelo of [0, 1, 2]) for (const caso of [0, 1]) {
     elementInputs: plano(s.elementInputs),
     deformations: plano(U), reactions: plano(s.deformOutputs.reactions ?? new Map()),
     base: m.base, presion: plano(s.presion),
+    // la membrana es un modelo PLANO: en CSI, «Available DOFs» = UX, UZ, RY (no se ata nudo a nudo)
+    ...(m.tipo === "membrana" ? { activeDOF: [true, false, true, false, true, false] } : {}),
   };
   writeFileSync(join(carpeta, `muro_${NOMBRE[modelo]}_${CASO[caso]}.json`), JSON.stringify(out));
   const eq = (a, b) => (Math.abs(a + b) / Math.max(1e-9, Math.abs(a)) * 100).toExponential(1);

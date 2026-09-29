@@ -1003,6 +1003,7 @@ function loadExample(ex: ExampleDef) {
   // "pressure" solo se ofrece en zapatas (con resortes Winkler); "bending*" solo
   // en elementos que flexan; "membrane*" solo en plane-stress; etc.
   filterShellResultOptions(ex.availableShellResults);
+  composicionAnterior = ""; campoSegunElModelo();   // el campo por defecto, según lo que el modelo TIENE
   ajustarResultadosAlModelo();          // y apagar lo que este modelo no puede dar
   autoScaleDeformedShape();
   autoFitCamera();
@@ -1662,6 +1663,33 @@ function ajustarResultadosAlModelo() {
 }
 (window as any).__hekatanAjustarResultados = ajustarResultadosAlModelo;
 
+/**
+ * Un ejemplo puede cambiar de TIPO de elemento con un parámetro (`muro-manabi`: membrana · cáscara ·
+ * sólido). El campo que se pinta tiene que cambiar con él: con «Resultados de sólido» puesto y un
+ * modelo SIN sólidos, las cáscaras salían sin color y la leyenda era de otro campo (28-sep-2026).
+ * Solo actúa cuando cambia la composición del modelo, para no pisar lo que elija el usuario.
+ */
+let composicionAnterior = "";
+function campoSegunElModelo() {
+  const s = (viewerElm as any).__settings;
+  if (!s || !currentExample) return;
+  const elems = (states.elements.rawVal ?? []) as number[][];
+  const haySolidos = elems.some((e) => e.length === 8);
+  const hayCascaras = elems.some((e) => e.length === 3 || e.length === 4);
+  const composicion = `${currentExample.id}|${haySolidos}|${hayCascaras}`;
+  if (composicion === composicionAnterior) return;
+  composicionAnterior = composicion;
+  if (s.solidResults) {
+    if (!haySolidos) s.solidResults.val = "none";
+    else if (s.solidResults.val === "none" && currentExample.defaultSolidResult) s.solidResults.val = currentExample.defaultSolidResult;
+  }
+  if (s.shellResults) {
+    if (!hayCascaras && haySolidos) s.shellResults.val = "none";
+    else if (hayCascaras && s.shellResults.val === "none" && currentExample.defaultShellResult) s.shellResults.val = currentExample.defaultShellResult;
+  }
+  try { setTimeout(ajustarResultadosAlModelo, 60); } catch { /* no-op */ }
+}
+
 function filterShellResultOptions(allowed?: string[]) {
   // ⚠️ YA NO SE RECORTA NADA. Cada ejemplo traía su propia lista `availableShellResults`
   // —87 ejemplos, 87 listas distintas— y el desplegable salía diferente en cada uno: en
@@ -1822,6 +1850,7 @@ function rebuild() {
   // SELLO: el modelo ya esta armado y el ejemplo dejo sus resultados. Todo lo
   // que llegue DESPUES con un sello viejo, el visor lo tira.
   sellarSalidas(nuevoSello(), states.deformOutputs.rawVal, states.analyzeOutputs.rawVal);
+  campoSegunElModelo();
 
   // ── Active Case dispatcher ──
   // Tras el build() estático, si el case activo es Modal-* y el ejemplo
