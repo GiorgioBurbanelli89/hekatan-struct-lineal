@@ -7035,7 +7035,9 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       stepDiv.appendChild(text);
       guideContainer.appendChild(stepDiv);
     });
-    fGuide.element.appendChild(guideContainer);
+    // DENTRO del contenido de la carpeta: colgados de la carpeta misma, los pasos se quedaban a la
+    // vista con la carpeta plegada (28-sep-2026)
+    (fGuide.element.querySelector(".tp-fldv_c") ?? fGuide.element).appendChild(guideContainer);
   }
 
   // ── Folder "📊 Calculados" (read-only) — valores derivados del build actual ──
