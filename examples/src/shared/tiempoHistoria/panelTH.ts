@@ -11,6 +11,7 @@
  */
 import type { State } from "vanjs-core";
 import { timeHistoryAnalysis, modalAnalysis, type THResultado } from "hekatan-fem";
+import { EL_CENTRO_1940_NS } from "./registrosMuestra";
 import { getSharedChartPanel } from "../chartPanel";
 import { leerAcelerograma, pulso, pico, G, type Acel } from "./acelerograma";
 import { modelDiagonal } from "../modeScale";
@@ -43,8 +44,8 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
 
   f.addBinding(p, "metodo", { label: "Método", options: { "Modal (exacto por modo)": 0, "Directa (HHT / Newmark)": 1 } });
   f.addBinding(p, "dir", { label: "Dirección", options: { X: 0, Y: 1, Z: 2 } });
-  f.addBinding(p, "registro", { label: "Registro", options: { "Pulso de medio seno": 0, "Archivo (RENAC o t, a)": 1 } })
-    .on("change", () => { if (p.registro === 1) abrirArchivo(); else rehacerPulso(); });
+  f.addBinding(p, "registro", { label: "Registro", options: { "Pulso de medio seno": 0, "Archivo (RENAC o t, a)": 1, "El Centro 1940 N-S (muestra)": 2 } })
+    .on("change", () => { if (p.registro === 1) abrirArchivo(); else if (p.registro === 2) cargarElCentro(); else rehacerPulso(); });
   const fPulso = f.addFolder({ title: "Pulso", expanded: false });
   fPulso.addBinding(p, "ampG", { label: "amplitud (g)", min: 0.01, max: 2, step: 0.01 }).on("change", () => rehacerPulso());
   fPulso.addBinding(p, "dur", { label: "duración (s)", min: 0.05, max: 5, step: 0.05 }).on("change", () => rehacerPulso());
@@ -71,6 +72,17 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
       cargarTexto(await fl.text(), fl.name);
     };
     inp.click();
+  }
+  /** El Centro 1940 N-S incluido en la app (registro público de PEER), para el curso y los enlaces. */
+  function cargarElCentro() {
+    const pares: number[] = [];
+    EL_CENTRO_1940_NS.g.forEach((a, i) => pares.push(+(i * EL_CENTRO_1940_NS.dt).toFixed(4), a * G));
+    acel = { pares, dt: EL_CENTRO_1940_NS.dt, fuente: "El Centro 1940 N-S (PEER) · 1559 puntos cada 0.02 s" };
+    p.dt = EL_CENTRO_1940_NS.dt;
+    const pk = pico(acel);
+    p.info = `${acel.fuente}
+PGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s`;
+    f.refresh();
   }
   /** La lectura del archivo, separada del diálogo (el botón la usa; y los ensayos sin ratón). */
   function cargarTexto(texto: string, nombre = "archivo") {
@@ -218,5 +230,16 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     raf = requestAnimationFrame(tick);
   }
   p.info = acel.fuente;
+  // ENLACE con el tiempo-historia ya configurado (Jorge, 30-sep): ?th=elcentro&the=<escala>&thx=<ξ %>&thn=<modos>&thm=<0 modal|1 directa>&thd=<0 X|1 Y>&thr=1 (correr)
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("th")) {
+      const num = (k: string, d: number) => (q.get(k) !== null && isFinite(+q.get(k)!) ? +q.get(k)! : d);
+      p.metodo = num("thm", 0); p.dir = num("thd", 0); p.escala = num("the", 1); p.xi = num("thx", 5); p.nModos = num("thn", 12);
+      if (q.get("th") === "elcentro") { p.registro = 2; cargarElCentro(); }
+      f.expanded = true; f.refresh();
+      if (q.get("thr") === "1") setTimeout(() => correr(), 1500);
+    }
+  } catch { /* enlace sin tiempo-historia */ }
   return { correr, animar, parar, resultado: () => ultimo, cargarTexto, params: p, refrescar: () => f.refresh() };
 }
