@@ -274,6 +274,8 @@ ETABS en la sonda del 8-sep (`validation/isse/ETABS_DEFECTOS_QUE_ANADE.md`): vig
   vertical, viga = < 20° de la horizontal; medidas de los tokens D B / perfiles, o el rectángulo
   equivalente de A e I). `rigidzone off` manda sobre `auto`.
 - Tests: `node tests/run.mjs brazos-automaticos` (7 filas), `node cli/ctl_brazos_rz.mjs [--base]` (app).
+- Modelo nuevo (dibujado): «Brazos rígidos» Ninguno (SAP2000, defecto) / ETABS + RZ; el `.heks` guarda los
+  `endoffset`. Pórtico dibujado con RZ 1 vs SAP2000 0.00009 % (`cli/ctl_brazos_newblank.mjs`).
 - La LEY contra SAP2000 (juez) y ETABS: `brazos-portico` 57/57 a 0.000 % (29-sep, `brazos_portico_sap2000.json`).
 - Edificio entero (29-sep): las 8 plantillas + pórtico 3D con RZ 0.5, **SAP2000 (juez) y luego ETABS**: estático
   0.0000 % nudo a nudo y periodos a 4 decimales (`validation/brazos-rigidos/plantillas_rz/v2`). Dual modo 3 en SAP
