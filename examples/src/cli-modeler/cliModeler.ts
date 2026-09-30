@@ -52,6 +52,7 @@
  *   load 2 0 0 -100
  *   solve
  */
+import { placaAT } from "hekatan-fem";
 import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
@@ -778,8 +779,11 @@ export function parseCliCommands(text: string): ParsedModel {
           // «Membrane» de los exportadores y en el solver es el MITC4 (data-model.ts).
           else if (q === "dkmq" || q === "3") v = 3;
           else if (q === "wilson" || q === "dse" || q === "4") v = 4;
+          // 5 = Auricchio & Taylor (1994), CMAME 118: w ligado a los giros, burbujas, cortante mixto
+          // (transcrita de FEAPpv, plate2d.f). Su carga de área consistente lleva momentos (ver abajo).
+          else if (q === "auricchio" || q === "at" || q === "auricchio-taylor" || q === "5") v = 5;
           if (v === undefined) {
-            m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq o wilson`);
+            m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq, wilson o auricchio`);
             break;
           }
           m.shellTypes.set(id, v);
@@ -1681,6 +1685,29 @@ export const cliModeler: ExampleDef = {
                     a[0] * b[1] - a[1] * b[0]];
         const detJ = Math.hypot(cr[0], cr[1], cr[2]);   // area diferencial real
         for (let i = 0; i < 4; i++) f[i] += N[i] * q * detJ;
+      }
+      // Auricchio-Taylor (shelltype 5): el w está LIGADO a los giros, y su carga consistente lleva
+      // además MOMENTOS en los nudos (FEAPpv plate2q). Se calculan en un sistema del plano del paño
+      // (e1, e2, n con los nudos antihorarios) con la componente normal de la carga, y se pasan a
+      // globales como M = Mx·e1 + My·e2. Sin ellos la placa sale 2-3 % más flexible (29-sep-2026).
+      const esAT = m.shellTypes.get(s.id) === 5;
+      if (esAT) {
+        const d1 = [0, 1, 2].map((c) => P[2][c] - P[0][c]), d2 = [0, 1, 2].map((c) => P[3][c] - P[1][c]);
+        let n = [d1[1] * d2[2] - d1[2] * d2[1], d1[2] * d2[0] - d1[0] * d2[2], d1[0] * d2[1] - d1[1] * d2[0]];
+        const nl = Math.hypot(n[0], n[1], n[2]); n = n.map((v) => v / nl);
+        let e1 = [0, 1, 2].map((c) => P[1][c] - P[0][c]); const e1n = e1.reduce((z, v, c) => z + v * n[c], 0);
+        e1 = e1.map((v, c) => v - e1n * n[c]); const l1 = Math.hypot(e1[0], e1[1], e1[2]); e1 = e1.map((v) => v / l1);
+        const e2 = [n[1] * e1[2] - n[2] * e1[1], n[2] * e1[0] - n[0] * e1[2], n[0] * e1[1] - n[1] * e1[0]];
+        const xl = P.map((p) => [0, 1, 2].reduce((z, c) => z + (p[c] - P[0][c]) * e1[c], 0));
+        const yl = P.map((p) => [0, 1, 2].reduce((z, c) => z + (p[c] - P[0][c]) * e2[c], 0));
+        const Fat = placaAT(xl, yl, 1, 0.2, 1, q * n[2]).F;   // la carga no depende de E, ν ni t
+        for (let i = 0; i < 4; i++) {
+          const k = idx[i] as number;
+          const prev = loads.get(k) ?? [0, 0, 0, 0, 0, 0];
+          const Mx = Fat[3 * i + 1], My = Fat[3 * i + 2];
+          for (let c = 0; c < 3; c++) prev[3 + c] += Mx * e1[c] + My * e2[c];
+          loads.set(k, prev as [number,number,number,number,number,number]);
+        }
       }
       for (let i = 0; i < 4; i++) {
         const k = idx[i] as number;

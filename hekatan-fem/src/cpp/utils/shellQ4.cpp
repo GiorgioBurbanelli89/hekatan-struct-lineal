@@ -1550,6 +1550,97 @@ static Eigen::MatrixXd getBendingK_DSE_FULL(const double x[4], const double y[4]
 #define HK_BENDING_FORMULATION 3
 #endif
 
+// ============================================================================
+// Placa de AURICCHIO & TAYLOR (1994), «A shear deformable plate element with an exact thin limit»,
+// CMAME 118, 393-412 — transcrita de FEAPpv (código abierto de R. L. Taylor, elements/shells/plate2d.f:
+// plate2q, shpspq, geompq, bmatpq). Espejo de hekatan-fem/src/utils/placaAT.ts (TS = Python a 1e-16).
+// GDL por nudo [w, θx, θy]; w LIGADO a los giros (funciones de lado M_i); 4 burbujas en los giros;
+// cortante MIXTO de 4 parámetros; Gauss 3×3; condensación: burbujas, luego cortante.
+// La carga de área consistente (con momentos por el w ligado) la pone el que arma las cargas (cliModeler).
+// ============================================================================
+static Eigen::MatrixXd getBendingK_AT(const double x[4], const double y[4],
+                                      double E, double nu, double t, const double *mod = nullptr)
+{
+    const double kappa = 5.0 / 6.0;
+    double D0 = E * t * t * t / (12.0 * (1.0 - nu * nu));
+    Eigen::Matrix3d Db;
+    Db << D0, D0 * nu, 0, D0 * nu, D0, 0, 0, 0, D0 * (1 - nu) / 2.0;
+    double Gs0 = kappa * E / (2.0 * (1.0 + nu)) * t, Gs1 = Gs0;
+    if (mod) {
+        Db(0, 0) *= mod[3]; Db(1, 1) *= mod[4]; Db(2, 2) *= mod[5];
+        double c = std::sqrt(std::max(0.0, mod[3] * mod[4])); Db(0, 1) *= c; Db(1, 0) *= c;
+        Gs0 *= mod[6]; Gs1 *= mod[7];
+    }
+    double co[4], si[4];
+    for (int i = 0; i < 4; i++) { int j = (i + 1) % 4; co[i] = -y[i] + y[j]; si[i] = x[i] - x[j]; }
+    double j0[2][2] = {{0.25 * (-x[0] + x[1] + x[2] - x[3]), 0.25 * (-y[0] + y[1] + y[2] - y[3])},
+                       {0.25 * (-x[0] - x[1] + x[2] + x[3]), 0.25 * (-y[0] - y[1] + y[2] + y[3])}};
+    const double g3 = std::sqrt(0.6);
+    const double gp[3] = {-g3, 0.0, g3}, gw[3] = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
+    Eigen::MatrixXd Ktt = Eigen::MatrixXd::Zero(12, 12), Kbt = Eigen::MatrixXd::Zero(4, 12),
+                    Kbb = Eigen::MatrixXd::Zero(4, 4), Kss = Eigen::MatrixXd::Zero(4, 4),
+                    Ks = Eigen::MatrixXd::Zero(4, 12);
+    const double dj1 = (x[0] - x[1] + x[2] - x[3]) * 0.25, dj2 = (y[0] - y[1] + y[2] - y[3]) * 0.25;
+    const double aa = j0[0][0] * dj2 - j0[0][1] * dj1, bb = j0[1][1] * dj1 - j0[1][0] * dj2;
+    for (int a1 = 0; a1 < 3; a1++) for (int a2 = 0; a2 < 3; a2++) {
+        const double xi = gp[a1], eta = gp[a2];
+        const double xp = 1 + xi, xm = 1 - xi, ep = 1 + eta, em = 1 - eta, xi2 = xp * xm, eta2 = ep * em;
+        const double N[4] = {0.25 * xm * em, 0.25 * xp * em, 0.25 * xp * ep, 0.25 * xm * ep};
+        const double dxi[4] = {-0.25 * em, 0.25 * em, 0.25 * ep, -0.25 * ep};
+        const double deta[4] = {-0.25 * xm, -0.25 * xp, 0.25 * xp, 0.25 * xm};
+        double J[2][2] = {{0, 0}, {0, 0}};
+        for (int k = 0; k < 4; k++) { J[0][0] += dxi[k] * x[k]; J[0][1] += dxi[k] * y[k]; J[1][0] += deta[k] * x[k]; J[1][1] += deta[k] * y[k]; }
+        double xsj = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+        const double Ji[2][2] = {{J[1][1] / xsj, -J[0][1] / xsj}, {-J[1][0] / xsj, J[0][0] / xsj}};
+        xsj = std::abs(xsj);
+        const double shpn[3] = {-2 * xi * eta2, -2 * eta * xi2, xi2 * eta2};
+        const double Mxi[4] = {-xi * em * 0.125, eta2 * 0.0625, -xi * ep * 0.125, -eta2 * 0.0625};
+        const double Meta[4] = {-xi2 * 0.0625, -eta * xp * 0.125, xi2 * 0.0625, -eta * xm * 0.125};
+        double b1[4], b2[4], f1[4], f2[4];
+        for (int i = 0; i < 4; i++) {
+            b1[i] = Ji[0][0] * dxi[i] + Ji[0][1] * deta[i]; b2[i] = Ji[1][0] * dxi[i] + Ji[1][1] * deta[i];
+            f1[i] = Ji[0][0] * Mxi[i] + Ji[0][1] * Meta[i]; f2[i] = Ji[1][0] * Mxi[i] + Ji[1][1] * Meta[i];
+        }
+        const double Nj = shpn[2] / xsj;
+        const double Nj_xi = (shpn[0] * xsj - shpn[2] * aa) / (xsj * xsj), Nj_eta = (shpn[1] * xsj - shpn[2] * bb) / (xsj * xsj);
+        const double Nj_x = Ji[0][0] * Nj_xi + Ji[0][1] * Nj_eta, Nj_y = Ji[1][0] * Nj_xi + Ji[1][1] * Nj_eta;
+        const double xiNj_xi = Nj + xi * Nj_xi, xiNj_eta = xi * Nj_eta, etaNj_xi = eta * Nj_xi, etaNj_eta = Nj + eta * Nj_eta;
+        const double xiNj_x = Ji[0][0] * xiNj_xi + Ji[0][1] * xiNj_eta, xiNj_y = Ji[1][0] * xiNj_xi + Ji[1][1] * xiNj_eta;
+        const double etaNj_x = Ji[0][0] * etaNj_xi + Ji[0][1] * etaNj_eta, etaNj_y = Ji[1][0] * etaNj_xi + Ji[1][1] * etaNj_eta;
+        const double ax = etaNj_x * j0[1][0], ay = etaNj_y * j0[1][0], bx = -xiNj_x * j0[0][0], by = -xiNj_y * j0[0][0];
+        const double cx = etaNj_x * j0[1][1], cy = etaNj_y * j0[1][1], dx = -xiNj_x * j0[0][1], dy = -xiNj_y * j0[0][1];
+        Eigen::MatrixXd Bt = Eigen::MatrixXd::Zero(3, 12), Bs = Eigen::MatrixXd::Zero(2, 12), Bb(3, 4), Ns(2, 4);
+        for (int i = 0; i < 4; i++) {
+            Bs(0, 3 * i) = b1[i]; Bs(1, 3 * i) = b2[i];
+            Bt(0, 3 * i + 2) = b1[i]; Bt(1, 3 * i + 1) = -b2[i]; Bt(2, 3 * i + 1) = -b1[i]; Bt(2, 3 * i + 2) = b2[i];
+            const int c = (i + 3) % 4;
+            Bs(0, 3 * i + 1) += f1[i] * co[i] - f1[c] * co[c];
+            Bs(0, 3 * i + 2) += N[i] + f1[i] * si[i] - f1[c] * si[c];
+            Bs(1, 3 * i + 1) += -N[i] + f2[i] * co[i] - f2[c] * co[c];
+            Bs(1, 3 * i + 2) += f2[i] * si[i] - f2[c] * si[c];
+        }
+        Bb << j0[1][1] * Nj_x, -j0[0][1] * Nj_x, cx, dx,
+              -j0[1][0] * Nj_y, j0[0][0] * Nj_y, -ay, -by,
+              -j0[1][0] * Nj_x + j0[1][1] * Nj_y, j0[0][0] * Nj_x - j0[0][1] * Nj_y, -ax + cy, -bx + dy;
+        Ns << j0[0][0], j0[1][0], j0[0][0] * eta, j0[1][0] * xi,
+              j0[0][1], j0[1][1], j0[0][1] * eta, j0[1][1] * xi;
+        const double dA = xsj * gw[a1] * gw[a2];
+        Ktt += Bt.transpose() * Db * Bt * dA;
+        Kbt += Bb.transpose() * Db * Bt * dA;
+        Kbb += Bb.transpose() * Db * Bb * dA;
+        Ks  += Ns.transpose() * Bs * dA;
+        Eigen::Matrix2d Dsi; Dsi << 1.0 / Gs0, 0, 0, 1.0 / Gs1;
+        Kss -= Ns.transpose() * Dsi * Ns * dA;
+    }
+    const double dJ0 = j0[0][0] * j0[1][1] - j0[0][1] * j0[1][0];
+    Eigen::Vector4d kbs(1.0, 1.0, 0.2, 0.2); kbs *= 16.0 / 9.0 * dJ0;
+    const Eigen::MatrixXd Kbbi = Kbb.inverse();
+    const Eigen::MatrixXd app1 = Kbbi * Kbt;
+    const Eigen::MatrixXd Kss2 = Kss - kbs.asDiagonal() * Kbbi * kbs.asDiagonal();
+    const Eigen::MatrixXd Ks2 = Ks - kbs.asDiagonal() * app1;
+    return Ktt - Kbt.transpose() * app1 - Ks2.transpose() * Kss2.inverse() * Ks2;
+}
+
 // ─── Public: Combined Shell Q4 stiffness 24×24 ─────────────────────────────
 Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     const std::vector<Node> &nodes,
@@ -1791,6 +1882,9 @@ Eigen::MatrixXd getLocalStiffnessMatrixShellQ4(
     Eigen::MatrixXd Kb;
     if (sinFlexion) {
         Kb = Eigen::MatrixXd::Zero(12, 12);
+    } else if (plateForm == 5) {
+        // Auricchio & Taylor (1994), desde FEAPpv (ver getBendingK_AT)
+        Kb = getBendingK_AT(x, y, E, nu, t, dmod);
     } else if (plateForm == 4) {
         // Wilson DSE completo (cap. 8): cortante discreto de lado + corrección
         // de patch test (8.17) + condensación estática (8.18-8.19).

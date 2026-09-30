@@ -77,3 +77,4 @@ export { getTransformationMatrix } from "./utils/getTransformationMatrix";
 
 export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
 export type { KPano } from "./utils/shellElementK";
+export { placaAT, atJointMoments } from "./utils/placaAT";

@@ -8,6 +8,7 @@ import {
 } from "./data-model";
 import { mitc4JointMoments } from "./utils/mitc4Joints";
 import { dkqJointMoments } from "./utils/dkqJoints";
+import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
 import {
@@ -605,8 +606,11 @@ function computeQ4ShellStresses(
       // directamente en las esquinas el M12 de los elementos de esquina se iba
       // un 26 %: CSI extrapola desde Gauss, no evalua en el nudo.
       const modoDKQ = (globalThis as any).__hekatanDkqJoints ?? "gauss";
-      Mj = (esPlacaGruesa ? mitc4JointMoments(xl, yl, u12, E, nu, t)
-                          : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
+      // 5 = Auricchio-Taylor: su propio campo (burbujas y cortante recuperados, strepq de FEAPpv)
+      const pf = (elementInputs as any)?.plateFormulations?.get(elemIdx) ?? 0;
+      Mj = (pf === 5 ? atJointMoments(xl, yl, u12, E, nu, t)
+            : esPlacaGruesa ? mitc4JointMoments(xl, yl, u12, E, nu, t)
+                            : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
              .map((m) => m.map((v) => SIGNO_CSI * v));
       if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
     } catch { Mj = null; }

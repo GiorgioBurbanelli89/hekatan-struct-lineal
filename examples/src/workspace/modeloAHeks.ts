@@ -163,9 +163,9 @@ export function modeloAHeks(states: any, opts: OpcionesHeks = {}): string {
       "se guardan como `thick`,",
       "#    que es lo que el solver ya calculaba; al exportar a CSI saldrán Shell-Thick, no Membrane.");
     const palabra = (f: number | undefined) =>
-      f === 1 ? "thin" : f === 3 ? "dkmq" : f === 4 ? "wilson" : "thick";
+      f === 1 ? "thin" : f === 3 ? "dkmq" : f === 4 ? "wilson" : f === 5 ? "auricchio" : "thick";
     if (conTipo.length) {
-      L.push("# formulación de placa: shelltype id thin|thick|dkmq|wilson");
+      L.push("# formulación de placa: shelltype id thin|thick|dkmq|wilson|auricchio");
       for (const e of conTipo) L.push(`shelltype ${e + 1} ${palabra(g(ei.plateFormulations, e))}`);
     }
     // El tipo de DRILLING tampoco tiene orden en el `.heks` (el lector usa el suyo). Medido en
