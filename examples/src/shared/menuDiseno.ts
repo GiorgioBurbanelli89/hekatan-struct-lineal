@@ -230,7 +230,8 @@ async function compartir(btn: HTMLElement): Promise<void> {
     "border:1px solid #22c55e;border-radius:6px;font:12px sans-serif;padding:8px 10px;box-shadow:0 6px 18px rgba(0,0,0,.45)";
   const txt = !r.url ? `No se pudo crear el enlace (${r.tipo}).`
     : (copiado ? "✓ Enlace copiado" : "Copia el enlace") +
-      (r.tipo === "modelo" ? " — lleva el modelo dentro: quien lo abra lo ve y lo calcula en su navegador." : " — abre este ejemplo con los mismos parámetros.");
+      (r.tipo === "modelo" ? " — lleva el modelo dentro: quien lo abra lo ve y lo calcula en su navegador." : " — abre este ejemplo con los mismos parámetros.") +
+      (/[?&]th=/.test(r.url) ? " Incluye el tiempo-historia" + (/[?&]thk=/.test(r.url) ? " y tu registro sísmico (guardado en línea): no hace falta el archivo." : ".") : "");
   a.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><b style="color:${r.url ? "#22c55e" : "#f87171"}">${txt}</b>` +
     `<button data-x style="margin-left:auto;background:transparent;color:#9aa;border:0;cursor:pointer;font-size:14px">✕</button></div>` +
     (r.url ? `<input readonly style="width:100%;margin-top:6px;box-sizing:border-box;background:#11161d;color:#cfe;border:1px solid #334;border-radius:4px;padding:4px;font:11px Consolas,monospace">` : "");
