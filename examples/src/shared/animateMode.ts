@@ -187,6 +187,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
 
   function stopInternal(restore: boolean) {
     if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    { const stA = getSettings(); if (stA) stA.__modoAnim = null; }
     if (restore) {
       // Restaurar deformedShape al valor que tenía el usuario antes de animar.
       const st = getSettings();
@@ -289,6 +290,11 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
           o[2] + (shape[i * 6 + 2] || 0) * amp,
         ];
       }
+      // La foto sin deformar + el modo (6 GDL) + la amplitud de ESTE cuadro, ANTES de mover los nudos:
+      // con eso el visor dibuja las barras CURVAS del modo (elements.ts) y los tests miden lo dibujado
+      // (tests/lib/visor_modal.mjs). El lector se añadió el 18-sep-2026 (6ddc1f37e) pero esta escritura
+      // no llegó a guardarse: la animación de las barras salía recta y el test «no anima» (29-sep-2026).
+      const stA = getSettings(); if (stA) stA.__modoAnim = { orig: originalNodes, shape, amp };
       mesh.nodes.val = newNodes;
       // Forzar render inmediato (bypass debounce reactivo de van.derive)
       getCtx()?.render();

@@ -26,7 +26,7 @@ import * as THREE from "three";
 import { ecHormigonACI } from "../shared/materials";
 import { rangoSoloLosas, cortarPorYCero } from "./comunPlacaBase";
 
-const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 78;
+const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 7.85;   // MASA del acero en t/m³ (kN·s²/m⁴). Iba 78 = su PESO en kN/m³: 10 veces de más (29-sep-2026)
 const Fy_steel = 250000, fut_anchor = 600000;
 
 /** Separación visible entre la placa y el pedestal. */

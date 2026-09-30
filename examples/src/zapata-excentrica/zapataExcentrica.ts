@@ -222,7 +222,7 @@ const F = (folder: string, label: string, def: number, min: number, max: number,
 export const zapataExcentrica: ExampleDef = {
   id: "zapata-excentrica",
   name: "Levantamiento de zapatas (suelo sin tracción) · Das ej. 6.10, p. 247",
-  category: "4️⃣ Mixtos · 🧰 Cimentaciones",
+  category: "2️⃣ Shells · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
   availableShellResults: [
     "none", "pressure",
@@ -364,7 +364,7 @@ export function paramsDePlantilla(pr: Record<string, number>): ParamsZapataExc &
 export const zapataLevantamientoPlantilla: ExampleDef = {
   id: "zapata-levantamiento",
   name: "Zapata con levantamiento (suelo sin tracción) · cimentación no lineal por contacto · Footing with uplift (tensionless soil)",
-  category: "4️⃣ Mixtos · 🧰 Cimentaciones",
+  category: "2️⃣ Shells · 🧰 Cimentaciones",
   defaultShellResult: "pressure",
   availableShellResults: ["pressure", "displacementZ", "bendingXX", "bendingYY"],
   params: {

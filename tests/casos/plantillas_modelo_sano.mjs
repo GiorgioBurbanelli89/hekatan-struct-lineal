@@ -150,7 +150,10 @@ export async function correr() {
   });
 
   // ── 1 · la carga: es una SUMA EXACTA, no una aproximación ────────────────
-  for (const x of r.filter((y) => !y.err)) {
+  // Solo las plantillas de EDIFICIO se cargan por area (q·A por piso). Las de CIMENTACION (añadidas
+  // despues) llevan cargas de COLUMNA: ahi q·A no es la carga y la fila salia roja sin serlo (29-sep-2026).
+  // Su equilibrio (suelo = carga) lo mide cli/barrido_162.mjs.
+  for (const x of r.filter((y) => !y.err && !/Cimentaci/i.test(y.nombre))) {
     const d = Math.abs(x.suma / x.debe - 1) * 100;
     filas.push({
       que: `${x.nombre} · Σ carga = q·A·pisos`,

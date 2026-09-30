@@ -33,7 +33,7 @@ import { ecHormigonACI } from "../shared/materials";
 const Es = 200e6;
 const nu_s = 0.3;
 const Gs = Es / (2 * (1 + nu_s));
-const rho_s = 78;
+const rho_s = 7.85;   // MASA del acero en t/m³ (kN·s²/m⁴). Iba 78 = su PESO en kN/m³: 10 veces de más (29-sep-2026)
 const Fy_s = 350000;  // 350 MPa, ASTM A500 Gr. C
 // Hormigón
 const nu_c = 0.20;

@@ -52,6 +52,8 @@
  *   load 2 0 0 -100
  *   solve
  */
+import { recta, arcoPor3Puntos, polilinea, longitudCurva, transfinita, type Curva } from "./transfinito";
+import { pavimentar } from "./pavimentador";
 import { placaAT } from "hekatan-fem";
 import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import * as THREE from "three";
@@ -149,6 +151,14 @@ interface ParsedModel {
    *  Hekatan resuelve la malla que se le da: si un `.e2k` de ETABS trae la losa como UN pano,
    *  ETABS la parte y Hekatan no, y no son el mismo modelo. Con la directiva si lo son. */
   autoMesh: number;
+  /** `automesh <tam> noinclinados`: los paños inclinados NO se mallan (regla de ETABS, medida en su binario) */
+  autoMeshNoInclinados: boolean;
+  /** `arco nI nJ X Y Z` / `borde nI nJ k1 [k2 ...]`: el borde nI-nJ de un paño es curvo (clave "nI-nJ") */
+  bordesCurvos: Map<string, { arco?: [number, number, number]; nudos?: number[] }>;
+  /** `area ID t E n1 n2 ... nk`: paño POLIGONAL (L, hueco, lados oblicuos) que se pavimenta al mallar */
+  areasPoligonales: Array<{ id: number; t: number; E: number; pts: number[]; huecos: number[][] }>;
+  /** `apoyoborde <areaID> <DOFs>`: apoya cada nudo que caiga sobre el contorno del `area`, tras mallar */
+  apoyosBorde: Array<{ area: number; spec: string }>;
   /** `torsion safe` (= 0.1) o `torsion <factor>`: multiplica la J de TODAS las barras. SAFE 20
    *  analiza las vigas con 0.1·J (medido el 5-sep-2026: Hekatan con J×0.1 = giros de SAFE a
    *  4 cifras). Con la directiva, Hekatan reproduce a SAFE; sin ella = SAP2000/ETABS. */
@@ -288,6 +298,10 @@ export function parseCliCommands(text: string): ParsedModel {
     torsionFactor: 1,
     deckTributario: new Set(),
     autoMesh: 0,
+    autoMeshNoInclinados: false,
+    bordesCurvos: new Map(),
+    areasPoligonales: [],
+    apoyosBorde: [],
     areaSprings: [],
     combos: [],
     edgeEtabs: false,
@@ -641,6 +655,46 @@ export function parseCliCommands(text: string): ParsedModel {
           if (v === "off" || v === "no" || v === "0") { m.autoMesh = 0; break; }
           const f = parseFloat(v);
           m.autoMesh = isFinite(f) && f > 0 ? f : 1.25;
+          if (tokens.slice(2).some((t) => /^(noinclinados|noinclined)$/i.test(t))) m.autoMeshNoInclinados = true;
+          break;
+        }
+        // arco nI nJ X Y Z : el borde nI-nJ es el arco circular que pasa por (X,Y,Z) (interpolación transfinita)
+        case "arco": {
+          const a = parseInt(tokens[1], 10), b = parseInt(tokens[2], 10);
+          const M = [3, 4, 5].map((k) => parseFloat(tokens[k])) as [number, number, number];
+          if (!isFinite(a) || !isFinite(b) || M.some((x) => !isFinite(x))) { m.errors.push("arco: uso arco nI nJ X Y Z"); break; }
+          m.bordesCurvos.set(a + "-" + b, { arco: M });
+          break;
+        }
+        // borde nI nJ k1 [k2 ...] : el borde nI-nJ pasa por esos nudos ya existentes (polilínea del CAD)
+        case "borde": {
+          const ids = tokens.slice(1).map((t) => parseInt(t, 10)).filter((x) => isFinite(x));
+          if (ids.length < 3) { m.errors.push("borde: uso borde nI nJ k1 [k2 ...]"); break; }
+          m.bordesCurvos.set(ids[0] + "-" + ids[1], { nudos: ids.slice(2) });
+          break;
+        }
+        // area ID t E n1 n2 ... nk : paño poligonal (se pavimenta en cuadriláteros al mallar)
+        case "area": {
+          const id = parseInt(tokens[1], 10), t = parseFloat(tokens[2]), E = parseFloat(tokens[3]);
+          const pts = tokens.slice(4).map((x) => parseInt(x, 10)).filter((x) => isFinite(x));
+          if (!isFinite(id) || !(t > 0) || !(E > 0) || pts.length < 3) { m.errors.push("area: uso area ID t E n1 n2 n3 [...]"); break; }
+          m.areasPoligonales.push({ id, t, E, pts, huecos: [] });
+          break;
+        }
+        // hueco areaID n1 n2 ... : hueco del `area`
+        case "hueco": {
+          const id = parseInt(tokens[1], 10);
+          const pts = tokens.slice(2).map((x) => parseInt(x, 10)).filter((x) => isFinite(x));
+          const ar = m.areasPoligonales.find((q) => q.id === id);
+          if (!ar || pts.length < 3) { m.errors.push("hueco: uso hueco areaID n1 n2 n3 [...] (el area va antes)"); break; }
+          ar.huecos.push(pts);
+          break;
+        }
+        // apoyoborde areaID DOFs : apoya cada nudo del contorno del `area`, después de mallar
+        case "apoyoborde": {
+          const id = parseInt(tokens[1], 10);
+          if (!isFinite(id)) { m.errors.push("apoyoborde: uso apoyoborde areaID DOFs"); break; }
+          m.apoyosBorde.push({ area: id, spec: tokens.slice(2).join(" ") || "pinned" });
           break;
         }
         case "meshcross":
@@ -1083,17 +1137,54 @@ function aplicarAutomesh(m: ParsedModel, tam: number) {
   };
   const nuevos: typeof m.shells = [];
   let partidos = 0;
+  // ── paños POLIGONALES (`area` + `hueco`): pavimentador (rejilla rectilínea, o Delaunay + Catmull-Clark) ──
+  for (const ar of m.areasPoligonales) {
+    const con = ar.pts.map(P), hue = ar.huecos.map((h) => h.map(P));
+    if (con.some((q) => !q) || hue.some((h) => h.some((q) => !q))) { m.errors.push("area " + ar.id + ": algún nudo inexistente"); continue; }
+    const malla = pavimentar({ contorno: con as V3[], huecos: hue as V3[][] }, tam);
+    const ids = malla.nudos.map((q) => nudoEn(q as V3));
+    malla.celdas.forEach((c, k) => {
+      const id = k === 0 ? ar.id : nextShell++;
+      nuevos.push({ id, pts: c.map((i) => ids[i]), t: ar.t, E: ar.E });
+      if (id !== ar.id) hereda(ar.id, id);
+    });
+    partidos++;
+    console.log("[CLI Modeler] area " + ar.id + ": " + malla.celdas.length + " cascaras (" + malla.metodo + ")");
+  }
+  // borde curvo declarado (`arco`/`borde`) entre dos nudos, recorrido de a -> b (o null)
+  const curvaBorde = (a: number, b: number): Curva | null => {
+    const dir = m.bordesCurvos.get(a + "-" + b), inv = m.bordesCurvos.get(b + "-" + a);
+    const hacer = (d: { arco?: [number, number, number]; nudos?: number[] }, x: number, y: number): Curva | null => {
+      if (d.arco) return arcoPor3Puntos(P(x), d.arco as V3, P(y));
+      if (d.nudos && d.nudos.every((k) => m.nodes.has(k))) return polilinea([P(x), ...d.nudos.map(P), P(y)]);
+      return null;
+    };
+    if (dir) return hacer(dir, a, b);
+    if (inv) { const c = hacer(inv, b, a); return c ? (t: number) => c(1 - t) : null; }
+    return null;
+  };
+  const esInclinado = (Q: V3[]) => {
+    const u = v3sub(Q[2], Q[0]), w = v3sub(Q[3], Q[1]);
+    const n: V3 = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    const nz = Math.abs(n[2] / v3norm(n)); return nz > 1e-6 && nz < 1 - 1e-6;
+  };
   for (const sh of m.shells) {
     if (sh.pts.length !== 4) { nuevos.push(sh); continue; }
     const Q = sh.pts.map(P) as [V3, V3, V3, V3];
     if (Q.some((q) => !q)) { nuevos.push(sh); continue; }
-    // lados medios: 0-1 y 3-2 son "u"; 0-3 y 1-2 son "v"
-    const Lu = (v3norm(v3sub(Q[1], Q[0])) + v3norm(v3sub(Q[2], Q[3]))) / 2;
-    const Lv = (v3norm(v3sub(Q[3], Q[0])) + v3norm(v3sub(Q[2], Q[1]))) / 2;
+    if (m.autoMeshNoInclinados && esInclinado(Q)) { nuevos.push(sh); continue; }   // regla de ETABS
+    const [a, b, c, d] = sh.pts;
+    const cb = curvaBorde(a, b), dr = curvaBorde(b, c), ct = curvaBorde(d, c), dl = curvaBorde(a, d);
+    const hayCurva = !!(cb || dr || ct || dl);
+    const B = { Cb: cb ?? recta(Q[0], Q[1]), Dr: dr ?? recta(Q[1], Q[2]), Ct: ct ?? recta(Q[3], Q[2]), Dl: dl ?? recta(Q[0], Q[3]) };
+    // lados medios: 0-1 y 3-2 son "u"; 0-3 y 1-2 son "v" (con borde curvo, la longitud REAL del borde)
+    const Lu = hayCurva ? (longitudCurva(B.Cb) + longitudCurva(B.Ct)) / 2 : (v3norm(v3sub(Q[1], Q[0])) + v3norm(v3sub(Q[2], Q[3]))) / 2;
+    const Lv = hayCurva ? (longitudCurva(B.Dl) + longitudCurva(B.Dr)) / 2 : (v3norm(v3sub(Q[3], Q[0])) + v3norm(v3sub(Q[2], Q[1]))) / 2;
     const nu = Math.max(1, Math.ceil(Lu / tam - 1e-9));
     const nv = Math.max(1, Math.ceil(Lv / tam - 1e-9));
     if (nu === 1 && nv === 1) { nuevos.push(sh); continue; }
-    const punto = (u: number, v: number): V3 => [0, 1, 2].map((k) =>
+    // sin bordes curvos, la BILINEAL (= transfinita de bordes rectos, y bit a bit la malla de siempre)
+    const punto = (u: number, v: number): V3 => hayCurva ? transfinita(B, Q, u, v) as V3 : [0, 1, 2].map((k) =>
       Q[0][k] * (1 - u) * (1 - v) + Q[1][k] * u * (1 - v) + Q[2][k] * u * v + Q[3][k] * (1 - u) * v) as V3;
     const rej: number[][] = [];
     for (let i = 0; i <= nu; i++) {
@@ -1109,9 +1200,25 @@ function aplicarAutomesh(m: ParsedModel, tam: number) {
       }
     partidos++;
   }
-  if (partidos) {
+  if (partidos || m.areasPoligonales.length) {
     m.shells = nuevos;
     console.log(`[CLI Modeler] automesh ${tam} m: ${partidos} pano(s) partido(s) -> ${m.shells.length} cascaras, ${m.nodes.size} nudos`);
+  }
+  // `apoyoborde`: cada nudo que cae sobre un lado del contorno del `area` (sin pisar un `support` ya puesto)
+  for (const ab of m.apoyosBorde) {
+    const ar = m.areasPoligonales.find((q) => q.id === ab.area);
+    if (!ar) { m.errors.push("apoyoborde " + ab.area + ": no hay un area con ese id"); continue; }
+    const con = ar.pts.map(P);
+    for (const [id, q] of m.nodes) {
+      if (m.supports.has(id)) continue;
+      for (let i = 0; i < con.length; i++) {
+        const A = con[i], Bq = con[(i + 1) % con.length], AB = v3sub(Bq, A), L2 = AB[0] ** 2 + AB[1] ** 2 + AB[2] ** 2;
+        const t = Math.max(0, Math.min(1, ((q[0] - A[0]) * AB[0] + (q[1] - A[1]) * AB[1] + (q[2] - A[2]) * AB[2]) / L2));
+        if (v3norm(v3sub(q as V3, [A[0] + t * AB[0], A[1] + t * AB[1], A[2] + t * AB[2]])) < 1e-6) {
+          m.supports.set(id, parseSupportSpec(ab.spec)); break;
+        }
+      }
+    }
   }
 }
 
@@ -1287,7 +1394,7 @@ export const cliModeler: ExampleDef = {
     const script = (window as any).__hekatanCliScript ?? DEFAULT_SCRIPT;
     (window as any).__hekatanCliLastScript = script;
     const m = parseCliCommands(script);
-    if (m.autoMesh > 0) aplicarAutomesh(m, m.autoMesh);
+    if (m.autoMesh > 0 || m.areasPoligonales.length) aplicarAutomesh(m, m.autoMesh > 0 ? m.autoMesh : 1e9);
     if (m.deckEtabs) aplicarDeckEtabs(m);
 
     // Ordenar nodos por ID y asignar índices internos

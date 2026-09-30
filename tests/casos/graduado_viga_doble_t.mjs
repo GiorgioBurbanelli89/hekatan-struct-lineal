@@ -64,7 +64,7 @@ export async function correr() {
   const etiquetas = ex.computedLabels(params, states);
   const errPct = parseFloat(etiquetas["Δ vs E-B (%)"]);
   filas.push({
-    que: "δ FEM vs Euler-Bernoulli", medido: errPct, limite: 5, ok: errPct <= 5,
+    que: "δ FEM vs Timoshenko (misma sección de planos medios)", medido: errPct, limite: 5, ok: errPct <= 5,
     detalle: `δ_FEM=${etiquetas["δ punta FEM (m)"]} vs δ_analítica=${etiquetas["δ punta analítica (m)"]} — límite «PASA» de la página original`,
   });
 

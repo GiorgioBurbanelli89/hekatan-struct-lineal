@@ -90,6 +90,10 @@ const PARAMS_PARA_MEDIR = {
  */
 const COLGADOS_ADMITIDOS = {
   "estructura-mixta": 40,   // medido 36 (29-ago-2026), con el análisis encendido
+  // La PROYECCION del perno sobre la placa (placa -> tuerca, z = +L_proj): un voladizo corto SIN carga que
+  // solo sirve para dibujar el perno entero; no es un mecanismo ni cambia el cálculo (29-sep-2026).
+  "placa-base-h": 4, "placa-base-hueca": 4, "placa-base-cft": 4,   // 4 pernos
+  "bolt-hole-detail": 1,                                          // el perno pasante (mitad de arriba)
 };
 
 const FUENTE = `

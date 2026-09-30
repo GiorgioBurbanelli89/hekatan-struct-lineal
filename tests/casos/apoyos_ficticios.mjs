@@ -71,9 +71,12 @@ const PERMITIDOS = {
   // fichero que el de la categoria Drilling ITW). Son membranas PLANAS: el
   // fuera-de-plano no tiene rigidez propia y dejarlo suelto deja el sistema mal
   // condicionado. Aqui la atadura general si hace falta.
-  "itw-patch-test": "membrana plana: sin atar el fuera-de-plano el sistema queda mal condicionado",
-  "itw-cantilever": "membrana plana (idem)",
-  "itw-cook": "membrana plana (idem)",
+  // (29-sep-2026) itw-patch-test, itw-cantilever e itw-cook ya NO atan casi todo: fuera de la lista.
+
+  // Zapatas con suelo SOLO COMPRESION (ley Gap): el muelle de area es vertical y el suelo no sujeta el
+  // plano (ux, uy, rz); sin atarlo en cada nudo la matriz es singular. Es lo que hacen SAFE y SAP2000.
+  "zapata-excentrica": "zapata sobre muelles verticales: el plano (ux, uy, rz) se ata en todos los nudos",
+  "zapata-levantamiento": "zapata sobre muelles verticales (idem)",
 
   // Los de la categoria Drilling ITW. MISMO motivo: son membranas planas en el
   // plano X-Z. ⚠️ El hemisferio NO esta aqui — es una cascara curva y solo se

@@ -23,6 +23,9 @@ const EXCEPCIONES = {
   "benchmark-paz-10-7": "Paz: unidades kip-in del libro (validado contra ETABS)",
   "benchmark-paz-11-1": "Paz: unidades del libro", "benchmark-paz-12-1": "Paz: unidades del libro", "benchmark-paz-13-1": "Paz: unidades del libro",
   "benchmark-cft-cantilever": "CFT: densidad EQUIVALENTE (ρs·As + ρc·Ac)/A_tr",
+  "galpon-curvo": "columnas CFT 250x250x8: (7.85·As + 2.4·Ac)/A_tr = 13.17 t/m³ (densidad equivalente, 29-sep-2026)",
+  "galpon-agua1": "columnas CFT: ídem (13.17 t/m³)",
+  "beams": "Paz 6.3: unidades kip-in-s del libro (ρ del orden de 1e-7), validado contra ETABS",
   "W2_viga_flexion_composite_slab_cantilever": "mixta: densidad equivalente de la sección transformada",
   "W2_viga_flexion_composite_encased_cantilever": "mixta: densidad equivalente de la sección transformada",
 };

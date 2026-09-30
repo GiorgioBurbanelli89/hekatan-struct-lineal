@@ -24,7 +24,7 @@ import { analyze, deform } from "hekatan-fem";
 const Es = 200e6;
 const nu_s = 0.3;
 const Gs = Es / (2 * (1 + nu_s));
-const rho_s = 78;
+const rho_s = 7.85;   // MASA del acero en t/m³ (kN·s²/m⁴). Iba 78 = su PESO en kN/m³: 10 veces de más (29-sep-2026)
 
 export interface VigaDobleTParams {
   L: number; hw: number; tw: number;
@@ -201,7 +201,16 @@ export function mallaVigaDobleT(p: VigaDobleTParams): VigaDobleTMalla {
   const c_bot = y_c;
   const sigma_top_an = (M_max * c_top) / I;
   const sigma_bot_an = -(M_max * c_bot) / I;
-  const delta_an = -(P * L * L * L) / (3 * Es * I);
+  // δ de REFERENCIA con la MISMA sección que la malla (29-sep-2026). La malla es de planos medios: las
+  // alas van en los bordes del alma (separadas hw, no hw + (tb_inf + tb_sup)/2), así que su inercia es la
+  // de esa geometría (8.9 % menor que la de la sección real), y el alma de cortante añade P·L/(G·tw·hw)
+  // (Timoshenko). Contra Euler-Bernoulli de la sección REAL salía un 15.2 % «de error» que no era del FEM:
+  // era comparar dos secciones distintas, sin cortante. Con esto: +1.2 %.
+  const Ai_m = bf_inf * tb_inf, Aw_m = tw * hw, As_m = bf_sup * tb_sup;
+  const yc_m = (Aw_m * hw / 2 + As_m * hw) / (Ai_m + Aw_m + As_m);
+  const I_malla = (bf_inf * tb_inf ** 3) / 12 + Ai_m * yc_m ** 2 + (tw * hw ** 3) / 12 + Aw_m * (hw / 2 - yc_m) ** 2 +
+                  (bf_sup * tb_sup ** 3) / 12 + As_m * (hw - yc_m) ** 2;
+  const delta_an = -((P * L * L * L) / (3 * Es * I_malla) + (P * L) / (Gs * tw * hw));
 
   return { nodes, elements, nodeInputs, elementInputs, tipNodes, A_total, y_c, I, M_max, sigma_top_an, sigma_bot_an, delta_an };
 }
@@ -237,7 +246,7 @@ export const vigaDobleT: ExampleDef = {
   guide: [
     "P en la punta (x=L) genera M_max = P·L en el empotramiento (x=0)",
     "El eje neutro real (y_c) está desplazado por la asimetría de los patines (Steiner)",
-    "«📊 Calculados» compara σ y δ analíticos (Euler-Bernoulli) contra el FEM Q4",
+    "«📊 Calculados» compara σ (Euler-Bernoulli) y δ (Timoshenko, con la sección de planos medios de la malla) contra el FEM Q4",
   ],
   build: (p: Record<string, number>, states: BuildStates) => {
     const malla = mallaVigaDobleT(p as unknown as VigaDobleTParams);
