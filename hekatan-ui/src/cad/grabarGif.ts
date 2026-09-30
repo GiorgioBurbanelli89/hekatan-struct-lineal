@@ -157,13 +157,16 @@ async function grabarFlujo(flujo: MediaStream, b: HTMLButtonElement) {
 
   grabando = false; parar = null;
   pinta(b, 0);
-  if (mb > MAX_MB)
-    aviso(`GIF guardado: ${n} cuadros, ${mb.toFixed(1)} MB. OJO: LinkedIn admite 5 MB — ` +
-          `por encima lo congela en el primer cuadro. Graba menos segundos.`, true);
-  else if (n >= MAX_CUADROS)
-    aviso(`GIF guardado: ${n} cuadros (el tope de LinkedIn), ${mb.toFixed(1)} MB.`);
-  else
-    aviso(`GIF guardado: ${ANCHO}×${alto}, ${n} cuadros, ${mb.toFixed(1)} MB. Entra en LinkedIn.`);
+  // LinkedIn (ayuda oficial a564109, 30-sep-2026): «The limit for a GIF is 500 frames or 36,152,320 pixels» — píxeles de
+  // TODOS los cuadros sumados. Si se pasa, LinkedIn lo reduce y se ve borroso: para LinkedIn conviene el MP4.
+  const LI_PX = 36_152_320, px = ANCHO * alto * n;
+  if (px > LI_PX || n > 500) {
+    const s10 = Math.round(Math.sqrt(LI_PX / (10 * FPS) * (ANCHO / alto)));
+    aviso(`GIF guardado: ${ANCHO}×${alto}, ${n} cuadros, ${mb.toFixed(1)} MB. OJO LinkedIn: admite ${(LI_PX / 1e6).toFixed(0)} millones de píxeles ` +
+          `SUMANDO todos los cuadros; este tiene ${(px / 1e6).toFixed(0)}: lo reducirá y perderá nitidez. Sube el MP4, o un GIF de ` +
+          `${Math.floor(LI_PX / (ANCHO * alto))} cuadros a este tamaño (10 s caben a ~${s10} px de ancho).`, true);
+  } else
+    aviso(`GIF guardado: ${ANCHO}×${alto}, ${n} cuadros, ${mb.toFixed(1)} MB. Cabe en LinkedIn sin reducirse.`);
 }
 
 /** Coloca el 🎞 a la izquierda del ⏺, siguiendo su rect real. */
