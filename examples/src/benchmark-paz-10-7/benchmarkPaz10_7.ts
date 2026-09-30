@@ -205,7 +205,7 @@ export const benchmarkPaz10_7: ExampleDef = {
       dt: p.dt_s, nSteps,
     });
     // La gráfica y el informe siguen con u, v, a del nudo central
-    const res = { t: resB.t, u: resB.u.map((u) => [u[iC]]), v: resB.v.map((v) => [v[iC]]), a: resB.a.map((a) => [a[iC]]) };
+    const res = { t: resB.t, u: resB.u.map((u) => [u[iC]]), v: resB.v.map((v) => [v[iC]]), a: resB.a.map((a) => [a[iC]]), cfg: resB.cfg, iC };
     (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs
     const u_max = Math.max(...res.u.map((u) => Math.abs(u[0])));
     const u_st = p.F_lb / k_centro_lbin;

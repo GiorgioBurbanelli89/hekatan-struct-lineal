@@ -39,6 +39,11 @@ export interface NewmarkConfig {
   nSteps: number;                  // # de pasos
   gamma?: number;                  // default 0.5
   beta?: number;                   // default 0.25 (avg acceleration)
+  /** Aceleración inicial. "equilibrio" (defecto): a₀ = M⁻¹(F(0) − C·v₀ − K·u₀), lo físico, igual al libro y a la
+   *  solución exacta. "cero": a₀ = 0, lo que hace SAP2000/ETABS (Linear Direct Integration) — medido el 30-sep-2026:
+   *  con a₀ = 0 este integrador da la serie de SAP2000 a 5 decimales en el Paz 8.1; con una carga que ARRANCA en
+   *  F₀ ≠ 0 (pulso rectangular o triangular) CSI responde 2–5 % menos al principio. */
+  a0?: "equilibrio" | "cero";
 }
 
 export interface NewmarkResult {
@@ -46,6 +51,8 @@ export interface NewmarkResult {
   u: Vector[];      // [nSteps+1] × [nDOF]
   v: Vector[];      // [nSteps+1] × [nDOF]
   a: Vector[];      // [nSteps+1] × [nDOF]
+  /** La configuración con que se integró (para repetirla en los tests, p.ej. con a₀ = 0 contra SAP2000) */
+  cfg?: NewmarkConfig;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -265,7 +272,7 @@ export function newmarkBeta(cfg: NewmarkConfig): NewmarkResult {
   const Cv0 = matVec(C, v0);
   const Ku0 = matVec(K, u0);
   const rhs0 = F0.map((f, i) => f - Cv0[i] - Ku0[i]);
-  const a0 = gaussSolve(M, rhs0);
+  const a0 = cfg.a0 === "cero" ? new Array(n).fill(0) : gaussSolve(M, rhs0);
 
   // Matriz efectiva K* = K + γ·dt·C/(β·dt²) + M/(β·dt²)
   // Forma estándar: K* = K + (γ/(β·dt))·C + (1/(β·dt²))·M
@@ -320,7 +327,7 @@ export function newmarkBeta(cfg: NewmarkConfig): NewmarkResult {
     u = u1; v = v1; a = a1;
   }
 
-  return { t: tArr, u: uArr, v: vArr, a: aArr };
+  return { t: tArr, u: uArr, v: vArr, a: aArr, cfg };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

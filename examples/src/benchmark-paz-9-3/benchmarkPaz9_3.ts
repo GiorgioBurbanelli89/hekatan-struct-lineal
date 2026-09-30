@@ -77,7 +77,7 @@ export const benchmarkPaz9_3: ExampleDef = {
     k_lbin: { default: 327.35, min: 100, max: 1000, step: 1, label: "k por piso (lb/in)", folder: "Rigidez" },
     m_lbs2in: { default: 1.0, min: 0.1, max: 10, step: 0.1, label: "m por piso (lb·s²/in)", folder: "Masa" },
     E_psi: { default: 30e6, min: 25e6, max: 35e6, step: 0.5e6, label: "E acero (psi)", folder: "Material" },
-    F0_lb: { default: 50, min: 0, max: 500, step: 1, label: "Pulso F0 piso 4 (lb)", folder: "Time History" },
+    F0_lb: { default: 50, min: 0, max: 500, step: 1, label: "Pulso F0 piso 4 (lb) — demostración, no del libro (el Ej. 9.3 pide modos y condensación)", folder: "Time History" },
     pulseDur_s: { default: 0.1, min: 0.01, max: 1, step: 0.01, label: "Duración pulso (s)", folder: "Time History" },
     tEnd_s: { default: 5.0, min: 1, max: 20, step: 0.5, label: "t fin análisis (s)", folder: "Time History" },
     dt_s: { default: 0.01, min: 0.001, max: 0.05, step: 0.001, label: "Δt Newmark (s)", folder: "Time History" },

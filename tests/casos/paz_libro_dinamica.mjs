@@ -10,9 +10,13 @@
  *     el 3D con ρ mal convertida (3.57 Hz) y el motor `modal_paz` ignoraba el As = −1 (Euler) → −0.54 %.
  *   · 4.1: σ con la k de las DOS columnas (30 524 psi, libro 15 083).
  * Referencias: la solución EXACTA de cada problema (validation/paz-newmark/*.py) y las tablas del libro.
- * El árbitro de programa (SAP2000, Linear Direct Integration) va en paz_libro_dinamica_sap2000 (pendiente).
+ * ÁRBITRO SAP2000 (validation/paz-newmark/sap_th.py → tests/datos/paz_th_sap2000.json): Linear Direct Integration,
+ * Newmark, mismo Δt, mismo modelo. SAP2000 arranca con a₀ = 0 aunque F(0) ≠ 0 (medido: así da su serie a 5 decimales),
+ * así que la comparación paso a paso repite NUESTRO integrador con a0 = "cero". SAP2000 concentra la masa de las
+ * barras: en el 10.7 se compara con la M concentrada (m̄·Le en w, 0 en θ) sobre la misma K.
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
+import { readFileSync } from "node:fs";
 
 export const nombre = "paz-libro-dinamica";
 export const descripcion = "Paz 4.1, 6.1, 7.1, 8.1, 9.3, 10.7, 13.1: modal 3D de Struct y tiempo-historia contra el libro / solución exacta";
@@ -40,7 +44,8 @@ const F = {
 
 export async function correr() {
   const src = Object.entries(EJ).map(([k, n]) => `export { ${n} } from "${R}/examples/src/benchmark-paz-${k}/${n}";`).join("\n") +
-    `\nexport { modalAnalysis, modalAnalysisPaz } from "${R}/hekatan-fem/src/index";\n`;
+    `\nexport { modalAnalysis, modalAnalysisPaz } from "${R}/hekatan-fem/src/index";\n` +
+    `export { newmarkBeta } from "${R}/examples/src/shared/newmarkBeta";\n`;
   const m = await empaquetar(src, "paz-libro-dinamica");
   const filas = [];
   const v = (x) => ({ val: x });
@@ -86,5 +91,27 @@ export async function correr() {
   fila("10.7 u_centro_max (Programa 13, 6 GDL)", maxAbs(th["10-7"], 0), 1.25388, 0.1);
   // 13.1 — K y M del libro con T completa, Δt = 1e-5 (validation/paz-newmark/paz13_1.py)
   fila("13.1 uz_max nudo 1", Math.max(...th["13-1"].u.map((u) => Math.abs(u[2]))), 1.3195e-3, 0.2);
+  // ── SAP2000 paso a paso ──
+  const SAP = JSON.parse(readFileSync(new URL("../datos/paz_th_sap2000.json", import.meta.url), "utf-8"));
+  const serie = (que, uH, sap, lim) => {
+    let peor = 0, mx = 0;
+    for (let i = 0; i < sap.u.length; i++) { mx = Math.max(mx, Math.abs(sap.u[i])); peor = Math.max(peor, Math.abs((uH[i] ?? NaN) - sap.u[i])); }
+    const d = 100 * peor / mx;
+    filas.push({ que, medido: d, limite: lim, ok: Number.isFinite(d) && d <= lim && uH.length >= sap.u.length,
+                 detalle: `${sap.u.length} pasos, peor ${peor.toExponential(3)} de ${mx.toFixed(5)} in` });
+  };
+  const cero = (k) => m.newmarkBeta({ ...th[k].cfg, a0: "cero" });
+  serie("4.1 vs SAP2000, u(t) paso a paso (a0 = 0 como CSI)", cero("4-1").u.map((u) => u[0]), SAP["4-1"].u, 0.02);   // SAP: pórtico de barras (viga I×1e5, A finita); aquí el 1 GDL ideal → 1e-4
+  serie("6.1 vs SAP2000, u(t) paso a paso (β = 1/6, ξ = 0.2)", cero("6-1").u.map((u) => u[0]), SAP["6-1"].u, 0.01);
+  const r81 = cero("8-1");
+  serie("8.1 vs SAP2000, u1(t) paso a paso", r81.u.map((u) => u[0]), SAP["8-1"].u1, 0.02);
+  serie("8.1 vs SAP2000, u2(t) paso a paso", r81.u.map((u) => u[1]), SAP["8-1"].u2, 0.02);
+  // 10.7 con la masa concentrada de SAP2000 (la K es la del libro, la misma que la de SAP con Euler)
+  const c107 = th["10-7"].cfg, nL = c107.M.length, Le = 200 / 4;
+  const Ml = Array.from({ length: nL }, (_, i) => Array.from({ length: nL }, (_, j) => (i === j && i % 2 === 0 ? 0.1 * Le : 0)));
+  const r107 = m.newmarkBeta({ ...c107, M: Ml, a0: "cero" });
+  serie("10.7 vs SAP2000 (4 barras, masa concentrada), u_centro(t)", r107.u.map((u) => u[th["10-7"].iC]), SAP["10-7_4"].u, 0.01);
+  // y la viga del LIBRO (masa consistente, 4 barras) contra SAP2000 convergido (40 barras): la discretización
+  fila("10.7 libro (consistente, 4 barras) vs SAP2000 40 barras, u_centro_max", maxAbs(th["10-7"], 0), SAP["10-7_40"].u.max, 0.3);
   return filas;
 }
