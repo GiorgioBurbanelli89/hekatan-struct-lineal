@@ -49,7 +49,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
   fPulso.addBinding(p, "ampG", { label: "amplitud (g)", min: 0.01, max: 2, step: 0.01 }).on("change", () => rehacerPulso());
   fPulso.addBinding(p, "dur", { label: "duración (s)", min: 0.05, max: 5, step: 0.05 }).on("change", () => rehacerPulso());
   fPulso.addBinding(p, "total", { label: "total (s)", min: 0.5, max: 60, step: 0.5 }).on("change", () => rehacerPulso());
-  f.addBinding(p, "escala", { label: "factor de escala", min: 0.01, max: 10, step: 0.01 });
+  f.addBinding(p, "escala", { label: "factor de escala", min: 0.0001, max: 100, step: 0.0001 });   // NEC: 4 decimales (2.6524)
   f.addBinding(p, "xi", { label: "ξ amortiguamiento (%)", min: 0, max: 30, step: 0.5 });
   f.addBinding(p, "nModos", { label: "N° de modos (modal)", min: 1, max: 200, step: 1 });
   f.addBinding(p, "alpha", { label: "α HHT (directa)", min: -0.3333, max: 0, step: 0.01 });
