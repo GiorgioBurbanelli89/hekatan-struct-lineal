@@ -87,6 +87,8 @@ export function modalPazCpp(
   const bendMods = processElementInput((elementInputs as any).bendingModifiers);
   // NEW: polar moment of inertia (I0)
   const polarMoi = processElementInput(elementInputs.polarMomentsOfInertia);
+  const shearY = processElementInput(elementInputs.shearAreasY);
+  const shearZ = processElementInput(elementInputs.shearAreasZ);
 
   // Output pointers
   const freqPtrOut = mod._malloc(4);
@@ -156,6 +158,12 @@ export function modalPazCpp(
     polarMoi.keysPtr,
     polarMoi.valuesPtr,
     polarMoi.size,
+    shearY.keysPtr,
+    shearY.valuesPtr,
+    shearY.size,
+    shearZ.keysPtr,
+    shearZ.valuesPtr,
+    shearZ.size,
     // control
     numModes,
     // output pointers

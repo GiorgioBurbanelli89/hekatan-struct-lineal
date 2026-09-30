@@ -30,7 +30,7 @@
  *      - Frecuencias modales (eigenproblem K·φ = ω²·M·φ)
  *      - Time history en u_z(t) del nodo 1 con Newmark-β
  */
-import { modalAnalysis } from "hekatan-fem";
+import { modalAnalysisPaz } from "hekatan-fem";
 import type { Element, Node } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import {
@@ -75,8 +75,8 @@ export const benchmarkPaz13_1: ExampleDef = {
     F0_lb: { default: 5000, min: 0, max: 20000, step: 100, label: "Step F0 nodo 1 Z (lb)", folder: "Time History" },
     pulseDur_s: { default: 0.1, min: 0.01, max: 1, step: 0.01, label: "Duración step (s)", folder: "Time History" },
     tEnd_s: { default: 0.5, min: 0.1, max: 5, step: 0.1, label: "t fin análisis (s)", folder: "Time History" },
-    dt_s: { default: 0.001, min: 0.0001, max: 0.01, step: 0.0001, label: "Δt Newmark (s)", folder: "Time History" },
-    xi: { default: 0.05, min: 0, max: 0.20, step: 0.005, label: "Damping ξ", folder: "Time History" },
+    dt_s: { default: 0.0001, min: 0.00005, max: 0.01, step: 0.00005, label: "Δt Newmark (s) — con 0.001 el pico de uz sale −0.86 %", folder: "Time History" },
+    xi: { default: 0, min: 0, max: 0.20, step: 0.005, label: "Damping ξ (libro = 0)", folder: "Time History" },
     showTH: { default: 1, boolean: true, label: "📈 Mostrar Chart Panel", folder: "Time History" },
     plotType: {
       default: 0,
@@ -143,6 +143,7 @@ export const benchmarkPaz13_1: ExampleDef = {
           u0, v0,
           dt: p.dt_s, nSteps,
         });
+        (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
         const uz_max = Math.max(...res.u.map((u) => Math.abs(u[2])));
         report += `  Newmark-β TH (F=${p.F0_lb} lb step ${p.pulseDur_s}s, ξ=${p.xi}):\n`;
         report += `    u_z_max nodo 1 = ${uz_max.toExponential(4)} in\n`;
@@ -201,7 +202,8 @@ export const benchmarkPaz13_1: ExampleDef = {
   runModal(p, states, modalPanel) {
     if (!states.nodes.val.length) return;
     try {
-      const out = modalAnalysis(
+      // Masa CONSISTENTE como el libro (SpaceFrameConsMass, p.346), igual que el 10.7.
+      const out = modalAnalysisPaz(
         states.nodes.val, states.elements.val,
         states.nodeInputs.val, states.elementInputs.val, 6,
       );
@@ -242,8 +244,11 @@ function paramsToSpaceFrame(p: Record<string, number>) {
   // distribuida por unidad de longitud / área. Simplemente: ρ = m̄/A ya da
   // densidad lineal, pero queremos densidad volumétrica → ρ = m̄·g_inps2/A
   const g_inps2 = 386.088;
-  const rho1_kgm3 = (p.mbar1 * g_inps2 / p.A1_in2) * 175.13 / 0.0254;  // approx
-  const rho2_kgm3 = (p.mbar2 * g_inps2 / p.A2_in2) * 175.13 / 0.0254;
+  void g_inps2;
+  // m̄ es masa por LONGITUD (lb·s²/in por in): 1 lb·s²/in = 175.127 kg → kg/m = m̄·175.127/0.0254.
+  // ρ en t/m³ (E en kN/m²) = (kg/m)/A/1000. Antes (m̄·g/A_in²)·175.13/0.0254 «approx»: el modal 3D daba 3.57 Hz.
+  const rho1_kgm3 = p.mbar1 * 175.127 / 0.0254 / A1_m2 / 1000;   // (t/m³, se deja el nombre)
+  const rho2_kgm3 = p.mbar2 * 175.127 / 0.0254 / A2_m2 / 1000;
 
   // Nodos en metros
   const nodes: Node[] = [
@@ -278,6 +283,7 @@ function paramsToSpaceFrame(p: Record<string, number>) {
       J: isType1 ? J1_m4 : J2_m4,
       E: E_kNm2, G: G_kNm2,
       rho: isType1 ? rho1_kgm3 : rho2_kgm3,
+      I0: PAZ_UTILS.in4_to_m4(isType1 ? 205 : 68),   // Tabla 13.1 (p.343)
       label: isType1 ? `Member ${eIdx + 1} (type 1)` : `Member ${eIdx + 1} (type 2)`,
       e2kName: isType1 ? "MEM_TYPE1" : "MEM_TYPE2",
       e2kShape: "Steel I/Wide Flange",
@@ -292,67 +298,54 @@ function paramsToSpaceFrame(p: Record<string, number>) {
     sectionByElement,
     materialName: "A992Fy50",
     materialType: "Steel" as const,
+    euler: true,
   };
 }
 
 // ════════════════════════════════════════════════════════════════════
-// Construye K_red 6×6 y M_red 6×6 para los DOFs del nodo 1 sumando
-// las contribuciones rotadas de los 4 elementos (lumped-mass simplificado).
+// K y M 6×6 del nudo 1 con los elementos del LIBRO (30-sep-2026): SpaceFrameElement (p.345) y
+// SpaceFrameConsMass (p.346), masa CONSISTENTE, orientación por el tercer nudo de `conn` (p.344).
+// Antes: rigideces sueltas sin el acoplamiento 6EI/L² desplazamiento-giro y masa lumped con una inercia
+// rotacional inventada (×1e-3). Nota: en SpaceFrameConsMass del libro T no rellena el bloque de las
+// traslaciones del nudo i y el nudo 1 se queda sin masa traslacional; aquí T va completa (validation/paz-newmark).
 // ════════════════════════════════════════════════════════════════════
 function buildLocalKM_Paz13_1(p: Record<string, number>): { K6: Matrix; M6: Matrix } {
-  const E = p.E_psi, G = p.G_psi, L = p.L_in;
-  const K6: Matrix = zeros(6);
-  const M6: Matrix = zeros(6);
-
-  // Cada miembro radia desde el nodo 1 a un nodo empotrado (cada uno DOF 0).
-  // Ya que los otros nodos están fijos, podemos usar la k_local del end "near"
-  // para un cantilever (una viga con un extremo fijo y otro libre).
-  // Stiffness aportada por una viga de longitud L con extremo fijo:
-  //   k_axial   = E·A / L
-  //   k_lateral = 12·E·I / L³  (ortogonal al eje del miembro)
-  //   k_torsion = G·J / L
-  //   k_bending = 4·E·I / L (rigidez rotacional contra giro)
-  //
-  // Asignamos según orientación de cada miembro:
-  //
-  // Miembro 1 (1→2): eje LOCAL x = -Z global   (long. vertical)
-  //   en el nodo 1: aporta k_axial en Z, k_lateral en X y Y, k_torsion en Rz
-  // Miembro 2 (1→3): eje LOCAL x = +Y global
-  //   aporta k_axial en Y, k_lateral en X y Z, k_torsion en Ry
-  // Miembro 3 (1→4): eje LOCAL x = -X global
-  //   aporta k_axial en X, k_lateral en Y y Z, k_torsion en Rx
-  // Miembro 4 (1→5): eje LOCAL x = -Y global  (mismo eje que 2 invertido)
-  //   aporta k_axial en Y, k_lateral en X y Z, k_torsion en Ry
-  function addMember(A: number, I: number, J: number, axis: 0 | 1 | 2, mbar: number) {
-    const kAx = E * A / L;
-    const kLat = 12 * E * I / Math.pow(L, 3);
-    const kTor = G * J / L;
-    const kBnd = 4 * E * I / L;
-    // axial → DOF axis (translación)
-    K6[axis][axis] += kAx;
-    // laterales → los otros 2 DOFs translación
-    for (let j = 0; j < 3; j++) if (j !== axis) K6[j][j] += kLat;
-    // torsión → DOF rotacional axial (axis+3)
-    K6[axis + 3][axis + 3] += kTor;
-    // flexión → DOFs rotacionales transversales
-    for (let j = 3; j < 6; j++) if (j !== axis + 3) K6[j][j] += kBnd;
-    // Masa lumped: m_total = mbar · L; mitad va al nodo 1
-    const mLumped = mbar * L / 2;
-    M6[0][0] += mLumped; M6[1][1] += mLumped; M6[2][2] += mLumped;
-    // Inercia rotacional pequeña (despreciable para validación)
-    M6[3][3] += mLumped * L * L * 1e-3;
-    M6[4][4] += mLumped * L * L * 1e-3;
-    M6[5][5] += mLumped * L * L * 1e-3;
+  const E = p.E_psi, G = p.G_psi, L0 = p.L_in;
+  const nd: number[][] = [[0, 0, 0], [0, 0, -L0], [0, L0, 0], [-L0, 0, 0], [0, -L0, 0]];
+  const P1 = { A: p.A1_in2, I: p.I1_in4, J: p.J1_in4, m: p.mbar1, I0: 205 };   // I0 polar (Tabla 13.1, p.343)
+  const P2 = { A: p.A2_in2, I: p.I2_in4, J: p.J2_in4, m: p.mbar2, I0: 68 };
+  const conn: [number, number, number, typeof P1][] = [[0, 1, 2, P1], [0, 2, 1, P2], [0, 3, 1, P1], [0, 4, 1, P2]];
+  const sub = (a: number[], b: number[]) => a.map((x, i) => x - b[i]);
+  const cross = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const norm = (a: number[]) => Math.hypot(a[0], a[1], a[2]);
+  const K6: Matrix = zeros(6), M6: Matrix = zeros(6);
+  for (const [a, b, c, q] of conn) {
+    const d = sub(nd[b], nd[a]), L = norm(d), ex = d.map((x) => x / L);
+    let ey = cross(sub(nd[c], nd[a]), d); const ny = norm(ey); ey = ey.map((x) => x / ny);
+    const H = [ex, ey, cross(ex, ey)];
+    const k: Matrix = zeros(12), m: Matrix = zeros(12);
+    const EA = E * q.A, EI = E * q.I, GJ = G * q.J, r = q.I0 / q.A, cm = q.m * L / 420;
+    k[0][0] = k[6][6] = EA / L; k[0][6] = k[6][0] = -EA / L; k[3][3] = k[9][9] = GJ / L; k[3][9] = k[9][3] = -GJ / L;
+    m[0][0] = m[6][6] = 140 * cm; m[0][6] = m[6][0] = 70 * cm; m[3][3] = m[9][9] = 140 * r * cm; m[3][9] = m[9][3] = 70 * r * cm;
+    for (const [idx, s] of [[[1, 5, 7, 11], 1], [[2, 4, 8, 10], -1]] as [number[], number][]) {
+      const kk = [[12, 6 * L * s, -12, 6 * L * s], [6 * L * s, 4 * L * L, -6 * L * s, 2 * L * L],
+                  [-12, -6 * L * s, 12, -6 * L * s], [6 * L * s, 2 * L * L, -6 * L * s, 4 * L * L]];
+      const mm = [[156, 22 * L * s, 54, -13 * L * s], [22 * L * s, 4 * L * L, 13 * L * s, -3 * L * L],
+                  [54, 13 * L * s, 156, -22 * L * s], [-13 * L * s, -3 * L * L, -22 * L * s, 4 * L * L]];
+      for (let u = 0; u < 4; u++) for (let v = 0; v < 4; v++) {
+        k[idx[u]][idx[v]] += EI / L ** 3 * kk[u][v]; m[idx[u]][idx[v]] += cm * mm[u][v];
+      }
+    }
+    // global = Tᵀ·local·T; solo interesa el bloque 6×6 del nudo i (el nudo 1, los demás empotrados)
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) {
+      let sk = 0, sm = 0;
+      const bi = i < 3 ? 0 : 3, bj = j < 3 ? 0 : 3;
+      for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) {
+        const t = H[x][i - bi] * H[y][j - bj];
+        sk += t * k[bi + x][bj + y]; sm += t * m[bi + x][bj + y];
+      }
+      K6[i][j] += sk; M6[i][j] += sm;
+    }
   }
-
-  // Miembro 1: axis = Z (translación vertical)
-  addMember(p.A1_in2, p.I1_in4, p.J1_in4, 2, p.mbar1);
-  // Miembro 2: axis = Y
-  addMember(p.A2_in2, p.I2_in4, p.J2_in4, 1, p.mbar2);
-  // Miembro 3: axis = X
-  addMember(p.A1_in2, p.I1_in4, p.J1_in4, 0, p.mbar1);
-  // Miembro 4: axis = Y (otra dirección, suma igual)
-  addMember(p.A2_in2, p.I2_in4, p.J2_in4, 1, p.mbar2);
-
   return { K6, M6 };
 }

@@ -52,8 +52,8 @@ export const benchmarkPaz8_1: ExampleDef = {
     H1_ft: { default: 15, min: 8, max: 25, step: 0.5, label: "H1 piso 1 (ft)", folder: "Geometría" },
     H2_ft: { default: 10, min: 6, max: 20, step: 0.5, label: "H2 piso 2 (ft)", folder: "Geometría" },
     bay_ft: { default: 30, min: 10, max: 60, step: 1, label: "Ancho bay (ft)", folder: "Geometría" },
-    I1_in4: { default: 248, min: 50, max: 600, step: 1, label: "I col piso 1 (in⁴)", folder: "Sección" },
-    I2_in4: { default: 118, min: 50, max: 600, step: 1, label: "I col piso 2 (in⁴)", folder: "Sección" },
+    I1_in4: { default: 248.6, min: 50, max: 600, step: 0.1, label: "I col piso 1 (in⁴)", folder: "Sección" },
+    I2_in4: { default: 106.3, min: 50, max: 600, step: 0.1, label: "I col piso 2 (in⁴)", folder: "Sección" },
     W1_lb: { default: 52500, min: 10000, max: 150000, step: 500, label: "W1 (lb)", folder: "Cargas estáticas" },
     W2_lb: { default: 25500, min: 5000, max: 100000, step: 500, label: "W2 (lb)", folder: "Cargas estáticas" },
     E_psi: { default: 30e6, min: 25e6, max: 35e6, step: 0.5e6, label: "E (psi)", folder: "Material" },
@@ -98,7 +98,8 @@ export const benchmarkPaz8_1: ExampleDef = {
 
     const F1 = p.F1_lb, F2 = p.F2_lb, td = p.td_s;
     const Ftri = (t: number): number[] => {
-      if (t <= 0 || t >= td) return [0, 0];
+      // Paz 8.1 (p.196): F(t) = F0(1 − t/td) para 0 ≤ t ≤ td → en t = 0 vale F0, no 0.
+      if (t < 0 || t >= td) return [0, 0];
       const fac = 1 - t / td;
       return [F1 * fac, F2 * fac];
     };
@@ -113,11 +114,12 @@ export const benchmarkPaz8_1: ExampleDef = {
         M, K, C, loadFunc: Ftri, u0: [0, 0], v0: [0, 0],
         dt: p.dt_s, nSteps, gamma: 0.5, beta: 0.25,
       });
+      (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
       const u1_max = Math.max(...res.u.map((u) => Math.abs(u[0])));
       const u2_max = Math.max(...res.u.map((u) => Math.abs(u[1])));
       report += `  Modal: f1=${eig.freqs[0].toFixed(3)}, f2=${eig.freqs[1].toFixed(3)} Hz\n`;
-      report += `  Newmark-β: u1_max=${u1_max.toFixed(4)} in (libro ≈0.70)\n`;
-      report += `             u2_max=${u2_max.toFixed(4)} in (libro ≈0.92)\n`;
+      report += `  Newmark-β: u1_max=${u1_max.toFixed(4)} in (libro, cota |Σ| 0.70, SRSS 0.62)\n`;
+      report += `             u2_max=${u2_max.toFixed(4)} in (libro, cota |Σ| 0.92, SRSS 0.79)\n`;
 
       if (p.showTH > 0.5) {
         const panel = getSharedChartPanel();

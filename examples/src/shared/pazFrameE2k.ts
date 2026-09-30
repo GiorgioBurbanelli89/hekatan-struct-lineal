@@ -204,15 +204,23 @@ export function buildShearBuildingModel(p: ShearBuildingParams, states: BuildSta
   const supports = new Map<number, [boolean, boolean, boolean, boolean, boolean, boolean]>();
   supports.set(0, [true, true, true, true, true, true]);
   supports.set(1, [true, true, true, true, true, true]);
+  // Pórtico PLANO XZ (Paz §7.1): uy, rx, rz atados en los pisos, como «Plane Frame XZ» de SAP2000. Sin esto el
+  // modal sacaba primero los modos fuera del plano (0.36 Hz). El visor no los dibuja (restriccionDePlano).
+  for (let n = 2; n < nodes.length; n++) supports.set(n, [false, true, false, true, false, true]);
 
   // ── Cargas: nodal en cada piso (W_story / 2 por nodo) ──────────
   // (Paz idealiza con masas concentradas; usamos peso distribuido nodal
   //  para que `deform` calcule reacciones correctas)
   const loads = new Map<number, [number, number, number, number, number, number]>();
+  // MASA del piso (30-sep-2026): Paz la concentra en el piso (§7.1, m = W/g). Antes solo iba el PESO como
+  // carga y el modal 3D daba f₁ = 21.9 Hz en vez de 1.88 (solo pesaba ρ = 0.001). Mitad en cada nudo, en t.
+  const masses = new Map<number, number>();
   for (let s = 0; s < nStories; s++) {
     const wHalf = -storyWeights[s] / 2;  // negativo Z
     loads.set(2 * (s + 1),     [0, 0, wHalf, 0, 0, 0]);
     loads.set(2 * (s + 1) + 1, [0, 0, wHalf, 0, 0, 0]);
+    masses.set(2 * (s + 1), storyWeights[s] / g / 2);
+    masses.set(2 * (s + 1) + 1, storyWeights[s] / g / 2);
   }
 
   // ── Inputs por elemento ────────────────────────────────────────
@@ -239,7 +247,9 @@ export function buildShearBuildingModel(p: ShearBuildingParams, states: BuildSta
     elasticities.set(e, E);
     shearModuli.set(e, G);
     if (isCol) {
-      areas.set(e, A_col * nCols / 2);  // 2 cols por línea (nCols=2 → 1 col por elemento)
+      // Shear building (Paz §7.1): la columna no se acorta. Con el área nominal 0.30×0.30 el pórtico
+      // cabeceaba y bajaba las frecuencias; ×1000 la deja axialmente rígida como en el libro.
+      areas.set(e, A_col * 1000);
       Iy_map.set(e, I_per_column[story]);  // strong axis flexión lateral
       Iz_map.set(e, I_per_column[story] * 0.3);  // weak axis (no crítica en shear)
       J_map.set(e, I_per_column[story] * 0.05);
@@ -253,7 +263,7 @@ export function buildShearBuildingModel(p: ShearBuildingParams, states: BuildSta
     } else {
       // Viga "rígida" — I muy grande para forzar shear-building idealization
       areas.set(e, A_col * 4);
-      Iy_map.set(e, I_per_column[Math.min(story, nStories - 1)] * 1000);
+      Iy_map.set(e, I_per_column[Math.min(story, nStories - 1)] * 1e5);   // viga RÍGIDA (Paz §7.1); ×1000 dejaba −0.08 %
       Iz_map.set(e, I_per_column[Math.min(story, nStories - 1)] * 100);
       J_map.set(e, I_per_column[Math.min(story, nStories - 1)] * 50);
       sectionLabels.set(e, `Viga RÍGIDA S${story + 1}`);
@@ -268,14 +278,16 @@ export function buildShearBuildingModel(p: ShearBuildingParams, states: BuildSta
     // ρ_eq de modo que ρ·A·g·L = peso del elemento
     // pero queremos el peso total como masa concentrada en pisos
     // → ρ pequeño (peso prop. negligible)
-    densities.set(e, 0.001);
-    shearAreasY.set(e, A_col * 0.85);
-    shearAreasZ.set(e, A_col * 0.85);
+    densities.set(e, 0);   // toda la masa está en los pisos (arriba)
+    // Euler-Bernoulli (As = −1, convención del solver): Paz no cuenta la deformación por cortante
+    // (k = 12EI/L³, §7.1). Con As = 0.85·A de la sección nominal el pórtico salía 0.2 % más blando.
+    shearAreasY.set(e, -1);
+    shearAreasZ.set(e, -1);
   }
 
   states.nodes.val = nodes;
   states.elements.val = elements;
-  states.nodeInputs.val = { supports, loads };
+  states.nodeInputs.val = { supports, loads, masses };
   states.elementInputs.val = {
     elasticities, shearModuli, areas,
     momentsOfInertiaZ: Iy_map,
@@ -444,6 +456,8 @@ export interface SpaceFrameParams {
   sectionByElement: Array<{
     A: number; Iy: number; Iz: number; J: number;
     E: number; G: number; rho: number;
+    /** Momento polar I0 de la masa torsional (Paz Tabla 13.1); si falta, el motor usa Iy + Iz */
+    I0?: number;
     label: string;
     e2kName: string;
     e2kShape: string;
@@ -453,6 +467,8 @@ export interface SpaceFrameParams {
   /** Material name para el e2k */
   materialName: string;
   materialType: "Steel" | "Concrete";
+  /** Euler-Bernoulli (As = −1): el libro no cuenta la deformación por cortante */
+  euler?: boolean;
 }
 
 export function buildSpaceFrameModel(p: SpaceFrameParams, states: BuildStates) {
@@ -468,17 +484,19 @@ export function buildSpaceFrameModel(p: SpaceFrameParams, states: BuildStates) {
   const sectionLabels = new Map<number, string>();
   const materialTypes = new Map<number, string>();
   const sectionInfo = new Map<number, any>();
+  const polarMomentsOfInertia = new Map<number, number>();
 
   for (let e = 0; e < p.elements.length; e++) {
     const s = p.sectionByElement[e];
+    if (s.I0 !== undefined) polarMomentsOfInertia.set(e, s.I0);
     elasticities.set(e, s.E);
     shearModuli.set(e, s.G);
     areas.set(e, s.A);
     Iy_map.set(e, s.Iy);
     Iz_map.set(e, s.Iz);
     J_map.set(e, s.J);
-    shearAreasY.set(e, s.A * 0.85);
-    shearAreasZ.set(e, s.A * 0.85);
+    shearAreasY.set(e, p.euler ? -1 : s.A * 0.85);
+    shearAreasZ.set(e, p.euler ? -1 : s.A * 0.85);
     densities.set(e, s.rho);
     sectionLabels.set(e, s.label);
     materialTypes.set(e, p.materialType === "Steel" ? "Acero" : "Hormigón");
@@ -499,7 +517,7 @@ export function buildSpaceFrameModel(p: SpaceFrameParams, states: BuildStates) {
     momentsOfInertiaZ: Iy_map,
     momentsOfInertiaY: Iz_map,
     torsionalConstants: J_map,
-    shearAreasY, shearAreasZ, densities,
+    shearAreasY, shearAreasZ, densities, polarMomentsOfInertia,
     sectionLabels, materialTypes, sectionInfo,
   } as any;
 

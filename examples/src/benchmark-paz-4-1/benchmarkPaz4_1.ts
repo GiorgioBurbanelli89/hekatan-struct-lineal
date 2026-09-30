@@ -127,14 +127,20 @@ export const benchmarkPaz4_1: ExampleDef = {
     const F = pointAtDof(rectPulse(p.F0_lb, 0, p.td_s), 0, 1);
     const nSteps = Math.floor(p.tEnd_s / p.dt_s);
     const res = newmarkBeta({ M, K, C, loadFunc: F, u0: [0], v0: [0], dt: p.dt_s, nSteps });
+    (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
     const u_max = Math.max(...res.u.map((u) => Math.abs(u[0])));
     const u_st = p.F0_lb / k;
     const DLF = u_max / u_st;
-    const dPaz = (u_max - PAZ_REF.u_max_in) / PAZ_REF.u_max_in * 100;
-    report += `  Newmark-β: u_max = ${u_max.toFixed(4)} in  (libro ${PAZ_REF.u_max_in}, Δ ${dPaz.toFixed(2)}%)\n`;
+    // Exacta (Duhamel, Paz ec. 4.11–4.12): tras el pulso la amplitud es u_st·2·sin(ω·td/2) si td < T/2.
+    const wn = Math.sqrt(k / m), uEx = u_st * (p.td_s * wn < Math.PI ? 2 * Math.sin(wn * p.td_s / 2) : 2);
+    const dEx = (u_max - uEx) / uEx * 100;
+    report += `  Newmark-β: u_max = ${u_max.toFixed(4)} in  (exacta Duhamel ${uEx.toFixed(4)}, Δ ${dEx.toFixed(2)}%;`
+      + ` libro: ${PAZ_REF.u_max_in} leyendo la Fig. 4.4, 0.673 con su MATLAB, p.92–93)\n`;
     report += `  DLF calculado = ${DLF.toFixed(3)} (libro ${PAZ_REF.DLF_max})\n`;
     // σ = (6·E·I / L²) · u / (S·c) ... simplificado: M=k·u_max·L/2; σ = M/S
-    const M_lbin = k * u_max * L_in / 2;
+    // Paz p.92: M = V·L/2 con V el cortante de UNA columna → M = 6·E·I/L²·u_max; σ = M/S.
+    // (Antes k·u·L/2 con la k de las DOS columnas: salía el doble, 30 524 psi.)
+    const M_lbin = 6 * p.E_psi * p.I_in4 / (L_in * L_in) * u_max;
     const sigma = M_lbin / p.S_in3;
     report += `  σ_max columnas = ${sigma.toFixed(0)} psi  (libro ${PAZ_REF.sigma_max_psi})\n`;
 

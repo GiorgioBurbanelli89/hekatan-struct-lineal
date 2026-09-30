@@ -154,6 +154,7 @@ export const benchmarkPaz9_3: ExampleDef = {
         dt: p.dt_s, nSteps,
         gamma: 0.5, beta: 0.25,
       });
+      (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
       const u_max = [0, 0, 0, 0];
       for (const u of res.u) for (let i = 0; i < 4; i++) u_max[i] = Math.max(u_max[i], Math.abs(u[i]));
       report += `  Newmark-β TH (pulso F0=${p.F0_lb} lb por ${p.pulseDur_s}s, ξ=${p.xi}):\n`;

@@ -50,6 +50,10 @@ extern "C"
         int *bendmod_keys_ptr, double *bendmod_values_ptr, int num_bendmods,
         // NEW: polar moment of inertia (I0) per element
         int *polar_moi_keys_ptr, double *polar_moi_values_ptr, int num_polar_moi,
+        // Áreas de cortante (30-sep-2026): sin ellas getLocalStiffnessMatrix caía SIEMPRE en Timoshenko con
+        // 5/6·A y el Euler-Bernoulli de Paz (As = −1) no llegaba: viga del Ej. 10.7 a −0.54 %.
+        int *shearY_keys_ptr, double *shearY_values_ptr, int num_shearY,
+        int *shearZ_keys_ptr, double *shearZ_values_ptr, int num_shearZ,
 
         // Control
         int num_modes,
@@ -98,6 +102,8 @@ extern "C"
         elementInputs.bendingModifiers = parseMapFromFlat(bendmod_keys_ptr, bendmod_values_ptr, num_bendmods);
         // NEW: parse polar moments of inertia
         elementInputs.polarMomentsOfInertia = parseMapFromFlat(polar_moi_keys_ptr, polar_moi_values_ptr, num_polar_moi);
+        elementInputs.shearAreasY = parseMapFromFlat(shearY_keys_ptr, shearY_values_ptr, num_shearY);
+        elementInputs.shearAreasZ = parseMapFromFlat(shearZ_keys_ptr, shearZ_values_ptr, num_shearZ);
 
         // --- 2. Assemble K (same as default) and M (Paz formulation) ---
         int dof = num_nodes * 6;

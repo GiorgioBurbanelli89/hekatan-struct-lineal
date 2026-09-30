@@ -9,8 +9,9 @@
  *    dimensión planta 30×15 ft, 2 columnas por marco interior.
  *
  *  Pisos (vigas asumidas rígidas — shear building idealization):
- *    Piso 1: H1=15 ft (4.572 m), 2 cols I=248 in⁴ → k1=30,700 lb/in
- *    Piso 2: H2=10 ft (3.048 m), 2 cols I=118 in⁴ → k2=44,300 lb/in
+ *    Piso 1: H1=15 ft (4.572 m), 2 cols W10×45 I=248.6 in⁴ → k1=30,700 lb/in (p.198)
+ *    Piso 2: H2=10 ft (3.048 m), 2 cols W10×21 I=106.3 in⁴ → k2=44,300 lb/in (el «118» del texto
+ *            de la p.178 es errata: con 118 sale k2=49,167; el libro calcula con 106.3, p.199)
  *  Pesos:
  *    W1 = 100·30·15 + 20·12.5·15·2 = 52,500 lb (m1=136 lb·s²/in)
  *    W2 = 50·30·15  + 20·5·15·2    = 25,500 lb (m2=66  lb·s²/in)
@@ -73,11 +74,11 @@ export const benchmarkPaz7_1: ExampleDef = {
   defaultShellResult: "none",
   guide: [
     "Paz Ej. 7.1 — Two-story steel shear building, validación modal canónica.",
-    "Pisos: H1=15ft, H2=10ft. 2 columnas por marco I=248/118 in⁴ (W14 W12).",
+    "Pisos: H1=15ft, H2=10ft. 2 columnas por marco: W10×45 (I=248.6) y W10×21 (I=106.3 in⁴), Fig. 7.4 y p.198–199 (el 118 de p.178 es errata).",
     "Pesos: W1=52,500 lb (m1=136 lb·s²/in), W2=25,500 lb (m2=66 lb·s²/in).",
     "Vigas idealmente rígidas → shear building puro (DIAPHRAGM RIGID en e2k).",
     "Resultados analíticos (libro p.179): f1=1.88 Hz, f2=5.24 Hz; modos {1, 1.263} y {1, -1.629}.",
-    "📈 Chart Panel: muestra time history Newmark-β y modos.",
+    "📈 Chart Panel: modos del libro. El pulso del time history (F0 en el piso 2) es una carga de DEMOSTRACIÓN, no está en el Ej. 7.1 (el libro solo pide modos); la respuesta a cargas del libro es el Ej. 8.1.",
     "📤 Toggle 'Exportar a .e2k' → modelo ETABS canónico para validación cruzada.",
   ],
   params: {
@@ -88,15 +89,15 @@ export const benchmarkPaz7_1: ExampleDef = {
     H2_ft: { default: 10, min: 6, max: 20, step: 0.5, label: "H2 piso 2 (ft)", folder: "Geometría" },
     bay_ft: { default: 30, min: 10, max: 60, step: 1, label: "Ancho bay (ft)", folder: "Geometría" },
     // ─── Sección ───
-    I1_in4: { default: 248, min: 50, max: 600, step: 1, label: "I1 col piso 1 (in⁴)", folder: "Sección" },
-    I2_in4: { default: 118, min: 50, max: 600, step: 1, label: "I2 col piso 2 (in⁴)", folder: "Sección" },
+    I1_in4: { default: 248.6, min: 50, max: 600, step: 0.1, label: "I1 col piso 1 (in⁴)", folder: "Sección" },
+    I2_in4: { default: 106.3, min: 50, max: 600, step: 0.1, label: "I2 col piso 2 (in⁴)", folder: "Sección" },
     // ─── Pesos ───
     W1_lb: { default: 52500, min: 10000, max: 150000, step: 500, label: "W1 piso 1 (lb)", folder: "Cargas" },
     W2_lb: { default: 25500, min: 5000,  max: 100000, step: 500, label: "W2 piso 2 (lb)", folder: "Cargas" },
     // ─── Material ───
     E_psi: { default: 30e6, min: 25e6, max: 35e6, step: 0.5e6, label: "E acero (psi)", folder: "Material" },
     // ─── Time history ───
-    F0_lb: { default: 5000, min: 0, max: 20000, step: 100, label: "Pulso F0 piso 2 (lb)", folder: "Time History" },
+    F0_lb: { default: 5000, min: 0, max: 20000, step: 100, label: "Pulso F0 piso 2 (lb) — demostración, no del libro", folder: "Time History" },
     pulseDur_s: { default: 0.1, min: 0.01, max: 1, step: 0.01, label: "Duración pulso (s)", folder: "Time History" },
     tEnd_s: { default: 2.0, min: 0.5, max: 10, step: 0.1, label: "t fin análisis (s)", folder: "Time History" },
     dt_s: { default: 0.005, min: 0.0005, max: 0.05, step: 0.0005, label: "Δt Newmark (s)", folder: "Time History" },
@@ -200,6 +201,7 @@ export const benchmarkPaz7_1: ExampleDef = {
         dt: p.dt_s, nSteps,
         gamma: 0.5, beta: 0.25,
       });
+      (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
       const u_max1 = Math.max(...res.u.map((u) => Math.abs(u[0])));
       const u_max2 = Math.max(...res.u.map((u) => Math.abs(u[1])));
       report += `  Newmark-β TH (pulso F0=${p.F0_lb} lb, td=${p.pulseDur_s}s, ξ=${p.xi}):\n`;

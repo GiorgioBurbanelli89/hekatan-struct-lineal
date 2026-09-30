@@ -55,10 +55,10 @@ export const benchmarkPaz6_1: ExampleDef = {
     t2_s: { default: 0.04, min: 0.01, max: 0.3, step: 0.005, label: "t₂ fin plateau (s)", folder: "Carga" },
     t3_s: { default: 0.06, min: 0.02, max: 0.4, step: 0.005, label: "t₃ fin bajada (s)", folder: "Carga" },
     tEnd_s: { default: 0.5, min: 0.1, max: 5, step: 0.1, label: "t fin (s)", folder: "Time History" },
-    dt_s: { default: 0.001, min: 0.0001, max: 0.05, step: 0.0001, label: "Δt Newmark (s)", folder: "Time History" },
+    dt_s: { default: 0.005, min: 0.0001, max: 0.05, step: 0.0001, label: "Δt Newmark (s) — libro 0.02 · 0.01 · 0.005", folder: "Time History" },
     schemeBeta: {
-      default: 0, label: "Esquema Newmark",
-      options: { "γ=½, β=¼ (avg accel — incond.)": 0, "γ=½, β=⅙ (linear accel — Paz)": 1 },
+      default: 1, label: "Esquema Newmark",   // el del libro (Ej. 6.1: β = 1/6)
+      options: { "γ=1/2, β=1/4 (avg accel — incond.)": 0, "γ=1/2, β=1/6 (linear accel — Paz)": 1 },
       folder: "Time History",
     },
     showTH: { default: 1, boolean: true, label: "📈 Mostrar Chart Panel", folder: "Time History" },
@@ -121,12 +121,13 @@ export const benchmarkPaz6_1: ExampleDef = {
       M, K, C, loadFunc: Ftrap, u0: [0], v0: [0],
       dt: p.dt_s, nSteps, gamma, beta,
     });
+    (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs (lo que se grafica)
     const u_max = Math.max(...res.u.map((u) => Math.abs(u[0])));
     const v_max = Math.max(...res.v.map((v) => Math.abs(v[0])));
     const a_max = Math.max(...res.a.map((a) => Math.abs(a[0])));
 
     let report = `[Paz 6.1] Newmark-β canonical 1-DOF\n`;
-    report += `  Esquema: γ=½, β=${scheme === 0 ? "¼" : "⅙"} (${scheme === 0 ? "avg accel" : "linear accel — Paz"})\n`;
+    report += `  Esquema: γ=1/2, β=${scheme === 0 ? "1/4" : "1/6"} (${scheme === 0 ? "avg accel" : "linear accel — Paz"})\n`;
     report += `  Δt=${p.dt_s} s, nSteps=${nSteps}\n`;
     report += `  u_max = ${u_max.toFixed(5)} in\n`;
     report += `  v_max = ${v_max.toFixed(4)} in/s\n`;
@@ -138,7 +139,7 @@ export const benchmarkPaz6_1: ExampleDef = {
       if (ptype === 0) {
         panel.setTitle("Paz 6.1 — u(t)");
         panel.setSeries([{
-          label: `u(t) β=${scheme === 0 ? "¼" : "⅙"}`,
+          label: `u(t) β=${scheme === 0 ? "1/4" : "1/6"}`,
           data: res.t.map((t, i) => [t, res.u[i][0]] as [number, number]),
           color: "#1a4d8c", width: 2,
         }]);
@@ -171,10 +172,10 @@ export const benchmarkPaz6_1: ExampleDef = {
         // Comparar ambos esquemas
         const r1 = newmarkBeta({ M, K, C, loadFunc: Ftrap, u0: [0], v0: [0], dt: p.dt_s, nSteps, gamma: 0.5, beta: 0.25 });
         const r2 = newmarkBeta({ M, K, C, loadFunc: Ftrap, u0: [0], v0: [0], dt: p.dt_s, nSteps, gamma: 0.5, beta: 1 / 6 });
-        panel.setTitle("Paz 6.1 — Comparación β=¼ vs β=⅙");
+        panel.setTitle("Paz 6.1 — Comparación β=1/4 vs β=1/6");
         panel.setSeries([
-          { label: "u(t) β=¼ avg accel", data: r1.t.map((t, i) => [t, r1.u[i][0]] as [number, number]), color: "#1a4d8c" },
-          { label: "u(t) β=⅙ linear accel", data: r2.t.map((t, i) => [t, r2.u[i][0]] as [number, number]), color: "#c0392b" },
+          { label: "u(t) β=1/4 avg accel", data: r1.t.map((t, i) => [t, r1.u[i][0]] as [number, number]), color: "#1a4d8c" },
+          { label: "u(t) β=1/6 linear accel", data: r2.t.map((t, i) => [t, r2.u[i][0]] as [number, number]), color: "#c0392b" },
         ]);
         panel.setAxes({ xLabel: "t (s)", yLabel: "u (in)", grid: true });
       }

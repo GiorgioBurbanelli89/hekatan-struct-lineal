@@ -23,7 +23,7 @@ import { modalAnalysisPaz, deform, analyze, type Node, type Element } from "heka
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { downloadTextFile, PAZ_UTILS, emitE2kHeader, emitE2kFooter, emitSteelMaterial, emitFrameSection, fmtNum } from "../shared/pazFrameE2k";
 import { getSharedChartPanel } from "../shared/chartPanel";
-import { newmarkBeta } from "../shared/newmarkBeta";
+import { newmarkBeta, solveEigenGeneralized, rayleighDamping, type Matrix } from "../shared/newmarkBeta";
 
 export const benchmarkPaz10_7: ExampleDef = {
   id: "benchmark-paz-10-7",
@@ -49,7 +49,7 @@ export const benchmarkPaz10_7: ExampleDef = {
     t1_s: { default: 0.1, min: 0.01, max: 1, step: 0.01, label: "t₁ fin plateau (s)", folder: "Time History" },
     t2_s: { default: 0.2, min: 0.01, max: 1, step: 0.01, label: "t₂ fin bajada (s)", folder: "Time History" },
     tEnd_s: { default: 0.5, min: 0.1, max: 5, step: 0.1, label: "t fin (s)", folder: "Time History" },
-    dt_s: { default: 0.005, min: 0.0001, max: 0.05, step: 0.001, label: "Δt Newmark (s)", folder: "Time History" },
+    dt_s: { default: 0.001, min: 0.0001, max: 0.05, step: 0.001, label: "Δt Newmark (s)", folder: "Time History" },
     xi: { default: 0.0, min: 0, max: 0.20, step: 0.005, label: "Damping ξ (libro=0)", folder: "Time History" },
     showTH: { default: 1, boolean: true, label: "📈 Mostrar Chart Panel", folder: "Time History" },
     plotType: {
@@ -128,8 +128,8 @@ export const benchmarkPaz10_7: ExampleDef = {
       Iy.set(e, I_m4);
       Iz.set(e, I_m4);
       J.set(e, I_m4 * 2);
-      sAY.set(e, A_m2 * 0.85);
-      sAZ.set(e, A_m2 * 0.85);
+      sAY.set(e, -1);   // Euler-Bernoulli (As = −1): BeamElement del libro, p.281
+      sAZ.set(e, -1);
       dens.set(e, rho_tm3);
       sLab.set(e, `Beam Paz 10.7  I=${p.I_in4} in⁴`);
       matT.set(e, "Acero");
@@ -158,36 +158,62 @@ export const benchmarkPaz10_7: ExampleDef = {
     }
     states.objects3D.val = [];
 
-    // ── Newmark-β simplificado: 1-DOF equivalente para u_centro ──
-    // Para fixed-fixed beam: k_centro = 192·EI/L³ (carga puntual centro)
-    //                       m_eq = 0.5·m̄·L (modal equivalente, primer modo)
-    const k_centro_lbin = 192 * p.E_psi * p.I_in4 / Math.pow(L_in, 3);
-    const m_eq_lbs2in = 0.5 * p.mbar * L_in;  // approx primera masa modal
-    const omega_eq = Math.sqrt(k_centro_lbin / m_eq_lbs2in);
-    const T_eq = 2 * Math.PI / omega_eq;
-    const f_eq = 1 / T_eq;
-    const c_eq = 2 * p.xi * Math.sqrt(k_centro_lbin * m_eq_lbs2in);
+    // ── Time history del LIBRO (30-sep-2026) ──────────────────────────────────────────────────────
+    // Antes era un 1 GDL inventado (k = 192EI/L³, m = ½·m̄·L). Paz lo resuelve con la viga discretizada:
+    // BeamElement + BeamConsMass (masa CONSISTENTE) de la p.281, se quitan los GDL de los apoyos (debc) y se
+    // integra el sistema entero. GDL por nudo interior: [w, θ].
+    const Le = L_in / nElem, EI = p.E_psi * p.I_in4, mb = p.mbar;
+    const ke = [[12 * EI / Le ** 3, 6 * EI / Le ** 2, -12 * EI / Le ** 3, 6 * EI / Le ** 2],
+                [6 * EI / Le ** 2, 4 * EI / Le, -6 * EI / Le ** 2, 2 * EI / Le],
+                [-12 * EI / Le ** 3, -6 * EI / Le ** 2, 12 * EI / Le ** 3, -6 * EI / Le ** 2],
+                [6 * EI / Le ** 2, 2 * EI / Le, -6 * EI / Le ** 2, 4 * EI / Le]];
+    const cm = mb * Le / 420;
+    const me = [[156 * cm, 22 * Le * cm, 54 * cm, -13 * Le * cm],
+                [22 * Le * cm, 4 * Le * Le * cm, 13 * Le * cm, -3 * Le * Le * cm],
+                [54 * cm, 13 * Le * cm, 156 * cm, -22 * Le * cm],
+                [-13 * Le * cm, -3 * Le * Le * cm, -22 * Le * cm, 4 * Le * Le * cm]];
+    const nd = 2 * (nElem + 1);
+    const Kg: Matrix = Array.from({ length: nd }, () => new Array(nd).fill(0));
+    const Mg: Matrix = Array.from({ length: nd }, () => new Array(nd).fill(0));
+    for (let e = 0; e < nElem; e++)
+      for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) {
+        Kg[2 * e + a][2 * e + b] += ke[a][b]; Mg[2 * e + a][2 * e + b] += me[a][b];
+      }
+    const libres: number[] = [];
+    for (let d = 2; d < nd - 2; d++) libres.push(d);          // fuera w y θ de los dos empotramientos
+    const Kf = libres.map((r) => libres.map((c) => Kg[r][c]));
+    const Mf = libres.map((r) => libres.map((c) => Mg[r][c]));
+    const iC = libres.indexOf(2 * midNode);                    // w del nudo central
+    const eigB = solveEigenGeneralized(Kf, Mf);
+    const w1 = Math.sqrt(eigB.omega2[0]), w2 = Math.sqrt(eigB.omega2[1] ?? eigB.omega2[0] * 9);
+    const Cf = p.xi > 0 ? rayleighDamping(Mf, Kf, w1, w2, p.xi) : undefined;
+    const f_eq = w1 / (2 * Math.PI), T_eq = 1 / f_eq;
+    const k_centro_lbin = 192 * p.E_psi * p.I_in4 / Math.pow(L_in, 3);   // solo para el u estático de referencia
 
-    // Carga: rect plateau hasta t1, luego baja lineal hasta t2, luego 0
+    // Carga (MDOFP, p.282): F hasta t1, luego baja lineal hasta 0 en t2. En t = 0 ya vale F (se aplica de golpe).
     const Fload = (t: number): number[] => {
-      if (t <= 0) return [0];
+      if (t < 0) return [0];
       if (t <= p.t1_s) return [p.F_lb];
       if (t <= p.t2_s) return [p.F_lb * (p.t2_s - t) / (p.t2_s - p.t1_s)];
       return [0];
     };
     const nSteps = Math.floor(p.tEnd_s / p.dt_s);
-    const res = newmarkBeta({
-      M: [[m_eq_lbs2in]], K: [[k_centro_lbin]], C: [[c_eq]],
-      loadFunc: Fload, u0: [0], v0: [0],
+    const resB = newmarkBeta({
+      M: Mf, K: Kf, C: Cf,
+      loadFunc: (t) => { const v = new Array(libres.length).fill(0); v[iC] = Fload(t)[0]; return v; },
+      u0: new Array(libres.length).fill(0), v0: new Array(libres.length).fill(0),
       dt: p.dt_s, nSteps,
     });
+    // La gráfica y el informe siguen con u, v, a del nudo central
+    const res = { t: resB.t, u: resB.u.map((u) => [u[iC]]), v: resB.v.map((v) => [v[iC]]), a: resB.a.map((a) => [a[iC]]) };
+    (states as any)._th = res;   // para tests/casos/paz_libro_dinamica.mjs
     const u_max = Math.max(...res.u.map((u) => Math.abs(u[0])));
     const u_st = p.F_lb / k_centro_lbin;
 
     let report = `[Paz 10.7] Fixed-fixed beam, ${nElem} elementos\n`;
     report += `  EI = ${(p.E_psi * p.I_in4).toExponential(3)} lb·in²\n`;
     report += `  k_centro (carga puntual) = ${k_centro_lbin.toFixed(1)} lb/in\n`;
-    report += `  T_eq (1° modo aprox) = ${T_eq.toFixed(4)} s, f_eq = ${f_eq.toFixed(2)} Hz\n`;
+    report += `  Modo 1 (masa consistente, ${libres.length} GDL): T = ${T_eq.toFixed(4)} s, f = ${f_eq.toFixed(3)} Hz (libro 7.231)\n`;
     report += `  Newmark-β u_centro_max = ${u_max.toFixed(4)} in (DLF=${(u_max / u_st).toFixed(3)})\n`;
 
     if (p.showTH > 0.5) {
