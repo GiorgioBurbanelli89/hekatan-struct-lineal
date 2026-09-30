@@ -5,12 +5,20 @@ paso a paso del GDL que grafica cada ejemplo.
 
     python validation/paz-newmark/sap_th.py            (SAP2000 tarda ~95 s en arrancar: no es cuelgue)
 """
-import os, json, math
-import comtypes.client, comtypes.gen.SAP2000v1 as S
+import os, sys, json, math
+import comtypes.client
 
+PROG = "etabs" if "etabs" in sys.argv else "sap"      # python sap_th.py etabs → el mismo modelo en ETABS
 AQUI = os.path.dirname(os.path.abspath(__file__))
-h = comtypes.client.CreateObject("SAP2000v1.Helper").QueryInterface(S.cHelper)
-o = h.CreateObjectProgID("CSI.SAP2000.API.SapObject"); o.ApplicationStart()
+if PROG == "sap":
+    import comtypes.gen.SAP2000v1 as S
+    h = comtypes.client.CreateObject("SAP2000v1.Helper").QueryInterface(S.cHelper)
+    o = h.CreateObjectProgID("CSI.SAP2000.API.SapObject")
+else:
+    import comtypes.gen.ETABSv1 as S
+    h = comtypes.client.CreateObject("ETABSv1.Helper").QueryInterface(S.cHelper)
+    o = h.CreateObjectProgID("CSI.ETABS.API.ETABSObject")
+o.ApplicationStart()
 sm = o.SapModel
 LBIN = 1   # eUnits.lb_in_F
 res = {}
@@ -37,7 +45,9 @@ def nudo(x, y, z):
 
 
 def barra(a, b, sec):
-    r = sm.FrameObj.AddByPoint(a, b, "", sec, ""); return r[0]
+    r = sm.FrameObj.AddByPoint(a, b, "", sec, "")
+    if PROG == "etabs": sm.FrameObj.SetEndLengthOffset(r[0], False, 0, 0, 0)   # sin brazos automáticos
+    return r[0]
 
 
 def plano_xz(p):
@@ -48,12 +58,40 @@ def empotrar(p):
     sm.PointObj.SetRestraint(p, [True] * 6)
 
 
+FUNCS = {}   # ETABS: las funciones se escriben por tabla junto con el caso
+
+
 def funcion(nombre, tv):
     t = [a for a, _ in tv]; v = [b for _, b in tv]
+    if PROG == "etabs": FUNCS[nombre] = tv; return
     sm.Func.FuncTH.SetUser(nombre, len(t), t, v)
 
 
+def tabla(clave, campos, filas):
+    datos = [str(x) for f in filas for x in f]
+    r = sm.DatabaseTables.SetTableForEditingArray(clave, 0, campos, len(filas), datos)
+    assert r[-1] == 0, (clave, r)
+
+
+def aplicar():
+    r = sm.DatabaseTables.ApplyEditedTables(True, 0, 0, 0, 0, "")
+    print("  tablas:", r[:4], str(r[4] or "")[:600].replace(chr(10), " | "))
+    assert r[0] == 0, r
+
+
 def caso_th(nombre, patrones, dt, n, beta=0.25, gamma=0.5, a0=0.0, a1=0.0):
+    if PROG == "etabs":
+        # ETABS lleva la masa a las PLANTAS (LumpMass «Yes» de fábrica): sin plantas definidas se iba a la base
+        # empotrada y la respuesta salía estática (4.1 = u_st). Como SAP2000: sin agrupar, lateral y vertical.
+        tabla("Mass Source Definition", ["Name", "IsDefault", "IncLateral", "IncVertical", "LumpMass", "SourceSelf",
+              "SourceAdded", "SourceLoads"], [("MsSrc1", "Yes", "Yes", "Yes", "No", "Yes", "Yes", "No")])
+        tabla("Functions - Time History - User Defined", ["Name", "Time", "Value"],
+              [(f, t, v) for f, tv in FUNCS.items() for t, v in tv])
+        tabla("Load Case Definitions - Time History - Linear Direct Integration",
+              ["Name", "LoadType", "LoadName", "Function", "LoadSF", "NumSteps", "StepSize", "ProBy", "MassCoeff",
+               "StiffCoeff", "IntType", "Gamma", "Beta"],
+              [(nombre, "Load Pattern", p, f, 1, n, dt, "Direct", a0, a1, "Newmark", gamma, beta) for p, f in patrones])
+        aplicar(); FUNCS.clear(); return
     sm.LoadCases.DirHistLinear.SetCase(nombre)
     k = len(patrones)
     sm.LoadCases.DirHistLinear.SetLoads(nombre, k, ["Load"] * k, [p for p, _ in patrones], [f for _, f in patrones],
@@ -64,7 +102,7 @@ def caso_th(nombre, patrones, dt, n, beta=0.25, gamma=0.5, a0=0.0, a1=0.0):
 
 
 def correr_y_leer(caso, nudos, gdl):
-    sm.File.Save(os.path.join(AQUI, "sap", f"{caso}.sdb"))
+    sm.File.Save(os.path.join(AQUI, PROG, f"{caso}." + ("sdb" if PROG == "sap" else "edb")))
     sm.Analyze.SetRunCaseFlag("", False, True); sm.Analyze.SetRunCaseFlag(caso, True, False)
     assert sm.Analyze.RunAnalysis() == 0
     sm.Results.Setup.DeselectAllCasesAndCombosForOutput(); sm.Results.Setup.SetCaseSelectedForOutput(caso)
@@ -77,7 +115,7 @@ def correr_y_leer(caso, nudos, gdl):
     return out
 
 
-os.makedirs(os.path.join(AQUI, "sap"), exist_ok=True)
+os.makedirs(os.path.join(AQUI, PROG), exist_ok=True)
 E = 30e6
 
 # ── 4.1: pórtico de 1 piso, H = 180, luz 240, 2 columnas I = 69.2, W = 5000 lb, pulso 3000 lb × 0.1 s ──
@@ -131,7 +169,7 @@ for ne in (4, 40):
     caso_th(f"TH107_{ne}", [("P", "F107")], 0.001, 500)
     res[f"10-7_{ne}"] = correr_y_leer(f"TH107_{ne}", {"u": ps[ne // 2]}, 2)
 
-json.dump(res, open(os.path.join(AQUI, "sap_th.json"), "w"), indent=0)
+json.dump(res, open(os.path.join(AQUI, f"{PROG}_th.json"), "w"), indent=0)
 for k, v in res.items():
     print(k, {e: round(d["max"], 6) for e, d in v.items()})
 o.ApplicationExit(False)
