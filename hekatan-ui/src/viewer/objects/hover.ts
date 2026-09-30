@@ -57,7 +57,7 @@ function fmt(v: number | undefined | null, digits = 4): string {
   return v.toFixed(digits);
 }
 
-const HOVER_COLOR_NODE = 0xffaa00;     // amber/orange (hover)
+const HOVER_COLOR_NODE = 0x7f96b3;     // azul acero de Struct (nada de amarillo en la interfaz, Jorge 11-sep-2026)
 const HOVER_COLOR_FRAME = 0x00ddff;    // cyan (hover)
 const HOVER_COLOR_SHELL = 0x00ddff;    // cyan (hover)
 const HOVER_COLOR_SOLID = 0x00ddff;    // cyan (hover)
@@ -179,8 +179,8 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     fontSize: "11px",
     fontFamily: "Consolas, 'Courier New', monospace",
     background: "rgba(0, 0, 0, 0.88)",
-    color: "#ffd166",
-    border: "1px solid rgba(255, 200, 80, 0.5)",
+    color: "#d6e2f0",
+    border: "1px solid rgba(127, 150, 179, 0.7)",
     borderRadius: "4px",
     whiteSpace: "pre-line",  // soporta \n para multi-line
     zIndex: "9999",
@@ -590,8 +590,10 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           }
           extent = Math.max(mx[0]-mn[0], mx[1]-mn[1], mx[2]-mn[2], 0.1);
         }
-        const ds = ctx.derivedDisplayScale?.rawVal ?? 1;
-        const sz = 0.021 * extent * ds;
+        // radio FIJO en pantalla (5 px), como el tubo de la barra: con 2.1 % del modelo la esfera tapaba
+        // media malla al acercarse (Jorge, 30-sep-2026)
+        void extent;
+        const sz = Math.max(1e-4, 5 * metrosPorPixel(p));
         nodeHL.position.copy(p);
         nodeHL.scale.setScalar(sz);
         nodeHL.visible = true;
