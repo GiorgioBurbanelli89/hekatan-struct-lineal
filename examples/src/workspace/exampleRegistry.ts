@@ -154,6 +154,8 @@ export interface ExampleDef {
    * directamente "Benchmarks" desde la categoría y validar el solver.
    */
   benchmark?: boolean;
+  /** carpetas del Tweakpane que arrancan ABIERTAS en este ejemplo (sus parámetros son lo que se viene a tocar) */
+  expandedFolders?: string[];
   /**
    * Exportador E2K custom — si está definido, el botón "Exportar E2K" del
    * toolbar ETABS lo invoca en vez del genérico `e2kExporter.ts`. Útil para

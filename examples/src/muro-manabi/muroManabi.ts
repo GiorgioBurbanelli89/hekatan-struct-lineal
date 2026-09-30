@@ -115,6 +115,8 @@ export const muroManabi: ExampleDef = {
   // la categoría es la del modelo por defecto (membrana); la cáscara y el sólido se eligen dentro
   category: "2️⃣ Shells · 🕸 Membranas",
   benchmark: true,
+  // el muro es PARAMÉTRICO: modelo y geometría a la vista al abrirlo (antes todas las carpetas salían plegadas)
+  expandedFolders: ["Modelo", "Geometría"],
   defaultShellResult: "displacementX",
   defaultSolidResult: "vonMises",
   params: {

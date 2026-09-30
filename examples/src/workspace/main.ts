@@ -6806,6 +6806,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   const isExpandedByDefault = (title: string) =>
     !URL_HEKS && (
       title === defaultFolderTitle ||
+      !!currentExample?.expandedFolders?.includes(title) ||
       /\bmodo\b/i.test(title) ||
       /activar/i.test(title) ||     // "Cargas — Activar" (toggles D/L/S)
       // ⚠️ Al elegir una cimentación, sus parámetros son LO que se viene a tocar,
