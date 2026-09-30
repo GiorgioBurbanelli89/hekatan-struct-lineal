@@ -12,6 +12,7 @@
 import type { State } from "vanjs-core";
 import { timeHistoryAnalysis, modalAnalysis, type THResultado } from "hekatan-fem";
 import { EL_CENTRO_1940_NS } from "./registrosMuestra";
+const SERVICIO = "https://hekatan-compartir.j-b-jazz.workers.dev";   // el de los enlaces cortos de Hekatan LISP
 import { getSharedChartPanel } from "../chartPanel";
 import { leerAcelerograma, pulso, pico, G, type Acel } from "./acelerograma";
 import { modelDiagonal } from "../modeScale";
@@ -85,7 +86,9 @@ PGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s`;
     f.refresh();
   }
   /** La lectura del archivo, separada del diálogo (el botón la usa; y los ensayos sin ratón). */
+  let archivo: { texto: string; nombre: string } | null = null;   // el registro subido (para compartirlo)
   function cargarTexto(texto: string, nombre = "archivo") {
+    archivo = { texto, nombre };
     {
       try {
         acel = leerAcelerograma(texto, "m/s2", nombre);
@@ -238,9 +241,28 @@ PGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s`;
       const num = (k: string, d: number) => (q.get(k) !== null && isFinite(+q.get(k)!) ? +q.get(k)! : d);
       p.metodo = num("thm", 0); p.dir = num("thd", 0); p.escala = num("the", 1); p.xi = num("thx", 5); p.nModos = num("thn", 12);
       if (q.get("th") === "elcentro") { p.registro = 2; cargarElCentro(); }
+      else if (q.get("th") === "k" && q.get("thk")) {
+        p.registro = 1; p.info = "descargando el registro compartido…"; f.refresh();
+        fetch(SERVICIO + "/h/" + encodeURIComponent(q.get("thk")!)).then((r) => r.ok ? r.text() : Promise.reject(r.status)).then((t) => {
+          const nl = t.indexOf("\n"); const nombre = t.slice(0, nl).replace(/^#hekatan-registro\s*/, "") || "registro compartido";
+          cargarTexto(t.slice(nl + 1), nombre);
+          if (q.get("thr") === "1") correr();
+        }).catch((e) => { p.info = "✗ no se pudo descargar el registro compartido (" + e + ")"; f.refresh(); });
+      }
       f.expanded = true; f.refresh();
-      if (q.get("thr") === "1") setTimeout(() => correr(), 1500);
+      if (q.get("thr") === "1" && q.get("th") !== "k") setTimeout(() => correr(), 1500);
     }
   } catch { /* enlace sin tiempo-historia */ }
-  return { correr, animar, parar, resultado: () => ultimo, cargarTexto, params: p, refrescar: () => f.refresh() };
+  /** Lo que Compartir añade al enlace para que quien lo abra vea ESTE tiempo-historia (registro subido incluido). */
+  async function enlace(): Promise<Record<string, string>> {
+    const q: Record<string, string> = { thm: String(p.metodo), thd: String(p.dir), the: String(p.escala), thx: String(p.xi), thn: String(p.nModos), thr: "1" };
+    if (p.registro === 2) q.th = "elcentro";
+    else if (p.registro === 1 && archivo) {
+      const r = await fetch(SERVICIO + "/h", { method: "POST", body: "#hekatan-registro " + archivo.nombre + "\n" + archivo.texto });
+      if (!r.ok) throw new Error("no se pudo guardar el registro para compartir (" + r.status + ")");
+      q.th = "k"; q.thk = (await r.json()).k;
+    } else return {};
+    return q;
+  }
+  return { correr, animar, parar, resultado: () => ultimo, enlace, cargarTexto, params: p, refrescar: () => f.refresh() };
 }
