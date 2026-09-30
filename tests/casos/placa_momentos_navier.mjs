@@ -233,6 +233,19 @@ export async function correr() {
       detalle: `${mxT.toFixed(4)} vs ${t.centroS != null ? t.centroS.toFixed(4) : "?"}`,
     });
     const g = vsSap(r, "placa_navier_sap2000.json", c);
+    // flecha nudo a nudo de la gruesa contra SAP2000. La referencia se rehizo el 29-sep-2026: la del 8-sep
+    // era de un .s2k con E = 25e6 (el test usa 2.2e7) y salía 12 % «más rígida que la delgada».
+    {
+      const S = JSON.parse(readFileSync(new URL("../datos/placa_navier_sap2000.json", import.meta.url), "utf-8").replace(/NaN/g, "null"));
+      const k2 = (x, y) => `${Math.round(x * 1000)},${Math.round(y * 1000)}`;
+      const iN = new Map(r.nodes.map((q, i) => [k2(q[0], q[1]), i]));
+      let peor = 0, mw = 0;
+      for (const q of S.puntos) { const i = iN.get(k2(q.x, q.y)), d = S.disp_nudos[q.n]; if (i === undefined || !d) continue;
+        mw = Math.max(mw, Math.abs(d[2])); peor = Math.max(peor, Math.abs(r.deformOutputs.deformations.get(i)[2] - d[2])); }
+      const dw = (100 * peor) / mw;
+      filas.push({ que: "Shell-THICK vs SAP2000, flecha nudo a nudo (formulacion publicada != CSI; tope = medido)",
+                   medido: dw, limite: 1.5, ok: Number.isFinite(dw) && dw <= 1.5, detalle: `81 nudos, peor ${dw.toFixed(4)} % de ${(mw * 1000).toFixed(4)} mm` });
+    }
     filas.push({
       que: "Shell-THICK vs SAP2000, joints (INCONCLUSO: formulacion publicada != CSI; tope = medido)",
       medido: g.peorPct, limite: 45,
