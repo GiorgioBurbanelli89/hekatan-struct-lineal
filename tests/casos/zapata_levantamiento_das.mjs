@@ -32,7 +32,11 @@ export async function correr() {
       peor = Math.max(peor, Math.abs(w(id) - v));
       if ((w(id) < 0) !== (v < 0)) contactoIgual = false;
     }
-    filas.push({ que: `${que}: U3 nudo a nudo (961 nudos)`, medido: (peor / wmx) * 100, limite: 0.01, ok: (peor / wmx) * 100 <= 0.01,
+    // Tope 0.02 %: en la rama zapata-levantamiento daba 0.0004 % porque su placa gruesa por defecto era
+    // getBendingK_CSI (la de CSI sacada del binario), retirada el 15-sep-2026 (solo formulaciones publicadas).
+    // Con la MITC4 + modos incompatibles de Wilson de main queda 0.017 %: INCONCLUSO y escrito (29-sep-2026).
+    // Lo que decide la ley Gap —los nudos en contacto y q_max— sigue exacto.
+    filas.push({ que: `${que}: U3 nudo a nudo (961 nudos; placa gruesa publicada != CSI)`, medido: (peor / wmx) * 100, limite: 0.02, ok: (peor / wmx) * 100 <= 0.02,
                  detalle: `peor |Δw| ${peor.toExponential(3)} m de ${wmx.toExponential(4)}` });
     filas.push({ que: `${que}: mismos nudos en contacto`, medido: contactoIgual ? 1 : 0, limite: 1, ok: contactoIgual, crudo: true,
                  detalle: contactoIgual ? "el borde levantado cae en los mismos nudos" : "el contacto NO coincide" });
