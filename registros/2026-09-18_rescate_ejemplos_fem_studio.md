@@ -15,7 +15,7 @@ completos** —`params` + `build` + `runModal`— del FEM Studio viejo. El fiche
 ejemplos: por eso quedaron muertos y `?t=arco` salía en blanco.
 
 Y el bug tiene una segunda cara que se vio al reponer `plate-thick-validacion`:
-ese fichero seguía importando **`awatif-fem`**, el nombre de paquete de antes del
+ese fichero seguía importando **`origen-fem`**, el nombre de paquete de antes del
 rebrand (commit `ed5ae58c7`). Nunca dio la cara porque, al no estar en el
 registro, **nadie lo compilaba**. Código fuera del registro es código que nadie
 prueba.

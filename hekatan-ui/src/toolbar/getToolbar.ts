@@ -47,9 +47,6 @@ export function getToolbar({
       ${author
         ? html`<a href="${author}" class="dropdown-link">Contacto · Jorge Burbano (LinkedIn)</a>`
         : ""}
-      <a href="https://github.com/madil4/awatif/tree/v2.0.0" class="dropdown-link"
-        >Based on awatif v2.0.0</a
-      >
     </div>
   `;
 

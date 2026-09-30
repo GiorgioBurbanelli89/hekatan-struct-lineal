@@ -376,7 +376,7 @@ def run_model(mode):
 
 # ── Run all 3 models ──
 mode_labels = ["Rankine (Ka)", "Suelo continuo", "Interfaz"]
-awatif_results = [9.8318e-4, 1.4338e-3, 4.0793e-3]  # from browser console
+hekatan_results = [9.8318e-4, 1.4338e-3, 4.0793e-3]  # from browser console
 
 print("=" * 60)
 print("MURO DE CONTENCION: Hekatan vs OpenSees")
@@ -401,8 +401,8 @@ for mode in range(3):
     coords = np.array(coords)
 
     print(f"  OpenSees:  max|u| = {max_disp:.6e} m")
-    print(f"  Hekatan:    max|u| = {awatif_results[mode]:.6e} m")
-    diff = abs(max_disp - awatif_results[mode]) / max(awatif_results[mode], 1e-15) * 100
+    print(f"  Hekatan:    max|u| = {hekatan_results[mode]:.6e} m")
+    diff = abs(max_disp - hekatan_results[mode]) / max(hekatan_results[mode], 1e-15) * 100
     print(f"  Diferencia: {diff:.2f}%")
     print(f"  Nodos: {len(coords)}")
     print()
@@ -421,7 +421,7 @@ for mode in range(3):
     tcf = ax.tricontourf(triang, disp_mag, levels=20, cmap='jet')
     ax.triplot(triang, 'w-', linewidth=0.3, alpha=0.5)
     plt.colorbar(tcf, ax=ax, label='|u| (m)')
-    ax.set_title(f'{mode_labels[mode]}\nmax|u|={max_disp:.4e} m\n(Hekatan: {awatif_results[mode]:.4e})')
+    ax.set_title(f'{mode_labels[mode]}\nmax|u|={max_disp:.4e} m\n(Hekatan: {hekatan_results[mode]:.4e})')
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
     ax.set_aspect('equal')

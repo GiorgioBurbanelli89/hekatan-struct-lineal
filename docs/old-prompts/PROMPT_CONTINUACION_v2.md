@@ -125,7 +125,7 @@ mkdir "C:\Hekatan"
 cd "C:\Hekatan"
 git clone https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal.git
 cd hekatan-struct-lineal
-git checkout awatif-fem-v2-shells-nonlinear
+git checkout main
 
 # Deps
 npm install

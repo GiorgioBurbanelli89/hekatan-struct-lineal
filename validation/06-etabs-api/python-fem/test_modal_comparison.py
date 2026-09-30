@@ -15,7 +15,7 @@ Usage:
   python test_modal_comparison.py              # Run all comparisons
   python test_modal_comparison.py --opensees   # OpenSees only
   python test_modal_comparison.py --scipy      # SciPy only
-  python test_modal_comparison.py --awatif F1 F2 F3 ...  # Compare with Hekatan freqs
+  python test_modal_comparison.py --hekatan F1 F2 F3 ...  # Compare with Hekatan freqs
 """
 
 import sys
@@ -391,14 +391,14 @@ def run_scipy():
 # 3. COMPARISON TABLE
 # ============================================================================
 
-def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
+def compare_results(opensees_freq, scipy_freq, hekatan_freq=None):
     """Print comparison table between all solvers."""
     print("\n" + "=" * 72)
     print("  COMPARISON TABLE")
     print("=" * 72)
 
     header = f"  {'Mode':>4}  {'OpenSees':>12}  {'SciPy':>12}"
-    if awatif_freq:
+    if hekatan_freq:
         header += f"  {'Hekatan':>12}  {'OS vs SP %':>10}  {'OS vs AW %':>10}"
     else:
         header += f"  {'OS vs SP %':>10}"
@@ -406,8 +406,8 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
     print("  " + "-" * (len(header) - 2))
 
     n = min(len(opensees_freq or []), len(scipy_freq or []))
-    if awatif_freq:
-        n = min(n, len(awatif_freq))
+    if hekatan_freq:
+        n = min(n, len(hekatan_freq))
 
     for i in range(n):
         os_f = opensees_freq[i] if opensees_freq else 0
@@ -421,8 +421,8 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
 
         line = f"  {i+1:>4}  {os_f:>12.4f}  {sp_f:>12.4f}"
 
-        if awatif_freq:
-            aw_f = awatif_freq[i]
+        if hekatan_freq:
+            aw_f = hekatan_freq[i]
             diff_aw = abs(os_f - aw_f) / os_f * 100 if os_f > 0 else 0
             line += f"  {aw_f:>12.4f}  {diff_sp:>9.2f}%  {diff_aw:>9.2f}%"
         else:
@@ -431,9 +431,9 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
         print(line)
 
     print()
-    if awatif_freq:
+    if hekatan_freq:
         os_arr = np.array(opensees_freq[:n])
-        aw_arr = np.array(awatif_freq[:n])
+        aw_arr = np.array(hekatan_freq[:n])
         sp_arr = np.array(scipy_freq[:n])
         max_diff_aw = np.max(np.abs(os_arr - aw_arr) / os_arr * 100)
         max_diff_sp = np.max(np.abs(os_arr - sp_arr) / os_arr * 100)
@@ -453,7 +453,7 @@ def compare_results(opensees_freq, scipy_freq, awatif_freq=None):
 
     print()
     print("  To compare with Hekatan, run:")
-    print("    python test_modal_comparison.py --awatif 1.234 2.345 3.456 ...")
+    print("    python test_modal_comparison.py --hekatan 1.234 2.345 3.456 ...")
     print("  (paste frequencies from the browser modal table)")
 
 
@@ -466,14 +466,14 @@ def main():
 
     print_header()
 
-    awatif_freq = None
+    hekatan_freq = None
     run_os = True
     run_sp = True
 
-    if '--awatif' in args:
-        idx = args.index('--awatif')
-        awatif_freq = [float(x) for x in args[idx+1:]]
-        print(f"\n  Hekatan frequencies provided: {awatif_freq}")
+    if '--hekatan' in args:
+        idx = args.index('--hekatan')
+        hekatan_freq = [float(x) for x in args[idx+1:]]
+        print(f"\n  Hekatan frequencies provided: {hekatan_freq}")
 
     if '--opensees' in args:
         run_sp = '--scipy' in args
@@ -491,7 +491,7 @@ def main():
         scipy_freq = run_scipy()
 
     if opensees_freq and scipy_freq:
-        compare_results(opensees_freq, scipy_freq, awatif_freq)
+        compare_results(opensees_freq, scipy_freq, hekatan_freq)
     elif opensees_freq:
         print("\n  Only OpenSees results available.")
     elif scipy_freq:

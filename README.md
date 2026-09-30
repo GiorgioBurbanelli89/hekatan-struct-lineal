@@ -2,9 +2,7 @@
 
 **Structural FEM analysis platform that runs entirely in the browser.** No installation, no server — C++/Eigen solver compiled to WebAssembly, Three.js 3D visualization, reactive UI with VanJS + Tweakpane.
 
-**How it started.** [awatif](https://github.com/madil4/awatif) by Mohamed Adil compiled a C++ FEM solver to WebAssembly and ran it in the browser. That was the reason this project began: if a C++ solver could run in a web page, a complete structural analysis program could too. All the credit for that starting point belongs to awatif.
-
-Hekatan Struct Lineal started as a fork of [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) by Mohamed Adil (thanks for the original UI framework and viewer, ~10% of the current codebase). Everything else — modal analysis, Winkler springs, native Q4 plane-stress solver, unified Tweakpane workspace, 25+ parametric examples, reactive unit system, modal animation, foundation workflows, CSI membrane, draggable panes, and more — was added for this project.
+Hekatan Struct Lineal: modal analysis, Winkler springs, native Q4 plane-stress solver, unified Tweakpane workspace, 25+ parametric examples, reactive unit system, modal animation, foundation workflows, CSI membrane, draggable panes, and more.
 
 🌐 **Live:** [https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/](https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/)
 
@@ -612,9 +610,9 @@ npx gh-pages --dist website/src/examples `
   --message "your commit message"
 ```
 
-## What Hekatan Struct Lineal adds on top of Awatif
+## What Hekatan Struct Lineal adds
 
-| Feature | Awatif v2.0.0 | Hekatan Struct Lineal |
+| Feature | Base (v2.0.0) | Hekatan Struct Lineal |
 |---------|:---:|:---:|
 | Modal analysis (eigenvalue) | ❌ | ✅ Eigen C++/WASM, mass participation, validated 0.00% vs OpenSees/SciPy |
 | Modal animation (live mode shapes) | ❌ | ✅ Shared helper — works in EVERY example with `hasModal: true` |
@@ -717,8 +715,7 @@ Every example exports an `ExampleDef` with:
 | `hekatan-fem` | FEM solver: `deform()`, `analyze()`, `modalAnalysis()`, `plateQ4Solve()`, `planeQ4Solve()`, C++/WASM bindings |
 | `hekatan-ui` | UI: `getViewer()` (Three.js + colormap + legend), `getToolbar()`; exports reactive `colorMapForceUnit`, `colorMapDispUnit` |
 | `examples` | Unified workspace + 25+ self-contained examples + `getCad3d.ts` legacy FEM Studio (being phased out) |
-| `awatif-py` | **Python port de awatif v2** — pure numpy/scipy, API 1:1 (deform/analyze/modal_analysis), PyVista viewer, Qt + trame GUIs, 8 tests pytest |
-| `hekatan-struct-py` | **Hekatan extensions sobre awatif-py** — selfweight automation, rigid diaphragm constraint, Cardinal Point offsets, MZC Kirchhoff plate, stiffness modifiers, Mesa Torsión paramétrica, iterator framework |
+| `hekatan-struct-py` | **Motor de Python de Hekatan** — selfweight automation, rigid diaphragm constraint, Cardinal Point offsets, MZC Kirchhoff plate, stiffness modifiers, Mesa Torsión paramétrica, iterator framework |
 
 ### C++ Solver (hekatan-fem/src/cpp/)
 
@@ -805,7 +802,7 @@ npx gh-pages --dist website/src/examples \
 
 Solver validated against ETABS 22.6 via Python API (comtypes), plus Paz & Leigh Example 6.3 vs four solvers (browser-WASM, CLI-WASM, native C++, Python/SciPy — all 0.00% difference):
 
-| Test | awatif/ETABS Ratio |
+| Test | Hekatan/ETABS Ratio |
 |------|:---:|
 | Cantilever Timoshenko | 1.0000 |
 | Portal frame | 1.0000 |
@@ -956,7 +953,6 @@ powershell -ExecutionPolicy Bypass -File "Safe Powershell\safe_extract_clean.ps1
 
 ## Credits
 
-- [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) by Mohamed Adil — original UI framework and viewer (~10% of the current codebase; thank you!)
 - [Eigen 3.4](https://eigen.tuxfamily.org/) — C++ linear algebra
 - [web-ifc](https://github.com/ThatOpen/engine_web-ifc) — IFC parser by That Open Company
 - Dr. Roberto Aguiar — Timoshenko beam formulation and parametric building methodology
@@ -964,4 +960,4 @@ powershell -ExecutionPolicy Bypass -File "Safe Powershell\safe_extract_clean.ps1
 
 ## License
 
-MIT (inherited from awatif). See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE) for details.

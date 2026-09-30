@@ -145,9 +145,9 @@ w_check = ops.nodeDisp(nTag_check, 3)
 print(f"\nNode ({x_check:.2f}, {y_check:.2f}): w = {w_check:.6e}")
 
 # Compare with Hekatan
-awatif_w229 = 1.1744e-3
-print(f"Hekatan node 229 (7.80, 4.80): w = {awatif_w229:.6e}")
-print(f"Difference: {abs(w_check - awatif_w229):.6e}")
+hekatan_w229 = 1.1744e-3
+print(f"Hekatan node 229 (7.80, 4.80): w = {hekatan_w229:.6e}")
+print(f"Difference: {abs(w_check - hekatan_w229):.6e}")
 
 # Check a few more interior nodes
 print("\n--- Interior node comparison ---")
@@ -156,8 +156,8 @@ for (ci, cj) in check_points:
     nTag = node_map[(ci, cj)]
     x, y = ci * dx, cj * dy
     w = ops.nodeDisp(nTag, 3)
-    awatif_idx = cj * (nx + 1) + ci
-    print(f"  Node ({x:.2f}, {y:.2f}) [idx={awatif_idx}]: w = {w:.6e}")
+    hekatan_idx = cj * (nx + 1) + ci
+    print(f"  Node ({x:.2f}, {y:.2f}) [idx={hekatan_idx}]: w = {w:.6e}")
 
 # Check column nodes
 print("\n--- Column nodes ---")

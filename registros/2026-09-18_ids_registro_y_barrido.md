@@ -16,7 +16,7 @@ con exactamente esos ids. El fichero **no lo importaba NADIE**: era código
 muerto, y por eso `?t=arco` no cargaba. No hay que portar nada: hay que
 REGISTRARLOS. Lo dejó dicho el propio repo y nadie lo remató:
 
-> `legacyAwatif.ts:75` — «⚠️ "diagrid" y "pergola" también existen paramétricos
+> `legacyOrigen.ts:75` — «⚠️ "diagrid" y "pergola" también existen paramétricos
 > en shared/moreExamples.ts (18 ejemplos que NO están en el registry)»
 
 ### Los 37, clasificados
@@ -107,7 +107,7 @@ barato a más caro:
 4. **Choque de id**: `diagrid` y `pergola` — hay un `legacy(...)` registrado con
    el MISMO id que abre la página standalone. Hay que quitar los dos stubs en la
    misma tacada, o `?t=diagrid` se queda en blanco (ya pasó el 6-sep-2026, está
-   anotado en `legacyAwatif.ts:76`).
+   anotado en `legacyOrigen.ts:76`).
 
 ---
 

@@ -139,11 +139,11 @@ import { layeredQ4Solve, computeABBD, type LayerDef } from "hekatan-fem";
 mkdir "C:\Hekatan"
 cd "C:\Hekatan"
 
-# Clonar hekatan-struct-lineal (rama awatif-fem-v2-shells-nonlinear)
+# Clonar hekatan-struct-lineal (rama main)
 git clone https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal.git
 cd hekatan-struct-lineal
-git checkout awatif-fem-v2-shells-nonlinear
-git pull origin awatif-fem-v2-shells-nonlinear
+git checkout main
+git pull origin main
 cd ..
 
 # Clonar Calcpad-Symbolic (rama main)
@@ -165,7 +165,7 @@ cd examples && npm install && cd ..
 # hekatan-struct-lineal
 cd C:\Hekatan\hekatan-struct-lineal  # o donde lo tengas
 git fetch
-git pull origin awatif-fem-v2-shells-nonlinear
+git pull origin main
 
 # Calcpad-Symbolic
 cd C:\Hekatan\Calcpad-Symbolic
@@ -353,7 +353,7 @@ elementInputs.rigidOffsets = new Map([
 
 | Repo | URL | Branch | Acceso |
 |---|---|---|---|
-| hekatan-struct-lineal | https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal | `awatif-fem-v2-shells-nonlinear` | Privado |
+| hekatan-struct-lineal | https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal | `main` | Privado |
 | Calcpad-Symbolic | https://github.com/GiorgioBurbanelli89/Calcpad-Symbolic | `main` | Privado |
 
 **Comandos git remotes** (ya configurados al clonar, solo de referencia):

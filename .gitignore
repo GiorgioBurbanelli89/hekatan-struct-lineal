@@ -13,7 +13,6 @@ examples/src/**/*_out.html
 # (github.com/GiorgioBurbanelli89/hekatan-pro-struct).
 hekatan-pro-struct/
 hekatan-pro/
-awatif-fem-pro/
 hekatan-fem/src/cpp/PRO/
 hekatan-fem/src/cpp/built/deform-pro.wasm
 hekatan-fem/src/cpp/built/deform-pro.js

@@ -5,8 +5,6 @@
 
 Plataforma web de ingenieria estructural con solver FEM en C++/Eigen compilado a WebAssembly. Funciona completamente en el navegador -- sin instalacion, sin servidor. Construido con Three.js para visualizacion 3D y VanJS para manejo reactivo de estado.
 
-Basado en [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) de Mohamed Adil.
-
 ## Caracteristicas
 
 - **Modelado estructural 3D** -- porticos, shells y edificios completos con visor interactivo Three.js
@@ -130,7 +128,6 @@ hekatan-ui/      Visor (Three.js), parametros (Tweakpane), toolbar (VanJS)
 
 ## Creditos
 
-- [awatif v2.0.0](https://github.com/madil4/awatif/tree/v2.0.0) de Mohamed Adil -- framework original
 - [Eigen 3.4](https://eigen.tuxfamily.org/) -- libreria de algebra lineal C++
 - [web-ifc](https://github.com/ThatOpen/engine_web-ifc) -- parser IFC de That Open Company
 

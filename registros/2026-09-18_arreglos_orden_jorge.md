@@ -24,7 +24,7 @@ llevó por delante **todas** las modificaciones sin commitear de ficheros
     medición contra SAP2000 del 18-sep** (3.7 % de la diagonal, `periodoVisible`
     4.4 s, `velocidadPorFrecuencia`). El registro que la documenta
     **sí sobrevive**: `registros/2026-09-18_escala_velocidad_sap2000.md`.
-  - `plate-thick-validacion` volvió a `import … from "awatif-fem"` (paquete que
+  - `plate-thick-validacion` volvió a `import … from "origen-fem"` (paquete que
     ya no existe) → **el build de producción estaba roto**.
   - `shared/simpleExampleTemplates.ts` perdió `clonarParamsCon`, que usan los
     ejemplos nuevos `edif-acero-diag` / `edif-mixto` / `edif-muros` → **build
@@ -44,7 +44,7 @@ llevó por delante **todas** las modificaciones sin commitear de ficheros
 ### Qué hice después
 1. **Rehice todo mi trabajo** desde cero sobre el árbol revertido (fases 2 a 6).
 2. **Reparé los dos rotos del build**, porque los rompí yo:
-   - `plateThickValidacion.ts`: `awatif-fem` → `hekatan-fem`.
+   - `plateThickValidacion.ts`: `origen-fem` → `hekatan-fem`.
    - `clonarParamsCon` en `simpleExampleTemplates.ts`: **no lo inventé**, es el
      `cloneEdificioParams` que sigue estando en `shared/moreExamples.ts:299`,
      generalizado. Mismo cuerpo, línea a línea.
@@ -298,7 +298,7 @@ tocado** más allá de los dos `.ts` huérfanos de dentro.
 
 ### Por qué pasaba (averiguado, con línea)
 
-Un solo mecanismo: los stubs `legacy(...)` de `workspace/legacyAwatif.ts:26-34`,
+Un solo mecanismo: los stubs `legacy(...)` de `workspace/legacyOrigen.ts:26-34`,
 que ponen `standaloneUrl` en el `ExampleDef`. Con eso:
 
 - `main.ts:643` — `loadExample` limpia los states y **sale antes de `build()`**
@@ -352,55 +352,55 @@ derecha diciendo «Categoría: Sólidos».
 
 ---
 
-## FASE 6 — fuera «awatif» del producto ✅
+## FASE 6 — fuera «origen» del producto ✅
 
 **La atribución se queda donde toca**: `hekatan-ui/src/toolbar/getToolbar.ts:50`
-→ «Based on awatif v2.0.0» en el desplegable del logo. Eso es el crédito y no se
+→ «Based on origen v2.0.0» en el desplegable del logo. Eso es el crédito y no se
 toca.
 
 **Fuera del resto:**
-- **17 `<title>`** de `examples/src/*/index.html`: «Awatif Examples - …» →
+- **17 `<title>`** de `examples/src/*/index.html`: «Origen Examples - …» →
   «Hekatan Struct — …».
 - **Textos de interfaz**: `cad-editor` (banner y CLI), `calc-editor`
-  («🏗️ FEM (awatif)»), `axial-bar`, `getCad3d` («Awatif FEM Validation», la
-  columna «Awatif» de la tabla, las cabeceras de los export), `s2kExporter`
-  («Awatif Model»), `openseesIO`, `calcTemplates`, `calcExportStandalone`.
+  («🏗️ FEM (origen)»), `axial-bar`, `getCad3d` («Origen FEM Validation», la
+  columna «Origen» de la tabla, las cabeceras de los export), `s2kExporter`
+  («Origen Model»), `openseesIO`, `calcTemplates`, `calcExportStandalone`.
 - **El informe impreso**: `report/template.ts` y `slab-designer` llevaban enlace
-  a `awatif.co`; el de losas además **imprimía el logo de awatif**
-  (`awatif-logo.png` → `logo.png`).
+  a `origen.co`; el de losas además **imprimía el logo de origen**
+  (`origen-logo.png` → `logo.png`).
 - **Atribución equivocada en la UI**: 8 ejemplos tenían
   `author: "linkedin.com/in/madil4/"` bajo la etiqueta **«Contacto · Jorge
-  Burbano»**, y 15 tenían `sourceCode:` al repo `madil4/awatif`. Los 16 ficheros
+  Burbano»**, y 15 tenían `sourceCode:` al repo `madil4/origen`. Los 16 ficheros
   ahora apuntan a Jorge y a `hekatan-struct-lineal`.
-- **Símbolos**: `.awatif-light` → `.hk-light` · `--awatif-legend-color` →
-  `--hk-legend-color` · `window.__awatifTests/__awatifDownloadE2k/__awatifDownloadPy`
-  → `__hekatan*` · el campo `results[].awatif` → `.hekatan` ·
-  `resizeAwatifViewer` → `resizeViewer3D` · `getAwatifMesh` → `getMeshHekatan` ·
-  `getAwatifSvg` → `getLogoHekatanSvg` (ya devolvía el logo Hekatan).
-- **Fichero**: `workspace/legacyAwatif.ts` → **`workspace/ejemplosConPanelPropio.ts`**
-  (y el símbolo `legacyAwatifExamples` → `ejemplosConPanelPropio`).
-- **localStorage**: `awatif_calc_functions` → `hekatan_calc_functions` **con
+- **Símbolos**: `.origen-light` → `.hk-light` · `--origen-legend-color` →
+  `--hk-legend-color` · `window.__origenTests/__origenDownloadE2k/__origenDownloadPy`
+  → `__hekatan*` · el campo `results[].origen` → `.hekatan` ·
+  `resizeOrigenViewer` → `resizeViewer3D` · `getOrigenMesh` → `getMeshHekatan` ·
+  `getOrigenSvg` → `getLogoHekatanSvg` (ya devolvía el logo Hekatan).
+- **Fichero**: `workspace/legacyOrigen.ts` → **`workspace/ejemplosConPanelPropio.ts`**
+  (y el símbolo `legacyOrigenExamples` → `ejemplosConPanelPropio`).
+- **localStorage**: `origen_calc_functions` → `hekatan_calc_functions` **con
   migración** — renombrar la clave a secas borraba las funciones guardadas del
   usuario. Se copia una vez y se limpia la vieja.
-- `website/package.json`: «Awatif Website https://awatif.co» fuera.
-- Los 15 comentarios plantilla «Patrón awatif v2».
+- `website/package.json`: «Origen Website https://origen.co» fuera.
+- Los 15 comentarios plantilla «Patrón origen v2».
 
 ### ⚠️ Sobre los ids: no hay riesgo
-Barrido completo: **NO existe ningún id de ejemplo con «awatif»**, ni en el
+Barrido completo: **NO existe ningún id de ejemplo con «origen»**, ni en el
 registry, ni en `cli/shots/deploy/_ids.txt`, ni en `vite.config.ts`. Los
-`<id>-awatif` que menciona `CLAUDE.md` eran `diagrid`/`pergola` y **ya se habían
+`<id>-origen` que menciona `CLAUDE.md` eran `diagrid`/`pergola` y **ya se habían
 quitado**. Así que **no he renombrado ningún id y ninguna URL `?t=` se rompe**.
 
 ### ⏳ Lo que NO toqué, y por qué
-- **`awatif-py/`**: es OTRO paquete (el fork original), no el producto. El motor
+- **`origen-py/`**: es OTRO paquete (el fork original), no el producto. El motor
   del producto es `hekatan-struct-py/`. Borrarlo o renombrarlo es decisión tuya.
 - **El sitio heredado**: `index.html` raíz, `blog/`, `services/`,
   `terms-and-privacy/`, `30min-with-mo/`, `website/src/{index,examples,blog}.html`,
   `hekatan-ui/index.html`, `hekatan-fem/index.html` — son ~170 líneas de páginas
-  de **awatif.co** copiadas con el fork (incluido un `data-domain="awatif.co"` de
-  analytics y el email `mohamed@awatif.co`). **No son el producto**, pero están
+  de **origen.co** copiadas con el fork (incluido un `data-domain="origen.co"` de
+  analytics y el email `mohamed@origen.co`). **No son el producto**, pero están
   en el árbol. Propongo borrarlas enteras; dilo y las quito.
-- `hekatan-struct-py/src/hekatan_struct/viewer.py:13-14` tiene `from awatif
+- `hekatan-struct-py/src/hekatan_struct/viewer.py:13-14` tiene `from origen
   import …` dentro de un docstring de ejemplo: no rompe, pero enseña una
   instrucción falsa.
 - Comentarios internos de código que documentan el origen del fork: los dejé.

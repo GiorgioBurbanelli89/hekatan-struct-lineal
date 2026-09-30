@@ -7,7 +7,7 @@ fix unidades tonf/kN, layered shell ABBD, Winkler springs.
 
 **https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/**
 
-Branch repo: `awatif-fem-v2-shells-nonlinear`
+Branch repo: `main`
 Último commit: `bb024bbf` (a la fecha 2026-05-01)
 Branch deploy: `gh-pages` (commit `9351e439`)
 
@@ -149,7 +149,7 @@ mkdir "C:\Hekatan"
 cd "C:\Hekatan"
 git clone https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal.git
 cd hekatan-struct-lineal
-git checkout awatif-fem-v2-shells-nonlinear
+git checkout main
 git pull
 
 # 2. Deps
@@ -245,7 +245,7 @@ hekatan-struct-lineal/
 
 ## 🚀 Cómo arrancar la próxima sesión
 
-> Continuo Hekatan-struct, branch `awatif-fem-v2-shells-nonlinear`,
+> Continuo Hekatan-struct, branch `main`,
 > último commit `bb024bbf`. Estado completo en `PROMPT_CONTINUACION_v3.md`.
 > Deploy live: https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/
 >

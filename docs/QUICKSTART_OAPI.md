@@ -195,7 +195,7 @@ mkdir C:\Hekatan
 cd C:\Hekatan
 git clone https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal.git
 cd hekatan-struct-lineal
-git checkout awatif-fem-v2-shells-nonlinear
+git checkout main
 ```
 
 ### 3. (Opcional) Instalar dependencias Node.js para benchmark
@@ -224,7 +224,7 @@ cd "C:\Hekatan\hekatan-struct-lineal\Etabs Powershell"
 
 ```powershell
 cd C:\Hekatan\hekatan-struct-lineal
-git pull origin awatif-fem-v2-shells-nonlinear
+git pull origin main
 ```
 
 ### Después de hacer cambios:
@@ -232,7 +232,7 @@ git pull origin awatif-fem-v2-shells-nonlinear
 ```powershell
 git add .
 git commit -m "qué hiciste"
-git push hekatan-struct-lineal awatif-fem-v2-shells-nonlinear
+git push hekatan-struct-lineal main
 ```
 
 ### Si tu otra PC ya hizo commits divergentes:
@@ -273,7 +273,7 @@ git push
 ║                                                                  ║
 ║  Repos:                                                          ║
 ║    https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal        ║
-║      branch: awatif-fem-v2-shells-nonlinear                     ║
+║      branch: main                     ║
 ║    https://github.com/GiorgioBurbanelli89/Calcpad-Symbolic      ║
 ║      branch: main                                               ║
 ╚════════════════════════════════════════════════════════════════╝

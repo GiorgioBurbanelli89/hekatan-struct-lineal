@@ -259,4 +259,4 @@ if (result.massParticipation.length > 0) {
 // Output for piping to comparison script
 console.log("\n" + "-".repeat(72));
 console.log("  For comparison, run:");
-console.log(`  python test_modal_comparison.py --awatif ${freqValues.map(f => f.toFixed(4)).join(" ")}`);
+console.log(`  python test_modal_comparison.py --hekatan ${freqValues.map(f => f.toFixed(4)).join(" ")}`);

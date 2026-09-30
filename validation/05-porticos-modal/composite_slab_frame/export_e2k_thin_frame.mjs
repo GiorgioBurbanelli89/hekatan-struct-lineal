@@ -185,7 +185,7 @@ $ LOAD CASES
 
 // FIX #1: ETABS rechaza el archivo si PROGRAM != "ETABS"
 e2kText = e2kText.replace(
-  /PROGRAM\s+"AWATIF"\s+VERSION\s+"[\d.]+"/,
+  /PROGRAM\s+"[^"]+"\s+VERSION\s+"[\d.]+"/,
   'PROGRAM  "ETABS"  VERSION "22.6.0"'
 );
 

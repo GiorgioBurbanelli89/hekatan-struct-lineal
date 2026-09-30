@@ -8,9 +8,6 @@
  * `docs/GRADUAR_UN_EJEMPLO.md` y los tests `tests/casos/graduado_*.mjs`), salieron los 13
  * heredados del proyecto de origen y el duplicado `placa-cantilever-q4`. Queda uno, que no es
  * un modelo con parámetros sino una explicación paso a paso con su propia interfaz.
- *
- * (El fork parte de awatif v2.0.0; la atribucion esta en los CREDITOS, en el
- * desplegable del logo — `hekatan-ui/src/toolbar/getToolbar.ts`.)
  */
 
 import type { ExampleDef } from "./exampleRegistry";

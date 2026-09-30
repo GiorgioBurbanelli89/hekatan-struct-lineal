@@ -245,10 +245,10 @@ export const FUNDAMENTOS: Fundamento[] = [
     id: "origen", orden: 40, icono: "©", grupo: "Origen",
     titulo: "Origen y créditos",
     resumen: "Punto de partida del código y de las ideas.",
-    que: "Hekatan Struct Lineal parte de un fork de awatif v2.0.0 (github.com/madil4/awatif), extendido con análisis modal, muelles de " +
+    que: "Hekatan Struct Lineal parte de un visor y un solver en WebAssembly de código abierto (licencia MIT, ver LICENSE), extendido con análisis modal, muelles de " +
       "Winkler nativos en C++, ejemplos parametrizados y un workspace unificado. Las formulaciones de elementos son publicadas (ver cada entrada); " +
       "lo de CSI se compara solo por caja negra: misma malla y resultados, sin usar su código.",
-    referencias: ["awatif v2.0.0 — madil4/awatif"],
+    referencias: ["LICENSE (MIT)"],
     donde: [{ ruta: "CLAUDE.md", nota: "descripción de la arquitectura" }],
     estado: "Créditos.",
   },

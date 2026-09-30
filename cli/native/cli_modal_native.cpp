@@ -255,7 +255,7 @@ int main()
     // Output for comparison
     std::cout << std::endl << std::string(72, '-') << std::endl;
     std::cout << "  For comparison:" << std::endl;
-    std::cout << "  python test_modal_comparison.py --awatif";
+    std::cout << "  python test_modal_comparison.py --hekatan";
     std::cout << std::fixed << std::setprecision(4);
     for (int i = 0; i < numValid; ++i)
         std::cout << " " << freqVec[i];

@@ -1,6 +1,6 @@
 # Hekatan Struct Lineal
 
-Fork de [awatif v2.0.0](https://github.com/madil4/awatif) extendido con análisis modal, Winkler springs nativos en C++, ejemplos parametrizados (zapatas, placas, cáscaras, pórticos, edificios) y un **workspace unificado** con Tweakpane para cargar cualquier ejemplo por selector o URL `?t=<id>`.
+Plataforma FEM en el navegador (C++/Eigen → WebAssembly) con análisis modal, Winkler springs nativos en C++, ejemplos parametrizados (zapatas, placas, cáscaras, pórticos, edificios) y un **workspace unificado** con Tweakpane para cargar cualquier ejemplo por selector o URL `?t=<id>`.
 
 **Deploy público:** https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/
 
@@ -568,7 +568,7 @@ del sistema y dejarlo en 0: es el `getZerosIndices` de `deform.cpp`. Con él
 dentro no falla ese GDL, falla el modelo entero — `galpon_lc.heks` daba NaN en
 los 609 nudos por 9 GDL huérfanos de 3 nudos que solo tocan zinc sin flexión.
 
-⚠️ El paquete Python del fork original (`awatif-py/`) se eliminó del repo el
+⚠️ El paquete Python viejo (`…-py/` del proyecto de origen) se eliminó del repo el
 28-sep-2026; el motor Python de este proyecto es `hekatan-struct-py` y sus
 tests importan `hekatan_struct`. `pytest tests` → **69 pasan**, 1 skip, 2 xfail.
 

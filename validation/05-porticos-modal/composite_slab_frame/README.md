@@ -132,7 +132,7 @@ El `e2kExporter.ts` original genera archivos que ETABS abre pero rechaza
 
 | # | Bug original | Fix |
 |---|---|---|
-| 1 | `PROGRAM "AWATIF"` | → `PROGRAM "ETABS" VERSION "22.6.0"` (ETABS valida string) |
+| 1 | `PROGRAM "<el de antes>"` | → `PROGRAM "ETABS" VERSION "22.6.0"` (ETABS valida string) |
 | 2 | Mat_2 (acero) escrito como `TYPE Concrete` | → `TYPE Steel` + FY/FU |
 | 3 | Falta `POINTASSIGN ... DIAPH "D1"` por punto y story | → 25 pts × Level_1 (slab) o 5 pts × 4 Levels (wall) |
 | 4 | `POINTLOAD` individuales en losa | → `AREALOAD UNIFF DIR GRAV` |
