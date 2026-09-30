@@ -127,7 +127,7 @@ def k_pq2(pts, E, nu, t, kappa=5.0 / 6.0):
     return K
 
 
-def k_pq3(pts, E, nu, t, kappa=5.0 / 6.0):
+def k_pq3(pts, E, nu, t, kappa=5.0 / 6.0, condensar=True):
     """K 12x12 del PQ3: el PQ2 más las CUATRO rotaciones jerárquicas de lado.
 
       (3.29)  θ = Σ N_I θ_I + Σ_{L=5..8} N_L n_JK Δθ_JK
@@ -205,6 +205,8 @@ def k_pq3(pts, E, nu, t, kappa=5.0 / 6.0):
                 Bs += N[i] * Bg[i]
             K += (B.T @ CB @ B + Bs.T @ CS @ Bs) * abs(dJ)
 
+    if not condensar:                         # el paper: Δθ de lado COMPARTIDOS (gdl 12..15)
+        return K
     Kaa = K[:12, :12]; Kab = K[:12, 12:]; Kbb = K[12:, 12:]
     if abs(np.linalg.det(Kbb)) < 1e-30:
         return Kaa
