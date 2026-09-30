@@ -2,7 +2,7 @@ import { empaquetar, R } from "../tests/lib/bundle.mjs";
 import { readFileSync } from "node:fs";
 import { portico81 } from "./_portico81.mjs";
 const m = await empaquetar(`export { timeHistoryAnalysis } from "${R}/hekatan-fem/src/index";\n`, "thg" + Date.now());
-const S = JSON.parse(readFileSync("validation/paz-newmark/sap_th_general.json", "utf-8"));
+const S = JSON.parse(readFileSync(`validation/paz-newmark/${process.argv[2] ?? "sap"}_th_general.json`, "utf-8"));
 const sis = JSON.parse(readFileSync("validation/paz-newmark/sismo_sintetico.json", "utf-8"));
 const { nodes, elements, ni, ei } = portico81();
 const tri = { t: [0, 0.1, 1.0], v: [1, 0, 0] };

@@ -57,6 +57,7 @@ struct Config {
   double alpha = 0.0, gamma = 0.5, beta = 0.25;   // directa (HHT; α = 0 → Newmark)
   int envolvente = 0;
   int paso = 1;            // guardar la serie cada `paso` pasos de salida
+  int semantica = 0;       // 0 SAP2000, 1 ETABS (reacción en la base de la DIRECTA con el amortiguamiento cK·K·v)
 };
 
 /** Tabla 5.2.1 de Chopra (p.169): u_{i+1} = A u + B v + C p_i + D p_{i+1}; v_{i+1} = A' u + B' v + C' p_i + D' p_{i+1}. */
@@ -162,7 +163,7 @@ inline void modal(const Config &cfg, const std::vector<Carga> &cargas, const Eig
  */
 inline bool directa(const Config &cfg, const std::vector<Carga> &cargas, const Eigen::SparseMatrix<double> &K,
                     const Eigen::SparseMatrix<double> &M, Eigen::MatrixXd &uOut, std::vector<double> &tOut,
-                    Eigen::MatrixXd &uTodos) {
+                    Eigen::MatrixXd &uTodos, Eigen::MatrixXd *vOut = nullptr) {
   const int n = (int)K.rows();
   // paso interno: la salida partida para que caigan los puntos de las funciones (§21.4)
   double hmin = cfg.dt;
@@ -178,6 +179,7 @@ inline bool directa(const Config &cfg, const std::vector<Carga> &cargas, const E
   Eigen::VectorXd r = cargaEn(0.0, cargas, n);
   const int nOut = cfg.nsteps / cfg.paso + 1;
   uOut.resize(nOut, n); uOut.row(0).setZero(); tOut.assign(1, 0.0);
+  if (vOut) { vOut->resize(nOut, n); vOut->row(0).setZero(); }
   uTodos.resize(cfg.envolvente ? cfg.nsteps + 1 : 0, n);
   if (cfg.envolvente) uTodos.row(0).setZero();
   int kOut = 1;
@@ -196,7 +198,7 @@ inline bool directa(const Config &cfg, const std::vector<Carga> &cargas, const E
       u = un; v = vn; ac = an; r = rn;
     }
     if (cfg.envolvente) uTodos.row(k) = u.transpose();
-    if (k % cfg.paso == 0 && kOut < nOut) { uOut.row(kOut) = u.transpose(); tOut.push_back(k * cfg.dt); ++kOut; }
+    if (k % cfg.paso == 0 && kOut < nOut) { uOut.row(kOut) = u.transpose(); if (vOut) vOut->row(kOut) = v.transpose(); tOut.push_back(k * cfg.dt); ++kOut; }
   }
   return true;
 }

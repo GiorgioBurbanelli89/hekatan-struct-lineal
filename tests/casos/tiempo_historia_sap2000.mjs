@@ -18,7 +18,7 @@ import { empaquetar, R } from "../lib/bundle.mjs";
 import { readFileSync } from "node:fs";
 
 export const nombre = "tiempo-historia-sap2000";
-export const descripcion = "tiempo-historia lineal (modal y directa): Chopra E5.1 y pórtico Paz 8.1 contra SAP2000 paso a paso";
+export const descripcion = "tiempo-historia lineal (modal y directa): Chopra E5.1, pórtico Paz 8.1 contra SAP2000 y ETABS, dual contra SAP2000, paso a paso";
 
 function portico81() {
   const nodes = [[0, 0, 0], [360, 0, 0], [0, 0, 180], [360, 0, 180], [0, 0, 300], [360, 0, 300]];
@@ -54,6 +54,7 @@ export async function correr() {
   }
   // ── pórtico Paz 8.1 contra SAP2000 ──
   const S = JSON.parse(readFileSync(new URL("../datos/th_general_sap2000.json", import.meta.url), "utf-8"));
+  const E = JSON.parse(readFileSync(new URL("../datos/th_general_etabs.json", import.meta.url), "utf-8"));
   const sis = JSON.parse(readFileSync(new URL("../datos/th_sismo_sintetico.json", import.meta.url), "utf-8"));
   const { nodes, elements, ni, ei } = portico81();
   const tri = { t: [0, 0.1, 1.0], v: [1, 0, 0] };
@@ -66,12 +67,15 @@ export async function correr() {
     ["TH81AM", "modal, sismo, ξ = 5 %", { metodo: "modal", dt: 0.01, nPasos: 400, xi: 0.05, cargas: sismo }],
   ];
   const peor = (a, b) => { let p = 0, mx = 0; b.forEach((x, i) => { mx = Math.max(mx, Math.abs(x)); p = Math.max(p, Math.abs((a[i] ?? NaN) - x)); }); return 100 * p / mx; };
+  // SAP2000 (juez) y luego ETABS 22 (segundo árbitro; funciones y casos por DatabaseTables, masa sin agrupar en plantas).
+  // ETABS: en la DIRECTA su reacción en la base suma cK·K·v de los apoyos → semantica "etabs".
+  for (const [prog, REF, sem] of [["SAP2000", S, "sap"], ["ETABS", E, "etabs"]])
   for (const [c, txt, o] of casos) {
-    const r = m.timeHistoryAnalysis(nodes, elements, ni, ei, { ...o, numModes: 12, nudosSalida: [2, 4] });
+    const r = m.timeHistoryAnalysis(nodes, elements, ni, ei, { ...o, numModes: 12, nudosSalida: [2, 4], semantica: sem });
     const series = { u1: r.u.get(2).map((x) => x[0]), u2: r.u.get(4).map((x) => x[0]), FX: r.base.map((b) => b[0]) };
-    for (const [k, ref] of [["u1", S[c].u1.u], ["u2", S[c].u2.u], ["FX", S[c].baseFX]]) {
+    for (const [k, ref] of [["u1", REF[c].u1.u], ["u2", REF[c].u2.u], ["FX", REF[c].baseFX]]) {
       const d = peor(series[k], ref);
-      filas.push({ que: `Paz 8.1 vs SAP2000 ${c} (${txt}): ${k === "FX" ? "reacción en la base FX" : k} paso a paso`,
+      filas.push({ que: `Paz 8.1 vs ${prog} ${c} (${txt}): ${k === "FX" ? "reacción en la base FX" : k} paso a paso`,
                    medido: d, limite: 1e-4, ok: Number.isFinite(d) && d <= 1e-4, detalle: `${ref.length} pasos, peor ${d.toExponential(2)} % del máx` });
     }
   }

@@ -474,7 +474,7 @@ extern "C"
         int *endoff_keys_ptr = nullptr, double *endoff_values_ptr = nullptr, int num_endoff = 0,
         // TIEMPO-HISTORIA LINEAL (30-sep-2026), opcional: ver utils/tiempoHistoria.h. Configuración plana:
         //  [metodo(1 modal, 2 directa), dt, nsteps, xi, cM, cK, alpha, gamma, beta, envolvente, nCargas,
-        //   nNudosSalida, paso,
+        //   nNudosSalida, paso, semantica(0 SAP2000, 1 ETABS),
         //   por carga: tipo(0 patrón, 1 aceleración en la base), dir|nPares, sf, nPts, (t,v)×nPts, [(gdl, valor)×nPares],
         //   nudos de salida]
         // Salida plana: [nOut, nNud, nModos, t×nOut, u(nOut × nNud × 6), base(nOut × 6), envolvente(nNudos × 6)?]
@@ -1197,7 +1197,7 @@ extern "C"
         }
 
         // ── 9. TIEMPO-HISTORIA LINEAL (opcional) ──────────────────────────────────────────────────
-        if (th_cfg_ptr && th_cfg_len >= 13 && th_out_ptr && th_out_len)
+        if (th_cfg_ptr && th_cfg_len >= 14 && th_out_ptr && th_out_len)
         {
             const double *cf = th_cfg_ptr;
             th::Config cfg;
@@ -1205,7 +1205,8 @@ extern "C"
             cfg.cM = cf[4]; cfg.cK = cf[5]; cfg.alpha = cf[6]; cfg.gamma = cf[7]; cfg.beta = cf[8];
             cfg.envolvente = (int)cf[9]; const int nCargas = (int)cf[10]; const int nNud = (int)cf[11];
             cfg.paso = std::max(1, (int)cf[12]);
-            int pos = 13;
+            cfg.semantica = th_cfg_len > 13 ? (int)cf[13] : 0;
+            int pos = 14;
             // GDL completo -> vector reducido (con diafragma, T^T)
             auto aReducido = [&](const Eigen::VectorXd &full) -> Eigen::VectorXd {
                 return hayDiafragma ? (Eigen::VectorXd)(T_dia.transpose() * full) : full;
@@ -1346,8 +1347,8 @@ extern "C"
                 Eigen::SparseMatrix<double> Mf = getReducedMatrix(M_global, libres);
                 std::vector<th::Carga> cl = cargas;
                 for (auto &c : cl) { Eigen::VectorXd pf(libres.size()); for (size_t j = 0; j < libres.size(); ++j) pf(j) = c.p(libres[j]); c.p = pf; }
-                Eigen::MatrixXd uOut, uTodos;
-                ok = th::directa(cfg, cl, Kf, Mf, uOut, tOut, uTodos);
+                Eigen::MatrixXd uOut, uTodos, vOut;
+                ok = th::directa(cfg, cl, Kf, Mf, uOut, tOut, uTodos, &vOut);
                 if (ok) {
                     // libres -> reducido: selección de columnas (dispersa; densa serían GB en modelos grandes)
                     Eigen::SparseMatrix<double> E(dof, (int)libres.size());
@@ -1356,6 +1357,9 @@ extern "C"
                     Eigen::MatrixXd BE(6, libres.size());
                     for (size_t j = 0; j < libres.size(); ++j) BE.col(j) = B.col(libres[j]);
                     base = uOut * BE.transpose();
+                    // ETABS (medido 30-sep-2026, pórtico Paz 8.1): su reacción en la base de la DIRECTA suma el
+                    // amortiguamiento proporcional a la rigidez en los apoyos, cK·K·v (resto 4e-9). SAP2000 no.
+                    if (cfg.semantica == 1 && cfg.cK != 0.0) base += cfg.cK * (vOut * BE.transpose());
                     if (cfg.envolvente) {
                         todosRed = Eigen::MatrixXd::Zero(uTodos.rows(), dof);
                         for (size_t j = 0; j < libres.size(); ++j) todosRed.col(libres[j]) = uTodos.col(j);

@@ -446,6 +446,9 @@ export interface THOpciones {
   gamma?: number; beta?: number;
   envolvente?: boolean;       // máx |u| de TODOS los nudos (cuesta: pasa por todos los GDL en cada paso)
   paso?: number;              // guardar la serie cada `paso` pasos
+  /** De quién es la reacción en la base (medido 30-sep-2026): "sap" (defecto, el juez) = elástica; "etabs" = en la
+   *  DIRECTA suma el amortiguamiento proporcional a la rigidez cK·K·v de los apoyos, como ETABS. */
+  semantica?: "sap" | "etabs";
 }
 
 export interface THResultado {
@@ -461,7 +464,7 @@ function thConfigPlana(o: THOpciones, nNodos: number): number[] {
   const a = o.alpha ?? 0;
   const g = o.gamma ?? (1 - 2 * a) / 2, b = o.beta ?? (1 - a) * (1 - a) / 4;
   const out = [o.metodo === "directa" ? 2 : 1, o.dt, o.nPasos, o.xi ?? 0, o.cM ?? 0, o.cK ?? 0, a, g, b,
-               o.envolvente ? 1 : 0, o.cargas.length, o.nudosSalida.length, Math.max(1, o.paso ?? 1)];
+               o.envolvente ? 1 : 0, o.cargas.length, o.nudosSalida.length, Math.max(1, o.paso ?? 1), o.semantica === "etabs" ? 1 : 0];
   for (const c of o.cargas) {
     const f = c.funcion;
     if (c.tipo === "aceleracion") {

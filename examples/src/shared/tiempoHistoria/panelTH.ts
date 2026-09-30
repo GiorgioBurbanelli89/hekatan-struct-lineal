@@ -35,6 +35,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     alpha: 0,
     dt: 0.01,
     grafica: 0,           // 0 u nudo de control, 1 cortante basal, 2 aceleración del terreno
+    semantica: 0,         // reacción en la base: 0 SAP2000 (elástica), 1 ETABS (directa + cK·K·v)
     info: "—",
   };
   let acel: Acel = pulso(p.ampG, p.dur, p.total, p.dt);
@@ -53,6 +54,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
   f.addBinding(p, "nModos", { label: "N° de modos (modal)", min: 1, max: 200, step: 1 });
   f.addBinding(p, "alpha", { label: "α HHT (directa)", min: -0.3333, max: 0, step: 0.01 });
   f.addBinding(p, "dt", { label: "Δt salida (s)", min: 0.001, max: 0.1, step: 0.001 });
+  f.addBinding(p, "semantica", { label: "Reacción en la base", options: { "como SAP2000": 0, "como ETABS": 1 } });
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 3 });
   f.addButton({ title: "▶ Correr tiempo-historia" }).on("click", () => correr());
   f.addBinding(p, "grafica", { label: "Gráfica", options: { "u del nudo de control": 0, "Cortante basal": 1, "Aceleración del terreno": 2 } })
@@ -107,7 +109,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
         metodo: p.metodo === 1 ? "directa" : "modal", dt: p.dt, nPasos, numModes: p.nModos,
         xi: p.metodo === 0 ? xi : 0, cM, cK, alpha: p.alpha,
         cargas: [{ tipo: "aceleracion", dir: p.dir as 0 | 1 | 2, funcion: { t, v }, sf: p.escala }],
-        nudosSalida: nodes.map((_, i) => i), paso, envolvente: false,
+        nudosSalida: nodes.map((_, i) => i), paso, envolvente: false, semantica: p.semantica === 1 ? "etabs" : "sap",
       });
       if (!r) throw new Error("el motor no devolvió resultado (¿modelo sin masa o inestable?)");
       // nudo de control: el de mayor |u| en la dirección de la carga
