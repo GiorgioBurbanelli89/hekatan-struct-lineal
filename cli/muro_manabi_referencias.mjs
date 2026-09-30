@@ -2,7 +2,7 @@
 /**
  * De las salidas de CSI a las referencias del caso `muro-manabi-vs-csi`: solo los desplazamientos,
  * por nudo y por caso.
- *   node cli/muro_manabi_referencias.mjs <carpeta>
+ *   node cli/muro_manabi_referencias.mjs <carpeta> [variante]     (variante lat1 = suelo lateral)
  *
  * SAP2000: `sap_<modelo>.json`, el modelo ARMADO por OAPI (csi_desde_dump.py), dos casos.
  * ETABS:   `abre_etabs_<modelo>.json`, ETABS ABRIENDO el `.e2k` que exporta Hekatan
@@ -19,7 +19,9 @@ const AQUI = dirname(fileURLToPath(import.meta.url));
 const carpeta = process.argv[2];
 if (!carpeta) { console.error("uso: node cli/muro_manabi_referencias.mjs <carpeta>"); process.exit(2); }
 const hoy = new Date().toISOString().slice(0, 10);
-const guardar = (prog, modelo, out) => writeFileSync(join(AQUI, "..", "tests", "datos", `muro_manabi_${prog}_${modelo}.json`), JSON.stringify(out));
+// 2.º argumento opcional: variante del modelo (p. ej. `lat1` = con suelo lateral) → muro_manabi_<prog>_<modelo>_lat1.json
+const SUF = process.argv[3] ? `_${process.argv[3]}` : "";
+const guardar = (prog, modelo, out) => writeFileSync(join(AQUI, "..", "tests", "datos", `muro_manabi_${prog}_${modelo}${SUF}.json`), JSON.stringify(out));
 
 for (const modelo of ["membrana", "cascara", "solido"]) {
   const f = join(carpeta, `sap_${modelo}.json`);

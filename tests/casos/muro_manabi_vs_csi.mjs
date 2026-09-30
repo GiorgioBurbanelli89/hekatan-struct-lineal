@@ -29,9 +29,12 @@ export async function correr() {
     export { resolverMuroManabi } from "${R}/examples/src/muro-manabi/muroManabi";
     export { MURO_MANABI } from "${R}/examples/src/muro-manabi/malla";
   `, "muro-manabi-test");
-  const filas = [], sol = {};
+  const filas = [];
+  // dos variantes: el modelo de los vídeos (apoyo fijo en x) y el de SUELO LATERAL (muelles en x: Barkan + Terzaghi)
+  for (const [suf, over, nombreVar] of [["", { lat: 0 }, " [apoyo fijo en x]"], ["_lat1", { lat: 1 }, ""]]) {
+  const sol = {};
   for (let m = 0; m < 3; m++) for (let c = 0; c < 2; c++)
-    sol[`${MODELOS[m]}/${CASOS[c]}`] = mod.resolverMuroManabi({ ...mod.MURO_MANABI, modelo: m, caso: c }, 1);
+    sol[`${MODELOS[m]}/${CASOS[c]}`] = mod.resolverMuroManabi({ ...mod.MURO_MANABI, ...over, modelo: m, caso: c }, 1);
 
   // 1) equilibrio: lo que devuelve el terreno (muelles + apoyo en x) = lo que se carga
   let peorEq = 0, donde = "";
@@ -42,22 +45,22 @@ export async function correr() {
       if (e > peorEq) { peorEq = e; donde = `${k} ${"x z"[i]}`; }
     }
   }
-  filas.push({ que: "equilibrio con los muelles (6 modelos, x y z)", medido: peorEq, limite: 1e-6, ok: peorEq <= 1e-6, detalle: `peor: ${donde}` });
+  filas.push({ que: "equilibrio con los muelles (6 modelos, x y z)" + nombreVar, medido: peorEq, limite: 1e-6, ok: peorEq <= 1e-6, detalle: `peor: ${donde}` });
 
   // 2) las tres idealizaciones, caso sísmico
   const ux = (k) => sol[k].deformOutputs.deformations.get(sol[k].malla.nudoCoronacion)[0];
   const pmax = (k) => { let v = 0; sol[k].presion.forEach((p) => { v = Math.max(v, -p); }); return v; };
   const dif = (a, b) => Math.abs(a - b) / Math.abs(b) * 100;
   const dMS = dif(ux("membrana/Sismico"), ux("solido/Sismico"));
-  filas.push({ que: "coronacion: membrana (deformacion plana) vs solido", medido: dMS, limite: 0.5, ok: dMS <= 0.5,
+  filas.push({ que: "coronacion: membrana (deformacion plana) vs solido" + nombreVar, medido: dMS, limite: 0.5, ok: dMS <= 0.5,
     detalle: `${(ux("membrana/Sismico") * 1000).toFixed(4)} vs ${(ux("solido/Sismico") * 1000).toFixed(4)} mm` });
   const dP = dif(pmax("cascara/Sismico"), pmax("membrana/Sismico"));
-  filas.push({ que: "presion de contacto maxima: cascara vs membrana", medido: dP, limite: 0.5, ok: dP <= 0.5,
+  filas.push({ que: "presion de contacto maxima: cascara vs membrana" + nombreVar, medido: dP, limite: 0.5, ok: dP <= 0.5,
     detalle: `${pmax("cascara/Sismico").toFixed(2)} vs ${pmax("membrana/Sismico").toFixed(2)} kN/m2 (sin el par del apoyo daba 75.3)` });
 
   // 3) contra CSI, nudo a nudo
-  for (const [prog, modelos] of [["sap", MODELOS], ["etabs", ["membrana", "cascara"]]]) for (const modelo of modelos) {
-    const ref = join(AQUI, "..", "datos", `muro_manabi_${prog}_${modelo}.json`);
+  for (const [prog, modelos] of [["sap", MODELOS], ["etabs", suf ? [] : ["membrana", "cascara"]]]) for (const modelo of modelos) {
+    const ref = join(AQUI, "..", "datos", `muro_manabi_${prog}_${modelo}${suf}.json`);
     if (!existsSync(ref)) { filas.push({ que: `${prog} ${modelo}: referencia`, crudo: true, medido: "falta", limite: "existe", ok: false, detalle: ref }); continue; }
     const S = JSON.parse(readFileSync(ref, "utf-8"));
     for (const caso of CASOS) {
@@ -73,10 +76,11 @@ export async function correr() {
         for (let c = 0; c < 3; c++) { const d = Math.abs(U.get(n)[c] - u[n][c]) / mx * 100; if (d > peor) { peor = d; pn = n; } }
       }
       const nc = s.malla.nudoCoronacion, lim = S.limite ?? 1e-4;
-      filas.push({ que: `${S.programa} · ${modelo} · ${caso.toLowerCase()}: ux, uy, uz nudo a nudo`,
+      filas.push({ que: `${S.programa} · ${modelo} · ${caso.toLowerCase()}: ux, uy, uz nudo a nudo${nombreVar}`,
         medido: peor, limite: lim, ok: casados >= N - 1 && peor <= lim,
         detalle: `coronacion ${(U.get(nc)[0] * 1000).toFixed(4)} vs ${(u[nc]?.[0] * 1000).toFixed(4)} mm; ${casados}/${N} nudos; peor nudo ${pn}; ${S.como}` });
     }
+  }
   }
   return filas;
 }

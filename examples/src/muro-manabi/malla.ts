@@ -12,7 +12,13 @@
  *   z = tf ┌──────┴─────┴──────────────────┐
  *          │ puntera       │     talón     │  ← zapata
  *   z = 0  └───────────────────────────────┘
- *            ▲ muelles de balasto (uz) en toda la base · ux sujeto en la punta de la puntera
+ *            ▲ muelles de balasto (uz) en toda la base · en horizontal, según `lat`:
+ *              lat = 0  ux sujeto en la punta de la puntera (el modelo de los vídeos 4 y 5)
+ *              lat = 1  SUELO LATERAL: muelles ux en toda la base, k = Cτ·ks·A con Cτ/Cu = 0.5 (Barkan,
+ *                       Dynamics of Bases and Foundations, 1962; IS 5249:1992), y en la cara enterrada
+ *                       (puntera y pie del fuste hasta hDel sobre la base), k = nh·d/hDel·A con d la
+ *                       profundidad bajo el terreno de delante (Terzaghi 1955, Géotechnique 5(4):297–326,
+ *                       nh de arena suelta seca 2.2 MN/m³; B = hDel es la hipótesis de este modelo)
  *
  *   modelo 0  MEMBRANA  la sección x–z con cáscaras Q4 de espesor L (tensión plana, o deformación
  *                       plana equivalente con E' = E/(1−ν²), ν' = ν/(1−ν))
@@ -54,6 +60,10 @@ export interface MuroManabiParams {
   kh: number;
   kv: number;       // positivo = levanta (quita peso), el signo de GEO5
   ks: number;       // módulo de balasto, kN/m³
+  lat?: number;     // 0 apoyo fijo en x en la punta de la puntera · 1 suelo lateral (muelles en x)
+  ctau?: number;    // Cτ/Cu de la base (Barkan: 0.5)
+  nh?: number;      // Terzaghi, kN/m³ (arena suelta seca 2200 · media 6600 · densa 17600)
+  hDel?: number;    // altura del terreno de delante sobre la base de la zapata, m
 }
 
 /** Valores del muro de la serie, cada uno con su fuente (registros/2026-09-28_PENDIENTE_muro…). */
@@ -69,6 +79,11 @@ export const MURO_MANABI: MuroManabiParams = {
   kh: 0.336, kv: 0,           // NEC-SE-GC 4.2.2: kh = 0.6 · Z · Fa = 0.6 · 0.50 · 1.12
   // estudio de suelos, tramo −2.55 a −3.00 m: 6.59 kg/cm³ (tabla de Nelson Morrison 1993)
   ks: 6.59 * 9806.65,
+  // suelo lateral ENCENDIDO (30-sep-2026): arbitrado con SAP2000 por OAPI, los tres modelos × dos casos a
+  // < 1e-8 % nudo a nudo (tests/datos/muro_manabi_sap_*_lat1.json). lat = 0 es el modelo de los vídeos 4 y 5.
+  lat: 1, ctau: 0.5,
+  nh: 2200,                   // Terzaghi 1955: arena suelta, seca (N ≈ 6 a esa profundidad: sondeo 1)
+  hDel: 0.60,                 // terreno de delante 0.60 m sobre la base (GEO5 y Hekatan Geotechnic)
 };
 
 export type Patron = "PP" | "RELLENO" | "EMPUJE" | "SISMO";
@@ -186,6 +201,7 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
   const C = new Cargas();
   let nudoCoronacion = 0;
   let E = p.E, nu = p.nu;
+  const lat = Math.round(p.lat ?? 0) === 1, ctau = p.ctau ?? 0.5, nh = p.nh ?? 2200, hDel = p.hDel ?? 0.6;
 
   const ys = modelo === 0 ? [0] : tramos(0, p.L, p.ms);
   const wy = modelo === 0 ? [p.L] : tributaria(ys);   // la membrana lleva toda la longitud en su espesor
@@ -257,8 +273,13 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
       const n = zap(i, j);
       const A = wx[i] * wy[j];
       springs.push({ node: n, dof: 2, k: p.ks * A }); base.push({ node: n, area: A });
+      if (lat) springs.push({ node: n, dof: 0, k: ctau * p.ks * A });   // roce de la base (en el plano medio)
       C.mas("RELLENO", n, 2, -p.gamma * p.Hf * wRell[i] * wy[j]);
-      if (i === 0) supports.set(n, [true, true, false, true, false, true]);
+      if (i === 0 && !lat) supports.set(n, [true, true, false, true, false, true]);
+      if (i === 0 && lat) {   // cara enterrada de la zapata: el borde x = 0 lleva el terreno de delante
+        const h = Math.min(hDel, p.tf), d = hDel - h / 2;
+        if (h > 0) springs.push({ node: n, dof: 0, k: (nh * d / hDel) * h * wy[j] });
+      }
     }
     const k0 = zs.indexOf(rd(p.tf));
     for (let j = 0; j < ys.length; j++)
@@ -267,9 +288,20 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
     // (z = tf/2): la reacción, −ΣFx, tiene tf/2 de brazo y ese par se pone en los nudos del apoyo.
     // MEDIDO (28-sep-2026, sismo): sin el par la presión máxima salía 75.3 kPa contra 84.7 de la
     // membrana y del sólido; con él, 84.8. Y la membrana con el apoyo subido a z = tf/2 da 75.2.
-    for (const pat of PATRONES) {
+    if (!lat) for (const pat of PATRONES) {
       const Fx = C.suma(pat)[0];
       for (let j = 0; j < ys.length; j++) C.mas(pat, zap(0, j), 4, (Fx * p.tf / 2 * wy[j]) / p.L);
+    }
+    // con suelo lateral la cáscara lleva los muelles en su plano medio (z = tf/2): el roce de la base
+    // actúa tf/2 más arriba que en la membrana y el sólido. Se corrige igual que el apoyo fijo: el par
+    // ΣFx·tf/2, repartido por área tributaria entre los nudos de la base (el roce toma casi todo el empuje:
+    // la cara enterrada, el 0.6 % en el muro de Manabí).
+    if (lat) {
+      const Atot = base.reduce((a, q) => a + q.area, 0);
+      for (const pat of PATRONES) {
+        const Fx = C.suma(pat)[0];
+        for (const q of base) C.mas(pat, q.node, 4, Fx * p.tf / 2 * q.area / Atot);
+      }
     }
     nudoCoronacion = fus(zs.length - 1, jm);
     // faja de muro: las dos caras de los extremos (y = 0, y = L) son planos de simetría. Ahí nada se
@@ -327,7 +359,28 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
       for (let i = 0; i < xs.length; i++) {
         const n = nudo(i, j, 0), A = wx[i] * wy[j];
         springs.push({ node: n, dof: 2, k: p.ks * A }); base.push({ node: n, area: A });
+        if (lat) springs.push({ node: n, dof: 0, k: ctau * p.ks * A });   // roce de la base
         C.mas("RELLENO", nudo(i, j, kf), 2, -p.gamma * p.Hf * wRell[i] * wy[j]);
+      }
+      if (lat) {
+        // cara enterrada: la punta de la puntera (x = 0, z de 0 a tf) y el frente del fuste hasta hDel.
+        // Nudos de la columna i = 0 en la zapata y de la columna i0 (frente del fuste) por encima de tf.
+        const cara: Array<[number, number]> = [];
+        for (let k = 0; k < zs.length && zs[k] <= Math.min(hDel, p.tf) + 1e-9; k++) cara.push([0, k]);
+        const zc = cara.map(([, k]) => zs[k]);
+        const wz = tributaria(zc);
+        cara.forEach(([i, k], q) => {
+          const d = hDel - zs[k], A = wz[q] * wy[j];
+          if (A > 0 && d > 0) springs.push({ node: nudo(i, j, k), dof: 0, k: (nh * d / hDel) * A });
+        });
+        if (hDel > p.tf + 1e-9) {
+          const ks2 = zs.map((z, k) => k).filter((k) => zs[k] >= p.tf - 1e-9 && zs[k] <= hDel + 1e-9);
+          const z2 = ks2.map((k) => zs[k]), w2 = tributaria(z2);
+          ks2.forEach((k, q) => {
+            const d = hDel - zs[k], A = w2[q] * wy[j];
+            if (A > 0 && d > 0) springs.push({ node: nudo(i0, j, k), dof: 0, k: (nh * d / hDel) * A });
+          });
+        }
       }
       empujeEnLinea(zs.slice(kf), (k) => nudo(i1, j, kf + k), wy[j], () => 0);
     }
@@ -338,7 +391,7 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
     if (modelo === 2) nodes.forEach((q, n) => {
       if (q[1] < 1e-9 || q[1] > p.L - 1e-9) supports.set(n, [false, true, false, false, false, false]);
     });
-    for (let j = 0; j < ys.length; j++) {
+    if (!lat) for (let j = 0; j < ys.length; j++) {
       const n = nudo(0, j, 0), a = supports.get(n) ?? [false, false, false, false, false, false];
       a[0] = true; supports.set(n, a);
     }

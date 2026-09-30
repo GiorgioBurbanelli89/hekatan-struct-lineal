@@ -141,11 +141,15 @@ export const muroManabi: ExampleDef = {
     kh:     P("Sismo", "kh", D.kh, 0, 0.5, 0.001),
     kv:     P("Sismo", "kv (+ levanta)", D.kv, -0.3, 0.3, 0.001),
     ks:     P("Terreno", "módulo de balasto (kN/m³)", Math.round(D.ks), 5000, 300000, 500),
+    lat:    { default: D.lat ?? 0, label: "horizontal", folder: "Terreno", options: { "apoyo fijo en la puntera": 0, "suelo lateral (muelles en x)": 1 } },
+    ctau:   { ...P("Terreno", "Cτ/Cu base (Barkan)", D.ctau ?? 0.5, 0.1, 1, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
+    nh:     { ...P("Terreno", "nh cara enterrada (kN/m³, Terzaghi)", D.nh ?? 2200, 500, 20000, 100), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
+    hDel:   { ...P("Terreno", "terreno delante sobre la base (m)", D.hDel ?? 0.6, 0, 2, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
   },
   guide: [
     "«Modelo» cambia la idealización; la geometría, el terreno y las cargas son los mismos",
     "«Caso» sísmico añade el incremento de Mononobe-Okabe y la inercia del muro",
-    "La base descansa sobre muelles de balasto; la punta de la puntera no se desplaza en x",
+    "La base descansa sobre muelles de balasto. En horizontal: apoyo fijo en la punta de la puntera, o «suelo lateral» (Terreno): muelles en x en la base (Cτ = 0.5·ks, Barkan 1962) y en la cara enterrada (Terzaghi 1955)",
     "En 📊 Calculados: Ka, Kae, el desplazamiento de la coronación y la presión de contacto",
     "Exportar S2K / E2K lleva esta misma malla y estas mismas cargas a SAP2000 y ETABS",
   ],
@@ -188,6 +192,15 @@ export const muroManabi: ExampleDef = {
         + (mx > 0 ? " (tracción: el lineal no despega)" : "");
     }
     out["Reacción del terreno (x, z)"] = `${sol.reaccion[0].toFixed(2)} , ${sol.reaccion[2].toFixed(2)} kN`;
+    if (Math.round(p.lat ?? 0) === 1) {   // suelo lateral: cuánto toma el roce de la base y cuánto la cara enterrada
+      const enBase = new Set(m.base.map((b) => b.node)); let rb = 0, rc = 0;
+      for (const sp of m.springs) if (sp.dof === 0) {
+        const f = -sp.k * (U?.get(sp.node)?.[0] ?? 0);
+        if (enBase.has(sp.node)) rb += f; else rc += f;
+      }
+      out["Horizontal: roce de la base / cara enterrada"] = `${rb.toFixed(2)} / ${rc.toFixed(2)} kN`;
+      out["ux en la base (punta de la puntera)"] = `${((U?.get(m.base[0]?.node)?.[0] ?? 0) * 1000).toFixed(4)} mm`;
+    }
     return out;
   },
 };
