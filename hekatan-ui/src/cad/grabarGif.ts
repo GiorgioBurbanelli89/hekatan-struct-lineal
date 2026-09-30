@@ -20,9 +20,14 @@
  * y se avisa al pasar de 5 MB en vez de dejar que LinkedIn lo congele sin decir nada.
  */
 
-const GIFENC = "https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js";
+import * as gifenc from "gifenc";
 
-const ANCHO = 640;          // el alto sale de la proporción de lo que se graba
+/* 30-sep-2026 — Jorge: «deben tener la misma calidad tanto la grabación en GIF como en MP4». Antes: 640 px (la pantalla
+ * de 2560 encogida al 25 %, texto ilegible) y una paleta NUEVA por cuadro (parpadeo). Ahora: el ancho del MP4 (hasta
+ * 1920 px), escalado de alta calidad, UNA paleta para todo el GIF y cada cuadro guarda SOLO lo que cambió (el resto,
+ * transparente sobre el anterior): en una interfaz casi todo está quieto y el archivo sigue siendo pequeño.
+ * gifenc va dentro de la app (antes se bajaba de un CDN al grabar). */
+const ANCHO_MAX = 1920;     // el alto sale de la proporción de lo que se graba
 const FPS = 10;
 const MAX_CUADROS = 400;    // el tope de LinkedIn
 const MAX_MB = 5;           // idem
@@ -66,7 +71,7 @@ function pinta(b: HTMLButtonElement, n: number) {
     b.style.width = "34px";
     b.style.padding = "0";
     b.style.borderRadius = "50%";
-    b.title = "Grabar un GIF (640 px, 10 cuadros/s). Para LinkedIn: máximo 5 MB y 400 cuadros.";
+    b.title = "Grabar un GIF (hasta 1920 px, 10 cuadros/s, como el MP4). Para LinkedIn: máximo 5 MB y 400 cuadros.";
   }
 }
 
@@ -75,49 +80,56 @@ async function grabar(b: HTMLButtonElement) {
     aviso("Este navegador no sabe grabar la pantalla. En Chrome o Edge sí.", true);
     return;
   }
-  let lib: any;
-  try {
-    lib = await import(/* @vite-ignore */ GIFENC);
-  } catch {
-    aviso("No se pudo cargar el codificador de GIF (¿sin internet?). El MP4 sí funciona.", true);
-    return;
-  }
+  const lib: any = gifenc;
 
   let flujo: MediaStream;
   try {
-    flujo = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: FPS }, audio: false });
+    flujo = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: FPS, width: { ideal: 2560 }, height: { ideal: 1600 } }, audio: false });
   } catch (e: any) {
     if (e?.name === "NotAllowedError") aviso("Grabación cancelada.");
     else aviso("No se pudo empezar: " + (e?.message ?? e), true);
     return;
   }
 
+  await grabarFlujo(flujo, b);
+}
+
+/** Todo lo que va después de elegir pantalla (separado para ensayarlo con un MediaStream cualquiera). */
+async function grabarFlujo(flujo: MediaStream, b: HTMLButtonElement) {
+  const lib: any = gifenc;
   const vid = document.createElement("video");
   vid.srcObject = flujo;
   vid.muted = true;
   await vid.play().catch(() => {});
   await new Promise((r) => setTimeout(r, 250));      // que llegue el primer cuadro
 
-  const alto = Math.max(2, Math.round(ANCHO * (vid.videoHeight || 9) / (vid.videoWidth || 16) / 2) * 2);
+  const vw = vid.videoWidth || 1920, vh = vid.videoHeight || 1080;
+  const ANCHO = Math.min(ANCHO_MAX, vw - (vw % 2));
+  const alto = Math.max(2, Math.round(ANCHO * vh / vw / 2) * 2);
   const c = document.createElement("canvas");
   c.width = ANCHO; c.height = alto;
   const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
 
-  const gif = lib.GIFEncoder();
-  let n = 0;
+  // la codificación va en un WORKER (gifWorker.ts): aquí solo se copia la pantalla y se anota el tiempo REAL
+  const w = new Worker(new URL("./gifWorker.ts", import.meta.url), { type: "module" });
+  let n = 0, enCola = 0, tPrev = 0;
   grabando = true;
   pinta(b, 0);
   aviso(`Grabando GIF ${ANCHO}×${alto} a ${FPS} cuadros/s. Pulsa otra vez para guardar.`);
+  w.onmessage = (ev) => { if (ev.data.tipo === "hecho") enCola--; };
 
   const fin = () => new Promise<void>((listo) => {
     const reloj = setInterval(() => {
       if (!grabando || n >= MAX_CUADROS) { clearInterval(reloj); listo(); return; }
+      if (enCola > 2) return;                          // el worker va atrás: se salta; el cuadro anterior dura más
+      const ahora = performance.now();
       g.drawImage(vid, 0, 0, ANCHO, alto);
       const d = g.getImageData(0, 0, ANCHO, alto).data;
-      // 256 colores: es lo que admite el formato
-      const paleta = lib.quantize(d, 256);
-      gif.writeFrame(lib.applyPalette(d, paleta), ANCHO, alto,
-                     { palette: paleta, delay: Math.round(1000 / FPS) });
+      const delay = n === 0 ? Math.round(1000 / FPS) : Math.round(ahora - tPrev);
+      tPrev = ahora;
+      enCola++;
+      w.postMessage({ tipo: "cuadro", rgba: d.buffer, ancho: ANCHO, alto, delay }, [d.buffer]);
       pinta(b, ++n);
     }, 1000 / FPS);
     parar = () => { grabando = false; };
@@ -125,9 +137,14 @@ async function grabar(b: HTMLButtonElement) {
 
   await fin();
   for (const p of flujo.getTracks()) p.stop();
-  gif.finish();
+  aviso("Terminando el GIF…");
+  const bytes: ArrayBuffer = await new Promise((ok) => {
+    w.onmessage = (ev) => { if (ev.data.tipo === "gif") ok(ev.data.bytes); };
+    w.postMessage({ tipo: "fin" });
+  });
+  w.terminate();
 
-  const blob = new Blob([gif.bytes()], { type: "image/gif" });
+  const blob = new Blob([bytes], { type: "image/gif" });
   const mb = blob.size / 1048576;
   const d = new Date();
   const a = document.createElement("a");
@@ -146,7 +163,7 @@ async function grabar(b: HTMLButtonElement) {
   else if (n >= MAX_CUADROS)
     aviso(`GIF guardado: ${n} cuadros (el tope de LinkedIn), ${mb.toFixed(1)} MB.`);
   else
-    aviso(`GIF guardado: ${n} cuadros, ${(n / FPS).toFixed(0)} s, ${mb.toFixed(1)} MB. Entra en LinkedIn.`);
+    aviso(`GIF guardado: ${ANCHO}×${alto}, ${n} cuadros, ${mb.toFixed(1)} MB. Entra en LinkedIn.`);
 }
 
 /** Coloca el 🎞 a la izquierda del ⏺, siguiendo su rect real. */
@@ -176,6 +193,8 @@ export function montarBotonGif() {
   ].join(";");
   pinta(b, 0);
   b.onclick = () => { if (grabando) parar?.(); else grabar(b); };
+  (window as any).hkGifDesde = (flujo: MediaStream) => grabarFlujo(flujo, b);   // ensayo sin diálogo de pantalla
+  (window as any).hkGifParar = () => parar?.();
   const poner = () => { if (document.body) { document.body.appendChild(b); colocar(b); } };
   if (document.body) poner();
   else document.addEventListener("DOMContentLoaded", poner);

@@ -10,10 +10,111 @@
  * ahí graba. **Nada sale del ordenador**: el vídeo se arma en memoria y se
  * descarga como un archivo, no se sube a ningún sitio.
  *
- * Formato: WebM (VP9 si el navegador lo trae, si no VP8). Es el que graba
- * Chrome sin recodificar; se abre en el propio navegador y lo tragan tanto
- * YouTube como ffmpeg.
+ * Formato (30-sep-2026): MP4 1920×1080, 30 fps fijos, H.264 + AAC, fast start
+ * (WebCodecs + mp4-muxer). Sin WebCodecs: MediaRecorder (MP4 o WebM).
  */
+
+import { Muxer, ArrayBufferTarget } from "mp4-muxer";
+
+/*
+ * 30-sep-2026 — Jorge: «traté de subirlo y no pude». El MP4 de MediaRecorder salía como lo grabó la pantalla:
+ * 2560×1528, fotogramas a ritmo variable (21.6 de media), SIN pista de audio y fragmentado (moov vacío + moof).
+ * Las redes (WhatsApp, TikTok, LinkedIn, Facebook) lo rechazan o lo suben roto. Ahora, si el navegador tiene
+ * WebCodecs (Chrome, Edge), se codifica aparte: 1920×1080 con bandas negras, 30 fotogramas FIJOS, H.264 High,
+ * audio AAC 48 kHz estéreo en silencio y el índice al principio (fast start). Sin WebCodecs, lo de antes.
+ */
+const FPS = 30, SR = 48000;
+let cod: { parar: () => Promise<void> } | null = null;
+
+async function arrancarWebCodecs(flujo: MediaStream, b: HTMLButtonElement): Promise<boolean> {
+  const VE = (window as any).VideoEncoder, AE = (window as any).AudioEncoder, TP = (window as any).MediaStreamTrackProcessor;
+  if (!VE || !AE || !TP) return false;
+  // CALIDAD (Jorge, 30-sep: «se ve feo»): encoger una pantalla de 2560 px a 1920 emborrona el texto de los paneles.
+  // Pantalla grande → 2560×1440 (sin encoger; H.264 nivel 5.0, 16 Mbps); si no, 1920×1080 a 10 Mbps.
+  const ajustes = flujo.getVideoTracks()[0]?.getSettings?.() ?? {};
+  const grande = (ajustes.width ?? 1920) > 1920 || (ajustes.height ?? 1080) > 1080;
+  const W = grande ? 2560 : 1920, H = grande ? 1440 : 1080, BR = grande ? 16e6 : 10e6;
+  const vcfg = grande ? ["avc1.640032", "avc1.4d0032"] : ["avc1.640028", "avc1.4d0028", "avc1.42E028"];
+  let codec = "";
+  for (const c of vcfg) {
+    try { if ((await VE.isConfigSupported({ codec: c, width: W, height: H, bitrate: BR, framerate: FPS })).supported) { codec = c; break; } } catch { /* sigue */ }
+  }
+  let aac = false;
+  try { aac = (await AE.isConfigSupported({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 })).supported; } catch { /* sin audio */ }
+  if (!codec) return false;
+
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: "avc", width: W, height: H, frameRate: FPS },
+    ...(aac ? { audio: { codec: "aac", numberOfChannels: 2, sampleRate: SR } } : {}),
+    fastStart: "in-memory",
+    firstTimestampBehavior: "offset",
+  });
+  const venc = new VE({ output: (ch: any, meta: any) => muxer.addVideoChunk(ch, meta), error: (e: any) => console.error("[grabar] vídeo", e) });
+  venc.configure({ codec, width: W, height: H, bitrate: BR, framerate: FPS, latencyMode: "quality" });
+  const aenc = aac ? new AE({ output: (ch: any, meta: any) => muxer.addAudioChunk(ch, meta), error: (e: any) => console.error("[grabar] audio", e) }) : null;
+  aenc?.configure({ codec: "mp4a.40.2", sampleRate: SR, numberOfChannels: 2, bitrate: 128000 });
+
+  // la pantalla llega a su ritmo; se toma el ÚLTIMO fotograma y se sella a 30 por segundo exactos
+  const lienzo = new OffscreenCanvas(W, H), ctx = lienzo.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  const lector = new TP({ track: flujo.getVideoTracks()[0] }).readable.getReader();
+  let vivo = true;
+  (async () => {
+    while (vivo) {
+      const r = await lector.read(); if (r.done) break;
+      const f = r.value; const esc = Math.min(W / f.displayWidth, H / f.displayHeight);
+      const w = f.displayWidth * esc, h = f.displayHeight * esc;
+      ctx.fillRect(0, 0, W, H); ctx.drawImage(f, (W - w) / 2, (H - h) / 2, w, h); f.close();
+    }
+  })();
+  let n = 0, na = 0;
+  const silencio = new Float32Array(1024 * 2);
+  const tic = window.setInterval(() => {
+    const vf = new (window as any).VideoFrame(lienzo, { timestamp: Math.round(n * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    venc.encode(vf, { keyFrame: n % (FPS * 2) === 0 }); vf.close(); n++;
+    // audio en silencio al mismo reloj: 1024 muestras por trozo
+    while (aenc && na * 1024 < n * SR / FPS) {
+      const ad = new (window as any).AudioData({ format: "f32-planar", sampleRate: SR, numberOfFrames: 1024, numberOfChannels: 2,
+        timestamp: Math.round(na * 1024 * 1e6 / SR), data: silencio });
+      aenc.encode(ad); ad.close(); na++;
+    }
+  }, 1000 / FPS);
+
+  cod = {
+    parar: async () => {
+      vivo = false; clearInterval(tic);
+      try { lector.cancel(); } catch { /* ya cerrado */ }
+      for (const p of flujo.getTracks()) p.stop();
+      await venc.flush(); if (aenc) await aenc.flush();
+      muxer.finalize();
+      const blob = new Blob([(muxer.target as ArrayBufferTarget).buffer], { type: "video/mp4" });
+      descargar(blob, "mp4", `${W}×${H}, 30 fps${aac ? ", audio 48 kHz" : ""}`);
+      cod = null;
+      if (reloj) { clearInterval(reloj); reloj = undefined; }
+      pintarBoton(b);
+    },
+  };
+  flujo.getVideoTracks()[0]?.addEventListener("ended", () => { cod?.parar(); });
+  t0 = Date.now();
+  reloj = window.setInterval(() => pintarBoton(b), 1000);
+  pintarBoton(b);
+  aviso(`Grabando en MP4 ${W}×${H} (listo para redes). Pulsa otra vez el botón rojo para parar y guardar.`);
+  return true;
+}
+
+function descargar(blob: Blob, ext: string, detalle = "") {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nombreArchivo(ext);
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  const mb = (blob.size / 1048576).toFixed(1);
+  const s = Math.round((Date.now() - t0) / 1000);
+  aviso(`Vídeo guardado: ${s} s, ${mb} MB${detalle ? " · " + detalle : ""} (${a.download}).`);
+}
 
 let grabadora: MediaRecorder | null = null;
 let trozos: BlobPart[] = [];
@@ -73,7 +174,7 @@ function aviso(texto: string, error = false) {
 }
 
 function pintarBoton(b: HTMLButtonElement) {
-  if (grabadora) {
+  if (grabadora || cod) {
     const s = Math.round((Date.now() - t0) / 1000);
     b.textContent = `⏹ ${dos(Math.floor(s / 60))}:${dos(s % 60)}`;
     b.style.background = "#7f1d1d";
@@ -101,7 +202,7 @@ async function arrancar(b: HTMLButtonElement) {
   let flujo: MediaStream;
   try {
     flujo = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 30 },
+      video: { frameRate: 30, width: { ideal: 2560 }, height: { ideal: 1600 } },
       audio: false,                       // solo imagen: el micro se pide aparte y casi nunca hace falta
     });
   } catch (e: any) {
@@ -111,6 +212,8 @@ async function arrancar(b: HTMLButtonElement) {
     return;
   }
 
+  // primero el MP4 listo para redes (WebCodecs); si el navegador no lo trae, el grabador de siempre
+  try { if (await arrancarWebCodecs(flujo, b)) return; } catch (e) { console.warn("[grabar] WebCodecs no disponible:", e); }
   trozos = [];
   const mime = formato();
   grabadora = new MediaRecorder(flujo, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
@@ -145,6 +248,7 @@ async function arrancar(b: HTMLButtonElement) {
 }
 
 export function pararGrabacion() {
+  if (cod) { cod.parar(); return; }
   if (grabadora && grabadora.state !== "inactive") grabadora.stop();
 }
 
@@ -225,9 +329,11 @@ export function montarBotonGrabar() {
     "box-shadow:0 3px 10px rgba(0,0,0,.35)",
   ].join(";");
   pintarBoton(b);
-  b.onclick = () => { if (grabadora) pararGrabacion(); else arrancar(b); };
+  b.onclick = () => { if (grabadora || cod) pararGrabacion(); else arrancar(b); };
   const poner = () => { if (document.body) { document.body.appendChild(b); colocar(b); } };
   if (document.body) poner();
   else document.addEventListener("DOMContentLoaded", poner);
   (window as any).hkGrabar = () => b.click();
+  // ensayo sin diálogo de pantalla: graba un MediaStream dado (p. ej. canvas.captureStream()) con el mismo camino
+  (window as any).hkGrabarDesde = (flujo: MediaStream) => arrancarWebCodecs(flujo, b);
 }

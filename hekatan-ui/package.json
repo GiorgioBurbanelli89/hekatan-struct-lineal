@@ -24,7 +24,9 @@
     "vite": "~5.4.10"
   },
   "dependencies": {
+    "gifenc": "^1.0.3",
     "lit-html": "^3.2.1",
+    "mp4-muxer": "^5.2.2",
     "three": "~0.169.0",
     "tweakpane": "~4.0.4",
     "vanjs-core": "^1.5.2",
