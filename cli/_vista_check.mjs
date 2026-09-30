@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const [BASE, PNG] = process.argv.slice(2);
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const err = [];
+const a = await nav.newPage(); await a.setViewport({ width: 1600, height: 1000 }); a.on("pageerror", (e) => err.push(String(e)));
+await a.goto(`${BASE}/workspace/?t=plantillas`, { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 6000));
+await a.evaluate(() => window.__hekatanSetView("elevX")); await new Promise((r) => setTimeout(r, 1000));
+const url = (await a.evaluate(() => window.__hekatanEnlaceEjemplo())).url; console.log(url.replace(/^.*\?/, "?"));
+const b = await nav.newPage(); await b.setViewport({ width: 1600, height: 1000 }); b.on("pageerror", (e) => err.push(String(e)));
+await b.goto(url, { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 9000));
+await b.screenshot({ path: PNG }); console.log("errores", err.length); await nav.close();

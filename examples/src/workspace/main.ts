@@ -574,6 +574,7 @@ async function enlaceEjemplo(): Promise<{ url: string; tipo: "ejemplo" | "modelo
   if (Object.keys(cambiados).length) u.searchParams.set("p", aB64(JSON.stringify(cambiados)));
   // el tiempo-historia hecho (registro incluido: si se subió un archivo, va al servicio de enlaces cortos)
   const th = (window as any).__hekatanTiempoHistoria;
+  if (vistaActual !== "iso") u.searchParams.set("vw", vistaActual);   // la cámara tal como está
   if (th?.enlace) for (const [k, v] of Object.entries(await th.enlace() as Record<string, string>)) u.searchParams.set(k, v);
   return { url: u.toString(), tipo: "ejemplo" };
 }
@@ -2022,6 +2023,11 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
 (window as any).__hekatanSetView = (p: "iso" | "plan" | "elevX" | "elevY") => { try { setView(p); } catch (e) {} };
+// enlace compartido con cámara (?vw=plan|elevX|elevY): se aplica cuando el modelo ya está dibujado
+{
+  const vw = new URLSearchParams(window.location.search).get("vw");
+  if (vw === "plan" || vw === "elevX" || vw === "elevY") setTimeout(() => { try { setView(vw); } catch (e) {} }, 3500);
+}
 
 // Y los PARÁMETROS vivos, para poder barrer un ejemplo desde fuera:
 //     window.__hekatanParams().na = 16;  window.__hekatanRebuild();
