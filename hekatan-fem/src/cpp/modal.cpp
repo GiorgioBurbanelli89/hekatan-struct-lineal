@@ -1,6 +1,7 @@
 #include "data-model.h"
 #include "utils/etabsWallJoint.h"
 #include "utils/springsExtra.h"
+#include "utils/tiempoHistoria.h"
 #include <vector>
 #include <map>
 #include <array>
@@ -470,8 +471,18 @@ extern "C"
         // (mode_shapes sale dividido por su maximo absoluto, para el visor)
         double **mode_scales_ptr_out = nullptr,
         // END LENGTH OFFSETS de CSI (27-sep-2026): [offI, offJ, rz] por barra; ver deform.cpp
-        int *endoff_keys_ptr = nullptr, double *endoff_values_ptr = nullptr, int num_endoff = 0)
+        int *endoff_keys_ptr = nullptr, double *endoff_values_ptr = nullptr, int num_endoff = 0,
+        // TIEMPO-HISTORIA LINEAL (30-sep-2026), opcional: ver utils/tiempoHistoria.h. Configuración plana:
+        //  [metodo(1 modal, 2 directa), dt, nsteps, xi, cM, cK, alpha, gamma, beta, envolvente, nCargas,
+        //   nNudosSalida, paso,
+        //   por carga: tipo(0 patrón, 1 aceleración en la base), dir|nPares, sf, nPts, (t,v)×nPts, [(gdl, valor)×nPares],
+        //   nudos de salida]
+        // Salida plana: [nOut, nNud, nModos, t×nOut, u(nOut × nNud × 6), base(nOut × 6), envolvente(nNudos × 6)?]
+        double *th_cfg_ptr = nullptr, int th_cfg_len = 0,
+        double **th_out_ptr = nullptr, int *th_out_len = nullptr)
     {
+        if (th_out_ptr) *th_out_ptr = nullptr;
+        if (th_out_len) *th_out_len = 0;
         // Initialize outputs to null
         *frequencies_ptr_out = nullptr;
         *num_frequencies_out = 0;
@@ -1183,6 +1194,154 @@ extern "C"
         {
             *mode_scales_ptr_out = (double *)malloc(numValidModes * sizeof(double));
             for (int m = 0; m < numValidModes; ++m) (*mode_scales_ptr_out)[m] = modeScale[m];
+        }
+
+        // ── 9. TIEMPO-HISTORIA LINEAL (opcional) ──────────────────────────────────────────────────
+        if (th_cfg_ptr && th_cfg_len >= 13 && th_out_ptr && th_out_len)
+        {
+            const double *cf = th_cfg_ptr;
+            th::Config cfg;
+            cfg.metodo = (int)cf[0]; cfg.dt = cf[1]; cfg.nsteps = (int)cf[2]; cfg.xi = cf[3];
+            cfg.cM = cf[4]; cfg.cK = cf[5]; cfg.alpha = cf[6]; cfg.gamma = cf[7]; cfg.beta = cf[8];
+            cfg.envolvente = (int)cf[9]; const int nCargas = (int)cf[10]; const int nNud = (int)cf[11];
+            cfg.paso = std::max(1, (int)cf[12]);
+            int pos = 13;
+            // GDL completo -> vector reducido (con diafragma, T^T)
+            auto aReducido = [&](const Eigen::VectorXd &full) -> Eigen::VectorXd {
+                return hayDiafragma ? (Eigen::VectorXd)(T_dia.transpose() * full) : full;
+            };
+            std::vector<th::Carga> cargas;
+            for (int c = 0; c < nCargas && pos + 4 <= th_cfg_len; ++c) {
+                th::Carga cg;
+                const int tipo = (int)cf[pos]; const int dirOn = (int)cf[pos + 1];
+                cg.f.sf = cf[pos + 2]; const int nPts = (int)cf[pos + 3]; pos += 4;
+                for (int j = 0; j < nPts; ++j) { cg.f.t.push_back(cf[pos]); cg.f.v.push_back(cf[pos + 1]); pos += 2; }
+                if (tipo == 1) {                       // aceleración en la base: p = −M·ι (respuesta relativa)
+                    const int d = std::max(0, std::min(2, dirOn));
+                    cg.p = -(M_global * r_full[d]);
+                } else {                               // patrón de fuerzas nodales (GDL completos)
+                    Eigen::VectorXd full = Eigen::VectorXd::Zero(dofCompleto);
+                    for (int j = 0; j < dirOn; ++j) { const int g = (int)cf[pos]; if (g >= 0 && g < dofCompleto) full(g) += cf[pos + 1]; pos += 2; }
+                    cg.p = aReducido(full);
+                }
+                cargas.push_back(cg);
+            }
+            std::vector<int> nudos;
+            for (int j = 0; j < nNud && pos < th_cfg_len; ++j) nudos.push_back((int)cf[pos++]);
+
+            // S: filas de T (o de la identidad) de los GDL de salida → u_completo = S·u_reducido
+            auto filaCompleta = [&](int gdl, std::vector<std::pair<int, double>> &fila) {
+                fila.clear();
+                if (!hayDiafragma) { fila.push_back({gdl, 1.0}); return; }
+                for (int k = 0; k < T_dia.outerSize(); ++k)
+                    for (Eigen::SparseMatrix<double>::InnerIterator it(T_dia, k); it; ++it)
+                        if (it.row() == gdl) fila.push_back({(int)it.col(), it.value()});
+            };
+            const int nS = (int)nudos.size() * 6;
+            Eigen::SparseMatrix<double> S(nS, dof);
+            {
+                std::vector<Eigen::Triplet<double>> tt; std::vector<std::pair<int, double>> fila;
+                for (size_t a2 = 0; a2 < nudos.size(); ++a2)
+                    for (int k = 0; k < 6; ++k) {
+                        const int g = nudos[a2] * 6 + k;
+                        if (nudos[a2] < 0 || nudos[a2] >= num_nodes) continue;
+                        filaCompleta(g, fila);
+                        for (auto &pr : fila) tt.emplace_back((int)(a2 * 6 + k), pr.first, pr.second);
+                    }
+                S.setFromTriplets(tt.begin(), tt.end());
+            }
+            // B: base (6 × dof reducido). Apoyos: R = (K·u) en los GDL fijos; muelles: −k·u. Momentos en el origen.
+            Eigen::MatrixXd B = Eigen::MatrixXd::Zero(6, dof);
+            {
+                std::vector<char> esLibre(dof, 0);
+                for (int c : freeIndices) esLibre[c] = 1;
+                std::vector<int> nodoDe(dof, -1), compDe(dof, -1);
+                if (hayDiafragma) { for (int g = 0; g < dofCompleto; ++g) if (colDe[g] >= 0) { nodoDe[colDe[g]] = g / 6; compDe[colDe[g]] = g % 6; } }
+                else for (int g = 0; g < dof; ++g) { nodoDe[g] = g / 6; compDe[g] = g % 6; }
+                auto sumar = [&](int nodo, int k, const Eigen::RowVectorXd &fila) {
+                    const double x = nodes[nodo][0], y = nodes[nodo][1], z = nodes[nodo][2];
+                    B.row(k) += fila;
+                    if (k == 0) { B.row(4) += z * fila; B.row(5) -= y * fila; }       // My = z·Fx, Mz = −y·Fx
+                    if (k == 1) { B.row(3) -= z * fila; B.row(5) += x * fila; }       // Mx = −z·Fy, Mz = x·Fy
+                    if (k == 2) { B.row(3) += y * fila; B.row(4) -= x * fila; }       // Mx = y·Fz, My = −x·Fz
+                };
+                for (int c = 0; c < dof; ++c) {
+                    if (esLibre[c] || nodoDe[c] < 0) continue;
+                    Eigen::RowVectorXd fila = Eigen::RowVectorXd::Zero(dof);
+                    for (Eigen::SparseMatrix<double>::InnerIterator it(K_global, c); it; ++it) fila(it.row()) = it.value();  // K simétrica
+                    sumar(nodoDe[c], compDe[c], fila);
+                }
+                std::vector<std::pair<int, double>> fila;
+                for (int i = 0; i < num_springs; ++i) {
+                    const int nodo = (int)springs_flat_ptr[3 * i], d = (int)springs_flat_ptr[3 * i + 1];
+                    const double k = springs_flat_ptr[3 * i + 2];
+                    if (nodo < 0 || nodo >= num_nodes || d < 0 || d > 5 || k == 0.0) continue;
+                    filaCompleta(nodo * 6 + d, fila);
+                    Eigen::RowVectorXd r = Eigen::RowVectorXd::Zero(dof);
+                    for (auto &pr : fila) r(pr.first) += -k * pr.second;
+                    sumar(nodo, d, r);
+                }
+            }
+
+            Eigen::MatrixXd serie;   // nOut × nS
+            Eigen::MatrixXd base;    // nOut × 6
+            std::vector<double> tOut;
+            Eigen::MatrixXd todosRed; // (nsteps+1) × dof (envolvente)
+            int nModosUsados = 0;
+            bool ok = true;
+            if (cfg.metodo == 1) {
+                Eigen::MatrixXd phi(dof, numValidModes);
+                std::vector<double> w(numValidModes);
+                for (int m = 0; m < numValidModes; ++m) { phi.col(m) = fullModes[m] / std::sqrt(mGen[m]); w[m] = 2.0 * M_PI * freqVec[m]; }
+                Eigen::MatrixXd qOut, qTodos;
+                th::modal(cfg, cargas, phi, w, qOut, tOut, qTodos);
+                serie = qOut * (S * phi).transpose();
+                base = qOut * (B * phi).transpose();
+                if (cfg.envolvente) todosRed = qTodos * phi.transpose();
+                nModosUsados = numValidModes;
+            } else {
+                std::vector<int> libres = freeIndices;
+                Eigen::SparseMatrix<double> Kf = getReducedMatrix(K_global, libres);
+                Eigen::SparseMatrix<double> Mf = getReducedMatrix(M_global, libres);
+                std::vector<th::Carga> cl = cargas;
+                for (auto &c : cl) { Eigen::VectorXd pf(libres.size()); for (size_t j = 0; j < libres.size(); ++j) pf(j) = c.p(libres[j]); c.p = pf; }
+                Eigen::MatrixXd uOut, uTodos;
+                ok = th::directa(cfg, cl, Kf, Mf, uOut, tOut, uTodos);
+                if (ok) {
+                    // libres -> reducido: selección de columnas (dispersa; densa serían GB en modelos grandes)
+                    Eigen::SparseMatrix<double> E(dof, (int)libres.size());
+                    { std::vector<Eigen::Triplet<double>> te; for (size_t j = 0; j < libres.size(); ++j) te.emplace_back(libres[j], (int)j, 1.0); E.setFromTriplets(te.begin(), te.end()); }
+                    serie = uOut * Eigen::MatrixXd(S * E).transpose();
+                    Eigen::MatrixXd BE(6, libres.size());
+                    for (size_t j = 0; j < libres.size(); ++j) BE.col(j) = B.col(libres[j]);
+                    base = uOut * BE.transpose();
+                    if (cfg.envolvente) {
+                        todosRed = Eigen::MatrixXd::Zero(uTodos.rows(), dof);
+                        for (size_t j = 0; j < libres.size(); ++j) todosRed.col(libres[j]) = uTodos.col(j);
+                    }
+                }
+            }
+            if (ok) {
+                const int nOut = (int)tOut.size();
+                const bool env = cfg.envolvente && todosRed.rows() > 0;
+                const int len = 3 + nOut + nOut * nS + nOut * 6 + (env ? num_nodes * 6 : 0);
+                double *o = (double *)malloc(len * sizeof(double));
+                int q = 0;
+                o[q++] = nOut; o[q++] = (double)nudos.size(); o[q++] = nModosUsados;
+                for (int k = 0; k < nOut; ++k) o[q++] = tOut[k];
+                for (int k = 0; k < nOut; ++k) for (int j = 0; j < nS; ++j) o[q++] = serie(k, j);
+                for (int k = 0; k < nOut; ++k) for (int j = 0; j < 6; ++j) o[q++] = base(k, j);
+                if (env) {
+                    std::vector<double> mx(num_nodes * 6, 0.0);
+                    for (int k = 0; k < todosRed.rows(); ++k) {
+                        Eigen::VectorXd ur = todosRed.row(k).transpose();
+                        Eigen::VectorXd uf = hayDiafragma ? (Eigen::VectorXd)(T_dia * ur) : ur;
+                        for (int g = 0; g < num_nodes * 6 && g < uf.size(); ++g) mx[g] = std::max(mx[g], std::abs(uf(g)));
+                    }
+                    for (int g = 0; g < num_nodes * 6; ++g) o[q++] = mx[g];
+                }
+                *th_out_ptr = o; *th_out_len = len;
+            }
         }
     }
 }

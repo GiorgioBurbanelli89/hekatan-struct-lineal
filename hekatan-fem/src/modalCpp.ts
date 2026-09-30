@@ -32,8 +32,10 @@ export function modalCpp(
   diaphragms?: Map<number, number>,
   // Resortes nodales (Winkler). El estatico ya los recibia y el modal no: sin
   // ellos, un modelo apoyado en balasto FLOTA y da periodos absurdos.
-  springs?: Array<{ node: number; dof: number; k: number }>
-): ModalOutputs {
+  springs?: Array<{ node: number; dof: number; k: number }>,
+  // TIEMPO-HISTORIA LINEAL (30-sep-2026): ver timeHistoryAnalysis() abajo y cpp/utils/tiempoHistoria.h
+  th?: THOpciones
+): ModalOutputs & { timeHistory?: THResultado } {
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
 
   const gc: number[] = [];
@@ -178,6 +180,15 @@ export function modalCpp(
   // Mass participation output pointers
   const massPtrOut = mod._malloc(4);
   gc.push(massPtrOut);
+  // tiempo-historia: configuración plana (ver modal.cpp) y salida
+  let thCfgPtr = 0, thCfgLen = 0;
+  if (th) {
+    const cfg = thConfigPlana(th, nodes.length);
+    thCfgPtr = allocate(cfg, Float64Array, mod.HEAPF64); gc.push(thCfgPtr); thCfgLen = cfg.length;
+  }
+  const thOutPtr = mod._malloc(4); gc.push(thOutPtr);
+  const thOutLen = mod._malloc(4); gc.push(thOutLen);
+  mod.HEAPU32[thOutPtr / 4] = 0; mod.HEAPU32[thOutLen / 4] = 0;
   const massRowsOut = mod._malloc(4);
   gc.push(massRowsOut);
   const massColsOut = mod._malloc(4);
@@ -312,7 +323,12 @@ export function modalCpp(
     // End length offsets (brazos rigidos de CSI): al final, detras de las salidas
     endOffKeysPtr,
     endOffValuesPtr,
-    endOffKeys.length
+    endOffKeys.length,
+    // tiempo-historia (opcional)
+    thCfgPtr,
+    thCfgLen,
+    thOutPtr,
+    thOutLen
   );
 
   // 3- Read outputs
@@ -383,6 +399,15 @@ export function modalCpp(
     gc.push(msPtr);
   }
 
+  // Tiempo-historia
+  let timeHistory: THResultado | undefined;
+  const thPtr = mod.HEAPU32[thOutPtr / 4], thLen = mod.HEAPU32[thOutLen / 4];
+  if (th && thPtr && thLen > 0) {
+    const o = Array.from(new Float64Array(mod.HEAPF64.buffer, thPtr, thLen));
+    gc.push(thPtr);
+    timeHistory = thLeerSalida(o, th, nodes.length);
+  }
+
   // Free memory
   gc.forEach((ptr) => mod._free(ptr));
 
@@ -393,7 +418,97 @@ export function modalCpp(
     participationFactors,
     totalMass,
     modeScales,
+    timeHistory,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+// TIEMPO-HISTORIA LINEAL — los dos métodos de SAP2000/ETABS (CSI Analysis Reference, cap. 21)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+/** Una función de tiempo: puntos (t, v). Antes del primero vale 0 y después del último se mantiene. */
+export interface THFuncion { t: number[]; v: number[] }
+
+/** Un término de r(t) = Σ fᵢ(t)·pᵢ (ec. 21-2). */
+export type THCarga =
+  | { tipo: "patron"; fuerzas: Map<number, number[]>; funcion: THFuncion; sf?: number }   // nudo → [Fx,Fy,Fz,Mx,My,Mz]
+  | { tipo: "aceleracion"; dir: 0 | 1 | 2; funcion: THFuncion; sf?: number };           // üg (respuesta RELATIVA)
+
+export interface THOpciones {
+  metodo: "modal" | "directa";
+  dt: number;                 // paso de SALIDA
+  nPasos: number;
+  cargas: THCarga[];
+  nudosSalida: number[];      // nudos cuya serie se devuelve (u, 6 componentes)
+  xi?: number;                // modal: amortiguamiento constante de todos los modos
+  cM?: number; cK?: number;   // proporcional: C = cM·M + cK·K (directa) / ξₘ = cM/2ω + cK·ω/2 (modal)
+  alpha?: number;             // directa: HHT-α ∈ [−1/3, 0]; 0 = Newmark (γ = ½, β = ¼)
+  gamma?: number; beta?: number;
+  envolvente?: boolean;       // máx |u| de TODOS los nudos (cuesta: pasa por todos los GDL en cada paso)
+  paso?: number;              // guardar la serie cada `paso` pasos
+}
+
+export interface THResultado {
+  t: number[];
+  u: Map<number, number[][]>;   // nudo → [paso][6]
+  base: number[][];             // [paso][Fx, Fy, Fz, Mx, My, Mz] reacción en la base (apoyos + muelles), momentos en el origen
+  envolvente?: number[][];      // [nudo][6] máx |u|
+  nModos: number;
+}
+
+/** Parámetros HHT por defecto: γ = (1 − 2α)/2, β = (1 − α)²/4 (Hilber, Hughes & Taylor 1977). */
+function thConfigPlana(o: THOpciones, nNodos: number): number[] {
+  const a = o.alpha ?? 0;
+  const g = o.gamma ?? (1 - 2 * a) / 2, b = o.beta ?? (1 - a) * (1 - a) / 4;
+  const out = [o.metodo === "directa" ? 2 : 1, o.dt, o.nPasos, o.xi ?? 0, o.cM ?? 0, o.cK ?? 0, a, g, b,
+               o.envolvente ? 1 : 0, o.cargas.length, o.nudosSalida.length, Math.max(1, o.paso ?? 1)];
+  for (const c of o.cargas) {
+    const f = c.funcion;
+    if (c.tipo === "aceleracion") {
+      out.push(1, c.dir, c.sf ?? 1, f.t.length);
+      f.t.forEach((t, i) => out.push(t, f.v[i]));
+    } else {
+      const pares: number[] = [];
+      c.fuerzas.forEach((v, n) => { if (n >= 0 && n < nNodos) v.forEach((x, k) => { if (x) pares.push(n * 6 + k, x); }); });
+      out.push(0, pares.length / 2, c.sf ?? 1, f.t.length);
+      f.t.forEach((t, i) => out.push(t, f.v[i]));
+      out.push(...pares);
+    }
+  }
+  out.push(...o.nudosSalida);
+  return out;
+}
+
+function thLeerSalida(o: number[], opc: THOpciones, nNodos: number): THResultado {
+  const nOut = o[0], nNud = o[1], nModos = o[2];
+  let q = 3;
+  const t = o.slice(q, q + nOut); q += nOut;
+  const u = new Map<number, number[][]>();
+  opc.nudosSalida.slice(0, nNud).forEach((n) => u.set(n, []));
+  for (let k = 0; k < nOut; ++k)
+    for (let j = 0; j < nNud; ++j) { u.get(opc.nudosSalida[j])!.push(o.slice(q, q + 6)); q += 6; }
+  const base: number[][] = [];
+  for (let k = 0; k < nOut; ++k) { base.push(o.slice(q, q + 6)); q += 6; }
+  let envolvente: number[][] | undefined;
+  if (opc.envolvente && q + nNodos * 6 <= o.length) {
+    envolvente = [];
+    for (let i = 0; i < nNodos; ++i) { envolvente.push(o.slice(q, q + 6)); q += 6; }
+  }
+  return { t, u, base, envolvente, nModos };
+}
+
+/**
+ * Tiempo-historia lineal sobre el MISMO modelo que el modal (masa, diafragmas, apoyos, muelles).
+ * `numModes` solo cuenta en el método modal (los modos que se superponen).
+ */
+export function timeHistoryAnalysis(
+  nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs,
+  opc: THOpciones & { numModes?: number; lateralMass?: number; lumpStories?: number; includeElements?: number }
+): THResultado | undefined {
+  const ni: any = nodeInputs;
+  const r = modalCpp(nodes, elements, nodeInputs, elementInputs, opc.numModes ?? 12, opc.lateralMass ?? 0,
+    opc.lumpStories ?? 0, opc.includeElements ?? 1, ni.diaphragms, ni.springs, opc);
+  return r.timeHistory;
 }
 
 // Utils

@@ -65,8 +65,9 @@ const PENDIENTES = [
   //     `edificioAporticado.ts` ponia `rho_c` a todo sin mirar `matCol`/`matViga`,
   //     asi que una columna de acero pesaba 2.447 t/m3 en vez de 7.951: 3.25
   //     veces menos masa. Ahora la densidad va por material, como E, G y nu.
-  "benchmark-paz-7-1", "benchmark-paz-9-3", "benchmark-paz-10-7",
-  "benchmark-paz-11-1", "benchmark-paz-12-1", "benchmark-paz-13-1",
+  // (2) 30-sep-2026: 7-1, 9-3 y 13-1 CERRADOS (masa de piso en nudos, rho del 13.1 bien convertida:
+  //     tests/casos/paz_libro_dinamica.mjs). Quedan los de masa académica (c = sqrt(E/rho) fuera de rango).
+  "benchmark-paz-10-7", "benchmark-paz-11-1", "benchmark-paz-12-1",
 ];
 
 const FUENTE = `

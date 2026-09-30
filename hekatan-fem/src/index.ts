@@ -5,6 +5,8 @@ export { analyze } from "./analyze";
 export { deformCpp as deform } from "./deformCpp";
 
 export { modalCpp as modalAnalysis } from "./modalCpp";
+export { timeHistoryAnalysis } from "./modalCpp";
+export type { THOpciones, THResultado, THCarga, THFuncion } from "./modalCpp";
 export { modalPazCpp as modalAnalysisPaz } from "./modalPazCpp";
 
 export { slopeSRM } from "./slopeCpp";
