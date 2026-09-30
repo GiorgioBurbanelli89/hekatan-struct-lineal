@@ -216,6 +216,9 @@ const PARAMS = {
   ny: { default: 4, min: 2, max: 12, step: 1, label: "líneas en Y", folder: "📐 Rejilla (planta)" },
   sx: { default: 6, min: 2, max: 15, step: 0.5, label: "separación X (m)", folder: "📐 Rejilla (planta)" },
   sy: { default: 6, min: 2, max: 15, step: 0.5, label: "separación Y (m)", folder: "📐 Rejilla (planta)" },
+  // Ejes a mano, como el «Grid Data» de ETABS (vanos desiguales): «0, 5, 11, 15». Vacío = nx·sx.
+  ejesX: { default: 0, texto: "", label: "ejes X (m, con comas)", folder: "📐 Rejilla (planta)" },
+  ejesY: { default: 0, texto: "", label: "ejes Y (m, con comas)", folder: "📐 Rejilla (planta)" },
 
   // ── Pisos — el «Story Dimensions» ────────────────────────────────────────
   pisos: { default: 4, min: 1, max: 20, step: 1, label: "nº de pisos", folder: "🏢 Pisos" },

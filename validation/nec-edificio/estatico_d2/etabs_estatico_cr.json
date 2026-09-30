@@ -1,0 +1,58 @@
+[
+ {
+  "Story": "Story1",
+  "Diaphragm": "D1",
+  "MassX": "0",
+  "MassY": "0",
+  "XCM": "9.6765",
+  "YCM": "2.9231",
+  "CumMassX": "0",
+  "CumMassY": "0",
+  "XCCM": "0",
+  "YCCM": "0",
+  "XCR": "7.8327",
+  "YCR": "4.5988"
+ },
+ {
+  "Story": "Story1",
+  "Diaphragm": "D2",
+  "MassX": "0",
+  "MassY": "0",
+  "XCM": "9.6765",
+  "YCM": "2.9231",
+  "CumMassX": "0",
+  "CumMassY": "0",
+  "XCCM": "0",
+  "YCCM": "0",
+  "XCR": "7.9321",
+  "YCR": "4.5168"
+ },
+ {
+  "Story": "Story1",
+  "Diaphragm": "D3",
+  "MassX": "0",
+  "MassY": "0",
+  "XCM": "9.6765",
+  "YCM": "2.9231",
+  "CumMassX": "0",
+  "CumMassY": "0",
+  "XCCM": "0",
+  "YCCM": "0",
+  "XCR": "7.9691",
+  "YCR": "4.4858"
+ },
+ {
+  "Story": "Story1",
+  "Diaphragm": "D4",
+  "MassX": "244.2186",
+  "MassY": "244.2186",
+  "XCM": "8.3519",
+  "YCM": "3.8616",
+  "CumMassX": "244.2186",
+  "CumMassY": "244.2186",
+  "XCCM": "8.3519",
+  "YCCM": "3.8616",
+  "XCR": "7.9914",
+  "YCR": "4.4675"
+ }
+]

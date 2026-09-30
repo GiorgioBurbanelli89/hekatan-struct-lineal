@@ -15,6 +15,7 @@
  * =============================================================================
  */
 import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
+import { montarNEC } from "../shared/nec/panelNEC";
 import van, { State } from "vanjs-core";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
@@ -559,6 +560,7 @@ function paramsCambiados(): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [k, d] of Object.entries(currentExample?.params ?? {})) {
     const v = currentParams[k];
+    if ((d as any).texto !== undefined) { if (typeof v === "string" && v.trim() && v !== (d as any).texto) (out as any)[k] = v; continue; }
     if (typeof v === "number" && Number.isFinite(v) && Math.abs(v - (d as any).default) > 1e-12) out[k] = v;
   }
   return out;
@@ -6905,6 +6907,14 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     if ((p as any).inModal) continue;
     const folderTitle = p.folder ?? defaultFolderTitle;
     const fTarget = getFolder(folderTitle);
+    if (p.texto !== undefined) {
+      // Texto (30-sep-2026): p. ej. los ejes «0, 5, 11, 15». Vacío = lo de los sliders.
+      if (typeof currentParams[key] !== "string") (currentParams as any)[key] = p.texto;
+      const tb = fTarget.addBinding(currentParams as any, key, { label: p.label ?? key });
+      tb.on("change", () => { applyHiddenBindings(); scheduleRebuild(); });
+      if (p.hiddenIf) hiddenBindings.push({ binding: tb, hiddenIf: p.hiddenIf });
+      continue;
+    }
     if (p.boolean) {
       // Checkbox on/off. Valor almacenado como 0|1 en currentParams.
       boolProxy[key] = currentParams[key] >= 0.5;
@@ -7282,6 +7292,8 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       const th = montarTiempoHistoria(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
       (window as any).__hekatanTiempoHistoria = th;
     } catch (e) { console.warn("[tiempo-historia]", e); }
+    // ── 🌎 Sismo NEC (30-sep-2026): estático + espectral NEC-15 / borrador, derivas, CM/CR, torsión ──
+    try { (window as any).__hekatanNEC = montarNEC(fModal, states as any); } catch (e) { console.warn("[NEC]", e); }
   }
   currentPane = pane;
   // Aplicar visibilidad dinamica de bindings (hiddenIf) en el render inicial.
@@ -9270,9 +9282,10 @@ if (initialEx) {
     if (pTxt) {
       try {
         const pv = JSON.parse(deB64(pTxt)) as Record<string, number>;
-        const validos = Object.entries(pv).filter(([k, v]) => k in (initialEx.params ?? {}) && Number.isFinite(Number(v)));
+        const defs: any = initialEx.params ?? {};
+        const validos = Object.entries(pv).filter(([k, v]) => k in defs && (defs[k].texto !== undefined ? typeof v === "string" : Number.isFinite(Number(v))));
         if (validos.length) setTimeout(() => {
-          for (const [k, v] of validos) currentParams[k] = Number(v);
+          for (const [k, v] of validos) (currentParams as any)[k] = defs[k].texto !== undefined ? String(v) : Number(v);
           buildParamsPane();
           rebuild();
           console.log(`✅ Enlace compartido: ${validos.length} parámetros aplicados (${validos.map(([k, v]) => `${k}=${v}`).join(", ")})`);

@@ -1,0 +1,1 @@
+node cli/dump_ejemplo.mjs plantillas edif.json tipo=2 ejesX=0,5,11,15 ejesY=0,4.5,9.5 pisos=4 h=3 h1=3.6 volXp=1.2 volYm=1.5 volXm=0 volYp=0 formLosa=51 tlosa=0.25 offsets=0

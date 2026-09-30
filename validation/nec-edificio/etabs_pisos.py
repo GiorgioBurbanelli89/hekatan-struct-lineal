@@ -19,8 +19,8 @@ def tabla(t):
     r = sm.DatabaseTables.GetTableForDisplayArray(t, [], "All", 0, [], 0, [])
     campos, nfil, datos = list(r[2]), r[3], list(r[4])
     return [dict(zip(campos, datos[i * len(campos):(i + 1) * len(campos)])) for i in range(nfil)]
-out = {k: tabla(k) for k in ("Mass Summary by Story", "Centers of Mass and Rigidity", "Modal Participating Mass Ratios")}
+out = {k: tabla(k) for k in ("Mass Summary by Story", "Centers Of Mass And Rigidity", "Modal Participating Mass Ratios")}
 json.dump(out, open(os.path.join(AQUI, "etabs_pisos.json"), "w"), indent=1)
 for f in out["Mass Summary by Story"]: print(f)
-for f in out["Centers of Mass and Rigidity"]: print({k: f[k] for k in f if k in ("Story", "MassX", "XCM", "YCM", "XCCM", "YCCM", "XCR", "YCR")})
+for f in out["Centers Of Mass And Rigidity"]: print({k: f[k] for k in f if k in ("Story", "MassX", "XCM", "YCM", "XCCM", "YCCM", "XCR", "YCR")})
 for f in out["Modal Participating Mass Ratios"][:3]: print({k: f[k] for k in f if k in ("Mode", "Period", "UX", "UY", "RZ")})

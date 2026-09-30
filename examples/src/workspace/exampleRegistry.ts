@@ -22,6 +22,9 @@ export interface ParamDef {
    *  El valor se guarda como 0 (off) o 1 (on) en `params`. Ejemplo: toggles
    *  para activar/desactivar patrones de carga D/L/S. */
   boolean?: boolean;
+  /** Si se define, el param es TEXTO (caja de texto) con este valor inicial; `default` no se usa.
+   *  Ej.: los ejes de la rejilla «0, 5, 11, 15» (30-sep-2026). Viaja en el enlace de Compartir. */
+  texto?: string;
   /** Folder del Tweakpane donde va (e.g. "Geometría", "Luces", "Cargas").
    *  Si no se define, va en el folder raíz "Parámetros". */
   folder?: string;
