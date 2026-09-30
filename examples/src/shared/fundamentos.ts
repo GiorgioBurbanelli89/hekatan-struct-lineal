@@ -214,6 +214,44 @@ export const FUNDAMENTOS: Fundamento[] = [
     estado: "Activo.",
   },
   {
+    id: "th-modal", orden: 21.5, icono: "〰", grupo: "Solver",
+    titulo: "Tiempo-historia lineal: superposición modal",
+    resumen: "Cada modo integrado EXACTO con la carga lineal a trozos (Chopra, Tabla 5.2.1).",
+    que: "Se resuelve el problema modal y cada modo es un oscilador de 1 GDL: q̈ + 2ξω·q̇ + ω²·q = φᵀ·p(t). Con la carga lineal " +
+      "entre puntos del registro, la recurrencia de Chopra (§5.2, Tabla 5.2.1) es exacta: no hay error de paso, solo el de truncar " +
+      "modos. La rejilla une los tiempos de salida con los puntos de la función. Convenciones de CSI medidas: la carga vale f(0) " +
+      "desde t = 0, y la reacción en la base suma m·üg de la masa de BARRA de los nudos apoyados.",
+    referencias: [
+      "Chopra, A. K. — Dynamics of Structures, 4.ª ed., §5.2, Tabla 5.2.1 (pp. 167–170)",
+      "CSI Analysis Reference Manual — cap. «Linear Time-History Analysis», modal",
+    ],
+    donde: [
+      { ruta: "hekatan-fem/src/cpp/utils/tiempoHistoria.h", nota: "th::modal(), th::coefChopra()" },
+      { ruta: "hekatan-fem/src/cpp/modal.cpp", nota: "sección 9: carga, nudos de salida, reacción en la base" },
+      { ruta: "hekatan-fem/src/modalCpp.ts", nota: "timeHistoryAnalysis()" },
+      { ruta: "examples/src/shared/tiempoHistoria/panelTH.ts", nota: "panel «〰 Tiempo-historia (lineal)»" },
+    ],
+    estado: "Activo. = SAP2000 y ETABS (Paz 8.1, edificio dual 1048 nudos) a 1e-4 % o mejor: tests tiempo-historia-sap2000, paz-libro-dinamica.",
+  },
+  {
+    id: "th-directa", orden: 21.6, icono: "〰", grupo: "Solver",
+    titulo: "Tiempo-historia lineal: integración directa",
+    resumen: "HHT-α sobre M, C, K completas; α = 0 es Newmark de aceleración media.",
+    que: "Integra M·ü + C·u̇ + K·u = p(t) paso a paso con Hilber-Hughes-Taylor: γ = (1 − 2α)/2, β = (1 − α)²/4 (α ∈ [−1/3, 0]). " +
+      "Amortiguamiento de Rayleigh C = cM·M + cK·K. La K efectiva se factoriza UNA vez (LDLT de Eigen). Convención de CSI: la carga " +
+      "vale 0 en t = 0 (a₀ = 0). La reacción en la base de ETABS suma cK·K·v en los apoyos (SAP2000 no): se elige en el panel.",
+    referencias: [
+      "Hilber, Hughes & Taylor (1977), Earthquake Eng. Struct. Dyn. 5:283–292",
+      "Chopra, A. K. — Dynamics of Structures, 4.ª ed., §5.4 (Newmark)",
+      "CSI Analysis Reference Manual — cap. «Linear Time-History Analysis», integración directa",
+    ],
+    donde: [
+      { ruta: "hekatan-fem/src/cpp/utils/tiempoHistoria.h", nota: "th::directa()" },
+      { ruta: "hekatan-fem/src/cpp/modal.cpp", nota: "sección 9" },
+    ],
+    estado: "Activo. = SAP2000 y ETABS a 1e-4 % o mejor (mismos tests).",
+  },
+  {
     id: "diafragma", orden: 22, icono: "▤", grupo: "Solver",
     titulo: "Diafragma rígido",
     resumen: "Ata ux, uy y rz de los nudos de un piso a un maestro virtual.",
