@@ -1,0 +1,17 @@
+# Hekatan Struct · modelo dibujado (2026-09-30)
+# unidades: m, kN, kN/m
+node 1 0 0 0
+node 2 6 0 0
+node 3 0 0 3
+node 4 6 0 3
+frame 1 1 3 25000000 0.16 0.00213333 0.00213333 0.003584 0.2 2.44732
+frame 2 2 4 25000000 0.16 0.00213333 0.00213333 0.003584 0.2 2.44732
+frame 3 3 4 25000000 0.15 0.001125 0.003125 0.001134 0.2 2.28416
+support 1 1 1 1 1 1 1
+support 2 1 1 1 1 1 1
+load 3 10 0 -10 0 0 0
+load 4 10 0 -10 0 0 0
+endoffset 1 0 0.5 1
+endoffset 2 0 0.5 1
+endoffset 3 0.2 0.2 1
+solve

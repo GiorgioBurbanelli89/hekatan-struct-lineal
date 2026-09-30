@@ -20,6 +20,7 @@
  * en Tweakpane (secciones/cargas/apoyos) y permite alternar 2D/3D con
  * un toggle. Es el "nuevo proyecto en blanco" de Hekatan.
  */
+import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import * as THREE from "three";
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
@@ -86,6 +87,10 @@ export const newBlank: ExampleDef = {
     hCol:  P("Sección frames", "h columna (m)", 0.40, 0.10, 1.00, 0.05),
     bViga: P("Sección frames", "b viga (m)", 0.30, 0.10, 0.80, 0.05),
     hViga: P("Sección frames", "h viga (m)", 0.50, 0.10, 1.00, 0.05),
+    // Brazos rígidos AUTOMÁTICOS de ETABS (regla medida: viga ½ lado de columna por extremo, columna el
+    // canto de la viga arriba). Ninguno = SAP2000 (defecto: SAP2000 es el juez). RZ = 0 como ETABS.
+    brazos: PE("Sección frames", "Brazos rígidos", 0, { "Ninguno (SAP2000)": 0, "ETABS (automáticos)": 1 }),
+    rz:     P("Sección frames", "Factor de zona rígida RZ (0 ETABS)", 0, 0, 1, 0.05),
 
     // ── Sección por defecto para shells dibujados ──
     tShell: P("Sección shells", "Espesor shell (m)", 0.20, 0.05, 1.00, 0.01),
@@ -563,10 +568,33 @@ export const newBlank: ExampleDef = {
       return;
     }
 
+    // ── Brazos rígidos automáticos (ETABS): medidas de la sección = rectángulo equivalente de A e I
+    //    (las secciones a mano solo traen A, I). La viga no pesa ni masa el tramo dentro del brazo, como
+    //    ETABS; SAP2000 no descuenta (el s2k lleva esta densidad rebajada, el e2k la completa).
+    let endOffsets: Map<number, [number, number, number]> | undefined;
+    const densidadesSinBrazos = new Map<number, number>();
+    if (Math.round(p.brazos ?? 0) === 1) {
+      const lado = (e: number, I: Map<number, number>) => Math.sqrt(12 * (I.get(e) ?? 0) / (areas.get(e) || 1));
+      endOffsets = brazosAutomaticosETABS(nodes as any, elements as any,
+        (e) => (shellIdx.has(e) ? null : colIdx.has(e) ? "col" : beamIdx.has(e) ? "viga" : null),
+        (e, _n, enX) => lado(e, enX ? Iy : Iz),      // columna: I33 (Iy aquí) = lado en X; I22 = lado en Y
+        (e) => lado(e, Iy),                           // viga: canto = √(12·I33/A)
+        Math.min(1, Math.max(0, p.rz ?? 0)));
+      for (const [e, [oI, oJ]] of endOffsets) {
+        if (!beamIdx.has(e)) continue;
+        const [a, b] = elements[e] as number[];
+        const L = Math.hypot(...[0, 1, 2].map((c) => nodes[b][c] - nodes[a][c]));
+        const rho = densities.get(e) ?? 0;
+        if (L > 1e-9 && rho) { densidadesSinBrazos.set(e, rho); densities.set(e, rho * Math.max(0, L - oI - oJ) / L); }
+      }
+    }
+
     states.nodes.val = nodes;
     states.elements.val = elements;
     states.nodeInputs.val = { supports, loads };
     states.elementInputs.val = {
+      ...(endOffsets?.size ? { endOffsets } : {}),
+      ...(densidadesSinBrazos.size ? { densidadesSinBrazos } : {}),
       elasticities, shearModuli, areas,
       momentsOfInertiaY: Iz, momentsOfInertiaZ: Iy,
       torsionalConstants: J, densities, poissonsRatios: poissons,
@@ -604,6 +632,7 @@ export const newBlank: ExampleDef = {
       for (const [nd, d] of supports) L.push(`support ${nd + 1} ${d.map((v: any) => (v ? 1 : 0)).join(" ")}`);
       for (const [nd, f] of loads) if (f.some((v: number) => v !== 0)) L.push(`load ${nd + 1} ${f.join(" ")}`);
       for (const [i, w] of frameLoadsElem) L.push(`frameload ${i + 1} ${w.join(" ")}`);
+      if (endOffsets) for (const [i, [oI, oJ, rz]] of endOffsets) L.push(`endoffset ${i + 1} ${n6(oI)} ${n6(oJ)} ${g6(rz)}`);
       for (const sp of springsList) L.push(`spring ${sp.node + 1} ${["ux", "uy", "uz", "rx", "ry", "rz"][sp.dof]} ${sp.k}`);
       L.push("solve");
       return L.join("\n") + "\n";
