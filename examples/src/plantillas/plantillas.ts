@@ -222,6 +222,12 @@ const PARAMS = {
   // La losa se pasa `volado` metros del ultimo eje POR LOS CUATRO LADOS, y ahi
   // NO hay columna: es un voladizo de verdad, no un vano mas. 0 = sin volado.
   volado: { default: 0, min: 0, max: 3, step: 0.25, label: "volado perimetral (m)", folder: "🏢 Pisos" },
+  // Volado POR LADO (Jorge, 30-sep-2026: «con volados… como los arquitectos, ponme en problemas»): un volado solo al frente
+  // y a un costado corre el centro de masa y trae torsión. −1 = el volado general de arriba.
+  volXm: { default: -1, min: -1, max: 3, step: 0.25, label: "volado lado −X (m, −1 = general)", folder: "🏢 Pisos" },
+  volXp: { default: -1, min: -1, max: 3, step: 0.25, label: "volado lado +X (m, −1 = general)", folder: "🏢 Pisos" },
+  volYm: { default: -1, min: -1, max: 3, step: 0.25, label: "volado lado −Y (m, −1 = general)", folder: "🏢 Pisos" },
+  volYp: { default: -1, min: -1, max: 3, step: 0.25, label: "volado lado +Y (m, −1 = general)", folder: "🏢 Pisos" },
   // Solo se usan si la losa es Nervada o Waffle
   tLoseta: { default: 0.05, min: 0.03, max: 0.15, step: 0.01, label: "nervada: loseta (m)", folder: "🔩 Secciones" },
   bNervio: { default: 0.10, min: 0.05, max: 0.30, step: 0.01, label: "nervada: ancho nervio (m)", folder: "🔩 Secciones" },
@@ -502,13 +508,15 @@ export const plantillas: ExampleDef = {
     // con los ejes de verdad: si no, un volado de 0.5 m re-mallaria el edificio
     // entero a 0.5 y se irian los tiempos y la comparacion.
     const vol = conLosa ? Math.max(0, (p as any).volado || 0) : 0;
-    const hayVol = vol > 1e-6;
-    const ampl = (v: number[]) => hayVol ? [v[0] - vol, ...v, ult(v) + vol] : v;
-    const marca = (v: number[]) => hayVol
-      ? [true, ...v.map(() => false), true] : v.map(() => false);
-    const XV = ampl(X), volX = marca(X);
-    const YV = Y.length > 1 ? ampl(Y) : Y;
-    const volY = Y.length > 1 ? marca(Y) : Y.map(() => false);
+    const lado = (k: string) => { const v = (p as any)[k]; return !conLosa ? 0 : (typeof v === "number" && v >= 0 ? v : vol); };
+    const vXm = lado("volXm"), vXp = lado("volXp"), vYm = lado("volYm"), vYp = lado("volYp");
+    const hayVol = Math.max(vXm, vXp, vYm, vYp) > 1e-6;
+    // un eje más solo en los lados que vuelan; marcado DE VOLADO para que ahí no haya columna
+    const ampl = (v: number[], a: number, b: number) => [...(a > 1e-6 ? [v[0] - a] : []), ...v, ...(b > 1e-6 ? [ult(v) + b] : [])];
+    const marca = (v: number[], a: number, b: number) => [...(a > 1e-6 ? [true] : []), ...v.map(() => false), ...(b > 1e-6 ? [true] : [])];
+    const XV = ampl(X, vXm, vXp), volX = marca(X, vXm, vXp);
+    const YV = Y.length > 1 ? ampl(Y, vYm, vYp) : Y;
+    const volY = Y.length > 1 ? marca(Y, vYm, vYp) : Y.map(() => false);
     const fx = finos(XV, D, volX);
     const fy = YV.length > 1 ? finos(YV, D, volY)
                              : { c: [0], eje: [true], vol: [false] };

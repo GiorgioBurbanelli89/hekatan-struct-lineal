@@ -13,7 +13,7 @@ import { empaquetar, R } from "../tests/lib/bundle.mjs";
 const [id, salida, ...kv] = process.argv.slice(2);
 if (!id || !salida) { console.error("uso: node cli/dump_ejemplo.mjs <id> <salida.json> [k=v ...]"); process.exit(2); }
 const over = {};
-for (const a of kv) { const m = a.match(/^([A-Za-z_]\w*)=(.+)$/); if (m && !isNaN(+m[2])) over[m[1]] = +m[2]; }
+for (const a of kv) { const m = a.match(/^([A-Za-z_]\w*)=(.+)$/); if (m) over[m[1]] = isNaN(+m[2]) ? m[2] : +m[2]; }   // texto también (ejesX=0,5,11)
 
 const mod = await empaquetar(`
 const g = globalThis; g.window = g;
