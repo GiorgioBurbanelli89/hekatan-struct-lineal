@@ -39,7 +39,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     info: "—",
   };
   let acel: Acel = pulso(p.ampG, p.dur, p.total, p.dt);
-  let ultimo: { r: THResultado; nodoControl: number; comp: number } | null = null;
+  let ultimo: { r: THResultado; nodoControl: number; comp: number; anim?: THResultado; extremos?: any } | null = null;
 
   f.addBinding(p, "metodo", { label: "Método", options: { "Modal (exacto por modo)": 0, "Directa (HHT / Newmark)": 1 } });
   f.addBinding(p, "dir", { label: "Dirección", options: { X: 0, Y: 1, Z: 2 } });
@@ -55,7 +55,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
   f.addBinding(p, "alpha", { label: "α HHT (directa)", min: -0.3333, max: 0, step: 0.01 });
   f.addBinding(p, "dt", { label: "Δt salida (s)", min: 0.001, max: 0.1, step: 0.001 });
   f.addBinding(p, "semantica", { label: "Reacción en la base", options: { "como SAP2000": 0, "como ETABS": 1 } });
-  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 3 });
+  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 4 });
   f.addButton({ title: "▶ Correr tiempo-historia" }).on("click", () => correr());
   f.addBinding(p, "grafica", { label: "Gráfica", options: { "u del nudo de control": 0, "Cortante basal": 1, "Aceleración del terreno": 2 } })
     .on("change", () => graficar());
@@ -68,15 +68,21 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     inp.type = "file"; inp.accept = ".txt,.dat,.csv,.acc,.evt,.*";
     inp.onchange = async () => {
       const fl = inp.files?.[0]; if (!fl) return;
+      cargarTexto(await fl.text(), fl.name);
+    };
+    inp.click();
+  }
+  /** La lectura del archivo, separada del diálogo (el botón la usa; y los ensayos sin ratón). */
+  function cargarTexto(texto: string, nombre = "archivo") {
+    {
       try {
-        acel = leerAcelerograma(await fl.text(), "m/s2", fl.name);
+        acel = leerAcelerograma(texto, "m/s2", nombre);
         const pk = pico(acel);
         p.dt = +acel.dt.toFixed(4);
         p.info = `${acel.fuente}\nPGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s${acel.aviso ? "\n⚠ " + acel.aviso : ""}`;
       } catch (e: any) { p.info = "✗ " + e.message; p.registro = 0; }
       f.refresh();
-    };
-    inp.click();
+    }
   }
 
   function modeloActual() {
@@ -105,21 +111,40 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
       const nN = nodes.length;
       const cuadros = Math.max(20, Math.min(150, Math.floor(6e6 / (nN * 6))));
       const paso = Math.max(1, Math.ceil(nPasos / cuadros));
-      const r = timeHistoryAnalysis(nodes, elements, ni, ei, {
-        metodo: p.metodo === 1 ? "directa" : "modal", dt: p.dt, nPasos, numModes: p.nModos,
+      const base = {
+        metodo: (p.metodo === 1 ? "directa" : "modal") as "directa" | "modal", dt: p.dt, nPasos, numModes: p.nModos,
         xi: p.metodo === 0 ? xi : 0, cM, cK, alpha: p.alpha,
-        cargas: [{ tipo: "aceleracion", dir: p.dir as 0 | 1 | 2, funcion: { t, v }, sf: p.escala }],
-        nudosSalida: nodes.map((_, i) => i), paso, envolvente: false, semantica: p.semantica === 1 ? "etabs" : "sap",
-      });
-      if (!r) throw new Error("el motor no devolvió resultado (¿modelo sin masa o inestable?)");
-      // nudo de control: el de mayor |u| en la dirección de la carga
+        cargas: [{ tipo: "aceleracion" as const, dir: p.dir as 0 | 1 | 2, funcion: { t, v }, sf: p.escala }],
+        semantica: (p.semantica === 1 ? "etabs" : "sap") as "etabs" | "sap",
+      };
+      // 1) animación: todos los nudos cada `paso` pasos + ENVOLVENTE de todos los pasos (el máximo real de cada nudo)
+      const ra = timeHistoryAnalysis(nodes, elements, ni, ei, { ...base, nudosSalida: nodes.map((_, i) => i), paso, envolvente: true });
+      if (!ra) throw new Error("el motor no devolvió resultado (¿modelo sin masa o inestable?)");
+      // nudo de control: el de mayor |u| en TODOS los pasos (la envolvente, no los cuadros de la animación)
       let nc = 0, umax = -1;
-      r.u.forEach((serie, n) => { for (const u of serie) if (Math.abs(u[p.dir]) > umax) { umax = Math.abs(u[p.dir]); nc = n; } });
-      const vmax = Math.max(...r.base.map((b) => Math.abs(b[p.dir])));
-      ultimo = { r, nodoControl: nc, comp: p.dir };
+      if (ra.envolvente) ra.envolvente.forEach((e, n) => { if (Math.abs(e[p.dir]) > umax) { umax = Math.abs(e[p.dir]); nc = n; } });
+      else ra.u.forEach((serie, n) => { for (const u of serie) if (Math.abs(u[p.dir]) > umax) { umax = Math.abs(u[p.dir]); nc = n; } });
+      // 2) gráficas y máximos: el nudo de control y el cortante basal en CADA paso (hasta 30-sep se leían de los cuadros
+      //    de la animación, 1 de cada `paso`: en El Centro con 1558 pasos salía 22.4 mm en vez de 24.27 y 260 kN en vez de 292)
+      const rc = timeHistoryAnalysis(nodes, elements, ni, ei, { ...base, nudosSalida: [nc], paso: 1, envolvente: false }) ?? ra;
+      const r: THResultado = rc;
+      ultimo = { r, nodoControl: nc, comp: p.dir, anim: ra };
       const ms = performance.now() - t0;
-      p.info = `${p.metodo === 1 ? "Directa" : `Modal, ${r.nModos} modos`} · ${nPasos} pasos · ${(ms / 1000).toFixed(1)} s\n` +
-        `u máx ${(umax * 1000).toFixed(2)} mm en el nudo ${nc}\ncortante basal máx ${vmax.toFixed(1)} kN`;
+      // extremos como los lee ETABS bajo su gráfica: «Max: (t, valor); Min: (t, valor)», de TODOS los pasos
+      const ext = (vals: number[]) => {
+        let iM = 0, im = 0;
+        vals.forEach((v, i) => { if (v > vals[iM]) iM = i; if (v < vals[im]) im = i; });
+        return { tM: rc.t[iM], vM: vals[iM], tm: rc.t[im], vm: vals[im] };
+      };
+      const eu = ext((rc.u.get(nc) ?? []).map((u) => 1000 * u[p.dir]));
+      const ev = ext(rc.base.map((b) => b[p.dir]));
+      const par = (t: number, v: number, d: number) => `(${t.toFixed(2)} s, ${v.toFixed(d)})`;
+      ultimo.extremos = { u: eu, V: ev };
+      p.info = `${p.metodo === 1 ? "Directa" : `Modal, ${r.nModos} modos`} · ${nPasos} pasos · ${(ms / 1000).toFixed(1)} s
+` +
+        `u nudo ${nc} [mm]  Máx ${par(eu.tM, eu.vM, 3)}  Mín ${par(eu.tm, eu.vm, 3)}
+` +
+        `cortante basal [kN]  Máx ${par(ev.tM, ev.vM, 2)}  Mín ${par(ev.tm, ev.vm, 2)}`;
       f.refresh();
       graficar();
     } catch (e: any) { p.info = "✗ " + (e?.message ?? e); f.refresh(); }
@@ -139,12 +164,16 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
       const s = r.u.get(nc) ?? [];
       const tt = r.t.filter((_, k) => k < s.length);
       panel.setTitle(`u${eje.toLowerCase()}(t) del nudo ${nc} (relativo al terreno)`);
-      panel.setSeries([{ label: `u${eje.toLowerCase()} nudo ${nc}`, data: tt.map((x, k) => [x, s[k][p.dir] * 1000] as [number, number]), color: "#7f96b3", width: 2 }]);
+      const eu = ultimo.extremos?.u;
+      const leyU = eu ? `  ·  Máx (${eu.tM.toFixed(2)}, ${eu.vM.toFixed(3)})  Mín (${eu.tm.toFixed(2)}, ${eu.vm.toFixed(3)})` : "";
+      panel.setSeries([{ label: `u${eje.toLowerCase()} nudo ${nc} [mm]${leyU}`, data: tt.map((x, k) => [x, s[k][p.dir] * 1000] as [number, number]), color: "#7f96b3", width: 2 }]);
       panel.setAxes({ xLabel: "t (s)", yLabel: "u (mm)", grid: true });
     } else {
       const { r } = ultimo;
       panel.setTitle(`Cortante basal V${eje.toLowerCase()}(t)`);
-      panel.setSeries([{ label: `V${eje.toLowerCase()} (reacción en la base)`, data: r.base.map((b, k) => [r.t[k], b[p.dir]] as [number, number]), color: "#c0392b", width: 2 }]);
+      const ev = ultimo.extremos?.V;
+      const leyV = ev ? `  ·  Máx (${ev.tM.toFixed(2)}, ${ev.vM.toFixed(2)})  Mín (${ev.tm.toFixed(2)}, ${ev.vm.toFixed(2)})` : "";
+      panel.setSeries([{ label: `V${eje.toLowerCase()} base [kN]${leyV}`, data: r.base.map((b, k) => [r.t[k], b[p.dir]] as [number, number]), color: "#c0392b", width: 2 }]);
       panel.setAxes({ xLabel: "t (s)", yLabel: "V (kN)", grid: true });
     }
     panel.show();
@@ -166,7 +195,7 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     if (!ultimo) { correr(); if (!ultimo) return; }
     pararOtrasAnimaciones();
     parar(true);
-    const { r } = ultimo!;
+    const r = ultimo!.anim ?? ultimo!.r;       // la animación usa los cuadros de TODOS los nudos
     originales = estado.nodes.rawVal.map((n: any) => [...n]);
     const st = ajustes();
     if (st?.deformedShape) { deformadaAntes = !!st.deformedShape.val; st.deformedShape.val = false; }
@@ -189,5 +218,5 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
     raf = requestAnimationFrame(tick);
   }
   p.info = acel.fuente;
-  return { correr, animar, parar, resultado: () => ultimo };
+  return { correr, animar, parar, resultado: () => ultimo, cargarTexto, params: p, refrescar: () => f.refresh() };
 }
