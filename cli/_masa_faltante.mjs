@@ -1,0 +1,10 @@
+import { empaquetar, R } from "../tests/lib/bundle.mjs";
+import { readFileSync } from "node:fs";
+const m = await empaquetar(`export { modalAnalysis } from "${R}/hekatan-fem/src/index";\n`, "mf" + Date.now());
+const D = JSON.parse(readFileSync("validation/tiempo-historia/dual_sap.json", "utf-8"));
+const aMap = (o) => new Map(Object.entries(o).map(([k, v]) => [Number(k), v]));
+const ei = {}; for (const [k, v] of Object.entries(D.elementInputs)) ei[k] = v && typeof v === "object" && !Array.isArray(v) ? aMap(v) : v;
+const ni = { supports: aMap(D.nodeInputs.supports), diaphragms: aMap(D.nodeInputs.diaphragms ?? {}) };
+const o = m.modalAnalysis(D.nodes, D.elements, ni, ei, 12, 0, 0, 1, ni.diaphragms, []);
+const g2 = o.participationFactors.reduce((s, g) => s + g[0] * g[0], 0);
+console.log("masa libre X", o.totalMass[0].toFixed(4), "t; sum Γx² (12 modos)", g2.toFixed(4), "→ faltante", (o.totalMass[0] - g2).toFixed(4), "t  (SAP: 10.965)");

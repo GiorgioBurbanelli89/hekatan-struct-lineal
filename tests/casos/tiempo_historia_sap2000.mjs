@@ -8,7 +8,11 @@
  *   · SAP2000 24 (validation/paz-newmark/sap_th_general.py → tests/datos/th_general_sap2000.json): el pórtico
  *     del Paz 8.1 en lb-in, paso a paso, desplazamientos RELATIVOS y reacción en la base FX:
  *       TH81M  modal, pulsos triangulares      TH81AD directa, sismo, Rayleigh      TH81AM modal, sismo, ξ = 5 %
- * Convención CSI medida: en la DIRECTA la carga vale 0 en t = 0 (§21.3, a₀ = 0); en el MODAL vale f(0).
+ *   · SAP2000 con la plantilla DUAL (1048 nudos: pórticos, losas, muros, 4 diafragmas), mismo volcado armado en SAP por
+ *     galpon-bodega-electoral/csi_desde_dump.py --th (validation/tiempo-historia/), sismo en X, modal ξ = 5 % (12 modos)
+ *     y directa con Rayleigh: ux del techo y de media altura, FX y MY en la base, paso a paso.
+ * Convenciones CSI medidas: en la DIRECTA la carga vale 0 en t = 0 (§21.3, a₀ = 0); en el MODAL vale f(0), y la
+ * reacción en la base del MODAL suma m·üg de la masa de BARRA en los nudos apoyados (la directa no).
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
 import { readFileSync } from "node:fs";
@@ -69,6 +73,29 @@ export async function correr() {
       const d = peor(series[k], ref);
       filas.push({ que: `Paz 8.1 vs SAP2000 ${c} (${txt}): ${k === "FX" ? "reacción en la base FX" : k} paso a paso`,
                    medido: d, limite: 1e-4, ok: Number.isFinite(d) && d <= 1e-4, detalle: `${ref.length} pasos, peor ${d.toExponential(2)} % del máx` });
+    }
+  }
+  // ── plantilla dual contra SAP2000 ──
+  {
+    const D = JSON.parse(readFileSync(new URL("../datos/th_dual_modelo.json", import.meta.url), "utf-8"));
+    const SD = JSON.parse(readFileSync(new URL("../datos/th_dual_sap2000.json", import.meta.url), "utf-8"));
+    const aMap = (o) => new Map(Object.entries(o).map(([k, v]) => [Number(k), v]));
+    const ei = {};
+    for (const [k, v] of Object.entries(D.elementInputs)) ei[k] = v && typeof v === "object" && !Array.isArray(v) ? aMap(v) : v;
+    const ni = { supports: aMap(D.nodeInputs.supports), diaphragms: aMap(D.nodeInputs.diaphragms ?? {}) };
+    for (const met of ["modal", "directa"]) {
+      const sp = SD[met].spec;
+      const r = m.timeHistoryAnalysis(D.nodes, D.elements, ni, ei, { metodo: met, dt: sp.dt, nPasos: sp.n, xi: sp.xi ?? 0,
+        cM: sp.cM ?? 0, cK: sp.cK ?? 0, numModes: sp.nModos, nudosSalida: sp.nudos,
+        cargas: [{ tipo: "aceleracion", dir: sp.dir, funcion: { t: SD.t, v: SD.a } }] });
+      for (const n of sp.nudos) {
+        const d = peor(r.u.get(n).map((x) => x[0]), SD[met].ux[n]);
+        filas.push({ que: `dual 1048 nudos vs SAP2000, ${met}: ux del nudo ${n}`, medido: d, limite: 1e-3, ok: d <= 1e-3, detalle: `${sp.n + 1} pasos, peor ${d.toExponential(2)} %` });
+      }
+      for (const [k, c] of [["FX", 0], ["MY", 4]]) {
+        const d = peor(r.base.map((b) => b[c]), SD[met][k]);
+        filas.push({ que: `dual 1048 nudos vs SAP2000, ${met}: reacción en la base ${k}`, medido: d, limite: 1e-3, ok: d <= 1e-3, detalle: `peor ${d.toExponential(2)} %` });
+      }
     }
   }
   return filas;

@@ -14,6 +14,7 @@
  *    { id, name, category, params, build(states, modal?) }
  * =============================================================================
  */
+import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
 import van, { State } from "vanjs-core";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
@@ -7267,6 +7268,11 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     // el 13-sep-2026: repetían lo que ya dice «Modo» (su T) y la casilla «🎞 Animar». Jorge:
     // «case result y mode, ¿por qué es lo mismo?». Un control por cosa, como ETABS.)
     void status; void lastModalResults;
+    // ── 〰 Tiempo-historia lineal (30-sep-2026): el de SAP2000/ETABS sobre el modelo en pantalla ──
+    try {
+      const th = montarTiempoHistoria(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
+      (window as any).__hekatanTiempoHistoria = th;
+    } catch (e) { console.warn("[tiempo-historia]", e); }
   }
   currentPane = pane;
   // Aplicar visibilidad dinamica de bindings (hiddenIf) en el render inicial.

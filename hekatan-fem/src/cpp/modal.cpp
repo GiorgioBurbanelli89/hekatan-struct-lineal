@@ -1211,6 +1211,7 @@ extern "C"
                 return hayDiafragma ? (Eigen::VectorXd)(T_dia.transpose() * full) : full;
             };
             std::vector<th::Carga> cargas;
+            std::vector<std::pair<int, int>> acelBase;   // (dirección, índice de la carga) de cada aceleración en la base
             for (int c = 0; c < nCargas && pos + 4 <= th_cfg_len; ++c) {
                 th::Carga cg;
                 const int tipo = (int)cf[pos]; const int dirOn = (int)cf[pos + 1];
@@ -1219,6 +1220,7 @@ extern "C"
                 if (tipo == 1) {                       // aceleración en la base: p = −M·ι (respuesta relativa)
                     const int d = std::max(0, std::min(2, dirOn));
                     cg.p = -(M_global * r_full[d]);
+                    acelBase.push_back({d, (int)cargas.size()});
                 } else {                               // patrón de fuerzas nodales (GDL completos)
                     Eigen::VectorXd full = Eigen::VectorXd::Zero(dofCompleto);
                     for (int j = 0; j < dirOn; ++j) { const int g = (int)cf[pos]; if (g >= 0 && g < dofCompleto) full(g) += cf[pos + 1]; pos += 2; }
@@ -1297,6 +1299,45 @@ extern "C"
                 th::modal(cfg, cargas, phi, w, qOut, tOut, qTodos);
                 serie = qOut * (S * phi).transpose();
                 base = qOut * (B * phi).transpose();
+                // SAP2000, MODAL con aceleración en la base (medido 30-sep-2026, plantilla dual de 1048 nudos): su
+                // reacción en la base SUMA m·üg de la masa de BARRA que cae en los nudos apoyados (ρ·A·L/2 por extremo:
+                // la aceleración entra como carga repartida en la barra y la mitad va directa al apoyo). La de las
+                // cáscaras no (12.85 t de muro fuera, 10.964 t de columnas dentro = los 10.965 t medidos). En la
+                // DIRECTA no la suma (ahí coincide sin esto, 1.5e-5 %).
+                if (!acelBase.empty()) {
+                    std::vector<std::array<double, 3>> mApoyo(num_nodes, {0.0, 0.0, 0.0});   // masa de barra por nudo y dirección apoyada
+                    std::map<int, std::vector<bool>> sop = nodeInputs.supports;
+                    int pos2 = 0;
+                    for (size_t e = 0; e < element_sizes.size(); ++e) {
+                        const int ne = (int)element_sizes[e];
+                        if (ne == 2) {
+                            const int a2 = (int)element_indices[pos2], b2 = (int)element_indices[pos2 + 1];
+                            const double rho = elementInputs.densities.count((int)e) ? elementInputs.densities.at((int)e) : 0.0;
+                            const double A = elementInputs.areas.count((int)e) ? elementInputs.areas.at((int)e) : 0.0;
+                            const double L = std::sqrt(std::pow(nodes[a2][0] - nodes[b2][0], 2) + std::pow(nodes[a2][1] - nodes[b2][1], 2) + std::pow(nodes[a2][2] - nodes[b2][2], 2));
+                            const double mh = rho * A * L / 2.0;
+                            for (int nd : {a2, b2}) {
+                                auto it = sop.find(nd); if (it == sop.end()) continue;
+                                for (int d = 0; d < 3 && d < (int)it->second.size(); ++d) if (it->second[d]) mApoyo[nd][d] += mh;
+                            }
+                        }
+                        pos2 += ne;
+                    }
+                    for (int k = 0; k < (int)tOut.size(); ++k)
+                        for (auto &ab : acelBase) {
+                            const int d = ab.first; const double ag = cargas[ab.second].f.en(tOut[k]);
+                            if (ag == 0.0) continue;
+                            for (int nd = 0; nd < num_nodes; ++nd) {
+                                const double F = mApoyo[nd][d] * ag;
+                                if (F == 0.0) continue;
+                                const double x = nodes[nd][0], y = nodes[nd][1], z = nodes[nd][2];
+                                base(k, d) += F;
+                                if (d == 0) { base(k, 4) += z * F; base(k, 5) -= y * F; }
+                                if (d == 1) { base(k, 3) -= z * F; base(k, 5) += x * F; }
+                                if (d == 2) { base(k, 3) += y * F; base(k, 4) -= x * F; }
+                            }
+                        }
+                }
                 if (cfg.envolvente) todosRed = qTodos * phi.transpose();
                 nModosUsados = numValidModes;
             } else {
