@@ -28,18 +28,18 @@ export function montarTiempoHistoria(folder: any, estado: ModeloTH, viewerElm: H
   const p = {
     metodo: 0,            // 0 modal, 1 directa
     dir: 0,               // 0 X, 1 Y, 2 Z
-    registro: 0,          // 0 pulso, 1 archivo
+    registro: 2,          // 0 pulso, 1 archivo, 2 El Centro 1940 (por defecto: siempre hay un registro real)
     ampG: 0.3, dur: 0.5, total: 4,
     escala: 1.0,
     xi: 5,                // %
     nModos: 12,
     alpha: 0,
-    dt: 0.01,
+    dt: 0.02,
     grafica: 0,           // 0 u nudo de control, 1 cortante basal, 2 aceleración del terreno
     semantica: 0,         // reacción en la base: 0 SAP2000 (elástica), 1 ETABS (directa + cK·K·v)
     info: "—",
   };
-  let acel: Acel = pulso(p.ampG, p.dur, p.total, p.dt);
+  let acel: Acel = pulso(p.ampG, p.dur, p.total, 0.01);
   let ultimo: { r: THResultado; nodoControl: number; comp: number; anim?: THResultado; extremos?: any } | null = null;
 
   f.addBinding(p, "metodo", { label: "Método", options: { "Modal (exacto por modo)": 0, "Directa (HHT / Newmark)": 1 } });
@@ -230,6 +230,7 @@ PGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s`;
     raf = requestAnimationFrame(tick);
   }
   p.info = acel.fuente;
+  if (p.registro === 2) cargarElCentro();          // el registro por defecto
   // ENLACE con el tiempo-historia ya configurado (Jorge, 30-sep): ?th=elcentro&the=<escala>&thx=<ξ %>&thn=<modos>&thm=<0 modal|1 directa>&thd=<0 X|1 Y>&thr=1 (correr)
   try {
     const q = new URLSearchParams(window.location.search);
