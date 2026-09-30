@@ -40,7 +40,9 @@ export interface NewmarkConfig {
   gamma?: number;                  // default 0.5
   beta?: number;                   // default 0.25 (avg acceleration)
   /** Aceleración inicial. "equilibrio" (defecto): a₀ = M⁻¹(F(0) − C·v₀ − K·u₀), lo físico, igual al libro y a la
-   *  solución exacta. "cero": a₀ = 0, lo que hace SAP2000/ETABS (Linear Direct Integration) — medido el 30-sep-2026:
+   *  solución exacta. "cero": a₀ = 0, lo que hace SAP2000/ETABS (Linear Direct Integration): sus condiciones iniciales
+   *  nulas incluyen las CARGAS (CSI Analysis Reference, §21.3, p.21-4/5), la carga vale 0 en t = 0 y el salto a F(0) se
+   *  reparte en el primer Δt. Medido el 30-sep-2026:
    *  con a₀ = 0 este integrador da la serie de SAP2000 a 5 decimales en el Paz 8.1; con una carga que ARRANCA en
    *  F₀ ≠ 0 (pulso rectangular o triangular) CSI responde 2–5 % menos al principio. */
   a0?: "equilibrio" | "cero";
