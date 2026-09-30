@@ -240,28 +240,47 @@ PGA ${(Math.abs(pk.a) / G).toFixed(3)} g en t = ${pk.t.toFixed(2)} s`;
     if (q.get("th")) {
       const num = (k: string, d: number) => (q.get(k) !== null && isFinite(+q.get(k)!) ? +q.get(k)! : d);
       p.metodo = num("thm", 0); p.dir = num("thd", 0); p.escala = num("the", 1); p.xi = num("thx", 5); p.nModos = num("thn", 12);
+      p.grafica = num("thg", 0);
+      const verGrafica = q.get("thv") !== "0";
+      const trasCargar = () => { if (q.get("thr") === "1") correr(); else if (verGrafica) graficar(); };
       if (q.get("th") === "elcentro") { p.registro = 2; cargarElCentro(); }
       else if (q.get("th") === "k" && q.get("thk")) {
         p.registro = 1; p.info = "descargando el registro compartido…"; f.refresh();
         fetch(SERVICIO + "/h/" + encodeURIComponent(q.get("thk")!)).then((r) => r.ok ? r.text() : Promise.reject(r.status)).then((t) => {
           const nl = t.indexOf("\n"); const nombre = t.slice(0, nl).replace(/^#hekatan-registro\s*/, "") || "registro compartido";
           cargarTexto(t.slice(nl + 1), nombre);
-          if (q.get("thr") === "1") correr();
+          trasCargar();
         }).catch((e) => { p.info = "✗ no se pudo descargar el registro compartido (" + e + ")"; f.refresh(); });
       }
+      if (q.get("th") === "pulso") { p.registro = 0; rehacerPulso(); }
       f.expanded = true; f.refresh();
-      if (q.get("thr") === "1" && q.get("th") !== "k") setTimeout(() => correr(), 1500);
+      // abrir también las carpetas que la contienen (Modal + Animación, Resultados)
+      setTimeout(() => {
+        let el: HTMLElement | null = (f as any).element?.parentElement ?? null;
+        while (el) {
+          if (el.classList?.contains("tp-fldv") && !el.classList.contains("tp-fldv-expanded"))
+            (el.querySelector(":scope > .tp-fldv_b") as HTMLElement | null)?.click();
+          el = el.parentElement;
+        }
+        (f as any).element?.scrollIntoView?.({ block: "start" });
+      }, 800);
+      if (q.get("th") !== "k") setTimeout(trasCargar, 1500);
     }
   } catch { /* enlace sin tiempo-historia */ }
   /** Lo que Compartir añade al enlace para que quien lo abra vea ESTE tiempo-historia (registro subido incluido). */
   async function enlace(): Promise<Record<string, string>> {
-    const q: Record<string, string> = { thm: String(p.metodo), thd: String(p.dir), the: String(p.escala), thx: String(p.xi), thn: String(p.nModos), thr: "1" };
+    // se comparte TAL COMO ESTÁ (Jorge, 30-sep): si el panel está abierto o ya se calculó, va todo; si no, nada
+    const graficaVisible = (document.getElementById("hk-shared-chart")?.style.display ?? "none") !== "none";
+    if (!f.expanded && !ultimo) return {};
+    const q: Record<string, string> = { thm: String(p.metodo), thd: String(p.dir), the: String(p.escala), thx: String(p.xi),
+      thn: String(p.nModos), thg: String(p.grafica), thv: graficaVisible ? "1" : "0" };
+    if (ultimo) q.thr = "1";
     if (p.registro === 2) q.th = "elcentro";
     else if (p.registro === 1 && archivo) {
       const r = await fetch(SERVICIO + "/h", { method: "POST", body: "#hekatan-registro " + archivo.nombre + "\n" + archivo.texto });
       if (!r.ok) throw new Error("no se pudo guardar el registro para compartir (" + r.status + ")");
       q.th = "k"; q.thk = (await r.json()).k;
-    } else return {};
+    } else q.th = "pulso";
     return q;
   }
   return { correr, animar, parar, resultado: () => ultimo, enlace, cargarTexto, params: p, refrescar: () => f.refresh() };

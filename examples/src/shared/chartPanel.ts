@@ -98,6 +98,7 @@ export function createChartPanel(opts: ChartPanelOptions = {}): ChartPanelApi {
 
   // ── Container ───────────────────────────────────────────────────
   const el = document.createElement("div");
+  el.id = "hk-shared-chart";          // para saber si está a la vista (Compartir lo guarda en el enlace)
   el.className = "hekatan-chart-panel";
   Object.assign(el.style, {
     position: "fixed",

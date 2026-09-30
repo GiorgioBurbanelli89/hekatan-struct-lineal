@@ -574,7 +574,7 @@ async function enlaceEjemplo(): Promise<{ url: string; tipo: "ejemplo" | "modelo
   if (Object.keys(cambiados).length) u.searchParams.set("p", aB64(JSON.stringify(cambiados)));
   // el tiempo-historia hecho (registro incluido: si se subió un archivo, va al servicio de enlaces cortos)
   const th = (window as any).__hekatanTiempoHistoria;
-  if (th?.resultado?.() && th.enlace) for (const [k, v] of Object.entries(await th.enlace() as Record<string, string>)) u.searchParams.set(k, v);
+  if (th?.enlace) for (const [k, v] of Object.entries(await th.enlace() as Record<string, string>)) u.searchParams.set(k, v);
   return { url: u.toString(), tipo: "ejemplo" };
 }
 (window as any).__hekatanEnlaceEjemplo = enlaceEjemplo;
