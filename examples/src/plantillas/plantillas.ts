@@ -129,6 +129,18 @@ function modsNervada(h: number, tLoseta: number, bNervio: number,
   return [1, 1, 1, f, fCruz, Math.sqrt(f * fCruz), 1, 1];
 }
 
+/**
+ * Fracción de VOLUMEN de hormigón de una nervada / waffle respecto de la maciza del mismo canto (30-sep-2026).
+ * Hasta hoy la masa de la losa era la de la maciza (modificadores solo en rigidez): con canto 0.25, loseta 0.05 y
+ * nervios de 0.10 cada 0.60, el peso sísmico salía ×2.25. Por m²: loseta + almas (una dirección, o las dos menos el
+ * cruce): V = tL + ha·b/s·(2 − b/s en waffle). Waffle de 0.25: 0.111 m³/m² = 44 % de la maciza.
+ */
+function fraccionVolumenNervada(h: number, tLoseta: number, bNervio: number, sep: number, dosDirecciones: boolean): number {
+  const r = bNervio / sep, ha = Math.max(0, h - tLoseta);
+  const v = tLoseta + (dosDirecciones ? ha * r * (2 - r) : ha * r);
+  return Math.min(1, v / h);
+}
+
 function niveles(txt: unknown, pisos: number, h: number, h1: number): number[] {
   const dado = ordenadas(txt);
   if (dado) return dado[0] === 0 ? dado : [0, ...dado];
@@ -764,6 +776,8 @@ export const plantillas: ExampleDef = {
         if (esNerv) {
           shellModifiers.set(e, modsNervada(p.tlosa, p.tLoseta, p.bNervio,
                                             p.sNervio, fRaw === 51));
+          // y el PESO/MASA de la nervada de verdad (no el de la maciza)
+          densities.set(e, RHOh * fraccionVolumenNervada(p.tlosa, p.tLoseta, p.bNervio, p.sNervio, fRaw === 51));
         }
         return;
       }

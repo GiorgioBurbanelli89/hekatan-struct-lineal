@@ -1679,7 +1679,10 @@ function exportFromScratch(input: ExportE2kInput): string {
       lines.push(`  SHELLPROP  "${DECK_SEC}"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t_slab))} `);
     } else {
       lines.push(`$ SLAB PROPERTIES`);
-      lines.push(`  SHELLPROP  "Losa"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "${modelingDe(false)}"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t_slab))} `);
+      // el material DE LA LOSA (30-sep-2026): con una sola losa se usaba el «por defecto» y una waffle con su peso
+      // rebajado (Conc_2) salía pesando como maciza (Conc_1) en ETABS
+      const matLosa = [...grupos.values()].find((g) => !g.isWall && !g.mem)?.mat ?? defaultShellMat;
+      lines.push(`  SHELLPROP  "Losa"  PROPTYPE  "Slab"  MATERIAL "${matLosa}"  MODELINGTYPE "${modelingDe(false)}"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t_slab))} `);
     }
     const modLosa = lineaMods(esMembrana ? DECK_SEC : "Losa", false);
     if (modLosa) lines.push(modLosa);
@@ -1695,7 +1698,8 @@ function exportFromScratch(input: ExportE2kInput): string {
     // medía dos elementos. Verificado pidiendole a ETABS que exportara su
     // propio .e2k de cada tipo (galpon-bodega-electoral/tipos_cascara_export.py).
     const modelingMuro = modelingDe(true);
-    lines.push(`  SHELLPROP  "Muro"  PROPTYPE  "Wall"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "${modelingMuro}"  WALLTHICKNESS ${rd(cL(t_wall))} `);
+    const matMuro = [...grupos.values()].find((g) => g.isWall)?.mat ?? defaultShellMat;
+    lines.push(`  SHELLPROP  "Muro"  PROPTYPE  "Wall"  MATERIAL "${matMuro}"  MODELINGTYPE "${modelingMuro}"  WALLTHICKNESS ${rd(cL(t_wall))} `);
     const modMuro = lineaMods("Muro", true);
     if (modMuro) lines.push(modMuro);
     lines.push(``);

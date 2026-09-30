@@ -115,10 +115,11 @@ export function registrarDiseno(e: Entrada): void {
 }
 
 let menuAbierto: HTMLDivElement | null = null;
-function montar(): void {
+function montar(n = 0): void {
+  if (typeof document === "undefined" || typeof document.getElementById !== "function") return;   // sin DOM (tests)
   if (document.getElementById("hk-menus")) return;
   const tit = document.getElementById("hk-cad-tit"), doc = tit?.querySelector(".doc");
-  if (!tit || !doc) { setTimeout(montar, 400); return; }   // la barra de título aún no está
+  if (!tit || !doc) { if (n < 150) setTimeout(() => montar(n + 1), 400); return; }   // la barra de título aún no está
   // en pantallas angostas: nada se parte en dos líneas; primero se quita la marca, luego el nombre
   const st = document.createElement("style");
   st.textContent = "#hk-cad-tit button{white-space:nowrap}" +

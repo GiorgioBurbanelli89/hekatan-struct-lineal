@@ -222,6 +222,16 @@ export function modalCpp(
   const endOffValuesPtr = allocate(endOffValues, Float64Array, mod.HEAPF64);
   gc.push(endOffValuesPtr);
 
+  // Modificadores DIRECCIONALES (8 por cáscara, orden e2k: F11 F22 F12 M11 M22 M12 V13 V23), como en deformCpp
+  const dirMods = (elementInputs as any).shellModifiers as Map<number, number[]> | undefined;
+  const dirModKeys = dirMods ? Array.from(dirMods.keys()) : [];
+  const dirModValues: number[] = [];
+  if (dirMods) for (const k of dirModKeys) { const v8 = dirMods.get(k) as number[]; for (let i = 0; i < 8; i++) dirModValues.push(v8[i] ?? 1); }
+  const dirModKeysPtr = mod._malloc(Math.max(1, dirModKeys.length) * 4);
+  mod.HEAPU32.set(new Uint32Array(dirModKeys), dirModKeysPtr / 4); gc.push(dirModKeysPtr);
+  const dirModValuesPtr = mod._malloc(Math.max(1, dirModValues.length) * 8);
+  mod.HEAPF64.set(new Float64Array(dirModValues), dirModValuesPtr / 8); gc.push(dirModValuesPtr);
+
   mod._modal(
     nodesPtr,
     nodes.length,
@@ -328,7 +338,10 @@ export function modalCpp(
     thCfgPtr,
     thCfgLen,
     thOutPtr,
-    thOutLen
+    thOutLen,
+    dirModKeysPtr,
+    dirModValuesPtr,
+    dirModKeys.length
   );
 
   // 3- Read outputs
@@ -547,4 +560,36 @@ function allocate<T extends TypedArrayConstructor>(
   heap.set(buffer, pointer / buffer.BYTES_PER_ELEMENT);
 
   return pointer;
+}
+
+/**
+ * Masa ENSAMBLADA por nudo [nudo][6] (UX UY UZ RX RY RZ): la tabla «Assembled Joint Masses» de ETABS/SAP2000, con la
+ * MISMA `ensamblarMasa()` del modal (30-sep-2026, para la capa NEC: peso y centro de masa por piso). No resuelve nada.
+ */
+export function jointMass(nodes: Node[], elements: Element[], elementInputs: ElementInputs,
+                          opc: { lateral?: number; lump?: number; incluyeElementos?: number; masaNodal?: Map<number, number[]> } = {}): number[][] {
+  if (!nodes.length) return [];
+  const gc: number[] = [];
+  const alloc = (a: ArrayLike<number>, T: any, heap: any) => {
+    const t = new T(a.length ? a : [0]); const p = mod._malloc(t.length * t.BYTES_PER_ELEMENT);
+    heap.set(t, p / t.BYTES_PER_ELEMENT); gc.push(p); return p;
+  };
+  const nP = alloc(nodes.flat(), Float64Array, mod.HEAPF64);
+  const eI = elements.flat();
+  const eP = alloc(eI, Uint32Array, mod.HEAPU32);
+  const eS = alloc(elements.map((e) => e.length), Uint32Array, mod.HEAPU32);
+  const P = (m?: Map<number, any>) => {
+    const k = m ? [...m.keys()] : []; const v = m ? [...m.values()].flat() : [];
+    return { kp: alloc(k, Uint32Array, mod.HEAPU32), vp: alloc(v, Float64Array, mod.HEAPF64), size: k.length };
+  };
+  const ar = P(elementInputs.areas as any), de = P(elementInputs.densities as any), th = P(elementInputs.thicknesses as any);
+  const nm = P(opc.masaNodal);
+  const out = mod._malloc(nodes.length * 6 * 8); gc.push(out);
+  mod._assembled_joint_mass(nP, nodes.length, eP, eI.length, eS, elements.length,
+    ar.kp, ar.vp, ar.size, de.kp, de.vp, de.size, th.kp, th.vp, th.size, nm.kp, nm.vp, nm.size,
+    opc.incluyeElementos ?? 1, opc.lateral ?? 0, opc.lump ?? 0, out);
+  const m = new Float64Array(mod.HEAPF64.buffer, out, nodes.length * 6);
+  const res = Array.from({ length: nodes.length }, (_, i) => Array.from(m.subarray(i * 6, i * 6 + 6)));
+  gc.forEach((p) => mod._free(p));
+  return res;
 }

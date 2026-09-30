@@ -479,7 +479,11 @@ extern "C"
         //   nudos de salida]
         // Salida plana: [nOut, nNud, nModos, t×nOut, u(nOut × nNud × 6), base(nOut × 6), envolvente(nNudos × 6)?]
         double *th_cfg_ptr = nullptr, int th_cfg_len = 0,
-        double **th_out_ptr = nullptr, int *th_out_len = nullptr)
+        double **th_out_ptr = nullptr, int *th_out_len = nullptr,
+        // MODIFICADORES DIRECCIONALES de cáscara (30-sep-2026): 8 por elemento, F11 F22 F12 M11 M22 M12 V13 V23, igual
+        // que deform.cpp. Hasta hoy el modal NO los recibía: una losa nervada/waffle o una inercia agrietada (NEC) salía
+        // con la rigidez de la maciza (edificio waffle: T1 0.5388 contra 0.5659 de SAP2000 y ETABS, −4.8 %).
+        int *shellmod_keys_ptr = nullptr, double *shellmod_values_ptr = nullptr, int num_shellmods = 0)
     {
         if (th_out_ptr) *th_out_ptr = nullptr;
         if (th_out_len) *th_out_len = 0;
@@ -532,6 +536,8 @@ extern "C"
         elementInputs.momentReleases = parseMapBoolVecFromFlat(release_keys_ptr, release_values_ptr, num_releases, 12);
         if (num_endoff > 0 && endoff_keys_ptr && endoff_values_ptr)
             elementInputs.endOffsets = parseMapVecFromFlat(endoff_keys_ptr, endoff_values_ptr, num_endoff, 3);
+        if (num_shellmods > 0 && shellmod_keys_ptr && shellmod_values_ptr)
+            elementInputs.shellModifiers = parseMapVecFromFlat(shellmod_keys_ptr, shellmod_values_ptr, num_shellmods, 8);
 
         // --- 2. Assemble K and M ---
         int dof = num_nodes * 6;
