@@ -40,7 +40,7 @@ export const vigaAlta = makeSimpleExample({
     // Todo bloqueado en Y (plane stress en X-Z)
     for (let i = 0; i < nodes.length; i++) {
       if (supports.has(i)) continue;
-      supports.set(i, [false, true, false, true, true, true]);
+      supports.set(i, [false, true, false, true, false, true]);   // ry = giro EN el plano (drilling): libre
     }
     const topBase = ny * (nx + 1);
     const loads = new Map<number, [number,number,number,number,number,number]>();

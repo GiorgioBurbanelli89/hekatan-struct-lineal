@@ -35,7 +35,7 @@ export const vigaQ4 = makeSimpleExample({
     }
     const supports = new Map<number, [boolean,boolean,boolean,boolean,boolean,boolean]>();
     for (let j = 0; j <= ny; j++) supports.set(j * (nx + 1), [true, true, true, true, true, true]);
-    for (let i = 0; i < nodes.length; i++) if (!supports.has(i)) supports.set(i, [false, true, false, true, true, true]);
+    for (let i = 0; i < nodes.length; i++) if (!supports.has(i)) supports.set(i, [false, true, false, true, false, true]);   // ry = giro EN el plano (drilling): libre
     const loads = new Map<number, [number,number,number,number,number,number]>();
     for (let j = 0; j <= ny; j++) loads.set(j * (nx + 1) + nx, [0, 0, p.F / (ny + 1), 0, 0, 0]);
     return { nodes, elements, supports, loads, material: "hormigon", thickness: p.t };

@@ -37,7 +37,7 @@ export const muroContencion = makeSimpleExample({
     const supports = new Map<number, [boolean,boolean,boolean,boolean,boolean,boolean]>();
     for (let i = 0; i <= nx; i++) supports.set(i, [true, true, true, true, true, true]);
     // Resto bloquea Y
-    for (let i = 0; i < nodes.length; i++) if (!supports.has(i)) supports.set(i, [false, true, false, true, true, true]);
+    for (let i = 0; i < nodes.length; i++) if (!supports.has(i)) supports.set(i, [false, true, false, true, false, true]);   // ry = giro EN el plano (drilling): libre
     // Carga horizontal lateral (presión del suelo, triangular)
     const loads = new Map<number, [number,number,number,number,number,number]>();
     const dz = p.H / nz;
