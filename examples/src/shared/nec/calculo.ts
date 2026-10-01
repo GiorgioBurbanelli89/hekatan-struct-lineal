@@ -17,6 +17,17 @@ export type OpcionesNEC = { sitio: DatosSitio; irregular: boolean; nModos: numbe
  * (< 20° de la vertical) = columna, el resto = viga; cáscara vertical = muro (sus 6 modificadores de membrana y flexión
  * × 0.6, el cortante transversal tal cual); losas sin tocar. Devuelve una COPIA: el modelo en pantalla no cambia.
  */
+/**
+ * Unidades (1-oct-2026). La capa NEC trabaja en kN-m con la densidad como MASA (t/m³). Un ejemplo en tonf-m (E en
+ * tonf/m², densidad = PESO en tonf/m³, como test-m) lo declara con `elementInputs.unidades = "tonf-m"`: aquí la
+ * densidad pasa a masa (÷ g) y todo sale en tonf. Sin esto el modal veía una rigidez 9.81 veces menor (T × 3.13).
+ */
+export function enMasa(ei: any): any {
+  if (ei?.unidades !== "tonf-m") return ei;
+  return { ...ei, densities: new Map([...(ei.densities ?? new Map())].map(([k, v]: [number, number]) => [k, v / 9.80665])), unidades: "tonf-m/masa" };
+}
+export const unidadFuerza = (ei: any) => (String(ei?.unidades ?? "").startsWith("tonf-m") ? "tonf" : "kN");
+
 export function agrietar(nodes: number[][], elements: number[][], ei: any): any {
   const iy = new Map(ei.momentsOfInertiaY ?? []), iz = new Map(ei.momentsOfInertiaZ ?? []), sm = new Map(ei.shellModifiers ?? []);
   elements.forEach((e, k) => {
@@ -50,12 +61,14 @@ export type ResultadoNEC = {
   /** masa participativa acumulada con nModos (NEC: ≥ 90 % en X e Y) */
   sumaMasa: { ux: number; uy: number; rz: number };
   agrietadas: boolean;
+  unidad: string;
 };
 
 const aMap = (o: any) => (o instanceof Map ? o : new Map(Object.entries(o ?? {}).map(([k, v]) => [Number(k), v])));
 
 export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs: any, elementInputsIn: any, o: OpcionesNEC): ResultadoNEC {
-  const elementInputs = o.agrietadas ? agrietar(nodes, elements, elementInputsIn) : elementInputsIn;
+  const eiM = enMasa(elementInputsIn);
+  const elementInputs = o.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
   const ni = { ...nodeInputs, supports: aMap(nodeInputs.supports), diaphragms: aMap(nodeInputs.diaphragms) };
   const pisos = pisosDeModelo(nodes, elements, ni, elementInputs);
   if (!pisos.length) throw new Error("el modelo no tiene pisos (ni diafragmas ni cotas con masa)");
@@ -100,7 +113,7 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
   const QX = Q("Ex"), QY = Q("Ey");
   const sumaMasa = { ux: mp.reduce((a, v) => a + (v?.[0] ?? 0), 0), uy: mp.reduce((a, v) => a + (v?.[1] ?? 0), 0), rz: mp.reduce((a, v) => a + (v?.[5] ?? 0), 0) };
   return {
-    estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas,
+    estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas, unidad: unidadFuerza(elementInputsIn),
     pisos, cr, modos, chequeoModos, estatico, derivasEst,
     dinamico: { X, Y, escX, escY, minimo },
     torsional: { X: peorX > 1.2, Y: peorY > 1.2, peorX, peorY },

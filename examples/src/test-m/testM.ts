@@ -172,7 +172,7 @@ function buildEdificio(p: any, states: any, sys: Sys, opts?: { soloGeometria?: b
   states.nodes.val = nodes;
   states.elements.val = elements;
   states.nodeInputs.val = { supports, loads };
-  states.elementInputs.val = { elasticities, poissonsRatios, shearModuli, densities, areas, momentsOfInertiaY, momentsOfInertiaZ, torsionalConstants, thicknesses, plateFormulations, drillingTypes, shearAreasY, shearAreasZ };
+  states.elementInputs.val = { unidades: "tonf-m", elasticities, poissonsRatios, shearModuli, densities, areas, momentsOfInertiaY, momentsOfInertiaZ, torsionalConstants, thicknesses, plateFormulations, drillingTypes, shearAreasY, shearAreasZ };
 
   if (opts?.soloGeometria) return;
   // ── Resolver y recuperar resultados → así se VE el aporte de losa/muros (shell results).

@@ -14,7 +14,8 @@ import { modalAnalysis } from "hekatan-fem";
 type Pares = [number, unknown][];
 
 function aMapa(p: Pares | undefined): Map<number, any> | undefined {
-  return p ? new Map(p as [number, any][]) : undefined;
+  // un campo que no es mapa (elementInputs.unidades = "tonf-m") pasa tal cual: new Map("tonf-m") revienta
+  return Array.isArray(p) ? new Map(p as [number, any][]) : (p as any);
 }
 
 // Señal de vida: si esto no llega, el worker ni siquiera arrancó (fallo al

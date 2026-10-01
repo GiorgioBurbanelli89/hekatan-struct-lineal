@@ -8,7 +8,7 @@
  * Fa, Fd y Fs se escriben a mano (Tablas 3-5 de la NEC-15, 3.3-3.5 del borrador): por defecto, Portoviejo suelo D.
  */
 import type { State } from "vanjs-core";
-import { calcularNEC, agrietar, type ResultadoNEC } from "./calculo";
+import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
 import { jointMass } from "hekatan-fem";
 import { PORTOVIEJO_D, type Norma } from "./estatico";
@@ -50,7 +50,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
     if (!ultimo) correr();
     if (!ultimo) return;
     const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val;
-    const ei = p.agrietadas ? agrietar(nodes, elements, estado.elementInputs.val) : estado.elementInputs.val;
+    const eiM = enMasa(estado.elementInputs.val), ei = p.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
     const t0 = performance.now();
     try {
       const masas = jointMass(nodes as any, elements as any, ei, { incluyeElementos: 1 });
@@ -80,7 +80,7 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
         { sitio: sitio() as any, irregular: !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
-      p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} kN (${(e.Cs * 100).toFixed(2)} % W)
+      p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} ${r.unidad} (${(e.Cs * 100).toFixed(2)} % W)
 Din: Vx ${dx.X.V.toFixed(1)} (${(dx.escX.relacion * 100).toFixed(1)} %) · Vy ${dx.Y.V.toFixed(1)} (${(dx.escY.relacion * 100).toFixed(1)} %) · mín ${dx.minimo * 100} %
 Escala: X ×${dx.escX.factor.toFixed(3)} · Y ×${dx.escY.factor.toFixed(3)}
 Torsión máx/prom: X ${r.torsional.peorX.toFixed(3)} · Y ${r.torsional.peorY.toFixed(3)} ${r.torsional.X || r.torsional.Y ? "✗ IRREGULAR (> 1.2)" : "✓ ≤ 1.2"}
@@ -138,11 +138,11 @@ function ventana() {
         `${td(`${q.cm[0].toFixed(3)}, ${q.cm[1].toFixed(3)}`)}${td(`${cr[0].toFixed(3)}, ${cr[1].toFixed(3)}`)}` +
         `${td((dX.inelastica * 100).toFixed(2) + " %")}${td(dX.relacion.toFixed(3), mala(dX))}${td((dY.inelastica * 100).toFixed(2) + " %")}${td(dY.relacion.toFixed(3), mala(dY))}${td(r.estabilidad.X[i].toFixed(4))}${td(r.estabilidad.Y[i].toFixed(4))}</tr>`;
     }
-    const cab = ["Piso", "z m", "W kN", "F kN", "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔM X", "máx/prom X", "ΔM Y", "máx/prom Y", "Q X", "Q Y"].map(th).join("");
+    const cab = ["Piso", "z m", `W ${r.unidad}`, `F ${r.unidad}`, "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔM X", "máx/prom X", "ΔM Y", "máx/prom Y", "Q X", "Q Y"].map(th).join("");
     cuerpo.innerHTML = `
 <div style="line-height:1.5;margin-bottom:6px">
- <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} kN · <b>V ${e.V.toFixed(1)} kN</b> (Cs ${e.Cs.toFixed(4)})<br>
- <b>Dinámico CQC</b>: Vx ${D.X.V.toFixed(1)} kN = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} kN = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
+ <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} ${r.unidad} · <b>V ${e.V.toFixed(1)} ${r.unidad}</b> (Cs ${e.Cs.toFixed(4)})<br>
+ <b>Dinámico CQC</b>: Vx ${D.X.V.toFixed(1)} ${r.unidad} = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} ${r.unidad} = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
  → escala X ×${D.escX.factor.toFixed(3)}, Y ×${D.escY.factor.toFixed(3)}<br>
  <b>Derivas</b> ΔM = 0.75·R·ΔE ≤ 2 % (el peor de sin/±5 % de excentricidad) · <b>Torsión</b> máx/prom > 1.2 = irregular (rojo)<br>
  <b>Modos</b>: ${r.chequeoModos.join(" · ")}<br>
