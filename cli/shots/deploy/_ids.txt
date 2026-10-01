@@ -104,6 +104,7 @@ muro-manabi
 muro-q4
 new-blank
 opera
+pandeo-sap2000
 pergola
 placa-base
 placa-base-cft

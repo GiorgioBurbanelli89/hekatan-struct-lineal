@@ -37,8 +37,9 @@ export function montarTiposDeCaso(folder: any) {
   const p = { tipo: 9, info: TIPOS[9][1] };
   const op: Record<string, number> = {}; TIPOS.forEach(([n], k) => (op[n] = k));
   f.addBinding(p, "tipo", { label: "Load Case Type", options: op }).on("change", () => { p.info = TIPOS[p.tipo][1]; f.refresh(); });
-  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 2 });
-  return { params: p };
+  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 3 });
+  const elegir = (k: number) => { p.tipo = k; p.info = TIPOS[k][1]; f.refresh(); };
+  return { params: p, elegir, tipos: TIPOS.map(([n]) => n), folder: f };
 }
 
 export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLElement, pararOtrasAnimaciones: () => void) {
@@ -47,7 +48,7 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
   let ultimo: PandeoResultado | null = null;
   f.addBinding(p, "nModos", { label: "N° de modos", min: 1, max: 30, step: 1 });
   f.addButton({ title: "▶ Calcular pandeo" }).on("click", () => calcular());
-  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 8 });
+  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 10 });
   f.addBinding(p, "modo", { label: "Modo a ver", min: 1, max: 30, step: 1 }).on("change", () => { if (raf) animar(); });
   f.addButton({ title: "🎞 Animar el modo de pandeo" }).on("click", () => animar());
   f.addButton({ title: "⏹ Detener" }).on("click", () => parar(true));
@@ -64,10 +65,12 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
     } catch (e) { ultimo = null; p.info = "✗ " + String(e); f.refresh(); return; }
     if (!ultimo || !ultimo.factors.length) { p.info = "✗ no se pudo resolver (¿mecanismo? ¿sin compresión?)"; f.refresh(); return; }
     const conCascaras = elements.some((e: number[]) => e.length > 2);
-    p.info = "Factor de pandeo λ (cargas × λ = pandeo):\n" +
-      ultimo.factors.map((l, k) => `  modo ${k + 1}:  λ = ${l.toFixed(4)}${k === 0 ? (l > 1 ? "  (> 1: aguanta)" : l > 0 ? "  (< 1: PANDEA antes)" : "  (< 0: con cargas invertidas)") : ""}`).join("\n") +
-      (conCascaras ? "\n⚠ cáscaras/sólidos sin G todavía (solo barras)" : "") +
-      `\n${(performance.now() - t0).toFixed(0)} ms · = SAP2000 Buckling`;
+    const l1 = ultimo.factors[0];
+    p.info = "λ = factor de pandeo\n" +
+      ultimo.factors.map((l, k) => `modo ${k + 1}:  λ = ${l.toFixed(4)}`).join("\n") +
+      "\n" + (l1 > 1 ? "λ₁ > 1: aguanta las cargas" : l1 > 0 ? "λ₁ < 1: PANDEA antes" : "λ₁ < 0: cargas invertidas") +
+      (conCascaras ? "\n⚠ cáscaras: sin G todavía" : "") +
+      `\n${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
     p.modo = 1; f.refresh();
   }
 
@@ -102,5 +105,5 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
     };
     raf = requestAnimationFrame(tick);
   }
-  return { calcular, animar, parar, resultado: () => ultimo, params: p, refrescar: () => f.refresh() };
+  return { calcular, animar, parar, resultado: () => ultimo, params: p, refrescar: () => f.refresh(), folder: f };
 }

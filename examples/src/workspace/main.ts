@@ -7294,11 +7294,6 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       const th = montarTiempoHistoria(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
       (window as any).__hekatanTiempoHistoria = th;
     } catch (e) { console.warn("[tiempo-historia]", e); }
-    // ── ⟂ Pandeo lineal (1-oct-2026): el Load Case «Buckling» de SAP2000 + la lista de los 11 tipos (no lineal = Pro) ──
-    try {
-      (window as any).__hekatanPandeo = montarPandeo(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
-      montarTiposDeCaso(fModal);
-    } catch (e) { console.warn("[pandeo]", e); }
     // ── 🌎 Sismo NEC (30-sep-2026): estático + espectral NEC-15 / borrador, derivas, CM/CR, torsión ──
     try { (window as any).__hekatanNEC = montarNEC(fModal, states as any); } catch (e) { console.warn("[NEC]", e); }
   }
@@ -7310,6 +7305,14 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       const corte = montarCorte(W_.__hekatanOutputsFolder ?? pane, states as any);
       W_.__hekatanCorte = corte; W_.__hekatanCorteFolder = corte.folder;
     } catch (e) { console.warn("[corte]", e); }
+    // ── ⟂ Pandeo lineal (1-oct-2026): el Load Case «Buckling» de SAP2000 + los tipos de caso (no lineal = Pro), en TODOS ──
+    for (const k of ["__hekatanPandeoFolder", "__hekatanTiposFolder"]) if (W_[k]) { try { W_[k].dispose(); } catch {} W_[k] = null; }
+    try {
+      const pd = montarPandeo(W_.__hekatanOutputsFolder ?? pane, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
+      W_.__hekatanPandeo = pd; W_.__hekatanPandeoFolder = pd.folder;
+      const tc = montarTiposDeCaso(W_.__hekatanOutputsFolder ?? pane);
+      W_.__hekatanTiposCaso = tc; W_.__hekatanTiposFolder = tc.folder;
+    } catch (e) { console.warn("[pandeo]", e); }
   }
   currentPane = pane;
   // Aplicar visibilidad dinamica de bindings (hiddenIf) en el render inicial.
