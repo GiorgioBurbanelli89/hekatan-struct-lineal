@@ -1,29 +1,20 @@
-// Barrido de TODOS los ejemplos en el servidor local: pageerror, console.error, nudos, NaN. → JSONL + PNG
+// Barrido de TODOS los ejemplos contra el build local (o HK_BASE): PNG + errores. node cli/_barrido_local.mjs <dir>
 import puppeteer from "puppeteer";
-import { appendFileSync, writeFileSync } from "node:fs";
-const BASE = "http://localhost:4600/workspace/";
-const OUT = "cli/shots/barrido_local/";
-const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--enable-webgl"] });
-let p = await nav.newPage(); await p.goto(BASE, { waitUntil: "networkidle2", timeout: 180000 }); await new Promise(r => setTimeout(r, 8000));
-const ids = await p.evaluate(() => { const L = window.__hekatanExamples; return (typeof L === "function" ? L() : L ?? []).map(e => e.id ?? e); });
-await p.close(); writeFileSync(OUT + "_res.jsonl", "");
-console.log("ejemplos", ids.length);
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+const DIR = process.argv[2] ?? "cli/shots/barrido"; mkdirSync(DIR, { recursive: true });
+const BASE = process.env.HK_BASE ?? "http://localhost:8931/hekatan-struct-lineal";
+const ids = readFileSync("cli/shots/deploy/_ids.txt", "utf8").split(/\s+/).filter(Boolean);
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const res = [];
 for (const id of ids) {
-  const pg = await nav.newPage(); await pg.setViewport({ width: 1500, height: 950 });
-  const errs = [], cons = [];
-  pg.on("pageerror", e => errs.push(String(e.message).slice(0, 180)));
-  pg.on("console", m => { if (m.type() === "error") cons.push(m.text().slice(0, 180)); });
-  const t0 = Date.now(); let info = {};
+  const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 800 });
+  const err = []; pag.on("pageerror", (e) => err.push(String(e).slice(0, 160)));
   try {
-    await pg.goto(BASE + "?t=" + id, { waitUntil: "networkidle2", timeout: 120000 });
-    await new Promise(r => setTimeout(r, 6000));
-    info = await pg.evaluate(() => { const S = window.__hekatanStates; const N = S?.nodes?.val ?? [];
-      let nan = 0; for (const n of N) if (n.some(v => !Number.isFinite(v))) nan++;
-      return { nudos: N.length, elems: S?.elements?.val?.length ?? 0, nanCoord: nan, ejemplo: window.__hekatanExample?.() }; });
-    await pg.screenshot({ path: OUT + id + ".png" });
-  } catch (e) { errs.push("NAV " + String(e.message).slice(0, 120)); }
-  const fila = { id, ms: Date.now() - t0, pageerror: errs, console: cons.slice(0, 5), ...info };
-  appendFileSync(OUT + "_res.jsonl", JSON.stringify(fila) + "\n");
-  await pg.close();
+    await pag.goto(`${BASE}/workspace/?t=${id}`, { waitUntil: "networkidle2", timeout: 90000 }); await new Promise((r) => setTimeout(r, 6000));
+    const info = await pag.evaluate(() => { const s = window.__hekatanSettings?.(); const st = window.__hekatanStates;
+      const els = st?.elements?.val ?? []; return { el: s?.elements?.val, malla: s?.malla?.val, n: st?.nodes?.val?.length ?? 0, barras: els.filter((e) => e.length === 2).length, areas: els.filter((e) => e.length === 3 || e.length === 4).length }; });
+    await pag.screenshot({ path: `${DIR}/${id}.png` }); res.push({ id, ...info, err });
+  } catch (e) { res.push({ id, err: [String(e).slice(0, 160)] }); }
+  await pag.close(); console.log(id, res[res.length - 1].err.length ? "ERR" : "ok");
 }
-await nav.close(); console.log("fin");
+writeFileSync(`${DIR}/_resultado.json`, JSON.stringify(res, null, 1)); await nav.close();

@@ -64,6 +64,8 @@ export type Settings = {
    *  todos usan el color neutro del tema. Útil para distinguir visualmente
    *  qué es qué cuando hay muchos elementos. Default false. */
   colorByType: State<boolean>;
+  /** Malla de las áreas (todas las aristas de cada cáscara). Default false: solo el contorno de losas y muros. */
+  malla: State<boolean>;
   nodesIndexes: State<boolean>;
   elementsIndexes: State<boolean>;
   orientations: State<boolean>;
@@ -126,6 +128,7 @@ export type SettingsObj = {
   elemZapatas?: boolean;
   elemLosas?: boolean;
   colorByType?: boolean;
+  malla?: boolean;
   nodesIndexes?: boolean;
   elementsIndexes?: boolean;
   orientations?: boolean;
@@ -301,6 +304,9 @@ export function getSettings(
     verFolder.addBinding(settings.edges, "val", {
       label: "  Aristas (delim.)",
     });
+    verFolder.addBinding(settings.malla, "val", {
+      label: "  Malla de áreas",
+    });
     verFolder.addBinding(settings.faces, "val", {
       label: "  Caras (fill)",
     });
@@ -314,10 +320,10 @@ export function getSettings(
       label: "    Vigas",
     });
     verFolder.addBinding(settings.elemZapatas, "val", {
-      label: "  Zapatas (shells z≤0)",
+      label: "  Zapatas (verde)",
     });
     verFolder.addBinding(settings.elemLosas, "val", {
-      label: "  Losas (shells z>0)",
+      label: "  Losas (azul) · muros (magenta)",
     });
     verFolder.addBinding(settings.colorByType, "val", {
       label: "  🎨 Color por tipo",
@@ -601,7 +607,8 @@ export function getDefaultSettings(settingsObj: SettingsObj): Settings {
     elemFrames: van.state(settingsObj?.elemFrames ?? true),
     elemZapatas: van.state(settingsObj?.elemZapatas ?? true),
     elemLosas: van.state(settingsObj?.elemLosas ?? true),
-    colorByType: van.state(settingsObj?.colorByType ?? false),
+    colorByType: van.state(settingsObj?.colorByType ?? true),   // 1-oct-2026: de serie (columnas, vigas, muros, losas)
+    malla: van.state(settingsObj?.malla ?? false),
     nodesIndexes: van.state(settingsObj?.nodesIndexes ?? false),
     elementsIndexes: van.state(settingsObj?.elementsIndexes ?? false),
     orientations: van.state(settingsObj?.orientations ?? false),

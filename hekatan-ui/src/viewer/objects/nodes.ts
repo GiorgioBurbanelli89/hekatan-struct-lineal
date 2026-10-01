@@ -7,7 +7,8 @@ import { getTheme, onThemeChange } from "../../theme";
 export function nodes(
   settings: Settings,
   derivedNodes: State<Node[]>,
-  derivedDisplayScale: State<number>
+  derivedDisplayScale: State<number>,
+  elementos?: State<number[][]>
 ): THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial> {
   const t = getTheme();
   const points = new THREE.Points(
@@ -20,11 +21,22 @@ export function nodes(
   // on settings.nodes, and derivedNodes update visuals
   van.derive(() => {
     if (!settings.nodes.val) return;
-
-    points.geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(derivedNodes.val.flat(), 3)
-    );
+    const malla = (settings as any).malla ? (settings as any).malla.val : true;
+    const els = elementos?.val ?? [];
+    const ns = derivedNodes.val;
+    // Sin «Malla de áreas» (1-oct-2026) los nudos que SOLO tocan cáscaras no se dibujan: miles de puntos dibujaban
+    // la malla igual. Quedan los de las barras y los sueltos (apoyos, cargas en nudos de sólidos, etc.).
+    let pts: number[] = [];
+    if (malla || !els.some((e) => e.length === 3 || e.length === 4)) pts = ns.flat();
+    else {
+      const deCascara = new Uint8Array(ns.length), deBarra = new Uint8Array(ns.length);
+      for (const e of els) {
+        if (e.length === 2) { deBarra[e[0]] = 1; deBarra[e[1]] = 1; }
+        else if (e.length === 3 || e.length === 4) for (const i of e) deCascara[i] = 1;
+      }
+      for (let i = 0; i < ns.length; i++) if (deBarra[i] || !deCascara[i]) pts.push(ns[i][0], ns[i][1], ns[i][2]);
+    }
+    points.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
   });
 
   // on derivedDisplayScale, gridSize or nodes change update scale

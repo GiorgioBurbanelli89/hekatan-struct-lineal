@@ -12,6 +12,7 @@ const COLOR_COLUMN  = new THREE.Color(0xFF8800);  // naranja — frames vertical
 const COLOR_BEAM    = new THREE.Color(0x00CCCC);  // cyan — frames horizontales
 const COLOR_ZAPATA  = new THREE.Color(0x00CC44);  // verde — shells de cimentación (z≤0)
 const COLOR_LOSA    = new THREE.Color(0x3388FF);  // azul — shells de losa (z>0)
+const COLOR_MURO    = new THREE.Color(0xE040A0);  // magenta — shells VERTICALES (muros, pantallas)
 const COLOR_TRI     = new THREE.Color(0xFFCC00);  // amarillo — elementos triangulares
 const COLOR_SOLIDO  = new THREE.Color(0xB07CFF);  // violeta — sólidos H8
 
@@ -20,7 +21,9 @@ function isVerticalFrame(n1: Node, n2: Node): boolean {
   const dx = Math.abs(n2[0] - n1[0]);
   const dy = Math.abs(n2[1] - n1[1]);
   const dz = Math.abs(n2[2] - n1[2]);
-  return (dz > dx && dz > dy) || (dy > dx && dy > dz);
+  // vertical = Z dominante. Antes también contaba «dy dominante» (convención Y-arriba de un visor viejo): las
+  // VIGAS en dirección Y salían pintadas como columnas (Jorge, 1-oct-2026: «no se sabe si tiene vigas»).
+  return dz > dx && dz > dy;
 }
 function isVerticalQ4(n0: Node, n1: Node, n2: Node, n3: Node): boolean {
   const v01 = [n1[0]-n0[0], n1[1]-n0[1], n1[2]-n0[2]];
@@ -31,6 +34,14 @@ function isVerticalQ4(n0: Node, n1: Node, n2: Node, n3: Node): boolean {
   const len = Math.sqrt(nx*nx + ny*ny + nz*nz);
   if (len < 1e-12) return false;
   return Math.abs(nz / len) < 0.5;
+}
+function normalDe(ns: Node[]): number[] {
+  if (ns.length < 3 || ns.some((n) => !n)) return [0, 0, 1];
+  const u = [ns[1][0] - ns[0][0], ns[1][1] - ns[0][1], ns[1][2] - ns[0][2]];
+  const v = [ns[ns.length - 1][0] - ns[0][0], ns[ns.length - 1][1] - ns[0][1], ns[ns.length - 1][2] - ns[0][2]];
+  const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  const l = Math.hypot(n[0], n[1], n[2]) || 1;
+  return [n[0] / l, n[1] / l, n[2] / l];
 }
 function isFooting(zAvg: number): boolean {
   // Cimentación: shell con centro a z ≤ 0 (o muy cerca). Convención Hekatan:
@@ -138,7 +149,9 @@ export function elements(
     // (Jorge, Tutorial 9: «la línea inferior no se ve nada de nada»).
     new THREE.LineBasicMaterial({ color: t.elementLine, vertexColors: false, depthTest: false, transparent: true, opacity: 1 })
   );
-  onThemeChange((_n, c) => { lines.material.color.setHex(c.elementLine); });
+  // con «Color por tipo» los colores van por vértice: el color del material tiene que quedar BLANCO (multiplica);
+  // con el negro del tema claro las barras salían negras (1-oct-2026)
+  onThemeChange((_n, c) => { lines.material.color.setHex(lines.material.vertexColors ? 0xffffff : c.elementLine); });
   lines.frustumCulled = false;
   // Render order alto + sin polygon offset → líneas siempre encima de cualquier
   // fill (incluyendo colormap) sin Z-fighting (las líneas son 1D, no compiten
@@ -212,8 +225,13 @@ export function elements(
     settings.elemZapatas?.val;
     settings.elemLosas?.val;
     settings.colorByType?.val;
+    (settings as any).malla?.val;
 
     if (!settings.elements.val) return;
+    // MALLA de áreas (1-oct-2026): apagada por defecto. Sin ella, de cada losa/muro se dibuja solo su CONTORNO
+    // (aristas de una sola cáscara o donde cambia el plano), y las barras siempre: se ven vigas, columnas, losas
+    // y muros como objetos, sin la rejilla de los elementos. Jorge: «la malla se activa visualmente».
+    const verMalla = (settings as any).malla ? (settings as any).malla.rawVal : true;
 
     const showFrames  = settings.elemFrames  ? settings.elemFrames.rawVal  : true;
     const showCols    = settings.elemColumns.rawVal;
@@ -281,6 +299,7 @@ export function elements(
     // Wireframe buffer + colores por edge (cuando colorByType=ON)
     const wireVerts: number[] = [];
     const wireCols: number[] = [];
+    const bordes = new Map<string, { a: number; b: number; normales: number[][]; color: THREE.Color | null }>();
     for (const e of elems) {
       if (e.length === 8) continue;          // los sólidos ya pusieron las aristas de su piel
       if (!showElement(e)) continue;
@@ -293,7 +312,7 @@ export function elements(
           const ns = e.map(i => nodes[i]).filter(Boolean) as Node[];
           if (ns.length === 4) {
             const zAvg = (ns[0][2] + ns[1][2] + ns[2][2] + ns[3][2]) / 4;
-            edgeColor = isFooting(zAvg) ? COLOR_ZAPATA : COLOR_LOSA;
+            edgeColor = isVerticalQ4(ns[0], ns[1], ns[2], ns[3]) ? COLOR_MURO : isFooting(zAvg) ? COLOR_ZAPATA : COLOR_LOSA;
           }
         } else if (e.length === 3) {
           edgeColor = COLOR_TRI;
@@ -345,6 +364,15 @@ export function elements(
           continue;
         }
       }
+      if (!verMalla && (e.length === 3 || e.length === 4)) {
+        const nrm = normalDe(e.map((i) => nodes[i]) as Node[]);
+        for (const edge of elementToEdges(e)) {
+          const k = edge[0] < edge[1] ? `${edge[0]},${edge[1]}` : `${edge[1]},${edge[0]}`;
+          const r = bordes.get(k);
+          if (r) r.normales.push(nrm); else bordes.set(k, { a: edge[0], b: edge[1], normales: [nrm], color: edgeColor });
+        }
+        continue;
+      }
       for (const edge of elementToEdges(e)) {
         const a = nodes[edge[0]], b = nodes[edge[1]];
         if (!a || !b) continue;
@@ -354,6 +382,17 @@ export function elements(
           wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
         }
       }
+    }
+    // contorno de las áreas: arista de UNA sola cáscara (borde libre) o entre cáscaras de planos distintos
+    // (losa con muro, quiebre de 10° o más)
+    for (const r of bordes.values()) {
+      const n0 = r.normales[0];
+      const quiebre = r.normales.length === 1 || r.normales.some((n) => Math.abs(n[0] * n0[0] + n[1] * n0[1] + n[2] * n0[2]) < 0.985);
+      if (!quiebre) continue;
+      const a = nodes[r.a], b = nodes[r.b];
+      if (!a || !b) continue;
+      wireVerts.push(...a, ...b);
+      if (colorByType && r.color) { wireCols.push(r.color.r, r.color.g, r.color.b, r.color.r, r.color.g, r.color.b); }
     }
     lines.geometry.setAttribute(
       "position",
@@ -365,10 +404,12 @@ export function elements(
         new THREE.Float32BufferAttribute(wireCols, 3)
       );
       (lines.material as THREE.LineBasicMaterial).vertexColors = true;
+      (lines.material as THREE.LineBasicMaterial).color.setHex(0xffffff);
       (lines.material as THREE.LineBasicMaterial).needsUpdate = true;
     } else {
       lines.geometry.deleteAttribute("color");
       (lines.material as THREE.LineBasicMaterial).vertexColors = false;
+      (lines.material as THREE.LineBasicMaterial).color.setHex(getTheme().elementLine);
       (lines.material as THREE.LineBasicMaterial).needsUpdate = true;
     }
 
@@ -397,7 +438,7 @@ export function elements(
           let col: THREE.Color;
           if (colorByType) {
             const zAvg = (nodes[a][2] + nodes[b][2] + nodes[c][2] + nodes[d][2]) / 4;
-            col = isFooting(zAvg) ? COLOR_ZAPATA : COLOR_LOSA;
+            col = isVerticalQ4(nodes[a], nodes[b], nodes[c], nodes[d]) ? COLOR_MURO : isFooting(zAvg) ? COLOR_ZAPATA : COLOR_LOSA;
           } else {
             col = isVerticalQ4(nodes[a], nodes[b], nodes[c], nodes[d]) ? wallColor : slabColor;
           }

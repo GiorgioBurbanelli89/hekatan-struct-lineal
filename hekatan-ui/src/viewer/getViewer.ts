@@ -671,7 +671,7 @@ export function getViewer({
   if (mesh) {
     // 3D objects
     scene.add(
-      nodes(settings, derivedNodes, derivedDisplayScale),
+      nodes(settings, derivedNodes, derivedDisplayScale, mesh.elements as any),
       elements(mesh, settings, derivedNodes),
       nodesIndexes(settings, derivedNodes, derivedDisplayScale),
       elementsIndexes(mesh, settings, derivedNodes, derivedDisplayScale),

@@ -988,9 +988,10 @@ function loadExample(ex: ExampleDef) {
   const resetViewerVis = () => {
     const sR = (viewerElm as any).__settings;
     if (!sR) return;
-    // malla muy fina (> 1500 cascaras): aristas apagadas, si no tapan el colormap (placa-base se veia blanca)
-    if (sR.elements?.val !== undefined)    sR.elements.val =
-      (states.elements.rawVal ?? []).filter((e: number[]) => e.length === 3 || e.length === 4).length <= 1500;
+    // Elementos SIEMPRE (1-oct-2026): antes, con > 1500 cáscaras se apagaba todo y desaparecían también las vigas y
+    // columnas. La malla de las áreas es otra casilla («Malla de áreas», apagada): sin ella solo va el contorno.
+    if (sR.elements?.val !== undefined)    sR.elements.val = true;
+    if (sR.malla?.val !== undefined)       sR.malla.val = false;
     if (sR.nodes?.val !== undefined)       sR.nodes.val = true;
     if (sR.elemColumns?.val !== undefined) sR.elemColumns.val = true;
     if (sR.elemBeams?.val !== undefined)   sR.elemBeams.val = true;
