@@ -16,7 +16,10 @@ import { deform } from "hekatan-fem";
 import type { Piso } from "./pisos";
 
 export type PisoAguiar = { k: number; Kxx: number; Kyy: number; Ktt: number; Kxt: number; Kyt: number; Kxy: number; ex: number; ey: number; rhoX: number; rhoY: number };
-export type ResultadoAguiar = { KE: number[][]; T: number[]; part: number[][]; pisos: PisoAguiar[] };
+export type ResultadoAguiar = { KE: number[][]; T: number[]; part: number[][]; pisos: PisoAguiar[];
+  /** flexibilidad condensada F (3n×3n) y el CR de cada piso leído de su bloque diagonal (carga SOLO en ese piso, como ETABS):
+   *  x_CR = x_CM − θ(Fy)/θ(Mz), y_CR = y_CM + θ(Fx)/θ(Mz) */
+  F: number[][]; cr: [number, number][] };
 
 export function matrizDePiso(nodes: number[][], elements: number[][], nodeInputs: any, elementInputs: any,
   pisos: Piso[], masas: number[][]): ResultadoAguiar {
@@ -66,7 +69,11 @@ export function matrizDePiso(nodes: number[][], elements: number[][], nodeInputs
       ex: -B(0, 2) / B(0, 0), ey: B(1, 2) / B(1, 1),
       rhoX: Math.abs(B(0, 2)) / Math.sqrt(B(0, 0) * B(2, 2)), rhoY: Math.abs(B(1, 2)) / Math.sqrt(B(1, 1) * B(2, 2)) };
   });
-  return { KE, T, part, pisos: pisosA };
+  const cr = pisos.map((p, k) => {
+    const tFx = F[3 * k + 2][3 * k], tFy = F[3 * k + 2][3 * k + 1], tMz = F[3 * k + 2][3 * k + 2];
+    return [p.cm[0] - tFy / tMz, p.cm[1] + tFx / tMz] as [number, number];
+  });
+  return { KE, T, part, pisos: pisosA, F, cr };
 }
 
 function inversa(M: number[][]): number[][] {

@@ -11,6 +11,7 @@ import van, { type State } from "vanjs-core";
 import { deform } from "hekatan-fem";
 import { pisosDeModelo } from "./pisos";
 import { centrosDeRigidez } from "./derivas";
+import { calcularJueces, type Jueces } from "./jueces";
 import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
 import { NOMBRES, type ClaveIrr } from "./irregularidades";
@@ -20,7 +21,7 @@ import { PORTOVIEJO_D, type Norma } from "./estatico";
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
 let _sitio: any = null;
-const _vivo = { on: false };
+const _vivo = { on: false, jueces: false };
 let _tVivo: any = 0, _historia: [number, number][][] = [], _programar: (ya?: boolean) => void = () => {}, _oyente = false;
 
 /** una línea: qué irregularidades hay y qué hacen (NEC-15 φP·φE; borrador Ax) */
@@ -77,13 +78,21 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   // (3 cargas unitarias por piso) y se redibuja la planta. Sirve para TANTEAR hasta que el CR se acerque al CM.
   const vivo = _vivo;   // sobrevive a la regeneración del modelo (cambiar el n.º de muros vuelve a montar el panel)
   f.addBinding(vivo, "on", { label: "🎯 Planta CM/CR en vivo" }).on("change", () => { if (vivo.on) programar(true); else ventanaVivo().ocultar(); });
-  function programar(ya = false) { if (!vivo.on) return; clearTimeout(_tVivo); _tVivo = setTimeout(cmcr, ya ? 0 : 600); }
+  f.addBinding(vivo, "jueces", { label: "⚖ 4 jueces en vivo" }).on("change", () => { if (vivo.jueces) programar(true); else panelJueces().ocultar(); });
+  function programar(ya = false) { if (!vivo.on && !vivo.jueces) return; clearTimeout(_tVivo); _tVivo = setTimeout(cmcr, ya ? 0 : 600); }
   _programar = programar;                        // el oyente (uno solo) llama siempre al panel montado más reciente
   if (!_oyente) { _oyente = true; van.derive(() => { estado.nodes.val; estado.elements.val; estado.elementInputs.val; estado.nodeInputs.val; _programar(); }); }
-  if (vivo.on) programar(true);
+  if (vivo.on || vivo.jueces) programar(true);
   function cmcr() {
     const nodes = estado.nodes.val, elements = estado.elements.val;
     if (!nodes?.length) return;
+    if (vivo.jueces) {
+      try {
+        const eiM = enMasa(estado.elementInputs.val), ei = p.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
+        panelJueces().mostrar(calcularJueces(nodes, elements, estado.nodeInputs.val ?? {}, ei, sitio() as any), nodes, elements);
+      } catch (err) { console.warn("[jueces]", err); }
+      if (!vivo.on) return;
+    }
     const t0 = performance.now();
     try {
       const eiM = enMasa(estado.elementInputs.val), ei = p.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
@@ -327,4 +336,56 @@ function ventanaVivo() {
   }
   _vv = { mostrar, ocultar: () => { el.style.display = "none"; } };
   return _vv;
+}
+
+
+// ── panel «⚖ 4 jueces en vivo»: a la izquierda, el modelo sigue a la derecha ──────────────────────────────
+let _pj: { mostrar: (j: Jueces, nodes: number[][], elements: number[][]) => void; ocultar: () => void } | null = null;
+const _histRho: number[] = [];
+function panelJueces() {
+  if (_pj) return _pj;
+  const el = document.createElement("div");
+  el.id = "hk-jueces";
+  Object.assign(el.style, { position: "fixed", left: "310px", top: "50px", bottom: "64px", width: "min(46vw, 860px)", overflow: "auto",
+    background: "rgba(14, 18, 24, 0.96)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+    padding: "8px", fontFamily: "ui-monospace, Consolas, monospace", fontSize: "11px", color: "#e2e8f0", zIndex: "101", display: "none" } as CSSStyleDeclaration);
+  const cab = document.createElement("div"); cab.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:6px";
+  const tit = document.createElement("span"); tit.style.cssText = "font-weight:600;font-size:13px;color:#a5b4fc"; tit.textContent = "⚖ Los 4 jueces de la torsión — en vivo";
+  const x = document.createElement("button"); x.textContent = "×"; x.style.cssText = "background:transparent;border:none;color:#e2e8f0;font-size:18px;cursor:pointer";
+  x.onclick = () => { el.style.display = "none"; };
+  cab.append(tit, x); const cuerpo = document.createElement("div"); el.append(cab, cuerpo); document.body.appendChild(el);
+  const caja = (t: string, h: string) => `<div style="border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px;min-width:0;overflow:hidden"><div style="font-weight:600;color:#a5b4fc;margin-bottom:4px">${t}</div>${h}</div>`;
+  const rojo = "#f87171", verde = "#4ade80", ambar = "#fbbf24";
+  const sem = (v: number, bien: number, mal: number) => (v <= bien ? verde : v <= mal ? ambar : rojo);
+  function mostrar(j: Jueces, nodes: number[][], elements: number[][]) {
+    const A = j.aguiar, th = (s: string) => `<th style="padding:1px 5px;text-align:right;color:#94a3b8;font-weight:500">${s}</th>`;
+    const td = (s: string, c = "") => `<td style="padding:1px 5px;text-align:right;${c}">${s}</td>`;
+    const k = (v: number) => (Math.abs(v) >= 1e5 ? v.toExponential(2) : v.toFixed(0));
+    const rhoMax = Math.max(...A.pisos.map((q) => Math.max(q.rhoX, q.rhoY)));
+    _histRho.unshift(rhoMax); _histRho.length = Math.min(_histRho.length, 8);
+    // 1. Aguiar
+    let t1 = `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap"><tr>${["", "K_xx", "K_yy", "K_θθ", "K_xθ", "K_yθ", "ρ_x", "ρ_y"].map(th).join("")}</tr>`;
+    for (const q of [...A.pisos].reverse()) t1 += `<tr>${td("P" + q.k)}${td(k(q.Kxx))}${td(k(q.Kyy))}${td(k(q.Ktt))}${td(k(q.Kxt), "color:" + rojo)}${td(k(q.Kyt), "color:" + rojo)}` +
+      `${td(q.rhoX.toFixed(3), "font-weight:700;color:" + sem(q.rhoX, 0.1, 0.3))}${td(q.rhoY.toFixed(3), "font-weight:700;color:" + sem(q.rhoY, 0.1, 0.3))}</tr>`;
+    t1 += `</table><div style="margin-top:4px">ρ = |K_yθ|/√(K_yy·K_θθ): <b style="color:${sem(rhoMax, 0.1, 0.3)}">máx ${rhoMax.toFixed(3)}</b> · antes: ${_histRho.slice(1, 5).map((v) => v.toFixed(2)).join(" → ") || "—"}</div>`;
+    // 2. planta CM / CR (el CR del bloque diagonal de la misma flexibilidad de Aguiar)
+    const r = { pisos: j.pisos, cr: A.cr } as any;
+    const xs = nodes.map((q) => q[0]), ys = nodes.map((q) => q[1]), Lx = Math.max(...xs) - Math.min(...xs), Ly = Math.max(...ys) - Math.min(...ys);
+    const pct = Math.max(...j.pisos.map((q, i) => Math.max(Math.abs(A.cr[i][0] - q.cm[0]) / Lx, Math.abs(A.cr[i][1] - q.cm[1]) / Ly))) * 100;
+    const t2 = `<div>|CR − CM| máx <b style="color:${sem(pct, 5, 15)}">${pct.toFixed(1)} % de la planta</b></div>${planta(r, nodes, elements)}`;
+    // 3. torsión
+    let t3 = `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums"><tr>${["", "X", "", "Y", ""].map(th).join("")}</tr>`;
+    const barra = (v: number) => `<span style="display:inline-block;height:8px;width:${Math.max(2, Math.min(120, (v - 1) * 120)).toFixed(0)}px;background:${v > 1.2 ? rojo : verde};border-radius:2px"></span>`;
+    for (const t of [...j.torsion].reverse()) t3 += `<tr>${td("P" + t.k)}${td(t.X.toFixed(3), "font-weight:700;color:" + (t.X > 1.2 ? rojo : verde))}<td>${barra(t.X)}</td>${td(t.Y.toFixed(3), "font-weight:700;color:" + (t.Y > 1.2 ? rojo : verde))}<td>${barra(t.Y)}</td></tr>`;
+    t3 += `</table><div style="margin-top:4px">Δmax/Δprom con ±5 % · límite 1.2 · ${j.torsionMax.X > 1.2 || j.torsionMax.Y > 1.2 ? `<b style="color:${rojo}">IRREGULAR</b>` : `<b style="color:${verde}">regular</b>`}</div>`;
+    // 4. modos
+    let t4 = `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums"><tr>${["modo", "T (s)", "UX", "UY", "RZ", ""].map(th).join("")}</tr>`;
+    j.modos.forEach((m, i) => { t4 += `<tr>${td(String(i + 1))}${td(m.T.toFixed(4))}${td((m.ux * 100).toFixed(1) + " %")}${td((m.uy * 100).toFixed(1) + " %")}${td((m.rz * 100).toFixed(1) + " %", "font-weight:700")}${td(j.chequeo[i] ? "✓" : "✗", "font-weight:700;color:" + (j.chequeo[i] ? verde : rojo))}</tr>`; });
+    t4 += `</table><div style="margin-top:4px">1 y 2 traslación (RZ &lt; 10 %), 3 giro</div>`;
+    cuerpo.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${caja("1 · Matriz de piso (Aguiar)", t1)}${caja("2 · Centro de masas ● y de rigidez ✚", t2)}${caja("3 · Irregularidad torsional (NEC)", t3)}${caja("4 · Tres primeros modos", t4)}</div>
+      <div style="margin-top:6px;color:#94a3b8">recalculado en ${(j.ms / 1000).toFixed(1)} s · cambie muros, secciones, pisos o vanos y mire los cuatro cuadros</div>`;
+    el.style.display = "block";
+  }
+  _pj = { mostrar, ocultar: () => { el.style.display = "none"; } };
+  return _pj;
 }
