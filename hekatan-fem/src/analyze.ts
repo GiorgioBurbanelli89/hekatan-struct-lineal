@@ -7,7 +7,7 @@ import {
   ElementInputs,
 } from "./data-model";
 import { mitc4JointMoments } from "./utils/mitc4Joints";
-import { dkqJointMoments } from "./utils/dkqJoints";
+import { dkqJointMoments, dkqJointShear } from "./utils/dkqJoints";
 import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -46,6 +46,7 @@ export function analyze(
   // MITC4 en Thick; ver utils/dkqJoints.ts y utils/mitc4Joints.ts). Sin
   // promediar: es lo que ETABS lista en AreaForceShell, por elemento y por joint.
   const jointBending: Map<number, number[][]> = new Map();
+  const jointShear: Map<number, number[][]> = new Map();   // [V13, V23] por esquina (Shell-Thin, receta de CSI)
   const jointMembrane: Map<number, number[][]> = new Map();   // F11 F22 F12 en los 4 joints (ITW)
   const analyzeOutputsElements: {
     bendingXX: Map<number, number>;
@@ -147,6 +148,7 @@ export function analyze(
       analyzeOutputsElements.bendingXY.set(i, q4Results.Mxy);
       if (q4Results.Mj) jointBending.set(i, q4Results.Mj);
       if (q4Results.Nj) jointMembrane.set(i, q4Results.Nj);
+      if ((q4Results as any).Vj) jointShear.set(i, (q4Results as any).Vj);
       analyzeOutputsElements.tranverseShearX.set(i, q4Results.Qx);
       analyzeOutputsElements.tranverseShearY.set(i, q4Results.Qy);
       analyzeOutputsElements.vonMises.set(i, q4Results.vonMises);
@@ -312,8 +314,15 @@ export function analyze(
       bendingXXs[pos] = avgJoint(0, analyzeOutputsElements.bendingXX);
       bendingYYs[pos] = avgJoint(1, analyzeOutputsElements.bendingYY);
       bendingXYs[pos] = avgJoint(2, analyzeOutputsElements.bendingXY);
-      shearXs[pos] = avgField(analyzeOutputsElements.tranverseShearX);
-      shearYs[pos] = avgField(analyzeOutputsElements.tranverseShearY);
+      // cortante: como la flexión, la media del valor que cada vecino tiene EN SU ESQUINA cuando lo trae
+      const avgV = (campo: number, centro: Map<number, number>) =>
+        mean(elementIndicies.map((ei) => {
+          const vj = jointShear.get(ei);
+          const pos2 = vj ? elements[ei].indexOf(nodeIndex) : -1;
+          return vj && pos2 >= 0 ? vj[pos2][campo] : (centro.get(ei) ?? 0);
+        }));
+      shearXs[pos] = avgV(0, analyzeOutputsElements.tranverseShearX);
+      shearYs[pos] = avgV(1, analyzeOutputsElements.tranverseShearY);
       vmStress[pos] = avgField(analyzeOutputsElements.vonMises);
     });
 
@@ -350,8 +359,14 @@ export function analyze(
     // sin promediar: el cortante del elemento tal cual (uno por elemento; ver la nota de V13/V23 abajo)
     (analyzeOutputs as any).tranverseShearXcentro ??= new Map();
     (analyzeOutputs as any).tranverseShearYcentro ??= new Map();
-    (analyzeOutputs as any).tranverseShearXcentro.set(elementIndex, analyzeOutputsElements.tranverseShearX.get(elementIndex) ?? 0);
-    (analyzeOutputs as any).tranverseShearYcentro.set(elementIndex, analyzeOutputsElements.tranverseShearY.get(elementIndex) ?? 0);
+    const vjE = jointShear.get(elementIndex);
+    const centroV = (q: number, m: Map<number, number>) => vjE ? vjE.reduce((s, v) => s + v[q], 0) / vjE.length : (m.get(elementIndex) ?? 0);
+    (analyzeOutputs as any).tranverseShearXcentro.set(elementIndex, centroV(0, analyzeOutputsElements.tranverseShearX));
+    (analyzeOutputs as any).tranverseShearYcentro.set(elementIndex, centroV(1, analyzeOutputsElements.tranverseShearY));
+    if (vjE) {
+      ((analyzeOutputs as any).tranverseShearXjoint ??= new Map()).set(elementIndex, vjE.map((v) => v[0]));
+      ((analyzeOutputs as any).tranverseShearYjoint ??= new Map()).set(elementIndex, vjE.map((v) => v[1]));
+    }
     analyzeOutputs.tranverseShearX!.set(elementIndex, shearXs);
     analyzeOutputs.tranverseShearY!.set(elementIndex, shearYs);
     analyzeOutputs.vonMises!.set(elementIndex, vmStress);
@@ -501,7 +516,7 @@ function computeQ4ShellStresses(
   }
   const detJ = J00*J11 - J01*J10;
   if (Math.abs(detJ) < 1e-20) {
-    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0, Mj: null, Nj: null };
+    return { Nx: 0, Ny: 0, Nxy: 0, Mx: 0, My: 0, Mxy: 0, Qx: 0, Qy: 0, vonMises: 0, Mj: null, Nj: null, Vj: null };
   }
   const invJ00 = J11/detJ, invJ01 = -J01/detJ, invJ10 = -J10/detJ, invJ11 = J00/detJ;
 
@@ -599,6 +614,7 @@ function computeQ4ShellStresses(
   // (utils/dkqJoints.ts, espejo de plateDKQ.h) y se evalua directamente en las
   // esquinas: es el elemento de las plantillas (losa Thin por defecto).
   let Mj: number[][] | null = null;
+  let Vj: number[][] | null = null;
   const esPlacaGruesa = ((elementInputs as any)?.plateFormulations?.get(elemIdx) ?? 0) !== 1;
   if (Math.abs(detJ) > 1e-20) {
     const u12: number[] = [];
@@ -618,6 +634,11 @@ function computeQ4ShellStresses(
                             : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
              .map((m) => m.map((v) => SIGNO_CSI * v));
       if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
+      // cortante V13/V23 en los joints: la receta de CSI para el Shell-Thin (dkqJointShear)
+      if (Mj && !esPlacaGruesa && pf !== 5) {
+        Vj = dkqJointShear(xl, yl, u12, E, nu, t).map((v) => v.map((x) => SIGNO_CSI * x));
+        if (Vj.some((v) => v.some((x) => !Number.isFinite(x)))) Vj = null;
+      }
     } catch { Mj = null; }
   }
 
@@ -643,8 +664,11 @@ function computeQ4ShellStresses(
   //
   //     Qx = dMx/dx + dMxy/dy      Qy = dMy/dy + dMxy/dx
   //
-  // Mientras esto no se arregle, `tranverseShearX/Y` NO es comparable con el
-  // V13/V23 de ETABS ni sirve para dimensionar a cortante. Los momentos si:
+  // ✅ ARREGLADO para el Shell-Thin (30-sep-2026): `dkqJointShear` (utils/dkqJoints.ts) da V13/V23 en los
+  // joints con la receta de CSI y = SAP2000 a 1e-12 % (test `cortante-thin-sap`); de ahí salen
+  // `tranverseShearX/Yjoint`, la media en el nudo y el centro. Lo de abajo sigue valiendo para el
+  // Shell-Thick (formulación 0), cuyo V13/V23 NO es todavía el de CSI (su M tampoco: 25-38 % en la
+  // sonda irregular de validation/cortante-v13) ni sirve para dimensionar a cortante. Los momentos si:
   // estan validados contra Navier al 2 % (`placa-momentos-navier`).
   // shellQ4.cpp: γxz = dw/dx - θx_solver, donde θx_solver = -d[3]
   // → γxz = dw/dx - (-d[3]) = dw/dx + d[3]
@@ -678,7 +702,7 @@ function computeQ4ShellStresses(
 
   const vonMises = Math.max(vonMises_top, vonMises_bot);
 
-  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises, Mj, Nj };
+  return { Nx, Ny, Nxy, Mx, My, Mxy, Qx, Qy, vonMises, Mj, Nj, Vj };
 }
 
 function getMaterialStiffnessMatrix3x3(

@@ -81,3 +81,46 @@ export function dkqJointMoments(
     return [0, 1, 2].map((i) => Nn.reduce((acc, q, k) => acc + q * Mg[k][i], 0));
   });
 }
+
+/**
+ * CORTANTE V13/V23 del Shell-Thin en los 4 joints, la receta de CSI (30-sep-2026). Sacada de SAP2000 24 por caja
+ * negra (validation/cortante-v13: losa de malla irregular, sus propios desplazamientos → error 2e-13 kN/m):
+ *   1. los momentos en Gauss 2×2 (los mismos que dan M11/M22/M12 en los joints);
+ *   2. el campo BILINEAL que pasa por esos 4 valores;
+ *   3. en cada punto de Gauss, la derivada de ese campo con el jacobiano de ESE punto:
+ *        Vx = ∂Mx/∂x + ∂Mxy/∂y      Vy = ∂My/∂y + ∂Mxy/∂x
+ *   4. extrapolación bilineal de los 4 valores a las esquinas.
+ * No es la derivada del campo de la DKQ (eso da otro número: error 4.4 de 19) ni un valor por elemento (8.2).
+ * Devuelve [Vx, Vy] por esquina con el signo de Batoz (el que llama pone SIGNO_CSI, como en los momentos).
+ */
+export function dkqJointShear(xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number): number[][] {
+  const D0 = (E * t * t * t) / (12 * (1 - nu * nu));
+  const Db = [[D0, D0 * nu, 0], [D0 * nu, D0, 0], [0, 0, (D0 * (1 - nu)) / 2]];
+  const esq = [[-1, -1], [1, -1], [1, 1], [-1, 1]], g = 1 / Math.sqrt(3);
+  const Men = (xi: number, et: number) => {
+    const B = dkqB(xl, yl, xi, et);
+    const k = [0, 1, 2].map((i) => B[i].reduce((acc, q, c) => acc + q * u12[c], 0));
+    return [0, 1, 2].map((i) => Db[i][0] * k[0] + Db[i][1] * k[1] + Db[i][2] * k[2]);
+  };
+  const Mg = esq.map(([r, s]) => Men(r * g, s * g));
+  // los valores nodales del campo bilineal = la extrapolación de Gauss a las esquinas
+  const ext = (vals: number[][]) => esq.map(([r, s]) => {
+    const R = r * Math.sqrt(3), S = s * Math.sqrt(3);
+    const Nn = esq.map(([a, b]) => ((1 + a * R) * (1 + b * S)) / 4);
+    return vals[0].map((_, i) => Nn.reduce((acc, q, k) => acc + q * vals[k][i], 0));
+  });
+  const Mj = ext(Mg);
+  const Vg = esq.map(([r, s]) => {
+    const xi = r * g, et = s * g;
+    const dNxi = [-(1 - et), (1 - et), (1 + et), -(1 + et)].map((v) => v / 4);
+    const dNet = [-(1 - xi), -(1 + xi), (1 + xi), (1 - xi)].map((v) => v / 4);
+    let J11 = 0, J12 = 0, J21 = 0, J22 = 0;
+    for (let i = 0; i < 4; i++) { J11 += dNxi[i] * xl[i]; J12 += dNxi[i] * yl[i]; J21 += dNet[i] * xl[i]; J22 += dNet[i] * yl[i]; }
+    const dJ = J11 * J22 - J12 * J21, i11 = J22 / dJ, i12 = -J12 / dJ, i21 = -J21 / dJ, i22 = J11 / dJ;
+    const d = (c: number, dN: number[]) => dN.reduce((acc, q, k) => acc + q * Mj[k][c], 0);
+    const dX = (c: number) => i11 * d(c, dNxi) + i12 * d(c, dNet), dY = (c: number) => i21 * d(c, dNxi) + i22 * d(c, dNet);
+    // V de CSI = −(∂M_csi) y M_csi = −M_batoz → V_csi = +∂M_batoz; el que llama multiplica por SIGNO_CSI (−1)
+    return [-(dX(0) + dY(2)), -(dY(1) + dX(2))];
+  });
+  return ext(Vg);
+}
