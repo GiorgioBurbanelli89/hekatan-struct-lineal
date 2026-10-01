@@ -54,9 +54,23 @@ for im, rot, ms in todo:
     lz = Image.new("RGBA", (W, H + BAR), (0, 0, 0, 255)); lz.paste(im, ((W - im.width) // 2, BAR + (H - im.height) // 2))
     ImageDraw.Draw(lz).text((14, 10), rot, font=F(23, True), fill=(255, 255, 255))
     frames.append(Image.alpha_composite(lz, marca).convert("RGB")); durs.append(ms)
-pal = frames[len(frames) // 3].quantize(colors=255, method=Image.MEDIANCUT)
-q = [fr.quantize(palette=pal, dither=Image.Dither.NONE) for fr in frames]
-q[0].save(OUT, save_all=True, append_images=q[1:], duration=durs, loop=0, optimize=True)
+if OUT.lower().endswith(".mp4"):
+    # MP4 (1-oct-2026): Telegram convierte el GIF en una animación chica, borrosa y que no se puede ampliar.
+    # El vídeo sí: H.264 sin paleta, a pantalla completa. Cada cuadro dura lo mismo que en el GIF.
+    import tempfile, subprocess
+    tmp = tempfile.mkdtemp(); lista = []
+    for k, (fr, ms) in enumerate(zip(frames, durs)):
+        fn = os.path.join(tmp, "c%04d.png" % k); fr.save(fn)
+        lista.append("file '%s'" % fn.replace(os.sep, "/")); lista.append("duration %.3f" % (ms / 1000))
+    lista.append("file '%s'" % os.path.join(tmp, "c%04d.png" % (len(frames) - 1)).replace(os.sep, "/"))
+    open(os.path.join(tmp, "lista.txt"), "w").write(chr(10).join(lista))
+    FF = os.path.join(os.environ["APPDATA"], "Python", "Python312", "site-packages", "imageio_ffmpeg", "binaries", "ffmpeg-win-x86_64-v7.1.exe")
+    subprocess.run([FF, "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", os.path.join(tmp, "lista.txt"), "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=25",
+                    "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart", OUT], check=True)
+else:
+    pal = frames[len(frames) // 3].quantize(colors=255, method=Image.MEDIANCUT)
+    q = [fr.quantize(palette=pal, dither=Image.Dither.NONE) for fr in frames]
+    q[0].save(OUT, save_all=True, append_images=q[1:], duration=durs, loop=0, optimize=True)
 idx = [int(k * (len(frames) - 1) / 8) for k in range(9)]
 hj = Image.new("RGB", (W * 3 // 2, (H + BAR) * 3 // 2))
 for k, i in enumerate(idx): hj.paste(frames[i].resize((W // 2, (H + BAR) // 2)), ((k % 3) * (W // 2), (k // 3) * ((H + BAR) // 2)))
