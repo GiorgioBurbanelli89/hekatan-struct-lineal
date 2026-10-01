@@ -11,6 +11,7 @@
 //
 // Uso: scene.add(setupHover(...)) en getViewer.ts
 // =============================================================================
+import { shellAveraging } from "../../color-map/getColorMap";
 import { hoverPermitido } from "../hoverPrefs";
 import * as THREE from "three";
 import van, { State } from "vanjs-core";
@@ -451,39 +452,39 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const ao = ctx.mesh.analyzeOutputs.rawVal as any;
         const sF = STRESS_FACTOR[units.stressUnit] ?? 1;
         // [key del Map, label visible, factor de conversión, unidad string]
+        // Valor en el JOINT del elemento más cercano al cursor, como SAP2000 (30-sep-2026). Antes: el promediado
+        // en el nudo y el mayor de los 4, sin mirar «⊞ Promediado» — en la base de un muro daba la mitad del pico
+        // que lee SAP2000 «None» (Fernan: 1 contra 2 tonf·m/m). Ahora sigue el ajuste:
+        //   ninguno / por plano → los joints del elemento (= AreaForceShell de CSI) · en todos los nudos → la media.
+        const modoP = (shellAveraging?.val ?? "todos");
+        let kJ = 0, dJ = Infinity;
+        el.forEach((nd: number, k: number) => { const pp = projectNode(nd); if (!pp) return; const dd = Math.hypot(pp.x - mx, pp.y - my); if (dd < dJ) { dJ = dd; kJ = k; } });
         const fields: [string, string, number, string][] = [
-          ["bendingXX",  "Mxx", fF, `${units.forceUnit}·m/m`],   // momento por longitud
-          ["bendingYY",  "Myy", fF, `${units.forceUnit}·m/m`],
-          ["bendingXY",  "Mxy", fF, `${units.forceUnit}·m/m`],
-          ["membraneXX", "Nxx", fF, `${units.forceUnit}/m`],     // fuerza membrana por longitud
-          ["membraneYY", "Nyy", fF, `${units.forceUnit}/m`],
-          ["membraneXY", "Nxy", fF, `${units.forceUnit}/m`],
-          ["shearX",     "Qx",  fF, `${units.forceUnit}/m`],     // cortante out-of-plane
-          ["shearY",     "Qy",  fF, `${units.forceUnit}/m`],
-          ["vonMises",   "σVM", sF, units.stressUnit],           // tensión
-          ["pressure",   "p",   sF, units.stressUnit],           // presión suelo
+          ["bendingXX",  "M11", fF, `${units.forceUnit}·m/m`],
+          ["bendingYY",  "M22", fF, `${units.forceUnit}·m/m`],
+          ["bendingXY",  "M12", fF, `${units.forceUnit}·m/m`],
+          ["membraneXX", "F11", fF, `${units.forceUnit}/m`],
+          ["membraneYY", "F22", fF, `${units.forceUnit}/m`],
+          ["membraneXY", "F12", fF, `${units.forceUnit}/m`],
+          ["tranverseShearX", "V13", fF, `${units.forceUnit}/m`],
+          ["tranverseShearY", "V23", fF, `${units.forceUnit}/m`],
+          ["vonMises",   "σVM", sF, units.stressUnit],
+          ["pressure",   "p",   sF, units.stressUnit],
         ];
         const lines: string[] = [];
         for (const [key, label, fct, unit] of fields) {
-          const m = ao?.[key];
+          const mJ = modoP !== "todos" ? ao?.[key + "joint"] : null;
+          const m = (mJ instanceof Map && mJ.has(bestElem)) ? mJ : ao?.[key];
           if (m && m instanceof Map) {
             const v = m.get(bestElem);
-            if (v != null) {
-              if (typeof v === "number") {
-                lines.push(`${label} = ${fmt(v * fct, 3)} ${unit}`);
-              } else if (Array.isArray(v)) {
-                // 4 valores per-nodo; tomar el de mayor magnitud
-                let vMax = v[0];
-                for (const x of v) {
-                  if (Math.abs(x) > Math.abs(vMax)) vMax = x;
-                }
-                lines.push(`${label} = ${fmt(vMax * fct, 3)} ${unit}`);
-              }
-            }
+            if (v == null) continue;
+            const x = typeof v === "number" ? v : Array.isArray(v) ? (v[kJ] ?? v[0]) : null;
+            if (x != null && Number.isFinite(x)) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
           }
         }
+        if (lines.length) lines.unshift(`en el nudo ${el[kJ]} · ${modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar"}`);
         if (lines.length > 0) {
-          info += `\n──── results ────\n` + lines.slice(0, 8).join("\n");
+          info += `\n──── results ────\n` + lines.slice(0, 12).join("\n");
         }
       }
 
