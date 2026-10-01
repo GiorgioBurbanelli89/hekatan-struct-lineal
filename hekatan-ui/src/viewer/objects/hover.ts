@@ -12,7 +12,7 @@
 // Uso: scene.add(setupHover(...)) en getViewer.ts
 // =============================================================================
 import { shellAveraging } from "../../color-map/getColorMap";
-import { hoverPermitido } from "../hoverPrefs";
+import { hoverPermitido, hoverPrefs } from "../hoverPrefs";
 import * as THREE from "three";
 import van, { State } from "vanjs-core";
 import { Mesh, Element, Node, DeformOutputs, AnalyzeOutputs } from "hekatan-fem";
@@ -252,11 +252,21 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       if (!el) continue;
       for (const n of el) usedNodes.add(n);
     }
+    // ✂ Cortes X/Y/Z: lo que el corte oculta no se lee (1-oct-2026: con solo la zapata a la vista el recuadro decía
+    // «Shell 398», de la pantalla escondida). Un nudo oculto = del lado del plano que se esconde.
+    const clip = (globalThis as any).__hekatanClip;
+    const ocultoXYZ = (p: number[] | undefined) => {
+      if (!clip || !p) return false;
+      const ej: Array<[boolean, number, boolean]> = [[clip.enableX, clip.posX, clip.invertX], [clip.enableY, clip.posY, clip.invertY], [clip.enableZ, clip.posZ, clip.invertZ]];
+      return ej.some(([on, pos, inv], d) => on && (inv ? p[d] < pos - 1e-9 : p[d] > pos + 1e-9));
+    };
+    const N0c = (ctx.mesh?.nodes?.rawVal ?? nodes) as number[][];
     const NODE_TOL = 8;
     let bestNode = -1;
     let bestNodeDist = NODE_TOL;
     for (let i = 0; i < nodes.length; i++) {
       if (!usedNodes.has(i)) continue; // skip nodos sin elemento conectado
+      if (ocultoXYZ(N0c[i])) continue;
       const pp = projectNode(i);
       if (!pp || pp.z < -1 || pp.z > 1) continue; // fuera del frustum
       const dx = pp.x - mx;
@@ -324,6 +334,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i] as Element;
       if (!el || el.length < 2) continue;
+      if (el.every((k: number) => ocultoXYZ(N0c[k]))) continue;   // entero del lado oculto del corte
 
       if (el.length === 2) {
         // FRAME: distancia punto-segmento en 2D screen
@@ -508,16 +519,45 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           ["pressure",   "p",   sF, units.stressUnit],
         ];
         const lines: string[] = [];
-        for (const [key, label, fct, unit] of fields) {
+        const enPunto = (key: string): number | null => {
           const mJ = modoP !== "todos" ? ao?.[key + "joint"] : null;
           const m = (mJ instanceof Map && mJ.has(bestElem)) ? mJ : ao?.[key];
-          if (m && m instanceof Map) {
-            const v = m.get(bestElem);
-            if (v == null) continue;
-            const x = typeof v === "number" ? v : Array.isArray(v)
-              ? (Nq && v.length === 4 ? Nq.reduce((s2, w, i) => s2 + w * (v[i] ?? 0), 0) : (v[kJ] ?? v[0])) : null;
-            if (x != null && Number.isFinite(x)) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
-          }
+          if (!(m instanceof Map)) return null;
+          const v = m.get(bestElem); if (v == null) return null;
+          const x = typeof v === "number" ? v : Array.isArray(v)
+            ? (Nq && v.length === 4 ? Nq.reduce((s2, w, i) => s2 + w * (v[i] ?? 0), 0) : (v[kJ] ?? v[0])) : null;
+          return x != null && Number.isFinite(x) ? x : null;
+        };
+        // SOLO el resultado elegido en «Resultados de cáscara» (Jorge, 1-oct-2026: «debería mostrar solo los resultados
+        // que pido»); el resto con la casilla «todos los esfuerzos» de 🖱 Al pasar el cursor.
+        const campo = ctx.settings?.shellResults?.val ?? "none";
+        const verTodos = hoverPrefs.todos.val || campo === "none";
+        const mohr = (a: number | null, b: number | null, c: number | null, sg: number) => (a == null || b == null || c == null) ? null : (a + b) / 2 + sg * Math.hypot((a - b) / 2, c);
+        const derivados: Record<string, [string, () => number | null, number, string]> = {
+          membranePrincipalMax: ["FMax", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), 1), fF, `${units.forceUnit}/m`],
+          membranePrincipalMin: ["FMin", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), -1), fF, `${units.forceUnit}/m`],
+          bendingPrincipalMax: ["MMax", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), 1), fF, `${units.forceUnit}·m/m`],
+          bendingPrincipalMin: ["MMin", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), -1), fF, `${units.forceUnit}·m/m`],
+          transverseShearMax: ["VMax", () => { const a = enPunto("tranverseShearX"), b = enPunto("tranverseShearY"); return a == null || b == null ? null : Math.hypot(a, b); }, fF, `${units.forceUnit}/m`],
+        };
+        const desp = (c: number): number | null => {   // desplazamiento en el punto: lineal entre los 4 nudos
+          const D = ctx.mesh?.deformOutputs?.rawVal?.deformations as Map<number, number[]> | undefined;
+          if (!D) return null;
+          const us = el.map((k: number) => D.get(k)?.[c] ?? 0);
+          return Nq && us.length === 4 ? Nq.reduce((s2, w, i) => s2 + w * us[i], 0) : us[kJ];
+        };
+        const dCampos: Record<string, [string, number]> = { displacementX: ["Ux", 0], displacementY: ["Uy", 1], displacementZ: ["Uz", 2] };
+        for (const [key, label, fct, unit] of fields) {
+          if (!verTodos && key !== campo) continue;
+          const x = enPunto(key); if (x != null) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
+        }
+        for (const [key, [label, f, fct, unit]] of Object.entries(derivados)) {
+          if (!verTodos && key !== campo) continue;
+          const x = f(); if (x != null) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
+        }
+        for (const [key, [label, c]] of Object.entries(dCampos)) {
+          if (!verTodos && key !== campo) continue;
+          const x = desp(c); if (x != null) lines.push(`${label} = ${fmt(x * dF, 3)} ${units.dispUnit}`);
         }
         const modoTxt = modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar";
         if (lines.length) lines.unshift(Nq

@@ -11,8 +11,10 @@ const CLAVE = "hk_hover_prefs_v1";
 const leer = (): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(CLAVE) ?? "{}"); } catch { return {}; } };
 const ini = leer();
 const st = (k: string) => van.state<boolean>(ini[k] ?? true);
-export const hoverPrefs: Record<"nudos" | "barras" | "areas" | "kBarras" | "kAreas", State<boolean>> = {
+export const hoverPrefs: Record<"nudos" | "barras" | "areas" | "kBarras" | "kAreas" | "todos", State<boolean>> = {
   nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras"), kAreas: st("kAreas"),
+  // false = el recuadro de una cáscara enseña SOLO el resultado elegido en «Resultados de cáscara»
+  todos: van.state<boolean>(ini["todos"] ?? false),
 };
 van.derive(() => {
   const o: Record<string, boolean> = {};

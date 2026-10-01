@@ -1,0 +1,21 @@
+// Recuadro: solo el campo elegido; con corte Z, no lee lo oculto. node cli/_hover_solo_check.mjs <base>
+import puppeteer from "puppeteer";
+const URL = `${process.argv[2]}/workspace/?t=muro-manabi&p=` + Buffer.from(JSON.stringify({ modelo: 1, L: 1, ms: 0.1, cf: 0, caso: 0, lat: 0, apoyos: 1 })).toString("base64");
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+await pag.goto(URL, { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 7000));
+await pag.evaluate(() => { const p = window.__hekatanHoverPrefs; p.nudos.val = false; p.kAreas.val = false; p.todos.val = false; window.__hekatanSettings().shellResults.val = "displacementX"; });
+const leer = () => pag.evaluate(() => [...document.querySelectorAll("div")].find((q) => q.style.whiteSpace === "pre-line" && q.style.display === "block")?.textContent ?? "");
+const barrer = async () => { const vistos = new Set(); for (let y = 350; y <= 800; y += 30) for (let x = 500; x <= 1300; x += 40) { await pag.mouse.move(x, y); await new Promise((r) => setTimeout(r, 60)); const t = await leer(); if (t.startsWith("Shell")) vistos.add(t.split("\n")[0] + " | " + t.split("\n").slice(3).join(" / ").slice(0, 130)); } return [...vistos]; };
+await pag.mouse.move(900, 700); await new Promise((r) => setTimeout(r, 300)); console.log("solo Ux:", JSON.stringify((await leer()).split(String.fromCharCode(10)).filter((l) => / = /.test(l))));
+let v = await barrer(); console.log("SIN corte, campo Ux:", v.length, "\n  ", v[0], "\n  ", v[v.length - 1]);
+await pag.evaluate(() => { const c = window.__hekatanClip; c.enableZ = true; c.posZ = 0.25; c.invertZ = false; window.__hekatanClipApply(); });
+await new Promise((r) => setTimeout(r, 800));
+v = await barrer();
+const muros = v.filter((t) => t.includes("2→+Z"));
+console.log("CON corte Z=0.25 (solo zapata):", v.length, "shells leídos; de la pantalla (ocultos):", muros.length);
+await pag.evaluate(() => { window.__hekatanHoverPrefs.todos.val = true; });
+await pag.mouse.move(10, 990); await pag.mouse.move(900, 700); await new Promise((r) => setTimeout(r, 300));
+console.log("con «todos los esfuerzos»:", (await leer()).split("\n").filter((l) => / = /.test(l)).length, "líneas de valores");
+await pag.evaluate(() => { window.__hekatanHoverPrefs.todos.val = false; const c = window.__hekatanClip; c.enableZ = false; window.__hekatanClipApply(); });
+await nav.close();

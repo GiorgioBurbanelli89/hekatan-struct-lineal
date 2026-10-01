@@ -471,6 +471,7 @@ export function getSettings(
       fh.addBinding(hoverPrefs.areas, "val", { label: "info de áreas" });
       fh.addBinding(hoverPrefs.kBarras, "val", { label: "matriz K de barras" });
       fh.addBinding(hoverPrefs.kAreas, "val", { label: "matriz K de áreas" });
+      fh.addBinding(hoverPrefs.todos, "val", { label: "todos los esfuerzos (no solo el elegido)" });
     }
     // «Stress Averaging» de SAP2000/ETABS: en la unión muro–losa promediar mezcla planos distintos.
     outputs.addBinding(shellAveraging, "val", {
