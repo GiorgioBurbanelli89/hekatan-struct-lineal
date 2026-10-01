@@ -497,8 +497,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           const e2 = un(cr(e3, e1)); e1 = un(cr(e2, e3));
           const dir = (v: number[]) => { const k = [0, 1, 2].reduce((b, c) => (Math.abs(v[c]) > Math.abs(v[b]) ? c : b), 0);
             return Math.abs(v[k]) > 0.995 ? `${v[k] > 0 ? "+" : "−"}${"XYZ"[k]}` : `(${v.map((x) => x.toFixed(2)).join(", ")})`; };
-          lines.splice(1, 0, `ejes locales: 1 → ${dir(e1)} · 2 → ${dir(e2)} · 3 → ${dir(e3)}`,
-            `(como SAP2000: M11 F11 V13 en la cara ⟂ al eje 1; M22 F22 V23 en la ⟂ al eje 2)`);
+          lines.splice(1, 0, `ejes: 1→${dir(e1)}  2→${dir(e2)}  3→${dir(e3)}`, `(11: cara ⟂ eje 1 · 22: cara ⟂ eje 2)`);
         }
         if (lines.length > 0) {
           info += `\n──── results ────\n` + lines.slice(0, 14).join("\n");
