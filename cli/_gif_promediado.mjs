@@ -1,0 +1,28 @@
+// Fotogramas para el GIF «dónde se cambia el Promediado» (cursor dibujado después en Python). node cli/_gif_promediado.mjs <dir>
+import puppeteer from "puppeteer";
+import { writeFileSync } from "node:fs";
+const DIR = process.argv[2];
+const URL = "https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=muro-manabi&p=eyJtb2RlbG8iOjEsImNmIjoxLCJMIjozLCJzQ2YiOjEuNSwibXMiOjAuMTV9";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+await pag.goto(URL, { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 7000));
+const caja = (et) => pag.evaluate((et) => { const e = [...document.querySelectorAll(".tp-lblv")].find((x) => x.querySelector(".tp-lblv_l")?.innerText?.trim() === et);
+  const r = e.querySelector("select").getBoundingClientRect(); return [r.x + r.width * 0.6, r.y + r.height / 2]; }, et);
+const elegir = (et, v) => pag.evaluate((et, v) => { const e = [...document.querySelectorAll(".tp-lblv")].find((x) => x.querySelector(".tp-lblv_l")?.innerText?.trim() === et);
+  const s = e.querySelector("select"); s.value = v; s.dispatchEvent(new Event("change", { bubbles: true })); }, et, v);
+const meta = []; let n = 0, cur = [800, 600];
+const foto = async (rotulo, clic = false, k = 1) => { for (let i = 0; i < k; i++) { const f = `f_${String(n++).padStart(3, "0")}.png`; await pag.screenshot({ path: `${DIR}/${f}` }); meta.push({ f, x: cur[0], y: cur[1], clic, rotulo }); } };
+const ir = async (dest, rotulo, pasos = 8) => { const [x0, y0] = cur; for (let i = 1; i <= pasos; i++) { const t = i / pasos, e = t * t * (3 - 2 * t); cur = [x0 + (dest[0] - x0) * e, y0 + (dest[1] - y0) * e]; await foto(rotulo); } };
+const R1 = "Settings › Resultados › «Resultados de cáscara»: elige V23";
+await foto("Muro con contrafuertes en Hekatan Struct", false, 6);
+await ir(await caja("Resultados de cáscara"), R1);
+await foto(R1, true, 2); await elegir("Resultados de cáscara", "V23"); await new Promise((r) => setTimeout(r, 1200)); await foto(R1, false, 8);
+const R2 = "«⊞ Promediado» = en todos los nudos (CSI): la media en el nudo";
+await ir(await caja("⊞ Promediado"), R2); await foto(R2, false, 10);
+const R3 = "«⊞ Promediado» = ninguno: cada elemento con sus valores (sin promediar)";
+await foto(R3, true, 2); await elegir("⊞ Promediado", "ninguno (sin promediar)"); await new Promise((r) => setTimeout(r, 1200)); await foto(R3, false, 14);
+const R4 = "«⊞ Promediado» = por plano: media solo entre muro con muro y losa con losa";
+await foto(R4, true, 2); await elegir("⊞ Promediado", "por plano (muro / losa)"); await new Promise((r) => setTimeout(r, 1200)); await foto(R4, false, 12);
+writeFileSync(`${DIR}/meta.json`, JSON.stringify(meta));
+console.log("fotogramas", n);
+await nav.close();

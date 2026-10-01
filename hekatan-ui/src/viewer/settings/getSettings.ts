@@ -1,3 +1,4 @@
+import { hoverPrefs } from "../hoverPrefs";
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
 import { Mesh } from "hekatan-fem";
@@ -462,6 +463,15 @@ export function getSettings(
       options: { "todas las cáscaras": "auto", "todas, recortando picos (p1–p99)": "robusto", "todas, min/max real": "real", "solo muros": "muros", "muros X (plano x=cte)": "murosX", "muros Y (plano y=cte)": "murosY", "solo losas": "losas" },
       label: "📐 Rango colormap",
     });
+    // 🖱 Lo que sale al pasar el cursor: cada cosa se apaga por separado (tapaban el modelo)
+    {
+      const fh = outputs.addFolder({ title: "🖱 Al pasar el cursor", expanded: false });
+      fh.addBinding(hoverPrefs.nudos, "val", { label: "info de nudos" });
+      fh.addBinding(hoverPrefs.barras, "val", { label: "info de barras" });
+      fh.addBinding(hoverPrefs.areas, "val", { label: "info de áreas" });
+      fh.addBinding(hoverPrefs.kBarras, "val", { label: "matriz K de barras" });
+      fh.addBinding(hoverPrefs.kAreas, "val", { label: "matriz K de áreas" });
+    }
     // «Stress Averaging» de SAP2000/ETABS: en la unión muro–losa promediar mezcla planos distintos.
     outputs.addBinding(shellAveraging, "val", {
       options: { "en todos los nudos (CSI)": "todos", "por plano (muro / losa)": "objeto", "ninguno (sin promediar)": "ninguno" },

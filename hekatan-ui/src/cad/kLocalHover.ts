@@ -9,6 +9,7 @@
  *
  * El visor avisa con el evento `hk:hover` (lo lanza `viewer/objects/hover.ts`).
  */
+import { hoverPrefs } from "../viewer/hoverPrefs";
 import { abrirHoja } from "./hojaLisp";
 import { comprobar, comprobarLetras, corto, datosBarra, elementosDelModelo, formulaHtml, GDL, hojaBarraNumerica, hojaBarraSimbolica, kLetras, kLocalBarra } from "./kLocalBarra";
 import { comprobarPano, datosPano, formulacionPano, formulaMembrana, formulaPlaca, GDL_FLEXION, GDL_MEMBRANA, hojaPanoNumerica, hojaPanoSimbolica } from "./kLocalPano";
@@ -335,7 +336,8 @@ export function arrancarKLocalHover(): void {
   window.addEventListener("hk:hover", (ev: any) => {
     const h = ev.detail;
     clearTimeout(reloj);
-    if (!activo || !h || (h.type !== "frame" && h.type !== "shell")) { if (!dentro) cerrarLuego(300); return; }
+    const permitida = h && ((h.type === "frame" && hoverPrefs.kBarras.val) || (h.type === "shell" && hoverPrefs.kAreas.val));
+    if (!activo || !h || !permitida) { if (!dentro) cerrarLuego(300); return; }
     if (h.type + ":" + h.idx === abierta) { clearTimeout(cierre); return; }
     clearTimeout(cierre);
     reloj = window.setTimeout(() => (h.type === "frame" ? pintar : pintarPano)(h.idx, h.x, h.y), ESPERA);

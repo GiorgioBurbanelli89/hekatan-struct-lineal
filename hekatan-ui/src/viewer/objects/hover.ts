@@ -11,6 +11,7 @@
 //
 // Uso: scene.add(setupHover(...)) en getViewer.ts
 // =============================================================================
+import { hoverPermitido } from "../hoverPrefs";
 import * as THREE from "three";
 import van, { State } from "vanjs-core";
 import { Mesh, Element, Node, DeformOutputs, AnalyzeOutputs } from "hekatan-fem";
@@ -687,7 +688,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
   const onPointerMove = (e: PointerEvent) => {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
-      const hover = findHovered(e.clientX, e.clientY);
+      let hover = findHovered(e.clientX, e.clientY);
+      // Settings › 🖱 Al pasar el cursor: el tipo apagado no se resalta ni enseña recuadro (ni tarjeta K)
+      if (hover && !hoverPermitido(hover.type)) hover = null;
       if (DEBUG_HOVER && debugCount < 5) {
         const ns = ctx.derivedNodes.rawVal;
         const els = ctx.mesh?.elements?.rawVal;
