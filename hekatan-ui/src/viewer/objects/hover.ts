@@ -483,8 +483,25 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           }
         }
         if (lines.length) lines.unshift(`en el nudo ${el[kJ]} · ${modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar"}`);
+        // EJES LOCALES del elemento, la regla de CSI (Area Local Axes, ángulo 0) — la misma de computeQ4ShellStresses
+        // en hekatan-fem/src/analyze.ts: eje 3 = normal; horizontal → eje 1 = +X; si no, eje 1 = Z × n (horizontal).
+        // Fernan (30-sep-2026): «estoy acostumbrado a leer en función a los ejes locales del elemento».
+        const N0 = (ctx.mesh?.nodes?.rawVal ?? []) as number[][];
+        if (lines.length && el.length === 4 && el.every((k: number) => N0[k])) {
+          const P = el.map((k: number) => N0[k]);
+          const d02 = [0, 1, 2].map((c) => P[2][c] - P[0][c]), d13 = [0, 1, 2].map((c) => P[3][c] - P[1][c]);
+          const cr = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+          const un = (v: number[]) => { const m = Math.hypot(v[0], v[1], v[2]) || 1; return v.map((x) => x / m); };
+          const e3 = un(cr(d02, d13));
+          let e1 = Math.abs(e3[2]) > 1 - 1e-6 ? [1, 0, 0] : un([-e3[1], e3[0], 0]);
+          const e2 = un(cr(e3, e1)); e1 = un(cr(e2, e3));
+          const dir = (v: number[]) => { const k = [0, 1, 2].reduce((b, c) => (Math.abs(v[c]) > Math.abs(v[b]) ? c : b), 0);
+            return Math.abs(v[k]) > 0.995 ? `${v[k] > 0 ? "+" : "−"}${"XYZ"[k]}` : `(${v.map((x) => x.toFixed(2)).join(", ")})`; };
+          lines.splice(1, 0, `ejes locales: 1 → ${dir(e1)} · 2 → ${dir(e2)} · 3 → ${dir(e3)}`,
+            `(como SAP2000: M11 F11 V13 en la cara ⟂ al eje 1; M22 F22 V23 en la ⟂ al eje 2)`);
+        }
         if (lines.length > 0) {
-          info += `\n──── results ────\n` + lines.slice(0, 12).join("\n");
+          info += `\n──── results ────\n` + lines.slice(0, 14).join("\n");
         }
       }
 
