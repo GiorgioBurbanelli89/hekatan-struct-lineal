@@ -7,7 +7,10 @@
  *   - chequeo de modos (1 y 2 traslacionales con RZ < 10 %, 3 rotacional).
  * Fa, Fd y Fs se escriben a mano (Tablas 3-5 de la NEC-15, 3.3-3.5 del borrador): por defecto, Portoviejo suelo D.
  */
-import type { State } from "vanjs-core";
+import van, { type State } from "vanjs-core";
+import { deform } from "hekatan-fem";
+import { pisosDeModelo } from "./pisos";
+import { centrosDeRigidez } from "./derivas";
 import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
 import { NOMBRES, type ClaveIrr } from "./irregularidades";
@@ -17,6 +20,8 @@ import { PORTOVIEJO_D, type Norma } from "./estatico";
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
 let _sitio: any = null;
+const _vivo = { on: false };
+let _tVivo: any = 0, _historia: [number, number][][] = [], _programar: (ya?: boolean) => void = () => {}, _oyente = false;
 
 /** una línea: qué irregularidades hay y qué hacen (NEC-15 φP·φE; borrador Ax) */
 function lineaIrr(r: ResultadoNEC): string {
@@ -68,6 +73,30 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
   f.addButton({ title: "📋 Tabla por piso y planta CM/CR" }).on("click", () => { if (ultimo) mostrar(ultimo); });
   f.addButton({ title: "🧮 Matriz de piso (Aguiar) u_x · u_y · θz" }).on("click", () => aguiar());
+  // ── PLANTA CM / CR EN VIVO (1-oct-2026): al cambiar muros, secciones o la planta, se recalculan SOLO el CM y el CR
+  // (3 cargas unitarias por piso) y se redibuja la planta. Sirve para TANTEAR hasta que el CR se acerque al CM.
+  const vivo = _vivo;   // sobrevive a la regeneración del modelo (cambiar el n.º de muros vuelve a montar el panel)
+  f.addBinding(vivo, "on", { label: "🎯 Planta CM/CR en vivo" }).on("change", () => { if (vivo.on) programar(true); else ventanaVivo().ocultar(); });
+  function programar(ya = false) { if (!vivo.on) return; clearTimeout(_tVivo); _tVivo = setTimeout(cmcr, ya ? 0 : 600); }
+  _programar = programar;                        // el oyente (uno solo) llama siempre al panel montado más reciente
+  if (!_oyente) { _oyente = true; van.derive(() => { estado.nodes.val; estado.elements.val; estado.elementInputs.val; estado.nodeInputs.val; _programar(); }); }
+  if (vivo.on) programar(true);
+  function cmcr() {
+    const nodes = estado.nodes.val, elements = estado.elements.val;
+    if (!nodes?.length) return;
+    const t0 = performance.now();
+    try {
+      const eiM = enMasa(estado.elementInputs.val), ei = p.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
+      const ni0 = estado.nodeInputs.val ?? {};
+      const aM = (o: any) => (o instanceof Map ? o : new Map(Object.entries(o ?? {}).map(([k, v]) => [Number(k), v])));
+      const ni = { ...ni0, supports: aM(ni0.supports), diaphragms: aM(ni0.diaphragms) };
+      const pisos = pisosDeModelo(nodes, elements, ni, ei);
+      const resolver = (loads: Map<number, any>) => deform(nodes as any, elements as any, { ...ni, loads } as any, ei).deformations as any;
+      const cr = centrosDeRigidez(nodes, pisos, ni.diaphragms, resolver);
+      ventanaVivo().mostrar({ pisos, cr } as any, nodes, elements, _historia, performance.now() - t0);
+      _historia = [cr.map((c) => [c[0], c[1]] as [number, number]), ..._historia].slice(0, 6);
+    } catch (err) { console.warn("[CM/CR en vivo]", err); }
+  }
 
   function aguiar() {
     if (!ultimo) correr();
@@ -116,7 +145,7 @@ ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.no
     f.refresh();
   }
   function mostrar(r: ResultadoNEC) { ventana().mostrar(r, estado.nodes.val, estado.elements.val, p.norma ? "borrador 2023" : "NEC-15"); }
-  return { correr, aguiar, resultado: () => ultimo, params: p };
+  return { correr, aguiar, cmcr, vivo, resultado: () => ultimo, params: p };
 }
 
 // ── ventana flotante ──────────────────────────────────────────────────────────────────────────────
@@ -255,4 +284,46 @@ function planta(r: ResultadoNEC, nodes: number[][], elements: number[][]): strin
   r.pisos.forEach((q, i) => { s += `<text x="${m}" y="${Math.max(hP + 2 * m, 166) + 10 + 13 * i}" fill="${COL[i % COL.length]}" font-size="11">P${q.k}  ● CM  ✚ CR  e = (${(r.cr[i][0] - q.cm[0]).toFixed(2)}, ${(r.cr[i][1] - q.cm[1]).toFixed(2)}) m</text>`; });
   s += `<text x="${m}" y="${H - 4}" fill="#94a3b8" font-size="10">x ${x0.toFixed(1)} … ${x1.toFixed(1)} m · y ${y0.toFixed(1)} … ${y1.toFixed(1)} m</text></svg>`;
   return s;
+}
+
+
+// ── ventana «Planta CM / CR en vivo» ─────────────────────────────────────────────────────────────────
+let _vv: { mostrar: (r: any, nodes: number[][], elements: number[][], hist: [number, number][][], ms: number) => void; ocultar: () => void } | null = null;
+function ventanaVivo() {
+  if (_vv) return _vv;
+  const el = document.createElement("div");
+  el.id = "hk-cmcr-vivo";
+  Object.assign(el.style, { position: "fixed", right: "16px", bottom: "120px", width: "min(470px, calc(100vw - 32px))", background: "rgba(20, 24, 30, 0.95)",
+    border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", padding: "6px 8px",
+    fontFamily: "ui-monospace, Consolas, monospace", fontSize: "11px", color: "#e2e8f0", zIndex: "102", display: "none" } as CSSStyleDeclaration);
+  const cab = document.createElement("div"); cab.style.cssText = "display:flex;justify-content:space-between;align-items:center;cursor:move;margin-bottom:4px";
+  const tit = document.createElement("span"); tit.style.cssText = "font-weight:600;font-size:12px;color:#a5b4fc"; tit.textContent = "🎯 Planta CM / CR en vivo";
+  const x = document.createElement("button"); x.textContent = "×"; x.style.cssText = "background:transparent;border:none;color:#e2e8f0;font-size:18px;cursor:pointer";
+  x.onclick = () => { el.style.display = "none"; };
+  cab.append(tit, x); const cuerpo = document.createElement("div"); el.append(cab, cuerpo); document.body.appendChild(el);
+  let arr: { x: number; y: number } | null = null;
+  cab.onmousedown = (e) => { const r = el.getBoundingClientRect(); arr = { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  window.addEventListener("mousemove", (e) => { if (!arr) return; Object.assign(el.style, { left: `${e.clientX - arr.x}px`, top: `${e.clientY - arr.y}px`, right: "auto", bottom: "auto" }); });
+  window.addEventListener("mouseup", () => { arr = null; });
+  function mostrar(r: any, nodes: number[][], elements: number[][], hist: [number, number][][], ms: number) {
+    let svg = planta(r, nodes, elements);
+    // rastro: dónde estaba el CR en los cálculos anteriores (gris, cada vez más tenue)
+    const z1 = r.pisos[0].z, losas = elements.filter((e) => e.length >= 3 && e.every((k) => Math.abs(nodes[k][2] - z1) < 1e-3));
+    const pts = losas.length ? losas.flatMap((e) => e.map((k) => nodes[k])) : r.pisos[0].nudos.map((k: number) => nodes[k]);
+    const xs = pts.map((q: number[]) => q[0]), ys = pts.map((q: number[]) => q[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const Wd = 620, m = 20, esc = Math.min((Wd - 2 * m - 170) / Math.max(x1 - x0, 1e-6), 260 / Math.max(y1 - y0, 1e-6));
+    const X = (v: number) => m + (v - x0) * esc, Y = (v: number) => m + (y1 - v) * esc;
+    let rastro = "";
+    hist.forEach((cr, h) => cr.forEach((c) => { rastro += `<path d="M${X(c[0]) - 4},${Y(c[1])}h8M${X(c[0])},${Y(c[1]) - 4}v8" stroke="#94a3b8" stroke-opacity="${(0.5 - h * 0.07).toFixed(2)}" stroke-width="1.5"/>`; }));
+    svg = svg.replace("</svg>", rastro + "</svg>");
+    const e = r.pisos.map((q: any, i: number) => Math.hypot(r.cr[i][0] - q.cm[0], r.cr[i][1] - q.cm[1]));
+    const emax = Math.max(...e), Lx = x1 - x0, Ly = y1 - y0;
+    const pct = Math.max(...r.pisos.map((q: any, i: number) => Math.max(Math.abs(r.cr[i][0] - q.cm[0]) / Lx, Math.abs(r.cr[i][1] - q.cm[1]) / Ly))) * 100;
+    cuerpo.innerHTML = `<div style="margin-bottom:4px">|CR − CM| máx <b style="color:${pct < 5 ? "#4ade80" : pct < 15 ? "#fbbf24" : "#f87171"}">${emax.toFixed(2)} m = ${pct.toFixed(1)} % de la planta</b>
+      · ${(ms / 1000).toFixed(1)} s · gris = CR anteriores</div>${svg}`;
+    el.style.display = "block";
+  }
+  _vv = { mostrar, ocultar: () => { el.style.display = "none"; } };
+  return _vv;
 }
