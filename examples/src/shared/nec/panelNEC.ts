@@ -15,15 +15,21 @@ import { PORTOVIEJO_D, type Norma } from "./estatico";
 
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
+let _sitio: any = null;
+
 export function montarNEC(folder: any, estado: ModeloNEC) {
   const f = folder.addFolder({ title: "🌎 Sismo NEC (estático + espectral)", expanded: false });
   const d15 = PORTOVIEJO_D["NEC-15"];
-  const p = {
+  // Los datos del sitio SOBREVIVEN a la regeneración del modelo (1-oct-2026): al cambiar un parámetro con
+  // regenOnChange (p. ej. el número de muros) el workspace vuelve a montar este panel, y antes volvía a Portoviejo
+  // suelo D sin agrietar — el cálculo siguiente salía con otro sitio sin avisar.
+  const p = _sitio ?? {
     norma: 0,                      // 0 NEC-15, 1 borrador 2023
     Z: d15.Z, Fa: d15.Fa, Fd: d15.Fd, Fs: d15.Fs, eta: d15.eta!, r: d15.r,
     I: 1.0, R: 8, sistema: 0, irregular: 1, nModos: 12, agrietadas: 0,
     info: "—",
   };
+  _sitio = p;
   f.addBinding(p, "norma", { label: "Norma", options: { "NEC-15 (oficial)": 0, "Borrador NEC-SE-DS 2023": 1 } }).on("change", () => {
     const d = PORTOVIEJO_D[p.norma ? "borrador" : "NEC-15"];
     Object.assign(p, { Z: d.Z, Fa: d.Fa, Fd: d.Fd, Fs: d.Fs, r: d.r }); f.refresh();
