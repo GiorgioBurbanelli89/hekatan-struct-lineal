@@ -1233,3 +1233,14 @@ manual usa dK = 0.04 ≈ 2 % modal). M = la masa concentrada de CSI del modal. R
   motor: f(ω) = √S(ω) con S interpolada LINEALMENTE, √PSD = |a|, RMS = √∫|a|² df por TRAPECIO (con rectángulos SAP difiere
   0.08 %: así se supo). Juez `validation/psd/sap_psd.py` (`LoadCases.PSD`, `Func.FuncPSD.SetUser`, `SetOptionPSD(1|2)` =
   RMS | sqrt(PSD)). Test en `estacionario`: √PSD y RMS **0.000 %**. Panel: Tipo de caso = PSD.
+
+## Matriz de rigidez en coordenadas de piso (Aguiar) — 1-oct-2026
+
+Panel «🌎 Sismo NEC» › **🧮 Matriz de piso (Aguiar) u_x · u_y · θz** (`examples/src/shared/nec/aguiar.ts`). Aguiar arma
+K_E = Σ Aᵀ·K_L·A (K_L = matriz lateral de cada pórtico, A = [cos α  sen α  r]); con losas y muros de CÁSCARA no hay
+pórticos que sumar, así que K_E sale por CONDENSACIÓN: Fx/Fy/Mz unitarios en el CM de cada piso repartidos por la masa
+de cada nudo → u_x, u_y, θz del piso (promedio pesado) → flexibilidad F (3n×3n) → K_E = F⁻¹. Lectura: e = K_yθ/K_yy,
+ρ = |K_yθ|/√(K_yy·K_θθ) (0 sin torsión). Juez SAP2000 (`validation/articulo-revista/sap_aguiar.py`, mismas cargas):
+pórtico asimétrico K_E **0.000 %**; dual del artículo e_y 0.02 m y ρ 0.006 (K_E entera 5 %: membrana del muro, no el
+método). `node tests/run.mjs aguiar` (11 filas). La capa NEC también trae `agrietadas` (§6.1.6), índice Q y ΣUx/ΣUy, y
+sin diafragma toma los pisos de las cotas con losa/vigas y el CR con carga repartida (antes: cotas de malla de muro y rz local).

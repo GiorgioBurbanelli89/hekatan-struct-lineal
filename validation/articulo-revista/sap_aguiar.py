@@ -36,6 +36,8 @@ try:
         Ac = bc * bc; Ic = bc ** 4 / 12; Jc = 0.141 * bc ** 4
         Av = bb * hb; I33v = bb * hb ** 3 / 12; I22v = hb * bb ** 3 / 12; Jv = I33v + I22v
         sm.PropFrame.SetGeneral("COL", "CONC", bc, bc, Ac, 5/6*Ac, 5/6*Ac, Jc, Ic, Ic, 1, 1, 1, 1, 1, 1)
+        sm.PropFrame.SetGeneral("COL4", "CONC", bc, bc, Ac, 5/6*Ac, 5/6*Ac, Jc, 4*Ic, 4*Ic, 1, 1, 1, 1, 1, 1)
+        I4 = set(D.get("colI4", []))
         sm.PropFrame.SetGeneral("VIGA", "CONC", hb, bb, Av, 5/6*Av, 5/6*Av, Jv, I22v, I33v, 1, 1, 1, 1, 1, 1)
         sm.PropArea.SetShell_1("LOSA", 2, True, "CONC", 0.0, D["tSlab"], D["tSlab"])
         sm.PropArea.SetShell_1("MURO", 2, True, "CONC", 0.0, D["tWall"], D["tWall"])
@@ -43,7 +45,7 @@ try:
         for i, (x, y, z) in enumerate(D["nodes"]):
             sm.PointObj.AddCartesian(float(x), float(y), float(z), "", "N%d" % i); nom.append("N%d" % i)
         for k, (el, kind) in enumerate(zip(D["elements"], D["kinds"])):
-            if kind in ("col", "beam"): sm.FrameObj.AddByPoint(nom[el[0]], nom[el[1]], "", "COL" if kind == "col" else "VIGA", "F%d" % k)
+            if kind in ("col", "beam"): sm.FrameObj.AddByPoint(nom[el[0]], nom[el[1]], "", ("COL4" if k in I4 else "COL") if kind == "col" else "VIGA", "F%d" % k)
             else: sm.AreaObj.AddByPoint(4, [nom[j] for j in el], "", "LOSA" if kind == "slab" else "MURO", "A%d" % k)
         for i in D["supports"]: sm.PointObj.SetRestraint(nom[int(i)], [True] * 6)
         log("%s: %d nudos, %d elementos" % (caso, len(nom), len(D["elements"])))
@@ -82,6 +84,9 @@ try:
         log("  K_E: diferencia máx %.3f %% del mayor término" % dif)
         OUT[caso] = dict(KE_sap=KE.tolist(), KE_hekatan=KEh.tolist(), dif_pct_max=dif, pisos=pisos)
 finally:
-    json.dump(OUT, open(os.path.join(AQUI, "sap_aguiar_resultado.json"), "w", encoding="utf-8"), indent=1, default=float)
+    ruta = os.path.join(AQUI, "sap_aguiar_resultado.json")
+    previo = json.load(open(ruta, encoding="utf-8")) if os.path.exists(ruta) else {}
+    previo.update(OUT)
+    json.dump(previo, open(ruta, "w", encoding="utf-8"), indent=1, default=float)
     o.ApplicationExit(False)
     log("fin")

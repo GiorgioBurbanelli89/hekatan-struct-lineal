@@ -50,16 +50,23 @@ const MUROS = {
 const sp = nec.necSpectrum({ Z: 0.40, soil: "E", region: "Costa", I: 1, R: 8, phiP: 1, phiE: 1 });
 const sitio = { norma: "NEC-15", Z: 0.40, Fa: sp.Fa, Fd: sp.Fd, Fs: sp.Fs, eta: 1.8, r: 1.5, I: 1, R: 8, phiP: 1, phiE: 1, Ct: 0.055, alfa: 0.75 };
 const OUT = {};
+// solo pórticos (sin cáscaras): el modelo donde Hekatan = SAP2000 a 0.000 %, para juzgar el MÉTODO sin la membrana
+const SOLO = process.argv[2];
+const CASOS = SOLO === "portico" ? { portico: null, porticoAsim: null } : MUROS;
 
-for (const [nom, walls] of Object.entries(MUROS)) {
-  const p = { nbx: 2, nby: 2, nFloors: 4, ms: 1.0, nWalls: 1, tWall: 0.25, tSlab: 0.20, bCol: 0.40, bBeam: 0.30, hBeam: 0.50, q: 1.0, walls };
-  const d = buildEdificio(p, { slab: true, walls: true });
+for (const [nom, walls] of Object.entries(CASOS)) {
+  const p = { nbx: 2, nby: 2, nFloors: 4, ms: 1.0, nWalls: 1, tWall: 0.25, tSlab: 0.20, bCol: 0.40, bBeam: 0.30, hBeam: 0.50, q: 1.0, walls: walls ?? undefined };
+  const d = buildEdificio(p, nom.startsWith("portico") ? { slab: false, walls: false } : { slab: true, walls: true });
   d.kinds.forEach((k, e) => {   // eje fuerte de la viga en I33 (como hekatan_cortante_derivas.mjs)
     if (k !== "beam") return;
     const y = d.ei.momentsOfInertiaY.get(e), z = d.ei.momentsOfInertiaZ.get(e);
     d.ei.momentsOfInertiaY.set(e, Math.min(y, z)); d.ei.momentsOfInertiaZ.set(e, Math.max(y, z));
   });
   const { nodes, elements, kinds, ni } = d;
+  // pórtico ASIMÉTRICO: las columnas del eje x = 0 con 4 veces la inercia → K_yθ ≠ 0 (para juzgar el acoplamiento)
+  const colX0 = new Set();
+  if (nom === "porticoAsim") kinds.forEach((k, e) => { if (k === "col" && Math.abs(nodes[elements[e][0]][0]) < 1e-6) {
+    colX0.add(e); d.ei.momentsOfInertiaY.set(e, d.ei.momentsOfInertiaY.get(e) * 4); d.ei.momentsOfInertiaZ.set(e, d.ei.momentsOfInertiaZ.get(e) * 4); } });
   const ei = { ...d.ei, plateFormulations: new Map(), drillingTypes: new Map() };
   const eiM = { ...ei, densities: new Map([...ei.densities].map(([k, v]) => [k, v / GRAV])) };
   const niM = { supports: ni.supports };
@@ -101,7 +108,7 @@ for (const [nom, walls] of Object.entries(MUROS)) {
   }
   // el mismo modelo y las mismas 3n cargas para SAP2000 (juez): sap_aguiar.py
   writeFileSync(join(AQUI, `sap_aguiar_${nom}.json`), JSON.stringify({
-    nodes, elements, kinds, supports: [...ni.supports.keys()], E: 2534564, nu: 0.20, rho: 2.40277,
+    nodes, elements, kinds, supports: [...ni.supports.keys()], colI4: [...colX0], E: 2534564, nu: 0.20, rho: 2.40277,
     bCol: p.bCol, bBeam: p.bBeam, hBeam: p.hBeam, tSlab: p.tSlab, tWall: p.tWall,
     casos: casosSap, pisos: floor.map((f) => ({ ns: f.ns, m: f.m, M: f.M, rel: f.rel, J: f.J })), F_hekatan: F }));
   const derMax = (ks) => Math.max(...ks.flatMap((k) => r.derivasEst[k].map((x) => x.inelastica)));
@@ -123,4 +130,4 @@ for (const [nom, walls] of Object.entries(MUROS)) {
   console.log("CM", pisos.map((pz) => pz.cm.map((v) => v.toFixed(2)).join(",")).join("  "), " CR", r.cr.map((c) => c.map((v) => v.toFixed(2)).join(",")).join("  "));
   console.log(`Vest ${r.estatico.V.toFixed(2)}  VdinX ${r.dinamico.X.V.toFixed(2)} (${(r.dinamico.escX.relacion * 100).toFixed(1)} %)  VdinY ${r.dinamico.Y.V.toFixed(2)} (${(r.dinamico.escY.relacion * 100).toFixed(1)} %)`);
 }
-writeFileSync(join(AQUI, "torsion_aguiar.json"), JSON.stringify(OUT, null, 1));
+writeFileSync(join(AQUI, SOLO === "portico" ? "torsion_aguiar_portico.json" : "torsion_aguiar.json"), JSON.stringify(OUT, null, 1));
