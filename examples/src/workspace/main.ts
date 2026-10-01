@@ -15,6 +15,7 @@
  * =============================================================================
  */
 import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
+import { montarPandeo, montarTiposDeCaso } from "../shared/panelPandeo";
 import { montarNEC } from "../shared/nec/panelNEC";
 import { montarCorte } from "../shared/panelCorte";
 import van, { State } from "vanjs-core";
@@ -7293,6 +7294,11 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       const th = montarTiempoHistoria(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
       (window as any).__hekatanTiempoHistoria = th;
     } catch (e) { console.warn("[tiempo-historia]", e); }
+    // ── ⟂ Pandeo lineal (1-oct-2026): el Load Case «Buckling» de SAP2000 + la lista de los 11 tipos (no lineal = Pro) ──
+    try {
+      (window as any).__hekatanPandeo = montarPandeo(fModal, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
+      montarTiposDeCaso(fModal);
+    } catch (e) { console.warn("[pandeo]", e); }
     // ── 🌎 Sismo NEC (30-sep-2026): estático + espectral NEC-15 / borrador, derivas, CM/CR, torsión ──
     try { (window as any).__hekatanNEC = montarNEC(fModal, states as any); } catch (e) { console.warn("[NEC]", e); }
   }

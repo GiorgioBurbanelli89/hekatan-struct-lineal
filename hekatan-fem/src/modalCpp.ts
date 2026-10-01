@@ -34,8 +34,10 @@ export function modalCpp(
   // ellos, un modelo apoyado en balasto FLOTA y da periodos absurdos.
   springs?: Array<{ node: number; dof: number; k: number }>,
   // TIEMPO-HISTORIA LINEAL (30-sep-2026): ver timeHistoryAnalysis() abajo y cpp/utils/tiempoHistoria.h
-  th?: THOpciones
-): ModalOutputs & { timeHistory?: THResultado } {
+  th?: THOpciones,
+  // PANDEO LINEAL (1-oct-2026, cpp/utils/pandeo.h): axial P-delta por elemento (tracción +). Si viene, no hay modal.
+  pandeoP?: number[]
+): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado } {
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
 
   const gc: number[] = [];
@@ -186,6 +188,11 @@ export function modalCpp(
     const cfg = thConfigPlana(th, nodes.length);
     thCfgPtr = allocate(cfg, Float64Array, mod.HEAPF64); gc.push(thCfgPtr); thCfgLen = cfg.length;
   }
+  let pandeoPPtr = 0;
+  if (pandeoP) { pandeoPPtr = allocate(pandeoP, Float64Array, mod.HEAPF64); gc.push(pandeoPPtr); }
+  const pandeoOutPtr = mod._malloc(4); gc.push(pandeoOutPtr);
+  const pandeoOutLen = mod._malloc(4); gc.push(pandeoOutLen);
+  mod.HEAPU32[pandeoOutPtr / 4] = 0; mod.HEAPU32[pandeoOutLen / 4] = 0;
   const thOutPtr = mod._malloc(4); gc.push(thOutPtr);
   const thOutLen = mod._malloc(4); gc.push(thOutLen);
   mod.HEAPU32[thOutPtr / 4] = 0; mod.HEAPU32[thOutLen / 4] = 0;
@@ -341,7 +348,10 @@ export function modalCpp(
     thOutLen,
     dirModKeysPtr,
     dirModValuesPtr,
-    dirModKeys.length
+    dirModKeys.length,
+    pandeoPPtr,
+    pandeoOutPtr,
+    pandeoOutLen
   );
 
   // 3- Read outputs
@@ -421,10 +431,22 @@ export function modalCpp(
     timeHistory = thLeerSalida(o, th, nodes.length);
   }
 
+  // Pandeo
+  let buckling: PandeoResultado | undefined;
+  const pbPtr = mod.HEAPU32[pandeoOutPtr / 4], pbLen = mod.HEAPU32[pandeoOutLen / 4];
+  if (pandeoP && pbPtr && pbLen > 0) {
+    const o = new Float64Array(mod.HEAPF64.buffer, pbPtr, pbLen);
+    const m = Math.round(o[0]), dof = nodes.length * 6;
+    buckling = { factors: Array.from(o.slice(1, 1 + m)), modeShapes: [] };
+    for (let k = 0; k < m; k++) buckling.modeShapes.push(Array.from(o.slice(1 + m + k * dof, 1 + m + (k + 1) * dof)));
+    gc.push(pbPtr);
+  }
+
   // Free memory
   gc.forEach((ptr) => mod._free(ptr));
 
   return {
+    buckling,
     frequencies,
     modeShapes,
     massParticipation,
@@ -511,6 +533,25 @@ function thLeerSalida(o: number[], opc: THOpciones, nNodos: number): THResultado
     for (let i = 0; i < nNodos; ++i) { envolvente.push(o.slice(q, q + 6)); q += 6; }
   }
   return { t, u, base, envolvente, nModos };
+}
+
+/** Resultado del pandeo lineal: factores λ (por |λ| creciente) y formas (dof completo, máx |Ψ| = 1). */
+export type PandeoResultado = { factors: number[]; modeShapes: number[][] };
+
+/**
+ * PANDEO LINEAL como SAP2000 (Load Case «Buckling»): [K − λ·G(r)]·Ψ = 0, con r = nodeInputs.loads.
+ * La axial P-delta de cada barra es la del estático de r (promedio de los dos extremos, CSIRefer cap. XXII)
+ * y G se arma en el C++ (utils/pandeo.h) sobre el MISMO K que el modal (muelles, diafragmas, releases…).
+ * `axiales`: las del estático de r, por elemento: [N_I, N_J] (fuerzas de extremo de analyze()).
+ */
+export function bucklingAnalysis(
+  nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs,
+  axiales: Map<number, number[]>, numModes = 6
+): PandeoResultado | undefined {
+  const ni: any = nodeInputs;
+  const P = elements.map((_, e) => { const n = axiales.get(e); return n ? (-n[0] + n[1]) / 2 : 0; });
+  const r = modalCpp(nodes, elements, nodeInputs, elementInputs, numModes, 0, 0, 1, ni.diaphragms, ni.springs, undefined, P);
+  return r.buckling;
 }
 
 /**

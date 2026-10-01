@@ -2,6 +2,7 @@
 #include "utils/etabsWallJoint.h"
 #include "utils/springsExtra.h"
 #include "utils/tiempoHistoria.h"
+#include "utils/pandeo.h"
 #include <vector>
 #include <map>
 #include <array>
@@ -483,8 +484,13 @@ extern "C"
         // MODIFICADORES DIRECCIONALES de cáscara (30-sep-2026): 8 por elemento, F11 F22 F12 M11 M22 M12 V13 V23, igual
         // que deform.cpp. Hasta hoy el modal NO los recibía: una losa nervada/waffle o una inercia agrietada (NEC) salía
         // con la rigidez de la maciza (edificio waffle: T1 0.5388 contra 0.5659 de SAP2000 y ETABS, −4.8 %).
-        int *shellmod_keys_ptr = nullptr, double *shellmod_values_ptr = nullptr, int num_shellmods = 0)
+        int *shellmod_keys_ptr = nullptr, double *shellmod_values_ptr = nullptr, int num_shellmods = 0,
+        // PANDEO LINEAL (1-oct-2026, utils/pandeo.h): axial P-delta de cada elemento (num_elements, tracción +).
+        // Si viene, NO se hace el modal: se resuelve [K − λG]Ψ = 0 y sale [nModos, λ…, Ψ…] por pandeo_out.
+        double *pandeo_P_ptr = nullptr, double **pandeo_out_ptr = nullptr, int *pandeo_out_len = nullptr)
     {
+        if (pandeo_out_ptr) *pandeo_out_ptr = nullptr;
+        if (pandeo_out_len) *pandeo_out_len = 0;
         if (th_out_ptr) *th_out_ptr = nullptr;
         if (th_out_len) *th_out_len = 0;
         // Initialize outputs to null
@@ -557,6 +563,16 @@ extern "C"
         }
         springsExtra::aplicarColgados(K_global, nodes, element_indices, element_sizes, colgados);
         if (etabs_wall_joint) addEtabsWallJoint(K_global, nodes, element_indices, element_sizes, elementInputs);
+
+        if (pandeo_P_ptr && pandeo_out_ptr && pandeo_out_len) {
+            Eigen::SparseMatrix<double> Gg = pandeo::gGlobal(nodes, element_indices, element_sizes, elementInputs, pandeo_P_ptr, dof);
+            std::map<int, double> diafr = parseMapFromFlat(diaph_keys_ptr, diaph_values_ptr, num_diaph);
+            std::vector<double> r = pandeo::resolver(K_global, Gg, nodes, nodeInputs, diafr, num_modes > 0 ? num_modes : 6);
+            double *buf = (double *)malloc(sizeof(double) * r.size());
+            std::copy(r.begin(), r.end(), buf);
+            *pandeo_out_ptr = buf; *pandeo_out_len = (int)r.size();
+            return;
+        }
 
         // La masa se arma en ensamblarMasa() (arriba): los mismos pasos 2a,
         // 2b y 2c de ETABS, ahora en una funcion que tambien puede llamarse

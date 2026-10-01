@@ -1200,3 +1200,20 @@ Tres fallos encadenados, y ninguno daba error en pantalla:
 ⚠️ El botón usa `position: fixed` pero hay un ancestro con `transform`, así que se posiciona
 respecto a ESE ancestro, no a la ventana: aparece en x≈1301 y no en la esquina derecha. Por
 eso «no estaba» al buscarlo por coordenadas.
+
+## Pandeo lineal (Load Case «Buckling» de SAP2000) — 1-oct-2026
+
+`[K − λ·G(r)]·Ψ = 0` (CSiRefer cap. XVIII). G de barra según cap. XXII: deformada **cúbica por flexión + lineal
+por cortante** (el campo de Timoshenko homogéneo) y axial P-delta **constante = promedio de los extremos**, del
+estático de las cargas r. La 4×4 de cada plano se INTEGRA de ese campo con la pendiente TOTAL v′
+(`gPlano` en `hekatan-fem/src/cpp/utils/pandeo.h`, espejo `hekatan-struct-py/.../buckling.py`). Con la pendiente de
+solo flexión θ salía hasta 22 % de SAP2000: no volver a probarla.
+
+- C++: `modal()` recibe al final `pandeo_P` (axial por elemento) → arma G sobre el MISMO K (muelles, unión
+  muro-viga, diafragmas, releases) y resuelve (−G)Ψ = μKΨ, λ = 1/μ: denso si n ≤ 400, Spectra (Cholesky) si no.
+- TS: `bucklingAnalysis(nodes, elements, ni, ei, analyzeOutputs.normals, nModos)`. App: Settings › ⚡ Modal +
+  Animación › **⟂ Pandeo (lineal)** (r = las cargas del caso aplicado) y **📋 Tipos de caso**: los 13 de SAP2000;
+  los NO LINEALES dicen «Módulo Pro — no disponible en Hekatan Struct» (decisión de Jorge).
+- Juez: `validation/pandeo/sap_pandeo.py` (OAPI) → `sap_pandeo.json`; `node tests/run.mjs pandeo` (columna 1 y 4
+  trozos, pórtico 3D con columna girada 30° y apoyo articulado, edificio 3D de 918 GDL): **0.0000 %** en 28 modos.
+- Pendiente: G de cáscaras y sólidos (muros), releases dentro de G.

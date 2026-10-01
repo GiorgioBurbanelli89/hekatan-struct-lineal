@@ -1,0 +1,27 @@
+// Pandeo en la app PÚBLICA: abre un pórtico, calcula, lee λ, anima y captura. node cli/_pandeo_ui_check.mjs <dir>
+import puppeteer from "puppeteer";
+import { mkdirSync, writeFileSync } from "node:fs";
+const DIR = process.argv[2] ?? "cli/shots/pandeo"; mkdirSync(DIR, { recursive: true });
+const BASE = "https://giorgioburbanelli89.github.io/hekatan-struct-lineal";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+const errores = []; pag.on("pageerror", (e) => errores.push(String(e)));
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const abrir = (txt) => pag.evaluate((txt) => { const t = [...document.querySelectorAll(".tp-fldv_t")].find((e) => e.innerText.includes(txt)); if (!t) return false; const f = t.closest(".tp-fldv"); if (!f.classList.contains("tp-fldv-expanded")) t.click(); t.scrollIntoView({ block: "start" }); return true; }, txt);
+const P = Buffer.from(JSON.stringify({ tipo: 0, nx: 3, pisos: 3, sx: 5, offsets: 0 })).toString("base64");
+await pag.goto(`${BASE}/workspace/?t=plantillas&p=${P}`, { waitUntil: "networkidle2", timeout: 120000 }); await espera(8000);
+const hay = await pag.evaluate(() => !!window.__hekatanPandeo);
+await abrir("Modal + Animación"); await abrir("Pandeo (lineal)"); await espera(600);
+const info = await pag.evaluate(() => { const p = window.__hekatanPandeo; p.calcular(); return p.params.info; });
+await espera(500); await pag.evaluate(() => window.__hekatanPandeo.refrescar()); await abrir("Pandeo (lineal)"); await espera(400);
+await pag.screenshot({ path: `${DIR}/01_pandeo_info.png` });
+await pag.evaluate(() => window.__hekatanPandeo.animar()); await espera(900);
+await pag.screenshot({ path: `${DIR}/02_pandeo_modo1.png` });
+await pag.evaluate(() => window.__hekatanPandeo.parar(true));
+await abrir("Tipos de caso"); await espera(300);
+const tipos = await pag.evaluate(() => { const s = [...document.querySelectorAll(".tp-lblv")].find((x) => x.querySelector(".tp-lblv_l")?.innerText.trim() === "Load Case Type")?.querySelector("select");
+  if (!s) return null; s.value = String([...s.options].findIndex((o) => o.text.startsWith("Staged"))); s.dispatchEvent(new Event("change", { bubbles: true })); return [...s.options].map((o) => o.text); });
+await espera(400); await pag.screenshot({ path: `${DIR}/03_tipos_pro.png` });
+const r = { hay, info, tipos, errores };
+writeFileSync(`${DIR}/datos.json`, JSON.stringify(r, null, 1)); console.log(JSON.stringify(r, null, 1));
+await nav.close();
