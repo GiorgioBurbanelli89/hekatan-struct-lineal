@@ -33,6 +33,28 @@ Por metro de corte (tonf/m, tonf·m/m): F ${c.F.map((v) => (v / G / c.L).toFixed
 ${c.desequilibrio > 1e-6 ? "⚠ el modelo no cierra el equilibrio con sus cargas nodales (" + c.desequilibrio.toExponential(1) + "): faltan cargas internas" : "Equilibrio del modelo: ✓"}`;
     f.refresh();
     (window as any).__hekatanUltimoCorte = c;
+    ventana(p.info);
   }
   return { calcular, params: p, folder: f };
+}
+
+/** El resultado en una ventana flotante ancha: en la columna de Settings el texto quedaba cortado. */
+function ventana(texto: string) {
+  let el = document.getElementById("hk-corte-panel") as HTMLDivElement | null;
+  if (!el) {
+    el = document.createElement("div"); el.id = "hk-corte-panel";
+    Object.assign(el.style, { position: "fixed", left: "50%", top: "70px", transform: "translateX(-50%)", maxWidth: "calc(100vw - 32px)",
+      background: "rgba(20, 24, 30, 0.95)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+      padding: "8px 12px", fontFamily: "ui-monospace, Consolas, monospace", fontSize: "13px", color: "#e2e8f0", zIndex: "101" } as CSSStyleDeclaration);
+    const cab = document.createElement("div");
+    Object.assign(cab.style, { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px", borderBottom: "1px solid rgba(255,255,255,0.1)" });
+    const tit = document.createElement("b"); tit.textContent = "Corte de sección — fuerzas totales"; tit.style.color = "#a5b4fc";
+    const x = document.createElement("button"); x.textContent = "×";
+    Object.assign(x.style, { background: "transparent", border: "none", color: "#e2e8f0", fontSize: "18px", cursor: "pointer", marginLeft: "16px" });
+    x.onclick = () => { el!.style.display = "none"; };
+    const pre = document.createElement("pre"); pre.id = "hk-corte-texto"; Object.assign(pre.style, { margin: "0", whiteSpace: "pre-wrap", lineHeight: "1.5" });
+    cab.append(tit, x); el.append(cab, pre); document.body.appendChild(el);
+  }
+  (el.querySelector("#hk-corte-texto") as HTMLElement).textContent = texto;
+  el.style.display = "block";
 }
