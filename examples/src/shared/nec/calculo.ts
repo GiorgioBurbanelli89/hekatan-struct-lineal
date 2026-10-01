@@ -6,11 +6,14 @@
  */
 import { deform, jointMass, modalAnalysis as modalCpp } from "hekatan-fem";
 import { pisosDeModelo, type Piso } from "./pisos";
-import { cortanteEstatico, espectro, type DatosSitio, type Estatico } from "./estatico";
+import { cortanteEstatico, espectro, ampDeriva, limiteDeriva, type DatosSitio, type Estatico } from "./estatico";
+import { detectar, type ClaveIrr, type Forzar, type ResultadoIrr } from "./irregularidades";
 import { cargasEnCM, derivas, centrosDeRigidez, type DerivaPiso } from "./derivas";
 import { espectralPorPiso, escalaDinamico, type Espectral } from "./espectral";
 
-export type OpcionesNEC = { sitio: DatosSitio; irregular: boolean; nModos: number; ecc: number; agrietadas?: boolean };
+export type OpcionesNEC = { sitio: DatosSitio; irregular?: boolean | null; nModos: number; ecc: number; agrietadas?: boolean;
+  /** sistema dual (pórtico especial con muros): NEC-15 φE = 1 */ dual?: boolean;
+  /** corrección manual de cada irregularidad: −1 automático, 0 no, 1 sí */ forzar?: Partial<Record<ClaveIrr, Forzar>> };
 
 /**
  * Inercias agrietadas NEC-SE-DS §6.1.6 (1-oct-2026): vigas 0.5·Ig, columnas 0.8·Ig, muros 0.6·Ig. Barra vertical
@@ -62,6 +65,9 @@ export type ResultadoNEC = {
   sumaMasa: { ux: number; uy: number; rz: number };
   agrietadas: boolean;
   unidad: string;
+  irregularidades: ResultadoIrr;
+  sitio: DatosSitio;
+  limiteDeriva: number;
 };
 
 const aMap = (o: any) => (o instanceof Map ? o : new Map(Object.entries(o ?? {}).map(([k, v]) => [Number(k), v])));
@@ -88,33 +94,51 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
   });
 
   const T1 = modos[0]?.T;
-  const estatico = cortanteEstatico(o.sitio, pisos, T1);
-  const F = estatico.pisos.map((p) => p.F);
-  const derivasEst: Record<string, DerivaPiso[]> = {};
-  for (const [dir, s, nom] of [[0, 0, "Ex"], [0, 1, "Ex+e"], [0, -1, "Ex−e"], [1, 0, "Ey"], [1, 1, "Ey+e"], [1, -1, "Ey−e"]] as [0 | 1, number, string][]) {
-    const L = cargasEnCM(nodes, pisos, F, dir, s * o.ecc, masas, ni.diaphragms);
-    derivasEst[nom] = derivas(nodes, pisos, resolver(L), dir, o.sitio.R, esDia);
-  }
+  const amp = ampDeriva(o.sitio);
   const cr = centrosDeRigidez(nodes, pisos, ni.diaphragms, resolver);
-
   const sp = espectro(o.sitio);
-  const red = o.sitio.I / (o.sitio.R * (o.sitio.norma === "NEC-15" ? (o.sitio.phiP ?? 1) * (o.sitio.phiE ?? 1) : 1));
-  const minimo = o.sitio.norma === "borrador" ? 1.0 : o.irregular ? 0.85 : 0.80;
-  const X = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 0, o.sitio.R, esDia);
-  const Y = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 1, o.sitio.R, esDia);
+  const sumaMasa = { ux: mp.reduce((a, v) => a + (v?.[0] ?? 0), 0), uy: mp.reduce((a, v) => a + (v?.[1] ?? 0), 0), rz: mp.reduce((a, v) => a + (v?.[5] ?? 0), 0) };
+
+  /** estático (cortante, derivas Ex/Ex±e/Ey/Ey±e) con un sitio y una excentricidad por piso y dirección */
+  const pasada = (sitio: DatosSitio, eccX: number[], eccY: number[]) => {
+    const estatico = cortanteEstatico(sitio, pisos, T1);
+    const F = estatico.pisos.map((p) => p.F);
+    const derivasEst: Record<string, DerivaPiso[]> = {};
+    for (const [dir, s, nom] of [[0, 0, "Ex"], [0, 1, "Ex+e"], [0, -1, "Ex−e"], [1, 0, "Ey"], [1, 1, "Ey+e"], [1, -1, "Ey−e"]] as [0 | 1, number, string][]) {
+      const L = cargasEnCM(nodes, pisos, F, dir, (dir === 0 ? eccX : eccY).map((e) => s * e), masas, ni.diaphragms);
+      derivasEst[nom] = derivas(nodes, pisos, resolver(L), dir, amp, esDia);
+    }
+    return { estatico, derivasEst };
+  };
+  const ecc0 = pisos.map(() => o.ecc);
+  // 1.ª pasada: sin coeficientes de configuración → irregularidades (geometría + derivas con ±5 %)
+  const p1 = pasada({ ...o.sitio, phiP: 1, phiE: 1 }, ecc0, ecc0);
+  const irr = detectar({ norma: o.sitio.norma, dual: !!o.dual, nodes, elements, pisos, derivasEst: p1.derivasEst,
+    Vpiso: p1.estatico.pisos.map((q) => q.Vpiso), forzar: o.forzar });
+  // 2.ª pasada: NEC-15 con φP·φE (V = I·Sa/(R·φP·φE)·W); borrador con la torsión accidental × Ax por piso (ec. 6.7)
+  const sitio: DatosSitio = { ...o.sitio, phiP: irr.phiP, phiE: irr.phiE };
+  const { estatico, derivasEst } = irr.Ax || irr.phiP < 1 || irr.phiE < 1
+    ? pasada(sitio, irr.Ax ? irr.Ax.X.map((a) => a * o.ecc) : ecc0, irr.Ax ? irr.Ax.Y.map((a) => a * o.ecc) : ecc0) : p1;
+
+  const red = sitio.I / (sitio.R * (sitio.norma === "NEC-15" ? (sitio.phiP ?? 1) * (sitio.phiE ?? 1) : 1));
+  const irregular = o.irregular === undefined || o.irregular === null ? irr.irregular : !!o.irregular;
+  const minimo = sitio.norma === "borrador" ? 1.0 : irregular ? 0.85 : 0.80;
+  const X = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 0, amp, esDia);
+  const Y = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 1, amp, esDia);
   const escX = escalaDinamico(X.V, estatico.V, minimo), escY = escalaDinamico(Y.V, estatico.V, minimo);
 
   const peor = (ks: string[]) => Math.max(...ks.flatMap((k) => derivasEst[k].map((d) => d.relacion)));
   const peorX = peor(["Ex", "Ex+e", "Ex−e"]), peorY = peor(["Ey", "Ey+e", "Ey−e"]);
+  // índice de estabilidad: NEC-15 Qi = Pi·Δi/(Vi·hi) (§6.3.8, Δ elástica); borrador θ = Px·Δ·Ie/(Vx·hsx·Cd) (ec. 6.9, Δ de
+  // diseño = Cd·Δe/Ie) → los dos quedan P·Δe/(V·h) con Δe la deriva elástica
   const Q = (k: string) => estatico.pisos.map((pe, i) => {
     const P = estatico.pisos.slice(i).reduce((a, q) => a + q.w, 0);
     return (P * derivasEst[k][i].prom) / pe.Vpiso;
   });
   const QX = Q("Ex"), QY = Q("Ey");
-  const sumaMasa = { ux: mp.reduce((a, v) => a + (v?.[0] ?? 0), 0), uy: mp.reduce((a, v) => a + (v?.[1] ?? 0), 0), rz: mp.reduce((a, v) => a + (v?.[5] ?? 0), 0) };
   return {
     estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas, unidad: unidadFuerza(elementInputsIn),
-    pisos, cr, modos, chequeoModos, estatico, derivasEst,
+    pisos, cr, modos, chequeoModos, estatico, derivasEst, irregularidades: irr, sitio, limiteDeriva: limiteDeriva(sitio),
     dinamico: { X, Y, escX, escY, minimo },
     torsional: { X: peorX > 1.2, Y: peorY > 1.2, peorX, peorY },
   };

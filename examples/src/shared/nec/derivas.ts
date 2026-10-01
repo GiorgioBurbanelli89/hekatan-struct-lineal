@@ -14,7 +14,7 @@ import type { Piso } from "./pisos";
 
 export type Carga6 = [number, number, number, number, number, number];
 
-export function cargasEnCM(nodes: number[][], pisos: Piso[], F: number[], dir: 0 | 1, ecc: number,
+export function cargasEnCM(nodes: number[][], pisos: Piso[], F: number[], dir: 0 | 1, eccIn: number | number[],
   masas: number[][], diaphragms?: Map<number, number>): Map<number, Carga6> {
   const L = new Map<number, Carga6>();
   const suma = (n: number, c: number, v: number) => {
@@ -22,24 +22,37 @@ export function cargasEnCM(nodes: number[][], pisos: Piso[], F: number[], dir: 0
   };
   pisos.forEach((p, i) => {
     for (const n of p.nudos) suma(n, dir, F[i] * masas[n][0] / p.masa);
+    const ecc = Array.isArray(eccIn) ? eccIn[i] ?? 0 : eccIn;   // por piso: el Ax del borrador amplifica cada nivel
     if (ecc) {
       // dimensión perpendicular al sismo (sismo en X → la del edificio en Y)
       const c = dir === 0 ? 1 : 0, v = p.nudos.map((n) => nodes[n][c]);
       const B = Math.max(...v) - Math.min(...v);
       // sismo en X con el CM corrido +e en Y: Mz = −Fx·e; sismo en Y corrido +e en X: Mz = +Fy·e
       const Mz = (dir === 0 ? -1 : 1) * F[i] * ecc * B;
-      const maestro = p.nudos.find((n) => diaphragms?.has(n)) ?? p.nudos[0];
-      suma(maestro, 5, Mz);
+      const maestro = p.nudos.find((n) => diaphragms?.has(n));
+      if (maestro !== undefined) suma(maestro, 5, Mz);
+      else {
+        // SIN diafragma (losa de cáscara, 1-oct-2026): un momento Rz en UN nudo solo hace girar ese nudo y la planta
+        // casi no se entera (la torsión accidental salía subestimada). Va como PAR de fuerzas repartido por la masa:
+        // F_i = Mz·m_i·(−y_i, x_i)/J respecto al CM, J = Σ m_i·r_i² (misma resultante nula y mismo momento Mz).
+        const J = p.nudos.reduce((a, n) => a + masas[n][0] * ((nodes[n][0] - p.cm[0]) ** 2 + (nodes[n][1] - p.cm[1]) ** 2), 0);
+        if (J > 0) for (const n of p.nudos) {
+          const w = (Mz * masas[n][0]) / J;
+          suma(n, 0, -w * (nodes[n][1] - p.cm[1])); suma(n, 1, w * (nodes[n][0] - p.cm[0]));
+        }
+      }
     }
   });
   return L;
 }
 
 export type DerivaPiso = { k: number; h: number; max: number; min: number; prom: number; relacion: number;
-  inelastica: number; torsional: boolean; nudoMax: number };
+  inelastica: number; torsional: boolean; nudoMax: number; relDesp: number };
 
-/** Derivas de los ejes de columna (nudos del piso con otro en la misma planta abajo, o la base). */
-export function derivas(nodes: number[][], pisos: Piso[], U: Map<number, number[]>, dir: 0 | 1, R: number,
+/** Derivas de los ejes de columna (nudos del piso con otro en la misma planta abajo, o la base).
+ *  amp = factor de la deriva inelástica: NEC-15 0.75·R (§6.3.9), borrador Cd/Ie (ec. 6.8). relDesp = δmax/δprom de los
+ *  DESPLAZAMIENTOS del nivel (para el Ax del borrador, ec. 6.7). */
+export function derivas(nodes: number[][], pisos: Piso[], U: Map<number, number[]>, dir: 0 | 1, amp: number,
   soloNudos?: (n: number) => boolean): DerivaPiso[] {
   const clave = (p: number[]) => `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
   const zs = [0, ...pisos.map((p) => p.z)];
@@ -50,14 +63,16 @@ export function derivas(nodes: number[][], pisos: Piso[], U: Map<number, number[
   });
   return pisos.map((p, i) => {
     const h = zs[i + 1] - zs[i], arriba = porNivel[i + 1], abajo = porNivel[i];
-    let max = -Infinity, min = Infinity, nudoMax = -1;
+    let max = -Infinity, min = Infinity, nudoMax = -1, umax = -Infinity, umin = Infinity;
     arriba.forEach((n, c) => {
       const b = abajo.get(c); if (b === undefined) return;
       const d = Math.abs(((U.get(n)?.[dir] ?? 0) - (U.get(b)?.[dir] ?? 0)) / h);
       if (d > max) { max = d; nudoMax = n; } if (d < min) min = d;
+      const u = Math.abs(U.get(n)?.[dir] ?? 0); if (u > umax) umax = u; if (u < umin) umin = u;
     });
     const prom = (max + min) / 2;
-    return { k: p.k, h, max, min, prom, relacion: max / prom, inelastica: 0.75 * R * max, torsional: max > 1.2 * prom, nudoMax };
+    return { k: p.k, h, max, min, prom, relacion: max / prom, inelastica: amp * max, torsional: max > 1.2 * prom, nudoMax,
+      relDesp: umax / ((umax + umin) / 2) };
   });
 }
 

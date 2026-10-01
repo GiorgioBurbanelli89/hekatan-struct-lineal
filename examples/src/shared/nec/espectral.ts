@@ -36,7 +36,7 @@ export type Espectral = {
  * @param Sa      espectro elástico en g;  red = I/(R·φP·φE)
  */
 export function espectralPorPiso(nodes: number[][], pisos: Piso[], out: any, masas: number[][], Sa: (T: number) => number,
-  red: number, dir: 0 | 1, Rinel: number, esDia?: (n: number) => boolean, zeta = 0.05, conNudos = false): Espectral {
+  red: number, dir: 0 | 1, amp: number, esDia?: (n: number) => boolean, zeta = 0.05, conNudos = false): Espectral {
   const f: number[] = out.frequencies ?? [];
   const T = f.map((v) => (v > 0 ? 1 / v : 0));
   const zs = [0, ...pisos.map((p) => p.z)];
@@ -68,7 +68,7 @@ export function espectralPorPiso(nodes: number[][], pisos: Piso[], out: any, mas
   }), T, zeta));
   const pz = pisos.map((p, i) => {
     const deriva = Math.max(...Dp[i].map((r) => cqc(r, T, zeta)));
-    return { k: p.k, V: cqc(Vp[i], T, zeta), deriva, derivaInel: 0.75 * Rinel * deriva };
+    return { k: p.k, V: cqc(Vp[i], T, zeta), deriva, derivaInel: amp * deriva };
   });
   return { T, Vmodo, V, pisos: pz, u };
 }

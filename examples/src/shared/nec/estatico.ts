@@ -18,7 +18,13 @@ export type DatosSitio = {
   r: number;        // NEC-15: 1 (1.5 suelo E) · borrador: 1.2 Costa, 1.0 Sierra/Oriente
   I: number; R: number; phiP?: number; phiE?: number;
   Ct: number; alfa: number;
+  Cd?: number;          // borrador, Tabla 4.4 (pórtico especial H.A. 5.5; dual con muros especiales 5.5; muros especiales 5)
+  limDeriva?: number;   // borrador, Tabla 4.3 (cat. I-II: 0.015 paredes rígidas, 0.018 livianas); NEC-15 0.02 (H.A.)
 };
+
+/** Factor de la deriva inelástica: NEC-15 ΔM = 0.75·R·ΔE (§6.3.9); borrador δx = Cd·δxe/Ie (ec. 6.8). */
+export const ampDeriva = (d: DatosSitio) => (d.norma === "NEC-15" ? 0.75 * d.R : (d.Cd ?? 5.5) / d.I);
+export const limiteDeriva = (d: DatosSitio) => (d.norma === "NEC-15" ? 0.02 : d.limDeriva ?? 0.015);
 
 export function espectro(d: DatosSitio) {
   if (d.norma === "NEC-15") {

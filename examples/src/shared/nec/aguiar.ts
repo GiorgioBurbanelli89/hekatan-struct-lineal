@@ -82,7 +82,7 @@ function inversa(M: number[][]): number[][] {
 
 /** autovalores de una simétrica por Jacobi cíclico (n ≤ ~150: aquí 3 por piso) */
 function jacobi(S: number[][]): { val: number[]; vec: number[][] } {
-  const n = S.length, A = S.map((f) => [...f]), V = A.map((_, i) => A.map((__, j) => (i === j ? 1 : 0)));
+  const n = S.length, A = S.map((f) => [...f]), V: number[][] = A.map((_, i) => A.map((__, j) => (i === j ? 1 : 0)));
   for (let barrido = 0; barrido < 100; barrido++) {
     let off = 0; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) off += A[i][j] ** 2;
     let dia = 0; for (let i = 0; i < n; i++) dia += A[i][i] ** 2;

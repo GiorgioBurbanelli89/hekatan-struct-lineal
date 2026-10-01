@@ -10,12 +10,21 @@
 import type { State } from "vanjs-core";
 import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
+import { NOMBRES, type ClaveIrr } from "./irregularidades";
 import { jointMass } from "hekatan-fem";
 import { PORTOVIEJO_D, type Norma } from "./estatico";
 
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
 let _sitio: any = null;
+
+/** una línea: qué irregularidades hay y qué hacen (NEC-15 φP·φE; borrador Ax) */
+function lineaIrr(r: ResultadoNEC): string {
+  const I = r.irregularidades, si = I.lista.filter((q) => q.valor).map((q) => q.clave + (q.manual ? "*" : ""));
+  const efecto = r.sitio.norma === "NEC-15" ? `φP ${I.phiP.toFixed(2)} · φE ${I.phiE.toFixed(2)}`
+    : I.Ax ? `Ax máx X ${Math.max(...I.Ax.X).toFixed(2)} · Y ${Math.max(...I.Ax.Y).toFixed(2)}` : "Ax = 1";
+  return `Irregularidades: ${si.length ? si.join(" ") : "ninguna"} → ${efecto}`;
+}
 
 export function montarNEC(folder: any, estado: ModeloNEC) {
   const f = folder.addFolder({ title: "🌎 Sismo NEC (estático + espectral)", expanded: false });
@@ -26,7 +35,8 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   const p = _sitio ?? {
     norma: 0,                      // 0 NEC-15, 1 borrador 2023
     Z: d15.Z, Fa: d15.Fa, Fd: d15.Fd, Fs: d15.Fs, eta: d15.eta!, r: d15.r,
-    I: 1.0, R: 8, sistema: 0, irregular: 1, nModos: 12, agrietadas: 0,
+    I: 1.0, R: 8, sistema: 0, irregular: -1, nModos: 12, agrietadas: 0, Cd: 5.5, limDeriva: 0.015,
+    P1: -1, P2: -1, P3: -1, P4: -1, P5: -1, E1: -1, E2: -1, E3: -1, E4: -1, E5: -1,
     info: "—",
   };
   _sitio = p;
@@ -43,8 +53,15 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   fs.addBinding(p, "r", { label: "r", min: 1, max: 1.5, step: 0.1 });
   f.addBinding(p, "I", { label: "I importancia", options: { "1.0 otras": 1.0, "1.3 ocupación especial": 1.3, "1.5 esenciales": 1.5 } });
   f.addBinding(p, "R", { label: "R", min: 1, max: 8, step: 0.5 });
-  f.addBinding(p, "sistema", { label: "Ta (Ct, α)", options: { "Pórtico H.A. sin muros": 0, "Pórtico H.A. con muros": 1 } });
-  f.addBinding(p, "irregular", { label: "Irregular (85 %)", options: { "sí": 1, "no (80 %)": 0 } });
+  f.addBinding(p, "sistema", { label: "Ta (Ct, α)", options: { "Pórtico H.A. sin muros": 0, "Pórtico H.A. con muros (dual)": 1 } });
+  f.addBinding(p, "irregular", { label: "Irregular (85 %)", options: { "auto (por las irregularidades)": -1, "sí": 1, "no (80 %)": 0 } });
+  const fb = f.addFolder({ title: "Borrador 2023: Cd y deriva límite", expanded: false });
+  fb.addBinding(p, "Cd", { label: "Cd (Tabla 4.4)", min: 1, max: 8, step: 0.25 });
+  fb.addBinding(p, "limDeriva", { label: "Deriva límite (Tabla 4.3)", options: { "0.015 paredes rígidas (cat. I-II)": 0.015, "0.018 paredes livianas (cat. I-II)": 0.018, "0.012 paredes rígidas (cat. III)": 0.012, "0.010 (cat. IV)": 0.010 } });
+  const fi = f.addFolder({ title: "Irregularidades (automático · corregir)", expanded: false });
+  const OPC = { "auto": -1, "sí": 1, "no": 0 };
+  for (const k of ["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[])
+    fi.addBinding(p as any, k, { label: `${k[0] === "P" ? "Planta" : "Elevación"} ${k.slice(1)} · ${NOMBRES[k]}`, options: OPC });
   f.addBinding(p, "nModos", { label: "N° de modos", min: 3, max: 60, step: 1 });
   f.addBinding(p, "agrietadas", { label: "Inercias agrietadas §6.1.6", options: { "no (brutas)": 0, "sí: vigas 0.5 · col. 0.8 · muros 0.6": 1 } });
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
@@ -73,9 +90,9 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
   function sitio() {
     const norma: Norma = p.norma ? "borrador" : "NEC-15";
     // Ct y α: NEC-15 §6.3.3 (0.055/0.9 sin muros, 0.055/0.75 con muros); borrador Tabla 6.2 (0.0466/0.90 pórtico H.A.)
-    if (norma === "borrador" && p.sistema) throw new Error("borrador, pórtico con muros: el Ct/x de su Tabla 6.2 aún no está extraído del PDF");
-    const [Ct, alfa] = norma === "NEC-15" ? (p.sistema ? [0.055, 0.75] : [0.055, 0.9]) : [0.0466, 0.9];
-    return { norma, Z: p.Z, Fa: p.Fa, Fd: p.Fd, Fs: p.Fs, eta: p.eta, r: p.r, I: p.I, R: p.R, phiP: 1, phiE: 1, Ct, alfa };
+    // borrador Tabla 6.2: 0.0466/0.90 pórtico de hormigón; 0.0488/0.75 «todos los otros sistemas» (dual, muros)
+    const [Ct, alfa] = norma === "NEC-15" ? (p.sistema ? [0.055, 0.75] : [0.055, 0.9]) : (p.sistema ? [0.0488, 0.75] : [0.0466, 0.9]);
+    return { norma, Z: p.Z, Fa: p.Fa, Fd: p.Fd, Fs: p.Fs, eta: p.eta, r: p.r, I: p.I, R: p.R, phiP: 1, phiE: 1, Ct, alfa, Cd: p.Cd, limDeriva: p.limDeriva };
   }
   function correr() {
     const nodes = estado.nodes.val, elements = estado.elements.val;
@@ -83,13 +100,15 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     const t0 = performance.now();
     try {
       const r = calcularNEC(nodes, elements, estado.nodeInputs.val, estado.elementInputs.val,
-        { sitio: sitio() as any, irregular: !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas });
+        { sitio: sitio() as any, irregular: p.irregular === -1 ? null : !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas,
+          dual: !!p.sistema, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
       p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} ${r.unidad} (${(e.Cs * 100).toFixed(2)} % W)
 Din: Vx ${dx.X.V.toFixed(1)} (${(dx.escX.relacion * 100).toFixed(1)} %) · Vy ${dx.Y.V.toFixed(1)} (${(dx.escY.relacion * 100).toFixed(1)} %) · mín ${dx.minimo * 100} %
 Escala: X ×${dx.escX.factor.toFixed(3)} · Y ×${dx.escY.factor.toFixed(3)}
 Torsión máx/prom: X ${r.torsional.peorX.toFixed(3)} · Y ${r.torsional.peorY.toFixed(3)} ${r.torsional.X || r.torsional.Y ? "✗ IRREGULAR (> 1.2)" : "✓ ≤ 1.2"}
+${lineaIrr(r)}
 Masa ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % ${r.sumaMasa.ux >= 0.9 && r.sumaMasa.uy >= 0.9 ? "✓ ≥ 90 %" : "✗ < 90 %"} · Q máx ${r.estabilidad.max.toFixed(3)} ${r.estabilidad.max <= 0.1 ? "✓ ≤ 0.10" : "✗ P-Δ"}
 ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.now() - t0) / 1000).toFixed(1)} s)`;
       mostrar(r);
@@ -150,8 +169,11 @@ function ventana() {
  <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} ${r.unidad} · <b>V ${e.V.toFixed(1)} ${r.unidad}</b> (Cs ${e.Cs.toFixed(4)})<br>
  <b>Dinámico CQC</b>: Vx ${D.X.V.toFixed(1)} ${r.unidad} = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} ${r.unidad} = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
  → escala X ×${D.escX.factor.toFixed(3)}, Y ×${D.escY.factor.toFixed(3)}<br>
- <b>Derivas</b> ΔM = 0.75·R·ΔE ≤ 2 % (el peor de sin/±5 % de excentricidad) · <b>Torsión</b> máx/prom > 1.2 = irregular (rojo)<br>
+ <b>Derivas</b> inelásticas ≤ ${(r.limiteDeriva * 100).toFixed(1)} % (el peor de sin/±5 % de excentricidad) · <b>Torsión</b> máx/prom > 1.2 = irregular (rojo)<br>
  <b>Modos</b>: ${r.chequeoModos.join(" · ")}<br>
+ <b>Irregularidades</b> (${r.sitio.norma === "NEC-15" ? "NEC-15 Tablas 13-14" : "borrador Tablas 5.1-5.2"}; * = corregida a mano): ${r.irregularidades.lista.map((q) => `<span style="color:${q.valor ? "#f87171" : "#94a3b8"}" title="${q.detalle}">${q.clave} ${q.nombre}${q.valor ? " ✗" : " ✓"}${q.manual ? "*" : ""}</span>`).join(" · ")}
+ → ${lineaIrr(r).split("→ ")[1]}<br>
+ <b>Deriva límite</b> ${(r.limiteDeriva * 100).toFixed(1)} % (${r.sitio.norma === "NEC-15" ? "ΔM = 0.75·R·ΔE" : "δ = Cd·δe/Ie, Cd " + (r.sitio.Cd ?? 5.5)})<br>
  <b>Masa participativa</b> (${r.modos.length} modos): ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % (≥ 90 %) · <b>Estabilidad</b> Q = P·Δ/(V·h) máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · <b>Inercias</b> ${r.agrietadas ? "agrietadas §6.1.6 (vigas 0.5, columnas 0.8, muros 0.6)" : "brutas"}
 </div>
 <div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${cab}</tr></thead><tbody>${filas}</tbody></table></div>

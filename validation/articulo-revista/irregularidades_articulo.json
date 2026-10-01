@@ -1,0 +1,116 @@
+{
+ "1 muro · NEC-15": {
+  "V": 34.65875586499997,
+  "minimo": 0.85,
+  "escX": 1,
+  "escY": 1.428239292906655,
+  "phiP": 0.9,
+  "phiE": 1,
+  "torsion": [
+   1.0623790578782817,
+   1.9003935455160055
+  ],
+  "derX": 0.008451864350611364,
+  "derY": 0.00767280249841794,
+  "lim": 0.02,
+  "irr": [
+   "P1✗ Δmax/Δprom = 1.900 > 1.2 (con ±5 %)",
+   "P2✓ entrante: 0 % de la planta (límite 15 % en las dos direcciones)",
+   "P3✓ aberturas 0 % del piso (límite 50 %) · cambio de área entre pisos 0 % (límite 50 %)",
+   "P4✓ 0 barra(s) fuera de 0°/90° (±5°) respecto al eje principal (0.0°)",
+   "E1✓ X: K ≥ 70 % del piso de arriba y ≥ 80 % de los 3 de arriba · Y: K ≥ 70 % del piso de arriba y ≥ 80 % de los 3 de arriba",
+   "E2✓ ningún piso > 1.5× un adyacente",
+   "E3✓ ninguna dimensión > 1.3× la del piso adyacente"
+  ]
+ },
+ "1 muro · borrador": {
+  "V": 47.532008043428526,
+  "minimo": 1,
+  "escX": 1.1796229076314075,
+  "escY": 1.94076885798982,
+  "phiP": 1,
+  "phiE": 1,
+  "Ax": {
+   "X": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "Y": [
+    2.5079830748881213,
+    2.4725008123765067,
+    2.422754826520722,
+    2.363479154771204
+   ]
+  },
+  "torsion": [
+   1.0623790578782828,
+   1.9199619289156256
+  ],
+  "derX": 0.010625200897911432,
+  "derY": 0.01094971579044859,
+  "lim": 0.015,
+  "irr": [
+   "P1✗ Δmax/Δprom = 1.900 > 1.2 (con ±5 %)",
+   "P2✓ entrante: 0 % de la planta (límite 20 % en las dos direcciones)",
+   "P3✓ aberturas 0 % del piso (límite 25 %) · cambio de área entre pisos 0 % (límite 50 %)",
+   "P4✓ 0 barra(s) fuera de 0°/90° (±5°) respecto al eje principal (0.0°)",
+   "P5✓ 0 elemento(s) vertical(es) sin continuidad hacia abajo",
+   "E1✓ X: K ≥ 70 % del piso de arriba y ≥ 80 % de los 3 de arriba · Y: K ≥ 70 % del piso de arriba y ≥ 80 % de los 3 de arriba",
+   "E3✓ ninguna dimensión > 1.3× la del piso adyacente",
+   "E4✓ 0 elemento(s) vertical(es) con desfase",
+   "E5✓ resistencia del piso: no se calcula en el análisis lineal; indíquela a mano"
+  ]
+ },
+ "molinete · NEC-15": {
+  "V": 39.70769646599996,
+  "minimo": 0.8,
+  "escX": 1.0333071703448022,
+  "escY": 1.0333071728880687,
+  "phiP": 1,
+  "phiE": 1,
+  "torsion": [
+   1.0681376422186781,
+   1.0681376422187951
+  ],
+  "derX": 0.000574436792068173,
+  "derY": 0.0005744367920683291,
+  "lim": 0.02,
+  "irr": [
+   "P1✓ Δmax/Δprom = 1.068 ≤ 1.2 (con ±5 %)",
+   "P2✓ entrante: 0 % de la planta (límite 15 % en las dos direcciones)",
+   "P3✓ aberturas 0 % del piso (límite 50 %) · cambio de área entre pisos 0 % (límite 50 %)",
+   "P4✓ 0 barra(s) fuera de 0°/90° (±5°) respecto al eje principal (0.0°)",
+   "E1✓ X: ninguna deriva > 1.30·la del piso de arriba · Y: ninguna deriva > 1.30·la del piso de arriba",
+   "E2✓ ningún piso > 1.5× un adyacente",
+   "E3✓ ninguna dimensión > 1.3× la del piso adyacente"
+  ]
+ },
+ "molinete · borrador": {
+  "V": 60.506966043428505,
+  "minimo": 1,
+  "escX": 1.8351807582756987,
+  "escY": 1.8351807605427992,
+  "phiP": 1,
+  "phiE": 1,
+  "torsion": [
+   1.0681376422186772,
+   1.068137642218798
+  ],
+  "derX": 0.0008023879000317356,
+  "derY": 0.000802387900031951,
+  "lim": 0.015,
+  "irr": [
+   "P1✓ Δmax/Δprom = 1.068 ≤ 1.2 (con ±5 %)",
+   "P2✓ entrante: 0 % de la planta (límite 20 % en las dos direcciones)",
+   "P3✓ aberturas 0 % del piso (límite 25 %) · cambio de área entre pisos 0 % (límite 50 %)",
+   "P4✓ 0 barra(s) fuera de 0°/90° (±5°) respecto al eje principal (0.0°)",
+   "P5✓ 0 elemento(s) vertical(es) sin continuidad hacia abajo",
+   "E1✓ X: ninguna deriva > 1.30·la del piso de arriba · Y: ninguna deriva > 1.30·la del piso de arriba",
+   "E3✓ ninguna dimensión > 1.3× la del piso adyacente",
+   "E4✓ 0 elemento(s) vertical(es) con desfase",
+   "E5✓ resistencia del piso: no se calcula en el análisis lineal; indíquela a mano"
+  ]
+ }
+}
