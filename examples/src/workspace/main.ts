@@ -16,6 +16,7 @@
  */
 import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
 import { montarNEC } from "../shared/nec/panelNEC";
+import { montarCorte } from "../shared/panelCorte";
 import van, { State } from "vanjs-core";
 import * as THREE from "three";
 import { Pane } from "tweakpane";
@@ -7294,6 +7295,15 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     } catch (e) { console.warn("[tiempo-historia]", e); }
     // ── 🌎 Sismo NEC (30-sep-2026): estático + espectral NEC-15 / borrador, derivas, CM/CR, torsión ──
     try { (window as any).__hekatanNEC = montarNEC(fModal, states as any); } catch (e) { console.warn("[NEC]", e); }
+  }
+  // ── ✂ Corte de sección (1-oct-2026): el Section Cut de SAP2000/ETABS, en TODOS los ejemplos ──
+  {
+    const W_: any = window as any;
+    if (W_.__hekatanCorteFolder) { try { W_.__hekatanCorteFolder.dispose(); } catch {} W_.__hekatanCorteFolder = null; }
+    try {
+      const corte = montarCorte(W_.__hekatanOutputsFolder ?? pane, states as any);
+      W_.__hekatanCorte = corte; W_.__hekatanCorteFolder = corte.folder;
+    } catch (e) { console.warn("[corte]", e); }
   }
   currentPane = pane;
   // Aplicar visibilidad dinamica de bindings (hiddenIf) en el render inicial.
