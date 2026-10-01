@@ -215,6 +215,7 @@ function ventana() {
  <b>Masa participativa</b> (${r.modos.length} modos): ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % (≥ 90 %) · <b>Estabilidad</b> Q = P·Δ/(V·h) máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · <b>Inercias</b> ${r.agrietadas ? "agrietadas §6.1.6 (vigas 0.5, columnas 0.8, muros 0.6)" : "brutas"}
 </div>
 <div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${cab}</tr></thead><tbody>${filas}</tbody></table></div>
+<div style="margin-top:8px">${graficaDerivas(r)}</div>
 <div style="margin-top:8px">${planta(r, nodes, elements)}</div>`;
     el.style.display = "block";
   }
@@ -395,4 +396,34 @@ function panelJueces() {
   }
   _pj = { mostrar, ocultar };
   return _pj;
+}
+
+
+/** Gráfica de DERIVA INELÁSTICA por piso (1-oct-2026): estático (el peor de sin/±5 %) en trazo lleno y dinámico CQC
+ *  escalado en trazo discontinuo, X azul e Y naranja, con la línea del límite (NEC-15 2 %, borrador la Tabla 4.3). */
+function graficaDerivas(r: ResultadoNEC): string {
+  const n = r.pisos.length, D = r.dinamico;
+  const est = (ks: string[]) => r.pisos.map((_, i) => Math.max(...ks.map((k) => r.derivasEst[k][i].inelastica)));
+  const sx = est(["Ex", "Ex+e", "Ex−e"]), sy = est(["Ey", "Ey+e", "Ey−e"]);
+  const dx = D.X.pisos.map((p) => p.derivaInel * D.escX.factor), dy = D.Y.pisos.map((p) => p.derivaInel * D.escY.factor);
+  const lim = r.limiteDeriva, vmax = Math.max(lim * 1.15, ...sx, ...sy, ...dx, ...dy);
+  const W = 620, H = 60 + 46 * n, m = { l: 50, r: 150, t: 22, b: 30 };
+  const X = (v: number) => m.l + (v / vmax) * (W - m.l - m.r), Y = (i: number) => H - m.b - ((i + 1) / n) * (H - m.t - m.b);
+  const linea = (v: number[], col: string, dash = "") => `<polyline fill="none" stroke="${col}" stroke-width="2.5" ${dash ? `stroke-dasharray="${dash}"` : ""} points="${[`${X(0)},${H - m.b}`, ...v.map((d, i) => `${X(d).toFixed(1)},${Y(i).toFixed(1)}`)].join(" ")}"/>` +
+    v.map((d, i) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(i).toFixed(1)}" r="3.5" fill="${col}"/>`).join("");
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#11151b;border-radius:6px">`;
+  s += `<text x="${m.l}" y="14" fill="#a5b4fc" font-size="12" font-weight="600">Deriva inelástica por piso (%)</text>`;
+  for (let i = 0; i < n; i++) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(i)}" y2="${Y(i)}" stroke="#334155" stroke-width="0.6"/><text x="${m.l - 8}" y="${Y(i) + 4}" fill="#94a3b8" font-size="11" text-anchor="end">P${i + 1}</text>`;
+  for (const t of [0, vmax / 4, vmax / 2, (3 * vmax) / 4, vmax]) s += `<text x="${X(t)}" y="${H - 10}" fill="#94a3b8" font-size="10" text-anchor="middle">${(t * 100).toFixed(2)}</text>`;
+  s += `<line x1="${X(0)}" x2="${X(0)}" y1="${m.t}" y2="${H - m.b}" stroke="#64748b"/><line x1="${X(0)}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="#64748b"/>`;
+  s += `<line x1="${X(lim)}" x2="${X(lim)}" y1="${m.t}" y2="${H - m.b}" stroke="#f87171" stroke-width="2"/><text x="${X(lim) + 4}" y="${m.t + 10}" fill="#f87171" font-size="11">límite ${(lim * 100).toFixed(1)} %</text>`;
+  s += linea(sx, "#60a5fa") + linea(sy, "#fb923c") + linea(dx, "#60a5fa", "5 4") + linea(dy, "#fb923c", "5 4");
+  const lx = W - m.r + 14;
+  s += `<text x="${lx}" y="${m.t + 30}" fill="#60a5fa" font-size="11">— X estático máx ${(Math.max(...sx) * 100).toFixed(2)} %</text>`;
+  s += `<text x="${lx}" y="${m.t + 46}" fill="#fb923c" font-size="11">— Y estático máx ${(Math.max(...sy) * 100).toFixed(2)} %</text>`;
+  s += `<text x="${lx}" y="${m.t + 66}" fill="#94a3b8" font-size="11">- - dinámico CQC escalado</text>`;
+  s += `<text x="${lx}" y="${m.t + 82}" fill="#94a3b8" font-size="10">X ${(Math.max(...dx) * 100).toFixed(2)} % · Y ${(Math.max(...dy) * 100).toFixed(2)} %</text>`;
+  const ok = Math.max(...sx, ...sy, ...dx, ...dy) <= lim;
+  s += `<text x="${lx}" y="${m.t + 106}" fill="${ok ? "#4ade80" : "#f87171"}" font-size="12" font-weight="700">${ok ? "cumple" : "NO cumple"}</text></svg>`;
+  return s;
 }
