@@ -272,6 +272,8 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     const dF = DISP_FACTOR[units.dispUnit] ?? 1000;   // m → unidad UI
     const fF = FORCE_FACTOR[units.forceUnit] ?? 1;    // kN → unidad UI (tonf default)
 
+    // con «info de nudos» apagada el cursor junto a un nudo lee la CARA (si no, no salía nada en las esquinas)
+    if (bestNode >= 0 && !hoverPermitido("node")) bestNode = -1;
     if (bestNode >= 0) {
       const n = nodes[bestNode];
       let info = `Nodo ${bestNode}\n(${n[0].toFixed(3)}, ${n[1].toFixed(3)}, ${n[2].toFixed(3)})`;
@@ -459,6 +461,40 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const modoP = (shellAveraging?.val ?? "todos");
         let kJ = 0, dJ = Infinity;
         el.forEach((nd: number, k: number) => { const pp = projectNode(nd); if (!pp) return; const dd = Math.hypot(pp.x - mx, pp.y - my); if (dd < dJ) { dJ = dd; kJ = k; } });
+        // PUNTO DEL CURSOR dentro de la cara (1-oct-2026, Jorge: «en SAP2000 el valor cambia al mover el cursor dentro de
+        // la cara»). CSI calcula los esfuerzos SOLO en los 4 joints y entre ellos los supone LINEALES (manual de SAP2000,
+        // «Shell Element Internal Forces», figura (c)): v(ξ,η) = Σ Nᵢ(ξ,η)·vᵢ con las funciones bilineales del Q4.
+        // El rayo del cursor se corta con el plano del elemento (geometría dibujada) y (ξ,η) sale por Newton.
+        let Nq: number[] | null = null, xiQ = 0, etaQ = 0;
+        if (el.length === 4) {
+          const Pq = el.map((k: number) => nodePos(k));
+          if (Pq.every(Boolean)) {
+            const P4 = Pq as THREE.Vector3[];
+            const rc = new THREE.Raycaster();
+            rc.setFromCamera(new THREE.Vector2((mx / rect.width) * 2 - 1, -(my / rect.height) * 2 + 1), camera);
+            const nrm = P4[2].clone().sub(P4[0]).cross(P4[3].clone().sub(P4[1])).normalize();
+            const c0 = P4.reduce((a, q) => a.add(q), new THREE.Vector3()).multiplyScalar(0.25);
+            const hitP = rc.ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(nrm, c0), new THREE.Vector3());
+            if (hitP) {
+              const u1 = P4[1].clone().sub(P4[0]).normalize(), u2 = nrm.clone().cross(u1).normalize();
+              const L = P4.map((q) => [q.clone().sub(c0).dot(u1), q.clone().sub(c0).dot(u2)]);
+              const tx = hitP.clone().sub(c0).dot(u1), ty = hitP.clone().sub(c0).dot(u2);
+              let a = 0, b = 0;
+              for (let it = 0; it < 15; it++) {
+                const N = [(1 - a) * (1 - b), (1 + a) * (1 - b), (1 + a) * (1 + b), (1 - a) * (1 + b)].map((v) => v / 4);
+                const da = [-(1 - b), (1 - b), (1 + b), -(1 + b)].map((v) => v / 4), db = [-(1 - a), -(1 + a), (1 + a), (1 - a)].map((v) => v / 4);
+                const fx = N.reduce((s2, v, i) => s2 + v * L[i][0], 0) - tx, fy = N.reduce((s2, v, i) => s2 + v * L[i][1], 0) - ty;
+                const J11 = da.reduce((s2, v, i) => s2 + v * L[i][0], 0), J12 = db.reduce((s2, v, i) => s2 + v * L[i][0], 0);
+                const J21 = da.reduce((s2, v, i) => s2 + v * L[i][1], 0), J22 = db.reduce((s2, v, i) => s2 + v * L[i][1], 0);
+                const det = J11 * J22 - J12 * J21; if (Math.abs(det) < 1e-14) break;
+                const d1 = (J22 * fx - J12 * fy) / det, d2 = (-J21 * fx + J11 * fy) / det; a -= d1; b -= d2;
+                if (Math.abs(d1) + Math.abs(d2) < 1e-10) break;
+              }
+              xiQ = Math.max(-1, Math.min(1, a)); etaQ = Math.max(-1, Math.min(1, b));
+              Nq = [(1 - xiQ) * (1 - etaQ), (1 + xiQ) * (1 - etaQ), (1 + xiQ) * (1 + etaQ), (1 - xiQ) * (1 + etaQ)].map((v) => v / 4);
+            }
+          }
+        }
         const fields: [string, string, number, string][] = [
           ["bendingXX",  "M11", fF, `${units.forceUnit}·m/m`],
           ["bendingYY",  "M22", fF, `${units.forceUnit}·m/m`],
@@ -478,11 +514,16 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           if (m && m instanceof Map) {
             const v = m.get(bestElem);
             if (v == null) continue;
-            const x = typeof v === "number" ? v : Array.isArray(v) ? (v[kJ] ?? v[0]) : null;
+            const x = typeof v === "number" ? v : Array.isArray(v)
+              ? (Nq && v.length === 4 ? Nq.reduce((s2, w, i) => s2 + w * (v[i] ?? 0), 0) : (v[kJ] ?? v[0])) : null;
             if (x != null && Number.isFinite(x)) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
           }
         }
-        if (lines.length) lines.unshift(`en el nudo ${el[kJ]} · ${modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar"}`);
+        const modoTxt = modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar";
+        if (lines.length) lines.unshift(Nq
+          ? `en el punto del cursor (ξ ${xiQ.toFixed(2)}, η ${etaQ.toFixed(2)}) · ${modoTxt}
+(lineal entre los 4 nudos, como SAP2000; nudo más cercano: ${el[kJ]})`
+          : `en el nudo ${el[kJ]} · ${modoTxt}`);
         // EJES LOCALES del elemento, la regla de CSI (Area Local Axes, ángulo 0) — la misma de computeQ4ShellStresses
         // en hekatan-fem/src/analyze.ts: eje 3 = normal; horizontal → eje 1 = +X; si no, eje 1 = Z × n (horizontal).
         // Fernan (30-sep-2026): «estoy acostumbrado a leer en función a los ejes locales del elemento».
@@ -724,7 +765,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           detail: hover ? { type: hover.type, idx: hover.idx, x: e.clientX, y: e.clientY } : null,
         }));
       } else if (hover) {
-        // Mismo objeto pero mover tooltip al cursor
+        // Mismo objeto pero mover tooltip al cursor. En una cáscara el VALOR cambia dentro de la cara (lineal entre
+        // los 4 nudos, como SAP2000): se reescribe el texto en cada movimiento.
+        if (hover.type === "shell" && tooltip.style.display === "block") tooltip.textContent = hover.info;
         const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect()
           ?? ctx.rendererElm.getBoundingClientRect();
         tooltip.style.left = `${e.clientX - parentRect.left}px`;

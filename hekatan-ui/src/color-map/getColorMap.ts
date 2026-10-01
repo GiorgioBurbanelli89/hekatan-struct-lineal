@@ -383,15 +383,27 @@ export function getColorMap(
       for (const k of [a, b, c]) { const p = N[e[k]] ?? [0, 0, 0]; pos.push(p[0], p[1], p[2]); vals.push(v[k] ?? v[0]); }
       faceToElem.push(ei); faceLocal.push(loc);
     };
+    // Q4: la superficie BILINEAL de los 4 valores, como la dibuja SAP2000 (lineal entre los joints a lo largo de
+    // cada dirección). Con 2 triángulos el color era lineal por triángulo y la diagonal se notaba: se subdivide.
+    const SUB = 6;
     elements.val.forEach((e, ei) => {
       const v = esq.get(ei); if (!v || (e.length !== 3 && e.length !== 4)) return;
-      tri(e, v, 0, 1, 2, ei, 0);
-      if (e.length === 4) tri(e, v, 0, 2, 3, ei, 1);
+      if (e.length === 3) { tri(e, v, 0, 1, 2, ei, 0); return; }
+      const X = e.map((k) => N[k] ?? [0, 0, 0]);
+      const at = (a: number, b: number) => {
+        const w = [(1 - a) * (1 - b), (1 + a) * (1 - b), (1 + a) * (1 + b), (1 - a) * (1 + b)].map((q) => q / 4);
+        return { p: [0, 1, 2].map((c) => w.reduce((s, q, i) => s + q * X[i][c], 0)), v: w.reduce((s, q, i) => s + q * (v[i] ?? v[0]), 0) };
+      };
+      for (let i = 0; i < SUB; i++) for (let j = 0; j < SUB; j++) {
+        const a0 = -1 + 2 * i / SUB, a1 = -1 + 2 * (i + 1) / SUB, b0 = -1 + 2 * j / SUB, b1 = -1 + 2 * (j + 1) / SUB;
+        const q = [at(a0, b0), at(a1, b0), at(a1, b1), at(a0, b1)];
+        for (const [x, y, z] of [[0, 1, 2], [0, 2, 3]]) { for (const k of [x, y, z]) { pos.push(...q[k].p); vals.push(q[k].v); } faceToElem.push(ei); faceLocal.push(-1); }
+      }
     });
     colorMap.geometry.setIndex(null);
     colorMap.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
     colorMap.userData.faceToElem = faceToElem;
-    colorMap.userData.faceLocal = faceLocal;
+    colorMap.userData.faceLocal = undefined;     // subdividido: los triángulos ya no son [0,1,2]/[0,2,3] del Q4
     const ok = vals.filter((x) => Number.isFinite(x));
     const rng = fixedColorMapRange.val;
     let [vMin, vMax] = rng ? [Math.min(rng[0], rng[1]), Math.max(rng[0], rng[1])] : robustRange(ok);

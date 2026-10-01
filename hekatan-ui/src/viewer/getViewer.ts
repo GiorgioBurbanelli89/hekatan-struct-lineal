@@ -1402,7 +1402,7 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       membranePrincipalMax: ["membraneXX", "membraneYY", "membraneXY", 1], membranePrincipalMin: ["membraneXX", "membraneYY", "membraneXY", -1],
       bendingPrincipalMax: ["bendingXX", "bendingYY", "bendingXY", 1], bendingPrincipalMin: ["bendingXX", "bendingYY", "bendingXY", -1] };
     let esquinas: Map<number, number[]> | null = null;
-    if (modoProm !== "todos" && !useSolid && selloOk && (BASE[field] || MOHR[field] || field === "transverseShearMax")) {
+    if (!useSolid && selloOk && (BASE[field] || MOHR[field] || field === "transverseShearMax")) {
       const E = mesh.elements.val, N = mesh.nodes.val;
       // grupo de cada elemento = su plano (normal redondeada + distancia al origen)
       const grupo = (e: number[]) => {
@@ -1417,6 +1417,11 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       const crudo = (nombre: string): Map<number, number[]> => {
         // los valores SIN promediar: los joints (M y F, = CSI a 0.0000 %); el cortante, uno por elemento
         const out = new Map<number, number[]>();
+        if (modoProm === "todos") {   // la media en el nudo (At All Joints): los valores por esquina que ya trae analyze
+          const mt: Map<number, number[]> | undefined = (ao as any)?.[nombre];
+          mt?.forEach((vals, ei) => { const e = E[ei]; if (e) out.set(ei, e.map((_, i) => vals[i] ?? vals[0])); });
+          return out;
+        }
         let m: Map<number, number[]> | undefined = (ao as any)?.[nombre + "joint"];
         if (!m) { const c: Map<number, number> | undefined = (ao as any)?.[nombre + "centro"];
           if (c) { m = new Map(); c.forEach((v, ei) => m!.set(ei, (E[ei] ?? []).map(() => v))); } }
