@@ -293,7 +293,8 @@ function ventanaVivo() {
   if (_vv) return _vv;
   const el = document.createElement("div");
   el.id = "hk-cmcr-vivo";
-  Object.assign(el.style, { position: "fixed", right: "16px", bottom: "120px", width: "min(470px, calc(100vw - 32px))", background: "rgba(20, 24, 30, 0.95)",
+  // abajo a la IZQUIERDA, sobre la vista 3D: a la derecha tapaba el panel de muros y el clic caía en la ventana
+  Object.assign(el.style, { position: "fixed", left: "330px", bottom: "90px", width: "min(470px, calc(100vw - 32px))", background: "rgba(20, 24, 30, 0.95)",
     border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)", padding: "6px 8px",
     fontFamily: "ui-monospace, Consolas, monospace", fontSize: "11px", color: "#e2e8f0", zIndex: "102", display: "none" } as CSSStyleDeclaration);
   const cab = document.createElement("div"); cab.style.cssText = "display:flex;justify-content:space-between;align-items:center;cursor:move;margin-bottom:4px";
