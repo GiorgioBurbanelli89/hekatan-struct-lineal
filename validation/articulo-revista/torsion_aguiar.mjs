@@ -78,6 +78,7 @@ for (const [nom, walls] of Object.entries(MUROS)) {
     return { ns, m, M, rel, J, cm };
   });
   const F = Array.from({ length: 3 * n }, () => new Array(3 * n).fill(0));
+  const casosSap = [];
   for (let j = 0; j < n; j++) for (let g = 0; g < 3; g++) {
     const fl = floor[j], loads = new Map();
     fl.ns.forEach((i, k) => {
@@ -86,6 +87,7 @@ for (const [nom, walls] of Object.entries(MUROS)) {
       else { c[0] = -w * fl.rel[k][1] / fl.J; c[1] = w * fl.rel[k][0] / fl.J; }   // Mz = 1 como par repartido por masa
       loads.set(i, c);
     });
+    casosSap.push([...loads].map(([i, c]) => [i, c[0], c[1]]));
     const U = deform(nodes, elements, { supports: ni.supports, loads }, ei).deformations;
     floor.forEach((fl2, i2) => {
       let ux = 0, uy = 0, th = 0;
@@ -97,6 +99,11 @@ for (const [nom, walls] of Object.entries(MUROS)) {
       F[3 * i2][3 * j + g] = ux; F[3 * i2 + 1][3 * j + g] = uy; F[3 * i2 + 2][3 * j + g] = th;
     });
   }
+  // el mismo modelo y las mismas 3n cargas para SAP2000 (juez): sap_aguiar.py
+  writeFileSync(join(AQUI, `sap_aguiar_${nom}.json`), JSON.stringify({
+    nodes, elements, kinds, supports: [...ni.supports.keys()], E: 2534564, nu: 0.20, rho: 2.40277,
+    bCol: p.bCol, bBeam: p.bBeam, hBeam: p.hBeam, tSlab: p.tSlab, tWall: p.tWall,
+    casos: casosSap, pisos: floor.map((f) => ({ ns: f.ns, m: f.m, M: f.M, rel: f.rel, J: f.J })), F_hekatan: F }));
   const derMax = (ks) => Math.max(...ks.flatMap((k) => r.derivasEst[k].map((x) => x.inelastica)));
   OUT[nom] = {
     muros: walls ?? "dynWallDefaults nWalls=1", nudos: nodes.length, elementos: elements.length,

@@ -8,7 +8,9 @@
  * Fa, Fd y Fs se escriben a mano (Tablas 3-5 de la NEC-15, 3.3-3.5 del borrador): por defecto, Portoviejo suelo D.
  */
 import type { State } from "vanjs-core";
-import { calcularNEC, type ResultadoNEC } from "./calculo";
+import { calcularNEC, agrietar, type ResultadoNEC } from "./calculo";
+import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
+import { jointMass } from "hekatan-fem";
 import { PORTOVIEJO_D, type Norma } from "./estatico";
 
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
@@ -42,6 +44,24 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
   f.addButton({ title: "📋 Tabla por piso y planta CM/CR" }).on("click", () => { if (ultimo) mostrar(ultimo); });
+  f.addButton({ title: "🧮 Matriz de piso (Aguiar) u_x · u_y · θz" }).on("click", () => aguiar());
+
+  function aguiar() {
+    if (!ultimo) correr();
+    if (!ultimo) return;
+    const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val;
+    const ei = p.agrietadas ? agrietar(nodes, elements, estado.elementInputs.val) : estado.elementInputs.val;
+    const t0 = performance.now();
+    try {
+      const masas = jointMass(nodes as any, elements as any, ei, { incluyeElementos: 1 });
+      const a = matrizDePiso(nodes, elements, ni, ei, ultimo.pisos, masas);
+      p.info = `Aguiar: K_E ${a.KE.length}×${a.KE.length} por condensación (${((performance.now() - t0) / 1000).toFixed(1)} s)
+T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal ${ultimo.modos.slice(0, 3).map((m) => m.T.toFixed(4)).join(" · ")} s
+ρ máx: X ${Math.max(...a.pisos.map((q) => q.rhoX)).toFixed(3)} · Y ${Math.max(...a.pisos.map((q) => q.rhoY)).toFixed(3)} (0 = sin torsión)`;
+      ventana().mostrarAguiar(a, ultimo);
+    } catch (err: any) { p.info = "✗ Aguiar: " + (err?.message ?? err); console.error("[Aguiar]", err); }
+    f.refresh();
+  }
 
   let ultimo: ResultadoNEC | null = null;
   function sitio() {
@@ -71,11 +91,11 @@ ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.no
     f.refresh();
   }
   function mostrar(r: ResultadoNEC) { ventana().mostrar(r, estado.nodes.val, estado.elements.val, p.norma ? "borrador 2023" : "NEC-15"); }
-  return { correr, resultado: () => ultimo, params: p };
+  return { correr, aguiar, resultado: () => ultimo, params: p };
 }
 
 // ── ventana flotante ──────────────────────────────────────────────────────────────────────────────
-let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void } | null = null;
+let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void; mostrarAguiar: (a: ResultadoAguiar, r: ResultadoNEC) => void } | null = null;
 const COL = ["#60a5fa", "#34d399", "#f472b6", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9", "#4ade80"];
 
 function ventana() {
@@ -132,7 +152,39 @@ function ventana() {
 <div style="margin-top:8px">${planta(r, nodes, elements)}</div>`;
     el.style.display = "block";
   }
-  _v = { el, mostrar };
+  function mostrarAguiar(a: ResultadoAguiar, r: ResultadoNEC) {
+    tit.textContent = `Matriz de rigidez en coordenadas de piso (Aguiar) — ${r.pisos.length} pisos`;
+    const n = r.pisos.length, g = ["u_x", "u_y", "θz"];
+    const num = (v: number) => (Math.abs(v) < 1e-9 * Math.max(1, Math.abs(a.KE[0][0])) ? "0" : v.toFixed(Math.abs(v) >= 100 ? 0 : 3));
+    const th = (s: string) => `<th style="padding:2px 6px;text-align:right;color:#a5b4fc;font-weight:600">${s}</th>`;
+    const td = (s: string, c = "") => `<td style="padding:2px 6px;text-align:right;${c}">${s}</td>`;
+    const etq = Array.from({ length: 3 * n }, (_, i) => `${g[i % 3]} P${Math.floor(i / 3) + 1}`);
+    const acop = (i: number, j: number) => (i % 3 === 2) !== (j % 3 === 2) && Math.floor(i / 3) === Math.floor(j / 3);
+    let ke = `<tr>${th("")}${etq.map(th).join("")}</tr>`;
+    a.KE.forEach((fila, i) => {
+      ke += `<tr>${th(etq[i])}${fila.map((v, j) => td(num(v), Math.floor(i / 3) === Math.floor(j / 3) ? (acop(i, j) ? "color:#f87171;font-weight:600" : "background:#1e293b") : "color:#94a3b8")).join("")}</tr>`;
+    });
+    let pp = "";
+    for (const q of [...a.pisos].reverse())
+      pp += `<tr>${td("P" + q.k)}${td(num(q.Kxx))}${td(num(q.Kyy))}${td(num(q.Ktt))}${td(num(q.Kxt), "color:#f87171")}${td(num(q.Kyt), "color:#f87171")}` +
+        `${td(q.ex.toFixed(3))}${td(q.ey.toFixed(3))}${td(q.rhoX.toFixed(3), q.rhoX > 0.3 ? "color:#f87171;font-weight:600" : "")}${td(q.rhoY.toFixed(3), q.rhoY > 0.3 ? "color:#f87171;font-weight:600" : "")}</tr>`;
+    const modos = a.T.slice(0, Math.min(6, a.T.length)).map((t, k) =>
+      `${td(String(k + 1))}${td(t.toFixed(4))}${td(r.modos[k] ? r.modos[k].T.toFixed(4) : "—")}${td((a.part[k][0] * 100).toFixed(0) + " %")}${td((a.part[k][1] * 100).toFixed(0) + " %")}${td((a.part[k][2] * 100).toFixed(0) + " %")}`).map((s) => `<tr>${s}</tr>`).join("");
+    cuerpo.innerHTML = `
+<div style="line-height:1.5;margin-bottom:6px">
+ 3 GDL por piso en el CM: <b>u_x, u_y, θz</b>. Con pórticos planos K_E = Σ Aᵀ·K_L·A (A = [cos α  sen α  r]); con losas y muros de
+ cáscara, por <b>condensación</b>: Fx = 1, Fy = 1, Mz = 1 en el CM de cada piso → flexibilidad F → <b>K_E = F⁻¹</b>.<br>
+ <b>Torsión</b>: K_xθ, K_yθ (rojo) acoplan traslación y giro · e_x = −K_xθ/K_xx, e_y = K_yθ/K_yy (CM → CR, m) ·
+ ρ = |K_yθ|/√(K_yy·K_θθ): 0 sin acoplamiento, cerca de 1 torsión fuerte.
+</div>
+<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;margin-bottom:8px">
+<tr>${["Piso", "K_xx", "K_yy", "K_θθ", "K_xθ", "K_yθ", "e_x m", "e_y m", "ρ_x", "ρ_y"].map(th).join("")}</tr>${pp}</table>
+<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;margin-bottom:8px">
+<tr>${["Modo", "T reducido s", "T modal s", "u_x", "u_y", "θz"].map(th).join("")}</tr>${modos}</table>
+<div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:10px">${ke}</table></div>`;
+    el.style.display = "block";
+  }
+  _v = { el, mostrar, mostrarAguiar };
   return _v;
 }
 
