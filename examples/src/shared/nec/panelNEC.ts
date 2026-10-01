@@ -346,14 +346,21 @@ function panelJueces() {
   if (_pj) return _pj;
   const el = document.createElement("div");
   el.id = "hk-jueces";
-  Object.assign(el.style, { position: "fixed", left: "310px", top: "50px", bottom: "64px", width: "min(46vw, 860px)", overflow: "auto",
+  Object.assign(el.style, { position: "fixed", left: "310px", top: "50px", bottom: "64px", width: "520px", overflow: "auto",
     background: "rgba(14, 18, 24, 0.96)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
     padding: "8px", fontFamily: "ui-monospace, Consolas, monospace", fontSize: "11px", color: "#e2e8f0", zIndex: "101", display: "none" } as CSSStyleDeclaration);
   const cab = document.createElement("div"); cab.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:6px";
   const tit = document.createElement("span"); tit.style.cssText = "font-weight:600;font-size:13px;color:#a5b4fc"; tit.textContent = "⚖ Los 4 jueces de la torsión — en vivo";
   const x = document.createElement("button"); x.textContent = "×"; x.style.cssText = "background:transparent;border:none;color:#e2e8f0;font-size:18px;cursor:pointer";
-  x.onclick = () => { el.style.display = "none"; };
+  x.onclick = () => ocultar();
   cab.append(tit, x); const cuerpo = document.createElement("div"); el.append(cab, cuerpo); document.body.appendChild(el);
+  // pantalla DIVIDIDA: los jueces a la izquierda y la vista 3D corrida a la derecha (el visor escucha su tamaño)
+  const dividir = (si: boolean) => {
+    const v = document.querySelector("#viewer") as HTMLElement | null; if (!v) return;
+    if (si) { v.style.left = "838px"; v.style.width = "calc(100vw - 838px)"; } else { v.style.left = ""; v.style.width = ""; }
+    setTimeout(() => { try { (window as any).__hekatanAutoFit?.(); } catch {} }, 250);
+  };
+  function ocultar() { if (el.style.display !== "none") dividir(false); el.style.display = "none"; }
   const caja = (t: string, h: string) => `<div style="border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px;min-width:0;overflow:hidden"><div style="font-weight:600;color:#a5b4fc;margin-bottom:4px">${t}</div>${h}</div>`;
   const rojo = "#f87171", verde = "#4ade80", ambar = "#fbbf24";
   const sem = (v: number, bien: number, mal: number) => (v <= bien ? verde : v <= mal ? ambar : rojo);
@@ -382,10 +389,10 @@ function panelJueces() {
     let t4 = `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums"><tr>${["modo", "T (s)", "UX", "UY", "RZ", ""].map(th).join("")}</tr>`;
     j.modos.forEach((m, i) => { t4 += `<tr>${td(String(i + 1))}${td(m.T.toFixed(4))}${td((m.ux * 100).toFixed(1) + " %")}${td((m.uy * 100).toFixed(1) + " %")}${td((m.rz * 100).toFixed(1) + " %", "font-weight:700")}${td(j.chequeo[i] ? "✓" : "✗", "font-weight:700;color:" + (j.chequeo[i] ? verde : rojo))}</tr>`; });
     t4 += `</table><div style="margin-top:4px">1 y 2 traslación (RZ &lt; 10 %), 3 giro</div>`;
-    cuerpo.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${caja("1 · Matriz de piso (Aguiar)", t1)}${caja("2 · Centro de masas ● y de rigidez ✚", t2)}${caja("3 · Irregularidad torsional (NEC)", t3)}${caja("4 · Tres primeros modos", t4)}</div>
+    cuerpo.innerHTML = `<div style="display:grid;grid-template-columns:1fr;gap:8px">${caja("1 · Matriz de piso (Aguiar)", t1)}${caja("2 · Centro de masas ● y de rigidez ✚", t2)}${caja("3 · Irregularidad torsional (NEC)", t3)}${caja("4 · Tres primeros modos", t4)}</div>
       <div style="margin-top:6px;color:#94a3b8">recalculado en ${(j.ms / 1000).toFixed(1)} s · cambie muros, secciones, pisos o vanos y mire los cuatro cuadros</div>`;
-    el.style.display = "block";
+    if (el.style.display === "none") { el.style.display = "block"; dividir(true); }
   }
-  _pj = { mostrar, ocultar: () => { el.style.display = "none"; } };
+  _pj = { mostrar, ocultar };
   return _pj;
 }
