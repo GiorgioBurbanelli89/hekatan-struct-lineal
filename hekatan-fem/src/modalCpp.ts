@@ -598,6 +598,40 @@ export function steadyStateAnalysis(
   return r.steadyState;
 }
 
+/**
+ * DENSIDAD ESPECTRAL DE POTENCIA (Load Case «Power Spectral Density» de SAP2000, CSiRefer cap. XXV).
+ * Carga con f(ω) = √S(ω) (S interpolada LINEALMENTE, como SAP2000) sobre el mismo K̄(ω)·a = p del estado estacionario.
+ * Respuesta: √PSD = |a| en cada frecuencia y RMS = √(∫ |a|² df) con la regla del TRAPECIO (medido contra SAP2000).
+ */
+export type PSDResultado = { frecuencias: number[]; raizPSD: Map<number, number[][]>; rms: Map<number, number[]> };
+export function psdAnalysis(
+  nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs,
+  opc: { frecuencias: number[]; psd: Array<[number, number]>; dK?: number; dM?: number; carga?: { tipo: 0 | 1; dir?: number }; nudos?: number[] }
+): PSDResultado | undefined {
+  const S = (f: number) => { const p = opc.psd; if (!p.length) return 1; if (f <= p[0][0]) return p[0][1]; if (f >= p[p.length - 1][0]) return p[p.length - 1][1];
+    for (let k = 1; k < p.length; k++) if (f <= p[k][0]) { const t = (f - p[k - 1][0]) / (p[k][0] - p[k - 1][0]); return p[k - 1][1] + t * (p[k][1] - p[k - 1][1]); } return 1; };
+  const funcion = opc.frecuencias.map((f) => [f, Math.sqrt(Math.max(0, S(f)))] as [number, number]);
+  const ni: any = nodeInputs;
+  let cargas: EstacionarioCarga[];
+  if (opc.carga?.tipo === 1) cargas = [{ tipo: 1, dir: opc.carga.dir ?? 0, s: 1, fase: 0, funcion }];
+  else {
+    const pares: Array<[number, number]> = [];
+    (ni.loads as Map<number, number[]> | undefined)?.forEach((f, q) => f.forEach((v, k) => { if (v) pares.push([6 * q + k, v]); }));
+    cargas = [{ tipo: 0, pares, s: 1, fase: 0, funcion }];
+  }
+  const r = steadyStateAnalysis(nodes, elements, nodeInputs, elementInputs, { frecuencias: opc.frecuencias, dK: opc.dK ?? 0, dM: opc.dM ?? 0, cargas, nudos: opc.nudos });
+  if (!r) return undefined;
+  const raizPSD = new Map<number, number[][]>(), rms = new Map<number, number[]>();
+  r.re.forEach((re, q) => {
+    const im = r.im.get(q)!; const h = re.map((a, k) => a.map((x, c) => Math.hypot(x, im[k][c])));
+    raizPSD.set(q, h);
+    const v = [0, 0, 0, 0, 0, 0];
+    for (let k = 1; k < h.length; k++) { const df = r.frecuencias[k] - r.frecuencias[k - 1]; for (let c = 0; c < 6; c++) v[c] += 0.5 * df * (h[k][c] ** 2 + h[k - 1][c] ** 2); }
+    rms.set(q, v.map(Math.sqrt));
+  });
+  return { frecuencias: r.frecuencias, raizPSD, rms };
+}
+
 /** Resultado del pandeo lineal: factores λ (por |λ| creciente) y formas (dof completo, máx |Ψ| = 1). */
 export type PandeoResultado = { factors: number[]; modeShapes: number[][] };
 

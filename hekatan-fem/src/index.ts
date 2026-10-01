@@ -5,7 +5,8 @@ export { analyze } from "./analyze";
 export { deformCpp as deform } from "./deformCpp";
 
 export { modalCpp as modalAnalysis } from "./modalCpp";
-export { timeHistoryAnalysis, jointMass, bucklingAnalysis, steadyStateAnalysis } from "./modalCpp";
+export { timeHistoryAnalysis, jointMass, bucklingAnalysis, steadyStateAnalysis, psdAnalysis } from "./modalCpp";
+export type { PSDResultado } from "./modalCpp";
 export type { EstacionarioOpciones, EstacionarioResultado, EstacionarioCarga } from "./modalCpp";
 export type { PandeoResultado } from "./modalCpp";
 export type { THOpciones, THResultado, THCarga, THFuncion } from "./modalCpp";

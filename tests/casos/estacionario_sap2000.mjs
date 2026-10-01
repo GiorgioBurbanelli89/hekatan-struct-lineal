@@ -59,5 +59,17 @@ export async function correr() {
     });
     filas.push({ que: "aceleración en la base X: Re e Im (% del máximo)", medido: pe, limite: 1e-3, ok: pe <= 1e-3, detalle: "" });
   }
+  // PSD (validation/psd/sap_psd.py): √PSD en 40 frecuencias y RMS
+  try {
+    const P = JSON.parse(readFileSync(join(RAIZ, "validation/psd/sap_psd.json"), "utf8"));
+    const o2 = P.opciones["2"], fp = o2.stepnum;
+    const rp = fem.psdAnalysis(states.nodes.val, states.elements.val, states.nodeInputs.val, states.elementInputs.val,
+      { frecuencias: fp, psd: P.psd[0].map((f, k) => [f, P.psd[1][k]]), dK: 0.04, dM: 0, nudos: [top] });
+    let um = 0, pe = 0; for (const u of o2.u) for (let c = 0; c < 3; c++) um = Math.max(um, Math.abs(u[c]));
+    fp.forEach((f, k) => { for (let c = 0; c < 6; c++) pe = Math.max(pe, Math.abs(rp.raizPSD.get(top)[k][c] - o2.u[k][c]) / um * 100); });
+    filas.push({ que: "PSD: √PSD en 40 frecuencias (% del máximo)", medido: pe, limite: 1e-3, ok: pe <= 1e-3, detalle: "" });
+    const rs = P.opciones["1"].u[0], rh = rp.rms.get(top); let pr = 0; for (let c = 0; c < 3; c++) pr = Math.max(pr, Math.abs(rh[c] / rs[c] - 1) * 100);
+    filas.push({ que: "PSD: RMS (trapecio) Ux Uy Uz", medido: pr, limite: 1e-3, ok: pr <= 1e-3, detalle: `uy ${rh[1].toExponential(6)} vs ${rs[1].toExponential(6)}` });
+  } catch (e) { filas.push({ que: "PSD", medido: 1, limite: 0, ok: false, detalle: String(e) }); }
   return filas;
 }

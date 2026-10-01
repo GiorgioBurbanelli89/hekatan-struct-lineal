@@ -28,7 +28,7 @@ const TIPOS: Array<[string, string]> = [
   ["Moving Load", "Próximamente en Hekatan Struct (lineal)."],
   ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal), = SAP2000."],
   ["Steady State", "✓ Hekatan Struct: 〜 Estado estacionario (lineal), = SAP2000."],
-  ["Power Spectral Density", "Próximamente en Hekatan Struct (lineal)."],
+  ["Power Spectral Density", "✓ Hekatan Struct: 〜 Estado estacionario / PSD, = SAP2000."],
   ["Hyperstatic", "Próximamente en Hekatan Struct (lineal)."],
 ];
 

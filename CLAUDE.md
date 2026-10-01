@@ -1229,3 +1229,7 @@ manual usa dK = 0.04 ≈ 2 % modal). M = la masa concentrada de CSI del modal. R
 - Juez: `validation/estacionario/sap_ss.py` (OAPI: `LoadCases.SteadyState`, `Func.FuncSS.SetUser`,
   `Results.Setup.SetOptionSteadyState(2, 1)` = Real/Imag at Freq). `node tests/run.mjs estacionario`: 40 frecuencias,
   fuerzas y aceleración en la base, **0.000 %**.
+- **PSD** (Power Spectral Density, 1-oct-2026): `psdAnalysis(...{frecuencias, psd:[[f,S]], dK, dM, carga})` sobre el mismo
+  motor: f(ω) = √S(ω) con S interpolada LINEALMENTE, √PSD = |a|, RMS = √∫|a|² df por TRAPECIO (con rectángulos SAP difiere
+  0.08 %: así se supo). Juez `validation/psd/sap_psd.py` (`LoadCases.PSD`, `Func.FuncPSD.SetUser`, `SetOptionPSD(1|2)` =
+  RMS | sqrt(PSD)). Test en `estacionario`: √PSD y RMS **0.000 %**. Panel: Tipo de caso = PSD.
