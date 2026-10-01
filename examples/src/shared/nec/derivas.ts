@@ -68,10 +68,35 @@ export function derivas(nodes: number[][], pisos: Piso[], U: Map<number, number[
  */
 export function centrosDeRigidez(nodes: number[][], pisos: Piso[], diaphragms: Map<number, number>,
   resolver: (loads: Map<number, Carga6>) => Map<number, number[]>): [number, number][] {
+  if (!diaphragms.size) return centrosDeRigidezSinDiafragma(nodes, pisos, resolver);
   return pisos.map((p) => {
     const n = p.nudos.find((q) => diaphragms.has(q)) ?? p.nudos[0];
     const giro = (c: number) => { const L = new Map<number, Carga6>(); const v: Carga6 = [0, 0, 0, 0, 0, 0]; v[c] = 1; L.set(n, v); return resolver(L).get(n)![5]; };
     const tFx = giro(0), tFy = giro(1), tMz = giro(5);
     return [nodes[n][0] - tFy / tMz, nodes[n][1] + tFx / tMz] as [number, number];
+  });
+}
+
+/**
+ * CR sin diafragma rígido (losa de cáscara, 1-oct-2026). Con una carga en UN nudo, su rz es el giro local de ese
+ * nudo, no el del piso. Aquí Fx, Fy y Mz unitarios se reparten en todos los nudos del piso (por igual; el Mz como
+ * par F_i = (−y_i, x_i)/Σr² respecto al centroide) y el giro del piso es el de mínimos cuadrados
+ * θ = Σ(x_i·u_y − y_i·u_x)/Σr². Misma lectura que con diafragma: xCR = x_c − θ(Fy)/θ(Mz), yCR = y_c + θ(Fx)/θ(Mz).
+ */
+function centrosDeRigidezSinDiafragma(nodes: number[][], pisos: Piso[],
+  resolver: (loads: Map<number, Carga6>) => Map<number, number[]>): [number, number][] {
+  return pisos.map((p) => {
+    const ns = p.nudos.filter((q) => Math.abs(nodes[q][2] - p.z) < 1e-3);
+    const xc = ns.reduce((s, q) => s + nodes[q][0], 0) / ns.length, yc = ns.reduce((s, q) => s + nodes[q][1], 0) / ns.length;
+    const r = ns.map((q) => [nodes[q][0] - xc, nodes[q][1] - yc]), r2 = r.reduce((s, v) => s + v[0] ** 2 + v[1] ** 2, 0);
+    const giro = (c: number) => {
+      const L = new Map<number, Carga6>();
+      ns.forEach((q, k) => L.set(q, (c === 0 ? [1 / ns.length, 0, 0, 0, 0, 0] : c === 1 ? [0, 1 / ns.length, 0, 0, 0, 0]
+        : [-r[k][1] / r2, r[k][0] / r2, 0, 0, 0, 0]) as Carga6));
+      const U = resolver(L);
+      return ns.reduce((s, q, k) => { const u = U.get(q) ?? [0, 0]; return s + r[k][0] * u[1] - r[k][1] * u[0]; }, 0) / r2;
+    };
+    const tFx = giro(0), tFy = giro(1), tMz = giro(5);
+    return [xc - tFy / tMz, yc + tFx / tMz] as [number, number];
   });
 }

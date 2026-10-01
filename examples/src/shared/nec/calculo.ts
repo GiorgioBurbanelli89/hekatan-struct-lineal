@@ -10,7 +10,31 @@ import { cortanteEstatico, espectro, type DatosSitio, type Estatico } from "./es
 import { cargasEnCM, derivas, centrosDeRigidez, type DerivaPiso } from "./derivas";
 import { espectralPorPiso, escalaDinamico, type Espectral } from "./espectral";
 
-export type OpcionesNEC = { sitio: DatosSitio; irregular: boolean; nModos: number; ecc: number };
+export type OpcionesNEC = { sitio: DatosSitio; irregular: boolean; nModos: number; ecc: number; agrietadas?: boolean };
+
+/**
+ * Inercias agrietadas NEC-SE-DS §6.1.6 (1-oct-2026): vigas 0.5·Ig, columnas 0.8·Ig, muros 0.6·Ig. Barra vertical
+ * (< 20° de la vertical) = columna, el resto = viga; cáscara vertical = muro (sus 6 modificadores de membrana y flexión
+ * × 0.6, el cortante transversal tal cual); losas sin tocar. Devuelve una COPIA: el modelo en pantalla no cambia.
+ */
+export function agrietar(nodes: number[][], elements: number[][], ei: any): any {
+  const iy = new Map(ei.momentsOfInertiaY ?? []), iz = new Map(ei.momentsOfInertiaZ ?? []), sm = new Map(ei.shellModifiers ?? []);
+  elements.forEach((e, k) => {
+    const p = e.map((n) => nodes[n]);
+    if (e.length === 2) {
+      const d = [0, 1, 2].map((c) => p[1][c] - p[0][c]), L = Math.hypot(...d);
+      const f = L > 0 && Math.abs(d[2]) / L > Math.cos((20 * Math.PI) / 180) ? 0.8 : 0.5;
+      if (iy.has(k)) iy.set(k, (iy.get(k) as number) * f);
+      if (iz.has(k)) iz.set(k, (iz.get(k) as number) * f);
+    } else if (e.length >= 3) {
+      const zs = p.map((q) => q[2]);
+      if (Math.max(...zs) - Math.min(...zs) < 1e-6) return;                     // losa: horizontal
+      const v = (sm.get(k) as number[] | undefined) ?? [1, 1, 1, 1, 1, 1, 1, 1];
+      sm.set(k, v.map((x, j) => (j < 6 ? x * 0.6 : x)));
+    }
+  });
+  return { ...ei, momentsOfInertiaY: iy, momentsOfInertiaZ: iz, shellModifiers: sm };
+}
 
 export type ResultadoNEC = {
   pisos: Piso[];
@@ -21,11 +45,17 @@ export type ResultadoNEC = {
   derivasEst: Record<string, DerivaPiso[]>;          // Ex, Ex+e, Ex−e, Ey, Ey+e, Ey−e
   dinamico: { X: Espectral; Y: Espectral; escX: ReturnType<typeof escalaDinamico>; escY: ReturnType<typeof escalaDinamico>; minimo: number };
   torsional: { X: boolean; Y: boolean; peorX: number; peorY: number };
+  /** índice de estabilidad por piso Qi = Pi·Δi/(Vi·hi) (NEC §6.3.8), Δ = deriva elástica promedio del piso, sin excentricidad */
+  estabilidad: { X: number[]; Y: number[]; max: number };
+  /** masa participativa acumulada con nModos (NEC: ≥ 90 % en X e Y) */
+  sumaMasa: { ux: number; uy: number; rz: number };
+  agrietadas: boolean;
 };
 
 const aMap = (o: any) => (o instanceof Map ? o : new Map(Object.entries(o ?? {}).map(([k, v]) => [Number(k), v])));
 
-export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs: any, elementInputs: any, o: OpcionesNEC): ResultadoNEC {
+export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs: any, elementInputsIn: any, o: OpcionesNEC): ResultadoNEC {
+  const elementInputs = o.agrietadas ? agrietar(nodes, elements, elementInputsIn) : elementInputsIn;
   const ni = { ...nodeInputs, supports: aMap(nodeInputs.supports), diaphragms: aMap(nodeInputs.diaphragms) };
   const pisos = pisosDeModelo(nodes, elements, ni, elementInputs);
   if (!pisos.length) throw new Error("el modelo no tiene pisos (ni diafragmas ni cotas con masa)");
@@ -63,7 +93,14 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
 
   const peor = (ks: string[]) => Math.max(...ks.flatMap((k) => derivasEst[k].map((d) => d.relacion)));
   const peorX = peor(["Ex", "Ex+e", "Ex−e"]), peorY = peor(["Ey", "Ey+e", "Ey−e"]);
+  const Q = (k: string) => estatico.pisos.map((pe, i) => {
+    const P = estatico.pisos.slice(i).reduce((a, q) => a + q.w, 0);
+    return (P * derivasEst[k][i].prom) / pe.Vpiso;
+  });
+  const QX = Q("Ex"), QY = Q("Ey");
+  const sumaMasa = { ux: mp.reduce((a, v) => a + (v?.[0] ?? 0), 0), uy: mp.reduce((a, v) => a + (v?.[1] ?? 0), 0), rz: mp.reduce((a, v) => a + (v?.[5] ?? 0), 0) };
   return {
+    estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas,
     pisos, cr, modos, chequeoModos, estatico, derivasEst,
     dinamico: { X, Y, escX, escY, minimo },
     torsional: { X: peorX > 1.2, Y: peorY > 1.2, peorX, peorY },

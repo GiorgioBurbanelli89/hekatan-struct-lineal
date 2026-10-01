@@ -31,6 +31,13 @@ export function pisosDeModelo(nodes: number[][], elements: number[][], nodeInput
     dia.forEach((id, n) => { if (!porId.has(id)) porId.set(id, []); porId.get(id)!.push(nodes[n][2]); });
     cotas = [...porId.values()].map((zs) => zs.reduce((a, b) => a + b, 0) / zs.length);
   } else {
+    // sin diafragmas: un piso es una cota con LOSA o VIGAS horizontales (1-oct-2026). Contar solo masa tomaba como
+    // pisos las cotas intermedias de la malla de los muros (dual en molinete: 12 «pisos» en vez de 4).
+    const horiz = new Set<number>();
+    elements.forEach((e) => { if (e.length >= 2) { const z = nodes[e[0]][2]; if (z > 1e-6 && e.every((n) => Math.abs(nodes[n][2] - z) < 1e-6)) horiz.add(+z.toFixed(3)); } });
+    cotas = [...horiz];
+  }
+  if (!cotas.length) {
     const mz = new Map<number, number>();
     nodes.forEach((p, i) => { const z = +p[2].toFixed(3); mz.set(z, (mz.get(z) ?? 0) + masas[i][0]); });
     const tot = [...mz.values()].reduce((a, b) => a + b, 0);

@@ -19,7 +19,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   const p = {
     norma: 0,                      // 0 NEC-15, 1 borrador 2023
     Z: d15.Z, Fa: d15.Fa, Fd: d15.Fd, Fs: d15.Fs, eta: d15.eta!, r: d15.r,
-    I: 1.0, R: 8, sistema: 0, irregular: 1, nModos: 12,
+    I: 1.0, R: 8, sistema: 0, irregular: 1, nModos: 12, agrietadas: 0,
     info: "—",
   };
   f.addBinding(p, "norma", { label: "Norma", options: { "NEC-15 (oficial)": 0, "Borrador NEC-SE-DS 2023": 1 } }).on("change", () => {
@@ -38,7 +38,8 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addBinding(p, "sistema", { label: "Ta (Ct, α)", options: { "Pórtico H.A. sin muros": 0, "Pórtico H.A. con muros": 1 } });
   f.addBinding(p, "irregular", { label: "Irregular (85 %)", options: { "sí": 1, "no (80 %)": 0 } });
   f.addBinding(p, "nModos", { label: "N° de modos", min: 3, max: 60, step: 1 });
-  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 5 });
+  f.addBinding(p, "agrietadas", { label: "Inercias agrietadas §6.1.6", options: { "no (brutas)": 0, "sí: vigas 0.5 · col. 0.8 · muros 0.6": 1 } });
+  f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
   f.addButton({ title: "📋 Tabla por piso y planta CM/CR" }).on("click", () => { if (ultimo) mostrar(ultimo); });
 
@@ -56,13 +57,14 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
     const t0 = performance.now();
     try {
       const r = calcularNEC(nodes, elements, estado.nodeInputs.val, estado.elementInputs.val,
-        { sitio: sitio() as any, irregular: !!p.irregular, nModos: p.nModos, ecc: 0.05 });
+        { sitio: sitio() as any, irregular: !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
       p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} kN (${(e.Cs * 100).toFixed(2)} % W)
 Din: Vx ${dx.X.V.toFixed(1)} (${(dx.escX.relacion * 100).toFixed(1)} %) · Vy ${dx.Y.V.toFixed(1)} (${(dx.escY.relacion * 100).toFixed(1)} %) · mín ${dx.minimo * 100} %
 Escala: X ×${dx.escX.factor.toFixed(3)} · Y ×${dx.escY.factor.toFixed(3)}
 Torsión máx/prom: X ${r.torsional.peorX.toFixed(3)} · Y ${r.torsional.peorY.toFixed(3)} ${r.torsional.X || r.torsional.Y ? "✗ IRREGULAR (> 1.2)" : "✓ ≤ 1.2"}
+Masa ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % ${r.sumaMasa.ux >= 0.9 && r.sumaMasa.uy >= 0.9 ? "✓ ≥ 90 %" : "✗ < 90 %"} · Q máx ${r.estabilidad.max.toFixed(3)} ${r.estabilidad.max <= 0.1 ? "✓ ≤ 0.10" : "✗ P-Δ"}
 ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.now() - t0) / 1000).toFixed(1)} s)`;
       mostrar(r);
     } catch (err: any) { p.info = "✗ " + (err?.message ?? err); console.error("[NEC]", err); }
@@ -114,16 +116,17 @@ function ventana() {
       filas += `<tr>${td("P" + q.k)}${td(q.z.toFixed(2))}${td(q.peso.toFixed(1))}${td(pe.F.toFixed(1))}${td(pe.Vpiso.toFixed(1))}` +
         `${td((D.X.pisos[i].V * D.escX.factor).toFixed(1))}${td((D.Y.pisos[i].V * D.escY.factor).toFixed(1))}` +
         `${td(`${q.cm[0].toFixed(3)}, ${q.cm[1].toFixed(3)}`)}${td(`${cr[0].toFixed(3)}, ${cr[1].toFixed(3)}`)}` +
-        `${td((dX.inelastica * 100).toFixed(2) + " %")}${td(dX.relacion.toFixed(3), mala(dX))}${td((dY.inelastica * 100).toFixed(2) + " %")}${td(dY.relacion.toFixed(3), mala(dY))}</tr>`;
+        `${td((dX.inelastica * 100).toFixed(2) + " %")}${td(dX.relacion.toFixed(3), mala(dX))}${td((dY.inelastica * 100).toFixed(2) + " %")}${td(dY.relacion.toFixed(3), mala(dY))}${td(r.estabilidad.X[i].toFixed(4))}${td(r.estabilidad.Y[i].toFixed(4))}</tr>`;
     }
-    const cab = ["Piso", "z m", "W kN", "F kN", "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔM X", "máx/prom X", "ΔM Y", "máx/prom Y"].map(th).join("");
+    const cab = ["Piso", "z m", "W kN", "F kN", "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔM X", "máx/prom X", "ΔM Y", "máx/prom Y", "Q X", "Q Y"].map(th).join("");
     cuerpo.innerHTML = `
 <div style="line-height:1.5;margin-bottom:6px">
  <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} kN · <b>V ${e.V.toFixed(1)} kN</b> (Cs ${e.Cs.toFixed(4)})<br>
  <b>Dinámico CQC</b>: Vx ${D.X.V.toFixed(1)} kN = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} kN = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
  → escala X ×${D.escX.factor.toFixed(3)}, Y ×${D.escY.factor.toFixed(3)}<br>
  <b>Derivas</b> ΔM = 0.75·R·ΔE ≤ 2 % (el peor de sin/±5 % de excentricidad) · <b>Torsión</b> máx/prom > 1.2 = irregular (rojo)<br>
- <b>Modos</b>: ${r.chequeoModos.join(" · ")}
+ <b>Modos</b>: ${r.chequeoModos.join(" · ")}<br>
+ <b>Masa participativa</b> (${r.modos.length} modos): ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % (≥ 90 %) · <b>Estabilidad</b> Q = P·Δ/(V·h) máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · <b>Inercias</b> ${r.agrietadas ? "agrietadas §6.1.6 (vigas 0.5, columnas 0.8, muros 0.6)" : "brutas"}
 </div>
 <div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap"><thead><tr>${cab}</tr></thead><tbody>${filas}</tbody></table></div>
 <div style="margin-top:8px">${planta(r, nodes, elements)}</div>`;
