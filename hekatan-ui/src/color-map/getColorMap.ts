@@ -90,6 +90,18 @@ if (typeof window !== "undefined") {
  *  el número es correcto, la escala no le sirve. Con "muros" cada familia se mira con su propia escala. */
 export const colorMapScope: State<string> = van.state("auto");
 
+/** PROMEDIADO de los esfuerzos de cáscara, el «Stress Averaging» de SAP2000/ETABS (30-sep-2026):
+ *   "todos"   = At All Joints: en cada nudo la media de TODOS los elementos que lo tocan (lo de siempre).
+ *               En la unión muro–losa mezcla el F22 vertical del muro con el de la losa.
+ *   "objeto"  = Over Objects and Groups: la media solo entre elementos del MISMO plano (losa con losa,
+ *               muro con muro); el salto en la arista muro–losa se conserva.
+ *   "ninguno" = None: cada elemento con SUS valores de esquina (joint), sin promediar: los saltos
+ *               entre elementos se ven, como recomiendan para diseño.
+ *  Con "objeto" o "ninguno" el colormap se pinta por ESQUINA de elemento (`colorMapEsquinas`). */
+export const shellAveraging: State<string> = van.state("todos");
+/** Valores por esquina (elemento → [v por nudo del elemento], ya escalados), o null = pintar por nudo. */
+export const colorMapEsquinas: State<Map<number, number[]> | null> = van.state(null);
+
 /** Lookup en la palette ACTIVA. Las paletas CSI (safe/etabs/sap2000) son de 15 BANDAS
  *  DISCRETAS (sin interpolar, como el "Fill" de SAFE/ETABS/SAP2000: cada valor cae en UNA
  *  banda con un color sólido, no en un degradado). Las demás (jet/jet_r/viridis) siguen
@@ -278,6 +290,8 @@ export function getColorMap(
 
   // Update — al cambiar nodes/elements/values, regenerar geometría + scalar attribute
   van.derive(() => {
+    const esq = colorMapEsquinas.val;
+    if (esq && familia?.val !== "solido") { pintarPorEsquinas(esq); return; }
     // Update geometry
     colorMap.geometry.setAttribute(
       "position",
@@ -360,6 +374,32 @@ export function getColorMap(
     }
     colorMap.geometry.setAttribute("scalar", new THREE.BufferAttribute(scalars, 1));
   });
+
+  /** Sin promediar (o promediado por plano): cada triángulo con SUS vértices, sin índice compartido. */
+  function pintarPorEsquinas(esq: Map<number, number[]>) {
+    const pos: number[] = [], vals: number[] = [], faceToElem: number[] = [], faceLocal: number[] = [];
+    const N = nodes.val;
+    const tri = (e: number[], v: number[], a: number, b: number, c: number, ei: number, loc: number) => {
+      for (const k of [a, b, c]) { const p = N[e[k]] ?? [0, 0, 0]; pos.push(p[0], p[1], p[2]); vals.push(v[k] ?? v[0]); }
+      faceToElem.push(ei); faceLocal.push(loc);
+    };
+    elements.val.forEach((e, ei) => {
+      const v = esq.get(ei); if (!v || (e.length !== 3 && e.length !== 4)) return;
+      tri(e, v, 0, 1, 2, ei, 0);
+      if (e.length === 4) tri(e, v, 0, 2, 3, ei, 1);
+    });
+    colorMap.geometry.setIndex(null);
+    colorMap.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    colorMap.userData.faceToElem = faceToElem;
+    colorMap.userData.faceLocal = faceLocal;
+    const ok = vals.filter((x) => Number.isFinite(x));
+    const rng = fixedColorMapRange.val;
+    let [vMin, vMax] = rng ? [Math.min(rng[0], rng[1]), Math.max(rng[0], rng[1])] : robustRange(ok);
+    if (vMax === vMin) { const eps = Math.max(Math.abs(vMax) * 1e-6, 1e-9); vMax += eps; vMin -= eps; }
+    const sc = new Float32Array(vals.length);
+    vals.forEach((x, i) => { sc[i] = Number.isFinite(x) ? Math.max(0, Math.min(1, (x - vMin) / (vMax - vMin))) : -1; });
+    colorMap.geometry.setAttribute("scalar", new THREE.BufferAttribute(sc, 1));
+  }
 
   return colorMap;
 }

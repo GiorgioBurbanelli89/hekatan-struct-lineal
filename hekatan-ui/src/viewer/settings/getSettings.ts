@@ -1,7 +1,7 @@
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
 import { Mesh } from "hekatan-fem";
-import { colorMapPalette, colorMapScope } from "../../color-map/getColorMap";
+import { colorMapPalette, colorMapScope, shellAveraging } from "../../color-map/getColorMap";
 
 import "./styles.css";
 
@@ -461,6 +461,11 @@ export function getSettings(
       // el muro y = 0 trabaja a 5 kN/m² y el x = L a 30: ni con "solo muros" se ve el flojo.
       options: { "todas las cáscaras": "auto", "todas, recortando picos (p1–p99)": "robusto", "todas, min/max real": "real", "solo muros": "muros", "muros X (plano x=cte)": "murosX", "muros Y (plano y=cte)": "murosY", "solo losas": "losas" },
       label: "📐 Rango colormap",
+    });
+    // «Stress Averaging» de SAP2000/ETABS: en la unión muro–losa promediar mezcla planos distintos.
+    outputs.addBinding(shellAveraging, "val", {
+      options: { "en todos los nudos (CSI)": "todos", "por plano (muro / losa)": "objeto", "ninguno (sin promediar)": "ninguno" },
+      label: "⊞ Promediado",
     });
 
     // Solid results (elementos H8 sólidos: columna+viga, cubos, etc.)

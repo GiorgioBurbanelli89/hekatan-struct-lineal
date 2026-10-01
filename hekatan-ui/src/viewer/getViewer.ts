@@ -31,7 +31,7 @@ import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
 import { getLegend } from "../color-map/getLegend";
-import { colorMapScope, robustRange, setCampoEsDesplazamiento } from "../color-map/getColorMap";
+import { colorMapScope, robustRange, setCampoEsDesplazamiento, shellAveraging, colorMapEsquinas } from "../color-map/getColorMap";
 import { getTheme, onThemeChange, ThemeColors } from "../theme";
 
 export interface ViewerContext3D {
@@ -1391,6 +1391,58 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       values.push(raw * scale);
     });
 
+    // ── PROMEDIADO por plano o ninguno (Settings → «⊞ Promediado», el Stress Averaging de CSI) ──
+    // Se pinta por ESQUINA de elemento con su valor joint (el de CSI, 0.0000 % contra ETABS); con
+    // «por plano» la media en el nudo se hace solo entre elementos del mismo plano (muro con muro).
+    const modoProm = shellAveraging.val;
+    const BASE: Record<string, string> = { bendingXX: "bendingXX", bendingYY: "bendingYY", bendingXY: "bendingXY",
+      membraneXX: "membraneXX", membraneYY: "membraneYY", membraneXY: "membraneXY", tranverseShearX: "tranverseShearX",
+      tranverseShearY: "tranverseShearY" };   // von Mises y presión no tienen valores por esquina: van siempre promediados
+    const MOHR: Record<string, [string, string, string, number]> = {
+      membranePrincipalMax: ["membraneXX", "membraneYY", "membraneXY", 1], membranePrincipalMin: ["membraneXX", "membraneYY", "membraneXY", -1],
+      bendingPrincipalMax: ["bendingXX", "bendingYY", "bendingXY", 1], bendingPrincipalMin: ["bendingXX", "bendingYY", "bendingXY", -1] };
+    let esquinas: Map<number, number[]> | null = null;
+    if (modoProm !== "todos" && !useSolid && selloOk && (BASE[field] || MOHR[field] || field === "transverseShearMax")) {
+      const E = mesh.elements.val, N = mesh.nodes.val;
+      // grupo de cada elemento = su plano (normal redondeada + distancia al origen)
+      const grupo = (e: number[]) => {
+        const p = e.map((i) => N[i]); if (p.length < 3) return "x";
+        const u = [p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]], v = [p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]];
+        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        const L = Math.hypot(n[0], n[1], n[2]) || 1; n = n.map((x) => x / L);
+        const k = n.findIndex((x) => Math.abs(x) > 1e-6); if (k >= 0 && n[k] < 0) n = n.map((x) => -x);
+        const d = n[0] * p[0][0] + n[1] * p[0][1] + n[2] * p[0][2];
+        return n.map((x) => x.toFixed(3)).join(",") + "|" + d.toFixed(3);
+      };
+      const crudo = (nombre: string): Map<number, number[]> => {
+        // los valores SIN promediar: los joints (M y F, = CSI a 0.0000 %); el cortante, uno por elemento
+        const out = new Map<number, number[]>();
+        let m: Map<number, number[]> | undefined = (ao as any)?.[nombre + "joint"];
+        if (!m) { const c: Map<number, number> | undefined = (ao as any)?.[nombre + "centro"];
+          if (c) { m = new Map(); c.forEach((v, ei) => m!.set(ei, (E[ei] ?? []).map(() => v))); } }
+        if (!m) m = (ao as any)?.[nombre];
+        if (!m) return out;
+        if (modoProm === "ninguno") { m.forEach((vals, ei) => { const e = E[ei]; if (e) out.set(ei, e.map((_, i) => vals[i] ?? vals[0])); }); return out; }
+        const sum = new Map<string, number>(), cnt = new Map<string, number>(), gr = new Map<number, string>();
+        m.forEach((vals, ei) => { const e = E[ei]; if (!e) return; const g = grupo(e); gr.set(ei, g);
+          e.forEach((n, i) => { const v = vals[i] ?? vals[0]; if (!Number.isFinite(v)) return; const key = g + "#" + n; sum.set(key, (sum.get(key) ?? 0) + v); cnt.set(key, (cnt.get(key) ?? 0) + 1); }); });
+        m.forEach((_, ei) => { const e = E[ei]; if (!e) return; const g = gr.get(ei)!; out.set(ei, e.map((n) => { const key = g + "#" + n; return (sum.get(key) ?? NaN) / (cnt.get(key) ?? 1); })); });
+        return out;
+      };
+      if (BASE[field]) esquinas = crudo(BASE[field]);
+      else if (MOHR[field]) {
+        const [a, b, c, sg] = MOHR[field], A = crudo(a), B = crudo(b), Cc = crudo(c);
+        esquinas = new Map(); A.forEach((va, ei) => { const vb = B.get(ei) ?? [], vc = Cc.get(ei) ?? [];
+          esquinas!.set(ei, va.map((x, i) => (x + (vb[i] ?? 0)) / 2 + sg * Math.hypot((x - (vb[i] ?? 0)) / 2, vc[i] ?? 0))); });
+      } else {
+        const A = crudo("tranverseShearX"), B = crudo("tranverseShearY");
+        esquinas = new Map(); A.forEach((va, ei) => { const vb = B.get(ei) ?? []; esquinas!.set(ei, va.map((x, i) => Math.hypot(x, vb[i] ?? 0))); });
+      }
+      esquinas.forEach((v, ei) => esquinas!.set(ei, v.map((x) => x * scale)));
+    }
+    colorMapEsquinas.val = esquinas;
+    (window as any).__hekatanPromediado = shellAveraging;
+
     // ── Rango por familia (Settings → "Rango colormap") ──
     // Solo si el ejemplo no fija su propio rango. Clasifica cada Q4 por su plano (los 4 nudos con la
     // misma z = losa; la misma x o y = muro) y saca el rango robusto de los nudos de esa familia.
@@ -1403,10 +1455,14 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
         const entra = scopeSel === "losas" ? losa : scopeSel === "muros" ? muro : scopeSel === "murosX" ? muroX : scopeSel === "murosY" ? muroY : false;
         if (entra) for (const i of e) sel.add(i);
       }
-      const sub: number[] = []; for (const i of sel) { const v = values[i]; if (Number.isFinite(v)) sub.push(v); }
+      const sub: number[] = [];
+      if (esquinas) {           // por esquina: el rango sale de las esquinas de los elementos de esa familia
+        mesh.elements.val.forEach((e, ei) => { if (e.length === 4 && e.every((i) => sel.has(i))) for (const v of esquinas!.get(ei) ?? []) if (Number.isFinite(v)) sub.push(v); });
+      } else for (const i of sel) { const v = values[i]; if (Number.isFinite(v)) sub.push(v); }
       if (sub.length) fixedColorMapRange.val = robustRange(sub);
     }
-    colorMapValues.val = values;
+    // la leyenda saca su rango de estos valores: con esquinas, que sean ELLAS
+    colorMapValues.val = esquinas ? [...esquinas.values()].flat() : values;
   });
 
   return colorMapValues;

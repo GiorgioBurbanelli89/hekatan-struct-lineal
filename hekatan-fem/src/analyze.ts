@@ -347,6 +347,11 @@ export function analyze(
       (analyzeOutputs.bendingYYjoint ??= new Map()).set(elementIndex, mjE.map((m) => m[1]));
       (analyzeOutputs.bendingXYjoint ??= new Map()).set(elementIndex, mjE.map((m) => m[2]));
     }
+    // sin promediar: el cortante del elemento tal cual (uno por elemento; ver la nota de V13/V23 abajo)
+    (analyzeOutputs as any).tranverseShearXcentro ??= new Map();
+    (analyzeOutputs as any).tranverseShearYcentro ??= new Map();
+    (analyzeOutputs as any).tranverseShearXcentro.set(elementIndex, analyzeOutputsElements.tranverseShearX.get(elementIndex) ?? 0);
+    (analyzeOutputs as any).tranverseShearYcentro.set(elementIndex, analyzeOutputsElements.tranverseShearY.get(elementIndex) ?? 0);
     analyzeOutputs.tranverseShearX!.set(elementIndex, shearXs);
     analyzeOutputs.tranverseShearY!.set(elementIndex, shearYs);
     analyzeOutputs.vonMises!.set(elementIndex, vmStress);

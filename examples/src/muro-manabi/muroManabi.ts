@@ -145,6 +145,11 @@ export const muroManabi: ExampleDef = {
     ctau:   { ...P("Terreno", "Cτ/Cu base (Barkan)", D.ctau ?? 0.5, 0.1, 1, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
     nh:     { ...P("Terreno", "nh cara enterrada (kN/m³, Terzaghi)", D.nh ?? 2200, 500, 20000, 100), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
     hDel:   { ...P("Terreno", "terreno delante sobre la base (m)", D.hDel ?? 0.6, 0, 2, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
+    // contrafuertes (solo «Cáscara 3D»): la longitud L es el tramo modelado; sus extremos son planos de simetría
+    cf:     { default: 0, boolean: true, label: "con contrafuertes (cáscara 3D)", folder: "Contrafuertes" },
+    sCf:    { ...P("Contrafuertes", "separación (m)", 1.5, 0.5, 6, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.cf) !== 1 },
+    tCf:    { ...P("Contrafuertes", "espesor (m)", 0.30, 0.15, 1, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.cf) !== 1 },
+    cTop:   { ...P("Contrafuertes", "ancho en la coronación (m)", 0.30, 0.1, 2, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.cf) !== 1 },
   },
   guide: [
     "«Modelo» cambia la idealización; la geometría, el terreno y las cargas son los mismos",

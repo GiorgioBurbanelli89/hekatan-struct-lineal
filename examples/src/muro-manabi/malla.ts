@@ -64,6 +64,13 @@ export interface MuroManabiParams {
   ctau?: number;    // Cτ/Cu de la base (Barkan: 0.5)
   nh?: number;      // Terzaghi, kN/m³ (arena suelta seca 2200 · media 6600 · densa 17600)
   hDel?: number;    // altura del terreno de delante sobre la base de la zapata, m
+  // CONTRAFUERTES (solo en el modelo de cáscara, 30-sep-2026): placas verticales detrás del fuste, de la
+  // cara trasera al final del talón, cada `sCf` m. Los extremos del tramo (y = 0, y = L) son planos de
+  // simetría: un contrafuerte que cae ahí lleva la MITAD de su espesor.
+  cf?: number;      // 1 = con contrafuertes
+  sCf?: number;     // separación entre ejes (m)
+  tCf?: number;     // espesor (m)
+  cTop?: number;    // ancho del contrafuerte en la coronación, medido desde el trasdós (m)
 }
 
 /** Valores del muro de la serie, cada uno con su fuente (registros/2026-09-28_PENDIENTE_muro…). */
@@ -203,7 +210,10 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
   let E = p.E, nu = p.nu;
   const lat = Math.round(p.lat ?? 0) === 1, ctau = p.ctau ?? 0.5, nh = p.nh ?? 2200, hDel = p.hDel ?? 0.6;
 
-  const ys = modelo === 0 ? [0] : tramos(0, p.L, p.ms);
+  const conCf = modelo === 1 && Math.round(p.cf ?? 0) === 1 && (p.sCf ?? 0) > 0;
+  const yCf: number[] = [];
+  if (conCf) for (let y = 0; y <= p.L + 1e-9; y += p.sCf!) yCf.push(rd(y));
+  const ys = modelo === 0 ? [0] : unir(tramos(0, p.L, p.ms), yCf);
   const wy = modelo === 0 ? [p.L] : tributaria(ys);   // la membrana lleva toda la longitud en su espesor
   const jm = Math.floor(ys.length / 2);
 
@@ -253,9 +263,37 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
       thicknesses.set(elements.length, rd(xb - xFrente(zc)));
       elements.push([fus(k, j), fus(k, j + 1), fus(k + 1, j + 1), fus(k + 1, j)]);
     }
+    const nFuste = elements.length;
+    if (conCf) {
+      // contrafuerte en el plano y = yc: fila k (cota zs[k]) de la cara del fuste (plano medio) al borde
+      // inclinado; la fila de abajo son los nudos de la zapata del talón (los comparte), el canto izquierdo
+      // los del fuste. Borde inclinado: de (B, tf/2) a (xb + cTop, Zt).
+      const z0 = zs[0], cTop = Math.max(p.cTop ?? 0.3, p.ms);
+      const xFin = (z: number) => B + ((xb + cTop) - B) * (z - z0) / (Zt - z0);
+      const fr = xs.slice(iEje).map((x) => (x - xEje) / (B - xEje));          // reparto a lo largo de la fila
+      for (const yc of yCf) {
+        const j = ys.indexOf(yc), tc = (yc < 1e-9 || yc > p.L - 1e-9) ? (p.tCf ?? 0.3) / 2 : (p.tCf ?? 0.3);
+        const cfn = (k: number, i: number) => {
+          if (i === 0) return fus(k, j);
+          if (k === 0) return zap(iEje + i, j);
+          const key = `c${k},${i},${j}`; let id = nz.get(key);
+          if (id === undefined) {
+            const xa = nodes[fus(k, j)][0], xe = xFin(zs[k]);
+            id = nodes.length; nz.set(key, id); nodes.push([rd(xa + (xe - xa) * fr[i]), yc, zs[k]]);
+          }
+          return id;
+        };
+        for (let k = 0; k + 1 < zs.length; k++) for (let i = 0; i + 1 < fr.length; i++) {
+          thicknesses.set(elements.length, rd(tc));
+          elements.push([cfn(k, i), cfn(k, i + 1), cfn(k + 1, i + 1), cfn(k + 1, i)]);
+        }
+      }
+    }
     // peso propio; la fila del fuste que cae DENTRO de la zapata no pesa (ya la pesa la zapata)
     elements.forEach((el, e) => {
       if (e >= nZap && nodes[el[0]][2] < p.tf - 1e-9 && nodes[el[2]][2] <= p.tf + 1e-9) return;
+      // contrafuerte: su fila de dentro de la zapata tampoco pesa
+      if (e >= nFuste && Math.min(...el.map((n) => nodes[n][2])) < p.tf - 1e-9) return;
       const W = areaQ4(el.map((n) => nodes[n])) * (thicknesses.get(e) ?? 0) * p.gammaC;
       for (const n of el) {
         C.mas("PP", n, 2, -W / 4);
