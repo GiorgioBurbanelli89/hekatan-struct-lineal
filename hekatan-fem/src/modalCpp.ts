@@ -36,8 +36,10 @@ export function modalCpp(
   // TIEMPO-HISTORIA LINEAL (30-sep-2026): ver timeHistoryAnalysis() abajo y cpp/utils/tiempoHistoria.h
   th?: THOpciones,
   // PANDEO LINEAL (1-oct-2026, cpp/utils/pandeo.h): axial P-delta por elemento (tracción +). Si viene, no hay modal.
-  pandeoP?: number[]
-): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado } {
+  pandeoP?: number[],
+  // ESTADO ESTACIONARIO (1-oct-2026, cpp: sección 8b de modal.cpp)
+  ss?: EstacionarioOpciones
+): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado; steadyState?: EstacionarioResultado } {
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
 
   const gc: number[] = [];
@@ -193,6 +195,11 @@ export function modalCpp(
   const pandeoOutPtr = mod._malloc(4); gc.push(pandeoOutPtr);
   const pandeoOutLen = mod._malloc(4); gc.push(pandeoOutLen);
   mod.HEAPU32[pandeoOutPtr / 4] = 0; mod.HEAPU32[pandeoOutLen / 4] = 0;
+  let ssCfgPtr = 0, ssCfgLen = 0;
+  if (ss) { const cfg = ssConfigPlana(ss, nodes.length); ssCfgPtr = allocate(cfg, Float64Array, mod.HEAPF64); gc.push(ssCfgPtr); ssCfgLen = cfg.length; }
+  const ssOutPtr = mod._malloc(4); gc.push(ssOutPtr);
+  const ssOutLen = mod._malloc(4); gc.push(ssOutLen);
+  mod.HEAPU32[ssOutPtr / 4] = 0; mod.HEAPU32[ssOutLen / 4] = 0;
   const thOutPtr = mod._malloc(4); gc.push(thOutPtr);
   const thOutLen = mod._malloc(4); gc.push(thOutLen);
   mod.HEAPU32[thOutPtr / 4] = 0; mod.HEAPU32[thOutLen / 4] = 0;
@@ -351,7 +358,11 @@ export function modalCpp(
     dirModKeys.length,
     pandeoPPtr,
     pandeoOutPtr,
-    pandeoOutLen
+    pandeoOutLen,
+    ssCfgPtr,
+    ssCfgLen,
+    ssOutPtr,
+    ssOutLen
   );
 
   // 3- Read outputs
@@ -442,10 +453,25 @@ export function modalCpp(
     gc.push(pbPtr);
   }
 
+  // Estado estacionario
+  let steadyState: EstacionarioResultado | undefined;
+  const sP = mod.HEAPU32[ssOutPtr / 4], sL = mod.HEAPU32[ssOutLen / 4];
+  if (ss && sP && sL > 0) {
+    const o = Array.from(new Float64Array(mod.HEAPF64.buffer, sP, sL)); gc.push(sP);
+    const nF = Math.round(o[0]), nN = Math.round(o[1]); const freqs = o.slice(2, 2 + nF);
+    const re = new Map<number, number[][]>(), im = new Map<number, number[][]>();
+    const nudos = ss.nudos ?? nodes.map((_, i) => i);
+    nudos.slice(0, nN).forEach((q) => { re.set(q, []); im.set(q, []); });
+    let q = 2 + nF;
+    for (let k = 0; k < nF; k++) for (let j = 0; j < nN; j++) { re.get(nudos[j])!.push(o.slice(q, q + 6)); im.get(nudos[j])!.push(o.slice(q + 6, q + 12)); q += 12; }
+    steadyState = { frecuencias: freqs, re, im };
+  }
+
   // Free memory
   gc.forEach((ptr) => mod._free(ptr));
 
   return {
+    steadyState,
     buckling,
     frequencies,
     modeShapes,
@@ -533,6 +559,43 @@ function thLeerSalida(o: number[], opc: THOpciones, nNodos: number): THResultado
     for (let i = 0; i < nNodos; ++i) { envolvente.push(o.slice(q, q + 6)); q += 6; }
   }
   return { t, u, base, envolvente, nModos };
+}
+
+/** Estado estacionario (Steady State de SAP2000). Frecuencias en Hz; amortiguamiento HISTERÉTICO D = dK·K + dM·M. */
+export type EstacionarioCarga = { tipo?: 0 | 1; dir?: number; pares?: Array<[number, number]>; s?: number; fase?: number; funcion?: Array<[number, number]> };
+export type EstacionarioOpciones = { frecuencias: number[]; dK?: number; dM?: number; cargas: EstacionarioCarga[]; nudos?: number[] };
+export type EstacionarioResultado = { frecuencias: number[]; re: Map<number, number[][]>; im: Map<number, number[][]> };
+
+function ssConfigPlana(o: EstacionarioOpciones, nNodos: number): number[] {
+  const c: number[] = [o.frecuencias.length, ...o.frecuencias, o.dK ?? 0, o.dM ?? 0, o.cargas.length];
+  for (const g of o.cargas) {
+    const pares = g.pares ?? []; const fn = g.funcion ?? [];
+    c.push(g.tipo ?? 0, (g.tipo ?? 0) === 1 ? (g.dir ?? 0) : pares.length, g.s ?? 1, g.fase ?? 0, fn.length);
+    for (const [f, v] of fn) c.push(f, v);
+    if ((g.tipo ?? 0) !== 1) for (const [gdl, v] of pares) c.push(gdl, v);
+  }
+  const nud = o.nudos ?? Array.from({ length: nNodos }, (_, i) => i);
+  c.push(nud.length, ...nud);
+  return c;
+}
+
+/**
+ * ESTADO ESTACIONARIO como SAP2000 (CSiRefer cap. XXV): [K − ω²M + i(dK·K + dM·M)]·a = Σ s·f(ω)·e^{iθ}·p.
+ * Mismo modelo que el modal (masa concentrada de CSI, apoyos, diafragmas, muelles). Sin `cargas` usa nodeInputs.loads × 1.
+ */
+export function steadyStateAnalysis(
+  nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs, opc: Partial<EstacionarioOpciones> & { frecuencias: number[] }
+): EstacionarioResultado | undefined {
+  const ni: any = nodeInputs;
+  let cargas = opc.cargas;
+  if (!cargas) {
+    const pares: Array<[number, number]> = [];
+    (ni.loads as Map<number, number[]> | undefined)?.forEach((f, q) => f.forEach((v, k) => { if (v) pares.push([6 * q + k, v]); }));
+    cargas = [{ tipo: 0, pares, s: 1, fase: 0 }];
+  }
+  const r = modalCpp(nodes, elements, nodeInputs, elementInputs, 1, 0, 0, 1, ni.diaphragms, ni.springs, undefined, undefined,
+    { frecuencias: opc.frecuencias, dK: opc.dK ?? 0, dM: opc.dM ?? 0, cargas, nudos: opc.nudos });
+  return r.steadyState;
 }
 
 /** Resultado del pandeo lineal: factores λ (por |λ| creciente) y formas (dof completo, máx |Ψ| = 1). */

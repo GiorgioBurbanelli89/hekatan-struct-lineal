@@ -14,6 +14,7 @@
 #include <Eigen/Eigenvalues>
 #include <iostream>
 #include <limits>
+#include <complex>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -487,8 +488,15 @@ extern "C"
         int *shellmod_keys_ptr = nullptr, double *shellmod_values_ptr = nullptr, int num_shellmods = 0,
         // PANDEO LINEAL (1-oct-2026, utils/pandeo.h): axial P-delta de cada elemento (num_elements, tracción +).
         // Si viene, NO se hace el modal: se resuelve [K − λG]Ψ = 0 y sale [nModos, λ…, Ψ…] por pandeo_out.
-        double *pandeo_P_ptr = nullptr, double **pandeo_out_ptr = nullptr, int *pandeo_out_len = nullptr)
+        double *pandeo_P_ptr = nullptr, double **pandeo_out_ptr = nullptr, int *pandeo_out_len = nullptr,
+        // ESTADO ESTACIONARIO (1-oct-2026, Steady State de SAP2000, CSiRefer cap. XXV): [K − ω²M + i(dK·K + dM·M)]·a = p(ω).
+        // Configuración plana: [nFreq, f(Hz)×nFreq, dK, dM, nCargas, por carga: tipo(0 patrón,1 aceleración base),
+        //   dir|nPares, s, θ(°), nPts, (f,v)×nPts, [(gdl, valor)×nPares], nNud, nudos…]
+        // Salida: [nFreq, nNud, f×nFreq, por frecuencia y nudo: Re×6, Im×6]
+        double *ss_cfg_ptr = nullptr, int ss_cfg_len = 0, double **ss_out_ptr = nullptr, int *ss_out_len = nullptr)
     {
+        if (ss_out_ptr) *ss_out_ptr = nullptr;
+        if (ss_out_len) *ss_out_len = 0;
         if (pandeo_out_ptr) *pandeo_out_ptr = nullptr;
         if (pandeo_out_len) *pandeo_out_len = 0;
         if (th_out_ptr) *th_out_ptr = nullptr;
@@ -1216,6 +1224,54 @@ extern "C"
         {
             *mode_scales_ptr_out = (double *)malloc(numValidModes * sizeof(double));
             for (int m = 0; m < numValidModes; ++m) (*mode_scales_ptr_out)[m] = modeScale[m];
+        }
+
+        // ── 8b. ESTADO ESTACIONARIO (opcional) — mismo K, M, apoyos, diafragmas y muelles que el modal ──
+        if (ss_cfg_ptr && ss_cfg_len >= 5 && ss_out_ptr && ss_out_len)
+        {
+            const double *cf = ss_cfg_ptr; int pos = 0;
+            const int nF = (int)cf[pos++]; std::vector<double> fr(cf + pos, cf + pos + nF); pos += nF;
+            const double dK = cf[pos++], dM = cf[pos++]; const int nC = (int)cf[pos++];
+            struct CargaSS { Eigen::VectorXd p; double s, th; std::vector<double> ff, fv; };
+            std::vector<CargaSS> cs;
+            for (int c = 0; c < nC && pos + 5 <= ss_cfg_len; ++c) {
+                CargaSS g; const int tipo = (int)cf[pos]; const int dirOn = (int)cf[pos + 1]; g.s = cf[pos + 2]; g.th = cf[pos + 3];
+                const int nPts = (int)cf[pos + 4]; pos += 5;
+                for (int j = 0; j < nPts; ++j) { g.ff.push_back(cf[pos]); g.fv.push_back(cf[pos + 1]); pos += 2; }
+                if (tipo == 1) g.p = -(M_global * r_full[std::max(0, std::min(2, dirOn))]);
+                else {
+                    Eigen::VectorXd full = Eigen::VectorXd::Zero(dofCompleto);
+                    for (int j = 0; j < dirOn; ++j) { const int gd = (int)cf[pos]; if (gd >= 0 && gd < dofCompleto) full(gd) += cf[pos + 1]; pos += 2; }
+                    g.p = hayDiafragma ? (Eigen::VectorXd)(T_dia.transpose() * full) : full;
+                }
+                cs.push_back(g);
+            }
+            std::vector<int> nud; const int nN = pos < ss_cfg_len ? (int)cf[pos++] : 0;
+            for (int j = 0; j < nN && pos < ss_cfg_len; ++j) nud.push_back((int)cf[pos++]);
+            auto interp = [](const std::vector<double> &x, const std::vector<double> &y, double f) {
+                if (x.empty()) return 1.0; if (f <= x.front()) return y.front(); if (f >= x.back()) return y.back();
+                size_t k = std::upper_bound(x.begin(), x.end(), f) - x.begin(); const double t = (f - x[k - 1]) / (x[k] - x[k - 1]);
+                return y[k - 1] + t * (y[k] - y[k - 1]); };
+            std::vector<int> keep; for (int c : freeIndices) if (!std::binary_search(zeroIndicesK.begin(), zeroIndicesK.end(), c)) keep.push_back(c);
+            const int n = (int)keep.size();
+            Eigen::SparseMatrix<double> Kf = extractBlock(K_global, keep, keep), Mf = extractBlock(M_global, keep, keep);
+            typedef std::complex<double> cd;
+            std::vector<double> out = { (double)fr.size(), (double)nud.size() };
+            for (double f : fr) out.push_back(f);
+            for (double f : fr) {
+                const double w = 2 * M_PI * f;
+                Eigen::SparseMatrix<cd> A = (Kf - w * w * Mf).cast<cd>() + cd(0, 1) * (dK * Kf + dM * Mf).cast<cd>();
+                Eigen::VectorXcd b = Eigen::VectorXcd::Zero(n);
+                for (auto &g : cs) { const cd e = g.s * interp(g.ff, g.fv, f) * std::exp(cd(0, g.th * M_PI / 180.0)); for (int a = 0; a < n; ++a) b(a) += e * g.p(keep[a]); }
+                Eigen::SparseLU<Eigen::SparseMatrix<cd>> lu; lu.compute(A);
+                Eigen::VectorXcd x = lu.info() == Eigen::Success ? (Eigen::VectorXcd)lu.solve(b) : Eigen::VectorXcd::Zero(n);
+                Eigen::VectorXcd red = Eigen::VectorXcd::Zero(dof); for (int a = 0; a < n; ++a) red(keep[a]) = x(a);
+                Eigen::VectorXcd full = hayDiafragma ? (Eigen::VectorXcd)(T_dia.cast<cd>() * red) : red;
+                for (int q : nud) { for (int k = 0; k < 6; ++k) out.push_back(q >= 0 && q < num_nodes ? full(6 * q + k).real() : 0.0);
+                                    for (int k = 0; k < 6; ++k) out.push_back(q >= 0 && q < num_nodes ? full(6 * q + k).imag() : 0.0); }
+            }
+            double *buf = (double *)malloc(sizeof(double) * out.size()); std::copy(out.begin(), out.end(), buf);
+            *ss_out_ptr = buf; *ss_out_len = (int)out.size();
         }
 
         // ── 9. TIEMPO-HISTORIA LINEAL (opcional) ──────────────────────────────────────────────────

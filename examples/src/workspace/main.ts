@@ -16,6 +16,7 @@
  */
 import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
 import { montarPandeo, montarTiposDeCaso } from "../shared/panelPandeo";
+import { montarEstacionario } from "../shared/panelEstacionario";
 import { montarNEC } from "../shared/nec/panelNEC";
 import { montarCorte } from "../shared/panelCorte";
 import van, { State } from "vanjs-core";
@@ -7307,10 +7308,12 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       W_.__hekatanCorte = corte; W_.__hekatanCorteFolder = corte.folder;
     } catch (e) { console.warn("[corte]", e); }
     // ── ⟂ Pandeo lineal (1-oct-2026): el Load Case «Buckling» de SAP2000 + los tipos de caso (no lineal = Pro), en TODOS ──
-    for (const k of ["__hekatanPandeoFolder", "__hekatanTiposFolder"]) if (W_[k]) { try { W_[k].dispose(); } catch {} W_[k] = null; }
+    for (const k of ["__hekatanPandeoFolder", "__hekatanTiposFolder", "__hekatanEstacionarioFolder"]) if (W_[k]) { try { W_[k].dispose(); } catch {} W_[k] = null; }
     try {
       const pd = montarPandeo(W_.__hekatanOutputsFolder ?? pane, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
       W_.__hekatanPandeo = pd; W_.__hekatanPandeoFolder = pd.folder;
+      const ssp = montarEstacionario(W_.__hekatanOutputsFolder ?? pane, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
+      W_.__hekatanEstacionario = ssp; W_.__hekatanEstacionarioFolder = ssp.folder;
       const tc = montarTiposDeCaso(W_.__hekatanOutputsFolder ?? pane);
       W_.__hekatanTiposCaso = tc; W_.__hekatanTiposFolder = tc.folder;
     } catch (e) { console.warn("[pandeo]", e); }

@@ -1217,3 +1217,15 @@ solo flexión θ salía hasta 22 % de SAP2000: no volver a probarla.
 - Juez: `validation/pandeo/sap_pandeo.py` (OAPI) → `sap_pandeo.json`; `node tests/run.mjs pandeo` (columna 1 y 4
   trozos, pórtico 3D con columna girada 30° y apoyo articulado, edificio 3D de 918 GDL): **0.0000 %** en 28 modos.
 - Pendiente: G de cáscaras y sólidos (muros), releases dentro de G.
+
+## Estado estacionario (Load Case «Steady State» de SAP2000) — 1-oct-2026
+
+CSiRefer cap. XXV: `[K − ω²M + i·(dK·K + dM·M)]·a = Σ s·f(ω)·e^{iθ}·p` (amortiguamiento HISTERÉTICO; el ejemplo del
+manual usa dK = 0.04 ≈ 2 % modal). M = la masa concentrada de CSI del modal. Re = en fase, Im = a 90°, |a| = √(Re²+Im²).
+- C++: `modal()` sección 8b (`ss_cfg`/`ss_out`, SparseLU complejo por frecuencia, mismos apoyos/diafragmas/muelles).
+  TS: `steadyStateAnalysis(nodes, elements, ni, ei, {frecuencias, dK, dM, cargas?, nudos?})`; Python `estacionario.py`.
+- App: Settings › **〜 Estado estacionario (lineal)**: carga = fuerzas del caso aplicado o aceleración en la base X/Y,
+  curva |u| contra f del nudo de control y animación a una frecuencia.
+- Juez: `validation/estacionario/sap_ss.py` (OAPI: `LoadCases.SteadyState`, `Func.FuncSS.SetUser`,
+  `Results.Setup.SetOptionSteadyState(2, 1)` = Real/Imag at Freq). `node tests/run.mjs estacionario`: 40 frecuencias,
+  fuerzas y aceleración en la base, **0.000 %**.

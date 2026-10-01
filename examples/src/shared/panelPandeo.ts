@@ -27,7 +27,7 @@ const TIPOS: Array<[string, string]> = [
   ["Nonlinear Static (pushover)", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
   ["Moving Load", "Próximamente en Hekatan Struct (lineal)."],
   ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal), = SAP2000."],
-  ["Steady State", "Próximamente en Hekatan Struct (lineal)."],
+  ["Steady State", "✓ Hekatan Struct: 〜 Estado estacionario (lineal), = SAP2000."],
   ["Power Spectral Density", "Próximamente en Hekatan Struct (lineal)."],
   ["Hyperstatic", "Próximamente en Hekatan Struct (lineal)."],
 ];
