@@ -83,7 +83,8 @@ export function resolverMuroManabi(p: MuroManabiParams, placa = 1, incompatible 
     const R = sol.deformOutputs.reactions as Map<number, number[]> | undefined;
     // del apoyo solo cuenta ux: uy está sujeto en todos los nudos (faja de muro) y no lleva carga
     if (R) for (const [k, r] of R) if (malla.supports.get(k)?.[0]) sol.reaccion[0] += r[0] ?? 0;
-    for (const b of malla.base) sol.presion.set(b.node, p.ks * (U.get(b.node)?.[2] ?? 0));
+    // con 4 apoyos fijos no hay terreno: ni presión de contacto ni su mapa
+    if (Math.round((p as any).apoyos ?? 0) !== 1 || malla.tipo !== "cascara") for (const b of malla.base) sol.presion.set(b.node, p.ks * (U.get(b.node)?.[2] ?? 0));
 
     if (malla.tipo === "cascara") {
       // mapa de presión de contacto sobre la zapata, como en las zapatas del workspace
@@ -145,6 +146,7 @@ export const muroManabi: ExampleDef = {
     ctau:   { ...P("Terreno", "Cτ/Cu base (Barkan)", D.ctau ?? 0.5, 0.1, 1, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
     nh:     { ...P("Terreno", "nh cara enterrada (kN/m³, Terzaghi)", D.nh ?? 2200, 500, 20000, 100), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
     hDel:   { ...P("Terreno", "terreno delante sobre la base (m)", D.hDel ?? 0.6, 0, 2, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.lat) !== 1 },
+    apoyos: { default: 0, label: "Apoyos (cáscara 3D)", folder: "Terreno", options: { "Balasto (muelles)": 0, "4 apoyos fijos en las esquinas": 1 } },
     // contrafuertes (solo «Cáscara 3D»): la longitud L es el tramo modelado; sus extremos son planos de simetría
     cf:     { default: 0, boolean: true, label: "con contrafuertes (cáscara 3D)", folder: "Contrafuertes" },
     sCf:    { ...P("Contrafuertes", "separación (m)", 1.5, 0.5, 6, 0.05), hiddenIf: (q: Record<string, number>) => Math.round(q.cf) !== 1 },

@@ -71,6 +71,10 @@ export interface MuroManabiParams {
   sCf?: number;     // separación entre ejes (m)
   tCf?: number;     // espesor (m)
   cTop?: number;    // ancho del contrafuerte en la coronación, medido desde el trasdós (m)
+  // APOYOS (solo cáscara, 30-sep-2026): 0 = balasto (lo de siempre) · 1 = 4 apoyos FIJOS en las esquinas de la zapata
+  // (ux uy uz impedidos, giros libres), sin muelles ni planos de simetría — el caso que propuso Fernan para descartar
+  // las condiciones de contorno. Arbitrado con SAP2000: validation/muro-simple-4apoyos (8 fuerzas a 0.0000 %).
+  apoyos?: number;
 }
 
 /** Valores del muro de la serie, cada uno con su fuente (registros/2026-09-28_PENDIENTE_muro…). */
@@ -350,6 +354,15 @@ export function mallaMuroManabi(p: MuroManabiParams): MuroManabiMalla {
       const a = supports.get(n) ?? [false, false, false, false, false, false];
       a[1] = true; a[3] = true; a[5] = true; supports.set(n, a);
     });
+    if (Math.round(p.apoyos ?? 0) === 1) {
+      springs.length = 0; supports.clear();
+      const zb = rd(p.tf / 2);
+      nodes.forEach((q, n) => {
+        if (Math.abs(q[2] - zb) > 1e-9) return;
+        const enX = Math.abs(q[0]) < 1e-9 || Math.abs(q[0] - B) < 1e-9, enY = Math.abs(q[1]) < 1e-9 || Math.abs(q[1] - p.L) < 1e-9;
+        if (enX && enY) supports.set(n, [true, true, true, false, false, false]);
+      });
+    }
   } else {
     // ── MEMBRANA y SÓLIDO: la sección x–z, tal cual o extruida ─────────────────────────────
     const xs = unir(tramos(0, p.toe, p.ms), tramos(p.toe, xb, p.ms), tramos(xb, B, p.ms));
