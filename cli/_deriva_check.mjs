@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const P = Buffer.from(JSON.stringify({ ms: 1.0 })).toString("base64");
+await pag.goto(`https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=test-m-dual&p=${P}&v=${Date.now()}`, { waitUntil: "networkidle2", timeout: 120000 }); await espera(9000);
+await pag.evaluate(() => { const n = window.__hekatanNEC; Object.assign(n.params, { Z: 0.4, Fa: 1, Fd: 1.6, Fs: 1.9, r: 1.5, sistema: 1, agrietadas: 1 }); n.correr(); });
+await espera(1500);
+await pag.evaluate(() => [...document.querySelectorAll("#hk-nec-panel svg")][0].scrollIntoView({ block: "center" })); await espera(500);
+await pag.screenshot({ path: "cli/shots/aguiar/deriva.png" });
+await nav.close();

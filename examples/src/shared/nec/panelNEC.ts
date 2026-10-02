@@ -199,9 +199,9 @@ function ventana() {
       filas += `<tr>${td("P" + q.k)}${td(q.z.toFixed(2))}${td(q.peso.toFixed(1))}${td(pe.F.toFixed(1))}${td(pe.Vpiso.toFixed(1))}` +
         `${td((D.X.pisos[i].V * D.escX.factor).toFixed(1))}${td((D.Y.pisos[i].V * D.escY.factor).toFixed(1))}` +
         `${td(`${q.cm[0].toFixed(3)}, ${q.cm[1].toFixed(3)}`)}${td(`${cr[0].toFixed(3)}, ${cr[1].toFixed(3)}`)}` +
-        `${td((dX.inelastica * 100).toFixed(2) + " %")}${td(dX.relacion.toFixed(3), mala(dX))}${td((dY.inelastica * 100).toFixed(2) + " %")}${td(dY.relacion.toFixed(3), mala(dY))}${td(r.estabilidad.X[i].toFixed(4))}${td(r.estabilidad.Y[i].toFixed(4))}</tr>`;
+        `${td((dX.max * 100).toFixed(3) + " %", "color:#94a3b8")}${td((dX.inelastica * 100).toFixed(2) + " %")}${td(dX.relacion.toFixed(3), mala(dX))}${td((dY.max * 100).toFixed(3) + " %", "color:#94a3b8")}${td((dY.inelastica * 100).toFixed(2) + " %")}${td(dY.relacion.toFixed(3), mala(dY))}${td(r.estabilidad.X[i].toFixed(4))}${td(r.estabilidad.Y[i].toFixed(4))}</tr>`;
     }
-    const cab = ["Piso", "z m", `W ${r.unidad}`, `F ${r.unidad}`, "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔM X", "máx/prom X", "ΔM Y", "máx/prom Y", "Q X", "Q Y"].map(th).join("");
+    const cab = ["Piso", "z m", `W ${r.unidad}`, `F ${r.unidad}`, "V est", "Vx din", "Vy din", "CM (x, y)", "CR (x, y)", "ΔE X", "ΔM X", "máx/prom X", "ΔE Y", "ΔM Y", "máx/prom Y", "Q X", "Q Y"].map(th).join("");
     cuerpo.innerHTML = `
 <div style="line-height:1.5;margin-bottom:6px">
  <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} ${r.unidad} · <b>V ${e.V.toFixed(1)} ${r.unidad}</b> (Cs ${e.Cs.toFixed(4)})<br>
@@ -407,7 +407,7 @@ function graficaDerivas(r: ResultadoNEC): string {
   const sx = est(["Ex", "Ex+e", "Ex−e"]), sy = est(["Ey", "Ey+e", "Ey−e"]);
   const dx = D.X.pisos.map((p) => p.derivaInel * D.escX.factor), dy = D.Y.pisos.map((p) => p.derivaInel * D.escY.factor);
   const lim = r.limiteDeriva, vmax = Math.max(lim * 1.15, ...sx, ...sy, ...dx, ...dy);
-  const W = 620, H = 60 + 46 * n, m = { l: 50, r: 150, t: 22, b: 30 };
+  const W = 680, H = 80 + 46 * n, m = { l: 46, r: 230, t: 22, b: 30 };
   const X = (v: number) => m.l + (v / vmax) * (W - m.l - m.r), Y = (i: number) => H - m.b - ((i + 1) / n) * (H - m.t - m.b);
   const linea = (v: number[], col: string, dash = "") => `<polyline fill="none" stroke="${col}" stroke-width="2.5" ${dash ? `stroke-dasharray="${dash}"` : ""} points="${[`${X(0)},${H - m.b}`, ...v.map((d, i) => `${X(d).toFixed(1)},${Y(i).toFixed(1)}`)].join(" ")}"/>` +
     v.map((d, i) => `<circle cx="${X(d).toFixed(1)}" cy="${Y(i).toFixed(1)}" r="3.5" fill="${col}"/>`).join("");
@@ -423,7 +423,11 @@ function graficaDerivas(r: ResultadoNEC): string {
   s += `<text x="${lx}" y="${m.t + 46}" fill="#fb923c" font-size="11">— Y estático máx ${(Math.max(...sy) * 100).toFixed(2)} %</text>`;
   s += `<text x="${lx}" y="${m.t + 66}" fill="#94a3b8" font-size="11">- - dinámico CQC escalado</text>`;
   s += `<text x="${lx}" y="${m.t + 82}" fill="#94a3b8" font-size="10">X ${(Math.max(...dx) * 100).toFixed(2)} % · Y ${(Math.max(...dy) * 100).toFixed(2)} %</text>`;
+  const nec15 = r.sitio.norma === "NEC-15", amp = nec15 ? 0.75 * r.sitio.R : (r.sitio.Cd ?? 5.5) / r.sitio.I;
+  s += `<text x="${lx}" y="${m.t + 130}" fill="#e2e8f0" font-size="11">${nec15 ? "NEC-15 §6.3.9: ΔM = 0.75·R·ΔE" : "borrador ec. 6.8: δ = Cd·δe/Ie"}</text>`;
+  s += `<text x="${lx}" y="${m.t + 146}" fill="#94a3b8" font-size="11">${nec15 ? `0.75 × ${r.sitio.R} = ${amp.toFixed(2)}` : `${r.sitio.Cd ?? 5.5} / ${r.sitio.I} = ${amp.toFixed(2)}`} × la elástica</text>`;
+  s += `<text x="${lx}" y="${m.t + 162}" fill="#94a3b8" font-size="11">elástica máx X ${(Math.max(...sx) / amp * 100).toFixed(3)} % · Y ${(Math.max(...sy) / amp * 100).toFixed(3)} %</text>`;
   const ok = Math.max(...sx, ...sy, ...dx, ...dy) <= lim;
-  s += `<text x="${lx}" y="${m.t + 106}" fill="${ok ? "#4ade80" : "#f87171"}" font-size="12" font-weight="700">${ok ? "cumple" : "NO cumple"}</text></svg>`;
+  s += `<text x="${lx}" y="${m.t + 106}" fill="${ok ? "#4ade80" : "#f87171"}" font-size="12" font-weight="700">${ok ? "cumple" : "NO cumple"} el límite</text></svg>`;
   return s;
 }
