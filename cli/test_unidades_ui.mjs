@@ -33,7 +33,7 @@ const ESPERA = { SI: { F: "kN", D: "mm", L: "m" }, MKS: { F: "tonf", D: "mm", L:
 // ── Unidad → factor a SI (kN, m) ─────────────────────────────────────────────
 const F = { kN: 1, N: 1e-3, MN: 1e3, tonf: 9.80665, Tonf: 9.80665, t: 9.80665, kgf: 0.00980665, kg: 0.00980665, kip: 4.4482216, Kip: 4.4482216, lb: 0.0044482216, lbf: 0.0044482216 };
 const L = { m: 1, mm: 1e-3, cm: 1e-2, in: 0.0254, ft: 0.3048 };
-const ALIAS = { kPa: "kN/m²", MPa: "1000kN/m²", GPa: "1e6kN/m²", psi: "0.006894757kN/m²", ksi: "6.894757kN/m²", pci: "lb/in³" };
+const ALIAS = { kPa: "kN/m²", MPa: "1000kN/m²", GPa: "1e6kN/m²", psi: "6.894757kN/m²", ksi: "6894.757kN/m²", pci: "lb/in³" };
 function factorUnidad(u) {
   if (!u) return null;
   u = u.replace(/\s+/g, "").replace(/\^2/g, "²").replace(/\^3/g, "³").replace(/2$/, "²").replace(/\*/g, "·");
@@ -99,7 +99,7 @@ async function leer(pag) {
     document.querySelectorAll(".tp-lblv").forEach((b) => {
       const lab = b.querySelector(".tp-lblv_l")?.textContent?.trim() ?? "";
       const inp = b.querySelector("input.tp-txtv_i, .tp-txtv input, input");
-      if (inp && lab) { const base = lab.replace(/\s*\([^()]*\)\s*$/, ""); vistos[base] = (vistos[base] ?? 0) + 1; tp.push({ k: `TP:${base}#${vistos[base]}`, lab, val: inp.value }); }
+      if (inp && lab) { const carpeta = b.closest(".tp-fldv")?.querySelector(".tp-fldv_t")?.textContent?.trim() ?? ""; const base = carpeta + "›" + lab.replace(/\s*\([^()]*\)\s*$/, ""); vistos[base] = (vistos[base] ?? 0) + 1; tp.push({ k: `TP:${base}#${vistos[base]}`, lab, val: inp.value }); }
     });
     const leg = document.querySelector("#legend");
     const leyenda = leg && !leg.hidden ? { unidad: leg.firstChild?.textContent ?? "", marcas: [...leg.querySelectorAll(".marker p")].map((p) => p.textContent) } : null;
@@ -160,7 +160,8 @@ async function etiquetas3D(pag) {
       try { s.nodeResults.val = "none"; s.frameResults.val = "none"; } catch {}
       if (ajuste) { try { s[ajuste].val = valor; } catch { return []; } }
       await new Promise((r) => setTimeout(r, 900));
-      const t = []; ctx.scene.traverse((o) => { if (o.visible !== false && typeof o.textoEtiqueta === "string") t.push(o.textoEtiqueta); });
+      const vis = (o) => { for (let x = o; x; x = x.parent) if (x.visible === false) return false; return true; };
+      const t = []; ctx.scene.traverse((o) => { if (typeof o.textoEtiqueta === "string" && vis(o)) t.push(o.textoEtiqueta); });
       try { s.nodeResults.val = "none"; s.frameResults.val = "none"; } catch {}
       return t.slice(0, 400);
     }, ajuste, valor);
@@ -202,7 +203,9 @@ function mapaPantalla(l) {
 function compararPantalla(base, otra, nomB, nomO, fallos) {
   for (const [k, a] of base) {
     const b = otra.get(k); if (!b) continue;
-    const tol = a.tol + b.tol + 1e-9 * Math.max(Math.abs(a.si), Math.abs(b.si));
+    // «📊 Calculados»: el ejemplo ya entrega el número redondeado (4 cifras) y convertirlo suma otro redondeo
+    const rel = k.includes("Calculados") ? 6e-4 : 1e-9;
+    const tol = a.tol + b.tol + rel * Math.max(Math.abs(a.si), Math.abs(b.si));
     if (Math.abs(a.si - b.si) > tol * 1.0001)
       fallos.push({ donde: k.split(">").slice(-3).join(">"), [nomB]: a.texto, [nomO]: b.texto, siB: a.si, siO: b.si, razon: (b.si / a.si) });
   }
@@ -287,7 +290,8 @@ for (const id of IDS) {
         a.forEach((pa, j) => { const pb = b[j]; if (!pb) return;
           const tol = pa.tol + pb.tol + 1e-9 * Math.max(Math.abs(pa.si), Math.abs(pb.si));
           if (Math.abs(pa.si - pb.si) > tol * 1.0001) r.e3dFallos.push({ modo, sis, SI: t, otro: otra[i] }); });
-        if (a.length === 0 && t.trim() === (otra[i] ?? "").trim() && /\d/.test(t) && sis === "IMP") r.e3dFallos.push({ modo, sis, igualEnTodos: t });
+        // un giro en rad o un número adimensional no cambia con el sistema: no es fallo
+        if (a.length === 0 && t.trim() === (otra[i] ?? "").trim() && /\d/.test(t) && !/\brad\b|%|°/.test(t) && sis === "IMP") r.e3dFallos.push({ modo, sis, igualEnTodos: t });
       });
     }
   }

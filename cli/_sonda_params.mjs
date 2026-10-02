@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const [BASE, id] = process.argv.slice(2);
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1500, height: 950 });
+await pag.evaluateOnNewDocument(() => { localStorage.clear(); localStorage.setItem("hk_unitsPreset", "Metric MKS"); });
+await pag.goto(`${BASE}/workspace/?t=${id}`, { waitUntil: "networkidle2", timeout: 180000 });
+await new Promise((r) => setTimeout(r, 7000));
+const r = await pag.evaluate(async () => { const e = await window.__hekatanEnlaceEjemplo(); const u = new URL(e.url); const p = u.searchParams.get("p");
+  let dec = null; if (p) { try { dec = JSON.parse(decodeURIComponent(escape(atob(p.replace(/-/g, "+").replace(/_/g, "/"))))); } catch (x) { dec = "?" + p; } } return dec; });
+console.log("cambiados tras abrir:", JSON.stringify(r));
+await nav.close();

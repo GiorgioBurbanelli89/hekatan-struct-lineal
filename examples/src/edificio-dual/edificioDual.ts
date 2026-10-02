@@ -36,7 +36,9 @@ params.slabOn     = { ...base.slabOn,     default: 1 };
 params.bracesMode = { ...base.bracesMode, default: 2 };  // todas las diagonales
 params.slabT      = { ...base.slabT,      default: 0.12 };
 params.fcConcr    = { ...base.fcConcr,    default: 280 };
-params.nPisos     = { ...base.nPisos,     default: 10 };
+// max 12: el heredado es 8 y el panel RECORTABA el 10 a 8 en el primer recálculo — al cambiar de unidades o mover
+// cualquier control el edificio perdía dos pisos (cortante −20 %, flecha −45 %). Medido el 2-oct-2026.
+params.nPisos     = { ...base.nPisos,     default: 10, max: 12 };
 params.murosMode  = { ...base.murosMode,  default: 3 };  // muros Q4 en X e Y (primer vano, dos fachadas)
 params.tMuro      = { ...base.tMuro,      default: 0.25 };
 

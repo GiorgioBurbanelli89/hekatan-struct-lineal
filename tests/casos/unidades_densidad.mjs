@@ -60,10 +60,15 @@ export function construir(id) {
   return st;
 }
 
+// Las COMPUESTAS (tubo relleno, Filled Steel Tube/Pipe) llevan la densidad EQUIVALENTE: la masa real del acero y
+// del hormigón repartida sobre el área TRANSFORMADA (ρs·As + ρc·Ac) / A_tr, que sale > 12 t/m³ y es correcta (la
+// masa por metro es la real). Se excluyen aquí; su masa la vigilan los tests de CFT (2-oct-2026).
 export function densidades(id) {
   const st = construir(id);
-  const d = st.elementInputs.val?.densities;
-  return d ? [...d.values()] : [];
+  const ei = st.elementInputs.val ?? {}, d = ei.densities;
+  if (!d) return [];
+  const comp = (i) => /filled|cft/i.test(String(ei.sectionInfo?.get?.(i)?.shape ?? ei.sectionInfo?.get?.(i)?.name ?? ""));
+  return [...d.entries()].filter(([i]) => !comp(i)).map(([, v]) => v);
 }
 
 export function e2kDe(id) {

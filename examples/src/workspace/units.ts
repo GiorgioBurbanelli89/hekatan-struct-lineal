@@ -31,12 +31,17 @@ export const dispUnit: State<DispUnit> = van.state(
   (localStorage.getItem("hk_dispUnit") as DispUnit) || "mm"
 );
 
+/** Avisa a quien muestre unidades fuera del panel (barra de estado). Fuera del navegador (tests en Node) no hace nada. */
+function avisarUnidades() {
+  try { if (typeof Event !== "undefined" && typeof (window as any).dispatchEvent === "function") window.dispatchEvent(new Event("hk:unidades")); } catch { /* nada */ }
+}
+
 // Persistir preferencias + exponer en window para que hover.ts pueda leerlo
 // sin crear dependencia circular hekatan-ui ← examples
 van.derive(() => {
   localStorage.setItem("hk_forceUnit", forceUnit.val);
   (window as any).__hekatanForceUnit = forceUnit.val;
-  window.dispatchEvent(new Event("hk:unidades"));
+  avisarUnidades();
 });
 van.derive(() => {
   localStorage.setItem("hk_dispUnit", dispUnit.val);
@@ -268,7 +273,7 @@ van.derive(() => { localStorage.setItem("hk_lengthSectionUnit", lengthSectionUni
 export const lengthStructureUnit: State<DispUnit> = van.state(
   (localStorage.getItem("hk_lengthStructureUnit") as DispUnit) || "m"
 );
-van.derive(() => { localStorage.setItem("hk_lengthStructureUnit", lengthStructureUnit.val); window.dispatchEvent(new Event("hk:unidades")); });
+van.derive(() => { localStorage.setItem("hk_lengthStructureUnit", lengthStructureUnit.val); avisarUnidades(); });
 
 // ============================================================================
 // PRESETS "Consistent Units" — un click setea todo

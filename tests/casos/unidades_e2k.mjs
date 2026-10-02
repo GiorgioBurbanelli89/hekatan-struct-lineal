@@ -81,8 +81,12 @@ import { parseE2k } from "${R}/examples/src/shared/e2kParser"; export { parseE2k
     // E y peso específico: cada valor que usa Hekatan es el de algún material de ETABS
     const Es = Object.values(O.materiales).map((x) => x.E), Gs = Object.values(O.materiales).map((x) => x.gamma);
     let peorE = 0, peorG = 0;
-    ei.elasticities?.forEach((v) => { peorE = Math.max(peorE, Math.min(...Es.map((e) => rel(v, e)))); });
-    E.forEach((e, i) => { if (e.length !== 2) return; const r = ei.densities?.get(i); if (r) peorG = Math.max(peorG, Math.min(...Gs.map((g) => rel(r * G, g)))); });
+    // E: el de algún material, o 0.8·E en el acero con el «método directo» de AISC (analisis.metodoDirecto, medido contra
+    // el EDB de ETABS el 2-oct-2026). γ: sin las COMPUESTAS, que llevan la densidad equivalente sobre el área transformada.
+    const Ese = M.analisis?.metodoDirecto ? [...Es, ...Es.map((e) => 0.8 * e)] : Es;
+    const comp = (i) => /filled|cft/i.test(String(ei.sectionInfo?.get?.(i)?.shape ?? ei.sectionInfo?.get?.(i)?.name ?? ""));
+    ei.elasticities?.forEach((v, i) => { if (comp(i)) return; peorE = Math.max(peorE, Math.min(...Ese.map((e) => rel(v, e)))); });
+    E.forEach((e, i) => { if (e.length !== 2 || comp(i)) return; const r = ei.densities?.get(i); if (r) peorG = Math.max(peorG, Math.min(...Gs.map((g) => rel(r * G, g)))); });
     filas.push({ que: `${et}: E de los materiales`, medido: peorE * 100, limite: TOL * 100, ok: peorE <= TOL,
       detalle: `ETABS ${Es.map((e) => e.toExponential(4)).join(" · ")} kN/m²` });
     filas.push({ que: `${et}: peso específico (barras)`, medido: peorG * 100, limite: TOL * 100, ok: peorG <= TOL,

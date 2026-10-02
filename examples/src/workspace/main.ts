@@ -256,6 +256,7 @@ import {
 // Cursor auxiliar dibujado (?cursor=1): el del sistema no sale en las capturas
 // ni en la automatizacion, asi que al ensenar la app no se ve donde se pulsa.
 import "./cursorAux";
+import { convertirEtiqueta, pasoRedondo } from "./unidadEtiqueta";
 
 // Propagación de unidades al viewer de hekatan-ui: cualquier cambio en
 // forceUnit/dispUnit del workspace se refleja en el colormap legend y en
@@ -1919,6 +1920,25 @@ function abrirConResultados() {
   // paleta: la del visor ya es SAFE por defecto (colorMapPalette = "safe" en hekatan-ui/getColorMap.ts)
 }
 
+/**
+ * «📊 Calculados» en el sistema elegido (2-oct-2026): la etiqueta trae la unidad fija («σ top (kN/m²)», «I (m⁴)») y el
+ * valor un número en esa unidad. Si el valor es un número a secas se pasa al sistema con la misma regla que los
+ * parámetros (unidadEtiqueta.ts); si trae texto («12.3 ✓», «OK») se deja como está, etiqueta incluida.
+ */
+function calculadosEnSistema(obj: Record<string, any>): Record<string, any> {
+  const sis = { F: forceUnit.val, L: lengthStructureUnit.val, LS: lengthSectionUnit.val, S: stressUnit.val, SG: subgradeUnit.val };
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const txt = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : "";
+    const conv = /^-?\d[\d,]*\.?\d*(e[-+]?\d+)?$/i.test(txt) ? convertirEtiqueta(k, sis) : null;
+    if (!conv) { out[k] = v; continue; }
+    const x = Number(txt.replace(/,/g, "")) * conv.k;
+    const cifras = Math.min(6, Math.max(3, txt.replace(/^-|\.|e.*$/gi, "").replace(/^0+/, "").length));
+    out[`${conv.base} (${conv.u})`] = Math.abs(x) >= 1e6 || (x !== 0 && Math.abs(x) < 1e-4) ? x.toExponential(cifras - 1) : String(Number(x.toPrecision(cifras)));
+  }
+  return out;
+}
+
 function rebuild() {
   if (!currentExample) return;
   resetStates();
@@ -2020,7 +2040,7 @@ function rebuild() {
   if (!userCameraInteracted && !_dibujando) autoFitCamera();
   // Refrescar el folder "📊 Calculados" con los nuevos valores derivados
   if (currentExample.computedLabels && computedObj) {
-    const latest = currentExample.computedLabels(currentParams, states);
+    const latest = calculadosEnSistema(currentExample.computedLabels(currentParams, states));
     for (const key of Object.keys(computedObj)) {
       if (key in latest) computedObj[key] = latest[key];
     }
@@ -7020,7 +7040,20 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
                        p.unitType === "moment" ? ` ${momentUnitSuffix()}` :
                        p.unitType === "disp"   ? ` ${dispUnitSuffix()}` :
                        "";
-    const finalLabel = baseLabel + unitSuffix;
+    let finalLabel = baseLabel + unitSuffix;
+    // Unidad FIJA en la etiqueta («E (kN/m²)», «Luz (m)»…): se enseña en el sistema elegido (unidadEtiqueta.ts).
+    // El ejemplo sigue recibiendo el valor en la unidad de su etiqueta: la conversión vive solo en el panel.
+    const conv = !p.unitType && p.options === undefined
+      ? convertirEtiqueta(p.label ?? key, { F: forceUnit.val, L: lengthStructureUnit.val, LS: lengthSectionUnit.val, S: stressUnit.val, SG: subgradeUnit.val })
+      : null;
+    if (conv) finalLabel = `${conv.base} (${conv.u})`;
+    const destino: any = conv ? (() => {
+      const o: any = {};
+      Object.defineProperty(o, key, { enumerable: true,
+        get: () => (currentParams[key] as number) * conv.k,
+        set: (v: number) => { currentParams[key] = v / conv.k; } });
+      return o;
+    })() : currentParams;
 
     const opts: any = { label: finalLabel };
     if (p.options !== undefined) {
@@ -7031,9 +7064,9 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       // currentParams[key] se almacena en la misma unidad UI que el slider;
       // la conversión a SI la hace el ejemplo en build() vía toKn/toKnm/dispToM,
       // O mejor: el workspace la hace automáticamente ANTES de llamar a build().
-      if (p.min !== undefined) opts.min = p.min;
-      if (p.max !== undefined) opts.max = p.max;
-      if (p.step !== undefined) opts.step = p.step;
+      if (p.min !== undefined) opts.min = conv ? p.min * conv.k : p.min;
+      if (p.max !== undefined) opts.max = conv ? p.max * conv.k : p.max;
+      if (p.step !== undefined) opts.step = conv ? pasoRedondo(p.step * conv.k) : p.step;
     }
     // Construir (o reconstruir) el binding con los min/max indicados.
     // Guardamos la API de rebuild en sliderBindings[key] para que el folder
@@ -7042,12 +7075,13 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     const rebuildSlider = (newMin: number | undefined, newMax: number | undefined) => {
       if (currentBinding) { try { currentBinding.dispose?.(); } catch {} }
       const rebuiltOpts: any = { ...opts };
-      if (newMin !== undefined) rebuiltOpts.min = newMin;
-      if (newMax !== undefined) rebuiltOpts.max = newMax;
+      // newMin/newMax vienen en la unidad del ejemplo (p.min/p.max o el folder «📏 Rangos»)
+      if (newMin !== undefined) rebuiltOpts.min = conv ? newMin * conv.k : newMin;
+      if (newMax !== undefined) rebuiltOpts.max = conv ? newMax * conv.k : newMax;
       // Clampar el valor actual al nuevo rango (evita que el slider se rompa)
-      if (rebuiltOpts.min !== undefined && currentParams[key] < rebuiltOpts.min) currentParams[key] = rebuiltOpts.min;
-      if (rebuiltOpts.max !== undefined && currentParams[key] > rebuiltOpts.max) currentParams[key] = rebuiltOpts.max;
-      currentBinding = fTarget.addBinding(currentParams, key, rebuiltOpts);
+      if (rebuiltOpts.min !== undefined && destino[key] < rebuiltOpts.min) destino[key] = rebuiltOpts.min;
+      if (rebuiltOpts.max !== undefined && destino[key] > rebuiltOpts.max) destino[key] = rebuiltOpts.max;
+      currentBinding = fTarget.addBinding(destino, key, rebuiltOpts);
       // Registrar visibilidad dinamica si el param tiene hiddenIf
       if (p.hiddenIf) hiddenBindings.push({ binding: currentBinding, hiddenIf: p.hiddenIf });
       // Tooltip nativo browser via title attribute — aparece al hover sin
@@ -7184,7 +7218,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   if (currentExample.computedLabels) {
     const fCalc = pane.addFolder({ title: "📊 Calculados", expanded: true });
     // Objeto mutable que tweakpane monitorea. Claves = labels, valores = strings.
-    const initial = currentExample.computedLabels(currentParams, states);
+    const initial = calculadosEnSistema(currentExample.computedLabels(currentParams, states));
     computedObj = { ...initial };
     console.log("[Calculados]", computedObj);
     for (const key of Object.keys(initial)) {
