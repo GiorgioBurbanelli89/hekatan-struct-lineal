@@ -215,6 +215,7 @@ import { exportEdificioCimentacionF2k, downloadEdificioCimentacionF2k } from "..
 };
 import { exportE2k } from "../shared/e2kExporter";
 import { exportTclFromCli, importTclToCli } from "../shared/tclIO";
+import { e2kAHeks } from "../shared/e2kAHeks";
 import { parseE2k } from "../shared/e2kParser";
 import { exportS2k } from "../shared/s2kExporter";
 import { parseS2k } from "../shared/s2kParser";
@@ -4945,6 +4946,16 @@ function buildParamsPane() {
       }
     };
 
+    // Abrir un .heks YA HECHO en el modelo (lo usa «📥 Importar E2K»: el e2k se convierte en .heks con
+    // `e2kAHeks` y se calcula por el mismo camino que un enlace #h=, con casos, modal y panel NEC).
+    (window as any).__hekatanAbrirHeks = (txt: string) => {
+      ta.value = txt;
+      applyCliScript();
+      userCameraInteracted = false;
+      try { abrirConResultados(); } catch (e) { console.warn("[abrir .heks] resultados por defecto:", e); }
+      setTimeout(() => { try { autoScaleDeformedShape(); autoFitCamera(); } catch { /* no-op */ } }, 300);
+    };
+
     // ── Live update con debounce ──
     // Cada cambio en la textarea se aplica tras 250ms de inactividad para
     // no recalcular el FEM en cada tecla. Si el usuario quiere forzar
@@ -6553,6 +6564,23 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
         const file = ev.target.files?.[0]; if (!file) return;
         try {
           const text = await file.text();
+          // ── CALCULABLE (1-oct-2026): el e2k pasa a .heks (orificios, losas malladas, releases, brazos,
+          // diafragmas, patrones, fuente de masa, sismo por coeficiente) y se abre como un enlace #h=:
+          // estático por caso, modal y panel NEC, y «Compartir enlace» lleva el modelo entero.
+          const abrirHeks = (window as any).__hekatanAbrirHeks as ((t: string) => void) | undefined;
+          if (abrirHeks) {
+            try {
+              const r = e2kAHeks(text, file.name);
+              (window as any).__hekatanUltimoE2kHeks = r.heks;
+              console.log(`✅ E2K importado y listo para calcular: ${file.name} — ${r.modelo.nodes.length} nudos, ` +
+                `${r.modelo.elements.length} elementos` + (r.modelo.analisis?.orificios.recortes ? `, ${r.modelo.analisis.orificios.recortes} orificios recortados` : "") +
+                (r.avisos.length ? ` · avisos: ${r.avisos.join(" | ")}` : ""));
+              abrirHeks(r.heks);
+              return;
+            } catch (e: any) {
+              console.warn("[Importar E2K] no se pudo pasar a .heks, se abre solo para MIRAR:", e?.message ?? e);
+            }
+          }
           const model = parseE2k(text);
           // ── El modelo va ENTERO al importador, no a `new-blank` ──────────
           // Antes se guardaban SOLO los puntos y las lineas y se navegaba a

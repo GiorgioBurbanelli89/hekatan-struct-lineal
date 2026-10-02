@@ -1244,3 +1244,29 @@ de cada nudo → u_x, u_y, θz del piso (promedio pesado) → flexibilidad F (3n
 pórtico asimétrico K_E **0.000 %**; dual del artículo e_y 0.02 m y ρ 0.006 (K_E entera 5 %: membrana del muro, no el
 método). `node tests/run.mjs aguiar` (11 filas). La capa NEC también trae `agrietadas` (§6.1.6), índice Q y ΣUx/ΣUy, y
 sin diafragma toma los pisos de las cotas con losa/vigas y el CR con carga repartida (antes: cotas de malla de muro y rz local).
+
+## Importar un `.e2k` de ETABS y CALCULARLO (1-oct-2026)
+
+«📥 Importar E2K» ya no solo dibuja: `examples/src/shared/e2kAHeks.ts` pasa el e2k a un `.heks` explícito y lo abre
+como un enlace #h= (casos por patrón, modal, panel NEC; «Compartir enlace» lleva el modelo entero). La tubería:
+`parseE2k(texto, { brazosAuto, pesoBarrasAparte })` → `coserModelo` → `.heks`.
+
+- **Orificios** (`AREAASSIGN … OPENING "Yes"`, uno por planta): antes no se leían (la regex pedía SECTION y el área
+  contaba como «sin AREAASSIGN») y la losa quedaba entera con su carga y su masa. Ahora recortan la losa de la misma
+  planta antes de mallar (`pavimentar` con huecos): sin celdas, carga, peso ni masa dentro; la carga puesta sobre el
+  propio orificio se descarta (como ETABS). `analisis.orificios.areaPorSeccion` dice cuánto quitaron.
+- **Losas** `OBJMESHTYPE "AUTOMESH"` (+ `MESHAT "BEAMS"`, `MAXMESHSIZE`): rejilla con líneas de corte en los extremos
+  de las vigas (`extras` del pavimentador); `DEFAULT`/`NOAUTOMESH` siguen como antes salvo que tengan orificios.
+- **Cargas por patrón** (`cargasPatron`), peso propio en su patrón, **nocionales** (`nocional`), **diafragmas** por
+  planta (`diaph grupo G n…`), `RELEASE "PINNED"` = M2 M3 en I y J, `SELFWEIGHTOPTION "Clear Length"` (también columnas).
+- **Peso propio de barras**: se reparte DESPUÉS de partir las vigas por la malla (si no, la flecha a media luz sale
+  corta: 2.9 % → 0.43 % del Uz máx); la MASA de ese peso va mitad y mitad a los nudos del OBJETO, como ETABS (si no,
+  el modo de torsión 0.55 % → 0.10 %). Por eso la masa de la fuente va como `mass` explícita en el `.heks`.
+- Directivas nuevas del `.heks`: `masssource elementos 0|1 lateral 0|1 lump 0|1 [Patrón f …]`, `sismocoef NOMBRE X|Y C k
+  ecc e signo ±` (User Coefficient: V = C·W, F ∝ w·h^k en el CM de cada cota + torsor), `nocional NOMBRE base f X|Y`,
+  `espectro NOMBRE amort T Sa …`, `casors NOMBRE U1|U2|U3 espectro sf amort a ecc e`, `shelltype a-b thin` (rango).
+- La capa NEC usa la fuente de masa del modelo (`opcionesMasa` en `nec/pisos.ts`).
+- Juez: `validation/e2k-orificios/etabs_ref_orificios.py` (ETABS 22 por OAPI; `SetTube` y `SetMassSource` no van, el
+  sismo y la malla se escriben en SU e2k y ETABS lo relee) → `node tests/run.mjs e2k-orificios` (13 filas: reacciones
+  y masa 0.000 %, nada dentro de los orificios, T1-3 ≤ 0.3 %). Comparar un modelo cualquiera: `cli/_e2k_a_heks.mjs`,
+  `cli/_e2k_vs_etabs.mjs` (patrón a patrón, nudo a nudo, modos y espectro), `cli/_e2k_app_check.mjs` (la app).

@@ -46,6 +46,10 @@ export interface PanoPoligonal {
   contorno: V3[];
   /** lazos de los huecos (cualquier sentido) */
   huecos: V3[][];
+  /** puntos del plano que tienen que ser NUDOS de la malla (el `MESHAT "BEAMS"` de ETABS: los
+   *  extremos de las vigas que caen sobre el paño). En la rejilla cada uno añade su línea de corte en
+   *  u y en v; fuera del rectángulo envolvente se ignoran. El camino Delaunay no los usa. */
+  extras?: V3[];
 }
 
 export interface MallaPavimentada {
@@ -130,8 +134,11 @@ function cortes(valores: number[], tam: number, tol: number): number[] {
   return out;
 }
 
-function rejilla(cont: P2[], huecos: P2[][], tam: number, tol: number) {
-  const todos = [cont, ...huecos].flat();
+function rejilla(cont: P2[], huecos: P2[][], tam: number, tol: number, extras: P2[] = []) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const p of cont) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  const dentroCaja = (p: P2) => p[0] >= x0 - tol && p[0] <= x1 + tol && p[1] >= y0 - tol && p[1] <= y1 + tol;
+  const todos = [...cont, ...huecos.flat(), ...extras.filter(dentroCaja)];
   const X = cortes(todos.map((p) => p[0]), tam, tol), Y = cortes(todos.map((p) => p[1]), tam, tol);
   const nudos: P2[] = []; const idx = new Map<string, number>();
   const nudo = (i: number, j: number) => {
@@ -307,7 +314,7 @@ export function pavimentar(pano: PanoPoligonal, tam: number, opts: { pasadas?: n
   const tol = 1e-9 * Math.max(1, escala);
   const lazos = [cont, ...huecos];
   if (!opts.forzarDelaunay && esRectilineo(lazos, tol)) {
-    const r = rejilla(cont, huecos, tam, tol);
+    const r = rejilla(cont, huecos, tam, tol, (pano.extras ?? []).map((p) => a2d(M, p)));
     const enBorde = new Set<number>();
     r.nudos.forEach((q, i) => { if (lazos.some((L) => L.some((a, k) => distSeg(q, a, L[(k + 1) % L.length]) < tol))) enBorde.add(i); });
     return { nudos: r.nudos.map((q) => a3d(M, q)), celdas: r.celdas, metodo: "rejilla", enBorde,

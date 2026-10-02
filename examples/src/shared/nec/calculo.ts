@@ -5,7 +5,7 @@
  *   mismas cargas = SAP2000 a 1e-9 % · CR = ETABS «Centers Of Mass And Rigidity» (X a 4 decimales, Y a ≤ 2 mm).
  */
 import { deform, jointMass, modalAnalysis as modalCpp } from "hekatan-fem";
-import { pisosDeModelo, type Piso } from "./pisos";
+import { pisosDeModelo, opcionesMasa, type Piso } from "./pisos";
 import { cortanteEstatico, espectro, ampDeriva, limiteDeriva, type DatosSitio, type Estatico } from "./estatico";
 import { detectar, type ClaveIrr, type Forzar, type ResultadoIrr } from "./irregularidades";
 import { cargasEnCM, derivas, centrosDeRigidez, type DerivaPiso } from "./derivas";
@@ -86,12 +86,12 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
   const ni = { ...nodeInputs, supports: aMap(nodeInputs.supports), diaphragms: aMap(nodeInputs.diaphragms) };
   const pisos = pisosDeModelo(nodes, elements, ni, elementInputs);
   if (!pisos.length) throw new Error("el modelo no tiene pisos (ni diafragmas ni cotas con masa)");
-  const masas = jointMass(nodes as any, elements as any, elementInputs, { incluyeElementos: 1 });
+  const masas = jointMass(nodes as any, elements as any, elementInputs, opcionesMasa(nodeInputs, elementInputs));
   const esDia = ni.diaphragms.size ? (n: number) => ni.diaphragms.has(n) : undefined;
   const resolver = (loads: Map<number, any>) => deform(nodes as any, elements as any, { ...ni, loads } as any, elementInputs).deformations as any;
 
   // modal (la misma llamada con la que los periodos dan SAP2000 a 4 decimales)
-  const out: any = modalCpp(nodes as any, elements as any, ni as any, elementInputs, o.nModos, 0, 0, 1, ni.diaphragms, ni.springs);
+  const out: any = modalCpp(nodes as any, elements as any, ni as any, elementInputs, o.nModos, 0, 0, opcionesMasa(nodeInputs, elementInputs).incluyeElementos, ni.diaphragms, ni.springs);
   const mp: number[][] = out.massParticipation ?? [];
   const modos = (out.frequencies ?? []).map((f: number, j: number) => ({ T: 1 / f, ux: mp[j]?.[0] ?? 0, uy: mp[j]?.[1] ?? 0, rz: mp[j]?.[5] ?? 0 }));
   const chequeoModos: string[] = [];

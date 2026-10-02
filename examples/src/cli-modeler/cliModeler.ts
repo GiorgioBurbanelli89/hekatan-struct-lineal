@@ -61,7 +61,7 @@ import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSec
 import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { resolverSoloCompresion, pesosAreaNudos } from "../shared/muellesSoloCompresion";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
-import { deform, analyze, modalAnalysis, cargaUniformeBarra, type Node, type Element } from "hekatan-fem";
+import { deform, analyze, modalAnalysis, jointMass, cargaUniformeBarra, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 interface ParsedModel {
@@ -226,6 +226,21 @@ interface ParsedModel {
   // Diafragma rigido por nudo: id del diafragma al que pertenece (0 = ninguno).
   // Ata Ux, Uy y Rz de todos los nudos con el mismo id, como ETABS.
   diaphragms: Map<number, number>;
+  /** `masssource elementos 0|1 lateral 0|1 lump 0|1 [Patrón factor …]`: la fuente de masa de ETABS
+   *  (MASSSOURCE). Con patrones, cada nudo recibe Σ factor·(−Fz del patrón)/g de masa; con
+   *  `elementos 0` el modal NO usa ρ·A·L (INCLUDEELEMENTS "No"). */
+  fuenteMasa?: { elementos: boolean; lateral: boolean; lump: boolean; patrones: Array<[string, number]> };
+  /** `sismocoef NOMBRE X|Y C k [ecc e] [signo +|-]`: el SEISMIC "User Coefficient" de ETABS. V = C·W
+   *  (W = peso de la fuente de masa sobre la base), F_x = V·w_x·h_x^k/Σ w·h^k en el CENTRO DE MASA de
+   *  cada planta, y la excentricidad accidental ±e·(lado de la planta perpendicular) como torsor. */
+  sismosCoef: Array<{ nombre: string; dir: 0 | 1; C: number; k: number; ecc: number; signo: number }>;
+  /** `nocional NOMBRE base factor X|Y`: carga NOCIONAL (factor × la gravedad del patrón base, en horizontal). */
+  nocionales: Array<{ nombre: string; base: string; factor: number; dir: 0 | 1 }>;
+  /** `espectro NOMBRE amort T1 Sa1 T2 Sa2 …` y `casors NOMBRE U1|U2|U3 espectro sf [amort a] [ecc e]`:
+   *  espectro de respuesta de ETABS (FUNCTION SPECTRUM + LOADCASE «Response Spectrum»). Se guardan para
+   *  el panel sísmico; el estático no los usa. */
+  espectros: Map<string, { amort: number; T: number[]; Sa: number[] }>;
+  casosRS: Array<{ nombre: string; dir: "U1" | "U2" | "U3"; func: string; sf: number; amort: number; ecc: number }>;
   doSolve: boolean;
   errors: string[];
 }
@@ -292,6 +307,10 @@ export function parseCliCommands(text: string): ParsedModel {
     frameEndOffsets: new Map(),
     selfWeight: 0,
     meshCross: true,
+    sismosCoef: [],
+    nocionales: [],
+    espectros: new Map(),
+    casosRS: [],
     deckEtabs: false,
     deckOneWay: false,
     deckSecs: new Map(),
@@ -823,7 +842,10 @@ export function parseCliCommands(text: string): ParsedModel {
         // 4 % menos de flecha en los nudos de losa y +1.1 % en el modo 1.
         case "shelltype":
         case "plateform": {
+          // `shelltype 12 thin` o un RANGO `shelltype 12-480 thin` (las celdas de una losa mallada)
+          const rango = (tokens[1] ?? "").match(/^(\d+)-(\d+)$/);
           const id = parseInt(tokens[1], 10);
+          const hasta = rango ? parseInt(rango[2], 10) : id;
           const q = (tokens[2] ?? "").toLowerCase();
           if (!isFinite(id)) break;
           let v: number | undefined;
@@ -840,7 +862,7 @@ export function parseCliCommands(text: string): ParsedModel {
             m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq, wilson o auricchio`);
             break;
           }
-          m.shellTypes.set(id, v);
+          for (let k = id; k <= hasta; k++) m.shellTypes.set(k, v);
           break;
         }
         case "shellmod": {
@@ -952,9 +974,69 @@ export function parseCliCommands(text: string): ParsedModel {
         // diaph <nudo> <idDiafragma>  — diafragma rigido (ata Ux, Uy, Rz)
         case "diaph":
         case "diaphragm": {
+          // diaph <nudo> <grupo>   ·   diaph grupo <G> <n1> <n2> …   (muchos nudos en una línea)
+          if ((tokens[1] ?? "").toLowerCase() === "grupo") {
+            const d = parseInt(tokens[2] ?? "1", 10);
+            if (isFinite(d) && d > 0) for (const t of tokens.slice(3)) {
+              const nId = parseInt(t, 10); if (isFinite(nId)) m.diaphragms.set(nId, d);
+            }
+            break;
+          }
           const nodeId = parseInt(tokens[1], 10);
           const d = parseInt(tokens[2] ?? "1", 10);
           if (isFinite(nodeId) && isFinite(d) && d > 0) m.diaphragms.set(nodeId, d);
+          break;
+        }
+        case "masssource":
+        case "fuentemasa": {
+          const fm = { elementos: true, lateral: false, lump: false, patrones: [] as Array<[string, number]> };
+          for (let k = 1; k + 1 < tokens.length; k += 2) {
+            const clave = tokens[k].toLowerCase(), v = parseFloat(tokens[k + 1]);
+            if (!isFinite(v)) { m.errors.push(`masssource: «${tokens[k + 1]}» no es un número`); break; }
+            if (clave === "elementos" || clave === "elements") fm.elementos = v !== 0;
+            else if (clave === "lateral") fm.lateral = v !== 0;
+            else if (clave === "lump") fm.lump = v !== 0;
+            else fm.patrones.push([tokens[k], v]);
+          }
+          m.fuenteMasa = fm;
+          break;
+        }
+        case "sismocoef": {
+          const nombre = tokens[1], dir = (tokens[2] ?? "").toUpperCase(), C = parseFloat(tokens[3]), kk = parseFloat(tokens[4] ?? "1");
+          if (!nombre || (dir !== "X" && dir !== "Y") || !isFinite(C)) { m.errors.push("sismocoef: uso sismocoef NOMBRE X|Y C k [ecc e] [signo +|-]"); break; }
+          let ecc = 0, signo = 1;
+          for (let k = 5; k + 1 < tokens.length; k += 2) {
+            if (tokens[k].toLowerCase() === "ecc") ecc = parseFloat(tokens[k + 1]) || 0;
+            if (tokens[k].toLowerCase() === "signo") signo = tokens[k + 1].startsWith("-") ? -1 : 1;
+          }
+          m.sismosCoef.push({ nombre, dir: dir === "X" ? 0 : 1, C, k: isFinite(kk) ? kk : 1, ecc, signo });
+          break;
+        }
+        case "nocional":
+        case "notional": {
+          const f = parseFloat(tokens[3]), dir = (tokens[4] ?? "").toUpperCase();
+          if (!tokens[1] || !tokens[2] || !isFinite(f) || (dir !== "X" && dir !== "Y")) { m.errors.push("nocional: uso nocional NOMBRE patronBase factor X|Y"); break; }
+          m.nocionales.push({ nombre: tokens[1], base: tokens[2], factor: f, dir: dir === "X" ? 0 : 1 });
+          break;
+        }
+        case "espectro": {
+          const v = tokens.slice(3).map(Number);
+          const am = parseFloat(tokens[2]);
+          if (!tokens[1] || !isFinite(am) || v.length < 2 || v.some((x) => !isFinite(x))) { m.errors.push("espectro: uso espectro NOMBRE amort T1 Sa1 T2 Sa2 …"); break; }
+          const T: number[] = [], Sa: number[] = [];
+          for (let k = 0; k + 1 < v.length; k += 2) { T.push(v[k]); Sa.push(v[k + 1]); }
+          m.espectros.set(tokens[1], { amort: am, T, Sa });
+          break;
+        }
+        case "casors": {
+          const dir = (tokens[2] ?? "").toUpperCase(), sf = parseFloat(tokens[4]);
+          if (!tokens[1] || !/^U[123]$/.test(dir) || !tokens[3] || !isFinite(sf)) { m.errors.push("casors: uso casors NOMBRE U1|U2|U3 espectro sf [amort a] [ecc e]"); break; }
+          let amort = 0.05, ecc = 0;
+          for (let k = 5; k + 1 < tokens.length; k += 2) {
+            if (tokens[k].toLowerCase() === "amort") amort = parseFloat(tokens[k + 1]) || amort;
+            if (tokens[k].toLowerCase() === "ecc") ecc = parseFloat(tokens[k + 1]) || 0;
+          }
+          m.casosRS.push({ nombre: tokens[1], dir: dir as "U1" | "U2" | "U3", func: tokens[3], sf, amort, ecc });
           break;
         }
         case "mass": {
@@ -1380,7 +1462,9 @@ export const cliModeler: ExampleDef = {
       const nModos = Math.max(1, parseInt((window as any).__hekatanCliModalModes ?? "12", 10) || 12);
       const ni = states.nodeInputs.val as any;
       const muelles = (window as any).__hekatanCliSprings as Array<{ node: number; dof: number; k: number }> | undefined;
-      const out = modalAnalysis(n, el, ni, states.elementInputs.val, nModos, 0, 0, 1,
+      const fm = (states.elementInputs.val as any)?.fuenteMasa as ParsedModel["fuenteMasa"];
+      const out = modalAnalysis(n, el, ni, states.elementInputs.val, nModos,
+        fm?.lateral ? 1 : 0, fm?.lump ? 1 : 0, fm && !fm.elementos ? 0 : 1,
         ni?.diaphragms instanceof Map && ni.diaphragms.size ? ni.diaphragms : undefined,
         muelles && muelles.length ? muelles : undefined);
       console.log(`[CLI Modeler] Modal OK — ${out.frequencies.length} modos, T1 = ${out.frequencies[0] ? (1 / out.frequencies[0]).toFixed(5) : "—"} s`);
@@ -2014,6 +2098,32 @@ export const cliModeler: ExampleDef = {
     // variable local que solo se le pasaba a `deform`, asi que el modal no podia
     // verlos por mucho que el .heks los trajera: la cimentacion del RIOCHICO se
     // apoya en 612 resortes de balasto y el modal la veia flotando.
+    // ── CARGAS NOCIONALES (`nocional`): factor × la gravedad del patrón base, en horizontal ──
+    const patronFinal = (p: string) => /^dead$/i.test(p) ? loads : loadsOtros.get(p);
+    for (const nc of m.nocionales) {
+      const base = patronFinal(nc.base);
+      if (!base) { m.errors.push(`nocional ${nc.nombre}: no hay cargas del patrón ${nc.base}`); continue; }
+      const dst = loadsOtros.get(nc.nombre) ?? loadsOtros.set(nc.nombre, new Map()).get(nc.nombre)!;
+      for (const [n, v] of base) {
+        const h = nc.factor * -(v[2] ?? 0);
+        if (!h) continue;
+        const a = dst.get(n) ?? [0, 0, 0, 0, 0, 0];
+        a[nc.dir] += h;
+        dst.set(n, a as [number, number, number, number, number, number]);
+      }
+      cargasPorPatron[nc.nombre] = new Map([...dst].map(([k, v]) => [k, [...v]]));
+    }
+    // ── FUENTE DE MASA desde las CARGAS (`masssource … Patrón factor`): m = Σ f·(−Fz)/g en cada nudo ──
+    if (m.fuenteMasa?.patrones.length) {
+      for (const [p, f] of m.fuenteMasa.patrones) {
+        const src = patronFinal(p);
+        if (!src) { m.errors.push(`masssource: no hay cargas del patrón ${p}`); continue; }
+        for (const [n, v] of src) {
+          const mm = f * -(v[2] ?? 0) / 9.80665;
+          if (mm) masses.set(n, (masses.get(n) ?? 0) + mm);
+        }
+      }
+    }
     states.nodeInputs.val = { supports, loads, masses, diaphragms, cargasPorPatron,
                               springs: springsList } as any;
     if ((states as any).springs) (states as any).springs.val = springsList;
@@ -2088,6 +2198,9 @@ export const cliModeler: ExampleDef = {
         return out;
       })(),
       combos: m.combos,
+      fuenteMasa: m.fuenteMasa,
+      espectros: m.espectros,
+      casosRS: m.casosRS,
       fcExport: m.fc,
       // muelle de AREA por cascara (indice de elemento): ks, nodal, solo compresion
       areaSpringsExport: new Map(m.areaSprings.map(a => [shellIdxOf.get(a.id), { ks: a.ks, nodal: a.nodal, comp: !!a.comp }]).filter(([e]) => e !== undefined) as any),
@@ -2106,6 +2219,55 @@ export const cliModeler: ExampleDef = {
       })).filter(o => o.nodes.length === 4 && o.cells.length > 0),
     } as any;
 
+    // ── SISMO POR COEFICIENTE (`sismocoef`), el «User Coefficient» de ETABS ──
+    if (m.sismosCoef.length) {
+      // plantas = cotas con masa por ENCIMA de la base (la cota más baja con apoyos)
+      const zApoyo = Math.min(...[...supports.keys()].map((n) => nodes[n][2]));
+      // la masa de la FUENTE: la de las cargas (`masses`) más la de los elementos (ρ·A·L, ρ·t·A) si la fuente la incluye
+      let masaElem: number[][] | null = null;
+      if (!m.fuenteMasa || m.fuenteMasa.elementos) {
+        try { masaElem = jointMass(nodes, elements, states.elementInputs.val as any, { incluyeElementos: 1 }); } catch { masaElem = null; }
+      }
+      const masaN = (n: number) => (masses.get(n) ?? 0) + (masaElem?.[n]?.[0] ?? 0);
+      const plantas = new Map<string, number[]>();
+      nodes.forEach((p, n) => {
+        if (!(masaN(n) > 0) || p[2] <= zApoyo + 1e-6) return;
+        const k = (Math.round(p[2] * 1000) / 1000).toFixed(3);
+        (plantas.get(k) ?? plantas.set(k, []).get(k)!).push(n);
+      });
+      const filas = [...plantas.entries()].map(([z, ns]) => {
+        const W = ns.reduce((s2, n) => s2 + masaN(n) * 9.80665, 0);
+        const M = W / 9.80665;
+        const xc = ns.reduce((s2, n) => s2 + masaN(n) * nodes[n][0], 0) / M, yc = ns.reduce((s2, n) => s2 + masaN(n) * nodes[n][1], 0) / M;
+        const xs = ns.map((n) => nodes[n][0]), ys = ns.map((n) => nodes[n][1]);
+        return { h: parseFloat(z) - zApoyo, ns, W, M, xc, yc, Lx: Math.max(...xs) - Math.min(...xs), Ly: Math.max(...ys) - Math.min(...ys) };
+      });
+      const Wt = filas.reduce((s2, f) => s2 + f.W, 0);
+      for (const sc of m.sismosCoef) {
+        const V = sc.C * Wt;
+        const den = filas.reduce((s2, f) => s2 + f.W * Math.pow(f.h, sc.k), 0);
+        const dst = new Map<number, [number, number, number, number, number, number]>();
+        for (const f of filas) {
+          const F = den > 0 ? V * f.W * Math.pow(f.h, sc.k) / den : 0;
+          // torsor de la excentricidad accidental: la fuerza se corre ±e·(lado perpendicular)
+          const e = sc.signo * sc.ecc * (sc.dir === 0 ? f.Ly : f.Lx);
+          const T = sc.dir === 0 ? -F * e : F * e;
+          // la fuerza en el CM (repartida por masa) y el torsor como PAR (fuerzas ⊥ al radio, por masa)
+          let J = 0;
+          for (const n of f.ns) J += masaN(n) * ((nodes[n][0] - f.xc) ** 2 + (nodes[n][1] - f.yc) ** 2);
+          for (const n of f.ns) {
+            const w = masaN(n) / f.M, dx = nodes[n][0] - f.xc, dy = nodes[n][1] - f.yc;
+            const a = dst.get(n) ?? [0, 0, 0, 0, 0, 0];
+            a[sc.dir] += F * w;
+            if (J > 0) { a[0] += -T * masaN(n) * dy / J; a[1] += T * masaN(n) * dx / J; }
+            dst.set(n, a);
+          }
+        }
+        loadsOtros.set(sc.nombre, dst);
+        cargasPorPatron[sc.nombre] = new Map([...dst].map(([k, v]) => [k, [...v]]));
+        console.log(`[CLI Modeler] sismo ${sc.nombre}: V = ${sc.C} × ${Wt.toFixed(2)} = ${V.toFixed(2)} kN en ${filas.length} plantas`);
+      }
+    }
     if (m.doSolve && solidIdx.length > 0 && solidIdx.length === elements.length && springsList.length === 0) {
       // Un modelo de SOLO solidos va por hex8Solve (da ademas tensiones y von Mises
       // por elemento) — salvo que lleve MUELLES: hex8Solve no los lee y un muro de solidos

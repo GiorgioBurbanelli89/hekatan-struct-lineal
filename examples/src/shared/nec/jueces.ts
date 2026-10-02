@@ -8,7 +8,7 @@
  * Coste: 3 cargas por piso (Aguiar) + 6 estáticos + un modal de 3 modos.
  */
 import { deform, jointMass, modalAnalysis as modalCpp } from "hekatan-fem";
-import { pisosDeModelo, type Piso } from "./pisos";
+import { pisosDeModelo, opcionesMasa, type Piso } from "./pisos";
 import { cortanteEstatico, type DatosSitio } from "./estatico";
 import { cargasEnCM, derivas } from "./derivas";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
@@ -27,12 +27,12 @@ export function calcularJueces(nodes: number[][], elements: number[][], nodeInpu
   const ni = { ...nodeInputs, supports: aMap(nodeInputs?.supports), diaphragms: aMap(nodeInputs?.diaphragms) };
   const pisos = pisosDeModelo(nodes, elements, ni, ei);
   if (!pisos.length) throw new Error("el modelo no tiene pisos");
-  const masas = jointMass(nodes as any, elements as any, ei, { incluyeElementos: 1 });
+  const masas = jointMass(nodes as any, elements as any, ei, opcionesMasa(nodeInputs, ei));
   const esDia = ni.diaphragms.size ? (n: number) => ni.diaphragms.has(n) : undefined;
   const resolver = (loads: Map<number, any>) => deform(nodes as any, elements as any, { ...ni, loads } as any, ei).deformations as any;
 
   // 4. modal de 3 modos
-  const out: any = modalCpp(nodes as any, elements as any, ni as any, ei, 3, 0, 0, 1, ni.diaphragms, ni.springs);
+  const out: any = modalCpp(nodes as any, elements as any, ni as any, ei, 3, 0, 0, opcionesMasa(nodeInputs, ei).incluyeElementos, ni.diaphragms, ni.springs);
   const mp: number[][] = out.massParticipation ?? [];
   const modos = (out.frequencies ?? []).slice(0, 3).map((f: number, j: number) => ({ T: 1 / f, ux: mp[j]?.[0] ?? 0, uy: mp[j]?.[1] ?? 0, rz: mp[j]?.[5] ?? 0 }));
   const chequeo = modos.map((m: any, j: number) => (j < 2 ? m.rz < 0.10 && Math.max(m.ux, m.uy) > m.rz : m.rz > Math.max(m.ux, m.uy)));

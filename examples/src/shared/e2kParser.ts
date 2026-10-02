@@ -13,6 +13,8 @@ import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSec
 import { propiedadesSD, formaDesdeE2k, type PiezaSD } from "./sectionDesigner";
 import { cargaBarraConsistente, acumularCargaBarra } from "./cargaBarraConsistente";
 import { reticularEtabs } from "./losaReticular";
+import { pavimentar } from "../cli-modeler/pavimentador";
+import { brazosAutomaticosETABS } from "./brazosAutomaticos";
 
 export interface E2kGrid {
   label: string;   // "A", "B", "1", "2", etc.
@@ -66,9 +68,52 @@ export interface E2kModel {
           title: string };
   /** Raw text blocks from original e2k for round-trip export */
   rawSections?: Map<string, string[]>;
+  /** Cargas nodales POR PATRÓN (kN y kN·m), con el peso propio dentro de su patrón y las cargas
+   *  NOCIONALES ya calculadas. `nodeInputs.loads` sigue siendo la SUMA de todos (carga de servicio). */
+  cargasPatron?: Map<string, Map<number, number[]>>;
+  /** Diafragma RÍGIDO por nudo: id 1..n, uno por (nombre del diafragma, planta). Sale del `DIAPH` de
+   *  los AREAASSIGN (todos los nudos de la malla de la losa) y de los POINTASSIGN. */
+  diafragmas?: Map<number, number>;
+  /** Peso propio de cada barra (con `pesoBarrasAparte`): q en kN/m hacia −Z, aplicado de s0 a s1 (m, medidos
+   *  desde el nudo I). Lo parte `coserModelo` con la barra. */
+  pesoBarras?: Map<number, { q: number; s0: number; s1: number }>;
+  /** Barra → factor de zona rígida (RIGIDZONE) leído del fichero (0..1). */
+  zonaRigida?: Map<number, number>;
+  /** Lo que ETABS ANALIZA además de la geometría (patrones, fuente de masa, sismo por coeficiente,
+   *  espectros y casos de espectro). Lo escribe `e2kAHeks` como directivas del `.heks`. */
+  analisis?: AnalisisE2k;
 }
 
-export function parseE2k(text: string): E2kModel {
+/** Lo que el `.e2k` dice de CÓMO se analiza (no de qué se analiza). Unidades ya en kN y m. */
+export interface AnalisisE2k {
+  patrones: Array<{ nombre: string; tipo: string; pesoPropio: number;
+                    nocional?: { base: string; factor: number; dir: "X" | "Y" } }>;
+  /** MASSSOURCE (la que lleva ISDEFAULT, o la primera). */
+  fuenteMasa?: { elementos: boolean; cargas: boolean; lateral: boolean; lump: boolean; patrones: Array<[string, number]> };
+  /** SEISMIC "User Coefficient": V = C·W, F_x ∝ w_x·h_x^k, con la excentricidad ±ecc·(lado de la planta). */
+  sismos: Array<{ nombre: string; tipo: string; dir: "X" | "Y"; signoEcc: -1 | 0 | 1; ecc: number; coef?: number; k?: number }>;
+  /** FUNCTION … FUNCTYPE "SPECTRUM": pares (T, Sa) tal cual (Sa en las unidades del fichero, normalmente g). */
+  espectros: Map<string, { T: number[]; Sa: number[]; amort: number }>;
+  /** LOADCASE … "Response Spectrum": dirección, función, factor de escala (a m/s² ya convertido) y excentricidad. */
+  casosRS: Array<{ nombre: string; dir: "U1" | "U2" | "U3"; func: string; sf: number; amort: number; ecc: number; combModal?: string }>;
+  nModos?: number;
+  /** Orificios (`AREAASSIGN … OPENING "Yes"`): cuántos se leyeron y cuántos recortaron una losa. */
+  orificios: { leidos: number; recortes: number; /** m² que los orificios quitaron, por propiedad de la losa */ areaPorSeccion: Record<string, number> };
+}
+
+export interface OpcionesE2k {
+  /** Brazos rígidos AUTOMÁTICOS de ETABS («Automatic from connectivity») en las barras sin LENGTHOFF,
+   *  con el RIGIDZONE de cada barra. Lo que hace ETABS por defecto; el lector solo lo aplica cuando se
+   *  le pide (los `.e2k` que escribe Hekatan ya traen sus brazos). */
+  brazosAuto?: boolean;
+  /** El peso propio de las BARRAS no va a las cargas nodales: se devuelve en `pesoBarras` (carga por metro y el
+   *  tramo que pesa) para repartirlo DESPUÉS de partir las barras por la malla (`coserModelo`). Si se reparte
+   *  antes, una viga partida en 12 trozos recibe el peso de la viga entera en sus dos extremos y la flecha a
+   *  media luz sale corta (medido: 2.9 % del Uz máximo en Dead contra ETABS en un edificio de acero). */
+  pesoBarrasAparte?: boolean;
+}
+
+export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const lines = text.split(/\r?\n/);
 
   // State
@@ -106,7 +151,17 @@ export function parseE2k(text: string): E2kModel {
   // UN AREA puede ir asignada a VARIAS plantas (un AREAASSIGN por planta, como los pisos típicos):
   // por eso es una LISTA. Con un solo valor por nombre la última planta pisaba a las demás y la casa
   // MOD_001 perdía 23 de sus 36 losas nervadas (−474 kN de peso, 22-sep-2026).
-  const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string }>>();
+  const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string;
+    diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean }>>();
+  // ORIFICIOS: `AREAASSIGN "A1" "N1" OPENING "Yes"` no lleva SECTION, así que la regex de arriba no
+  // lo leía y el área contaba como «sin AREAASSIGN»: el hueco de la escalera se perdía y la losa
+  // quedaba ENTERA (con su carga y su masa). Ahora se guardan por planta y recortan la losa.
+  const orificiosAsig = new Map<string, string[]>();
+  /** `AUTOMESHOPTIONS … FLOORMESHMAXSIZE`: el tamaño de malla de las losas por defecto (unidades del fichero). */
+  let tamMallaPiso = 0;
+  const pointDiaph = new Map<string, string>();
+  const analisis: AnalisisE2k = { patrones: [], sismos: [], espectros: new Map(), casosRS: [], orificios: { leidos: 0, recortes: 0, areaPorSeccion: {} } };
+  const fuentesMasa = new Map<string, { elementos: boolean; cargas: boolean; lateral: boolean; lump: boolean; defecto: boolean; patrones: Array<[string, number]> }>();
   /** SHELLPROP: espesor (m), material, tipo de cascara y los 8 modificadores. */
   const shellProps = new Map<string, {
     t: number; material: string; modeling: string; mods?: number[];
@@ -135,7 +190,7 @@ export function parseE2k(text: string): E2kModel {
     D: number; B: number; TF: number; TW: number; XC: number; YC: number;
   }>>();
   const restraints = new Map<string, string[]>(); // pointName+story → restrained DOFs
-  const lineAssigns = new Map<string, { story: string; section: string; rigidZone: number; releases: string[]; angle: number; spring?: string; mallaEnCruces?: boolean; offsets?: [number, number] }>(); // lineName+story → assignment
+  const lineAssigns = new Map<string, { story: string; section: string; rigidZone: number; releases: string[]; angle: number; spring?: string; mallaEnCruces?: boolean; offsets?: [number, number]; luzLibre?: boolean }>(); // lineName+story → assignment
   /**
    * Los MUELLES. ETABS los declara como propiedades con nombre y luego los
    * asigna con `SPRINGPROP "..."`. Sin ellos, una cimentación sobre Winkler no
@@ -234,6 +289,7 @@ export function parseE2k(text: string): E2kModel {
       rawSections.get(currentSection)!.push(rawLine);
     }
 
+    { const am = line.match(/AUTOMESHOPTIONS.*FLOORMESHMAXSIZE\s+([\d.eE+-]+)/); if (am) tamMallaPiso = parseFloat(am[1]); }
     // ── CONTROLS ──
     if (currentSection === "CONTROLS") {
       const um = line.match(/UNITS\s+"([^"]+)"\s+"([^"]+)"/);
@@ -353,6 +409,8 @@ export function parseE2k(text: string): E2kModel {
       if (pj) puntosDeclarados.add(`${pj[1]}@${pj[2]}`);
       const pm = line.match(/POINTASSIGN\s+"([^"]+)"\s+"([^"]+)".*SPRINGPROP\s+"([^"]+)"/);
       if (pm) pointSprings.set(`${pm[1]}@${pm[2]}`, pm[3]);
+      const pd = line.match(/POINTASSIGN\s+"([^"]+)"\s+"([^"]+)".*\bDIAPH(?:RAGM)?\s+"([^"]+)"/);
+      if (pd) pointDiaph.set(`${pd[1]}@${pd[2]}`, pd[3]);
     }
 
     // ── MUELLES: las propiedades, vengan de la seccion que vengan ──
@@ -391,7 +449,9 @@ export function parseE2k(text: string): E2kModel {
         const loi = line.match(/LENGTHOFFI\s+([\d.eE+-]+)/); const loj = line.match(/LENGTHOFFJ\s+([\d.eE+-]+)/);
         if (loi || loj) entry.offsets = [loi ? parseFloat(loi[1]) : 0, loj ? parseFloat(loj[1]) : 0];
         const relm = line.match(/RELEASE\s+"([^"]+)"/);
-        if (relm) entry.releases = relm[1].split(/\s+/);
+        // `RELEASE "PINNED"`: así escribe ETABS una barra articulada en los dos extremos (M2 y M3 en I y en J;
+        // medido: se le dieron esas cuatro liberaciones por la OAPI y ETABS 22 escribió PINNED)
+        if (relm) entry.releases = relm[1].split(/\s+/).flatMap((r) => r.toUpperCase() === "PINNED" ? ["M2I", "M3I", "M2J", "M3J"] : [r]);
         const angm = line.match(/ANG\s+([-\d.eE+]+)/);
         if (angm) entry.angle = parseFloat(angm[1]);
         const spr = line.match(/SPRINGPROP\s+"([^"]+)"/);
@@ -400,6 +460,8 @@ export function parseE2k(text: string): E2kModel {
         // donde esta barra cruza a otra. Sin leerla, las vigas secundarias
         // entran enteras y quedan flotando (ver `e2kCoser`).
         entry.mallaEnCruces = /MESHATINTERSECTIONS\s+"?YES/i.test(line);
+        // SELFWEIGHTOPTION "Clear Length": la barra pesa su luz LIBRE (sin los brazos), sea viga o columna
+        entry.luzLibre = /SELFWEIGHTOPTION\s+"Clear Length"/i.test(line);
         lineAssigns.set(`${lam[1]}@${lam[2]}`, entry);
       }
     }
@@ -454,6 +516,75 @@ export function parseE2k(text: string): E2kModel {
     if (currentSection === "LOAD PATTERNS") {
       const lp = line.match(/LOADPATTERN\s+"([^"]+)"\s+TYPE\s+"([^"]+)"\s+SELFWEIGHT\s+([\d.eE+-]+)/);
       if (lp && /dead/i.test(lp[2])) selfWeightMult = Math.max(selfWeightMult, parseFloat(lp[3]));
+      if (lp) {
+        const nl = line.match(/NOTIONALLOAD\s+"([^"]+)"\s+NOTIONALFACTOR\s+([-\d.eE+]+)\s+NOTIONALDIR\s+"([XY])"/);
+        analisis.patrones.push({ nombre: lp[1], tipo: lp[2], pesoPropio: parseFloat(lp[3]),
+          ...(nl ? { nocional: { base: nl[1], factor: parseFloat(nl[2]), dir: nl[3] as "X" | "Y" } } : {}) });
+      }
+    }
+    // ── SEISMIC (sismo estático del patrón): solo «User Coefficient» se calcula; el resto se anota ──
+    {
+      const sm = line.match(/^SEISMIC\s+"([^"]+)"\s+"([^"]+)"(.*)$/);
+      if (sm) {
+        const resto = sm[3];
+        const dm = resto.match(/DIR\s+"([XY])([+-]ECC)?"/);
+        const num = (re: RegExp) => { const q = resto.match(re); return q ? parseFloat(q[1]) : undefined; };
+        if (dm) analisis.sismos.push({ nombre: sm[1], tipo: sm[2], dir: dm[1] as "X" | "Y",
+          signoEcc: dm[2] === "+ECC" ? 1 : dm[2] === "-ECC" ? -1 : 0, ecc: num(/\bECC\s+([\d.eE+-]+)/) ?? 0,
+          coef: num(/SHEARCOEFF\s+([\d.eE+-]+)/), k: num(/HEIGHTEXPONENT\s+([\d.eE+-]+)/) });
+      }
+    }
+    // ── MASS SOURCE ──
+    {
+      const ms = line.match(/^MASSSOURCE\s+"([^"]+)"(.*)$/);
+      if (ms) {
+        const si = (k: string) => new RegExp(`${k}\\s+"Yes"`, "i").test(ms[2]);
+        fuentesMasa.set(ms[1], { elementos: si("INCLUDEELEMENTS"), cargas: si("INCLUDELOADS"),
+          lateral: si("INCLUDELATERALMASS") && !si("INCLUDEVERTICALMASS"), lump: si("LUMPATSTORIES"),
+          defecto: si("ISDEFAULT"), patrones: fuentesMasa.get(ms[1])?.patrones ?? [] });
+      }
+      const ml = line.match(/^MASSSOURCELOAD\s+"([^"]+)"\s+"([^"]+)"\s+([-\d.eE+]+)/);
+      if (ml) {
+        const fm = fuentesMasa.get(ml[1]) ?? fuentesMasa.set(ml[1], { elementos: true, cargas: true, lateral: true, lump: true, defecto: false, patrones: [] }).get(ml[1])!;
+        fm.patrones.push([ml[2], parseFloat(ml[3])]);
+      }
+    }
+    // ── FUNCTION … SPECTRUM (pares T, Sa) ──
+    {
+      const fn = line.match(/^FUNCTION\s+"([^"]+)"\s+(.*)$/);
+      if (fn) {
+        if (/FUNCTYPE\s+"SPECTRUM"/i.test(fn[2])) {
+          const am = fn[2].match(/DAMPRATIO\s+([\d.eE+-]+)/);
+          analisis.espectros.set(fn[1], { T: [], Sa: [], amort: am ? parseFloat(am[1]) : 0.05 });
+        }
+        const tv = fn[2].match(/TIMEVAL\s+"([^"]+)"/);
+        const esp = analisis.espectros.get(fn[1]);
+        if (tv && esp) {
+          const v = tv[1].trim().split(/\s+/).map(Number);
+          for (let k = 0; k + 1 < v.length; k += 2) { esp.T.push(v[k]); esp.Sa.push(v[k + 1]); }
+        }
+      }
+    }
+    // ── LOADCASE: modal (nº de modos) y espectro de respuesta ──
+    {
+      const lc = line.match(/^LOADCASE\s+"([^"]+)"\s+(.*)$/);
+      if (lc) {
+        const nm = lc[1], r = lc[2];
+        const mm = r.match(/MAXMODES\s+(\d+)/);
+        if (mm) analisis.nModos = Math.max(analisis.nModos ?? 0, parseInt(mm[1], 10));
+        let caso = analisis.casosRS.find((c) => c.nombre === nm);
+        if (/TYPE\s+"Response Spectrum"/i.test(r) && !caso) {
+          caso = { nombre: nm, dir: "U1", func: "", sf: 1, amort: 0.05, ecc: 0 };
+          analisis.casosRS.push(caso);
+        }
+        if (caso) {
+          const ac = r.match(/ACCEL\s+"(U[123])"\s+FUNC\s+"([^"]+)"\s+SF\s+([-\d.eE+]+)/);
+          if (ac) { caso.dir = ac[1] as "U1" | "U2" | "U3"; caso.func = ac[2]; caso.sf = parseFloat(ac[3]); }
+          const cd = r.match(/CONSTDAMP\s+([\d.eE+-]+)/); if (cd) caso.amort = parseFloat(cd[1]);
+          const ec = r.match(/ECCENRATIOTYPICAL\s+([\d.eE+-]+)/); if (ec) caso.ecc = parseFloat(ec[1]);
+          const cm = r.match(/MODALCOMBO\s+"([^"]+)"/); if (cm) caso.combModal = cm[1];
+        }
+      }
     }
 
     // ── POINT OBJECT LOADS ──
@@ -530,7 +661,13 @@ export function parseE2k(text: string): E2kModel {
     if (currentSection === "AREA ASSIGNS") {
       const aa = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+SECTION\s+"([^"]+)"/);
       if (aa) (areaAssigns.get(aa[1]) ?? areaAssigns.set(aa[1], []).get(aa[1])!).push({ story: aa[2], section: aa[3],
-        spring: line.match(/SPRINGPROP\s+"([^"]+)"/)?.[1] });
+        spring: line.match(/SPRINGPROP\s+"([^"]+)"/)?.[1],
+        diaph: line.match(/\bDIAPH\s+"([^"]+)"/)?.[1],
+        malla: line.match(/OBJMESHTYPE\s+"([^"]+)"/)?.[1]?.toUpperCase(),
+        tamMalla: (() => { const q = line.match(/MAXMESHSIZE\s+([\d.eE+-]+)/); return q ? parseFloat(q[1]) : undefined; })(),
+        mallaEnVigas: /MESHAT\s+"BEAMS"/i.test(line) });
+      const ao = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+.*\bOPENING\s+"Yes"/i);
+      if (ao && !aa) { (orificiosAsig.get(ao[1]) ?? orificiosAsig.set(ao[1], []).get(ao[1])!).push(ao[2]); analisis.orificios.leidos++; }
     }
 
     // ── SHELLPROP: las propiedades de losa, muro y deck ──
@@ -662,7 +799,7 @@ export function parseE2k(text: string): E2kModel {
       const storyIdx = stories.findIndex(s => s.name === story);
       if (storyIdx < 0) continue;
 
-      if (lc.type === "COLUMN" || lc.type === "BRACE") {
+      if (lc.type === "COLUMN" || lc.type === "BRACE" || (lc.pt1 === lc.pt2 && lc.nStories > 0)) {
         // Top node at this story's elevation
         allNodeKeys.add(nodeKey(lc.pt2, story));
         // Bottom node at nStories levels below this story
@@ -775,6 +912,8 @@ export function parseE2k(text: string): E2kModel {
   // más abajo y daban TDZ "Cannot access 'rigidOffsets' before initialization"
   // al parsear cualquier e2k con brazos rígidos o liberaciones (ej. BARRIO CENTRAL).
   const rigidOffsets = new Map<number, [number, number]>();
+  const zonaRigida = new Map<number, number>();
+  const luzLibre = new Set<number>();
   const momentReleases = new Map<number, boolean[]>();
   // `ANG` de la LINEASSIGN: el local axis angle de CSI. Se leia (entry.angle)
   // pero NO se emitia: las 156 barras giradas del galpon (cordones en C,
@@ -802,7 +941,7 @@ export function parseE2k(text: string): E2kModel {
       // eso sea una union, y partirlos ahi ESTROPEA el modelo. ETABS tampoco
       // lo hace: sus niveles auxiliares no cortan lo que no es de planta.
       const cadenaKeys: string[] = [];
-      if (lc.type === "COLUMN" || lc.type === "BRACE") {
+      if (lc.type === "COLUMN" || lc.type === "BRACE" || (lc.pt1 === lc.pt2 && lc.nStories > 0)) {
         // `nStories 0` = las dos caras en la misma planta (ver arriba).
         const bottomIdx = Math.min(storyIdx + lc.nStories, stories.length - 1);
         // `stories` va de arriba abajo: del indice grande (abajo) al pequeño.
@@ -834,6 +973,8 @@ export function parseE2k(text: string): E2kModel {
         if (la.spring) springAssigns.set(elemIdx, la.spring);
         if (la.mallaEnCruces) mallaEnCruces.set(elemIdx, true);
         if (la.rigidZone > 0) rigidOffsets.set(elemIdx, [la.rigidZone, la.rigidZone]);
+        if (la.rigidZone > 0) zonaRigida.set(elemIdx, la.rigidZone);
+        if (la.luzLibre) luzLibre.add(elemIdx);
         if (la.angle) localAngles.set(elemIdx, la.angle);
         if (la.offsets) endOffsets.set(elemIdx, [la.offsets[0], la.offsets[1], la.rigidZone]);
         // Releases (12: FxI,FyI,FzI,TI,M2I,M3I, FxJ,FyJ,FzJ,TJ,M2J,M3J).
@@ -1106,6 +1247,16 @@ export function parseE2k(text: string): E2kModel {
   // Equivalent nodal: F = w*L/2 at each end node, applied in gravity direction (-Z)
   // Combine all load cases (SCP + CV = total service load)
   const loads = new Map<number, [number, number, number, number, number, number]>();
+  /** Las MISMAS cargas, separadas por patrón (Dead, Live, SEx…): `loads` es su suma. */
+  const cargasPatron = new Map<string, Map<number, number[]>>();
+  const mapaPatron = (lc: string) => cargasPatron.get(lc) ?? cargasPatron.set(lc, new Map()).get(lc)!;
+  const sumarPatron = (lc: string, n: number, v: number[]) => {
+    const mp = mapaPatron(lc);
+    const prev = mp.get(n) ?? [0, 0, 0, 0, 0, 0];
+    for (let k = 0; k < 6; k++) prev[k] += v[k] ?? 0;
+    mp.set(n, prev);
+  };
+  const fefDescarte = new Map<number, number[]>();
 
   // Build element lookup: "lineName@story" → element index
   const elemLookup = new Map<string, number>();
@@ -1141,6 +1292,7 @@ export function parseE2k(text: string): E2kModel {
       ? cargaBarraConsistente(p1, p2, (fl.rs ?? 0) * L, (fl.re ?? 1) * L, fl.fs ?? 0, fl.fe ?? 0, dir)
       : cargaBarraConsistente(p1, p2, 0, L, fl.val, fl.val, dir);
     acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, elemIdx, n1, n2, eq);
+    acumularCargaBarra(mapaPatron(fl.lc), fefDescarte, elemIdx, n1, n2, eq);
   }
   if (lineLoadsSinDir)
     console.warn(`[e2kParser] ${lineLoadsSinDir} LINELOAD en ejes LOCALES (DIR 1/2/3) no se leen: esa carga se pierde.`);
@@ -1176,8 +1328,110 @@ export function parseE2k(text: string): E2kModel {
   // distintas. En el modelo real de Rio Chico la causa era una sola area de
   // SEIS lados, que no es un fallo de nadie: hekatan-fem tiene Q4 y T3.
   const perdidas = { sinAssign: 0, sinNudo: 0, colapsada: 0, poligono: 0 };
+  // ── Diafragmas: un id por (nombre, planta), como los ata ETABS ──
+  const diafragmas = new Map<number, number>();
+  const idsDiaf = new Map<string, number>();
+  const idDiafragma = (nombre: string, planta: string) => {
+    const k = `${nombre}@${planta}`;
+    let id = idsDiaf.get(k);
+    if (id === undefined) { id = idsDiaf.size + 1; idsDiaf.set(k, id); }
+    return id;
+  };
+  for (const [clave, nombre] of pointDiaph) {
+    const n = nodeNameToIdx.get(clave);
+    if (n !== undefined) diafragmas.set(n, idDiafragma(nombre, clave.split("@")[1]));
+  }
+  // ── Malla de LOSA con sus ORIFICIOS ──
+  // Unidades del FICHERO aquí (la conversión a metros va más abajo).
+  const LfLosa = ({ MM: 1e-3, CM: 1e-2, M: 1, IN: 0.0254, FT: 0.3048 } as Record<string, number>)[(units.length || "M").toUpperCase()] ?? 1;
+  const tolLosa = 1e-3 / LfLosa;                 // 1 mm, la MERGETOL de ETABS
+  const claveNudo = (p: number[]) => `${Math.round(p[0] / tolLosa)}|${Math.round(p[1] / tolLosa)}|${Math.round(p[2] / tolLosa)}`;
+  let indiceNudos: Map<string, number> | null = null;
+  const nudoEn = (p: number[], nombre: string): number => {
+    if (!indiceNudos) { indiceNudos = new Map(); (nodes as unknown as number[][]).forEach((q, i) => indiceNudos!.set(claveNudo(q), i)); }
+    const k = claveNudo(p);
+    const ya = indiceNudos.get(k);
+    if (ya !== undefined) return ya;
+    nodes.push([p[0], p[1], p[2]] as unknown as Node);
+    nodeNames.push(nombre); nodeNameToIdx.set(nombre, nodes.length - 1);
+    indiceNudos.set(k, nodes.length - 1);
+    return nodes.length - 1;
+  };
+  const dentro2d = (P: number[][], q: number[]) => {
+    let c = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const a = P[i], b = P[j];
+      if ((a[1] > q[1]) !== (b[1] > q[1]) && q[0] < ((b[0] - a[0]) * (q[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
+  };
+  const sobreBorde2d = (P: number[][], q: number[]) => P.some((a, i) => {
+    const b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+    const t = L2 > 0 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / L2)) : 0;
+    return Math.hypot(q[0] - a[0] - t * dx, q[1] - a[1] - t * dy) < tolLosa;
+  });
+  /** Los orificios que caen en la losa `nombre@planta` (lazos en 3D, a la cota de la losa). */
+  const orificiosEn = (planta: string, contorno: number[][]): number[][][] => {
+    const out: number[][][] = [];
+    for (const [nom, plantas] of orificiosAsig) {
+      if (!plantas.includes(planta)) continue;
+      const oc = areaConns.find((q) => q.name === nom);
+      if (!oc) continue;
+      const lazo = oc.pts.map((pt, k) => {
+        const st = storyDe(planta, oc.dz[k] ?? 0);
+        const xy = pointCoords.get(pt), z = st !== undefined ? storyElevs.get(st) : undefined;
+        return xy && z !== undefined ? [xy[0], xy[1], z - (xy[2] ?? 0)] : undefined;
+      });
+      if (lazo.some((q) => !q) || lazo.length < 3) continue;
+      const L = lazo as number[][];
+      const cx = L.reduce((a, q) => a + q[0], 0) / L.length, cy = L.reduce((a, q) => a + q[1], 0) / L.length;
+      if (Math.abs(L[0][2] - contorno[0][2]) > tolLosa) continue;
+      if (dentro2d(contorno, [cx, cy]) || L.some((q) => dentro2d(contorno, q))) out.push(L);
+    }
+    return out;
+  };
+  /** Malla la losa HORIZONTAL `nombre` (nudos `unicos`) si ETABS la malla (AUTOMESH) o si tiene orificios.
+   *  Devuelve las celdas (índices de nudo) o null para dejar el camino de siempre. */
+  const mallarLosa = (nombre: string, aa: { story: string; section?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean },
+                      unicos: number[]): number[][] | null => {
+    const P = unicos.map((n) => nodes[n] as unknown as number[]);
+    if (P.some((q) => Math.abs(q[2] - P[0][2]) > tolLosa)) return null;     // no es horizontal: muro, rampa
+    const huecos = orificiosEn(aa.story, P);
+    const automesh = aa.malla === "AUTOMESH";
+    if (!automesh && !huecos.length) return null;
+    const tam = automesh ? (aa.tamMalla ?? (tamMallaPiso > 0 ? tamMallaPiso : 1.25 / LfLosa)) : 1e12;
+    // MESHAT "BEAMS": los extremos de las barras que caen sobre la losa son nudos de la malla
+    const extras: number[][] = [];
+    if (automesh && aa.mallaEnVigas !== false) {
+      const vistos = new Set<number>();
+      (elements as unknown as number[][]).forEach((el) => {
+        if (el.length !== 2) return;
+        for (const n of el) {
+          if (vistos.has(n)) continue; vistos.add(n);
+          const q = nodes[n] as unknown as number[];
+          if (Math.abs(q[2] - P[0][2]) > tolLosa) continue;
+          if (dentro2d(P, q) || sobreBorde2d(P, q)) extras.push(q);
+        }
+      });
+    }
+    let malla;
+    try {
+      malla = pavimentar({ contorno: P as any, huecos: huecos as any, extras: extras as any }, tam);
+    } catch { return null; }
+    if (!malla.celdas.length) return null;
+    if (huecos.length) {
+      analisis.orificios.recortes += huecos.length;
+      // el área que se quitó = la del polígono de la losa − la de la malla (unidades del fichero; a m² más abajo)
+      const area2 = (Q: number[][]) => Math.abs(Q.reduce((a, q, i) => { const r = Q[(i + 1) % Q.length]; return a + q[0] * r[1] - r[0] * q[1]; }, 0)) / 2;
+      const neta = malla.celdas.reduce((a, c) => a + area2(c.map((i) => malla!.nudos[i] as unknown as number[])), 0);
+      const k = aa.section ?? "?";
+      analisis.orificios.areaPorSeccion[k] = (analisis.orificios.areaPorSeccion[k] ?? 0) + (area2(P) - neta);
+    }
+    const ids = malla.nudos.map((q, k) => nudoEn(q as unknown as number[], `${nombre}~${k}@${aa.story}`));
+    return malla.celdas.map((c) => c.map((i) => ids[i]));
+  };
   for (const ac of areaConns) {
-    if (!areaAssigns.get(ac.name)?.length) perdidas.sinAssign++;
+    if (!areaAssigns.get(ac.name)?.length && !orificiosAsig.has(ac.name)) perdidas.sinAssign++;
     for (const aa of areaAssigns.get(ac.name) ?? []) {
     const idx = ac.pts.map((pt, k) => {
       const st = storyDe(aa.story, ac.dz[k] ?? 0);
@@ -1195,9 +1449,15 @@ export function parseE2k(text: string): E2kModel {
     // por orejas en el plano del poligono (Newell), que vale tambien para no convexos — un
     // abanico desde un vertice da triangulos volteados en una L. Antes se perdian enteros
     // (CIMENTACION: 10 losas de 136; PEDESTAL: 7 de 44) y los trozos quedaban sueltos.
-    const trozos: number[][] = unicos.length <= 4
+    let trozos: number[][] = unicos.length <= 4
       ? [unicos.length === 3 ? unicos : (idx as number[]).slice(0, 4)]
       : triangularPoligono(unicos, nodes as unknown as number[][]);
+    // ── LOSA HORIZONTAL: malla como ETABS (OBJMESHTYPE "AUTOMESH", MESHAT "BEAMS") y ORIFICIOS recortados ──
+    {
+      const malla = mallarLosa(ac.name, aa, unicos);
+      if (malla) trozos = malla;
+    }
+    if (aa.diaph) for (const tz of trozos) for (const n of tz) diafragmas.set(n, idDiafragma(aa.diaph, aa.story));
     if (!trozos.length) { perdidas.poligono++; continue; }
     for (const nodosArea of trozos) {
     const ei = elements.length;
@@ -1277,6 +1537,7 @@ export function parseE2k(text: string): E2kModel {
     const prev = loads.get(ni) || [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number];
     for (let k = 0; k < 6; k++) prev[k] += pl.v[k];
     loads.set(ni, prev);
+    sumarPatron(pl.lc, ni, pl.v);
   }
   if (pointLoads.length)
     console.log(`[e2kParser] cargas puntuales: ${pointLoads.length - puntualesSinNudo} aplicadas · ${puntualesSinNudo} sin nudo (punto@planta que no existe)`);
@@ -1322,6 +1583,13 @@ export function parseE2k(text: string): E2kModel {
       const prev = loads.get(n) || [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number];
       prev[0] += fx; prev[1] += fy; prev[2] += fz;
       loads.set(n, prev);
+    }
+    // por patrón: cada trozo del juego a SU patrón
+    for (const t of trozos) {
+      const Ft = t.val * A / p.length;
+      const d = al.dir === "GRAV" || al.dir === "GRAVITY" || al.dir === "Z" ? [0, 0, -Ft]
+        : al.dir === "X" ? [Ft, 0, 0] : al.dir === "Y" ? [0, Ft, 0] : [0, 0, 0];
+      for (const n of el) sumarPatron(t.lc, n, d);
     }
     }   // for (trozos del área)
   }
@@ -1401,6 +1669,10 @@ export function parseE2k(text: string): E2kModel {
       loads.set(i, v.map((x, k) => x * (k < 3 ? F : F * L)) as typeof v);
     }
     for (const [i, v] of frameFixedEnd) frameFixedEnd.set(i, v.map((x, k) => x * (k % 6 < 3 ? F : F * L)));
+    for (const mp of cargasPatron.values()) for (const [i, v] of mp) mp.set(i, v.map((x, k) => x * (k < 3 ? F : F * L)));
+    // el SF del espectro lleva la aceleración (L/s²): 9806.65 mm/s² → 9.80665 m/s²
+    for (const c of analisis.casosRS) c.sf *= L;
+    for (const k of Object.keys(analisis.orificios.areaPorSeccion)) analisis.orificios.areaPorSeccion[k] *= L * L;
     // Los MUELLES. Cada tipo lleva su potencia de la longitud, porque cada uno
     // vale una cosa distinta:
     //   punto  F/L        (kgf/m)     -> * F / L
@@ -1442,12 +1714,31 @@ export function parseE2k(text: string): E2kModel {
   /** El PESO PROPIO (SELFWEIGHT del patron Dead), ya en kN y m: barras con el vector
    *  CONSISTENTE (fuerzas + momentos) y rho*t*A/4*WMOD a cada nudo de cascara, hacia -Z. Es lo
    *  que hace ETABS con el patron y lo que hace `apply_selfweight` en Hekatan. */
+  const pesoBarras = new Map<number, { q: number; s0: number; s1: number }>();
   const conPesoPropio = () => {
+    // Brazos AUTOMÁTICOS de ETABS (si se piden): van ANTES del peso propio, porque las vigas pesan su
+    // luz LIBRE («SELFWEIGHTOPTION "Clear Length"»).
+    if (opciones.brazosAuto) {
+      const secDe = (e: number) => frameSections.get(elementSections.get(e) ?? "");
+      const brazos = brazosAutomaticosETABS(nodes as unknown as number[][], elements as unknown as number[][],
+        (e) => endOffsets.has(e) ? null : elementTypes[e] === "COLUMN" ? "col" : elementTypes[e] === "BEAM" ? "viga" : null,
+        (k, _n, enX) => {
+          const sc = secDe(k); if (!sc) return 0;
+          const giro = Math.round(((localAngles.get(k) ?? 0) % 180 + 180) % 180);
+          const enD = (giro === 90) !== enX;          // ang 0: el canto D va según el eje 2 = X global
+          return (enD ? sc.D : sc.B) * L;
+        },
+        (k) => (secDe(k)?.D ?? 0) * L, 0);
+      for (const [e, v] of brazos) endOffsets.set(e, [v[0], v[1], zonaRigida.get(e) ?? 0]);
+    }
     if (!(selfWeightMult > 0)) return loads;
     let total = 0;
+    // El peso propio se calcula UNA vez con multiplicador 1 y se reparte: × selfWeightMult a `loads` y
+    // × su SELFWEIGHT a cada patrón que lo lleva (normalmente solo Dead).
+    const pp = new Map<number, number[]>(), ppFef = new Map<number, number[]>();
     const suma = (n: number, fz: number) => {
-      const prev = loads.get(n) || [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number];
-      prev[2] += fz; loads.set(n, prev); total += fz;
+      const prev = pp.get(n) ?? [0, 0, 0, 0, 0, 0];
+      prev[2] += fz; pp.set(n, prev); total += fz * selfWeightMult;
     };
     elements.forEach((el, i) => {
       const rho = densities.get(i);
@@ -1463,17 +1754,25 @@ export function parseE2k(text: string): E2kModel {
         const dh = Math.hypot(dx, dy);
         const esViga = dh > 1e-9 && Math.atan2(Math.abs(dz), dh) * 180 / Math.PI < 20;
         const Lt = Math.hypot(dx, dy, dz);
-        const Lb = Math.max(0, Lt - (off && esViga ? off[0] + off[1] : 0));
+        // `SELFWEIGHTOPTION "Clear Length"` en la barra: luz libre también en columnas (medido, ETABS 22:
+        // el peso de los brazos de columna del edificio de acero, 11.29 kN, es justo lo que faltaba).
+        const Lb = Math.max(0, Lt - (off && (esViga || luzLibre.has(i)) ? off[0] + off[1] : 0));
         // CONSISTENTE (24-sep-2026): fuerzas Y momentos de empotramiento (L^2/12)(t x w), con la
         // MISMA formula del peso propio del cliModeler (w·Lb/2 y ±(Lb²/12)(t×w), Lb = luz libre
         // en vigas con brazo): asi un e2k "auto" vuelve a dar lo que da el .heks. Antes era
         // rho*A*L/2 a cada extremo sin momentos: la viga de la mesa de torsion salia con V
         // -6..-10 % y M ~1 % contra mesa_modelo.py. El opuesto va a `frameFixedEnd`.
-        const q = rho * A * selfWeightMult, r = Lt > 0 ? Lb / Lt : 0;
+        if (opciones.pesoBarrasAparte) {
+          const libre = !!(off && (esViga || luzLibre.has(i)));
+          const s0 = libre ? off![0] : 0, s1 = libre ? Lt - off![1] : Lt;
+          if (s1 > s0) { pesoBarras.set(i, { q: rho * A, s0, s1 }); total -= rho * A * (s1 - s0) * selfWeightMult; }
+          return;
+        }
+        const q = rho * A, r = Lt > 0 ? Lb / Lt : 0;
         const eq = cargaBarraConsistente(a, b, 0, Lt, q, q, [0, 0, -1])
           .map((v, k) => v * (k % 6 < 3 ? r : r * r));
-        total += eq[2] + eq[8];
-        acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, i, e[0], e[1], eq);
+        total += (eq[2] + eq[8]) * selfWeightMult;
+        acumularCargaBarra(pp, ppFef, i, e[0], e[1], eq);
       } else if (e.length >= 3) {
         const t = thicknesses.get(i) ?? 0; const p = e.map(n => nodes[n]);
         let nx = 0, ny = 0, nz = 0;
@@ -1483,10 +1782,22 @@ export function parseE2k(text: string): E2kModel {
         }
         const Ar = Math.hypot(nx, ny, nz) / 2;
         // WMOD de la propiedad (ETABS `SHELLPROP ... WMOD x`): 0 = el area no pesa.
-        const w = rho * t * Ar * selfWeightMult * (wmodArea.get(i) ?? 1);
+        const w = rho * t * Ar * (wmodArea.get(i) ?? 1);
         for (const n of e) suma(n, -w / e.length);
       }
     });
+    for (const [n, v] of pp) {
+      const prev = loads.get(n) || [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number];
+      for (let k = 0; k < 6; k++) prev[k] += v[k] * selfWeightMult;
+      loads.set(n, prev);
+    }
+    for (const [i, v] of ppFef) {
+      const prev = frameFixedEnd.get(i) ?? new Array(12).fill(0);
+      frameFixedEnd.set(i, prev.map((x, k) => x + (v[k] ?? 0) * selfWeightMult));
+    }
+    const conPP = analisis.patrones.filter((p) => p.pesoPropio > 0);
+    if (!conPP.length && selfWeightMult > 0) conPP.push({ nombre: "Dead", tipo: "Dead", pesoPropio: selfWeightMult });
+    for (const p of conPP) for (const [n, v] of pp) sumarPatron(p.nombre, n, v.map((x) => x * p.pesoPropio));
     console.log(`[e2kParser] peso propio (SELFWEIGHT ${selfWeightMult}): ${total.toFixed(3)} kN repartidos a los nudos`);
     return loads;
   };
@@ -1500,7 +1811,34 @@ export function parseE2k(text: string): E2kModel {
     }
     return out.length ? out : undefined;
   };
+  const cargasFinales = conPesoPropio();
+  // ── CARGAS NOCIONALES: factor × la carga de gravedad del patrón base, en horizontal ──
+  for (const p of analisis.patrones) {
+    if (!p.nocional) continue;
+    const base = cargasPatron.get(p.nocional.base);
+    const mp = mapaPatron(p.nombre);
+    if (!base) continue;
+    for (const [n, v] of base) {
+      const h = p.nocional.factor * -(v[2] ?? 0);
+      if (!h) continue;
+      const prev = mp.get(n) ?? [0, 0, 0, 0, 0, 0];
+      prev[p.nocional.dir === "X" ? 0 : 1] += h;
+      mp.set(n, prev);
+    }
+  }
+  {
+    const fms = [...fuentesMasa.values()];
+    const fm = fms.find((q) => q.defecto) ?? fms[0];
+    if (fm) analisis.fuenteMasa = { elementos: fm.elementos, cargas: fm.cargas, lateral: fm.lateral, lump: fm.lump, patrones: fm.patrones };
+  }
+  if (analisis.orificios.leidos)
+    console.info(`[e2kParser] orificios: ${analisis.orificios.leidos} leídos (por planta) · ${analisis.orificios.recortes} recortados en las losas`);
   return {
+    ...(opciones.pesoBarrasAparte ? { pesoBarras } : {}),
+    cargasPatron,
+    diafragmas,
+    zonaRigida,
+    analisis,
     units,
     stories: stories.reverse(), // bottom to top
     materials,
@@ -1515,7 +1853,7 @@ export function parseE2k(text: string): E2kModel {
     elementSections,
     // Los muelles de PUNTO van ya como `springs` (lo que lee el motor); los de
     // linea/area siguen necesitando `muellesDelModelo` (dependen de la malla).
-    nodeInputs: { supports, loads: conPesoPropio(), springNames: nodeSprings,
+    nodeInputs: { supports, loads: cargasFinales, springNames: nodeSprings,
                   springs: springsDePunto() },
     elementInputs: {
       elasticities,

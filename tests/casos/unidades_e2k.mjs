@@ -41,8 +41,9 @@ const ORACULO_PRIVADO = { MOD_001_LB: join(RAIZ, "registros", "privado_LB", "eta
 const G = 9.80665;
 /** Diferencia de CARGA ya explicada (no de unidades), con su límite y su causa. */
 const CARGA_CONOCIDA = {
-  ref_riochico: [1.2, "2 ABERTURAS (AREAASSIGN … OPENING \"Yes\", 5.25 m²) dentro de losas cargadas: ETABS no carga el " +
-    "hueco y Hekatan no lee las aberturas (carga, peso y rigidez de la losa entera). Barras = ETABS exacto. ⏳ recortar la malla"],
+  ref_riochico: [0.25, "Fz = ETABS a 0.02 % desde que el lector RECORTA los 2 orificios (AREAASSIGN … OPENING \"Yes\", 5.25 m²; " +
+    "1-oct-2026). Lo que queda son los 6.80 kN en X y en Y de ETABS: cargas NOCIONALES, que van en su patrón (cargasPatron) " +
+    "y no en la suma de servicio `loads`"],
 };
 const TOL = 1e-4;   // relativo: los .e2k traen 6-7 cifras
 
@@ -102,7 +103,10 @@ import { parseE2k } from "${R}/examples/src/shared/e2kParser"; export { parseE2k
       if (prop === "None" || !(o.area > 0)) continue;
       const ascii = (t) => t.replace(/[^ -~]/g, "");   // «Ó» llega en utf-8, latin-1 o «?» según quién lo leyó
       const clave = Object.keys(aH).find((k) => ascii(k) === ascii(prop));
-      const r = rel(aH[clave] ?? 0, o.area); peorA = Math.max(peorA, r);
+      // ETABS da el área del OBJETO (sin restar sus orificios); Hekatan malla la losa ya recortada: se le suma
+      // lo que quitaron los orificios de esa propiedad para comparar lo mismo
+      const quitado = Object.entries(M.analisis?.orificios.areaPorSeccion ?? {}).find(([k]) => ascii(k) === ascii(prop))?.[1] ?? 0;
+      const r = rel((aH[clave] ?? 0) + quitado, o.area); peorA = Math.max(peorA, r);
       if (r > TOL) malas.push(`${prop} ${(aH[clave] ?? 0).toFixed(2)}/${o.area.toFixed(2)} m²`);
     }
     if (Object.keys(O.cascaras).length)

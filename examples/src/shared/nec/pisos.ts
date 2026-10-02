@@ -21,8 +21,17 @@ export type Piso = {
 
 const G = 9.80665;
 
+/** La FUENTE DE MASA del modelo (como ETABS MASSSOURCE): un `.e2k` importado puede traer la masa de las CARGAS
+ *  (`masssource … Dead 1 Live 0.25`, en `nodeInputs.masses`) y SIN la de los elementos (`elementos 0`). Sin
+ *  fuente declarada: la de siempre, ρ·A·L de los elementos más la masa nodal que haya. */
+export function opcionesMasa(nodeInputs: any, elementInputs: any): { incluyeElementos: number; masaNodal?: any } {
+  const fm = elementInputs?.fuenteMasa;
+  const nm = nodeInputs?.masses instanceof Map && nodeInputs.masses.size ? nodeInputs.masses : undefined;
+  return { incluyeElementos: fm && !fm.elementos ? 0 : 1, ...(nm ? { masaNodal: nm } : {}) };
+}
+
 export function pisosDeModelo(nodes: number[][], elements: number[][], nodeInputs: any, elementInputs: any): Piso[] {
-  const masas = jointMass(nodes as any, elements as any, elementInputs, { incluyeElementos: 1 });
+  const masas = jointMass(nodes as any, elements as any, elementInputs, opcionesMasa(nodeInputs, elementInputs));
   // cotas de piso: las de los diafragmas; si no hay, las de los nudos con más masa por cota
   const dia: Map<number, number> | undefined = nodeInputs?.diaphragms;
   let cotas: number[] = [];

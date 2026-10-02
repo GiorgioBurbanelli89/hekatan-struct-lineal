@@ -138,6 +138,17 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
         (el) => el.map((i) => tabla.get(i)!)) as unknown as typeof m.elements;
       const ni = m.nodeInputs as unknown as Record<string, unknown>;
       for (const k of Object.keys(ni)) ni[k] = remapear(ni[k], tabla);
+      // fuera de nodeInputs: las cargas por patrón (Map de Maps) y los diafragmas
+      if (m.cargasPatron) for (const [p, mp] of m.cargasPatron) {
+        const out = new Map<number, number[]>();
+        for (const [k, v] of mp) {
+          const j = tabla.get(k); if (j === undefined) continue;
+          const prev = out.get(j);
+          out.set(j, prev ? prev.map((x, q) => x + (v[q] ?? 0)) : [...v]);
+        }
+        m.cargasPatron.set(p, out);
+      }
+      if (m.diafragmas) m.diafragmas = remapear(m.diafragmas, tabla) as Map<number, number>;
       if (nombresViejos) {
         const nom: string[] = [];
         tabla.forEach((j, i) => { if (nom[j] === undefined) nom[j] = nombresViejos[i]; });
@@ -294,6 +305,15 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
         origen.forEach((o, j) => {
           if (!viejo.has(o)) return;
           let v = viejo.get(o);
+          if (clave === "endOffsets" && Array.isArray(v)) {
+            // el brazo de la cara I solo en el primer trozo y el de la J solo en el último
+            const r = (v as number[]).slice();
+            const pos = posicion[j];
+            if (pos !== "primero" && pos !== "unico") r[0] = 0;
+            if (pos !== "ultimo" && pos !== "unico") r[1] = 0;
+            v = r;
+          }
+          if (clave === "frameFixedEnd" && posicion[j] !== "unico") return;   // empotramiento de la barra ENTERA
           if (clave === "momentReleases" && Array.isArray(v)) {
             // El release de la cara I solo en el primer trozo, el de la J solo
             // en el último. Copiarlo a todos serían rótulas internas de más.
@@ -307,6 +327,7 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
         });
         ei[clave] = nuevo;
       }
+      const elemsViejos = elems;
       m.elements = nuevosElems as unknown as typeof m.elements;
       if (nombresViejos) {
         const cuenta = new Map<number, number>();
@@ -320,6 +341,22 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
       }
       if (tiposViejos) m.elementTypes = origen.map((o) => tiposViejos[o]);
       if (plantasViejas) m.elementStories = origen.map((o) => plantasViejas[o]);
+      // peso propio de barra aparte: cada trozo se queda con el tramo cargado que le cae dentro
+      if (m.pesoBarras) {
+        const pb = new Map<number, { q: number; s0: number; s1: number }>();
+        const N0 = m.nodes as unknown as number[][];
+        const dist = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+        origen.forEach((o, j) => {
+          const v = m.pesoBarras!.get(o); if (!v) return;
+          const ini = N0[elemsViejos[o][0]], [pa, pb2] = nuevosElems[j].map((n) => N0[n]);
+          const sa = dist(ini, pa), sb = dist(ini, pb2);
+          const s0 = Math.max(v.s0, Math.min(sa, sb)), s1 = Math.min(v.s1, Math.max(sa, sb));
+          if (s1 - s0 > 1e-9) pb.set(j, { q: v.q, s0: s0 - Math.min(sa, sb), s1: s1 - Math.min(sa, sb) });
+        });
+        m.pesoBarras = pb;
+      }
+      if (m.elementSections) { const es = new Map<number, string>(); origen.forEach((o, j) => { const v = m.elementSections.get(o); if (v !== undefined) es.set(j, v); }); m.elementSections = es; }
+      if (m.zonaRigida) { const zr = new Map<number, number>(); origen.forEach((o, j) => { const v = m.zonaRigida!.get(o); if (v !== undefined) zr.set(j, v); }); m.zonaRigida = zr; }
     }
   }
 

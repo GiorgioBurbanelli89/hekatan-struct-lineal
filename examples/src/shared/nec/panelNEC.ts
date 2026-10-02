@@ -9,7 +9,7 @@
  */
 import van, { type State } from "vanjs-core";
 import { deform } from "hekatan-fem";
-import { pisosDeModelo } from "./pisos";
+import { pisosDeModelo, opcionesMasa } from "./pisos";
 import { centrosDeRigidez } from "./derivas";
 import { calcularJueces, type Jueces } from "./jueces";
 import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
@@ -119,7 +119,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
     const eiM = enMasa(estado.elementInputs.val), ei = p.agrietadas ? agrietar(nodes, elements, eiM) : eiM;
     const t0 = performance.now();
     try {
-      const masas = jointMass(nodes as any, elements as any, ei, { incluyeElementos: 1 });
+      const masas = jointMass(nodes as any, elements as any, ei, opcionesMasa(estado.nodeInputs.val, ei));
       const a = matrizDePiso(nodes, elements, ni, ei, ultimo.pisos, masas);
       p.info = `Aguiar: K_E ${a.KE.length}×${a.KE.length} por condensación (${((performance.now() - t0) / 1000).toFixed(1)} s)
 T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal ${ultimo.modos.slice(0, 3).map((m) => m.T.toFixed(4)).join(" · ")} s
