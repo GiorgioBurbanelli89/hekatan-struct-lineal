@@ -89,8 +89,11 @@ kinds.forEach((k, e) => {   // NEC-SE-DS §6.1.6: vigas 0.5 Ig, columnas 0.8 Ig,
 });
 const OUT = { nudos: nodes.length, W, sitio };
 // «irregular»: Δmax/Δprom > 1.2 en Y → irregularidad torsional tipo 1 (NEC-SE-DS tabla 13): φP = 0.9 y dinámico ≥ 85 %
-for (const [nom, eiX, st, irr] of [["bruta", eiMasa, sitio, false], ["agrietada", agr, sitio, false], ["agrietada irregular", agr, { ...sitio, phiP: 0.9 }, true]]) {
-  const r = nec2.calcularNEC(nodes, elements, niM, eiX, { sitio: st, irregular: irr, nModos: 12, ecc: 0.05 });
+// BORRADOR NEC-SE-DS 2023 (2-oct-2026): zona IV suelo E (Fa 0.9, Fd 1.52, Fs 1.94), r 1.2, dual R 7, Cd 5.5 (Tabla 4.4),
+// Ct 0.0488 · α 0.75 (Tabla 6.2), deriva Δ = Cd·δe/Ie ≤ 0.015 (ec. 6.8, Tabla 4.3, categoría I-II, paredes rígidas)
+const borr = { norma: "borrador", Z: 0.40, Fa: 0.9, Fd: 1.52, Fs: 1.94, r: 1.2, I: 1, R: 7, Cd: 5.5, limDeriva: 0.015, Ct: 0.0488, alfa: 0.75 };
+for (const [nom, eiX, st, irr] of [["bruta", eiMasa, sitio, false], ["agrietada", agr, sitio, false], ["agrietada irregular", agr, { ...sitio, phiP: 0.9 }, true], ["borrador agrietada", agr, borr, null]]) {
+  const r = nec2.calcularNEC(nodes, elements, niM, eiX, { sitio: st, irregular: irr, nModos: 12, ecc: 0.05, dual: true });
   const hn = Math.max(...nodes.map(n => n[2])), Ta = 0.055 * hn ** 0.75;
   // índice de estabilidad NEC §6.3.8: Qi = Pi·Δi/(Vi·hi), Δ = deriva elástica en el CM (Ex / Ey sin excentricidad)
   const Q = d => r.estatico.pisos.map((p, k) => {
@@ -101,7 +104,8 @@ for (const [nom, eiX, st, irr] of [["bruta", eiMasa, sitio, false], ["agrietada"
     VdinX: r.dinamico.X.V, VdinY: r.dinamico.Y.V, escX: r.dinamico.escX, escY: r.dinamico.escY, torsional: r.torsional,
     derivas: Object.fromEntries(Object.entries(r.derivasEst).map(([k, v]) => [k, v.map(d => ({ piso: d.k, max: d.max, inel: d.inelastica, rel: d.relacion }))])),
     derivasDin: { X: r.dinamico.X.pisos.map(p => p.derivaInel), Y: r.dinamico.Y.pisos.map(p => p.derivaInel) },
-    QX: Q("Ex"), QY: Q("Ey") };
+    QX: Q("Ex"), QY: Q("Ey"), limite: r.limiteDeriva, Ax: r.irregularidades.Ax, phiP: r.irregularidades.phiP,
+    dinMax: { X: Math.max(...r.dirDerivas.X), Y: Math.max(...r.dirDerivas.Y) } };
   const o = OUT[nom], pc = x => (x * 100).toFixed(3);
   console.log(`\n== ${nom}: T ${o.modos.map(m => m.T.toFixed(4)).join(" ")}  Ta ${Ta.toFixed(3)} 1.3Ta ${(1.3 * Ta).toFixed(3)}`);
   console.log(`W ${o.estatico.W.toFixed(2)} Vest ${o.estatico.V.toFixed(2)}  VdinX ${o.VdinX.toFixed(2)} (${pc(o.escX.relacion)} %, f ${o.escX.factor.toFixed(3)})  VdinY ${o.VdinY.toFixed(2)} (${pc(o.escY.relacion)} %, f ${o.escY.factor.toFixed(3)})`);
