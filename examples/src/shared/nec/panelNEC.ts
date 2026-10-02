@@ -16,7 +16,7 @@ import { calcularNEC, agrietar, enMasa, type ResultadoNEC } from "./calculo";
 import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
 import { NOMBRES, type ClaveIrr } from "./irregularidades";
 import { jointMass } from "hekatan-fem";
-import { PORTOVIEJO_D, type Norma } from "./estatico";
+import { PORTOVIEJO_D, type Norma, espectro } from "./estatico";
 
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
@@ -79,6 +79,9 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
   f.addButton({ title: "📋 Tabla por piso y planta CM/CR" }).on("click", () => { if (ultimo) mostrar(ultimo); });
   // Solo la DERIVA DE PISO (Jorge, 2-oct-2026: «¿y si quiero ver solo la deriva de piso?»): tabla por piso + gráfica
+  // ESTÁTICO y DINÁMICO cada uno en su ventana limpia (Jorge, 2-oct-2026: «quiero ver análisis estático y dinámico»)
+  f.addButton({ title: "📐 Análisis estático (solo)" }).on("click", () => { enReposo(); correr(); if (ultimo) ventana().mostrarEstatico(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
+  f.addButton({ title: "〰 Análisis dinámico (solo)" }).on("click", () => { enReposo(); correr(); if (ultimo) ventana().mostrarDinamico(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
   f.addButton({ title: "📉 Deriva de piso (sola)" }).on("click", () => { enReposo(); if (!ultimo) correr(); if (ultimo) ventana().mostrarDerivas(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
   f.addButton({ title: "🧮 Matriz de piso (Aguiar) u_x · u_y · θz" }).on("click", () => aguiar());
   // ── PLANTA CM / CR EN VIVO (1-oct-2026): al cambiar muros, secciones o la planta, se recalculan SOLO el CM y el CR
@@ -170,7 +173,8 @@ ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.no
 }
 
 // ── ventana flotante ──────────────────────────────────────────────────────────────────────────────
-let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void; mostrarAguiar: (a: ResultadoAguiar, r: ResultadoNEC) => void; mostrarDerivas: (r: ResultadoNEC, norma: string) => void } | null = null;
+let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void; mostrarAguiar: (a: ResultadoAguiar, r: ResultadoNEC) => void; mostrarDerivas: (r: ResultadoNEC, norma: string) => void;
+  mostrarEstatico: (r: ResultadoNEC, norma: string) => void; mostrarDinamico: (r: ResultadoNEC, norma: string) => void } | null = null;
 const COL = ["#60a5fa", "#34d399", "#f472b6", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9", "#4ade80"];
 
 function ventana() {
@@ -234,6 +238,77 @@ ${r.espVertical ? ` <b>Componente vertical</b> (U3 = ⅔·Sa, ${D.X.modal}): FZ 
 <div style="margin-top:8px">${planta(r, nodes, elements)}</div>`;
     el.style.display = "block";
   }
+  const TH = (t: string) => `<th style="padding:3px 8px;text-align:right;color:#a5b4fc;font-weight:600">${t}</th>`;
+  const TD = (t: string, c = "") => `<td style="padding:3px 8px;text-align:right;${c}">${t}</td>`;
+  const TABLA = (cab: string[], filas: string) => `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;margin:6px 0">` +
+    `<thead><tr>${cab.map(TH).join("")}</tr></thead><tbody>${filas}</tbody></table>`;
+  const sitioTxt = (r: ResultadoNEC) => { const d = r.sitio;
+    return `Z ${d.Z} · Fa ${d.Fa} · Fd ${d.Fd} · Fs ${d.Fs} · ${d.norma === "NEC-15" ? `η ${d.eta ?? 1.8} · r ${d.r}` : `r ${d.r}`} · I ${d.I} · R ${d.R}` +
+      (d.norma === "NEC-15" ? ` · φP ${r.irregularidades.phiP.toFixed(2)} · φE ${r.irregularidades.phiE.toFixed(2)}` : ` · Cd ${d.Cd ?? 5.5}`); };
+
+  function mostrarEstatico(r: ResultadoNEC, norma: string) {
+    tit.textContent = `Análisis estático — ${norma}`;
+    const e = r.estatico, u = r.unidad, nec15 = r.sitio.norma === "NEC-15";
+    let filas = "";
+    for (let i = e.pisos.length - 1; i >= 0; i--) { const q = e.pisos[i];
+      filas += `<tr>${TD("P" + q.k)}${TD(q.z.toFixed(2))}${TD(q.w.toFixed(1))}${TD((q.w * Math.pow(q.z, e.k)).toFixed(0), "color:#94a3b8")}${TD(q.F.toFixed(1))}${TD(q.Vpiso.toFixed(1), "font-weight:600")}${TD((q.Vpiso / e.V * 100).toFixed(0) + " %", "color:#94a3b8")}</tr>`; }
+    const n = e.pisos.length, W = 520, H = 40 + 34 * n, x0 = 46, x1 = W - 90, vmax = e.V;
+    let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#11151b;border-radius:6px"><text x="${x0}" y="16" fill="#a5b4fc" font-size="12" font-weight="600">Fuerza F (naranja) y cortante V (azul) por piso, ${u}</text>`;
+    e.pisos.forEach((q, i) => { const y = H - 14 - (i + 1) * 34 + 8;
+      g += `<text x="${x0 - 8}" y="${y + 14}" fill="#94a3b8" font-size="11" text-anchor="end">P${q.k}</text>` +
+        `<rect x="${x0}" y="${y}" width="${(q.Vpiso / vmax) * (x1 - x0)}" height="12" fill="#60a5fa" opacity="0.5"/>` +
+        `<rect x="${x0}" y="${y + 13}" width="${(q.F / vmax) * (x1 - x0)}" height="8" fill="#fb923c"/>` +
+        `<text x="${x0 + (q.Vpiso / vmax) * (x1 - x0) + 6}" y="${y + 11}" fill="#e2e8f0" font-size="11">V ${q.Vpiso.toFixed(0)}</text>` +
+        `<text x="${x0 + (q.F / vmax) * (x1 - x0) + 6}" y="${y + 21}" fill="#fb923c" font-size="10">F ${q.F.toFixed(0)}</text>`; });
+    g += `</svg>`;
+    cuerpo.innerHTML = `
+<div style="line-height:1.7;font-size:12px">
+ <b>Sitio</b>: ${sitioTxt(r)}<br>
+ <b>Periodo</b>: Ta = Ct·hn^α = ${e.Ta.toFixed(3)} s → T = ${e.T.toFixed(3)} s (el del modal, con tope 1.3·Ta)<br>
+ <b>Espectro</b>: Sa(T) = ${e.Sa.toFixed(3)} g · <b>Cs</b> = ${nec15 ? "I·Sa/(R·φP·φE)" : "Ie·Sa/R"} = <b>${e.Cs.toFixed(4)}</b><br>
+ <b>Peso sísmico</b> W = ${e.W.toFixed(1)} ${u} → <b style="font-size:13px">V = Cs·W = ${e.V.toFixed(1)} ${u}</b><br>
+ <b>Reparto en altura</b>: Fx = V · wx·hx^k / Σ w·h^k, k = ${e.k.toFixed(3)} · excentricidad accidental ±5 %
+</div>
+${TABLA(["Piso", "h m", `w ${u}`, "w·h^k", `F ${u}`, `V ${u}`, "V/Vbase"], filas)}
+${g}
+<div style="font-size:12px;margin-top:6px">${lineaIrr(r)} · <b>Q</b> máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · inercias ${r.agrietadas ? "agrietadas" : "brutas"}</div>`;
+    el.style.display = "block";
+  }
+
+  function mostrarDinamico(r: ResultadoNEC, norma: string) {
+    tit.textContent = `Análisis dinámico espectral — ${norma}`;
+    const D = r.dinamico, u = r.unidad;
+    let sx = 0, sy = 0, filasM = "";
+    r.modos.forEach((m, i) => { sx += m.ux; sy += m.uy;
+      filasM += `<tr>${TD(String(i + 1))}${TD(m.T.toFixed(4))}${TD((m.ux * 100).toFixed(1) + " %")}${TD((m.uy * 100).toFixed(1) + " %")}${TD((m.rz * 100).toFixed(1) + " %")}` +
+        `${TD((sx * 100).toFixed(1) + " %", sx >= 0.9 ? "color:#4ade80" : "")}${TD((sy * 100).toFixed(1) + " %", sy >= 0.9 ? "color:#4ade80" : "")}</tr>`; });
+    let filasP = "";
+    for (let i = r.pisos.length - 1; i >= 0; i--)
+      filasP += `<tr>${TD("P" + r.pisos[i].k)}${TD((D.X.pisos[i].V * D.escX.factor).toFixed(1))}${TD((D.Y.pisos[i].V * D.escY.factor).toFixed(1))}${TD((r.dirDerivas.X[i] * 100).toFixed(2) + " %")}${TD((r.dirDerivas.Y[i] * 100).toFixed(2) + " %")}</tr>`;
+    const Sa = espectro(r.sitio as any).Sa, Tm = Math.max(3, ...r.modos.map((m) => m.T * 1.2)), W = 560, H = 210, l = 46, b = 28;
+    const pts = Array.from({ length: 121 }, (_, i) => { const t = (i / 120) * Tm; return [t, Sa(t)] as const; }), smax = Math.max(...pts.map((q) => q[1])) * 1.1;
+    const X = (t: number) => l + (t / Tm) * (W - l - 12), Y = (v: number) => H - b - (v / smax) * (H - b - 22);
+    let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#11151b;border-radius:6px"><text x="${l}" y="15" fill="#a5b4fc" font-size="12" font-weight="600">Espectro elástico Sa(T) en g, con los modos encima</text>`;
+    g += `<polyline fill="none" stroke="#60a5fa" stroke-width="2" points="${pts.map((q) => `${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join(" ")}"/>`;
+    g += `<line x1="${l}" x2="${W - 12}" y1="${H - b}" y2="${H - b}" stroke="#64748b"/><line x1="${l}" x2="${l}" y1="18" y2="${H - b}" stroke="#64748b"/>`;
+    for (const t of [0, Tm / 4, Tm / 2, 3 * Tm / 4, Tm]) g += `<text x="${X(t)}" y="${H - 10}" fill="#94a3b8" font-size="10" text-anchor="middle">${t.toFixed(2)} s</text>`;
+    for (const v of [smax / 2, smax / 1.1]) g += `<text x="${l - 6}" y="${Y(v) + 4}" fill="#94a3b8" font-size="10" text-anchor="end">${v.toFixed(2)}</text>`;
+    r.modos.slice(0, 6).forEach((m, i) => { g += `<circle cx="${X(m.T)}" cy="${Y(Sa(m.T))}" r="4" fill="#fb923c"/><text x="${X(m.T) + 5}" y="${Y(Sa(m.T)) - 5}" fill="#fb923c" font-size="10">${i + 1}</text>`; });
+    g += `</svg>`;
+    const ok = (q: any) => q.relacion >= D.minimo ? `<span style="color:#4ade80">≥ ${D.minimo * 100} % ✓</span>` : `<span style="color:#f87171">&lt; ${D.minimo * 100} % → escala ×${q.factor.toFixed(3)}</span>`;
+    cuerpo.innerHTML = `
+<div style="line-height:1.7;font-size:12px">
+ <b>Sitio</b>: ${sitioTxt(r)} · espectro reducido por ${r.sitio.norma === "NEC-15" ? "I/(R·φP·φE)" : "Ie/R"}<br>
+ <b>Combinación</b>: modal <b>${D.X.modal}</b> · direccional <b>${r.dirDerivas.metodo}</b> · ${r.modos.length} modos: ΣUx ${(sx * 100).toFixed(1)} % · ΣUy ${(sy * 100).toFixed(1)} % (≥ 90 %)<br>
+ <b>Cortante basal</b>: Vx ${D.X.V.toFixed(1)} ${u} = ${(D.escX.relacion * 100).toFixed(1)} % de Vest ${ok(D.escX)} · Vy ${D.Y.V.toFixed(1)} ${u} = ${(D.escY.relacion * 100).toFixed(1)} % ${ok(D.escY)}
+</div>
+${g}
+${TABLA(["Modo", "T s", "Ux", "Uy", "Rz", "ΣUx", "ΣUy"], filasM)}
+${TABLA(["Piso", `Vx din ${u}`, `Vy din ${u}`, "deriva X", "deriva Y"], filasP)}
+<div style="font-size:11px;color:#94a3b8">Cortantes y derivas ya escalados al mínimo de la norma · derivas inelásticas (${r.sitio.norma === "NEC-15" ? "0.75·R" : "Cd/Ie"} × la elástica), límite ${(r.limiteDeriva * 100).toFixed(1)} %</div>`;
+    el.style.display = "block";
+  }
+
   function mostrarDerivas(r: ResultadoNEC, norma: string) {
     tit.textContent = `Deriva de piso — ${norma}`;
     const nec15 = r.sitio.norma === "NEC-15", amp = nec15 ? 0.75 * r.sitio.R : (r.sitio.Cd ?? 5.5) / r.sitio.I, lim = r.limiteDeriva;
@@ -303,7 +378,7 @@ ${graficaDerivas(r)}
 <div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:10px">${ke}</table></div>`;
     el.style.display = "block";
   }
-  _v = { el, mostrar, mostrarAguiar, mostrarDerivas };
+  _v = { el, mostrar, mostrarAguiar, mostrarDerivas, mostrarEstatico, mostrarDinamico };
   return _v;
 }
 

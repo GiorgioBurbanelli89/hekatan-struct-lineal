@@ -289,7 +289,8 @@ export function montarAccesoRapido(): void {
         bt.appendChild(b);
       };
       accion("▶ Modal", "Correr modal + animar");
-      accion("🌎 Calcular NEC", "Calcular NEC");
+      accion("📐 Estático", "Análisis estático (solo)");
+      accion("〰 Dinámico", "Análisis dinámico (solo)");
       accion("📉 Deriva de piso", "Deriva de piso (sola)");
       casilla("🎯 CM/CR", "🎯 Planta CM/CR en vivo");
       casilla("⚖ 4 jueces", "⚖ 4 jueces en vivo");

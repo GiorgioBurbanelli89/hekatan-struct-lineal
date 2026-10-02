@@ -1,0 +1,10 @@
+import puppeteer from "puppeteer";
+const [png, boton] = process.argv.slice(2);
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-webgl"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1600, height: 1000 });
+const P = Buffer.from(JSON.stringify({ tipo: 2, ejesX: "0,5,11,15", ejesY: "0,4.5,9.5", pisos: 4, h: 3, h1: 3.6, volXp: 1.2, volYm: 1.5, volXm: 0, volYp: 0, formLosa: 51, tlosa: 0.25, offsets: 0 })).toString("base64");
+await pag.goto(`https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/?t=plantillas&p=${P}&v=${Date.now()}`, { waitUntil: "networkidle2", timeout: 120000 }); await new Promise((r) => setTimeout(r, 9000));
+const ok = await pag.evaluate((boton) => { const b = [...document.querySelectorAll("button")].find((e) => e.textContent.includes(boton)); b?.click(); return !!b; }, boton);
+await new Promise((r) => setTimeout(r, 6000));
+console.log("boton", ok, (await pag.evaluate(() => document.querySelector("#hk-nec-panel")?.innerText.slice(0, 400))));
+await pag.screenshot({ path: png }); await nav.close();
