@@ -47,7 +47,9 @@ export function cargasEnCM(nodes: number[][], pisos: Piso[], F: number[], dir: 0
 }
 
 export type DerivaPiso = { k: number; h: number; max: number; min: number; prom: number; relacion: number;
-  inelastica: number; torsional: boolean; nudoMax: number; relDesp: number };
+  inelastica: number; torsional: boolean; nudoMax: number; relDesp: number;
+  /** desplazamiento del nivel: máximo y PROMEDIO de los extremos (umax+umin)/2, como «Story Max Over Avg Displacements» de ETABS */
+  umax: number; uprom: number };
 
 /** Derivas de los ejes de columna (nudos del piso con otro en la misma planta abajo, o la base).
  *  amp = factor de la deriva inelástica: NEC-15 0.75·R (§6.3.9), borrador Cd/Ie (ec. 6.8). relDesp = δmax/δprom de los
@@ -72,7 +74,7 @@ export function derivas(nodes: number[][], pisos: Piso[], U: Map<number, number[
     });
     const prom = (max + min) / 2;
     return { k: p.k, h, max, min, prom, relacion: max / prom, inelastica: amp * max, torsional: max > 1.2 * prom, nudoMax,
-      relDesp: umax / ((umax + umin) / 2) };
+      relDesp: umax / ((umax + umin) / 2), umax, uprom: (umax + umin) / 2 };
   });
 }
 

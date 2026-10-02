@@ -78,6 +78,8 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
   f.addButton({ title: "📋 Tabla por piso y planta CM/CR" }).on("click", () => { if (ultimo) mostrar(ultimo); });
+  // Solo la DERIVA DE PISO (Jorge, 2-oct-2026: «¿y si quiero ver solo la deriva de piso?»): tabla por piso + gráfica
+  f.addButton({ title: "📉 Deriva de piso (sola)" }).on("click", () => { enReposo(); if (!ultimo) correr(); if (ultimo) ventana().mostrarDerivas(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
   f.addButton({ title: "🧮 Matriz de piso (Aguiar) u_x · u_y · θz" }).on("click", () => aguiar());
   // ── PLANTA CM / CR EN VIVO (1-oct-2026): al cambiar muros, secciones o la planta, se recalculan SOLO el CM y el CR
   // (3 cargas unitarias por piso) y se redibuja la planta. Sirve para TANTEAR hasta que el CR se acerque al CM.
@@ -168,7 +170,7 @@ ${r.chequeoModos.map((s) => s.split(" (")[0]).join(" · ")}  (${((performance.no
 }
 
 // ── ventana flotante ──────────────────────────────────────────────────────────────────────────────
-let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void; mostrarAguiar: (a: ResultadoAguiar, r: ResultadoNEC) => void } | null = null;
+let _v: { el: HTMLDivElement; mostrar: (r: ResultadoNEC, nodes: number[][], elements: number[][], norma: string) => void; mostrarAguiar: (a: ResultadoAguiar, r: ResultadoNEC) => void; mostrarDerivas: (r: ResultadoNEC, norma: string) => void } | null = null;
 const COL = ["#60a5fa", "#34d399", "#f472b6", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9", "#4ade80"];
 
 function ventana() {
@@ -232,6 +234,43 @@ ${r.espVertical ? ` <b>Componente vertical</b> (U3 = ⅔·Sa, ${D.X.modal}): FZ 
 <div style="margin-top:8px">${planta(r, nodes, elements)}</div>`;
     el.style.display = "block";
   }
+  function mostrarDerivas(r: ResultadoNEC, norma: string) {
+    tit.textContent = `Deriva de piso — ${norma}`;
+    const nec15 = r.sitio.norma === "NEC-15", amp = nec15 ? 0.75 * r.sitio.R : (r.sitio.Cd ?? 5.5) / r.sitio.I, lim = r.limiteDeriva;
+    const peor = (ks: string[], i: number) => ks.reduce((a, k) => (r.derivasEst[k][i].max > a.max ? r.derivasEst[k][i] : a), r.derivasEst[ks[0]][i]);
+    const th = (t: string) => `<th style="padding:3px 8px;text-align:right;color:#a5b4fc;font-weight:600">${t}</th>`;
+    const td = (t: string, c = "") => `<td style="padding:3px 8px;text-align:right;${c}">${t}</td>`;
+    const pc = (v: number, d = 2, c = "") => td((v * 100).toFixed(d) + " %", v > lim ? "color:#f87171;font-weight:700" : c);
+    let filas = "";
+    for (let i = r.pisos.length - 1; i >= 0; i--) {
+      const dX = peor(["Ex", "Ex+e", "Ex−e"], i), dY = peor(["Ey", "Ey+e", "Ey−e"], i);
+      filas += `<tr>${td("P" + r.pisos[i].k)}${td(dX.h.toFixed(2))}${td((dX.max * 100).toFixed(3) + " %", "color:#94a3b8")}${pc(dX.inelastica)}` +
+        `${td((dY.max * 100).toFixed(3) + " %", "color:#94a3b8")}${pc(dY.inelastica)}${pc(r.dirDerivas.X[i])}${pc(r.dirDerivas.Y[i])}</tr>`;
+    }
+    const cabD = ["Piso", "h m", "ΔE X", nec15 ? "ΔM X" : "Δ X", "ΔE Y", nec15 ? "ΔM Y" : "Δ Y", "din X", "din Y"].map(th).join("");
+    const todo = [...r.pisos.map((_, i) => Math.max(peor(["Ex", "Ex+e", "Ex−e"], i).inelastica, peor(["Ey", "Ey+e", "Ey−e"], i).inelastica)), ...r.dirDerivas.X, ...r.dirDerivas.Y];
+    const mx = Math.max(...todo);
+    cuerpo.innerHTML = `
+<div style="line-height:1.6;margin-bottom:6px;font-size:12px">
+ <b>${nec15 ? "NEC-15 §6.3.9: ΔM = 0.75·R·ΔE" : "Borrador ec. 6.8: δ = Cd·δe/Ie"}</b> = ${nec15 ? `0.75 × ${r.sitio.R}` : `${r.sitio.Cd ?? 5.5} / ${r.sitio.I}`} = <b>${amp.toFixed(2)} × la elástica</b>
+ · límite <b>${(lim * 100).toFixed(1)} %</b> ${nec15 ? "(NEC-15 Tabla 7)" : "(borrador Tabla 4.3)"}<br>
+ ΔE = deriva elástica (el peor de sin y ±5 % de excentricidad) · din = dinámico ${r.dinamico.X.modal} · ${r.dirDerivas.metodo}, ya escalado ·
+ máx <b style="color:${mx <= lim ? "#4ade80" : "#f87171"}">${(mx * 100).toFixed(2)} % → ${mx <= lim ? "cumple" : "NO cumple"}</b>
+</div>
+<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;margin-bottom:8px"><thead><tr>${cabD}</tr></thead><tbody>${filas}</tbody></table>
+${graficaDerivas(r)}
+<div style="margin-top:10px;font-size:12px"><b>Máximo y promedio por piso</b> (elásticos, el peor de sin y ±5 %; como «Story Max Over Avg Displacements / Drifts» de ETABS) ·
+ promedio = (máx + mín)/2 de los extremos · relación > 1.2 = torsión irregular</div>
+<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;margin-top:4px"><thead><tr>${
+  ["Piso", "Dir", "u máx mm", "u prom mm", "u máx/prom", "Δ máx", "Δ prom", "Δ máx/prom"].map(th).join("")}</tr></thead><tbody>${
+  r.pisos.map((_, i) => r.pisos.length - 1 - i).map((i) => (["X", "Y"] as const).map((dn) => {
+    const d = peor(dn === "X" ? ["Ex", "Ex+e", "Ex−e"] : ["Ey", "Ey+e", "Ey−e"], i), rel = (v: number) => td(v.toFixed(3), v > 1.2 ? "color:#f87171;font-weight:700" : "");
+    return `<tr>${td(dn === "X" ? "P" + r.pisos[i].k : "")}${td(dn)}${td((d.umax * 1000).toFixed(2))}${td((d.uprom * 1000).toFixed(2))}${rel(d.relDesp)}` +
+      `${td((d.max * 100).toFixed(3) + " %")}${td((d.prom * 100).toFixed(3) + " %")}${rel(d.relacion)}</tr>`;
+  }).join("")).join("")}</tbody></table>`;
+    el.style.display = "block";
+  }
+
   function mostrarAguiar(a: ResultadoAguiar, r: ResultadoNEC) {
     tit.textContent = `Matriz de rigidez en coordenadas de piso (Aguiar) — ${r.pisos.length} pisos`;
     const n = r.pisos.length, g = ["u_x", "u_y", "θz"];
@@ -264,7 +303,7 @@ ${r.espVertical ? ` <b>Componente vertical</b> (U3 = ⅔·Sa, ${D.X.modal}): FZ 
 <div style="overflow-x:auto"><table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:10px">${ke}</table></div>`;
     el.style.display = "block";
   }
-  _v = { el, mostrar, mostrarAguiar };
+  _v = { el, mostrar, mostrarAguiar, mostrarDerivas };
   return _v;
 }
 
