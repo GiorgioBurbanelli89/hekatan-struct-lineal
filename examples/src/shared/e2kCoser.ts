@@ -193,7 +193,7 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
     const clave = (x: number, y: number, z: number) =>
       `${Math.round(x / tol)}|${Math.round(y / tol)}|${Math.round(z / tol)}`;
     const hay = new Set(N.map((n) => clave(n[0], n[1], n[2])));
-    const nuevos = new Map<string, number[]>();
+    const nuevos = new Map<string, number[]>(), diafCruce = new Map<string, number>();
 
     // El cruce se busca en 3D por ACERCAMIENTO MINIMO entre los dos segmentos.
     // Antes se exigia que las dos barras fueran horizontales y coplanarias, y
@@ -237,10 +237,15 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
         // Sin el flag NO se toca: se cuenta y se deja.
         if (flag && !(flag.get(idxBar[a]) && flag.get(idxBar[b]))) { inf.crucesSinNudo++; continue; }
         nuevos.set(k, pm);
+        // el nudo de cruce entra en el diafragma de la barra cuyos DOS extremos están en él (2-oct-2026: se creaba
+        // después de asignar los diafragmas y quedaba suelto; ETABS ata el piso a todo nudo que toca)
+        const dg = m.diafragmas;
+        if (dg) for (const e of [ea, eb]) { const d = dg.get(e[0]); if (d !== undefined && dg.get(e[1]) === d) { diafCruce.set(k, d); break; } }
       }
     }
-    for (const [, p] of nuevos) {
+    for (const [k, p] of nuevos) {
       (m.nodes as unknown as number[][]).push(p);
+      const d = diafCruce.get(k); if (d !== undefined) m.diafragmas!.set(m.nodes.length - 1, d);
       if (m.nodeNames) m.nodeNames.push(`cruce@${m.nodeNames.length}`);
       inf.nudosDeCruce++;
     }
@@ -354,6 +359,23 @@ export function coserModelo(m: E2kModel, tol = TOL_FUSION,
           if (s1 - s0 > 1e-9) pb.set(j, { q: v.q, s0: s0 - Math.min(sa, sb), s1: s1 - Math.min(sa, sb) });
         });
         m.pesoBarras = pb;
+      }
+      // cargas de las losas en una dirección (puntos sobre la barra): cada trozo se queda con las suyas
+      if (m.cargasLosa) {
+        const cl = new Map<number, Array<{ s: number; P: number; lc: string }>>();
+        const N0 = m.nodes as unknown as number[][];
+        const dist = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+        origen.forEach((o, j) => {
+          const v = m.cargasLosa!.get(o); if (!v) return;
+          const ini = N0[elemsViejos[o][0]], fin = N0[elemsViejos[o][1]], Lo = dist(ini, fin);
+          const [pa, pb2] = nuevosElems[j].map((n) => N0[n]);
+          const sa = dist(ini, pa), sb = dist(ini, pb2), lo = Math.min(sa, sb), hi = Math.max(sa, sb);
+          const ultimo = hi >= Lo - 1e-6, invertido = sa > sb;
+          const mios = v.filter((q) => q.s >= lo - 1e-9 && (ultimo ? q.s <= hi + 1e-9 : q.s < hi - 1e-9))
+            .map((q) => ({ ...q, s: invertido ? hi - q.s : q.s - lo }));
+          if (mios.length) cl.set(j, mios);
+        });
+        m.cargasLosa = cl;
       }
       if (m.elementSections) { const es = new Map<number, string>(); origen.forEach((o, j) => { const v = m.elementSections.get(o); if (v !== undefined) es.set(j, v); }); m.elementSections = es; }
       if (m.zonaRigida) { const zr = new Map<number, number>(); origen.forEach((o, j) => { const v = m.zonaRigida!.get(o); if (v !== undefined) zr.set(j, v); }); m.zonaRigida = zr; }

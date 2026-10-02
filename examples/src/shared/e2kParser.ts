@@ -77,6 +77,9 @@ export interface E2kModel {
   /** Peso propio de cada barra (con `pesoBarrasAparte`): q en kN/m hacia −Z, aplicado de s0 a s1 (m, medidos
    *  desde el nudo I). Lo parte `coserModelo` con la barra. */
   pesoBarras?: Map<number, { q: number; s0: number; s1: number }>;
+  /** Con `losaUnaDireccion`: la carga de las losas en una dirección sobre cada barra, en puntos (s en m desde el nudo
+   *  I, P en kN hacia −Z, patrón). La parte `coserModelo` con la barra. */
+  cargasLosa?: Map<number, Array<{ s: number; P: number; lc: string }>>;
   /** Barra → factor de zona rígida (RIGIDZONE) leído del fichero (0..1). */
   zonaRigida?: Map<number, number>;
   /** Lo que ETABS ANALIZA además de la geometría (patrones, fuente de masa, sismo por coeficiente,
@@ -111,6 +114,12 @@ export interface OpcionesE2k {
    *  antes, una viga partida en 12 trozos recibe el peso de la viga entera en sus dos extremos y la flecha a
    *  media luz sale corta (medido: 2.9 % del Uz máximo en Dead contra ETABS en un edificio de acero). */
   pesoBarrasAparte?: boolean;
+  /** LOSAS EN UNA DIRECCIÓN como ETABS (2-oct-2026): el área `PROPTYPE "Deck"` o la membrana con `ONEWAYLOADDIST "Yes"`
+   *  no manda su carga de área ni su peso propio a sus esquinas: los lleva en el sentido del eje local 1 (+X girado
+   *  `ANG`) a la viga más cercana que cruza (la vigueta), como ETABS. Se devuelve en `cargasLosa` (cargas puntuales
+   *  sobre cada barra) para repartirlo después de partir las barras. Medido en un centro comercial de acero con deck:
+   *  en las esquinas, la inercia polar de la masa salía 6-33 % mayor que la de ETABS y el modo de torsión 7.4 % largo. */
+  losaUnaDireccion?: boolean;
 }
 
 export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
@@ -152,7 +161,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // por eso es una LISTA. Con un solo valor por nombre la última planta pisaba a las demás y la casa
   // MOD_001 perdía 23 de sus 36 losas nervadas (−474 kN de peso, 22-sep-2026).
   const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string;
-    diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean }>>();
+    diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean; ang?: number }>>();
   // ORIFICIOS: `AREAASSIGN "A1" "N1" OPENING "Yes"` no lleva SECTION, así que la regex de arriba no
   // lo leía y el área contaba como «sin AREAASSIGN»: el hueco de la escalera se perdía y la losa
   // quedaba ENTERA (con su carga y su masa). Ahora se guardan por planta y recortan la losa.
@@ -173,6 +182,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     mmod?: number; wmod?: number;
     /** SLABTYPE "Waffle": los 10 modificadores que ETABS le pasa al solver (losaReticular.ts). */
     reticular?: number[];
+    /** reparte su carga en UNA dirección (Deck, o ONEWAYLOADDIST "Yes") */
+    unaDir?: boolean;
   }>();
   /**
    * SECTION DESIGNER: una seccion DIBUJADA, hecha de varias piezas.
@@ -665,7 +676,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         diaph: line.match(/\bDIAPH\s+"([^"]+)"/)?.[1],
         malla: line.match(/OBJMESHTYPE\s+"([^"]+)"/)?.[1]?.toUpperCase(),
         tamMalla: (() => { const q = line.match(/MAXMESHSIZE\s+([\d.eE+-]+)/); return q ? parseFloat(q[1]) : undefined; })(),
-        mallaEnVigas: /MESHAT\s+"BEAMS"/i.test(line) });
+        mallaEnVigas: /MESHAT\s+"BEAMS"/i.test(line),
+        ang: (() => { const q = line.match(/\bANG\s+([-\d.eE+]+)/); return q ? parseFloat(q[1]) : undefined; })() });
       const ao = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+.*\bOPENING\s+"Yes"/i);
       if (ao && !aa) { (orificiosAsig.get(ao[1]) ?? orificiosAsig.set(ao[1], []).get(ao[1])!).push(ao[2]); analisis.orificios.leidos++; }
     }
@@ -740,11 +752,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
           const mods = leidos.map(v => v ?? 1);
           shellProps.set(nm, { t: prev?.t ?? 0, material: prev?.material ?? "",
                                modeling: prev?.modeling ?? "ShellThin", mods, deck: prev?.deck, pesoFactor: prev?.pesoFactor,
-                               mmod: prev?.mmod, wmod: prev?.wmod, reticular: prev?.reticular });
+                               mmod: prev?.mmod, wmod: prev?.wmod, reticular: prev?.reticular, unaDir: prev?.unaDir });
         } else if (esp !== undefined) {
           shellProps.set(nm, {
             t: espRet ?? esp, mods: prev?.mods, deck: deck ?? prev?.deck, pesoFactor: pesoFactor ?? prev?.pesoFactor,
             mmod: prev?.mmod, wmod: prev?.wmod, reticular: reticular ?? prev?.reticular,
+            unaDir: /PROPTYPE\s+"Deck"/.test(line) || /ONEWAYLOADDIST\s+"Yes"/i.test(line) || prev?.unaDir,
             material: line.match(/MATERIAL\s+"([^"]+)"/)?.[1] ??
                       line.match(/CONCMATERIAL\s+"([^"]+)"/)?.[1] ?? "",
             modeling: line.match(/MODELINGTYPE\s+"([^"]+)"/)?.[1] ??
@@ -1331,6 +1344,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // ── Diafragmas: un id por (nombre, planta), como los ata ETABS ──
   const diafragmas = new Map<number, number>();
   const idsDiaf = new Map<string, number>();
+  /** losas en UNA dirección (ver `losaUnaDireccion`): elemento → ángulo local y diafragma */
+  const unaDirArea = new Map<number, { ang: number; diaph?: number; pano: number[] }>();
+  /** cargas de esas losas a repartir: q en F/L² del FICHERO (área) o kN/m² (peso propio, `kN`) */
+  const pendLosa: Array<{ ei: number; lc: string; q: number; kN?: boolean }> = [];
   const idDiafragma = (nombre: string, planta: string) => {
     const k = `${nombre}@${planta}`;
     let id = idsDiaf.get(k);
@@ -1490,6 +1507,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         densities.set(ei, ((mat?.density ?? 0) * hormigon + d.w) / d.tc);
         deckSections.set(ei, { ...d });
       }
+      if (sp.unaDir && opciones.losaUnaDireccion)
+        unaDirArea.set(ei, { ang: aa.ang ?? 0, diaph: aa.diaph ? idDiafragma(aa.diaph, aa.story) : undefined, pano: unicos });
       const esMembrana = /membrane/i.test(sp.modeling);
       plateFormulations.set(ei, /thick/i.test(sp.modeling) || esMembrana ? 0 : 1);
       const m = sp.mods ? sp.mods.slice(0, 8) : [1, 1, 1, 1, 1, 1, 1, 1];
@@ -1575,6 +1594,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
 
     const F = q * A / p.length;
     cargaAreaTotal += q * A;
+    const vertical = al.dir === "GRAV" || al.dir === "GRAVITY" || al.dir === "Z";
+    if (vertical && unaDirArea.has(idx)) {   // losa en una dirección: a las viguetas, no a sus esquinas
+      for (const t of trozos) if (t.val) pendLosa.push({ ei: idx, lc: t.lc, q: t.val });
+      continue;
+    }
     let fx = 0, fy = 0, fz = 0;
     if (al.dir === "GRAV" || al.dir === "GRAVITY" || al.dir === "Z") fz = -F;
     else if (al.dir === "X") fx = F;
@@ -1670,6 +1694,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     }
     for (const [i, v] of frameFixedEnd) frameFixedEnd.set(i, v.map((x, k) => x * (k % 6 < 3 ? F : F * L)));
     for (const mp of cargasPatron.values()) for (const [i, v] of mp) mp.set(i, v.map((x, k) => x * (k < 3 ? F : F * L)));
+    for (const o of pendLosa) if (!o.kN) { o.q *= F / (L * L); o.kN = true; }
     // el SF del espectro lleva la aceleración (L/s²): 9806.65 mm/s² → 9.80665 m/s²
     for (const c of analisis.casosRS) c.sf *= L;
     for (const k of Object.keys(analisis.orificios.areaPorSeccion)) analisis.orificios.areaPorSeccion[k] *= L * L;
@@ -1715,6 +1740,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
    *  CONSISTENTE (fuerzas + momentos) y rho*t*A/4*WMOD a cada nudo de cascara, hacia -Z. Es lo
    *  que hace ETABS con el patron y lo que hace `apply_selfweight` en Hekatan. */
   const pesoBarras = new Map<number, { q: number; s0: number; s1: number }>();
+  const ppLosa: Array<{ ei: number; q: number }> = [];
   const conPesoPropio = () => {
     // Brazos AUTOMÁTICOS de ETABS (si se piden): van ANTES del peso propio, porque las vigas pesan su
     // luz LIBRE («SELFWEIGHTOPTION "Clear Length"»).
@@ -1783,6 +1809,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const Ar = Math.hypot(nx, ny, nz) / 2;
         // WMOD de la propiedad (ETABS `SHELLPROP ... WMOD x`): 0 = el area no pesa.
         const w = rho * t * Ar * (wmodArea.get(i) ?? 1);
+        if (unaDirArea.has(i)) { ppLosa.push({ ei: i, q: w / Ar }); total -= w * selfWeightMult; return; }
         for (const n of e) suma(n, -w / e.length);
       }
     });
@@ -1797,6 +1824,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     }
     const conPP = analisis.patrones.filter((p) => p.pesoPropio > 0);
     if (!conPP.length && selfWeightMult > 0) conPP.push({ nombre: "Dead", tipo: "Dead", pesoPropio: selfWeightMult });
+    for (const p of conPP) for (const o of ppLosa) pendLosa.push({ ei: o.ei, lc: p.nombre, q: o.q * p.pesoPropio, kN: true });
     for (const p of conPP) for (const [n, v] of pp) sumarPatron(p.nombre, n, v.map((x) => x * p.pesoPropio));
     console.log(`[e2kParser] peso propio (SELFWEIGHT ${selfWeightMult}): ${total.toFixed(3)} kN repartidos a los nudos`);
     return loads;
@@ -1812,6 +1840,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     return out.length ? out : undefined;
   };
   const cargasFinales = conPesoPropio();
+  const cargasLosa = repartirLosasUnaDireccion(nodes as unknown as number[][], elements as unknown as number[][], unaDirArea,
+    pendLosa, diafragmas, sumarPatron);
   // ── CARGAS NOCIONALES: factor × la carga de gravedad del patrón base, en horizontal ──
   for (const p of analisis.patrones) {
     if (!p.nocional) continue;
@@ -1835,6 +1865,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     console.info(`[e2kParser] orificios: ${analisis.orificios.leidos} leídos (por planta) · ${analisis.orificios.recortes} recortados en las losas`);
   return {
     ...(opciones.pesoBarrasAparte ? { pesoBarras } : {}),
+    ...(opciones.losaUnaDireccion ? { cargasLosa } : {}),
     cargasPatron,
     diafragmas,
     zonaRigida,
@@ -1928,6 +1959,96 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
  * componente de la normal de Newell, se orienta CCW y se cortan orejas convexas sin otro
  * vértice dentro. Devuelve [] si no puede (polígono degenerado o que se cruza).
  */
+/**
+ * Losa en UNA dirección como ETABS (Deck, o membrana con ONEWAYLOADDIST): cada punto de la losa manda su carga en el
+ * sentido del vano (eje local 1 = +X girado `ang`, la regla de CSI para un área horizontal) a la viga MÁS CERCANA que
+ * cruza esa recta dentro del paño (la vigueta o la viga de borde), o sea el área tributaria por bisectrices. Se muestrea
+ * el paño (rejilla de ~400 por lado) y cada muestra es una carga puntual sobre su viga. Si a ningún lado hay viga, la
+ * muestra va a las esquinas del paño. Los nudos de esas vigas dentro del paño entran en su diafragma (ETABS los ata: el
+ * piso se conecta a todo nudo que toca). Unidades: kN y m (después de convertir).
+ */
+function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaDir: Map<number, { ang: number; diaph?: number; pano: number[] }>,
+  pend: Array<{ ei: number; lc: string; q: number }>, diafragmas: Map<number, number>,
+  sumarPatron: (lc: string, n: number, v: number[]) => void): Map<number, Array<{ s: number; P: number; lc: string }>> {
+  const out = new Map<number, Array<{ s: number; P: number; lc: string }>>();
+  if (!pend.length) return out;
+  const TOL = 1e-3;
+  const dentro = (P: number[][], q: number[]) => {
+    let c = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      const a = P[i], b = P[j];
+      if ((a[1] > q[1]) !== (b[1] > q[1]) && q[0] < ((b[0] - a[0]) * (q[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
+  };
+  const enBorde = (P: number[][], q: number[]) => P.some((a, i) => {
+    const b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
+    const t = L2 > 0 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / L2)) : 0;
+    return Math.hypot(q[0] - a[0] - t * dx, q[1] - a[1] - t * dy) < TOL;
+  });
+  const enPano = (P: number[][], q: number[]) => dentro(P, q) || enBorde(P, q);
+  // la muestra de cada paño se calcula una vez y vale para todos sus patrones
+  const cache = new Map<number, { muestras: Array<{ f: number; s: number } | null>; esquinas: number[]; A: number }>();
+  const preparar = (ei: number) => {
+    // las vigas se buscan en el PAÑO de ETABS entero (`pano`); se muestrea solo el trozo `ei` (un polígono de más de
+    // 4 lados llega triangulado, y un triángulo solo no contiene las viguetas que lo sostienen)
+    const el = elements[ei], P = el.map((n) => nodes[n]), z0 = P[0][2], info = unaDir.get(ei)!;
+    const PP = info.pano.map((n) => nodes[n]);
+    const a = (info.ang * Math.PI) / 180, u = [Math.cos(a), Math.sin(a)];
+    const vigas: Array<{ f: number; a: number[]; b: number[] }> = [];
+    elements.forEach((e, f) => {
+      if (e.length !== 2) return;
+      const A = nodes[e[0]], B = nodes[e[1]];
+      if (Math.abs(A[2] - z0) > TOL || Math.abs(B[2] - z0) > TOL) return;
+      const dx = B[0] - A[0], dy = B[1] - A[1], Lb = Math.hypot(dx, dy);
+      const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+      if (!enPano(PP, M) && !(enPano(PP, A) && enPano(PP, B))) return;
+      // al diafragma TODA viga del paño (también las paralelas al vano): ETABS ata el piso a todo nudo que toca
+      if (info.diaph !== undefined) for (const n of e) if (!diafragmas.has(n) && enPano(PP, nodes[n])) diafragmas.set(n, info.diaph);
+      if (Lb < TOL || Math.abs(dx * u[1] - dy * u[0]) / Lb < 0.1) return;          // paralela al vano: no apoya
+      vigas.push({ f, a: A, b: B });
+    });
+    const xs = P.map((q) => q[0]), ys = P.map((q) => q[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const h = Math.max(x1 - x0, y1 - y0) / 400, nx = Math.max(1, Math.ceil((x1 - x0) / h)), ny = Math.max(1, Math.ceil((y1 - y0) / h));
+    const hx = (x1 - x0) / nx, hy = (y1 - y0) / ny, muestras: Array<{ f: number; s: number } | null> = [];
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+      const q = [x0 + (i + 0.5) * hx, y0 + (j + 0.5) * hy];
+      if (!dentro(P, q)) continue;
+      let mejor: { f: number; s: number; t: number } | null = null;
+      for (const v of vigas) {
+        // q + t·u = a + r·(b − a)
+        const ex = v.b[0] - v.a[0], ey = v.b[1] - v.a[1], det = -u[0] * ey + u[1] * ex;
+        if (Math.abs(det) < 1e-12) continue;
+        const rx = v.a[0] - q[0], ry = v.a[1] - q[1];
+        const t = (-rx * ey + ry * ex) / det, r = (u[0] * ry - u[1] * rx) / det;
+        if (r < -1e-9 || r > 1 + 1e-9) continue;
+        if (!mejor || Math.abs(t) < Math.abs(mejor.t)) mejor = { f: v.f, s: r * Math.hypot(ex, ey), t };
+      }
+      muestras.push(mejor ? { f: mejor.f, s: mejor.s } : null);
+    }
+    const A = Math.abs(P.reduce((acc, q, i) => { const w = P[(i + 1) % P.length]; return acc + q[0] * w[1] - w[0] * q[1]; }, 0)) / 2;
+    const r = { muestras, esquinas: el, A };
+    cache.set(ei, r); return r;
+  };
+  let sinViga = 0;
+  for (const o of pend) {
+    const c = cache.get(o.ei) ?? preparar(o.ei);
+    // la carga EXACTA del paño (q·A) repartida en sus muestras
+    const dP = (o.q * c.A) / Math.max(1, c.muestras.length);
+    const acum = new Map<string, { f: number; s: number; P: number }>();
+    for (const m of c.muestras) {
+      if (!m) { sinViga++; for (const n of c.esquinas) sumarPatron(o.lc, n, [0, 0, -dP / c.esquinas.length, 0, 0, 0]); continue; }
+      const k = `${m.f}|${Math.round(m.s / 0.01)}`;
+      const g = acum.get(k) ?? acum.set(k, { f: m.f, s: 0, P: 0 }).get(k)!;
+      g.s = (g.s * g.P + m.s * dP) / (g.P + dP); g.P += dP;
+    }
+    for (const g of acum.values()) (out.get(g.f) ?? out.set(g.f, []).get(g.f)!).push({ s: g.s, P: g.P, lc: o.lc });
+  }
+  console.info(`[e2kParser] losas en una dirección: ${unaDir.size} paños → ${out.size} vigas` + (sinViga ? ` · ${sinViga} muestras sin viga (a las esquinas)` : ""));
+  return out;
+}
+
 export function triangularPoligono(ids: number[], nodes: number[][]): number[][] {
   const n = ids.length;
   if (n < 3) return [];

@@ -80,7 +80,7 @@ const N = (v: number | undefined, def = 0): string => {
 };
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks {
-  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true });
+  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true });
   const inventario = inventarioDe(m, nombre);
   // El peso propio de cada barra ENTERA (antes de partirla), por coordenadas de sus extremos: es lo que ETABS
   // convierte en MASA (la mitad a cada nudo del objeto). Medido en el modelo sintético: repartiéndola por los
@@ -107,6 +107,30 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
           for (let k = 0; k < 6; k++) v[k] += eq[o + k] * p.pesoPropio;
           mp.set(n, v);
         }
+      }
+    }
+  }
+  // las losas en UNA dirección (Deck, ONEWAYLOADDIST): su carga, ya en las barras partidas, como cargas puntuales con
+  // el vector consistente de Hermite (las fórmulas de `deck etabs oneway` del cliModeler). También a la MASA: la fuente
+  // por cargas toma Fz/g de los nudos de cada trozo (va a `sinPP`).
+  if (m.cargasLosa?.size) {
+    const N0 = m.nodes as unknown as number[][];
+    for (const [e, lista] of m.cargasLosa) {
+      const [i, j] = (m.elements as unknown as number[][])[e];
+      const pi = N0[i], pj = N0[j], L = Math.hypot(pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]);
+      if (!(L > 1e-9)) continue;
+      const tv = [0, 1, 2].map((k) => (pj[k] - pi[k]) / L), txw = [tv[1], -tv[0], 0];   // t × ẑ
+      for (const q of lista) {
+        const xi = Math.min(1, Math.max(0, q.s / L)), dP = -q.P;
+        const F1 = 1 - 3 * xi * xi + 2 * xi ** 3, M1 = L * (xi - 2 * xi * xi + xi ** 3);
+        const F3 = 3 * xi * xi - 2 * xi ** 3, M4 = L * (-xi * xi + xi ** 3);
+        for (const mp of [m.cargasPatron!.get(q.lc) ?? m.cargasPatron!.set(q.lc, new Map()).get(q.lc)!,
+                          sinPP.get(q.lc) ?? sinPP.set(q.lc, new Map()).get(q.lc)!])
+          for (const [n, F, M] of [[i, F1, M1], [j, F3, M4]] as const) {
+            const v = mp.get(n) ?? [0, 0, 0, 0, 0, 0];
+            v[2] += dP * F; v[3] += txw[0] * dP * M; v[4] += txw[1] * dP * M; v[5] += txw[2] * dP * M;
+            mp.set(n, v);
+          }
       }
     }
   }
