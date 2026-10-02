@@ -17,6 +17,8 @@ import { matrizDePiso, type ResultadoAguiar } from "./aguiar";
 import { NOMBRES, type ClaveIrr } from "./irregularidades";
 import { jointMass } from "hekatan-fem";
 import { PORTOVIEJO_D, type Norma, espectro } from "./estatico";
+import { abrirMemoria } from "./memoria";
+import { registrarDiseno } from "../menuDiseno";
 
 export interface ModeloNEC { nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any> }
 
@@ -59,7 +61,10 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   fs.addBinding(p, "r", { label: "r", min: 1, max: 1.5, step: 0.1 });
   f.addBinding(p, "I", { label: "I importancia", options: { "1.0 otras": 1.0, "1.3 ocupación especial": 1.3, "1.5 esenciales": 1.5 } });
   f.addBinding(p, "R", { label: "R", min: 1, max: 8, step: 0.5 });
-  f.addBinding(p, "sistema", { label: "Ta (Ct, α)", options: { "Pórtico H.A. sin muros": 0, "Pórtico H.A. con muros (dual)": 1 } });
+  // acero (2-oct-2026, para el centro comercial de 3 pisos): NEC-15 §6.3.3 pág. 62 (0.072/0.8 sin arriostrar, 0.073/0.75
+  // arriostrado); borrador Tabla 6.2 pág. 84 (0.0724/0.80 pórtico de acero; 0.0731/0.75 arriostrado excéntrico o BRB)
+  f.addBinding(p, "sistema", { label: "Ta (Ct, α)", options: { "Pórtico H.A. sin muros": 0, "Pórtico H.A. con muros (dual)": 1,
+    "Acero sin arriostramientos": 2, "Acero con arriostramientos": 3 } });
   f.addBinding(p, "irregular", { label: "Irregular (85 %)", options: { "auto (por las irregularidades)": -1, "sí": 1, "no (80 %)": 0 } });
   const fb = f.addFolder({ title: "Borrador 2023: Cd y deriva límite", expanded: false });
   fb.addBinding(p, "Cd", { label: "Cd (Tabla 4.4)", min: 1, max: 8, step: 0.25 });
@@ -84,6 +89,11 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addButton({ title: "〰 Análisis dinámico (solo)" }).on("click", () => { enReposo(); correr(); if (ultimo) ventana().mostrarDinamico(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
   f.addButton({ title: "📉 Deriva de piso (sola)" }).on("click", () => { enReposo(); if (!ultimo) correr(); if (ultimo) ventana().mostrarDerivas(ultimo, p.norma ? "borrador 2023" : "NEC-15"); });
   f.addButton({ title: "🧮 Matriz de piso (Aguiar) u_x · u_y · θz" }).on("click", () => aguiar());
+  // MEMORIA TÉCNICA (Jorge, 2-oct-2026: «a Hekatan Struct le falta algo que genere memorias técnicas»): el informe
+  // completo, con el orden de una memoria de cálculo NEC (guía: memoria del Hotel Paraíso), para imprimir a PDF.
+  const memoria = () => { enReposo(); if (!ultimo) correr(); if (ultimo) abrirMemoria({ r: ultimo, nodes: estado.nodes.val, elements: estado.elements.val, params: p }); };
+  f.addButton({ title: "📄 Memoria técnica (PDF)" }).on("click", memoria);
+  registrarDiseno({ id: "memoria", orden: 0, icono: "📄", titulo: "Memoria técnica (NEC)", detalle: "Informe de cálculo completo: datos, espectro, modos, cortantes, derivas, irregularidades; para imprimir a PDF.", abrir: memoria });
   // ── PLANTA CM / CR EN VIVO (1-oct-2026): al cambiar muros, secciones o la planta, se recalculan SOLO el CM y el CR
   // (3 cargas unitarias por piso) y se redibuja la planta. Sirve para TANTEAR hasta que el CR se acerque al CM.
   const vivo = _vivo;   // sobrevive a la regeneración del modelo (cambiar el n.º de muros vuelve a montar el panel)
@@ -143,7 +153,11 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     const norma: Norma = p.norma ? "borrador" : "NEC-15";
     // Ct y α: NEC-15 §6.3.3 (0.055/0.9 sin muros, 0.055/0.75 con muros); borrador Tabla 6.2 (0.0466/0.90 pórtico H.A.)
     // borrador Tabla 6.2: 0.0466/0.90 pórtico de hormigón; 0.0488/0.75 «todos los otros sistemas» (dual, muros)
-    const [Ct, alfa] = norma === "NEC-15" ? (p.sistema ? [0.055, 0.75] : [0.055, 0.9]) : (p.sistema ? [0.0488, 0.75] : [0.0466, 0.9]);
+    const CT: Record<Norma, [number, number][]> = {
+      "NEC-15": [[0.055, 0.9], [0.055, 0.75], [0.072, 0.8], [0.073, 0.75]],
+      borrador: [[0.0466, 0.9], [0.0488, 0.75], [0.0724, 0.8], [0.0731, 0.75]],
+    };
+    const [Ct, alfa] = CT[norma][p.sistema] ?? CT[norma][0];
     return { norma, Z: p.Z, Fa: p.Fa, Fd: p.Fd, Fs: p.Fs, eta: p.eta, r: p.r, I: p.I, R: p.R, phiP: 1, phiE: 1, Ct, alfa, Cd: p.Cd, limDeriva: p.limDeriva };
   }
   function correr() {
@@ -154,7 +168,7 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     try {
       const r = calcularNEC(nodes, elements, estado.nodeInputs.val, estado.elementInputs.val,
         { sitio: sitio() as any, irregular: p.irregular === -1 ? null : !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas,
-          dual: !!p.sistema, modal: (p as any).modal, direccional: (p as any).direccional, conVertical: !!(p as any).conVertical, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
+          dual: p.sistema === 1, modal: (p as any).modal, direccional: (p as any).direccional, conVertical: !!(p as any).conVertical, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
       p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} ${r.unidad} (${(e.Cs * 100).toFixed(2)} % W)

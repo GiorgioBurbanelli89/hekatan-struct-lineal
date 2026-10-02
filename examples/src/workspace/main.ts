@@ -6603,6 +6603,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
             try {
               const r = e2kAHeks(text, file.name);
               (window as any).__hekatanUltimoE2kHeks = r.heks;
+              (window as any).__hekatanInventario = r.inventario;   // secciones y materiales con su nombre, para la memoria
               console.log(`✅ E2K importado y listo para calcular: ${file.name} — ${r.modelo.nodes.length} nudos, ` +
                 `${r.modelo.elements.length} elementos` + (r.modelo.analisis?.orificios.recortes ? `, ${r.modelo.analisis.orificios.recortes} orificios recortados` : "") +
                 (r.avisos.length ? ` · avisos: ${r.avisos.join(" | ")}` : ""));

@@ -26,6 +26,52 @@ export interface ResultadoE2kHeks {
   modelo: E2kModel;
   cosido: InformeCosido;
   avisos: string[];
+  /** Lo que la MEMORIA TÉCNICA lista y el .heks no guarda: materiales y secciones con su nombre de ETABS, plantas. */
+  inventario: InventarioE2k;
+}
+
+export type InventarioE2k = {
+  archivo: string;
+  plantas: { name: string; height: number; elev: number }[];
+  /** E, fy, fc en kN/m²; densidad = PESO por volumen en kN/m³ */
+  materiales: { nombre: string; tipo: string; E: number; fy?: number; fc?: number; densidad?: number }[];
+  secciones: { nombre: string; forma: string; material: string; relleno?: string; D: number; B: number; TF: number; TW: number;
+    tipo: string; n: number; L: number }[];
+  patrones: { nombre: string; tipo: string; pesoPropio: number }[];
+  sismos: { nombre: string; dir: string; coef?: number; ecc: number }[];
+  nAreas: number;
+  combos?: { nombre: string; items: [string, number][] }[];
+};
+
+/** materiales y secciones USADOS (con cuántas barras y cuántos metros), antes de coser: un objeto de ETABS = una barra */
+function inventarioDe(m: E2kModel, archivo: string): InventarioE2k {
+  const N0 = m.nodes as unknown as number[][], E0 = m.elements as unknown as number[][];
+  const porSec = new Map<string, { n: number; L: number; tipos: Map<string, number> }>();
+  for (const [e, nom] of m.elementSections) {
+    const el = E0[e]; if (!el || el.length !== 2) continue;
+    const a = N0[el[0]], b = N0[el[1]], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    const q = porSec.get(nom) ?? porSec.set(nom, { n: 0, L: 0, tipos: new Map() }).get(nom)!;
+    q.n++; q.L += L; const t = m.elementTypes[e] || "BEAM"; q.tipos.set(t, (q.tipos.get(t) ?? 0) + 1);
+  }
+  // materiales y secciones quedan en las unidades del FICHERO (ETABS suele escribir N y mm): a kN y m
+  const Lf = ({ MM: 1e-3, CM: 1e-2, M: 1, IN: 0.0254, FT: 0.3048 } as Record<string, number>)[(m.units.length || "M").toUpperCase()] ?? 1;
+  const Ff = ({ N: 1e-3, KN: 1, KGF: 9.80665e-3, TONF: 9.80665, LB: 4.44822e-3, KIP: 4.44822 } as Record<string, number>)[(m.units.force || "KN").toUpperCase()] ?? 1;
+  const tens = Ff / (Lf * Lf), peso = Ff / (Lf * Lf * Lf);
+  const usados = new Set<string>();
+  const secciones = [...porSec].map(([nombre, q]) => {
+    const s = m.frameSections.get(nombre);
+    if (s?.material) usados.add(s.material); if (s?.fillMaterial) usados.add(s.fillMaterial);
+    const tipo = [...q.tipos].sort((x, y) => y[1] - x[1])[0][0];
+    return { nombre, forma: s?.shape ?? "", material: s?.material ?? "", relleno: s?.fillMaterial, D: (s?.D ?? 0) * Lf, B: (s?.B ?? 0) * Lf, TF: (s?.TF ?? 0) * Lf, TW: (s?.TW ?? 0) * Lf, tipo, n: q.n, L: q.L };
+  }).sort((x, y) => x.tipo.localeCompare(y.tipo) || x.nombre.localeCompare(y.nombre));
+  const materiales = [...m.materials].filter(([n]) => usados.has(n))
+    .map(([nombre, x]) => ({ nombre, tipo: x.type, E: x.E * tens, fy: x.fy && x.fy * tens, fc: x.fc && x.fc * tens, densidad: x.density && x.density * peso }));
+  return {
+    archivo, plantas: m.stories.map((s) => ({ ...s })), materiales, secciones,
+    patrones: (m.analisis?.patrones ?? []).map((p) => ({ nombre: p.nombre, tipo: p.tipo, pesoPropio: p.pesoPropio })),
+    sismos: (m.analisis?.sismos ?? []).map((s) => ({ nombre: s.nombre, dir: s.dir, coef: s.coef, ecc: s.ecc })),
+    nAreas: m.info.nAreas,
+  };
 }
 
 const N = (v: number | undefined, def = 0): string => {
@@ -35,6 +81,7 @@ const N = (v: number | undefined, def = 0): string => {
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks {
   const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true });
+  const inventario = inventarioDe(m, nombre);
   // El peso propio de cada barra ENTERA (antes de partirla), por coordenadas de sus extremos: es lo que ETABS
   // convierte en MASA (la mitad a cada nudo del objeto). Medido en el modelo sintético: repartiéndola por los
   // trozos de la malla, el modo de torsión salía 0.55 % más corto que el de ETABS; así, 0.10 %.
@@ -99,9 +146,14 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     L.push(`# fuente de masa de ETABS (MASSSOURCE): elementos ${fm.elementos ? "sí" : "no"}, cargas ${fm.cargas ? "sí (" + fm.patrones.map(([p, f]) => `${p}×${N(f)}`).join(" + ") + ", en las líneas mass)" : "no"}`);
     L.push(`masssource elementos ${fm.elementos ? 1 : 0} lateral ${fm.lateral ? 1 : 0} lump ${fm.lump ? 1 : 0}`);
   }
+  if (an?.metodoDirecto?.barras)
+    L.push(`# AISC método de análisis directo (ETABS ${[an.metodoDirecto.acero && "acero " + an.metodoDirecto.acero, an.metodoDirecto.compuesto && "compuestas " + an.metodoDirecto.compuesto].filter(Boolean).join(", ")}): EI y EA × 0.8 (τb = 1) en ${an.metodoDirecto.barras} barras, ya en su E`);
   for (const s of an?.sismos ?? []) {
     if (/user coefficient/i.test(s.tipo) && s.coef !== undefined) {
-      L.push(`sismocoef ${s.nombre} ${s.dir} ${N(s.coef)} ${N(s.k ?? 1)} ecc ${N(s.ecc)} signo ${s.signoEcc >= 0 ? "+" : "-"}`);
+      const zDe = (p?: string) => (p ? m.stories.find((q) => q.name === p)?.elev : undefined);
+      const zb = zDe(s.pisoBase), zt = zDe(s.pisoTope);
+      L.push(`sismocoef ${s.nombre} ${s.dir} ${N(s.coef)} ${N(s.k ?? 1)} ecc ${N(s.ecc)} signo ${s.signoEcc >= 0 ? "+" : "-"}` +
+        (zb !== undefined ? ` zbase ${N(zb)}` : "") + (zt !== undefined ? ` ztope ${N(zt)}` : ""));
     } else {
       avisos.push(`sismo «${s.nombre}» (${s.tipo}): solo se calcula el «User Coefficient»; este patrón entra sin carga`);
     }
@@ -220,6 +272,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     if (c) (combos.get(c[1]) ?? combos.set(c[1], []).get(c[1])!).push([c[2], parseFloat(c[3])]);
   }
   const conocidos = new Set([...pats.keys()]);
+  inventario.combos = [...combos].map(([nombre, items]) => ({ nombre, items }));
   for (const [nom, items] of combos) {
     if (!items.every(([p]) => conocidos.has(p))) continue;
     L.push(`combo ${nom.replace(/\s+/g, "_")} ${items.map(([p, f]) => `${p.replace(/\s+/g, "_")} ${N(f)}`).join(" ")}`);
@@ -229,5 +282,5 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
   L.push(`vista displacementZ ${muerto.replace(/\s+/g, "_")}`);
   L.push("solve");
   if (avisos.length) L.splice(2, 0, ...avisos.map((a) => `# ⚠️ ${a}`));
-  return { heks: L.join("\n") + "\n", modelo: m, cosido, avisos };
+  return { heks: L.join("\n") + "\n", modelo: m, cosido, avisos, inventario };
 }

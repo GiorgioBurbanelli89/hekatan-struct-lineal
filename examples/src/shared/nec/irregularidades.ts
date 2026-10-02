@@ -126,7 +126,10 @@ export function detectar(e: Entrada): ResultadoIrr {
   let mMal = "";
   for (let i = 0; i < pisos.length && !mMal; i++) for (const j of [i - 1, i + 1]) {
     if (j < 0 || j >= pisos.length) continue;
-    const cubiertaLiviana = i === pisos.length - 1 && pisos[i].masa < pisos[i - 1]?.masa;
+    // NEC-15 pág. 56: «con excepción del piso de cubierta que sea más liviano que el piso inferior». El par
+    // cubierta–piso de abajo queda fuera EN LOS DOS SENTIDOS (2-oct-2026: antes solo cuando el que se medía era la
+    // cubierta, y un piso con 5 veces la masa de su cubierta liviana salía irregular, φE 0.9).
+    const n = pisos.length - 1, cubiertaLiviana = n > 0 && pisos[n].masa < pisos[n - 1].masa && (i === n || j === n);
     if (!cubiertaLiviana && pisos[i].masa > 1.5 * pisos[j].masa) { mMal = `piso ${i + 1}: ${(pisos[i].masa / pisos[j].masa).toFixed(2)}× el piso ${j + 1}`; break; }
   }
   pone("E2", !!mMal, mMal || "ningún piso > 1.5× un adyacente", !borr);
