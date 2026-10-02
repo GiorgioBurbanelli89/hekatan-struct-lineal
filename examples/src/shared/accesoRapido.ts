@@ -12,8 +12,22 @@
  *   Acordeón: al abrir un grupo se pliegan los otros, salvo los fijados con 📌.
  *   «＋» en cada grupo elige qué mandos van ahí (por ejemplo, se recuerda en localStorage).
  */
+import { convertirEtiqueta, pasoRedondo } from "../workspace/unidadEtiqueta";
+import { forceUnit, lengthStructureUnit, lengthSectionUnit, stressUnit, subgradeUnit, stripUnitSuffix, forceUnitSuffix, momentUnitSuffix } from "../workspace/units";
+
 type Grupo = "cargas" | "dim" | "res";
-type Def = { default: number; min?: number; max?: number; step?: number; label?: string; options?: Record<string, number>; boolean?: boolean; folder?: string };
+type Def = { default: number; min?: number; max?: number; step?: number; label?: string; options?: Record<string, number>; boolean?: boolean; folder?: string; unitType?: string };
+
+/** La misma conversión que el panel principal (unidadEtiqueta.ts): etiqueta y factor k (se enseña valor × k). */
+function enSistema(d: Def, etq: string): { etq: string; k: number } {
+  // fuerza y momento con unitType: el valor ya está en la unidad de la interfaz; la etiqueta, como la de Tweakpane
+  if (d.unitType === "force") return { etq: `${stripUnitSuffix(etq)} ${forceUnitSuffix()}`, k: 1 };
+  if (d.unitType === "moment") return { etq: `${stripUnitSuffix(etq)} ${momentUnitSuffix()}`, k: 1 };
+  if (d.unitType || d.options || d.boolean) return { etq, k: 1 };
+  const c = convertirEtiqueta(etq, { F: forceUnit.val, L: lengthStructureUnit.val, LS: lengthSectionUnit.val, S: stressUnit.val, SG: subgradeUnit.val });
+  return c ? { etq: `${c.base} (${c.u})`, k: c.k } : { etq, k: 1 };
+}
+const redondo = (x: number) => (Number.isFinite(x) ? Number(x.toPrecision(10)) : x);
 
 const ACENTO = "#7f96b3";
 const LS = "hk_acceso_";
@@ -148,12 +162,14 @@ export function montarAccesoRapido(): void {
   /** Un mando de PARÁMETRO del ejemplo. */
   function mandoParam(k: string, d: Def): HTMLElement {
     const f = document.createElement("div"); f.className = "ar-f";
-    const etq = d.label ?? k;
+    // en el sistema elegido, igual que la fila de Tweakpane de la que es espejo (que se busca por ESA etiqueta)
+    const { etq, k: fk } = enSistema(d, d.label ?? k);
     const lab = document.createElement("label"); lab.textContent = etq; lab.title = etq;
-    const v = params()[k];
+    const v0 = params()[k];
+    const v = typeof v0 === "number" ? redondo(v0 * fk) : v0;
     const aplicar = (val: number) => {
       const fr = filaReal(etq, "params");
-      if (!(fr && escribirFila(fr, d.options ? val : d.boolean ? !!val : val))) w.__hekatanSetParam?.(k, val);
+      if (!(fr && escribirFila(fr, d.options ? val : d.boolean ? !!val : val))) w.__hekatanSetParam?.(k, val / fk);
     };
     if (d.options) {
       const s = document.createElement("select");
@@ -163,13 +179,14 @@ export function montarAccesoRapido(): void {
       const c = document.createElement("input"); c.type = "checkbox"; c.checked = !!v; c.dataset.k = k;
       c.onchange = () => aplicar(c.checked ? 1 : 0); f.append(lab, c);
     } else if (typeof v === "number") {
-      const n = document.createElement("input"); n.type = "number"; n.value = String(v); n.dataset.k = k;
-      if (d.step) n.step = String(d.step);
+      const n = document.createElement("input"); n.type = "number"; n.value = String(v); n.dataset.k = k; n.dataset.fk = String(fk);
+      if (d.step) n.step = String(fk === 1 ? d.step : pasoRedondo(d.step * fk));
       n.onchange = () => { const x = Number(n.value); if (isFinite(x)) aplicar(x); };
       f.append(lab, n);
       if (d.min !== undefined && d.max !== undefined) {
-        const r = document.createElement("input"); r.type = "range"; r.min = String(d.min); r.max = String(d.max); r.step = String(d.step ?? (d.max - d.min) / 100);
-        r.value = String(v); r.dataset.k = k;
+        const r = document.createElement("input"); r.type = "range"; r.min = String(d.min * fk); r.max = String(d.max * fk);
+        r.step = String(d.step ? (fk === 1 ? d.step : pasoRedondo(d.step * fk)) : ((d.max - d.min) * fk) / 100);
+        r.value = String(v); r.dataset.k = k; r.dataset.fk = String(fk);
         r.oninput = () => { n.value = r.value; };
         r.onchange = () => aplicar(Number(r.value));
         f.append(r);
@@ -321,7 +338,8 @@ export function montarAccesoRapido(): void {
       if (!el.contains(activo)) { setTimeout(pintar, 300); return; }
       el.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-k]").forEach((i) => {
         if (i === activo) return; const v = P[i.dataset.k!];
-        if (i instanceof HTMLInputElement && i.type === "checkbox") i.checked = !!v; else i.value = String(v ?? "");
+        const fk = Number(i.dataset.fk ?? 1) || 1;
+        if (i instanceof HTMLInputElement && i.type === "checkbox") i.checked = !!v; else i.value = String(typeof v === "number" ? redondo(v * fk) : v ?? "");
       });
     }
     el.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-fila]").forEach((i) => {
