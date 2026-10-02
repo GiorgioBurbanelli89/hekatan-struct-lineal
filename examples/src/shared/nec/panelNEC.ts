@@ -287,7 +287,7 @@ ${g}
       filasP += `<tr>${TD("P" + r.pisos[i].k)}${TD((D.X.pisos[i].V * D.escX.factor).toFixed(1))}${TD((D.Y.pisos[i].V * D.escY.factor).toFixed(1))}${TD((r.dirDerivas.X[i] * 100).toFixed(2) + " %")}${TD((r.dirDerivas.Y[i] * 100).toFixed(2) + " %")}</tr>`;
     const Sa = espectro(r.sitio as any).Sa, Tm = Math.max(3, ...r.modos.map((m) => m.T * 1.2)), W = 560, H = 210, l = 46, b = 28;
     const pts = Array.from({ length: 121 }, (_, i) => { const t = (i / 120) * Tm; return [t, Sa(t)] as const; }), smax = Math.max(...pts.map((q) => q[1])) * 1.1;
-    const X = (t: number) => l + (t / Tm) * (W - l - 12), Y = (v: number) => H - b - (v / smax) * (H - b - 22);
+    const X = (t: number) => l + (t / Tm) * (W - l - 12), Y = (v: number) => H - b - (v / smax) * (H - b - 44);
     let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;background:#11151b;border-radius:6px"><text x="${l}" y="15" fill="#a5b4fc" font-size="12" font-weight="600">Espectro elástico Sa(T) en g, con los modos encima</text>`;
     g += `<polyline fill="none" stroke="#60a5fa" stroke-width="2" points="${pts.map((q) => `${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join(" ")}"/>`;
     g += `<line x1="${l}" x2="${W - 12}" y1="${H - b}" y2="${H - b}" stroke="#64748b"/><line x1="${l}" x2="${l}" y1="18" y2="${H - b}" stroke="#64748b"/>`;
