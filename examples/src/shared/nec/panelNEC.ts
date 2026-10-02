@@ -242,7 +242,8 @@ ${r.espVertical ? ` <b>Componente vertical</b> (U3 = ⅔·Sa, ${D.X.modal}): FZ 
   const TD = (t: string, c = "") => `<td style="padding:3px 8px;text-align:right;${c}">${t}</td>`;
   const TABLA = (cab: string[], filas: string) => `<table style="border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12px;margin:6px 0">` +
     `<thead><tr>${cab.map(TH).join("")}</tr></thead><tbody>${filas}</tbody></table>`;
-  const sitioTxt = (r: ResultadoNEC) => { const d = r.sitio;
+  const sitioTxt = (r: ResultadoNEC) => { const d0 = r.sitio, nf = (v: any) => (typeof v === "number" ? +v.toFixed(3) : v);
+    const d = Object.fromEntries(Object.entries(d0).map(([k, v]) => [k, nf(v)])) as typeof d0;   // sin 1.4399999999
     return `Z ${d.Z} · Fa ${d.Fa} · Fd ${d.Fd} · Fs ${d.Fs} · ${d.norma === "NEC-15" ? `η ${d.eta ?? 1.8} · r ${d.r}` : `r ${d.r}`} · I ${d.I} · R ${d.R}` +
       (d.norma === "NEC-15" ? ` · φP ${r.irregularidades.phiP.toFixed(2)} · φE ${r.irregularidades.phiE.toFixed(2)}` : ` · Cd ${d.Cd ?? 5.5}`); };
 
