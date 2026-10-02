@@ -70,7 +70,7 @@ export type ResultadoNEC = {
   /** derivas inelásticas DINÁMICAS (escaladas) con la combinación direccional elegida */
   dirDerivas: { metodo: ComboDir; X: number[]; Y: number[] };
   /** sismo vertical en VOLADIZOS: NEC-15 §3.4.4 F_rev = ⅔·I·(η·Z·Fa)·Wp; borrador ec. 3.9 F_rev = ⅔·Ie·(2.4·Z·Fa)·W_vol */
-  vertical: { coef: number; pisos: { k: number; nudos: number; Wp: number; Frev: number }[] };
+  vertical: { coef: number; coefNEC11: number; pisos: { k: number; nudos: number; Wp: number; Frev: number }[] };
   sitio: DatosSitio;
   limiteDeriva: number;
 };
@@ -171,5 +171,6 @@ function sismoVertical(nodes: number[][], elements: number[][], pisos: Piso[], m
     const Wp = fuera.reduce((a, n) => a + masas[n][0] * G, 0);
     return { k: p.k, nudos: fuera.length, Wp, Frev: coef * Wp };
   });
-  return { coef, pisos: out };
+  // NEC-11 §2.7.6.1 ec. (2-28): F_ver = ⅔·(Z·I·Fa)·Wp — sin η: el espectro plano de los voladizos es Z·Fa (§2.7.6.2)
+  return { coef, coefNEC11: (2 / 3) * s.Z * s.I * s.Fa, pisos: out };
 }
