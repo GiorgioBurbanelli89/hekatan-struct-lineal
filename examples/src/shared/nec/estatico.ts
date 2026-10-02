@@ -30,13 +30,17 @@ export function espectro(d: DatosSitio) {
   if (d.norma === "NEC-15") {
     const eta = d.eta ?? 1.8;
     const T0 = 0.10 * d.Fs * d.Fd / d.Fa, Tc = 0.55 * d.Fs * d.Fd / d.Fa;
-    const Sa = (T: number) => (T <= Tc ? eta * d.Z * d.Fa : eta * d.Z * d.Fa * Math.pow(Tc / T, d.r));
-    return { T0, Tc, TL: Infinity, Sa, meseta: eta * d.Z * d.Fa };
+    // NEC-15 §3.3.1: en el análisis dinámico, para los modos distintos al fundamental con T < T0, la rama que SUBE
+    // desde Z·Fa: Sa = Z·Fa·[1 + (η − 1)·T/T0]. Antes iba la meseta η·Z·Fa desde T = 0 (el mismo error que trae ETABS;
+    // Jorge, 2-oct-2026). El modo fundamental y el estático usan la meseta: `SaFund`.
+    const SaFund = (T: number) => (T <= Tc ? eta * d.Z * d.Fa : eta * d.Z * d.Fa * Math.pow(Tc / T, d.r));
+    const Sa = (T: number) => (T < T0 ? d.Z * d.Fa * (1 + (eta - 1) * T / T0) : SaFund(T));
+    return { T0, Tc, TL: Infinity, Sa, SaFund, meseta: eta * d.Z * d.Fa };
   }
   const T0 = 0.10 * d.Fs * d.Fd / d.Fa, Tc = 0.40 * d.Fs * d.Fd / d.Fa, TL = 2.4 * d.Fd, m = 2.4 * d.Z * d.Fa;
   const Sa = (T: number) => T < T0 ? d.Z * d.Fa * (1 + 1.4 * T / T0)
     : T < Tc ? m : T < TL ? m * Math.pow(Tc / T, d.r) : m * Math.pow(Tc / TL, d.r) * Math.pow(TL / T, 2);
-  return { T0, Tc, TL, Sa, meseta: m };
+  return { T0, Tc, TL, Sa, SaFund: Sa, meseta: m };
 }
 
 export const kDe = (T: number) => (T <= 0.5 ? 1 : T >= 2.5 ? 2 : 0.75 + 0.5 * T);
@@ -56,7 +60,7 @@ export type Estatico = { Ta: number; T: number; Sa: number; k: number; W: number
 export function cortanteEstatico(d: DatosSitio, pisos: { k: number; z: number; peso: number }[], Tcomp?: number): Estatico {
   const hn = Math.max(...pisos.map((p) => p.z));
   const { Ta, T } = periodoDeDiseno(d, hn, Tcomp);
-  const Sa = espectro(d).Sa(T);
+  const Sa = espectro(d).SaFund(T);   // el estático es el modo FUNDAMENTAL: sin la rama de T < T0
   const W = pisos.reduce((s, p) => s + p.peso, 0);
   let Cs = d.norma === "NEC-15" ? d.I * Sa / (d.R * (d.phiP ?? 1) * (d.phiE ?? 1)) : d.I * Sa / d.R;
   const Vmin = d.norma === "borrador" ? 0.03 * W : undefined;

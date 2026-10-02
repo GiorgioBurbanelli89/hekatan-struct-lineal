@@ -293,7 +293,11 @@ ${g}
     g += `<line x1="${l}" x2="${W - 12}" y1="${H - b}" y2="${H - b}" stroke="#64748b"/><line x1="${l}" x2="${l}" y1="18" y2="${H - b}" stroke="#64748b"/>`;
     for (const t of [0, Tm / 4, Tm / 2, 3 * Tm / 4, Tm]) g += `<text x="${X(t)}" y="${H - 10}" fill="#94a3b8" font-size="10" text-anchor="middle">${t.toFixed(2)} s</text>`;
     for (const v of [smax / 2, smax / 1.1]) g += `<text x="${l - 6}" y="${Y(v) + 4}" fill="#94a3b8" font-size="10" text-anchor="end">${v.toFixed(2)}</text>`;
-    r.modos.slice(0, 6).forEach((m, i) => { g += `<circle cx="${X(m.T)}" cy="${Y(Sa(m.T))}" r="4" fill="#fb923c"/><text x="${X(m.T) + 5}" y="${Y(Sa(m.T)) - 5}" fill="#fb923c" font-size="10">${i + 1}</text>`; });
+    // modos con periodos parecidos caen en el mismo punto: un solo rótulo por grupo («4·5·6»), sin encimarse
+    const grupos: { x: number; y: number; n: number[] }[] = [];
+    r.modos.slice(0, 6).forEach((m, i) => { const x = X(m.T), y = Y(Sa(m.T)); g += `<circle cx="${x}" cy="${y}" r="4" fill="#fb923c"/>`;
+      const gr = grupos.find((q) => Math.abs(q.x - x) < 16 && Math.abs(q.y - y) < 10); if (gr) gr.n.push(i + 1); else grupos.push({ x, y, n: [i + 1] }); });
+    grupos.forEach((q, k) => { g += `<text x="${q.x + 2}" y="${q.y - 8 - (k % 2) * 11}" fill="#fb923c" font-size="11" font-weight="600" text-anchor="middle">${q.n.sort((a, b) => a - b).join("·")}</text>`; });
     g += `</svg>`;
     const ok = (q: any) => q.relacion >= D.minimo ? `<span style="color:#4ade80">≥ ${D.minimo * 100} % ✓</span>` : `<span style="color:#f87171">&lt; ${D.minimo * 100} % → escala ×${q.factor.toFixed(3)}</span>`;
     cuerpo.innerHTML = `
