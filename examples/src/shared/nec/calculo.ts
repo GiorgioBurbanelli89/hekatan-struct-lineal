@@ -9,11 +9,12 @@ import { pisosDeModelo, type Piso } from "./pisos";
 import { cortanteEstatico, espectro, ampDeriva, limiteDeriva, type DatosSitio, type Estatico } from "./estatico";
 import { detectar, type ClaveIrr, type Forzar, type ResultadoIrr } from "./irregularidades";
 import { cargasEnCM, derivas, centrosDeRigidez, type DerivaPiso } from "./derivas";
-import { espectralPorPiso, escalaDinamico, type Espectral } from "./espectral";
+import { espectralPorPiso, escalaDinamico, combinarDir, type Espectral, type ComboModal, type ComboDir } from "./espectral";
 
 export type OpcionesNEC = { sitio: DatosSitio; irregular?: boolean | null; nModos: number; ecc: number; agrietadas?: boolean;
   /** sistema dual (pórtico especial con muros): NEC-15 φE = 1 */ dual?: boolean;
-  /** corrección manual de cada irregularidad: −1 automático, 0 no, 1 sí */ forzar?: Partial<Record<ClaveIrr, Forzar>> };
+  /** corrección manual de cada irregularidad: −1 automático, 0 no, 1 sí */ forzar?: Partial<Record<ClaveIrr, Forzar>>;
+  /** combinación modal (CQC por defecto) y direccional (independiente = NEC-15 §3.5.1) */ modal?: ComboModal; direccional?: ComboDir };
 
 /**
  * Inercias agrietadas NEC-SE-DS §6.1.6 (1-oct-2026): vigas 0.5·Ig, columnas 0.8·Ig, muros 0.6·Ig. Barra vertical
@@ -66,6 +67,10 @@ export type ResultadoNEC = {
   agrietadas: boolean;
   unidad: string;
   irregularidades: ResultadoIrr;
+  /** derivas inelásticas DINÁMICAS (escaladas) con la combinación direccional elegida */
+  dirDerivas: { metodo: ComboDir; X: number[]; Y: number[] };
+  /** sismo vertical en VOLADIZOS: NEC-15 §3.4.4 F_rev = ⅔·I·(η·Z·Fa)·Wp; borrador ec. 3.9 F_rev = ⅔·Ie·(2.4·Z·Fa)·W_vol */
+  vertical: { coef: number; pisos: { k: number; nudos: number; Wp: number; Frev: number }[] };
   sitio: DatosSitio;
   limiteDeriva: number;
 };
@@ -123,8 +128,8 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
   const red = sitio.I / (sitio.R * (sitio.norma === "NEC-15" ? (sitio.phiP ?? 1) * (sitio.phiE ?? 1) : 1));
   const irregular = o.irregular === undefined || o.irregular === null ? irr.irregular : !!o.irregular;
   const minimo = sitio.norma === "borrador" ? 1.0 : irregular ? 0.85 : 0.80;
-  const X = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 0, amp, esDia);
-  const Y = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 1, amp, esDia);
+  const X = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 0, amp, esDia, 0.05, false, o.modal ?? "CQC");
+  const Y = espectralPorPiso(nodes, pisos, out, masas, sp.Sa, red, 1, amp, esDia, 0.05, false, o.modal ?? "CQC");
   const escX = escalaDinamico(X.V, estatico.V, minimo), escY = escalaDinamico(Y.V, estatico.V, minimo);
 
   const peor = (ks: string[]) => Math.max(...ks.flatMap((k) => derivasEst[k].map((d) => d.relacion)));
@@ -136,10 +141,35 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
     return (P * derivasEst[k][i].prom) / pe.Vpiso;
   });
   const QX = Q("Ex"), QY = Q("Ey");
+  const dirM: ComboDir = o.direccional ?? "independiente";
+  const dirDerivas = { metodo: dirM,
+    X: X.pisos.map((p, i) => amp * combinarDir(p.deriva * escX.factor, Y.pisos[i].derivaPerp * escY.factor, dirM)),
+    Y: Y.pisos.map((p, i) => amp * combinarDir(p.deriva * escY.factor, X.pisos[i].derivaPerp * escX.factor, dirM)) };
+  const vertical = sismoVertical(nodes, elements, pisos, masas, sitio);
   return {
     estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas, unidad: unidadFuerza(elementInputsIn),
-    pisos, cr, modos, chequeoModos, estatico, derivasEst, irregularidades: irr, sitio, limiteDeriva: limiteDeriva(sitio),
+    pisos, cr, modos, chequeoModos, estatico, derivasEst, irregularidades: irr, sitio, limiteDeriva: limiteDeriva(sitio), dirDerivas, vertical,
     dinamico: { X, Y, escX, escY, minimo },
     torsional: { X: peorX > 1.2, Y: peorY > 1.2, peorX, peorY },
   };
+}
+
+
+/** Voladizos de cada piso = nudos FUERA del rectángulo de los elementos verticales (columnas y muros) de ese piso.
+ *  F_rev = coef·W_p, reversible (hacia arriba y hacia abajo). NEC-15 §3.4.4: coef = ⅔·I·η·Z·Fa; borrador ec. 3.9:
+ *  coef = ⅔·Ie·2.4·Z·Fa. Ev en general: ≥ ⅔·Eh (NEC-15 §3.4.2, borrador ec. 3.8). */
+function sismoVertical(nodes: number[][], elements: number[][], pisos: Piso[], masas: number[][], s: DatosSitio) {
+  const coef = s.norma === "NEC-15" ? (2 / 3) * s.I * (s.eta ?? 1.8) * s.Z * s.Fa : (2 / 3) * s.I * 2.4 * s.Z * s.Fa;
+  const G = 9.80665;
+  const out = pisos.map((p, i) => {
+    const z0 = i ? pisos[i - 1].z : 0, pts: number[][] = [];
+    elements.forEach((el) => { const zs = el.map((n) => nodes[n][2]); if (Math.max(...zs) - Math.min(...zs) > 1e-3 && Math.max(...zs) <= p.z + 1e-3 && Math.min(...zs) >= z0 - 1e-3) el.forEach((n) => pts.push(nodes[n])); });
+    if (!pts.length) return { k: p.k, nudos: 0, Wp: 0, Frev: 0 };
+    const x0 = Math.min(...pts.map((q) => q[0])) - 0.05, x1 = Math.max(...pts.map((q) => q[0])) + 0.05;
+    const y0 = Math.min(...pts.map((q) => q[1])) - 0.05, y1 = Math.max(...pts.map((q) => q[1])) + 0.05;
+    const fuera = p.nudos.filter((n) => { const q = nodes[n]; return Math.abs(q[2] - p.z) < 1e-3 && (q[0] < x0 || q[0] > x1 || q[1] < y0 || q[1] > y1); });
+    const Wp = fuera.reduce((a, n) => a + masas[n][0] * G, 0);
+    return { k: p.k, nudos: fuera.length, Wp, Frev: coef * Wp };
+  });
+  return { coef, pisos: out };
 }

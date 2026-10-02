@@ -41,7 +41,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   const p = _sitio ?? {
     norma: 0,                      // 0 NEC-15, 1 borrador 2023
     Z: d15.Z, Fa: d15.Fa, Fd: d15.Fd, Fs: d15.Fs, eta: d15.eta!, r: d15.r,
-    I: 1.0, R: 8, sistema: 0, irregular: -1, nModos: 12, agrietadas: 0, Cd: 5.5, limDeriva: 0.015,
+    I: 1.0, R: 8, sistema: 0, irregular: -1, nModos: 12, agrietadas: 0, Cd: 5.5, limDeriva: 0.015, modal: "CQC", direccional: "independiente",
     P1: -1, P2: -1, P3: -1, P4: -1, P5: -1, E1: -1, E2: -1, E3: -1, E4: -1, E5: -1,
     info: "—",
   };
@@ -69,6 +69,10 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   for (const k of ["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[])
     fi.addBinding(p as any, k, { label: `${k[0] === "P" ? "Planta" : "Elevación"} ${k.slice(1)} · ${NOMBRES[k]}`, options: OPC });
   f.addBinding(p, "nModos", { label: "N° de modos", min: 3, max: 60, step: 1 });
+  // como ETABS: «Modal Combination» y «Directional Combination» del caso espectral (validadas con SAP2000, 0.000 %)
+  f.addBinding(p as any, "modal", { label: "Combinación modal", options: { "CQC (ζ 5 %)": "CQC", "SRSS": "SRSS", "ABS (suma absoluta)": "ABS" } });
+  f.addBinding(p as any, "direccional", { label: "Combinación direccional", options: { "independiente (NEC-15 §3.5.1)": "independiente",
+    "100 % + 30 % (borrador §5.5.1.2a)": "100-30", "SRSS (= CQC3, ETABS)": "SRSS", "ABS (ETABS)": "ABS" } });
   f.addBinding(p, "agrietadas", { label: "Inercias agrietadas §6.1.6", options: { "no (brutas)": 0, "sí: vigas 0.5 · col. 0.8 · muros 0.6": 1 } });
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
@@ -139,7 +143,7 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     try {
       const r = calcularNEC(nodes, elements, estado.nodeInputs.val, estado.elementInputs.val,
         { sitio: sitio() as any, irregular: p.irregular === -1 ? null : !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas,
-          dual: !!p.sistema, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
+          dual: !!p.sistema, modal: (p as any).modal, direccional: (p as any).direccional, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
       p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} ${r.unidad} (${(e.Cs * 100).toFixed(2)} % W)
@@ -211,6 +215,8 @@ function ventana() {
  <b>Modos</b>: ${r.chequeoModos.join(" · ")}<br>
  <b>Irregularidades</b> (${r.sitio.norma === "NEC-15" ? "NEC-15 Tablas 13-14" : "borrador Tablas 5.1-5.2"}; * = corregida a mano): ${r.irregularidades.lista.map((q) => `<span style="color:${q.valor ? "#f87171" : "#94a3b8"}" title="${q.detalle}">${q.clave} ${q.nombre}${q.valor ? " ✗" : " ✓"}${q.manual ? "*" : ""}</span>`).join(" · ")}
  → ${lineaIrr(r).split("→ ")[1]}<br>
+ <b>Combinación</b>: modal ${D.X.modal} · direccional ${r.dirDerivas.metodo} → deriva dinámica máx X ${(Math.max(...r.dirDerivas.X) * 100).toFixed(2)} % · Y ${(Math.max(...r.dirDerivas.Y) * 100).toFixed(2)} %<br>
+ <b>Sismo vertical</b> en voladizos (${r.sitio.norma === "NEC-15" ? "NEC-15 §3.4.4: F_rev = ⅔·I·η·Z·Fa·Wp" : "borrador ec. 3.9: F_rev = ⅔·Ie·2.4·Z·Fa·W_vol"}) = ${r.vertical.coef.toFixed(3)}·Wp: ${r.vertical.pisos.some((q) => q.nudos) ? r.vertical.pisos.filter((q) => q.nudos).map((q) => `P${q.k} Wp ${q.Wp.toFixed(1)} → F_rev ±${q.Frev.toFixed(1)} ${r.unidad}`).join(" · ") : "no hay voladizos (todo dentro de las columnas y muros)"} · Ev ≥ ⅔·Eh<br>
  <b>Deriva límite</b> ${(r.limiteDeriva * 100).toFixed(1)} % (${r.sitio.norma === "NEC-15" ? "ΔM = 0.75·R·ΔE" : "δ = Cd·δe/Ie, Cd " + (r.sitio.Cd ?? 5.5)})<br>
  <b>Masa participativa</b> (${r.modos.length} modos): ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % (≥ 90 %) · <b>Estabilidad</b> Q = P·Δ/(V·h) máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · <b>Inercias</b> ${r.agrietadas ? "agrietadas §6.1.6 (vigas 0.5, columnas 0.8, muros 0.6)" : "brutas"}
 </div>
@@ -405,7 +411,7 @@ function graficaDerivas(r: ResultadoNEC): string {
   const n = r.pisos.length, D = r.dinamico;
   const est = (ks: string[]) => r.pisos.map((_, i) => Math.max(...ks.map((k) => r.derivasEst[k][i].inelastica)));
   const sx = est(["Ex", "Ex+e", "Ex−e"]), sy = est(["Ey", "Ey+e", "Ey−e"]);
-  const dx = D.X.pisos.map((p) => p.derivaInel * D.escX.factor), dy = D.Y.pisos.map((p) => p.derivaInel * D.escY.factor);
+  const dx = r.dirDerivas.X, dy = r.dirDerivas.Y;   // dinámico escalado, con la combinación modal y direccional elegidas
   const lim = r.limiteDeriva, vmax = Math.max(lim * 1.15, ...sx, ...sy, ...dx, ...dy);
   const W = 680, H = 80 + 46 * n, m = { l: 46, r: 230, t: 22, b: 30 };
   const X = (v: number) => m.l + (v / vmax) * (W - m.l - m.r), Y = (i: number) => H - m.b - ((i + 1) / n) * (H - m.t - m.b);
@@ -421,7 +427,7 @@ function graficaDerivas(r: ResultadoNEC): string {
   const lx = W - m.r + 14;
   s += `<text x="${lx}" y="${m.t + 30}" fill="#60a5fa" font-size="11">— X estático máx ${(Math.max(...sx) * 100).toFixed(2)} %</text>`;
   s += `<text x="${lx}" y="${m.t + 46}" fill="#fb923c" font-size="11">— Y estático máx ${(Math.max(...sy) * 100).toFixed(2)} %</text>`;
-  s += `<text x="${lx}" y="${m.t + 66}" fill="#94a3b8" font-size="11">- - dinámico CQC escalado</text>`;
+  s += `<text x="${lx}" y="${m.t + 66}" fill="#94a3b8" font-size="11">- - dinámico ${D.X.modal} · ${r.dirDerivas.metodo}</text>`;
   s += `<text x="${lx}" y="${m.t + 82}" fill="#94a3b8" font-size="10">X ${(Math.max(...dx) * 100).toFixed(2)} % · Y ${(Math.max(...dy) * 100).toFixed(2)} %</text>`;
   const nec15 = r.sitio.norma === "NEC-15", amp = nec15 ? 0.75 * r.sitio.R : (r.sitio.Cd ?? 5.5) / r.sitio.I;
   s += `<text x="${lx}" y="${m.t + 130}" fill="#e2e8f0" font-size="11">${nec15 ? "NEC-15 §6.3.9: ΔM = 0.75·R·ΔE" : "borrador ec. 6.8: δ = Cd·δe/Ie"}</text>`;
