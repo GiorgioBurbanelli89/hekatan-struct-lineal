@@ -23,7 +23,8 @@ export class LinearResult extends THREE.Group implements IResultObject {
     rotation: THREE.Matrix4,
     result: [number, number],
     normalizedResult: number[],
-    flipAxis: boolean
+    flipAxis: boolean,
+    etiqueta: (v: number) => string = (v) => v.toFixed(4)
   ) {
     super();
 
@@ -31,8 +32,8 @@ export class LinearResult extends THREE.Group implements IResultObject {
     const twoSegments = result[0] * result[1] > 0;
 
     // text
-    this.text = new Text(`${result[0].toFixed(4)}`);
-    this.text2 = new Text(`${(result[1] * -1).toFixed(4)}`);
+    this.text = new Text(etiqueta(result[0]));
+    this.text2 = new Text(etiqueta(result[1] * -1));
 
     this.normalizedResult = normalizedResult;
     this.textPosition = get10thFromFirstPoint(node1, node2);

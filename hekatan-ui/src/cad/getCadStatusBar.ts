@@ -164,7 +164,15 @@ export function addCadStatusBar(): HTMLElement {
   gdl.style.cssText = "color:var(--hk-suave, #94a3b8);";
 
   const unidades = document.createElement("span");
-  unidades.textContent = "m · kN";
+  // el sistema elegido en «Unidades» (antes «m · kN» fijo aunque se eligiera kip-ft). Las COORDENADAS del CAD
+  // siguen en metros, que es la unidad del modelo: por eso a la izquierda se lee «m».
+  const ponerSistema = () => {
+    const w = window as any, ls = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+    unidades.textContent = `${w.__hekatanForceUnit ?? ls("hk_forceUnit") ?? "tonf"}, ${ls("hk_lengthStructureUnit") ?? "m"}`;
+    unidades.title = "Sistema de unidades de los resultados (Settings › Unidades). El dibujo se mide en metros.";
+  };
+  ponerSistema();
+  window.addEventListener("hk:unidades", ponerSistema);
   unidades.style.cssText = "color:#475569;";
 
   barra.append(coords, msg, gdl, plano, conm, unidades);

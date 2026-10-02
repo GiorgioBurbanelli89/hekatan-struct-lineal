@@ -31,6 +31,7 @@ import { iniciarDiagrama2D } from "./diagram2d";
 
 import "./styles.css";
 import { getLegend } from "../color-map/getLegend";
+import { unidades as unidadesVista, M_POR, KPA_POR } from "../unidades";
 import { colorMapScope, robustRange, setCampoEsDesplazamiento, shellAveraging, colorMapEsquinas } from "../color-map/getColorMap";
 import { getTheme, onThemeChange, ThemeColors } from "../theme";
 
@@ -1343,6 +1344,9 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
     // Unidad de tensión sólido (independiente de forceUnit: el usuario elige
     // MPa, kgf/cm², ksi, etc. directamente — más práctico para ingeniería).
     const sUnit = colorMapStressUnit.val;
+    // Longitud del sistema (CSI «Fuerza, Longitud»): F/L y F·L/L dependen de ella (2-oct-2026: antes «m» fijo).
+    void colorMapForceUnit.val;   // dependencia: al cambiar de sistema se recalcula
+    const Lsis = unidadesVista().L;
 
     // Factor de escala UI: convierte valor SI → valor UI (para mostrar en el legend).
     // - Disp: multiplica por DISP_FACTORS[dUnit] (mm=1000, cm=100, µm=1e6)
@@ -1352,7 +1356,9 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       isSolidStress ? STRESS_FACTORS[sUnit] :
       isSolidDisp   ? DISP_FACTORS[dUnit] :
       isDisp        ? DISP_FACTORS[dUnit] :
-      (isBending || isMembrane || isStress || isShear) ? 1 / FORCE_FACTORS[fUnit] :
+      isBending ? 1 / FORCE_FACTORS[fUnit] :                                  // kN·m/m → F·L/L (= F)
+      (isMembrane || isShear) ? M_POR[Lsis] / FORCE_FACTORS[fUnit] :          // kN/m → F/L
+      isStress ? 1 / (KPA_POR[sUnit] ?? 1) :                                  // kN/m² → la unidad de tensión elegida
       1;
 
     // Sufijo de unidad en el legend.
@@ -1360,10 +1366,10 @@ function getColorMapValues(mesh: Mesh, settings: Settings): State<number[]> {
       isSolidStress ? sUnit :                 // MPa, kPa, kgf/cm², etc.
       isSolidDisp   ? dUnit :                 // ux, uy, uz (m / mm / etc.)
       isDisp        ? dUnit :
-      isBending     ? `${fUnit}·m/m` :
-      isMembrane    ? `${fUnit}/m²` :         // stress de plane Q4 (legacy)
-      isStress      ? `${fUnit}/m²` :         // shell vonMises legacy
-      isShear       ? `${fUnit}/m` :
+      isBending     ? `${fUnit}·${Lsis}/${Lsis}` :
+      isMembrane    ? `${fUnit}/${Lsis}` :    // fuerza de membrana por ancho (F11 de CSI); antes decía «/m²»
+      isStress      ? sUnit :                 // von Mises y presión: la unidad de TENSIÓN elegida (antes F/m² fijo)
+      isShear       ? `${fUnit}/${Lsis}` :
       "";
     colorMapUnit.val = unit;
     setCampoEsDesplazamiento(isDisp || isSolidDisp);

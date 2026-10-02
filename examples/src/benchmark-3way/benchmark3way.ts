@@ -96,7 +96,7 @@ export const benchmark3way: ExampleDef = {
     A_b:  { default: 7610,  min: 1000, max: 30000, step: 100, label: "A viga (mm²)", folder: "Frame W360x60" },
     Iy_b: { default: 12.9,  min: 1, max: 100, step: 0.5, label: "Iy strong (×10⁻⁵ m⁴)", folder: "Frame W360x60" },
     Iz_b: { default: 1.20,  min: 0.1, max: 50, step: 0.1, label: "Iz weak (×10⁻⁵ m⁴)", folder: "Frame W360x60" },
-    q:    { default: 5,   min: 0.5, max: 30, step: 0.5, label: "q vertical (kN/m²)", folder: "Carga", unitType: "force" },
+    q:    { default: 5,   min: 0.5, max: 30, step: 0.5, label: "q vertical (kN/m²)", folder: "Carga" },   // presión, no fuerza: sin unitType "force" (2-oct-2026)
     F:    { default: 100, min: 10, max: 500, step: 10,  label: "F lateral (kN)", folder: "Carga", unitType: "force" },
   },
 

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { IResultObject } from "./IResultObject";
 import { Text } from "../Text";
+import { unidades, num } from "../../../unidades";
 import { Node } from "hekatan-fem";
 import { ResultType } from "../nodeResults";
 
@@ -23,18 +24,22 @@ export class NodeResult extends THREE.Group implements IResultObject {
     super();
     // init
     const isR = resultType === ResultType.reactions;
+    // fuerza / momento (F·L) o desplazamiento / giro, en el sistema elegido (antes SI crudo, 4 decimales, sin unidad)
+    const U = unidades();
+    const tr = (v: number) => isR ? `${num(U.fuerza(v))} ${U.uF}` : `${num(U.desp(v))} ${U.uD}`;
+    const rt = (v: number) => isR ? `${num(U.momento(v))} ${U.uM}` : `${num(v)} rad`;
     if (result[0])
-      this.xText1 = new Text(`${isR ? "Fx" : "Dx"}: ` + result[0].toFixed(4));
+      this.xText1 = new Text(`${isR ? "Fx" : "Dx"}: ` + tr(result[0]));
     if (result[3])
-      this.xText2 = new Text(`${isR ? "Mx" : "Rx"}: ` + result[3].toFixed(4));
+      this.xText2 = new Text(`${isR ? "Mx" : "Rx"}: ` + rt(result[3]));
     if (result[1])
-      this.yText1 = new Text(`${isR ? "Fy" : "Dy"}: ` + result[1].toFixed(4));
+      this.yText1 = new Text(`${isR ? "Fy" : "Dy"}: ` + tr(result[1]));
     if (result[4])
-      this.yText2 = new Text(`${isR ? "My" : "Ry"}: ` + result[4].toFixed(4));
+      this.yText2 = new Text(`${isR ? "My" : "Ry"}: ` + rt(result[4]));
     if (result[2])
-      this.zText1 = new Text(`${isR ? "Fz" : "Dz"}: ` + result[2].toFixed(4));
+      this.zText1 = new Text(`${isR ? "Fz" : "Dz"}: ` + tr(result[2]));
     if (result[5])
-      this.zText2 = new Text(`${isR ? "Mz" : "Rz"}: ` + result[5].toFixed(4));
+      this.zText2 = new Text(`${isR ? "Mz" : "Rz"}: ` + rt(result[5]));
 
     if (result[0] || result[3])
       this.xArrow = new THREE.ArrowHelper(

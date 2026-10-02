@@ -19,7 +19,8 @@ export class ConstantResult extends THREE.Group implements IResultObject {
     rotation: THREE.Matrix4,
     result: [number, number],
     normalizedResult: number[],
-    flipAxis: boolean
+    flipAxis: boolean,
+    etiqueta: (v: number) => string = (v) => v.toFixed(4)
   ) {
     super();
 
@@ -60,7 +61,7 @@ export class ConstantResult extends THREE.Group implements IResultObject {
     this.add(this.mesh);
 
     // text
-    this.text = new Text(`${result[1].toFixed(4)}`);
+    this.text = new Text(etiqueta(result[1]));
 
     this.normalizedResult = normalizedResult;
     this.textPosition = getAverage([node1, node2]);

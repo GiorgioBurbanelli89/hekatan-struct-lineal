@@ -18,6 +18,7 @@ export class Text extends THREE.Sprite {
     this.material.depthTest = false;
 
     this.renderOrder = 99;
+    (this as any).textoEtiqueta = text;
     this.scale.set(this.material.map.image.width / this.fontHeightPx, 1, 1);
   }
 

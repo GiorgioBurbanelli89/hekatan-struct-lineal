@@ -6,6 +6,7 @@ import { Settings } from "../settings/getSettings";
 
 import { ejesCSI, diagramaCSI, ladoPositivo } from "./utils/diagramaCSI";
 import { ConstantResult } from "./resultObjects/ConstantResult";
+import { unidades, num } from "../../unidades";
 import { LinearResult } from "./resultObjects/LinearResult";
 import { IResultObject } from "./resultObjects/IResultObject";
 
@@ -71,6 +72,10 @@ export function frameResults(
     const resultType =
       ResultType[settings.frameResults.rawVal as keyof typeof ResultType];
 
+    // N, V2, V3 en fuerza; T, M2, M3 en F·L del sistema elegido (antes SI crudo con 4 decimales, sin unidad)
+    const U = unidades();
+    const esMomento = resultType === ResultType.torsions || resultType === ResultType.bendingsY || resultType === ResultType.bendingsZ;
+    const etiqueta = (v: number) => esMomento ? `${num(U.momento(v))} ${U.uM}` : `${num(U.fuerza(v))} ${U.uF}`;
     mesh.analyzeOutputs?.rawVal[resultType]?.forEach((result, index) => {
       const element = mesh.elements?.rawVal[index] ?? [0, 1]; // TODO: improve this
       const node1 = derivedNodes.rawVal[element[0]];
@@ -107,7 +112,8 @@ export function frameResults(
         rotation,
         res,
         normalizedResult,
-        false
+        false,
+        etiqueta,
       );
 
       resultObject.updateScale(tamañoBase() * deridedDisplayScale.rawVal);

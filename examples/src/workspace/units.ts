@@ -36,6 +36,7 @@ export const dispUnit: State<DispUnit> = van.state(
 van.derive(() => {
   localStorage.setItem("hk_forceUnit", forceUnit.val);
   (window as any).__hekatanForceUnit = forceUnit.val;
+  window.dispatchEvent(new Event("hk:unidades"));
 });
 van.derive(() => {
   localStorage.setItem("hk_dispUnit", dispUnit.val);
@@ -267,7 +268,7 @@ van.derive(() => { localStorage.setItem("hk_lengthSectionUnit", lengthSectionUni
 export const lengthStructureUnit: State<DispUnit> = van.state(
   (localStorage.getItem("hk_lengthStructureUnit") as DispUnit) || "m"
 );
-van.derive(() => { localStorage.setItem("hk_lengthStructureUnit", lengthStructureUnit.val); });
+van.derive(() => { localStorage.setItem("hk_lengthStructureUnit", lengthStructureUnit.val); window.dispatchEvent(new Event("hk:unidades")); });
 
 // ============================================================================
 // PRESETS "Consistent Units" — un click setea todo

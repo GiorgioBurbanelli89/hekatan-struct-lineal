@@ -132,7 +132,7 @@ export const benchmarkCft: ExampleDef = {
     Iz_b: { default: 1.814, min: 0.1, max: 50, step: 0.001, label: "Iz weak (×10⁻⁵ m⁴)",   folder: "Viga W360x60" },
 
     // Loads
-    q:       { default: 5,  min: 0.5, max: 30, step: 0.5, label: "q vertical (kN/m²)", folder: "Carga", unitType: "force" },
+    q:       { default: 5,  min: 0.5, max: 30, step: 0.5, label: "q vertical (kN/m²)", folder: "Carga" },   // presión, no fuerza: sin unitType "force" (2-oct-2026)
     P_point: { default: 20, min: 1, max: 100, step: 1,    label: "P puntual midspan (kN)", folder: "Carga", unitType: "force" },
   },
 

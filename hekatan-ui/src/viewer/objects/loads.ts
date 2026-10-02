@@ -4,6 +4,7 @@ import { Node } from "hekatan-fem";
 import { Structure } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
 import { Text } from "./Text";
+import { unidades, num } from "../../unidades";
 
 export function loads(
   structure: Structure,
@@ -130,10 +131,9 @@ export function loads(
       for (let c = 0; c < 3; c++) maxAbs = Math.max(maxAbs, Math.abs(load[c]));
     }
     const conValor = dibujar.length <= 60;
-    const fmt = (v: number) => {
-      const a = Math.abs(v);
-      return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
-    };
+    // en el sistema elegido en «Unidades» y con la unidad escrita (antes kN sin unidad, eligiera lo que eligiera)
+    const U = unidades();
+    const fmt = (v: number) => `${num(U.fuerza(v))} ${U.uF}`;
     for (const index of dibujar) {
       const load = structure.nodeInputs!.val!.loads!.get(index)!;
       const position = nodes[index];

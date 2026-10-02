@@ -17,6 +17,7 @@ import * as THREE from "three";
 import van, { State } from "vanjs-core";
 import { Mesh, Element, Node, DeformOutputs, AnalyzeOutputs } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
+import { unidades } from "../../unidades";
 
 // Lectura de unidades globales del workspace. Estos states se persisten en
 // localStorage y se actualizan via el folder "Unidades" de Tweakpane.
@@ -30,7 +31,7 @@ function getUnits() {
   };
 }
 const FORCE_FACTOR: Record<string, number> = { kN: 1, tonf: 1/9.80665, kip: 1/4.4482216 };
-const DISP_FACTOR:  Record<string, number> = { mm: 1000, cm: 100, m: 1, in: 39.3700787402 };
+const DISP_FACTOR:  Record<string, number> = { mm: 1000, cm: 100, m: 1, in: 39.3700787402, ft: 3.280839895 };
 const STRESS_FACTOR: Record<string, number> = {
   "kN/m²": 1, "kPa": 1, "MPa": 1/1000, "GPa": 1/1e6,
   "kgf/cm²": 1/98.0665, "tonf/m²": 1/9.80665, "psi": 1/6.89476,
@@ -281,12 +282,15 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     const units = getUnits();
     const dF = DISP_FACTOR[units.dispUnit] ?? 1000;   // m → unidad UI
     const fF = FORCE_FACTOR[units.forceUnit] ?? 1;    // kN → unidad UI (tonf default)
+    // Sistema «Fuerza, Longitud» de CSI: momento = F·L; membrana y cortante de placa = F/L (2-oct-2026).
+    const U = unidades();
+    const fFL = U.porLong(1);   // kN/m → F/L
 
     // con «info de nudos» apagada el cursor junto a un nudo lee la CARA (si no, no salía nada en las esquinas)
     if (bestNode >= 0 && !hoverPermitido("node")) bestNode = -1;
     if (bestNode >= 0) {
       const n = nodes[bestNode];
-      let info = `Nodo ${bestNode}\n(${n[0].toFixed(3)}, ${n[1].toFixed(3)}, ${n[2].toFixed(3)})`;
+      let info = `Nodo ${bestNode}\n(${U.longitud(n[0]).toFixed(3)}, ${U.longitud(n[1]).toFixed(3)}, ${U.longitud(n[2]).toFixed(3)}) ${U.uL}`;
       // Agregar desplazamientos si existen (con UNIDADES del workspace)
       const def = ctx.mesh?.deformOutputs?.rawVal;
       if (def?.deformations) {
@@ -312,9 +316,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
             info += `\nFy = ${fmt(r[1]*fF)} ${units.forceUnit}`;
             info += `\nFz = ${fmt(r[2]*fF)} ${units.forceUnit}`;
             if (Math.abs(r[3]) > 1e-6 || Math.abs(r[4]) > 1e-6 || Math.abs(r[5]) > 1e-6) {
-              info += `\nMx = ${fmt(r[3]*fF)} ${units.forceUnit}·m`;
-              info += `\nMy = ${fmt(r[4]*fF)} ${units.forceUnit}·m`;
-              info += `\nMz = ${fmt(r[5]*fF)} ${units.forceUnit}·m`;
+              info += `\nMx = ${fmt(U.momento(r[3]))} ${U.uM}`;
+              info += `\nMy = ${fmt(U.momento(r[4]))} ${U.uM}`;
+              info += `\nMz = ${fmt(U.momento(r[5]))} ${U.uM}`;
             }
           }
         }
@@ -507,14 +511,14 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           }
         }
         const fields: [string, string, number, string][] = [
-          ["bendingXX",  "M11", fF, `${units.forceUnit}·m/m`],
-          ["bendingYY",  "M22", fF, `${units.forceUnit}·m/m`],
-          ["bendingXY",  "M12", fF, `${units.forceUnit}·m/m`],
-          ["membraneXX", "F11", fF, `${units.forceUnit}/m`],
-          ["membraneYY", "F22", fF, `${units.forceUnit}/m`],
-          ["membraneXY", "F12", fF, `${units.forceUnit}/m`],
-          ["tranverseShearX", "V13", fF, `${units.forceUnit}/m`],
-          ["tranverseShearY", "V23", fF, `${units.forceUnit}/m`],
+          ["bendingXX",  "M11", fF, U.uML],
+          ["bendingYY",  "M22", fF, U.uML],
+          ["bendingXY",  "M12", fF, U.uML],
+          ["membraneXX", "F11", fFL, U.uFL],
+          ["membraneYY", "F22", fFL, U.uFL],
+          ["membraneXY", "F12", fFL, U.uFL],
+          ["tranverseShearX", "V13", fFL, U.uFL],
+          ["tranverseShearY", "V23", fFL, U.uFL],
           ["vonMises",   "σVM", sF, units.stressUnit],
           ["pressure",   "p",   sF, units.stressUnit],
         ];
@@ -534,11 +538,11 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         const verTodos = hoverPrefs.todos.val || campo === "none";
         const mohr = (a: number | null, b: number | null, c: number | null, sg: number) => (a == null || b == null || c == null) ? null : (a + b) / 2 + sg * Math.hypot((a - b) / 2, c);
         const derivados: Record<string, [string, () => number | null, number, string]> = {
-          membranePrincipalMax: ["FMax", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), 1), fF, `${units.forceUnit}/m`],
-          membranePrincipalMin: ["FMin", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), -1), fF, `${units.forceUnit}/m`],
-          bendingPrincipalMax: ["MMax", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), 1), fF, `${units.forceUnit}·m/m`],
-          bendingPrincipalMin: ["MMin", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), -1), fF, `${units.forceUnit}·m/m`],
-          transverseShearMax: ["VMax", () => { const a = enPunto("tranverseShearX"), b = enPunto("tranverseShearY"); return a == null || b == null ? null : Math.hypot(a, b); }, fF, `${units.forceUnit}/m`],
+          membranePrincipalMax: ["FMax", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), 1), fFL, U.uFL],
+          membranePrincipalMin: ["FMin", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), -1), fFL, U.uFL],
+          bendingPrincipalMax: ["MMax", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), 1), fF, U.uML],
+          bendingPrincipalMin: ["MMin", () => mohr(enPunto("bendingXX"), enPunto("bendingYY"), enPunto("bendingXY"), -1), fF, U.uML],
+          transverseShearMax: ["VMax", () => { const a = enPunto("tranverseShearX"), b = enPunto("tranverseShearY"); return a == null || b == null ? null : Math.hypot(a, b); }, fFL, U.uFL],
         };
         const desp = (c: number): number | null => {   // desplazamiento en el punto: lineal entre los 4 nudos
           const D = ctx.mesh?.deformOutputs?.rawVal?.deformations as Map<number, number[]> | undefined;
@@ -631,13 +635,13 @@ export function setupHover(ctx: HoverContext): THREE.Group {
               const Mz_approx = E * Iz * dRz / L0;
 
               info += `\n──── frame ────`;
-              info += `\nL = ${fmt(L0, 3)} m`;
+              info += `\nL = ${fmt(U.longitud(L0), 3)} ${U.uL}`;
               info += `\nΔL = ${fmt(dL*dF, 3)} ${units.dispUnit}`;
               info += `\nε = ${fmt(dL/L0, 6)}`;
               if (Math.abs(N_axial) > 1e-6) info += `\nN ≈ ${fmt(N_axial*fF)} ${units.forceUnit}`;
-              if (Math.abs(T_torsion) > 1e-6) info += `\nT ≈ ${fmt(T_torsion*fF)} ${units.forceUnit}·m`;
-              if (Math.abs(My_approx) > 1e-6) info += `\nMy ≈ ${fmt(My_approx*fF)} ${units.forceUnit}·m`;
-              if (Math.abs(Mz_approx) > 1e-6) info += `\nMz ≈ ${fmt(Mz_approx*fF)} ${units.forceUnit}·m`;
+              if (Math.abs(T_torsion) > 1e-6) info += `\nT ≈ ${fmt(U.momento(T_torsion))} ${U.uM}`;
+              if (Math.abs(My_approx) > 1e-6) info += `\nMy ≈ ${fmt(U.momento(My_approx))} ${U.uM}`;
+              if (Math.abs(Mz_approx) > 1e-6) info += `\nMz ≈ ${fmt(U.momento(Mz_approx))} ${U.uM}`;
             }
           }
         }

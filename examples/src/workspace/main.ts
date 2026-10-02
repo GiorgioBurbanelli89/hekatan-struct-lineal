@@ -251,6 +251,7 @@ import {
   // SAFE-style granular units + presets
   stressUnit, subgradeUnit, stiffTransUnit, lengthSectionUnit,
   applyConsistentUnits, detectCurrentPreset,
+  forceFactors, factorMomento, metrosDeLongitud, fromKnPm2, lengthStructureUnit,
 } from "./units";
 // Cursor auxiliar dibujado (?cursor=1): el del sistema no sale en las capturas
 // ni en la automatizacion, asi que al ensenar la app no se ve donde se pulsa.
@@ -574,8 +575,11 @@ function paramsCambiados(): Record<string, number> {
   for (const [k, d] of Object.entries(currentExample?.params ?? {})) {
     const v = currentParams[k];
     if ((d as any).texto !== undefined) { if (typeof v === "string" && v.trim() && v !== (d as any).texto) (out as any)[k] = v; continue; }
-    if (typeof v === "number" && Number.isFinite(v) && Math.abs(v - (d as any).default) > 1e-12) out[k] = v;
+    // en SI (el default también lo está): así quien abre el enlace con otras unidades recibe la MISMA carga
+    const vSI = typeof v === "number" ? v * factorSIDeParam(d as any) : v;
+    if (typeof vSI === "number" && Number.isFinite(vSI) && Math.abs(vSI - (d as any).default) > 1e-9 * Math.max(1, Math.abs((d as any).default))) out[k] = vSI;
   }
+  if (Object.keys(out).length && Object.values(currentExample?.params ?? {}).some((d: any) => d.unitType)) (out as any)._si = 1;
   return out;
 }
 async function enlaceEjemplo(): Promise<{ url: string; tipo: "ejemplo" | "modelo" }> {
@@ -1812,6 +1816,31 @@ function filterShellResultOptions(allowed?: string[]) {
       shellSelect.selectedIndex = idx;
       try { shellSelect.dispatchEvent(new Event("change", { bubbles: true })); } catch {}
     }
+  }
+}
+
+/**
+ * Cuántas unidades SI (kN, kN·m) vale UNA unidad de la interfaz de un parámetro con `unitType`, en el sistema actual.
+ * El momento es fuerza × longitud del sistema (como CSI): depende también de la longitud.
+ */
+function factorSIDeParam(p: { unitType?: string }): number {
+  if (p.unitType === "force") return forceFactors[forceUnit.val];
+  if (p.unitType === "moment") return factorMomento();
+  return 1;
+}
+/**
+ * Cambia unidades SIN cambiar la carga física (2-oct-2026, test de unidades con puppeteer): `currentParams` está en la
+ * unidad de la interfaz, así que al cambiar de sistema hay que reescalarlo. Antes solo lo hacía el desplegable «Fuerza»
+ * (y el momento solo con la fuerza): el PRESET cambiaba la unidad y dejaba el número → en `viga-doble-t` la flecha
+ * saltaba un 90 % al pasar de MKS a SI. `cambiar()` aplica el cambio; aquí se mide antes y después.
+ */
+function cambiarUnidadesConservando(cambiar: () => void) {
+  const antes: Record<string, number> = {};
+  for (const [k, p] of Object.entries(currentExample?.params ?? {})) if ((p as any).unitType) antes[k] = factorSIDeParam(p as any);
+  cambiar();
+  for (const [k, fa] of Object.entries(antes)) {
+    const fd = factorSIDeParam((currentExample!.params as any)[k]);
+    if (typeof currentParams[k] === "number" && fd) currentParams[k] = (currentParams[k] * fa) / fd;
   }
 }
 
@@ -6750,22 +6779,8 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
     label: "Fuerza",
     options: { kN: "kN", tonf: "tonf", kip: "kip" },
   }).on("change", (e) => {
-    const oldUnit = forceUnit.val;
-    const newUnit = e.value as any;
-    // Re-escala los values actuales de params con unitType="force"/"moment"
-    // para que representen la MISMA fuerza física pero expresada en la nueva
-    // unidad. Ej: F=200 kN con oldUnit=kN, newUnit=tonf → F=200/9.80665=20.4 tonf.
-    if (currentExample && oldUnit !== newUnit) {
-      const fOld = oldUnit === "kN" ? 1 : oldUnit === "tonf" ? 9.80665 : 4.4482216;
-      const fNew = newUnit === "kN" ? 1 : newUnit === "tonf" ? 9.80665 : 4.4482216;
-      for (const [k, p] of Object.entries(currentExample.params)) {
-        if (p.unitType === "force" || p.unitType === "moment") {
-          // value_physical_kN = value_ui × factor_old ⇒ value_ui_new = value_ui × (factor_old/factor_new)
-          currentParams[k] = (currentParams[k] * fOld) / fNew;
-        }
-      }
-    }
-    forceUnit.val = newUnit;
+    // la MISMA fuerza física expresada en la nueva unidad (F = 200 kN → 20.4 tonf)
+    cambiarUnidadesConservando(() => { forceUnit.val = e.value as any; });
     // Rebuild UI del pane con nuevos labels y valores escalados
     buildParamsPane();
     // Rebuild modelo (no es necesario si internamente trabajamos en SI, pero el
@@ -6805,7 +6820,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   }).on("change", (e: any) => {
     const name = e.value;
     if (name === "Custom") return;  // no aplica nada, el user usa Display Units
-    applyConsistentUnits(name);
+    cambiarUnidadesConservando(() => applyConsistentUnits(name));
     // Sync proxy con los nuevos valores
     unitsProxy.force = forceUnit.val;
     unitsProxy.disp = dispUnit.val;
@@ -9006,17 +9021,20 @@ document.body.appendChild(modalPanel.div);
   // Convierte el valor SI base (kN, kN·m, m) a la unidad UI activa
   // y devuelve [valor_convertido, sufijo_unidad].
   const formatValue = (kind: string, valSI: number): [number, string] => {
+    // Sistema «Fuerza, Longitud» de CSI, igual que la leyenda y la tarjeta del visor (2-oct-2026): momento por ancho
+    // F·L/L, membrana y cortante F/L, presión y von Mises en la unidad de TENSIÓN elegida. Antes F/m², F·m/m y
+    // «kip·ft/m» mezclados, con la longitud fija en metros.
     const u = forceUnit.val;
     const du = dispUnit.val;
+    const L = lengthStructureUnit.val;
     if (kind === "force_per_area") {
-      return [fromKn(valSI), `${u}/m²`];
+      return [fromKnPm2(valSI), stressUnit.val];
     }
     if (kind === "moment_per_length") {
-      const lbl = u === "kip" ? "kip·ft/m" : `${u}·m/m`;
-      return [fromKnm(valSI), lbl];
+      return [fromKn(valSI), `${u}·${L}/${L}`];
     }
     if (kind === "force_per_length") {
-      return [fromKn(valSI), `${u}/m`];
+      return [fromKn(valSI) * metrosDeLongitud(), `${u}/${L}`];
     }
     if (kind === "displacement") {
       return [mToDisp(valSI), du];
@@ -9375,7 +9393,11 @@ if (initialEx) {
         const defs: any = initialEx.params ?? {};
         const validos = Object.entries(pv).filter(([k, v]) => k in defs && (defs[k].texto !== undefined ? typeof v === "string" : Number.isFinite(Number(v))));
         if (validos.length) setTimeout(() => {
-          for (const [k, v] of validos) (currentParams as any)[k] = defs[k].texto !== undefined ? String(v) : Number(v);
+          // `_si`: el enlace trae los valores con unidad en SI (desde el 2-oct-2026) → a la unidad de ESTA interfaz.
+          // Sin la marca es un enlace viejo, en las unidades de quien lo mandó: se aplica tal cual, como antes.
+          const enSI = (pv as any)._si === 1;
+          for (const [k, v] of validos) (currentParams as any)[k] = defs[k].texto !== undefined ? String(v)
+            : enSI ? Number(v) / factorSIDeParam(defs[k]) : Number(v);
           buildParamsPane();
           rebuild();
           console.log(`✅ Enlace compartido: ${validos.length} parámetros aplicados (${validos.map(([k, v]) => `${k}=${v}`).join(", ")})`);
