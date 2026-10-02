@@ -50,7 +50,7 @@ const _qs = new URLSearchParams(window.location.search);
 const _hashModelo = window.location.hash.startsWith("#h=") ? window.location.hash.slice(3) : "";
 // Un modelo por ENLACE es para MIRARLO: en el celular la vista se reordena (ver el CSS
 // `html.hk-enlace` junto al layout móvil). Va en <html> porque <body> aún no existe aquí.
-if (_qs.get("heks") || _qs.get("m") || _hashModelo) document.documentElement.classList.add("hk-enlace");
+if (_qs.get("heks") || _qs.get("m") || _qs.get("k") || _hashModelo) document.documentElement.classList.add("hk-enlace");
 
 // Velo de carga. Se crea AQUI, al cargar el modulo, porque creandolo mas
 // tarde (dentro del panel CLI) llegaba despues de que el CAD ya hubiera
@@ -61,7 +61,7 @@ function quitarVelo() {
   try { _velo?.remove(); } catch { /* no-op */ }
   _velo = null;
 }
-if (_qs.get("heks") || _qs.get("m") || _hashModelo) {
+if (_qs.get("heks") || _qs.get("m") || _qs.get("k") || _hashModelo) {
   _velo = document.createElement("div");
   _velo.textContent = "Cargando modelo…";
   _velo.style.cssText = [
@@ -79,9 +79,16 @@ if (_qs.get("heks") || _qs.get("m") || _hashModelo) {
 const _codigo = _qs.get("m");
 // marcador: el modelo no se trae por fetch, se descomprime del hash (ver _hashModelo)
 const HASH_HEKS = "hash:modelo";
+// ?k=<id> — ENLACE CORTO (1-oct-2026): el modelo comprimido (el mismo texto del #h=) vive en un Worker de Cloudflare
+// (cloudflare/enlaces/) con un id aleatorio; el enlace solo lleva el id. Si el Worker no responde, «Compartir»
+// vuelve al enlace largo con el modelo dentro.
+const ENLACES = "https://hekatan-enlaces.j-b-jazz.workers.dev";
+const _clave = _qs.get("k");
+const CLAVE_HEKS = "clave:modelo";
 const URL_HEKS = _codigo
   ? `${import.meta.env.BASE_URL}m/${encodeURIComponent(_codigo)}/modelo.heks`
       .replace(/([^:])\/\//g, "$1/")
+  : _clave ? CLAVE_HEKS
   : (_qs.get("heks") || (_hashModelo ? HASH_HEKS : null));
 
 /** .heks → deflate-raw → base64url (sin «=»), para el hash del enlace de compartir. */
@@ -2013,7 +2020,7 @@ function rebuild() {
 function ribbonPlegadaPara(id?: string | null): boolean {
   // Un modelo que llega por ENLACE (?heks= / ?m=) es para mirarlo: la barra de dibujo
   // plegada. Abierta tapaba el tercio de arriba del modelo compartido (13-sep-2026).
-  if (_qs.get("heks") || _qs.get("m")) return true;
+  if (_qs.get("heks") || _qs.get("m") || _qs.get("k")) return true;
   const dibujar = ["new-blank", "cad-draw", "cad-editor", "inicio", "drawing"];
   return !!id && !dibujar.includes(id);
 }
@@ -5147,7 +5154,13 @@ function buildParamsPane() {
       u.search = "";
       const nModal = (window as any).__hekatanCliModalModes;
       if (nModal) u.searchParams.set("modal", String(nModal));
-      u.hash = "h=" + (await comprimirHeks(texto));
+      const datos = await comprimirHeks(texto);
+      try {   // corto: el modelo al Worker, el enlace solo con el id
+        const r = await fetch(ENLACES + "/", { method: "POST", body: datos, headers: { "Content-Type": "text/plain" } });
+        const id = r.ok ? (await r.json())?.id : null;
+        if (id) { u.searchParams.set("k", id); u.hash = ""; return u.toString(); }
+      } catch { /* sin red o Worker caído: enlace largo */ }
+      u.hash = "h=" + datos;
       return u.toString();
     };
     (window as any).__hekatanEnlaceModelo = crearEnlaceModelo;   // para las pruebas headless
@@ -5184,6 +5197,11 @@ function buildParamsPane() {
     if (urlHeks) {
       (urlHeks === HASH_HEKS
         ? descomprimirHeks(_hashModelo)          // enlace con el modelo dentro (#h=)
+        : urlHeks === CLAVE_HEKS
+        ? fetch(`${ENLACES}/${encodeURIComponent(_clave!)}`).then((r) => {   // enlace corto (?k=)
+            if (!r.ok) throw new Error(r.status === 404 ? "el enlace no existe o caducó" : r.status + " " + r.statusText);
+            return r.text();
+          }).then(descomprimirHeks)
         : fetch(urlHeks).then((r) => {
             if (!r.ok) throw new Error(r.status + " " + r.statusText);
             return r.text();

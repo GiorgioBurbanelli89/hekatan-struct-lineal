@@ -1,0 +1,7 @@
+name = "hekatan-enlaces"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[[kv_namespaces]]
+binding = "ENLACES"
+id = "9d211705c9204825bea9d987a7a33f32"
