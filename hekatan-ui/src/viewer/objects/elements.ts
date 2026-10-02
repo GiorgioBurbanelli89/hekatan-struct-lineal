@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import van, { State } from "vanjs-core";
 import { Mesh, Element, Node } from "hekatan-fem";
 import { Settings } from "../settings/getSettings";
@@ -9,7 +12,9 @@ import { versionCorte, mostrarSegunCorte } from "./utils/corteSolidos";
 // Colores por tipo (activos cuando settings.colorByType=true)
 // Pensados para alto contraste sobre fondo oscuro Y claro.
 const COLOR_COLUMN  = new THREE.Color(0xFF8800);  // naranja — frames verticales
-const COLOR_BEAM    = new THREE.Color(0x00CCCC);  // cyan — frames horizontales
+const COLOR_BEAM    = new THREE.Color(0x00CCCC);  // cyan — vigas PRINCIPALES (de columna a columna)
+const COLOR_SEC     = new THREE.Color(0x7CD650);  // verde claro — vigas SECUNDARIAS (apoyadas en otra viga)
+const COLOR_DIAG    = new THREE.Color(0xB07CFF);  // violeta — diagonales / riostras
 const COLOR_ZAPATA  = new THREE.Color(0x00CC44);  // verde — shells de cimentación (z≤0)
 const COLOR_LOSA    = new THREE.Color(0x3388FF);  // azul — shells de losa (z>0)
 const COLOR_MURO    = new THREE.Color(0xE040A0);  // magenta — shells VERTICALES (muros, pantallas)
@@ -25,6 +30,54 @@ function isVerticalFrame(n1: Node, n2: Node): boolean {
   // VIGAS en dirección Y salían pintadas como columnas (Jorge, 1-oct-2026: «no se sabe si tiene vigas»).
   return dz > dx && dz > dy;
 }
+/**
+ * Tipo de cada barra, por GEOMETRÍA (sirve para cualquier modelo, también uno importado y mallado):
+ *  - columna: a menos de 20° de la vertical; diagonal: ni vertical ni horizontal (más de 20°).
+ *  - viga: horizontal. Se recorre la LÍNEA de la viga (los trozos colineales, porque la malla la parte) hasta
+ *    llegar a un nudo con columna. Si los DOS extremos de la línea llegan a columna es PRINCIPAL; si algún
+ *    extremo acaba en otra viga (o suelto), es SECUNDARIA. Una secundaria continua sobre la viga principal
+ *    sigue siendo una sola línea: el nudo de cruce no tiene columna.
+ */
+export type TipoBarra = "columna" | "viga" | "secundaria" | "diagonal";
+export function clasificarBarras(nodes: Node[], elems: Element[]): Map<number, TipoBarra> {
+  const tipo = new Map<number, TipoBarra>();
+  const dir = new Map<number, number[]>();
+  const conCol = new Set<number>();
+  const vigasEn = new Map<number, number[]>();
+  elems.forEach((e, i) => {
+    if (e.length !== 2) return;
+    const a = nodes[e[0]], b = nodes[e[1]]; if (!a || !b) return;
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], L = Math.hypot(d[0], d[1], d[2]) || 1;
+    const u = d.map((x) => x / L), sz = Math.abs(u[2]);
+    if (sz > Math.cos(20 * Math.PI / 180)) { tipo.set(i, "columna"); conCol.add(e[0]); conCol.add(e[1]); }
+    else if (sz < Math.sin(20 * Math.PI / 180)) {
+      dir.set(i, u);
+      for (const n of e) { const l = vigasEn.get(n); if (l) l.push(i); else vigasEn.set(n, [i]); }
+    } else tipo.set(i, "diagonal");
+  });
+  for (const i of dir.keys()) {
+    if (tipo.has(i)) continue;
+    const u = dir.get(i)!, linea = [i];
+    const extremo = (nudo: number, desde: number): boolean => {      // true = la línea llega a una columna
+      let n = nudo, prev = desde;
+      for (let paso = 0; paso < 100000; paso++) {
+        if (conCol.has(n)) return true;
+        const sig = (vigasEn.get(n) ?? []).find((j) => j !== prev && !linea.includes(j) &&
+          Math.abs(dir.get(j)![0] * u[0] + dir.get(j)![1] * u[1] + dir.get(j)![2] * u[2]) > 0.999);
+        if (sig === undefined) return false;
+        linea.push(sig);
+        const e = elems[sig]; n = e[0] === n ? e[1] : e[0]; prev = sig;
+      }
+      return false;
+    };
+    const e = elems[i];
+    const t: TipoBarra = extremo(e[0], i) && extremo(e[1], i) ? "viga" : "secundaria";
+    for (const j of linea) tipo.set(j, t);
+  }
+  return tipo;
+}
+const COLOR_TIPO: Record<TipoBarra, THREE.Color> = { columna: COLOR_COLUMN, viga: COLOR_BEAM, secundaria: COLOR_SEC, diagonal: COLOR_DIAG };
+
 function isVerticalQ4(n0: Node, n1: Node, n2: Node, n3: Node): boolean {
   const v01 = [n1[0]-n0[0], n1[1]-n0[1], n1[2]-n0[2]];
   const v03 = [n3[0]-n0[0], n3[1]-n0[1], n3[2]-n0[2]];
@@ -174,6 +227,31 @@ export function elements(
   solidLines.userData.pintaSolidos = true;
   group.add(solidLines);
 
+  // ARTICULACIONES (releases de momento): un punto junto al extremo liberado, como los de ETABS.
+  const puntosRel = new THREE.Points(
+    new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({ color: t.elementLine, size: 8, sizeAttenuation: false, depthTest: false, transparent: true,
+      map: (() => {   // punto REDONDO (un Points sin textura es un cuadrado)
+        const cv = document.createElement("canvas"); cv.width = cv.height = 32;
+        const g = cv.getContext("2d")!; g.fillStyle = "#fff"; g.strokeStyle = "#000"; g.lineWidth = 6;
+        g.beginPath(); g.arc(16, 16, 12, 0, 2 * Math.PI); g.fill(); g.stroke();
+        return new THREE.CanvasTexture(cv);
+      })(), alphaTest: 0.5 }),
+  );
+  onThemeChange((_n, c) => { (puntosRel.material as THREE.PointsMaterial).color.setHex(c.elementLine); });
+  puntosRel.frustumCulled = false;
+  puntosRel.renderOrder = 4;
+  group.add(puntosRel);
+
+  // Con «Color por tipo» las BARRAS van GRUESAS (3 px): con la línea de 1 px de WebGL no se distinguía el cian de
+  // una viga principal del verde de una secundaria sobre el azul de la losa (Jorge, 2-oct-2026).
+  const matGruesa = new LineMaterial({ linewidth: 3, vertexColors: true, depthTest: false, transparent: true });
+  const barrasGruesas = new LineSegments2(new LineSegmentsGeometry(), matGruesa);
+  barrasGruesas.frustumCulled = false;
+  barrasGruesas.renderOrder = 3;
+  barrasGruesas.onBeforeRender = (rnd) => { const v = rnd.getSize(new THREE.Vector2()); matGruesa.resolution.set(v.x, v.y); };
+  group.add(barrasGruesas);
+
   // Solid faces for shell elements (Q4 = 4 nodes, CST = 3 nodes)
   // Uses vertex colors to differentiate walls (vertical) vs slabs (horizontal)
   const shellMat = new THREE.MeshBasicMaterial({
@@ -226,6 +304,8 @@ export function elements(
     settings.elemLosas?.val;
     settings.colorByType?.val;
     (settings as any).malla?.val;
+    (settings as any).articulaciones?.val;
+    mesh.elementInputs?.val;
 
     if (!settings.elements.val) return;
     // MALLA de áreas (1-oct-2026): apagada por defecto. Sin ella, de cada losa/muro se dibuja solo su CONTORNO
@@ -300,14 +380,20 @@ export function elements(
     const wireVerts: number[] = [];
     const wireCols: number[] = [];
     const bordes = new Map<string, { a: number; b: number; normales: number[][]; color: THREE.Color | null }>();
-    for (const e of elems) {
+    const nodosBase = (mesh.nodes?.rawVal as Node[] | undefined) ?? nodes;
+    const tiposBarra = colorByType ? clasificarBarras(nodosBase.length === nodes.length ? nodosBase : nodes, elems) : new Map<number, TipoBarra>();
+    const fatVerts: number[] = [], fatCols: number[] = [];
+    for (let ie = 0; ie < elems.length; ie++) {
+      const e = elems[ie];
+      const gruesa = colorByType && e.length === 2;
+      const V = gruesa ? fatVerts : wireVerts, C = gruesa ? fatCols : wireCols;
       if (e.length === 8) continue;          // los sólidos ya pusieron las aristas de su piel
       if (!showElement(e)) continue;
       let edgeColor: THREE.Color | null = null;
       if (colorByType) {
         if (e.length === 2) {
           const n1 = nodes[e[0]], n2 = nodes[e[1]];
-          if (n1 && n2) edgeColor = isVerticalFrame(n1, n2) ? COLOR_COLUMN : COLOR_BEAM;
+          if (n1 && n2) edgeColor = COLOR_TIPO[tiposBarra.get(ie) ?? (isVerticalFrame(n1, n2) ? "columna" : "viga")];
         } else if (e.length === 4) {
           const ns = e.map(i => nodes[i]).filter(Boolean) as Node[];
           if (ns.length === 4) {
@@ -333,10 +419,10 @@ export function elements(
           const pts = curvaHermite(pi, pj, defs.get(e[0]), defs.get(e[1]),
                                    sXY, sZ);
           for (let k = 0; k < pts.length - 1; k++) {
-            wireVerts.push(...pts[k], ...pts[k + 1]);
+            V.push(...pts[k], ...pts[k + 1]);
             if (colorByType && edgeColor) {
-              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
-              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
+              C.push(edgeColor.r, edgeColor.g, edgeColor.b);
+              C.push(edgeColor.r, edgeColor.g, edgeColor.b);
             }
           }
           continue;
@@ -355,10 +441,10 @@ export function elements(
           const dj = anim.shape.slice(e[1] * 6, e[1] * 6 + 6);
           const pts = curvaHermite(pi, pj, di, dj, anim.amp, anim.amp);
           for (let k = 0; k < pts.length - 1; k++) {
-            wireVerts.push(...pts[k], ...pts[k + 1]);
+            V.push(...pts[k], ...pts[k + 1]);
             if (colorByType && edgeColor) {
-              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
-              wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
+              C.push(edgeColor.r, edgeColor.g, edgeColor.b);
+              C.push(edgeColor.r, edgeColor.g, edgeColor.b);
             }
           }
           continue;
@@ -376,10 +462,10 @@ export function elements(
       for (const edge of elementToEdges(e)) {
         const a = nodes[edge[0]], b = nodes[edge[1]];
         if (!a || !b) continue;
-        wireVerts.push(...a, ...b);
+        V.push(...a, ...b);
         if (colorByType && edgeColor) {
-          wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
-          wireCols.push(edgeColor.r, edgeColor.g, edgeColor.b);
+          C.push(edgeColor.r, edgeColor.g, edgeColor.b);
+          C.push(edgeColor.r, edgeColor.g, edgeColor.b);
         }
       }
     }
@@ -398,6 +484,32 @@ export function elements(
       "position",
       new THREE.Float32BufferAttribute(wireVerts, 3)
     );
+    barrasGruesas.visible = fatVerts.length > 0;
+    if (fatVerts.length) {
+      const gg = new LineSegmentsGeometry(); gg.setPositions(fatVerts);
+      if (fatCols.length === fatVerts.length) gg.setColors(fatCols);
+      barrasGruesas.geometry.dispose(); barrasGruesas.geometry = gg;
+    }
+    // con «Color por tipo» y barras, la losa más transparente: que se vean las vigas que tiene debajo
+    shellMat.opacity = getTheme().shellOpacity * (colorByType && fatVerts.length ? 0.45 : 1);
+    shellMat.needsUpdate = true;
+    {
+      // Extremo I liberado si suelta algún momento (bits 3-5), extremo J (bits 9-11). El punto va a un 30 % del trozo
+      // de barra, sin pasar de 0.3 m del nudo: con la malla, el trozo extremo de una viga mide 0.5 m o menos.
+      const rel = mesh.elementInputs?.val?.momentReleases as Map<number, boolean[]> | undefined;
+      const pts: number[] = [];
+      const ver = (settings as any).articulaciones ? (settings as any).articulaciones.val : true;
+      if (ver && rel?.size) for (const [ie, b] of rel) {
+        const e = elems[ie]; if (!e || e.length !== 2 || !showElement(e)) continue;
+        const a = nodes[e[0]], c = nodes[e[1]]; if (!a || !c) continue;
+        const L = Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]); if (L < 1e-9) continue;
+        const f = Math.min(0.3, 0.3 / L);
+        if (b[3] || b[4] || b[5]) pts.push(a[0] + f * (c[0] - a[0]), a[1] + f * (c[1] - a[1]), a[2] + f * (c[2] - a[2]));
+        if (b[9] || b[10] || b[11]) pts.push(c[0] + f * (a[0] - c[0]), c[1] + f * (a[1] - c[1]), c[2] + f * (a[2] - c[2]));
+      }
+      puntosRel.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      puntosRel.visible = pts.length > 0;
+    }
     if (colorByType && wireCols.length === wireVerts.length) {
       lines.geometry.setAttribute(
         "color",

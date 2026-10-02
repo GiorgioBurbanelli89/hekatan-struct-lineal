@@ -66,6 +66,8 @@ export type Settings = {
   colorByType: State<boolean>;
   /** Malla de las áreas (todas las aristas de cada cáscara). Default false: solo el contorno de losas y muros. */
   malla: State<boolean>;
+  /** Punto en cada extremo ARTICULADO de una barra (release de momento), como ETABS. Default true. */
+  articulaciones: State<boolean>;
   nodesIndexes: State<boolean>;
   elementsIndexes: State<boolean>;
   orientations: State<boolean>;
@@ -129,6 +131,7 @@ export type SettingsObj = {
   elemLosas?: boolean;
   colorByType?: boolean;
   malla?: boolean;
+  articulaciones?: boolean;
   nodesIndexes?: boolean;
   elementsIndexes?: boolean;
   orientations?: boolean;
@@ -327,6 +330,9 @@ export function getSettings(
     });
     verFolder.addBinding(settings.colorByType, "val", {
       label: "  🎨 Color por tipo",
+    });
+    verFolder.addBinding(settings.articulaciones, "val", {
+      label: "  ● Articulaciones (releases)",
     });
     verFolder.addBinding(settings.nodesIndexes, "val", {
       label: "Nº de nudo",
@@ -609,6 +615,7 @@ export function getDefaultSettings(settingsObj: SettingsObj): Settings {
     elemLosas: van.state(settingsObj?.elemLosas ?? true),
     colorByType: van.state(settingsObj?.colorByType ?? true),   // 1-oct-2026: de serie (columnas, vigas, muros, losas)
     malla: van.state(settingsObj?.malla ?? false),
+    articulaciones: van.state(settingsObj?.articulaciones ?? true),
     nodesIndexes: van.state(settingsObj?.nodesIndexes ?? false),
     elementsIndexes: van.state(settingsObj?.elementsIndexes ?? false),
     orientations: van.state(settingsObj?.orientations ?? false),

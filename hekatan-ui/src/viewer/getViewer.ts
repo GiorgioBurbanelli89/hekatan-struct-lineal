@@ -525,6 +525,8 @@ export function getViewer({
     settings.edges?.val;
     settings.elemColumns.val;
     settings.elemBeams.val;
+    (settings as any).articulaciones?.val;
+    settings.colorByType?.val;
     settings.nodesIndexes.val;
     settings.elementsIndexes.val;
     settings.orientations.val;
@@ -710,6 +712,26 @@ export function getViewer({
       render: viewerRender,
     });
     scene.add(hoverGroup);
+
+    // Leyenda de TIPOS de barra (1-oct-2026, Jorge: «¿cómo distingo vigas de columnas y vigas secundarias, y los
+    // releases?»). Sale con «Color por tipo» y solo si el modelo tiene barras; abajo a la izquierda.
+    {
+      const ley = document.createElement("div");
+      ley.id = "hk-leyenda-tipos";
+      ley.style.cssText = "position:absolute;left:16px;top:110px;z-index:5;padding:5px 9px;border-radius:6px;"
+        + "background:rgba(10,14,24,.78);color:#e8ecf4;font:12px/1.5 system-ui,sans-serif;pointer-events:none;display:none";
+      const fila = (c: string, t: string, punto = false) =>
+        `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:10px">` +
+        (punto ? `<span style="width:8px;height:8px;border-radius:50%;background:${c}"></span>`
+               : `<span style="width:18px;height:3px;background:${c}"></span>`) + `${t}</span>`;
+      ley.innerHTML = fila("#FF8800", "columna") + fila("#00CCCC", "viga principal") + fila("#7CD650", "viga secundaria")
+        + fila("#B07CFF", "diagonal") + fila("#e8ecf4", "articulación (release)", true);
+      viewerElm.appendChild(ley);
+      van.derive(() => {
+        const hayBarras = (mesh.elements?.val ?? []).some((e) => e.length === 2);
+        ley.style.display = settings.colorByType.val && settings.elements.val && hayBarras ? "block" : "none";
+      });
+    }
 
     // Color map (shells)
     const colorMapValues = getColorMapValues(mesh, settings);
