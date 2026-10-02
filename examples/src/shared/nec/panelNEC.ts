@@ -84,11 +84,14 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   const vivo = _vivo;   // sobrevive a la regeneración del modelo (cambiar el n.º de muros vuelve a montar el panel)
   f.addBinding(vivo, "on", { label: "🎯 Planta CM/CR en vivo" }).on("change", () => { if (vivo.on) programar(true); else ventanaVivo().ocultar(); });
   f.addBinding(vivo, "jueces", { label: "⚖ 4 jueces en vivo" }).on("change", () => { if (vivo.jueces) programar(true); else panelJueces().ocultar(); });
+  const anim = () => (window as any).__hekatanModalAnimator;
+  const enReposo = () => { try { anim()?.enReposo?.(); } catch { /* sin animador */ } };
   function programar(ya = false) { if (!vivo.on && !vivo.jueces) return; clearTimeout(_tVivo); _tVivo = setTimeout(cmcr, ya ? 0 : 600); }
   _programar = programar;                        // el oyente (uno solo) llama siempre al panel montado más reciente
-  if (!_oyente) { _oyente = true; van.derive(() => { estado.nodes.val; estado.elements.val; estado.elementInputs.val; estado.nodeInputs.val; _programar(); }); }
+  if (!_oyente) { _oyente = true; van.derive(() => { estado.nodes.val; estado.elements.val; estado.elementInputs.val; estado.nodeInputs.val; if (!(window as any).__hekatanModalAnimator?.isPlaying?.()) _programar(); }); }
   if (vivo.on || vivo.jueces) programar(true);
   function cmcr() {
+    enReposo();
     const nodes = estado.nodes.val, elements = estado.elements.val;
     if (!nodes?.length) return;
     if (vivo.jueces) {
@@ -113,6 +116,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   }
 
   function aguiar() {
+    enReposo();
     if (!ultimo) correr();
     if (!ultimo) return;
     const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val;
@@ -138,6 +142,7 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     return { norma, Z: p.Z, Fa: p.Fa, Fd: p.Fd, Fs: p.Fs, eta: p.eta, r: p.r, I: p.I, R: p.R, phiP: 1, phiE: 1, Ct, alfa, Cd: p.Cd, limDeriva: p.limDeriva };
   }
   function correr() {
+    enReposo();
     const nodes = estado.nodes.val, elements = estado.elements.val;
     if (!nodes?.length) { p.info = "✗ no hay modelo"; f.refresh(); return; }
     const t0 = performance.now();

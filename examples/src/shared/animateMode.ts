@@ -90,6 +90,9 @@ export interface ModalAnimator {
   stop(): void;
   /** True si la animación está corriendo */
   isPlaying(): boolean;
+  /** Si el modo dejó los nudos movidos (animando, en pausa o estático), los devuelve a su sitio. Los cálculos
+   *  que leen `states.nodes` (panel NEC, jueces) lo llaman antes: si no, miden la forma del MODO, no el modelo. */
+  enReposo(): void;
   /** Corta el RAF SIN restaurar nodos: para cuando el modelo ya se REGENERÓ debajo (arrastre de un
    *  slider) y los originales guardados ya no son de este modelo. */
   pause(): void;
@@ -124,6 +127,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
   // al último frame corrompido por una animación anterior.
   let trueOriginalNodes: Node[] = [];
   let originalNodes: Node[] = [];
+  let deformado = false;   // los nudos del visor están movidos por el modo
   // Guarda el estado de deformedShape del viewer para restaurarlo al detener: durante la
   // animación modal hay que APAGARLO, si no el viewer SUMA la deformada estática (Dead) sobre
   // los nodos que la animación ya movió → deformada "horrible".
@@ -199,6 +203,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
       const src = mismaMalla(trueOriginalNodes) ? trueOriginalNodes
                 : mismaMalla(originalNodes) ? originalNodes
                 : [];
+      deformado = false;
       if (src.length > 0) {
         mesh.nodes.val = src.map((n) => [...n] as Node);
         getCtx()?.render();
@@ -216,6 +221,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
     if (!results || !results.modeShapes || results.modeShapes.length === 0) return;
     if (!results.modeShapes[mode]) return;
     stopInternal(false);
+    deformado = true;
     // Apagar deformedShape mientras animamos (guardar el valor del usuario una sola vez) para
     // que el viewer muestre el modo PURO, sin sumarle la deformada estática (Dead).
     const st = getSettings();
@@ -308,6 +314,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
   function showStaticInternal(i: number) {
     if (!results || !results.modeShapes || !results.modeShapes[i]) return;
     stopInternal(false);
+    deformado = true;
     const st = getSettings();
     if (st?.deformedShape) { if (savedDeformedShape === null) savedDeformedShape = st.deformedShape.val; st.deformedShape.val = false; }
     mode = Math.max(0, Math.min((results.frequencies?.length ?? 1) - 1, i));
@@ -360,6 +367,7 @@ export function createModalAnimator(cfg: ModalAnimatorConfig): ModalAnimator {
       fireStatus();
     },
     isPlaying() { return rafId !== 0; },
+    enReposo() { if (deformado || rafId !== 0) { stopInternal(true); fireStatus(); } },
     pause() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } fireStatus(); },
     modeCount() { return results?.frequencies?.length ?? 0; },
     currentMode() { return mode; },
