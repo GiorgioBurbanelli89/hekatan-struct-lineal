@@ -776,6 +776,11 @@ export const plantillas: ExampleDef = {
         plateFormulations.set(e, esPlate ? (fRaw === 40 ? 1 : 0)
                                : esNerv ? 1 : fRaw);
         if (esPlate) membraneModifiers.set(e, 0);
+        // MEMBRANA (2): sin flexión ni cortante fuera del plano. El motor no tiene una formulación «2» (es el
+        // MITC4: data-model.ts), así que hasta el 2-oct-2026 la «Membrana» se analizaba como Shell-Thick ENTERA
+        // —medido: los mismos periodos que Thick— y solo el .e2k decía Membrane. Ahora, como el importador de
+        // e2k: los 8 modificadores con flexión y cortante a cero (m11 m22 m12 v13 v23).
+        if (fRaw === 2) shellModifiers.set(e, [1, 1, 1, 0, 0, 0, 0, 0]);
         if (esNerv) {
           shellModifiers.set(e, modsNervada(p.tlosa, p.tLoseta, p.bNervio,
                                             p.sNervio, fRaw === 51));
@@ -1118,6 +1123,18 @@ export const plantillas: ExampleDef = {
         return `${d} div/vano · elemento ${(luz / d).toFixed(2)} m (tope ${p.ms} m)`;
       })(),
       "para comparar": "cambia solo la Plantilla y mira cuánto aporta la losa / los muros",
+      // Losa MEMBRANA mallada (2-oct-2026): sus nudos interiores no tienen rigidez vertical y la carga que cae en
+      // ellos no llega a la base. SAP2000 hace lo mismo (medido: 777.6 kN de reacción para 2160); ETABS la «lleva»
+      // con una rigidez residual y el nudo baja 491 840 m. Se avisa en vez de callarlo.
+      ...(() => {
+        let fz = 0, rz = 0;
+        for (const [, v] of states.nodeInputs?.val?.loads ?? []) fz += v?.[2] ?? 0;
+        for (const [, v] of states.deformOutputs?.val?.reactions ?? []) rz += v?.[2] ?? 0;
+        return Math.abs(fz) > 1e-6 && Math.abs(fz + rz) > 0.01 * Math.abs(fz)
+          ? { "⚠ carga que no llega a la base": `${(-fz).toFixed(1)} kN aplicados, ${rz.toFixed(1)} kN de reacción` +
+              (Math.round(p.formLosa ?? 1) === 2 ? " — losa membrana mallada: sus nudos interiores no tienen rigidez vertical (usa Shell-Thin, o una membrana por paño)" : "") }
+          : {};
+      })(),
     };
   },
 };
