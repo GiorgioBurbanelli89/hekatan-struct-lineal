@@ -19,6 +19,7 @@ import { montarPandeo, montarTiposDeCaso } from "../shared/panelPandeo";
 import { montarEstacionario } from "../shared/panelEstacionario";
 import { montarExplorador } from "../shared/exploradorModelo";
 import { montarNEC } from "../shared/nec/panelNEC";
+import { montarAccesoRapido } from "../shared/accesoRapido";
 import { montarCorte } from "../shared/panelCorte";
 import van, { State } from "vanjs-core";
 import * as THREE from "three";
@@ -3095,7 +3096,10 @@ if (window.innerWidth > 600) {
     try { localStorage.setItem(PANE_HID_KEY, hid ? "1" : "0"); } catch {}
   };
   paneToggle.addEventListener("click", () => setPaneHidden(!paneHidden));
-  try { if (localStorage.getItem(PANE_HID_KEY) === "1") setPaneHidden(true); } catch {}
+  // RECOGIDO DE SERIE (2-oct-2026, Jorge: «hay que dejar la ventana limpia»): lo de a diario va en el panel de
+  // ACCESO RÁPIDO (shared/accesoRapido.ts); el panel completo se abre con ⟨ o con ☰. Solo queda abierto si el usuario
+  // lo dejó abierto la última vez («0» guardado).
+  try { if (localStorage.getItem(PANE_HID_KEY) !== "0") setPaneHidden(true); } catch { setPaneHidden(true); }
   (window as any).__hekatanTogglePane = () => setPaneHidden(!paneHidden);
 
   // ── Panel IZQUIERDO (#settings del visor) también CORREDIZO (todos los menús) ──
@@ -3114,11 +3118,20 @@ if (window.innerWidth > 600) {
     const s = document.getElementById("settings");
     if (s) { s.style.transition = "transform .25s ease, opacity .25s ease"; s.style.transform = hid ? "translateX(-115%)" : ""; s.style.opacity = hid ? "0" : ""; s.style.pointerEvents = hid ? "none" : ""; }
     leftToggle.textContent = hid ? "⟩" : "⟨";
+    // el panel de acceso rápido ocupa el mismo sitio: se tapa mientras Settings está abierto
+    try { (window as any).__hekatanAccesoTapado?.(!hid); } catch {}
     try { localStorage.setItem(LSET_KEY, hid ? "1" : "0"); } catch {}
   };
   leftToggle.addEventListener("click", () => setLeftHidden(!leftHidden));
-  try { if (localStorage.getItem(LSET_KEY) === "1") setTimeout(() => setLeftHidden(true), 400); } catch {}
+  try { if (localStorage.getItem(LSET_KEY) !== "0") setTimeout(() => setLeftHidden(true), 400); } catch { setTimeout(() => setLeftHidden(true), 400); }
   (window as any).__hekatanToggleSettings = () => setLeftHidden(!leftHidden);
+  // Abrir los paneles completos desde el acceso rápido (☰ / ⚙) o desde los guiones de vídeo («todo»).
+  (window as any).__hekatanPaneles = (cual: "params" | "settings" | "todo" | "ninguno" = "todo") => {
+    if (cual === "params" || cual === "todo") setPaneHidden(false);
+    if (cual === "settings" || cual === "todo") setLeftHidden(false);
+    if (cual === "ninguno") { setPaneHidden(true); setLeftHidden(true); }
+  };
+  montarAccesoRapido();
 }
 
 // ── Botón «← Volver» al ejemplo anterior (navegación que no existía) ──

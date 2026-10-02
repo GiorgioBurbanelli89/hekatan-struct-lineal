@@ -718,7 +718,7 @@ export function getViewer({
     {
       const ley = document.createElement("div");
       ley.id = "hk-leyenda-tipos";
-      ley.style.cssText = "position:absolute;left:16px;top:110px;z-index:5;padding:5px 9px;border-radius:6px;"
+      ley.style.cssText = "position:absolute;left:70px;top:44px;z-index:5;padding:5px 9px;border-radius:6px;"
         + "background:rgba(10,14,24,.78);color:#e8ecf4;font:12px/1.5 system-ui,sans-serif;pointer-events:none;display:none";
       const fila = (c: string, t: string, punto = false) =>
         `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:10px">` +
@@ -729,7 +729,8 @@ export function getViewer({
       viewerElm.appendChild(ley);
       van.derive(() => {
         const hayBarras = (mesh.elements?.val ?? []).some((e) => e.length === 2);
-        ley.style.display = settings.colorByType.val && settings.elements.val && hayBarras ? "block" : "none";
+        // en el teléfono no cabe: se montaba en dos líneas encima de la barra de colores
+        ley.style.display = settings.colorByType.val && settings.elements.val && hayBarras && window.innerWidth > 700 ? "block" : "none";
       });
     }
 
