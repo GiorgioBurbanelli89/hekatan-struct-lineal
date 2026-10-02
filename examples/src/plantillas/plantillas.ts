@@ -289,6 +289,10 @@ const PARAMS = {
   // Los MISMOS numeros que la OAPI de CSI: 0 Thick · 1 Thin · 2 Membrana.
   // «Membrana» es la losa que NO toma flexion: solo reparte su carga a las
   // vigas, como el deck o la maciza declarada membrana en ETABS.
+  masaVertical: {
+    default: 0, label: "masa del modal", folder: "🔩 Secciones",
+    options: { "solo lateral (ETABS, por defecto)": 0, "lateral + vertical (SAP2000)": 1 },
+  },
   formLosa: {
     default: 1,
     options: {
@@ -1061,7 +1065,10 @@ export const plantillas: ExampleDef = {
     try {
       // Masa solo lateral (el `INCLUDEVERTICALMASS "No"` del mass source de
       // ETABS): sin eso los modos verticales roban cupos y ΣUx/ΣUy no llegan.
-      const out = modalAnalysis(nodes, elements, ni, ei, 12, 1);
+      // `masaVertical` (2-oct-2026): 1 = la masa también en Z, como SAP2000 (que no tiene la opción) y el
+      // `INCLUDEVERTICALMASS "Yes"` de ETABS; ahí aparecen los modos VERTICALES de la losa (8.6 % de Uz en el
+      // pórtico + losa 4 × 3, = ETABS y SAP2000) y, con una membrana mallada, los nudos sin rigidez vertical.
+      const out = modalAnalysis(nodes, elements, ni, ei, 12, Math.round((p as any).masaVertical ?? 0) === 1 ? 0 : 1);
       const NOM = ["Pórtico plano (2D)", "Pórtico 3D", "Pórtico + losa",
                    "Solo rejilla", "Losa plana", "Losa con vigas de borde",
                    "Pórtico + losa + muros (dual)", "Pórtico arriostrado (CBF)"];
@@ -1126,14 +1133,17 @@ export const plantillas: ExampleDef = {
       // Losa MEMBRANA mallada (2-oct-2026): sus nudos interiores no tienen rigidez vertical y la carga que cae en
       // ellos no llega a la base. SAP2000 hace lo mismo (medido: 777.6 kN de reacción para 2160); ETABS la «lleva»
       // con una rigidez residual y el nudo baja 491 840 m. Se avisa en vez de callarlo.
-      ...(() => {
+      // (la fila existe SIEMPRE: el panel crea sus filas con las claves de la primera evaluación, antes de calcular,
+      // y una clave que aparece después no se dibuja)
+      "carga que llega a la base": (() => {
         let fz = 0, rz = 0;
         for (const [, v] of states.nodeInputs?.val?.loads ?? []) fz += v?.[2] ?? 0;
         for (const [, v] of states.deformOutputs?.val?.reactions ?? []) rz += v?.[2] ?? 0;
-        return Math.abs(fz) > 1e-6 && Math.abs(fz + rz) > 0.01 * Math.abs(fz)
-          ? { "⚠ carga que no llega a la base": `${(-fz).toFixed(1)} kN aplicados, ${rz.toFixed(1)} kN de reacción` +
-              (Math.round(p.formLosa ?? 1) === 2 ? " — losa membrana mallada: sus nudos interiores no tienen rigidez vertical (usa Shell-Thin, o una membrana por paño)" : "") }
-          : {};
+        if (!(Math.abs(fz) > 1e-6) || !states.deformOutputs?.val?.reactions) return "—";
+        const ok = Math.abs(fz + rz) <= 0.01 * Math.abs(fz);
+        return ok ? `✓ ${rz.toFixed(1)} de ${(-fz).toFixed(1)} kN`
+          : `⚠ ${rz.toFixed(1)} de ${(-fz).toFixed(1)} kN` +
+            (Math.round(p.formLosa ?? 1) === 2 ? " — membrana mallada: sus nudos interiores no tienen rigidez vertical" : "");
       })(),
     };
   },
