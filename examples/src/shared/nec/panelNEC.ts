@@ -209,7 +209,7 @@ function ventana() {
     cuerpo.innerHTML = `
 <div style="line-height:1.5;margin-bottom:6px">
  <b>Estático</b>: Ta ${e.Ta.toFixed(3)} s → T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · k ${e.k.toFixed(3)} · W ${e.W.toFixed(1)} ${r.unidad} · <b>V ${e.V.toFixed(1)} ${r.unidad}</b> (Cs ${e.Cs.toFixed(4)})<br>
- <b>Dinámico CQC</b>: Vx ${D.X.V.toFixed(1)} ${r.unidad} = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} ${r.unidad} = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
+ <b>Dinámico ${D.X.modal}</b>: Vx ${D.X.V.toFixed(1)} ${r.unidad} = ${(D.escX.relacion * 100).toFixed(1)} % · Vy ${D.Y.V.toFixed(1)} ${r.unidad} = ${(D.escY.relacion * 100).toFixed(1)} % del estático (mínimo ${D.minimo * 100} %)
  → escala X ×${D.escX.factor.toFixed(3)}, Y ×${D.escY.factor.toFixed(3)}<br>
  <b>Derivas</b> inelásticas ≤ ${(r.limiteDeriva * 100).toFixed(1)} % (el peor de sin/±5 % de excentricidad) · <b>Torsión</b> máx/prom > 1.2 = irregular (rojo)<br>
  <b>Modos</b>: ${r.chequeoModos.join(" · ")}<br>
