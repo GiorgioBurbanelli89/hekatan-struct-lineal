@@ -78,6 +78,10 @@ function leerFila(f: HTMLElement): { tipo: "lista" | "casilla" | "numero"; valor
   return { tipo: "numero", valor: f.querySelector<HTMLInputElement>("input")?.value ?? "" };
 }
 
+const FILAS_RES = [["Resultados de barra", "Barras"], ["Resultados de cáscara", "Cáscaras"], ["Deformada", "Deformada"], ["Escala XY", "Escala"]] as const;
+/** Cuántas de las filas de resultados existen ahora (el visor las crea o filtra después de cargar el ejemplo). */
+const nFilasRes = () => FILAS_RES.filter(([e]) => filaReal(e, "settings") ?? filaReal(e)).length + (filaReal("Case", "settings") ? 1 : 0);
+
 const CSS = `
 #hk-acceso{position:fixed;left:30px;top:100px;width:272px;max-height:calc(100vh - 170px);overflow:auto;z-index:90;
  background:rgba(18,22,30,.94);border:1px solid rgba(127,150,179,.35);border-radius:8px;color:#e2e8f0;
@@ -270,7 +274,7 @@ export function montarAccesoRapido(): void {
       cuerpoParams("dim", claves.length ? "Este ejemplo no tiene dimensiones como parámetro." : "Modelo importado: la geometría es la del archivo (se edita en el CAD)."),
       claves.length ? masDe("dim") : undefined));
     el.appendChild(grupo("res", "RESULTADOS", "3", (cu) => {
-      for (const [e, r] of [["Resultados de barra", "Barras"], ["Resultados de cáscara", "Cáscaras"], ["Deformada", "Deformada"], ["Escala XY", "Escala"]] as const) {
+      for (const [e, r] of FILAS_RES) {
         const m = mandoFila(e, r); if (m) cu.appendChild(m);
       }
       const bt = document.createElement("div"); bt.className = "ar-bt";
@@ -306,7 +310,8 @@ export function montarAccesoRapido(): void {
     if (!visible || tapado) return;
     const id = String(w.__hekatanExample?.() ?? "");
     const nDefs = Object.keys(defs()).length;
-    if (id !== ejemplo || el.dataset.n !== String(nDefs)) { ejemplo = id; el.dataset.n = String(nDefs); pintar(); return; }
+    const nRes = String(nFilasRes());
+    if (id !== ejemplo || el.dataset.n !== String(nDefs) || el.dataset.r !== nRes) { ejemplo = id; el.dataset.n = String(nDefs); el.dataset.r = nRes; pintar(); return; }
     const P = params(), f = JSON.stringify(P);
     const activo = document.activeElement;
     if (f !== firma) {
