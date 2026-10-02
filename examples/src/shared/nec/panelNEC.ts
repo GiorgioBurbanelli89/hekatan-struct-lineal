@@ -41,7 +41,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   const p = _sitio ?? {
     norma: 0,                      // 0 NEC-15, 1 borrador 2023
     Z: d15.Z, Fa: d15.Fa, Fd: d15.Fd, Fs: d15.Fs, eta: d15.eta!, r: d15.r,
-    I: 1.0, R: 8, sistema: 0, irregular: -1, nModos: 12, agrietadas: 0, Cd: 5.5, limDeriva: 0.015, modal: "CQC", direccional: "independiente",
+    I: 1.0, R: 8, sistema: 0, irregular: -1, nModos: 12, agrietadas: 0, Cd: 5.5, limDeriva: 0.015, modal: "CQC", direccional: "independiente", conVertical: 0,
     P1: -1, P2: -1, P3: -1, P4: -1, P5: -1, E1: -1, E2: -1, E3: -1, E4: -1, E5: -1,
     info: "—",
   };
@@ -73,6 +73,7 @@ export function montarNEC(folder: any, estado: ModeloNEC) {
   f.addBinding(p as any, "modal", { label: "Combinación modal", options: { "CQC (ζ 5 %)": "CQC", "SRSS": "SRSS", "ABS (suma absoluta)": "ABS" } });
   f.addBinding(p as any, "direccional", { label: "Combinación direccional", options: { "independiente (NEC-15 §3.5.1)": "independiente",
     "100 % + 30 % (borrador §5.5.1.2a · NEC-11 §2.7.3)": "100-30", "SRSS (= CQC3, ETABS · NEC-11 alternativa)": "SRSS", "ABS (ETABS)": "ABS" } });
+  f.addBinding(p as any, "conVertical", { label: "Componente vertical Ev (U3 = ⅔·Sa)", options: { "no": 0, "sí: espectro × ⅔ en Z": 1 } });
   f.addBinding(p, "agrietadas", { label: "Inercias agrietadas §6.1.6", options: { "no (brutas)": 0, "sí: vigas 0.5 · col. 0.8 · muros 0.6": 1 } });
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 6 });
   f.addButton({ title: "▶ Calcular NEC" }).on("click", () => correr());
@@ -143,7 +144,7 @@ T reducido ${a.T.slice(0, 3).map((t) => t.toFixed(4)).join(" · ")} s · modal $
     try {
       const r = calcularNEC(nodes, elements, estado.nodeInputs.val, estado.elementInputs.val,
         { sitio: sitio() as any, irregular: p.irregular === -1 ? null : !!p.irregular, nModos: p.nModos, ecc: 0.05, agrietadas: !!p.agrietadas,
-          dual: !!p.sistema, modal: (p as any).modal, direccional: (p as any).direccional, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
+          dual: !!p.sistema, modal: (p as any).modal, direccional: (p as any).direccional, conVertical: !!(p as any).conVertical, forzar: Object.fromEntries((["P1", "P2", "P3", "P4", "P5", "E1", "E2", "E3", "E4", "E5"] as ClaveIrr[]).map((k) => [k, (p as any)[k]])) });
       ultimo = r;
       const e = r.estatico, dx = r.dinamico;
       p.info = `Est: T ${e.T.toFixed(3)} s · Sa ${e.Sa.toFixed(3)} g · V ${e.V.toFixed(1)} ${r.unidad} (${(e.Cs * 100).toFixed(2)} % W)
@@ -216,6 +217,7 @@ function ventana() {
  <b>Irregularidades</b> (${r.sitio.norma === "NEC-15" ? "NEC-15 Tablas 13-14" : "borrador Tablas 5.1-5.2"}; * = corregida a mano): ${r.irregularidades.lista.map((q) => `<span style="color:${q.valor ? "#f87171" : "#94a3b8"}" title="${q.detalle}">${q.clave} ${q.nombre}${q.valor ? " ✗" : " ✓"}${q.manual ? "*" : ""}</span>`).join(" · ")}
  → ${lineaIrr(r).split("→ ")[1]}<br>
  <b>Combinación</b>: modal ${D.X.modal} · direccional ${r.dirDerivas.metodo} → deriva dinámica máx X ${(Math.max(...r.dirDerivas.X) * 100).toFixed(2)} % · Y ${(Math.max(...r.dirDerivas.Y) * 100).toFixed(2)} %<br>
+${r.espVertical ? ` <b>Componente vertical</b> (U3 = ⅔·Sa, ${D.X.modal}): FZ basal ${r.espVertical.FZ.toFixed(1)} ${r.unidad} · Uz máx ${(r.espVertical.uzMax * 1000).toFixed(2)} mm sola · ${(r.espVertical.uzComb * 1000).toFixed(2)} mm con X e Y (${r.espVertical.metodo})<br>` : ""}
  <b>Sismo vertical</b> en voladizos (${r.sitio.norma === "NEC-15" ? "NEC-15 §3.4.4: F_rev = ⅔·I·η·Z·Fa·Wp" : "borrador ec. 3.9: F_rev = ⅔·Ie·2.4·Z·Fa·W_vol"}) = ${r.vertical.coef.toFixed(3)}·Wp: ${r.vertical.pisos.some((q) => q.nudos) ? r.vertical.pisos.filter((q) => q.nudos).map((q) => `P${q.k} Wp ${q.Wp.toFixed(1)} → F_rev ±${q.Frev.toFixed(1)} ${r.unidad}`).join(" · ") : "no hay voladizos (todo dentro de las columnas y muros)"} · Ev ≥ ⅔·Eh · NEC-11 §2.7.6 (sin η): ⅔·Z·I·Fa = ${r.vertical.coefNEC11.toFixed(3)}·Wp<br>
  <b>Deriva límite</b> ${(r.limiteDeriva * 100).toFixed(1)} % (${r.sitio.norma === "NEC-15" ? "ΔM = 0.75·R·ΔE" : "δ = Cd·δe/Ie, Cd " + (r.sitio.Cd ?? 5.5)})<br>
  <b>Masa participativa</b> (${r.modos.length} modos): ΣUx ${(r.sumaMasa.ux * 100).toFixed(1)} % · ΣUy ${(r.sumaMasa.uy * 100).toFixed(1)} % (≥ 90 %) · <b>Estabilidad</b> Q = P·Δ/(V·h) máx ${r.estabilidad.max.toFixed(4)} (≤ 0.10: sin P-Δ) · <b>Inercias</b> ${r.agrietadas ? "agrietadas §6.1.6 (vigas 0.5, columnas 0.8, muros 0.6)" : "brutas"}

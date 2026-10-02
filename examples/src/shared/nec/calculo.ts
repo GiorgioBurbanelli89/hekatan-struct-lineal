@@ -9,12 +9,13 @@ import { pisosDeModelo, type Piso } from "./pisos";
 import { cortanteEstatico, espectro, ampDeriva, limiteDeriva, type DatosSitio, type Estatico } from "./estatico";
 import { detectar, type ClaveIrr, type Forzar, type ResultadoIrr } from "./irregularidades";
 import { cargasEnCM, derivas, centrosDeRigidez, type DerivaPiso } from "./derivas";
-import { espectralPorPiso, escalaDinamico, combinarDir, type Espectral, type ComboModal, type ComboDir } from "./espectral";
+import { espectralPorPiso, escalaDinamico, combinarDir, combinarDir3, combinar, respuestaNudos, FACTOR_VERTICAL, type Espectral, type ComboModal, type ComboDir } from "./espectral";
 
 export type OpcionesNEC = { sitio: DatosSitio; irregular?: boolean | null; nModos: number; ecc: number; agrietadas?: boolean;
   /** sistema dual (pórtico especial con muros): NEC-15 φE = 1 */ dual?: boolean;
   /** corrección manual de cada irregularidad: −1 automático, 0 no, 1 sí */ forzar?: Partial<Record<ClaveIrr, Forzar>>;
-  /** combinación modal (CQC por defecto) y direccional (independiente = NEC-15 §3.5.1) */ modal?: ComboModal; direccional?: ComboDir };
+  /** combinación modal (CQC por defecto) y direccional (independiente = NEC-15 §3.5.1) */ modal?: ComboModal; direccional?: ComboDir;
+  /** componente VERTICAL del espectral (U3 = ⅔·Sa) en la combinación direccional */ conVertical?: boolean };
 
 /**
  * Inercias agrietadas NEC-SE-DS §6.1.6 (1-oct-2026): vigas 0.5·Ig, columnas 0.8·Ig, muros 0.6·Ig. Barra vertical
@@ -69,6 +70,8 @@ export type ResultadoNEC = {
   irregularidades: ResultadoIrr;
   /** derivas inelásticas DINÁMICAS (escaladas) con la combinación direccional elegida */
   dirDerivas: { metodo: ComboDir; X: number[]; Y: number[] };
+  /** espectral VERTICAL (U3 = ⅔·Sa): cortante basal FZ, Uz máximo solo y combinado con X e Y */
+  espVertical?: { FZ: number; uzMax: number; uzComb: number; metodo: ComboDir };
   /** sismo vertical en VOLADIZOS: NEC-15 §3.4.4 F_rev = ⅔·I·(η·Z·Fa)·Wp; borrador ec. 3.9 F_rev = ⅔·Ie·(2.4·Z·Fa)·W_vol */
   vertical: { coef: number; coefNEC11: number; pisos: { k: number; nudos: number; Wp: number; Frev: number }[] };
   sitio: DatosSitio;
@@ -146,9 +149,21 @@ export function calcularNEC(nodes: number[][], elements: number[][], nodeInputs:
     X: X.pisos.map((p, i) => amp * combinarDir(p.deriva * escX.factor, Y.pisos[i].derivaPerp * escY.factor, dirM)),
     Y: Y.pisos.map((p, i) => amp * combinarDir(p.deriva * escY.factor, X.pisos[i].derivaPerp * escX.factor, dirM)) };
   const vertical = sismoVertical(nodes, elements, pisos, masas, sitio);
+  let espVertical: ResultadoNEC["espVertical"];
+  if (o.conVertical) {
+    const md: ComboModal = o.modal ?? "CQC", f: number[] = out.frequencies ?? [], T = f.map((v) => (v > 0 ? 1 / v : 0));
+    const Gv = 9.80665, rv = red * FACTOR_VERTICAL;
+    const FZm = T.map((Tj, j) => { const A = rv * sp.Sa(Tj) * Gv, phi = out.modeShapes[j], esc = out.modeScales?.[j] ?? 1, Gam = out.participationFactors?.[j]?.[2] ?? 0;
+      let v = 0; nodes.forEach((_, n) => { v += masas[n][2] * phi[6 * n + 2] * esc * Gam * A; }); return v; });
+    const uz = respuestaNudos(nodes, out, sp.Sa, rv, 2, 2, md);
+    const ux = respuestaNudos(nodes, out, sp.Sa, red, 0, 2, md), uy = respuestaNudos(nodes, out, sp.Sa, red, 1, 2, md);
+    const dm = (o.direccional ?? "independiente") === "independiente" ? "SRSS" : (o.direccional as ComboDir);
+    espVertical = { FZ: Math.abs(combinar(FZm, T, 0.05, md)), uzMax: Math.max(...uz), metodo: dm,
+      uzComb: Math.max(...uz.map((z, i) => combinarDir3(ux[i], uy[i], z, dm))) };
+  }
   return {
     estabilidad: { X: QX, Y: QY, max: Math.max(...QX, ...QY) }, sumaMasa, agrietadas: !!o.agrietadas, unidad: unidadFuerza(elementInputsIn),
-    pisos, cr, modos, chequeoModos, estatico, derivasEst, irregularidades: irr, sitio, limiteDeriva: limiteDeriva(sitio), dirDerivas, vertical,
+    pisos, cr, modos, chequeoModos, estatico, derivasEst, irregularidades: irr, sitio, limiteDeriva: limiteDeriva(sitio), dirDerivas, vertical, espVertical,
     dinamico: { X, Y, escX, escY, minimo },
     torsional: { X: peorX > 1.2, Y: peorY > 1.2, peorX, peorY },
   };

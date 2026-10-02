@@ -18,7 +18,7 @@ export async function correr() {
   const D = leer("edif.json"), S = leer("sap_combinaciones.json");
   const m = await empaquetar(`export { pisosDeModelo } from "${R}/examples/src/shared/nec/pisos";
 export { espectro, PORTOVIEJO_D } from "${R}/examples/src/shared/nec/estatico";
-export { espectralPorPiso, respuestaNudos, combinarDir } from "${R}/examples/src/shared/nec/espectral";
+export { espectralPorPiso, respuestaNudos, combinarDir, combinarDir3, FACTOR_VERTICAL } from "${R}/examples/src/shared/nec/espectral";
 export { jointMass, modalCpp } from "${R}/hekatan-fem/src/modalCpp";\n`, "nec-combinaciones");
   await cargarFem();
   const aMap = (o) => new Map(Object.entries(o ?? {}).map(([k, v]) => [Number(k), v]));
@@ -47,6 +47,23 @@ export { jointMass, modalCpp } from "${R}/hekatan-fem/src/modalCpp";\n`, "nec-co
       const u = ux.map((a, i) => m.combinarDir(a, uy[i], metodo));
       const [pe, um] = nudos(c, comp, u);
       fila(`${c} U${comp + 1} nudo a nudo vs SAP2000 (% del máx)`, pe, 1e-3, `u máx ${(um * 1000).toFixed(3)} mm${dm === "CQC3" ? " (CQC3 = SRSS, mismo espectro)" : dm === "ABS30" ? " (100 % + 30 %)" : ""}`);
+    }
+  }
+  // componente VERTICAL: U3 con el espectro × 2/3, sola y combinada con X e Y
+  if (S.RSZ) {
+    const uz = m.respuestaNudos(D.nodes, out, Sa, red * m.FACTOR_VERTICAL, 2, 2, "CQC");
+    const [pe, um] = nudos("RSZ", 2, uz);
+    // Z: los 12 modos son laterales; su Uz es residual (sensible a la 4.ª cifra del vector propio) → 0.02 %
+    fila("RSZ (vertical, 2/3) Uz nudo a nudo vs SAP2000 (% del máx)", pe, 2e-2, `u máx ${(um * 1000).toFixed(3)} mm`);
+    for (const dm of ["SRSS", "ABS", "ABS30"]) {
+      const c = `RSXYZ_${dm}`, metodo = dm === "ABS" ? "ABS" : dm === "ABS30" ? "100-30" : "SRSS";
+      if (!S[c]) continue;
+      for (const comp of [0, 1, 2]) {
+        const r = [0, 1, 2].map((d) => m.respuestaNudos(D.nodes, out, Sa, red * (d === 2 ? m.FACTOR_VERTICAL : 1), d, comp, "CQC"));
+        const u = r[0].map((a, i) => m.combinarDir3(a, r[1][i], r[2][i], metodo));
+        const [pe2, um2] = nudos(c, comp, u);
+        fila(`${c} U${comp + 1} nudo a nudo vs SAP2000 (% del máx)`, pe2, comp === 2 ? 2e-2 : 1e-3, `u máx ${(um2 * 1000).toFixed(3)} mm`);
+      }
     }
   }
   return filas;

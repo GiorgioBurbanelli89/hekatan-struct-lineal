@@ -44,6 +44,20 @@ export function combinarDir(a: number, b: number, metodo: ComboDir): number {
   return a;
 }
 
+/** Combinación direccional de TRES componentes (X, Y y la VERTICAL Z): SRSS √(a²+b²+c²); ABS a+b+c (SAP SF = 1);
+ *  100 % + 30 % = la mayor de (1·a + 0.3·b + 0.3·c) rotando cuál va al 100 % (SAP ABS con SF = 0.3). */
+export function combinarDir3(a: number, b: number, c: number, metodo: ComboDir): number {
+  a = Math.abs(a); b = Math.abs(b); c = Math.abs(c);
+  if (metodo === "SRSS") return Math.sqrt(a * a + b * b + c * c);
+  if (metodo === "ABS") return a + b + c;
+  if (metodo === "100-30") return Math.max(a + 0.3 * (b + c), b + 0.3 * (a + c), c + 0.3 * (a + b));
+  return a;
+}
+
+/** Componente VERTICAL del sismo: el espectro horizontal × 2/3 aplicado en Z (NEC-11 §2.7.7.3, NEC-15 §3.4.2,
+ *  borrador ec. 3.8: Ev ≥ ⅔·Eh). */
+export const FACTOR_VERTICAL = 2 / 3;
+
 export type Espectral = {
   T: number[]; Vmodo: number[]; V: number;
   pisos: { k: number; V: number; deriva: number; derivaInel: number; derivaPerp: number }[];
@@ -99,7 +113,7 @@ export function espectralPorPiso(nodes: number[][], pisos: Piso[], out: any, mas
 
 /** Desplazamiento espectral de cada nudo en la componente `comp` con el sismo en `dirExc` (para comparar nudo a nudo
  *  con SAP2000, también la componente cruzada de un modo acoplado). */
-export function respuestaNudos(nodes: number[][], out: any, Sa: (T: number) => number, red: number, dirExc: 0 | 1, comp: 0 | 1 | 2,
+export function respuestaNudos(nodes: number[][], out: any, Sa: (T: number) => number, red: number, dirExc: 0 | 1 | 2, comp: 0 | 1 | 2,
   modal: ComboModal = "CQC", zeta = 0.05): number[] {
   const f: number[] = out.frequencies ?? [], T = f.map((v) => (v > 0 ? 1 / v : 0));
   return nodes.map((_, n) => combinar(T.map((Tj, j) => {
