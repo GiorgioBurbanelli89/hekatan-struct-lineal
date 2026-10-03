@@ -27,7 +27,7 @@ function enSistema(d: Def, etq: string): { etq: string; k: number } {
   const c = convertirEtiqueta(etq, { F: forceUnit.val, L: lengthStructureUnit.val, LS: lengthSectionUnit.val, S: stressUnit.val, SG: subgradeUnit.val });
   return c ? { etq: `${c.base} (${c.u})`, k: c.k } : { etq, k: 1 };
 }
-const redondo = (x: number) => (Number.isFinite(x) ? Number(x.toPrecision(10)) : x);
+const redondo = (x: number) => (Number.isFinite(x) ? Number(x.toPrecision(6)) : x);   // 6 cifras a la vista
 
 const ACENTO = "#7f96b3";
 const LS = "hk_acceso_";
@@ -350,6 +350,8 @@ export function montarAccesoRapido(): void {
     });
   }
   setInterval(refrescar, 900);
+  // al cambiar de sistema de unidades, etiquetas y valores nuevos (antes se quedaban los del sistema anterior)
+  window.addEventListener("hk:unidades", () => setTimeout(pintar, 60));
 
   // en CAPTURA y por e.code: la línea de órdenes del CAD se queda con las teclas sueltas
   window.addEventListener("keydown", (e) => {

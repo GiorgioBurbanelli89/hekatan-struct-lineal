@@ -243,6 +243,8 @@ for (const id of IDS) {
       r.enVivo[`MKS→${nom}`] = { ok, fisica: compararFisica(lect.MKS.fis, l2.fis), unidades: l2.unidades };
       const fv = []; compararPantalla(mapaPantalla(lect.MKS), mapaPantalla(l2), "MKS", `${nom}(vivo)`, fv);
       r.enVivo[`MKS→${nom}`].pantalla = fv.slice(0, 40);
+      // lo que se queda del sistema ANTERIOR tras cambiar en vivo (panel sin repintar, tarjeta abierta…)
+      const cv = []; coherencia(l2, nom, cv); r.enVivo[`MKS→${nom}`].coh = cv;
       await pag.screenshot({ path: `${OUT}/${id}_MKS_a_${nom}_envivo.png` });
     }
     await pag.close();
@@ -296,9 +298,15 @@ for (const id of IDS) {
     }
   }
   r.e3dFallos = r.e3dFallos.slice(0, 60);
+  // en vivo: textos incoherentes que NO salen al abrir directamente en ese sistema = se quedaron del anterior
+  for (const [k, v] of Object.entries(r.enVivo)) {
+    const sis = k.endsWith("IMP") ? "IMP" : "SI";
+    const base = new Set(r.coherencia.filter((x) => x.sistema === sis).map((x) => x.texto));
+    v.rancios = (v.coh ?? []).filter((x) => !base.has(x.texto)).map((x) => x.texto).slice(0, 20); delete v.coh;
+  }
   informe[id] = r;
   const nF = Math.max(...Object.values(r.fisica));
-  console.log(`${id}: física peor ${(nF * 100).toExponential(2)} % | pantalla ${r.pantalla.length} | coherencia ${r.coherencia.length} | leyenda ${r.leyendaFallos.length} | hover ${r.hoverFallos.length} | 3D ${r.e3dFallos.length} (${Object.values(r.e3d?.SI ?? {}).reduce((a, x) => a + x.length, 0)} etiquetas) | en vivo ${Object.entries(r.enVivo).map(([k, v]) => `${k}:${v.ok ? "" : "SIN-SELECT "}${(v.fisica * 100).toExponential(1)}%/${v.pantalla.length}`).join(" ")} | errores ${r.errores.length}`);
+  console.log(`${id}: física peor ${(nF * 100).toExponential(2)} % | pantalla ${r.pantalla.length} | coherencia ${r.coherencia.length} | leyenda ${r.leyendaFallos.length} | hover ${r.hoverFallos.length} | 3D ${r.e3dFallos.length} (${Object.values(r.e3d?.SI ?? {}).reduce((a, x) => a + x.length, 0)} etiquetas) | en vivo ${Object.entries(r.enVivo).map(([k, v]) => `${k}:${v.ok ? "" : "SIN-SELECT "}${(v.fisica * 100).toExponential(1)}%/${v.pantalla.length}/rancios ${v.rancios?.length}`).join(" ")} | errores ${r.errores.length}`);
   writeFileSync(`${OUT}/informe.json`, JSON.stringify(informe, null, 1));
 }
 await nav.close();

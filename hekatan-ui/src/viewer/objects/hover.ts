@@ -834,6 +834,8 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     ctx.render();
     window.dispatchEvent(new CustomEvent("hk:hover", { detail: null }));
   };
+  // la tarjeta abierta estaba escrita en el sistema anterior: se cierra y la siguiente sale en el nuevo
+  window.addEventListener("hk:unidades", () => clearHover());
   const onPointerLeave = (e: PointerEvent) => {
     const rect = ctx.rendererElm.getBoundingClientRect();
     const mx = e.clientX - rect.left;

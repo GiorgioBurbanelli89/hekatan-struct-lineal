@@ -44,7 +44,7 @@ van.derive(() => {
   avisarUnidades();
 });
 van.derive(() => {
-  localStorage.setItem("hk_dispUnit", dispUnit.val);
+  localStorage.setItem("hk_dispUnit", dispUnit.val); avisarUnidades();
   (window as any).__hekatanDispUnit = dispUnit.val;
 });
 
@@ -221,7 +221,7 @@ export const stressUnit: State<StressUnit> = van.state(
   (localStorage.getItem("hk_stressUnit") as StressUnit) || "tonf/m²"
 );
 van.derive(() => {
-  localStorage.setItem("hk_stressUnit", stressUnit.val);
+  localStorage.setItem("hk_stressUnit", stressUnit.val); avisarUnidades();
   (window as any).__hekatanStressUnit = stressUnit.val;
 });
 
@@ -241,7 +241,7 @@ export const subgradeFactors: Record<SubgradeUnit, number> = {
 export const subgradeUnit: State<SubgradeUnit> = van.state(
   (localStorage.getItem("hk_subgradeUnit") as SubgradeUnit) || "tonf/m³"
 );
-van.derive(() => { localStorage.setItem("hk_subgradeUnit", subgradeUnit.val); });
+van.derive(() => { localStorage.setItem("hk_subgradeUnit", subgradeUnit.val); avisarUnidades(); });
 export function fromKnPm3(val: number, u?: SubgradeUnit): number {
   return val * subgradeFactors[u ?? subgradeUnit.val];
 }
@@ -266,7 +266,7 @@ export const sectionLengthFactors: Record<LengthSectionUnit, number> = {
 export const lengthSectionUnit: State<LengthSectionUnit> = van.state(
   (localStorage.getItem("hk_lengthSectionUnit") as LengthSectionUnit) || "mm"
 );
-van.derive(() => { localStorage.setItem("hk_lengthSectionUnit", lengthSectionUnit.val); });
+van.derive(() => { localStorage.setItem("hk_lengthSectionUnit", lengthSectionUnit.val); avisarUnidades(); });
 
 // ── Length structure (m/ft para Lz, Bz, Hp). ──
 // Reuso DispUnit type pero conceptualmente puede ser m o ft.

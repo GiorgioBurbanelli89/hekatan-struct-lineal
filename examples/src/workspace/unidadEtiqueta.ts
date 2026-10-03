@@ -64,6 +64,9 @@ function unidadDelSistema(a: { dF: number; dL: number; grande: boolean }, s: Sis
 export function convertirEtiqueta(label: string, s: Sistema): { base: string; u: string; k: number } | null {
   const m = label.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
   if (!m) return null;
+  // «kN/nodo», «kN/m por barra»: lo que va tras la unidad física se conserva («por nudo» no es una dimensión)
+  const cola = m[2].match(/^(.*?)(\/(?:nodo|nudo|barra|pilote|columna))$/);
+  if (cola) { const c = convertirEtiqueta(`${m[1]} (${cola[1]})`, s); return c ? { ...c, u: c.u + cola[2] } : null; }
   const a = analizarUnidad(m[2]);
   if (!a) return null;
   const d = unidadDelSistema(a, s);
