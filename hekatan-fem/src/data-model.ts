@@ -222,6 +222,15 @@ export type ElementInputs = {
    * WASM; faltaba declararlo aqui.
    */
   shellModifiers?: Map<number, number[]>;
+  /**
+   * Modificadores de BARRA (seccion x objeto), en el orden de CSI:
+   *   [A, As2, As3, J, I22, I33, Masa, Peso]
+   * El motor NO los aplica: `areas`, `momentsOfInertia*`, `torsionalConstants`,
+   * `shearAreas*` y `densities` ya llevan el valor EFECTIVO (bruto x factor).
+   * Este mapa solo dice que parte es modificador, para que el e2k exportado
+   * escriba la seccion BRUTA y `PROPMODA ... PROPMODW` en el LINEASSIGN.
+   */
+  propertyModifiers?: Map<number, number[]>;
 };
 
 export type DeformOutputs = {

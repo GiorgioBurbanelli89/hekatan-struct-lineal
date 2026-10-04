@@ -59,7 +59,7 @@ export interface E2kModel {
   /** Los niveles AUXILIARES (`REFERENCEPLANE`). Se dibujan; NO cortan nada. */
   planosRef: E2kPlanoRef[];
   materials: Map<string, { type: string; E: number; G: number; nu: number; fy?: number; fc?: number; density?: number }>;
-  frameSections: Map<string, { material: string; shape: string; D: number; B: number; TF: number; TW: number; T?: number; R?: number; fillMaterial?: string; modI2?: number; modI3?: number;
+  frameSections: Map<string, { material: string; shape: string; D: number; B: number; TF: number; TW: number; T?: number; R?: number; fillMaterial?: string; modI2?: number; modI3?: number; mods?: number[];
                                /** SHAPE "General": las propiedades vienen escritas (unidades del fichero). */
                                AREA?: number; AS2?: number; AS3?: number; I33?: number; I22?: number; TORSION?: number }>;
   nodes: Node[];
@@ -138,6 +138,31 @@ export interface OpcionesE2k {
   losaUnaDireccion?: boolean;
 }
 
+/**
+ * Los tokens de modificadores del .e2k, LEIDOS de ETABS (no inventados):
+ * cadenas UTF-16 de ETABS.exe (v19) y ETABS.dll (v22), 4-oct-2026.
+ *  - FRAMESECTION: AMOD A2MOD A3MOD JMOD I2MOD I3MOD MMOD WMOD (en .$et reales,
+ *    p. ej. `FRAMESECTION "VIGA"  I3MOD 0,5`).
+ *  - LINEASSIGN (modificador del OBJETO): PROPMODA PROPMODA2 PROPMODA3 PROPMODT
+ *    PROPMODI22 PROPMODI33 PROPMODM PROPMODW.
+ *  - AREAASSIGN: PROPMODF11 PROPMODF22 PROPMODF12 PROPMODM11 PROPMODM22
+ *    PROPMODM12 PROPMODV13 PROPMODV23 PROPMODM PROPMODW.
+ * Orden de barra = el de CSI: [A, As2, As3, J, I22, I33, Masa, Peso].
+ */
+export const FRAME_SEC_MODS = ["AMOD", "A2MOD", "A3MOD", "JMOD", "I2MOD", "I3MOD", "MMOD", "WMOD"];
+export const LINE_ASSIGN_MODS = ["PROPMODA", "PROPMODA2", "PROPMODA3", "PROPMODT",
+                                 "PROPMODI22", "PROPMODI33", "PROPMODM", "PROPMODW"];
+export const AREA_ASSIGN_MODS = ["PROPMODF11", "PROPMODF22", "PROPMODF12", "PROPMODM11", "PROPMODM22",
+                                 "PROPMODM12", "PROPMODV13", "PROPMODV23", "PROPMODM", "PROPMODW"];
+/** Lee los tokens `k valor` de una linea; undefined si no hay ninguno. Acepta coma decimal. */
+function leerMods(line: string, tokens: string[]): (number | undefined)[] | undefined {
+  const v = tokens.map(k => {
+    const m = line.match(new RegExp(`(?:^|\\s)${k}\\s+([-\\d.,eE+]+)`));
+    return m ? parseFloat(m[1].replace(",", ".")) : undefined;
+  });
+  return v.some(x => x !== undefined) ? v : undefined;
+}
+
 export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const lines = text.split(/\r?\n/);
 
@@ -178,7 +203,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // MOD_001 perdía 23 de sus 36 losas nervadas (−474 kN de peso, 22-sep-2026).
   const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string;
     diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean; ang?: number;
-    addRestraint?: boolean }>>();
+    addRestraint?: boolean; mods?: number[] }>>();
   // ORIFICIOS: `AREAASSIGN "A1" "N1" OPENING "Yes"` no lleva SECTION, así que la regex de arriba no
   // lo leía y el área contaba como «sin AREAASSIGN»: el hueco de la escalera se perdía y la losa
   // quedaba ENTERA (con su carga y su masa). Ahora se guardan por planta y recortan la losa.
@@ -188,6 +213,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const pointDiaph = new Map<string, string>();
   const analisis: AnalisisE2k = { patrones: [], sismos: [], espectros: new Map(), casosRS: [], orificios: { leidos: 0, recortes: 0, areaPorSeccion: {} } };
   const fuentesMasa = new Map<string, { elementos: boolean; cargas: boolean; lateral: boolean; lump: boolean; defecto: boolean; patrones: Array<[string, number]> }>();
+  // Modificadores de barra asignados al OBJETO (LINEASSIGN PROPMOD*), por elemento.
+  const modsObjeto = new Map<number, number[]>();
+  const propertyModifiers = new Map<number, number[]>();
+  let avisoMasaPeso = 0;
   /** SHELLPROP: espesor (m), material, tipo de cascara y los 8 modificadores. */
   const shellProps = new Map<string, {
     t: number; material: string; modeling: string; mods?: number[];
@@ -218,7 +247,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     D: number; B: number; TF: number; TW: number; XC: number; YC: number;
   }>>();
   const restraints = new Map<string, string[]>(); // pointName+story → restrained DOFs
-  const lineAssigns = new Map<string, { story: string; section: string; rigidZone: number; releases: string[]; angle: number; spring?: string; mallaEnCruces?: boolean; offsets?: [number, number]; luzLibre?: boolean }>(); // lineName+story → assignment
+  const lineAssigns = new Map<string, { story: string; section: string; rigidZone: number; releases: string[]; angle: number; spring?: string; mallaEnCruces?: boolean; offsets?: [number, number]; luzLibre?: boolean; mods?: number[] }>(); // lineName+story → assignment
   /**
    * Los MUELLES. ETABS los declara como propiedades con nombre y luego los
    * asigna con `SPRINGPROP "..."`. Sin ellos, una cimentación sobre Winkler no
@@ -407,6 +436,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (i2M) sec.modI2 = parseFloat(i2M[1]);
         const i3M = line.match(/I3MOD\s+([\d.eE+-]+)/);
         if (i3M) sec.modI3 = parseFloat(i3M[1]);
+        // Los OCHO modificadores de la seccion, con los tokens que lee ETABS
+        // (ETABS.dll, 4-oct-2026): AMOD A2MOD A3MOD JMOD I2MOD I3MOD MMOD WMOD.
+        // ETABS escribe una segunda linea FRAMESECTION solo con los que no valen 1.
+        const fm = leerMods(line, FRAME_SEC_MODS);
+        if (fm) sec.mods = fm.map((v, k) => v ?? sec.mods?.[k] ?? 1);
         // SHAPE "General" (lo que escribe Hekatan y lo que ETABS escribe para
         // Section Designer/CFT): A, As2, As3, I33, I22 y J vienen EN EL FICHERO.
         // Hasta el 2-sep-2026 se ignoraban y la seccion se rehacia como un
@@ -536,6 +570,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         entry.mallaEnCruces = /MESHATINTERSECTIONS\s+"?YES/i.test(line);
         // SELFWEIGHTOPTION "Clear Length": la barra pesa su luz LIBRE (sin los brazos), sea viga o columna
         entry.luzLibre = /SELFWEIGHTOPTION\s+"Clear Length"/i.test(line);
+        // Modificadores asignados al OBJETO (Assign > Frame > Property Modifiers).
+        // Tokens de ETABS (ETABS.exe v19 y ETABS.dll v22): PROPMODA ... PROPMODW.
+        const lm = leerMods(line, LINE_ASSIGN_MODS);
+        if (lm) entry.mods = lm.map(v => v ?? 1);
         lineAssigns.set(`${lam[1]}@${lam[2]}`, entry);
       }
     }
@@ -748,7 +786,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         mallaEnVigas: /MESHAT\s+"BEAMS"/i.test(line),
         ang: (() => { const q = line.match(/\bANG\s+([-\d.eE+]+)/); return q ? parseFloat(q[1]) : undefined; })(),
         // ADDRESTRAINT "Yes": al mallar, ETABS restringe los nudos nuevos del borde que tocan un apoyo.
-        addRestraint: /ADDRESTRAINT\s+"Yes"/i.test(line) || undefined });
+        addRestraint: /ADDRESTRAINT\s+"Yes"/i.test(line) || undefined,
+        mods: leerMods(line, AREA_ASSIGN_MODS)?.map(v => v ?? 1) });
       const ao = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+.*\bOPENING\s+"Yes"/i);
       if (ao && !aa) { (orificiosAsig.get(ao[1]) ?? orificiosAsig.set(ao[1], []).get(ao[1])!).push(ao[2]); analisis.orificios.leidos++; }
     }
@@ -1068,6 +1107,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         elementSections.set(elemIdx, la.section);
         if (la.spring) springAssigns.set(elemIdx, la.spring);
         if (la.mallaEnCruces) mallaEnCruces.set(elemIdx, true);
+        if (la.mods && la.mods.some(v => Math.abs(v - 1) > 1e-12)) modsObjeto.set(elemIdx, la.mods);
         // `RIGIDZONE f` es el FACTOR de zona rigida, no una fraccion de la luz: no va a `rigidOffsets`
         // (el exportador lo escribia como 1 m de brazo flexible, LENGTHOFFI 1000 RIGIDZONE 0), 16-oct-2026.
         if (la.rigidZone > 0) zonaRigida.set(elemIdx, la.rigidZone);
@@ -1318,9 +1358,16 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         break;
     }
 
-    // Apply modifiers
-    if (sec.modI2) Iy *= sec.modI2;
-    if (sec.modI3) Iz *= sec.modI3;
+    // Modificadores: los de la SECCION por los del OBJETO (CSI los multiplica).
+    // Struct no tiene modificadores en el motor: se hornean en A, As, J, I y la
+    // densidad; el factor TOTAL (seccion x objeto) se guarda en `propertyModifiers`
+    // para que el e2k re-exportado escriba la seccion bruta + PROPMOD* en el
+    // LINEASSIGN (ida y vuelta, tambien con formas parametricas que ETABS recalcula).
+    const fSec = sec.mods ?? [1, 1, 1, 1, sec.modI2 ?? 1, sec.modI3 ?? 1, 1, 1];
+    const fObj = modsObjeto.get(elemIdx);
+    const f = fSec.map((v, k) => v * (fObj?.[k] ?? 1));
+    A *= f[0]; AsZ *= f[1]; AsY *= f[2]; J *= f[3]; Iy *= f[4]; Iz *= f[5];
+    if (f.some(v => Math.abs(v - 1) > 1e-12)) propertyModifiers.set(elemIdx, f);
 
     areas.set(elemIdx, A);
     momentsOfInertiaZ.set(elemIdx, Iz);
@@ -1441,8 +1488,17 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     const sec = frameSections.get(secName);
     if (!sec) continue;
     const mat = materials.get(sec.material);
-    if (mat?.density) densities.set(elemIdx, mat.density);
+    if (mat?.density) {
+      // Masa y peso: Struct tiene UNA densidad (masa y peso propio). Si los
+      // factores difieren se toma el de MASA (manda en el modal) y se avisa.
+      // El modificador de AREA no toca masa ni peso en CSI (solo rigidez axial),
+      // pero Struct calcula masa = rho·A·L con la A ya modificada: se compensa.
+      const f = propertyModifiers.get(elemIdx) ?? [1, 1, 1, 1, 1, 1, 1, 1];
+      if (Math.abs(f[6] - f[7]) > 1e-9) avisoMasaPeso++;
+      densities.set(elemIdx, mat.density * f[6] / (f[0] > 0 ? f[0] : 1));
+    }
   }
+  if (avisoMasaPeso) console.warn(`[e2k] ${avisoMasaPeso} barras con modificador de masa distinto del de peso: se usa el de masa`);
 
   // ── ELEMENTOS DE AREA ────────────────────────────────────────────────
   // Se montan al final, DESPUES de las barras, para no tocar la numeracion
@@ -1640,7 +1696,14 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       const m = sp.mods ? sp.mods.slice(0, 8) : [1, 1, 1, 1, 1, 1, 1, 1];
       if (ret) for (let k = 0; k < 8; k++) m[k] *= ret[k];
       if (esMembrana) { m[3] = 0; m[4] = 0; m[5] = 0; m[6] = 0; m[7] = 0; }
-      if (sp.mods || esMembrana || ret) shellModifiers.set(ei, m);
+      // Modificadores del OBJETO (AREAASSIGN PROPMODF11 ... PROPMODW): multiplican a
+      // los de la propiedad, como en CSI. Masa → densidad (Struct tiene una sola).
+      const om = aa.mods;
+      if (om) {
+        for (let k = 0; k < 8; k++) m[k] *= om[k];
+        if (om[8] !== 1 && densities.has(ei)) densities.set(ei, densities.get(ei)! * om[8]);
+      }
+      if (sp.mods || esMembrana || ret || om) shellModifiers.set(ei, m);
     }
     if (sp) {
       sectionInfo.set(ei, { name: aa.section, shape: sp.modeling, t: sp.t > 0 ? sp.t : undefined, material: sp.material });
@@ -2056,6 +2119,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       shellModifiers,
       frameFixedEnd,
       sectionInfo,
+      propertyModifiers,
       springNames: springAssigns,
       mallaEnCruces,
       // Solo si el fichero trae patrones: lo lee e2kExporter para escribirlas por patron.

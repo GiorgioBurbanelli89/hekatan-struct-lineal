@@ -30,12 +30,16 @@ export interface ExportE2kInput {
    */
   weightMode?: "auto" | "manual";
   /**
-   * Property modifiers por elemento (multipliers ETABS-style sobre A, I, etc).
-   * Si no se provee, hekatan asume que los valores en `elementInputs.areas/Iy/Iz`
-   * ya incluyen los modifiers baked-in y se emite `PROPMODIFIERS` = 1.0 (no-op).
-   * Formato: 8 valores [A, As2, As3, Torsion, I22, I33, Mass, Weight].
+   * Modificadores de barra del OBJETO, orden CSI [A, As2, As3, J, I22, I33, Masa, Peso].
+   * Los valores de `elementInputs` son los EFECTIVOS (los que usa el motor de
+   * Struct), asi que la seccion se escribe BRUTA (efectivo / factor) y el factor
+   * va en el LINEASSIGN con los tokens que lee ETABS (ETABS.exe v19 / ETABS.dll
+   * v22): PROPMODA PROPMODA2 PROPMODA3 PROPMODT PROPMODI22 PROPMODI33 PROPMODM
+   * PROPMODW. Hasta el 4-oct-2026 salia `PROPMODIFIERS "..."`, que ETABS no
+   * conoce. Si no se da, se toma `elementInputs.propertyModifiers` (lo que deja
+   * `parseE2k`); sin ninguno, la seccion es la efectiva y no sale ningun token.
    */
-  propertyModifiers?: Map<number, [number, number, number, number, number, number, number, number]>;
+  propertyModifiers?: Map<number, number[]>;
   /**
    * Sísmico NEC opcional: si se provee, el e2k exportado trae el espectro NEC
    * como función USER-defined (portable a cualquier ETABS/SAP) + un caso
@@ -169,6 +173,11 @@ export function modalCaseE2k(opt: { name?: string; ritz?: boolean; nModes?: numb
   ];
 }
 
+/** Tokens de modificador de barra en el LINEASSIGN, orden CSI [A, As2, As3, J, I22, I33, Masa, Peso].
+ *  Leidos de ETABS.exe (v19) y ETABS.dll (v22); no existe `PROPMODIFIERS`. */
+export const PROPMOD_TOKENS = ["PROPMODA", "PROPMODA2", "PROPMODA3", "PROPMODT",
+                               "PROPMODI22", "PROPMODI33", "PROPMODM", "PROPMODW"];
+
 export function exportE2k(input: ExportE2kInput): string {
   const raw = input.e2kModel?.rawSections;
   // Raw round-trip (preserva ETABS) o reconstrucción sintética.
@@ -295,6 +304,12 @@ function exportFromRaw(raw: Map<string, string[]>, model: E2kModel): string {
  */
 function exportFromScratch(input: ExportE2kInput): string {
   const { nodes, elements, nodeInputs, elementInputs, title, units } = input;
+  /** Los 8 modificadores del objeto `i`, o undefined si no tiene (o todos valen 1). */
+  const modsBarra = (i: number): number[] | undefined => {
+    const m = input.propertyModifiers?.get(i) ??
+              ((elementInputs as any).propertyModifiers as Map<number, number[]> | undefined)?.get(i);
+    return m && m.some(v => Math.abs(v - 1) > 1e-9) ? m : undefined;
+  };
   // Si el llamador no los pasa aparte, salen de elementInputs — que es donde
   // los deja el modelador, igual que los modificadores de shell.
   const shellLoadsRaw = input.shellLoads
@@ -625,7 +640,20 @@ function exportFromScratch(input: ExportE2kInput): string {
   // ETABS pesaba las columnas como acero y la carga muerta salia -0.99 %
   // (medido 2-sep-2026, modo auto). La clave es `${E}|${w kN/m3}`.
   const G_KN_PER_KG = 9.80665e-3;  // kg/m3 -> kN/m3
+  // Factor de MASA del objeto: la densidad del modelo es la efectiva, el
+  // material de ETABS lleva la bruta (y el PROPMODM del LINEASSIGN la escala).
+  // Y como CSI no aplica el de AREA a la masa pero Struct si (rho·A·L), la
+  // densidad efectiva lleva rho·fM/fA: se deshace igual.
+  const fMasa = (elemIdx: number) => {
+    const f = modsBarra(elemIdx); if (!f) return 1;
+    const fm = f[6] > 0 ? f[6] : 1, fa = f[0] > 0 ? f[0] : 1;
+    return fm / fa;
+  };
   const wpvDe = (elemIdx: number): number | undefined => {
+    const w = wpvEfectivo(elemIdx);
+    return w === undefined ? undefined : w / fMasa(elemIdx);
+  };
+  const wpvEfectivo = (elemIdx: number): number | undefined => {
     // CFT: la densidad del elemento es la EQUIVALENTE (ρs·As + ρc·Ac)/A_tr; el MATERIAL de la
     // "Filled Steel Tube" es el ACERO y el relleno va aparte (ConcFill). Con la equivalente el
     // acero salía a 12.5 t/m³ y ETABS contaba el hormigón dos veces (14-sep-2026).
@@ -766,12 +794,15 @@ function exportFromScratch(input: ExportE2kInput): string {
     const matName = matNames.get(matKeyDe(i)) || "Conc_1";
     const isSteel = matIsSteel.get(matKeyDe(i)) ?? (E_kNm2 >= 1e8);
 
-    const A      = elementInputs.areas?.get(i) ?? 0;
+    // Seccion BRUTA = efectiva / modificador del objeto (ver `propertyModifiers`).
+    const fo = modsBarra(i) ?? [1, 1, 1, 1, 1, 1, 1, 1];
+    const bruto = (v: number, k: number) => (fo[k] > 0 ? v / fo[k] : v);
+    const A      = bruto(elementInputs.areas?.get(i) ?? 0, 0);
     // Ejes locales en convencion CSI: momentsOfInertiaZ ES I33 y la Y es I22.
     // Antes iban cruzados porque la triada de Hekatan tambien lo estaba.
-    const I33    = elementInputs.momentsOfInertiaZ?.get(i) ?? 0;
-    const I22    = elementInputs.momentsOfInertiaY?.get(i) ?? 0;
-    const J      = elementInputs.torsionalConstants?.get(i) ?? 0;
+    const I33    = bruto(elementInputs.momentsOfInertiaZ?.get(i) ?? 0, 5);
+    const I22    = bruto(elementInputs.momentsOfInertiaY?.get(i) ?? 0, 4);
+    const J      = bruto(elementInputs.torsionalConstants?.get(i) ?? 0, 3);
 
     // "general" no es una forma geometrica sino "sin forma, con propiedades":
     // por eso se ensancha el tipo mas alla de las de SectionShape.
@@ -954,8 +985,8 @@ function exportFromScratch(input: ExportE2kInput): string {
       // As2 resiste V2 (plano 1-2, el de I33) -> shearAreasZ
       // As3 resiste V3 (plano 1-3, el de I22) -> shearAreasY
       // Estaban CRUZADAS: en un perfil I, As2 (el alma) es varias veces As3.
-      const as2 = elementInputs.shearAreasZ?.get(i) || A * 5 / 6;
-      const as3 = elementInputs.shearAreasY?.get(i) || A * 5 / 6;
+      const as2 = bruto(elementInputs.shearAreasZ?.get(i) ?? 0, 1) || A * 5 / 6;
+      const as3 = bruto(elementInputs.shearAreasY?.get(i) ?? 0, 2) || A * 5 / 6;
       line += `  D ${rd(cL(h))} B ${rd(cL(b))} AREA ${rp(A*1e6)} AS2 ${rp(as2*1e6)} AS3 ${rp(as3*1e6)}`
             // inercias: m4 -> mm4 (1e12)
             + ` I33 ${rp(I33*1e12)} I22 ${rp(I22*1e12)} TORSION ${rp((J || I33 + I22)*1e12)}`
@@ -1037,16 +1068,19 @@ function exportFromScratch(input: ExportE2kInput): string {
   };
 
   // ── Helper: construir cláusulas extras de LINEASSIGN ────────────────
-  // Genera PROPMODIFIERS, RELEASE, CARDINALPT, LENGTHOFFI/J según lo que
+  // Genera PROPMODA..PROPMODW (modificadores del objeto), RELEASE, CARDINALPT, LENGTHOFFI/J según lo que
   // hekatan tenga en elementInputs[i]. Si no hay nada, devuelve "" y
   // la línea queda con sólo SECTION + MINNUMSTA + AUTOMESH.
   const buildLineExtras = (i: number): string => {
     const parts: string[] = [];
 
-    // Property Modifiers (ETABS: 8 multipliers [A, As2, As3, J, I22, I33, Mass, Weight])
-    const mods = input.propertyModifiers?.get(i);
-    if (mods && mods.some((m: number) => Math.abs(m - 1) > 1e-9)) {
-      parts.push(`PROPMODIFIERS "${mods.map((m: number) => rd(m)).join(" ")}"`);
+    // Modificadores del OBJETO: un token por factor que no vale 1, como ETABS
+    // omite los unos en FRAMESECTION. Tokens leidos de ETABS (ver la interfaz).
+    const mods = modsBarra(i);
+    if (mods) {
+      mods.forEach((m, k) => {
+        if (Math.abs(m - 1) > 1e-9) parts.push(`${PROPMOD_TOKENS[k]} ${rd(m)}`);
+      });
     }
 
     // ANGULO LOCAL (el "local axis angle" de CSI). Sin esto, un e2k exportado
