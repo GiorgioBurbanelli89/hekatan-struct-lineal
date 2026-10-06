@@ -778,6 +778,9 @@ function loadExample(ex: ExampleDef) {
   _navegandoAtras = false;
   try { (window as any).__hekatanActualizarBotonVolver?.(exampleHistory.length > 0); } catch {}
   currentExample = ex;
+  // aviso de cambio de ejemplo: lo que un ejemplo deja montado fuera del visor (p. ej. el panel de verificación de la
+  // placa base de Pro) se quita al salir de él
+  try { (window as any).__hekatanExampleId = ex.id; window.dispatchEvent(new CustomEvent("hk:example", { detail: { id: ex.id } })); } catch {}
   // La barra de dibujo se pliega o se abre segun QUE se acaba de cargar. Va
   // aqui y no en el montaje porque el selector cambia de ejemplo sin tocar la
   // URL: decidirlo una sola vez al arrancar dejaba la barra abierta para
@@ -1044,6 +1047,8 @@ function loadExample(ex: ExampleDef) {
       if (s?.supports) s.supports.val = true;
     }
   }
+  // campos que el recuadro del cursor enseña siempre en este ejemplo (los lee viewer/objects/hover.ts)
+  (window as any).__hekatanHoverExtra = ex.hoverFields ?? [];
   if (ex.defaultShellResult || ex.defaultFrameResult) {
     const s = (viewerElm as any).__settings;
     if (s?.shellResults) s.shellResults.val = ex.defaultShellResult ?? "none";

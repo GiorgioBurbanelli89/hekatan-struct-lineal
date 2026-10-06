@@ -256,6 +256,12 @@ export interface ExampleDef {
   viewFrom?: [number, number, number];
   defaultShellResult?: string;
   /**
+   * Campos de cáscara que el recuadro del cursor enseña SIEMPRE, además del elegido en «Resultados de cáscara»
+   * (p. ej. ["pressure", "displacementZ", "vonMises"] en una placa base: presión de contacto, Uz y Von Mises en
+   * el punto). Sin esto, solo el elegido (o todos con la casilla «todos los esfuerzos»).
+   */
+  hoverFields?: string[];
+  /**
    * Resultado de BARRA por defecto (e.g. "normal", "shearY", "bendingZ").
    *
    * Hace falta para los ejemplos que no tienen ni una cascara: sin esto el

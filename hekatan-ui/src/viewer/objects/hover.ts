@@ -536,6 +536,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         // que pido»); el resto con la casilla «todos los esfuerzos» de 🖱 Al pasar el cursor.
         const campo = ctx.settings?.shellResults?.val ?? "none";
         const verTodos = hoverPrefs.todos.val || campo === "none";
+        // y los que el EJEMPLO pide ver siempre (ExampleDef.hoverFields: p. ej. presión, Uz y Von Mises en una placa base)
+        const extra = new Set<string>(((globalThis as any).__hekatanHoverExtra as string[] | undefined) ?? []);
+        const pedido = (key: string) => verTodos || key === campo || extra.has(key);
         const mohr = (a: number | null, b: number | null, c: number | null, sg: number) => (a == null || b == null || c == null) ? null : (a + b) / 2 + sg * Math.hypot((a - b) / 2, c);
         const derivados: Record<string, [string, () => number | null, number, string]> = {
           membranePrincipalMax: ["FMax", () => mohr(enPunto("membraneXX"), enPunto("membraneYY"), enPunto("membraneXY"), 1), fFL, U.uFL],
@@ -552,15 +555,15 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         };
         const dCampos: Record<string, [string, number]> = { displacementX: ["Ux", 0], displacementY: ["Uy", 1], displacementZ: ["Uz", 2] };
         for (const [key, label, fct, unit] of fields) {
-          if (!verTodos && key !== campo) continue;
+          if (!pedido(key)) continue;
           const x = enPunto(key); if (x != null) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
         }
         for (const [key, [label, f, fct, unit]] of Object.entries(derivados)) {
-          if (!verTodos && key !== campo) continue;
+          if (!pedido(key)) continue;
           const x = f(); if (x != null) lines.push(`${label} = ${fmt(x * fct, 3)} ${unit}`);
         }
         for (const [key, [label, c]] of Object.entries(dCampos)) {
-          if (!verTodos && key !== campo) continue;
+          if (!pedido(key)) continue;
           const x = desp(c); if (x != null) lines.push(`${label} = ${fmt(x * dF, 3)} ${units.dispUnit}`);
         }
         const modoTxt = modoP === "todos" ? "promediado" : modoP === "objeto" ? "promediado por plano" : "sin promediar";

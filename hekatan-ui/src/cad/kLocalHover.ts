@@ -149,12 +149,24 @@ function pintar(idx: number, x: number, y: number): void {
 /** Coloca la tarjeta al lado del cursor, siempre ENTERA dentro de la ventana. */
 function colocar(x: number, y: number): void {
   if (!tarjeta) return;
+  tarjeta.style.maxWidth = ""; tarjeta.style.maxHeight = ""; tarjeta.style.overflow = "";
   const r = tarjeta.getBoundingClientRect();
   let px = x + 18, py = y + 18;
   if (px + r.width > window.innerWidth - 8) px = Math.max(8, x - r.width - 18);
   if (px + r.width > window.innerWidth - 8) px = Math.max(8, window.innerWidth - r.width - 8);
   if (py + r.height > window.innerHeight - 8) py = Math.max(8, y - r.height - 18);
   if (py + r.height > window.innerHeight - 8) py = Math.max(8, window.innerHeight - r.height - 8);
+  // NUNCA encima del cursor: si no cabe al lado, se estrecha al hueco que queda (con su barra de desplazamiento).
+  // Tapándolo, la tarjeta se quedaba con los eventos del ratón y el recuadro de resultados se congelaba (6-oct-2026).
+  if (x >= px && x <= px + r.width && y >= py && y <= py + r.height) {
+    const izq = x > window.innerWidth / 2;
+    const hueco = Math.max(160, (izq ? x : window.innerWidth - x) - 26);
+    tarjeta.style.maxWidth = hueco + "px";
+    tarjeta.style.overflow = "auto";
+    tarjeta.style.maxHeight = (window.innerHeight - 16) + "px";
+    const w = Math.min(r.width, hueco);
+    px = izq ? Math.max(8, x - w - 18) : x + 18;
+  }
   tarjeta.style.left = px + "px";
   tarjeta.style.top = py + "px";
 }

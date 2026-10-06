@@ -7,12 +7,17 @@
  */
 import van, { State } from "vanjs-core";
 
-const CLAVE = "hk_hover_prefs_v1";
-const leer = (): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(CLAVE) ?? "{}"); } catch { return {}; } };
-const ini = leer();
-const st = (k: string) => van.state<boolean>(ini[k] ?? true);
+// v2 (6-oct-2026): la tarjeta «Matriz de rigidez local» de los PAÑOS pasa a estar APAGADA por defecto. Es más alta que
+// la ventana (dos matrices de 12×12): al pasar por una placa se abría ENCIMA del cursor, se quedaba con los eventos del
+// ratón y el recuadro de resultados se congelaba en el primer paño («no funciona el hover en la placa», Jorge, 5-oct).
+// Se enciende en Settings › 🖱 Al pasar el cursor › «matriz K de áreas». Lo demás se hereda de v1.
+const CLAVE = "hk_hover_prefs_v2";
+const leer = (k: string): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(k) ?? "{}"); } catch { return {}; } };
+const v2 = leer(CLAVE), v1 = leer("hk_hover_prefs_v1");
+const ini: Record<string, boolean> = Object.keys(v2).length ? v2 : { ...v1, kAreas: false };
+const st = (k: string, d = true) => van.state<boolean>(ini[k] ?? d);
 export const hoverPrefs: Record<"nudos" | "barras" | "areas" | "kBarras" | "kAreas" | "todos", State<boolean>> = {
-  nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras"), kAreas: st("kAreas"),
+  nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras"), kAreas: st("kAreas", false),
   // false = el recuadro de una cáscara enseña SOLO el resultado elegido en «Resultados de cáscara»
   todos: van.state<boolean>(ini["todos"] ?? false),
 };
