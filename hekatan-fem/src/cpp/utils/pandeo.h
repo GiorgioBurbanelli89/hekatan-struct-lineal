@@ -26,6 +26,10 @@
 #include <algorithm>
 #include <iostream>
 
+// getLocalStiffnessMatrix.cpp: ejes del triángulo y constitutiva de membrana con modificadores (las mismas de la K)
+Eigen::Matrix3d ejesTriangulo(const Node &n0, const Node &n1, const Node &n2);
+Eigen::Matrix3d membranaConModificadores(const ElementInputs &ei, int index, double E, double nu);
+
 namespace pandeo {
 
 // 4×4 de un plano, GDL [v1, θ1, v2, θ2], P > 0 tracción. c = EI/(G·As) (0 = Bernoulli).
@@ -177,7 +181,52 @@ inline Eigen::SparseMatrix<double> gCascaras(const std::vector<Node> &nodes, con
     std::vector<Eigen::Triplet<double>> tt;
     size_t off = 0; int tri = 0;
     for (size_t e = 0; e < sizes.size(); off += sizes[e], ++e) {
-        if (sizes[e] == 3 && valor(ei.thicknesses, (int)e, 0.0) > 0) { tri++; continue; }
+        if (sizes[e] == 3 && valor(ei.thicknesses, (int)e, 0.0) > 0) {
+            // TRIÁNGULO (6-oct-2026, medido contra SAP2000: validation/pandeo_cascara, placa/muro/losa partidas en
+            // triángulos): N lineales, ∇N constante → Kg = A·∇Nᵀ·[Nxx Nxy; Nxy Nyy]·∇N en u, v, w, con N = t·D·ε.
+            const double t = valor(ei.thicknesses, (int)e, 0.0), E = valor(ei.elasticities, (int)e, 0.0);
+            const double nu = valor(ei.poissonsRatios, (int)e, 0.2);
+            if (E <= 0) continue;
+            int n3[3]; for (int k = 0; k < 3; ++k) n3[k] = idx[off + k];
+            const Eigen::Matrix3d R = ejesTriangulo(nodes[n3[0]], nodes[n3[1]], nodes[n3[2]]);
+            if (R.norm() == 0) continue;
+            double x[3], y[3], ul[3], vl[3], th[3];
+            for (int k = 0; k < 3; ++k) {
+                const Eigen::Vector3d d(nodes[n3[k]][0] - nodes[n3[0]][0], nodes[n3[k]][1] - nodes[n3[0]][1], nodes[n3[k]][2] - nodes[n3[0]][2]);
+                const Eigen::Vector3d l = R * d; x[k] = l(0); y[k] = l(1);
+                const Eigen::Vector3d uu = R * Eigen::Vector3d(u[6 * n3[k]], u[6 * n3[k] + 1], u[6 * n3[k] + 2]);
+                const Eigen::Vector3d tg = R * Eigen::Vector3d(u[6 * n3[k] + 3], u[6 * n3[k] + 4], u[6 * n3[k] + 5]);
+                ul[k] = uu(0); vl[k] = uu(1); th[k] = tg(2);
+            }
+            const double A2 = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]);
+            const double b[3] = {(y[1] - y[2]) / A2, (y[2] - y[0]) / A2, (y[0] - y[1]) / A2};
+            const double cc[3] = {(x[2] - x[1]) / A2, (x[0] - x[2]) / A2, (x[1] - x[0]) / A2};
+            Eigen::Vector3d eps(0, 0, 0);
+            for (int k = 0; k < 3; ++k) { eps(0) += b[k] * ul[k]; eps(1) += cc[k] * vl[k]; eps(2) += cc[k] * ul[k] + b[k] * vl[k]; }
+            // La tensión es la de la membrana de Allman (proyectada) evaluada en UN punto: L = (1/4, 1/4, 1/2), el centro
+            // (r = s = 0) del Q4 DEGENERADO [n1 n2 n3 n3] del ITW 1991. Medido (muro de triángulos, vertical y tumbado, con
+            // el estático de SAP): 0.00000 % en 6 modos; con la media (el centroide) −0.12 %, en los vértices ±0.4…6 %.
+            // Las columnas θ proyectadas valen (∂ en L) − (∂ en el centroide).
+            {
+                static const int LI[3] = {0, 1, 2}, LJ[3] = {1, 2, 0};
+                const double Lp[3] = {0.25, 0.25, 0.5}, Lc[3] = {1.0 / 3, 1.0 / 3, 1.0 / 3};
+                for (int s = 0; s < 3; ++s) {
+                    const int i = LI[s], j = LJ[s];
+                    const double cx = (y[j] - y[i]) / 8.0, cy = -(x[j] - x[i]) / 8.0;
+                    const double dx = 4.0 * (b[i] * (Lp[j] - Lc[j]) + b[j] * (Lp[i] - Lc[i]));
+                    const double dy = 4.0 * (cc[i] * (Lp[j] - Lc[j]) + cc[j] * (Lp[i] - Lc[i]));
+                    const double dth = th[j] - th[i];
+                    eps(0) += dx * cx * dth; eps(1) += dy * cy * dth; eps(2) += (dy * cx + dx * cy) * dth;
+                }
+            }
+            const Eigen::Vector3d N = t * membranaConModificadores(ei, (int)e, E, nu) * eps;
+            const double A = std::abs(A2) / 2;
+            for (int i = 0; i < 3; ++i) for (int j = 0; j < 3; ++j) {
+                const double g = A * (b[i] * (N(0) * b[j] + N(2) * cc[j]) + cc[i] * (N(2) * b[j] + N(1) * cc[j]));
+                if (g != 0.0) for (int k = 0; k < 3; ++k) tt.emplace_back(6 * n3[i] + k, 6 * n3[j] + k, g);
+            }
+            continue;
+        }
         if (sizes[e] != 4) continue;
         const double t = valor(ei.thicknesses, (int)e, 0.0), E = valor(ei.elasticities, (int)e, 0.0);
         const double nu = valor(ei.poissonsRatios, (int)e, 0.2);

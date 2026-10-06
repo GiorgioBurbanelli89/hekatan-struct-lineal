@@ -1222,7 +1222,16 @@ solo flexión θ salía hasta 22 % de SAP2000: no volver a probarla.
   `bucklingAnalysis(..., deformaciones)`. Juez `validation/pandeo_cascara/sap_pandeo_cascara.py` → `node tests/run.mjs
   pandeo-cascara` (26 filas: λ de todos los modos y MAC = SAP2000, Kg sola con el estático de SAP, ejemplo
   `pandeo-cascara-sap2000`). Formulación: `registros/libros/CSiRefer_Pandeo_cascara_formulacion.md`.
-- Pendiente: triángulos de cáscara y sólidos sin G; Shell-Thick y modificadores de membrana sin medir; releases dentro de G.
+- **Triángulos** (6-oct-2026): Kg = A·∇Nᵀ·N·∇N (N lineales) con la tensión de la membrana de Allman proyectada en UN punto,
+  L = (¼, ¼, ½) (el centro del Q4 degenerado [n1 n2 n3 n3] del ITW 1991); Kg sola = SAP2000 0.00000 %. Al medirlo salió
+  que el triángulo de cáscara armaba su K con x, y GLOBALES (un muro de triángulos tenía área 0) y que su membrana no pasaba
+  el patch test: ahora es la de SAP medida por flexibilidad (`validation/pandeo_cascara/sap_tri_flex.py`, `proto_mem_tri.py`):
+  Allman, elástica a 3 puntos con la proyección del giro + γ = 0.4 μ a 1 punto (resto 1e-5 de |K| en el bloque θθ, sin
+  explicar) → muro de triángulos λ ≤ 4e-4 %, placa/losa 0.00000 %.
+- **Modificadores** f11 f22 f12 m11 m22 m12: λ = SAP2000 0.00000 %. Medido que CSI escala por f12 la penalización del giro y
+  el reloj de arena khg (Q4 y triángulo): sin eso el estático de un muro con modificadores se iba 0.9 % (giro 16 %).
+- Pendiente: **Shell-Thick** (la K de placa gruesa de Struct ≠ CSI: λ 0.7–10 %; el test lo marca OMITIDO y el panel avisa),
+  sólidos sin G, releases dentro de G.
 
 ## Estado estacionario (Load Case «Steady State» de SAP2000) — 1-oct-2026
 

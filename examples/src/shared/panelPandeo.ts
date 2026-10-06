@@ -3,8 +3,9 @@
  *   [K − λ·G(r)]·Ψ = 0      r = las cargas del caso que está aplicado ahora (las flechas del visor)
  * La axial P-delta de cada barra sale del estático de r (promedio de los extremos, CSiRefer cap. XXII) y G se arma en
  * el C++ (hekatan-fem/src/cpp/utils/pandeo.h). Arbitrado con SAP2000: tests/casos/pandeo_sap2000.mjs (0.0000 %).
- * Barras (frames) y, desde el 5-oct-2026, CÁSCARAS Q4 (muros y losas: Kg con las fuerzas de membrana del estático de r,
- * CSiRefer p.444; = SAP2000 en tests/casos/pandeo_cascara_sap2000.mjs). Triángulos de cáscara y sólidos: sin G (se avisa).
+ * Barras (frames) y, desde el 5-oct-2026, CÁSCARAS Q4 y (6-oct-2026) TRIÁNGULOS (muros y losas: Kg con las fuerzas de
+ * membrana del estático de r, CSiRefer p.444; = SAP2000 en tests/casos/pandeo_cascara_sap2000.mjs, también con modificadores).
+ * Sólidos: sin G. Shell-Thick: la K de placa gruesa de Struct no es la de CSI (se avisa).
  *
  * También la lista de los 11 «Load Case Type» de SAP2000: los lineales están (o estarán) en Hekatan Struct; los NO
  * LINEALES son del módulo Pro (decisión de Jorge, 1-oct-2026).
@@ -62,8 +63,8 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
     const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val, ei = estado.elementInputs.val;
     const normals: Map<number, number[]> | undefined = estado.analyzeOutputs.val?.normals;
     if (!nodes?.length) { p.info = "✗ no hay modelo"; f.refresh(); return; }
-    const nQ4 = elements.filter((e: number[]) => e.length === 4).length, nTri = elements.filter((e: number[]) => e.length === 3).length;
-    if ((!normals || normals.size === 0) && nQ4 === 0) { p.info = "✗ el modelo no tiene barras con fuerza axial ni cáscaras Q4 (triángulos y sólidos aún sin G)."; f.refresh(); return; }
+    const nQ4 = elements.filter((e: number[]) => e.length === 4 || e.length === 3).length;   // cáscaras: Q4 y triángulos
+    if ((!normals || normals.size === 0) && nQ4 === 0) { p.info = "✗ el modelo no tiene barras con fuerza axial ni cáscaras (los sólidos aún sin G)."; f.refresh(); return; }
     const t0 = performance.now();
     try {
       // cáscaras: la Kg sale de las fuerzas de membrana del ESTÁTICO de r (se resuelve aquí: la deformada en pantalla
@@ -72,12 +73,15 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
       ultimo = bucklingAnalysis(nodes, elements, ni, ei, normals, p.nModos, est) ?? null;
     } catch (e) { ultimo = null; p.info = "✗ " + String(e); f.refresh(); return; }
     if (!ultimo || !ultimo.factors.length) { p.info = "✗ no se pudo resolver (¿mecanismo? ¿sin compresión?)"; f.refresh(); return; }
-    const conCascaras = nTri > 0 || elements.some((e: number[]) => e.length > 4);
+    const conSolidos = elements.some((e: number[]) => e.length > 4);
+    const pf: Map<number, number> | undefined = (ei as any).plateFormulations;
+    const gruesa = elements.some((e: number[], k: number) => (e.length === 3 || e.length === 4) && (ei as any).thicknesses?.get?.(k) > 0 && pf?.get(k) !== 1);
     const l1 = ultimo.factors[0];
     p.info = "λ = factor de pandeo\n" +
       ultimo.factors.map((l, k) => `modo ${k + 1}:  λ = ${l.toFixed(4)}`).join("\n") +
       "\n" + (l1 > 1 ? "λ₁ > 1: aguanta las cargas" : l1 > 0 ? "λ₁ < 1: PANDEA antes" : "λ₁ < 0: cargas invertidas") +
-      (conCascaras ? "\n⚠ triángulos/sólidos: sin G todavía" : "") +
+      (conSolidos ? "\n⚠ sólidos: sin G todavía" : "") +
+      (gruesa ? "\n⚠ Shell-Thick: la placa gruesa de Struct no es la de SAP2000 (λ aproximado)" : "") +
       `\n${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
     p.modo = 1; f.refresh();
   }

@@ -578,9 +578,7 @@ extern "C"
         if (pandeo_P_ptr && pandeo_out_ptr && pandeo_out_len) {
             Eigen::SparseMatrix<double> Gg = pandeo::gGlobal(nodes, element_indices, element_sizes, elementInputs, pandeo_P_ptr, dof);
             if (pandeo_u_ptr) {
-                int nTri = 0;
-                Gg += pandeo::gCascaras(nodes, element_indices, element_sizes, elementInputs, pandeo_u_ptr, dof, &nTri);
-                if (nTri) std::cout << "pandeo: " << nTri << " triángulos de cáscara SIN Kg (solo Q4)" << std::endl;
+                Gg += pandeo::gCascaras(nodes, element_indices, element_sizes, elementInputs, pandeo_u_ptr, dof);   // Q4 y triángulos
             }
             std::map<int, double> diafr = parseMapFromFlat(diaph_keys_ptr, diaph_values_ptr, num_diaph);
             std::vector<double> r = pandeo::resolver(K_global, Gg, nodes, nodeInputs, diafr, num_modes > 0 ? num_modes : 6);

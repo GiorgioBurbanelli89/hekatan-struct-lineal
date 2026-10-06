@@ -12,6 +12,7 @@ RUTA = os.path.join(AQUI, "sap_pandeo_cascara.json")
 SOLO = sys.argv[1:]
 NMODOS = 8
 out = json.load(open(RUTA)) if os.path.exists(RUTA) else {}
+json.dump(dict(E=E, nu=NU, modelos=MODELOS), open(os.path.join(os.path.dirname(RUTA), "modelos.json"), "w"))
 h = comtypes.client.CreateObject("SAP2000v1.Helper").QueryInterface(S.cHelper)
 import time
 for intento in range(6):      # SAP 24 a veces se cae al arrancar («xxx» a Integer, IPC cerrado): se reintenta
@@ -25,9 +26,11 @@ for M in MODELOS:
     sm.InitializeNewModel(6); sm.File.NewBlank(); sm.SetPresentUnits(6)
     sm.PropMaterial.SetMaterial("AC", 1); sm.PropMaterial.SetMPIsotropic("AC", E, NU, 1.2e-5)
     sm.PropMaterial.SetWeightAndMass("AC", 1, 0.0)
-    sm.PropArea.SetShell_1("SH", 1, True, "AC", 0, M["t"], M["t"])          # 1 = Shell-Thin
+    sm.PropArea.SetShell_1("SH", M.get("tipo", 1), True, "AC", 0, M["t"], M["t"])   # 1 = Shell-Thin, 2 = Shell-Thick
     for q, p in enumerate(M["nodos"]): sm.PointObj.AddCartesian(p[0], p[1], p[2], "", "N%d" % q)
-    for e, c in enumerate(M["panos"]): sm.AreaObj.AddByPoint(4, ["N%d" % k for k in c], "", "SH", "A%d" % e)
+    for e, c in enumerate(M["panos"]):
+        sm.AreaObj.AddByPoint(len(c), ["N%d" % k for k in c], "", "SH", "A%d" % e)
+        if M.get("mods"): sm.AreaObj.SetModifiers("A%d" % e, [float(x) for x in M["mods"]])
     for q, s in M["apoyos"].items(): sm.PointObj.SetRestraint("N%d" % q, [bool(x) for x in s])
     sm.LoadPatterns.Add("P", 8, 0, True)
     for q, c in M["cargas"].items(): sm.PointObj.SetLoadForce("N%d" % q, "P", [float(x) for x in c], True)

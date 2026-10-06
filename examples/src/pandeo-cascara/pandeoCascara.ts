@@ -21,6 +21,13 @@ const SAP: Record<string, number[]> = {
   muro_8x12: [16.134187, 147.091117, 265.23099, 405.758275, 424.037198, 685.312405],
   losa_4x4: [13.20701, -13.20701, 19.307249, -19.307249, 7756.141277, -7756.141277],
   losa_12x12: [8.825065, -8.825065, 11.098866, -11.098866, -26.077947, 26.077948],
+  // 6-oct-2026: la MISMA malla con cada Q4 partido en dos triángulos por la diagonal 1-3
+  placa_t4x2: [6.862349, 8.43578, 10.449085, 3804.175594, 6564.008082, 7858.315913],
+  placa_t16x8: [7.218383, 8.555321, 11.26157, 11.590099, 15.967785, 21.704833],
+  muro_t2x3: [16.555252, 171.475711, 195.175191, 336.290804, 539.452674, 626.036192],
+  muro_t8x12: [16.156489, 147.279822, 259.154472, 399.014548, 424.587669, 678.689665],
+  losa_t4x4: [6.76469, 9.795688, 14.792096, 17.335286, 17.947872, 30.212854],
+  losa_t12x12: [8.247531, -9.714253, 10.397831, -12.154781, 22.066929, 23.765358],
 };
 // medidas con que se armaron en SAP2000 (tipo → a, b, t, q)
 const MEDIDAS_SAP = [[2, 1, 0.01, 100], [2, 3, 0.15, 1000], [4, 4, 0.02, 100]];
@@ -30,7 +37,7 @@ const DEFECTOS = [{ a: 2, b: 1, t: 0.01, q: 100, nx: 16, ny: 8 }, { a: 2, b: 3, 
 export type ModeloCascara = { nodes: number[][]; elements: number[][]; apoyos: Map<number, boolean[]>; cargas: Map<number, number[]>; lamTimoshenko: number; nombre: string };
 
 /** La malla de validation/pandeo_cascara/modelos.py (misma numeración). tipo 0 placa, 1 muro (plano XZ), 2 losa en cortante. */
-export function armarCascara(tipo: number, a: number, b: number, t: number, q: number, nx: number, ny: number): ModeloCascara {
+export function armarCascara(tipo: number, a: number, b: number, t: number, q: number, nx: number, ny: number, triangulos = false): ModeloCascara {
   if (tipo === 2) ny = nx, b = a;
   const nodes: number[][] = [];
   for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
@@ -39,7 +46,11 @@ export function armarCascara(tipo: number, a: number, b: number, t: number, q: n
   }
   const id = (i: number, j: number) => i + j * (nx + 1);
   const elements: number[][] = [];
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) elements.push([id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j + 1)]);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const c = [id(i, j), id(i + 1, j), id(i + 1, j + 1), id(i, j + 1)];
+    if (triangulos) elements.push([c[0], c[1], c[2]], [c[0], c[2], c[3]]);   // como modelos.py: diagonal 1-3
+    else elements.push(c);
+  }
   const apoyos = new Map<number, boolean[]>(), cargas = new Map<number, number[]>();
   const suma = (k: number, v: number[]) => { const c = cargas.get(k) ?? [0, 0, 0, 0, 0, 0]; v.forEach((x, z) => (c[z] += x)); cargas.set(k, c); };
   const D = (E * t ** 3) / (12 * (1 - NU ** 2));
@@ -69,7 +80,7 @@ export function armarCascara(tipo: number, a: number, b: number, t: number, q: n
       lam = (9.34 * Math.PI ** 2 * D) / (a * a) / q;
     }
   }
-  const nombre = ["placa", "muro", "losa"][tipo] + `_${nx}x${ny}`;
+  const nombre = ["placa", "muro", "losa"][tipo] + `_${triangulos ? "t" : ""}${nx}x${ny}`;
   return { nodes, elements, apoyos, cargas, lamTimoshenko: lam, nombre };
 }
 
@@ -88,6 +99,7 @@ export const pandeoCascara: ExampleDef = {
     q: { default: 100, label: "Carga q (kN/m de borde)", folder: "Modelo", min: 1, max: 100000, step: 1 },
     nx: { default: 16, label: "Malla nx", folder: "Malla", min: 1, max: 40, step: 1 },
     ny: { default: 8, label: "Malla ny", folder: "Malla", min: 1, max: 40, step: 1 },
+    elem: { default: 0, label: "Elemento", folder: "Malla", options: { "Q4 (cuadriláteros)": 0, "Triángulos (cada Q4 en dos)": 1 } },
     modo: { default: 1, label: "Modo que se dibuja", folder: "Pandeo", min: 1, max: NFIL, step: 1 },
   },
   defaultShellResult: "displacementZ",
@@ -106,7 +118,7 @@ export const pandeoCascara: ExampleDef = {
   },
   build(p, states) {
     const tipo = Math.round(p.tipo), nx = Math.max(1, Math.round(p.nx)), ny = Math.max(1, Math.round(p.ny));
-    const M = armarCascara(tipo, p.a, p.b, p.t, p.q, nx, ny);
+    const M = armarCascara(tipo, p.a, p.b, p.t, p.q, nx, ny, Math.round(p.elem ?? 0) === 1);
     const em = (v: number) => new Map(M.elements.map((_, e) => [e, v]));
     const ei: any = { elasticities: em(E), poissonsRatios: em(NU), thicknesses: em(p.t), shearModuli: em(E / (2 * (1 + NU))),
       plateFormulations: em(1), densities: em(0), etabsWallJoint: false };

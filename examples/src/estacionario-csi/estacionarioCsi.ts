@@ -51,7 +51,7 @@ function graficar(r: Res) {
 export const estacionarioCsi: ExampleDef = {
   id: "estacionario-sap2000",
   name: "Steady State y PSD (respuesta armónica) — igual que SAP2000",
-  category: "1️⃣ Frames · 🏢 Edificios",
+  category: "1️⃣ Frames · 🎯 n GDL Sistemas",
   params: {
     caso: { default: 0, label: "Load Case", folder: "Caso", options: { "Steady State": 0, "Power Spectral Density": 1 } },
     graf: { default: 0, label: "Gráfica", folder: "Caso", options: { "Módulo |u|": 0, "Fase (°)": 1, "Parte real Re": 2, "Parte imaginaria Im": 3 } },
@@ -99,7 +99,10 @@ export const estacionarioCsi: ExampleDef = {
         r.re = ss!.re.get(top)!; r.im = ss!.im.get(top)!;
         r.sapRe = (carga === 1 ? SAP_SS.acelRe : SAP_SS.re) as any; r.sapIm = (carga === 1 ? SAP_SS.acelIm : SAP_SS.im) as any;
       }
-      ultimo = r; (states as any)._ss = r; graficar(r);
+      ultimo = r; (states as any)._ss = r;
+      // la gráfica es interfaz: si falla (sin DOM completo, panel roto) NO se pierde el cálculo de 📊 Calculados.
+      // Antes iba dentro de este try y un `window` sin addEventListener dejaba el ejemplo en «✗ no se pudo calcular».
+      try { graficar(r); } catch (e) { console.warn("[estacionario-sap2000] gráfica:", e); }
     } catch (e) { console.warn("[estacionario-sap2000]", e); ultimo = null; }
     states.objects3D.val = [];
   },

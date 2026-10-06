@@ -64,7 +64,7 @@ let ultimo: { lam: number[]; ref?: number[]; clave: string } | null = null;
 export const pandeoSap: ExampleDef = {
   id: "pandeo-sap2000",
   name: "Pandeo lineal (Buckling) — igual que SAP2000",
-  category: "1️⃣ Frames · 🏢 Edificios",
+  category: "1️⃣ Frames · 🎯 n GDL Sistemas",
   params: {
     tipo: { default: 1, label: "Modelo", folder: "Modelo", options: { "Columna en voladizo (Euler)": 0, "Pórtico 3D": 1, "Edificio 2×2 vanos, 2 pisos": 2 } },
     n: { default: 4, label: "trozos por barra", folder: "Modelo", options: { "1": 1, "2": 2, "4": 4, "8": 8 } },

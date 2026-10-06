@@ -766,14 +766,105 @@ Eigen::MatrixXd getMembraneStiffnessMatrix(
     return Km;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// MEMBRANA DEL TRIÁNGULO como SAP2000 (6-oct-2026). Medida por FLEXIBILIDAD contra SAP2000 24 (un triángulo Shell-Thin,
+// 5 geometrías: validation/pandeo_cascara/sap_tri_flex.py + proto_mem_tri.py):
+//   u = Σ L_i u_i + Σ_lados 4 L_i L_j (l_ij/8)(θ_j − θ_i) n_ext          (Allman, la del ITW 1991)
+//   K = ∫ t (B − B̄θ)ᵀ D (B − B̄θ) dA  (3 puntos: exacta)  +  γ A t (ω − θ)²|centro,   γ = 0.4 μ
+//   B̄θ = media de las columnas de giro sobre el triángulo (la proyección de FEAP, como el tipo 8 del Q4).
+// Con γ libre el ajuste da 0.400000 en las cinco; resto 4e-6…5e-5 de |K|, todo en el bloque θθ (SAP no es simétrico ante
+// la reflexión del triángulo: algo suyo depende del orden de los nudos; sin explicar). Antes iba la «óptima» de Felippa
+// sobre coordenadas GLOBALES: no pasaba el patch test (17 % en ux, giros espurios) y un triángulo vertical tenía área 0.
+static Eigen::Matrix<double, 9, 9> membranaTriCSI(const double x[3], const double y[3], const Eigen::Matrix3d &Dm,
+                                                  double mu, double t)
+{
+    const double A2 = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]);
+    const double A = std::abs(A2) / 2.0;
+    const double b[3] = {(y[1] - y[2]) / A2, (y[2] - y[0]) / A2, (y[0] - y[1]) / A2};
+    const double c[3] = {(x[2] - x[1]) / A2, (x[0] - x[2]) / A2, (x[1] - x[0]) / A2};
+    static const int LI[3] = {0, 1, 2}, LJ[3] = {1, 2, 0};
+    auto campo = [&](const double L[3], Eigen::Matrix<double, 3, 9> &B, Eigen::Matrix<double, 1, 9> &W) {
+        B.setZero(); W.setZero();
+        for (int i = 0; i < 3; ++i) {
+            B(0, 3 * i) = b[i]; B(1, 3 * i + 1) = c[i]; B(2, 3 * i) = c[i]; B(2, 3 * i + 1) = b[i];
+            W(3 * i) = -0.5 * c[i]; W(3 * i + 1) = 0.5 * b[i]; W(3 * i + 2) = -L[i];
+        }
+        for (int s = 0; s < 3; ++s) {
+            const int i = LI[s], j = LJ[s];
+            const double cx = (y[j] - y[i]) / 8.0, cy = -(x[j] - x[i]) / 8.0;
+            const double dx = 4.0 * (b[i] * L[j] + b[j] * L[i]), dy = 4.0 * (c[i] * L[j] + c[j] * L[i]);
+            const int k2[2] = {j, i}; const double sg[2] = {1.0, -1.0};
+            for (int q = 0; q < 2; ++q) {
+                const int k = k2[q]; const double s1 = sg[q];
+                B(0, 3 * k + 2) += s1 * dx * cx; B(1, 3 * k + 2) += s1 * dy * cy; B(2, 3 * k + 2) += s1 * (dy * cx + dx * cy);
+                W(3 * k + 2) += s1 * 0.5 * (dx * cy - dy * cx);
+            }
+        }
+    };
+    const double Lc[3] = {1.0 / 3, 1.0 / 3, 1.0 / 3};
+    Eigen::Matrix<double, 3, 9> Bc; Eigen::Matrix<double, 1, 9> Wc;
+    campo(Lc, Bc, Wc);
+    Eigen::Matrix<double, 9, 9> K = Eigen::Matrix<double, 9, 9>::Zero();
+    static const double P3[3][3] = {{2.0 / 3, 1.0 / 6, 1.0 / 6}, {1.0 / 6, 2.0 / 3, 1.0 / 6}, {1.0 / 6, 1.0 / 6, 2.0 / 3}};
+    for (int g = 0; g < 3; ++g) {
+        Eigen::Matrix<double, 3, 9> B; Eigen::Matrix<double, 1, 9> W;
+        campo(P3[g], B, W);
+        for (int i = 0; i < 3; ++i) B.col(3 * i + 2) -= Bc.col(3 * i + 2);   // proyección: θ con media nula
+        K += (A * t / 3.0) * B.transpose() * Dm * B;
+    }
+    K += (0.4 * mu * A * t) * Wc.transpose() * Wc;
+    return K;
+}
+
+// Ejes locales del triángulo: los MISMOS de getTransformationMatrixShell (getTransformationMatrix.cpp).
+Eigen::Matrix3d ejesTriangulo(const Node &n0, const Node &n1, const Node &n2)
+{
+    const Eigen::Vector3d p0(n0[0], n0[1], n0[2]), p1(n1[0], n1[1], n1[2]), p2(n2[0], n2[1], n2[2]);
+    Eigen::Vector3d z = (p1 - p0).cross(p2 - p0);
+    Eigen::Matrix3d R = Eigen::Matrix3d::Zero();
+    if (z.norm() < 1e-12) return R;
+    z.normalize();
+    Eigen::Vector3d x = std::abs(z.x()) > 1.0 - 1e-10 ? Eigen::Vector3d(0, 0, 1) - z.z() * z : Eigen::Vector3d(1, 0, 0) - z.x() * z;
+    x.normalize(); Eigen::Vector3d y = z.cross(x); y.normalize();
+    R.row(0) = x.transpose(); R.row(1) = y.transpose(); R.row(2) = z.transpose();
+    return R;
+}
+
+// Constitutiva de membrana con los modificadores de CSI (f11 f22 f12; fuera de la diagonal √(f11·f22)) o el escalar.
+Eigen::Matrix3d membranaConModificadores(const ElementInputs &ei, int index, double E, double nu)
+{
+    const double f = E / (1 - nu * nu);
+    Eigen::Matrix3d D; D << f, f * nu, 0, f * nu, f, 0, 0, 0, f * (1 - nu) / 2;
+    auto it = ei.shellModifiers.find(index);
+    if (it != ei.shellModifiers.end() && it->second.size() >= 3) {
+        const double f11 = it->second[0], f22 = it->second[1], f12 = it->second[2];
+        D(0, 0) *= f11; D(1, 1) *= f22; D(2, 2) *= f12; const double cc = std::sqrt(std::max(0.0, f11 * f22));
+        D(0, 1) *= cc; D(1, 0) *= cc;
+    } else {
+        auto itm = ei.membraneModifiers.find(index);
+        if (itm != ei.membraneModifiers.end()) D *= itm->second;
+    }
+    return D;
+}
+
 Eigen::MatrixXd getLocalStiffnessMatrixShell(
-    const std::vector<Node> &nodes,
+    const std::vector<Node> &nodesGlob,
     const ElementInputs &elementInputs,
     int index)
 {
-    if (nodes.size() != 3)
+    if (nodesGlob.size() != 3)
     {
         throw std::runtime_error("Shell element must have 3 nodes.");
+    }
+    // Coordenadas LOCALES (6-oct-2026): antes se usaban x, y GLOBALES, así que un triángulo vertical (muro) salía de área
+    // nula y uno inclinado con la geometría proyectada. T (getTransformationMatrixShell) ya giraba a estos ejes.
+    std::vector<Node> nodes(3, Node(3, 0.0));
+    {
+        const Eigen::Matrix3d R = ejesTriangulo(nodesGlob[0], nodesGlob[1], nodesGlob[2]);
+        for (int k = 0; k < 3; ++k) {
+            const Eigen::Vector3d d(nodesGlob[k][0] - nodesGlob[0][0], nodesGlob[k][1] - nodesGlob[0][1], nodesGlob[k][2] - nodesGlob[0][2]);
+            const Eigen::Vector3d l = R * d; nodes[k][0] = l(0); nodes[k][1] = l(1); nodes[k][2] = 0.0;
+        }
     }
 
     double E = getMapValueOrDefault(elementInputs.elasticities, index, 0.0);
@@ -828,9 +919,32 @@ Eigen::MatrixXd getLocalStiffnessMatrixShell(
         return Eigen::MatrixXd::Zero(18, 18);
     }
 
+    // Modificadores de flexión (m11 m22 m12) y escalar, como la DKQ (shellThin.cpp). Antes el triángulo no los leía.
+    {
+        auto it = elementInputs.shellModifiers.find(index);
+        if (it != elementInputs.shellModifiers.end() && it->second.size() >= 6) {
+            const double m11 = it->second[3], m22 = it->second[4], m12 = it->second[5];
+            bendingStiffnessMatrix(0, 0) *= m11; bendingStiffnessMatrix(1, 1) *= m22; bendingStiffnessMatrix(2, 2) *= m12;
+            const double cm = std::sqrt(std::max(0.0, m11 * m22));
+            bendingStiffnessMatrix(0, 1) *= cm; bendingStiffnessMatrix(1, 0) *= cm;
+        } else {
+            auto itb = elementInputs.bendingModifiers.find(index);
+            if (itb != elementInputs.bendingModifiers.end()) bendingStiffnessMatrix *= itb->second;
+        }
+    }
     Eigen::MatrixXd shearStrainDisplacementMatrix = getShearStrainDisplacementMatrix(nodes);
     Eigen::MatrixXd bendingStrainDisplacementMatrix = getBendingStrainDisplacementMatrix(nodes);
-    Eigen::MatrixXd membraneStiffnessMatrix9x9 = getMembraneStiffnessMatrix(nodes, inPlaneConstitutiveMatrix, t);
+    Eigen::MatrixXd membraneStiffnessMatrix9x9;
+    if (Eo != 0.0)
+        membraneStiffnessMatrix9x9 = getMembraneStiffnessMatrix(nodes, inPlaneConstitutiveMatrix, t);   // ortótropo: la de antes
+    else {
+        const double xm[3] = {x1, x2, x3}, ym[3] = {y1, y2, y3};
+        // la penalización del giro va por f12 (medido en SAP2000, como en el Q4)
+        auto itF = elementInputs.shellModifiers.find(index);
+        const double f12 = (itF != elementInputs.shellModifiers.end() && itF->second.size() >= 3) ? itF->second[2] : 1.0;
+        membraneStiffnessMatrix9x9 = membranaTriCSI(xm, ym, membranaConModificadores(elementInputs, index, E, nu),
+                                                    f12 * E / (2.0 * (1.0 + nu)), t);
+    }
 
     Eigen::MatrixXd shearTerm = shearStrainDisplacementMatrix.transpose() * shearStiffnessMatrix * shearStrainDisplacementMatrix;
     Eigen::MatrixXd bendingTerm = bendingStrainDisplacementMatrix.transpose() * bendingStiffnessMatrix * bendingStrainDisplacementMatrix;

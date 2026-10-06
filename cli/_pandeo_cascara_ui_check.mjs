@@ -12,11 +12,13 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const leer = () => pag.evaluate(() => [...document.querySelectorAll(".tp-lblv")].map((e) => (e.querySelector(".tp-lblv_l")?.textContent ?? "").trim() + " = " + (e.querySelector("input,textarea")?.value ?? "")).filter((s) => /SAP2000|Timoshenko/.test(s)));
 const r = {};
 await pag.goto(`${BASE}/workspace/?t=pandeo-cascara-sap2000`, { waitUntil: "networkidle2", timeout: 120000 }); await espera(8000);
-for (const [k, q] of [["placa", {}], ["placa_modo2", { modo: 2 }], ["muro", { tipo: 1 }], ["losa", { tipo: 2 }]]) {
+// 6-oct-2026: también con TRIÁNGULOS (Elemento = 1): losa, muro y placa partidos en dos por la diagonal
+for (const [k, q] of [["placa", {}], ["placa_modo2", { modo: 2 }], ["muro", { tipo: 1 }], ["losa", { tipo: 2 }],
+  ["losa_tri", { elem: 1 }], ["muro_tri", { tipo: 1 }], ["placa_tri", { tipo: 0, modo: 1 }]]) {
   for (const [c, v] of Object.entries(q)) {
     await pag.evaluate((c, v) => window.__hekatanSetParam(c, v), c, v);
     if (c === "tipo") {   // lo que hace onParamChange al elegir en la lista: las medidas de la validación
-      const D = [{}, { a: 2, b: 3, t: 0.15, q: 1000, nx: 8, ny: 12 }, { a: 4, b: 4, t: 0.02, q: 100, nx: 12, ny: 12 }][v];
+      const D = [{ a: 2, b: 1, t: 0.01, q: 100, nx: 16, ny: 8 }, { a: 2, b: 3, t: 0.15, q: 1000, nx: 8, ny: 12 }, { a: 4, b: 4, t: 0.02, q: 100, nx: 12, ny: 12 }][v];
       for (const [c2, v2] of Object.entries(D)) await pag.evaluate((c, v) => window.__hekatanSetParam(c, v), c2, v2);
     }
   }

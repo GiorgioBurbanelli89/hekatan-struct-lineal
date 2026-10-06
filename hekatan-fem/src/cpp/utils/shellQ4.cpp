@@ -684,6 +684,9 @@ Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
     // con Omega = 4*dJ0 (el area) y res = <b ; g> de las ecs. (31)-(32).
     double mu = E / (2.0 * (1.0 + nu));
     double gamma = gammaFac * mu;
+    // Con modificadores de CSI la penalización del giro va por f12 (6-oct-2026, medido en SAP2000: muro con f11 0.5,
+    // f22 0.7, f12 0.4; sin esto ux 0.9 % y el giro 16 % del estático de SAP).
+    if (mod) gamma *= mod[2];
     Eigen::VectorXd res = Eigen::VectorXd::Zero(14);
     for (int i = 0; i < 4; i++) {
         res(3*i)     = -0.5 * c_dNy[i];
@@ -719,7 +722,7 @@ Eigen::MatrixXd getMembraneITW(const double x[4], const double y[4],
         A = std::abs(A) / 2.0;
         Eigen::VectorXd hg = Eigen::VectorXd::Zero(14);
         for (int i = 0; i < 4; i++) hg(3*i + 2) = (i % 2 == 0) ? 1.0 : -1.0;
-        K14 += (khg * mu * t * A / 4.0) * (hg * hg.transpose());
+        K14 += (khg * mu * (mod ? mod[2] : 1.0) * t * A / 4.0) * (hg * hg.transpose());   // también por f12
     }
 
     // ─── K0 de WILSON (cap. 9, ecs. 9.11-9.14) ────────────────────────────

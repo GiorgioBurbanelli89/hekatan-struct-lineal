@@ -83,6 +83,10 @@ await sinCursor(); await tabla("📊 Calculados: muro 8×12 (Shell-Thin)"); awai
 await parametro("Caso", "tipo", 2, "9 · Caso = Losa 4 × 4 m en CORTANTE puro (τ·t = 100 kN/m), Timoshenko k = 9.34", 900);
 await verY(0); await espera(1500); await foto(2600);
 await sinCursor(); await tabla("📊 Calculados: losa 12×12 en cortante"); await rotulo("10 · Cortante: ±λ (con el cortante al revés pandea igual); = SAP2000"); await foto(4200); await sinTabla();
+// 6-oct-2026: TRIÁNGULOS
+await parametro("Elemento", "elem", 1, "10b · Elemento = Triángulos (cada Q4 en dos): la Kg del triángulo, medida contra SAP2000", 2400);
+await sinCursor(); await tabla("📊 Calculados: losa 12×12 de TRIÁNGULOS"); await rotulo("10c · Triángulos: λ = SAP2000 con su misma malla (0.0000 %)"); await foto(4000); await sinTabla();
+await pag.evaluate(() => window.__hekatanSetParam("elem", 0)); await espera(1500);
 await pag.evaluate(() => window.__hekatanSetParam("tipo", 1)); await verY(1); await espera(2500);
 await lateral("cerrar", "11 · Volvemos al muro y cerramos los parámetros");
 await lateral("izq", "11 · Settings (panel izquierdo): el mismo cálculo sobre CUALQUIER modelo con barras o cáscaras");

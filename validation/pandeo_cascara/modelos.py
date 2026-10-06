@@ -39,13 +39,15 @@ def placa(nx, ny, a=2.0, b=1.0, t=0.01, qx=100.0):
                 analitico=lam, nota="Timoshenko k=4: λ = 4π²D/(b²·q)")
 
 
-def muro(nx, ny, a=2.0, H=3.0, t=0.15, qz=1000.0):
-    nodos, panos, q = malla(nx, ny, a, H, "XZ")
+def muro(nx, ny, a=2.0, H=3.0, t=0.15, qz=1000.0, plano="XZ", fuera=0.0):
+    nodos, panos, q = malla(nx, ny, a, H, plano)
     ap, car = {}, {}
     for i in range(nx + 1): ap[q(i, 0)] = [1, 1, 1, 1, 1, 1]
     h = a / nx
     for i in range(nx + 1):
-        car[q(i, ny)] = [0, 0, -qz * h * (0.5 if i in (0, nx) else 1.0), 0, 0, 0]
+        f = -qz * h * (0.5 if i in (0, nx) else 1.0)
+        car[q(i, ny)] = [0, 0, f, 0, 0, 0] if plano == "XZ" else [0, f, 0, 0, 0, 0]
+        if fuera: car[q(i, ny)][1 if plano == "XZ" else 2] += fuera
     D = E * t ** 3 / (12 * (1 - NU ** 2))
     lam = math.pi ** 2 * D / (4 * H ** 2) / qz     # franja de placa en ménsula (bordes libres: aprox.)
     return dict(nombre="muro_%dx%d" % (nx, ny), nodos=nodos, panos=panos, t=t, apoyos=ap, cargas=car,
@@ -73,5 +75,29 @@ def losa(n, a=4.0, t=0.02, s=100.0):
                 analitico=lam, nota="Timoshenko cortante k_s=9.34: λ = 9.34π²D/(a²·τt)")
 
 
+def triangulos(M, pref):
+    """La MISMA malla con cada Q4 [a b c d] partido por la diagonal a-c: [a b c] y [a c d]."""
+    M = dict(M); M["panos"] = [t for c in M["panos"] for t in ([c[0], c[1], c[2]], [c[0], c[2], c[3]])]
+    M["nombre"] = M["nombre"].replace("_", "_" + pref, 1); return M
+
+
+def variante(M, pref, **kw):
+    """Shell-Thick (tipo=2) y/o modificadores de CSI (mods = f11 f22 f12 m11 m22 m12 v13 v23 masa peso)."""
+    M = dict(M); M.update(kw); M["nombre"] = M["nombre"].replace("_", "_" + pref, 1); return M
+
+
+MODS = [0.5, 0.7, 0.4, 0.6, 0.8, 0.3, 1, 1, 1, 1]
 MODELOS = [placa(1, 1, 1.0, 1.0), placa(2, 1), placa(4, 2), placa(16, 8), muro(2, 3), muro(8, 12),
-           losa(4), losa(12)]
+           losa(4), losa(12),
+           # 6-oct-2026: triángulos, Shell-Thick y modificadores (cómo los trata SAP2000 en el pandeo)
+           triangulos(placa(4, 2), "t"), triangulos(placa(16, 8), "t"), triangulos(muro(2, 3), "t"),
+           triangulos(muro(8, 12), "t"), triangulos(losa(4), "t"), triangulos(losa(12), "t"),
+           variante(placa(4, 2, t=0.05, qx=1000.0), "k", tipo=2), variante(placa(16, 8, t=0.05, qx=1000.0), "k", tipo=2),
+           variante(muro(2, 3), "k", tipo=2), variante(muro(8, 12), "k", tipo=2),
+           variante(losa(4), "k", tipo=2),
+           variante(placa(4, 2), "m", mods=MODS), variante(muro(2, 3), "m", mods=MODS), variante(muro(8, 12), "m", mods=MODS),
+           variante(losa(4), "m", mods=MODS), variante(muro(2, 3), "km", tipo=2, mods=MODS),
+           triangulos(variante(muro(2, 3), "m", mods=MODS), "t"),
+           # diagnóstico de triángulos: muro TUMBADO (plano XY) y muro con carga fuera del plano (estático de la placa)
+           triangulos(variante(muro(2, 3, plano="XY"), "h"), "t"), triangulos(variante(muro(2, 3, fuera=10.0), "f"), "t"),
+           variante(muro(2, 3, plano="XY"), "h")]
