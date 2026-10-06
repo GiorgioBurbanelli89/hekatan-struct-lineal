@@ -658,6 +658,8 @@ const folderExpandedState = new Map<string, boolean>();
  * en folderExpandedState. Más fiable que un MutationObserver de clases.
  */
 let lastFolderMap: Map<string, any> | null = null;
+/** Hay un buildParamsPane() pendiente por un cambio de unidades (se hace fuera del aviso de Tweakpane). */
+let panelPorReconstruir = false;
 
 function captureFolderExpandedState() {
   if (!lastFolderMap) return;
@@ -2838,7 +2840,7 @@ const openDisplayUnitsDialog = () => {
     _duPaneInstance.addBinding(filter, "category", {
       label: "Categoría",
       options: catOpts,
-    }).on("change", () => buildPane());
+    }).on("change", () => window.setTimeout(buildPane, 0));   // fuera del aviso de Tweakpane (ver reconstruirTrasUnidades)
 
     // ── Items planos (sin sub-folder por item) ──
     // Agrupados por categoría con un mini-separador.
@@ -6808,25 +6810,31 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   // ── Unidades (global, persistido en localStorage) ──
   const fUnits = pane.addFolder({ title: "Unidades", expanded: false });
   const unitsProxy = { force: forceUnit.val, disp: dispUnit.val };
+  // ⚠️ Cambiar de unidades RECONSTRUYE este mismo panel (buildParamsPane lo desecha). Hacerlo dentro del «change»
+  // de uno de sus controles —o dentro de un pane.refresh(), que vuelve a disparar los «change» de los controles
+  // cuyo valor cambió— desechaba el panel a mitad del aviso de Tweakpane: `TpError: alreadyDisposed` en la página
+  // (6-oct-2026, al elegir Preset → Metric SI en cualquier ejemplo). Se reconstruye DESPUÉS, fuera del aviso.
+  const reconstruirTrasUnidades = () => {
+    if (panelPorReconstruir) return;
+    panelPorReconstruir = true;
+    window.setTimeout(() => { panelPorReconstruir = false; buildParamsPane(); rebuild(); }, 0);
+  };
   fUnits.addBinding(unitsProxy, "force", {
     label: "Fuerza",
     options: { kN: "kN", tonf: "tonf", kip: "kip" },
   }).on("change", (e) => {
+    if (e.value === forceUnit.val) return;   // ya está (lo puso el preset)
     // la MISMA fuerza física expresada en la nueva unidad (F = 200 kN → 20.4 tonf)
     cambiarUnidadesConservando(() => { forceUnit.val = e.value as any; });
-    // Rebuild UI del pane con nuevos labels y valores escalados
-    buildParamsPane();
-    // Rebuild modelo (no es necesario si internamente trabajamos en SI, pero el
-    // log de verificación usa p.F que ahora está en tonf; fine, se auto-corrige)
-    rebuild();
+    reconstruirTrasUnidades();
   });
   fUnits.addBinding(unitsProxy, "disp", {
     label: "Desplazamiento",
     options: { mm: "mm", cm: "cm", m: "m", in: "in" },
   }).on("change", (e) => {
+    if (e.value === dispUnit.val) return;
     dispUnit.val = e.value as any;
-    buildParamsPane();
-    rebuild();
+    reconstruirTrasUnidades();
   });
 
   // ── Auto-mesh shells toggle (ETABS-style MESHATINTERSECTIONS YES) ──
@@ -6853,17 +6861,12 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
   }).on("change", (e: any) => {
     const name = e.value;
     if (name === "Custom") return;  // no aplica nada, el user usa Display Units
+    if (name === detectCurrentPreset()) return;   // ya es ese sistema (p. ej. lo detectó un refresh)
     cambiarUnidadesConservando(() => applyConsistentUnits(name));
-    // Sync proxy con los nuevos valores
-    unitsProxy.force = forceUnit.val;
-    unitsProxy.disp = dispUnit.val;
-    customProxy.stress = stressUnit.val;
-    customProxy.subgrade = subgradeUnit.val;
-    customProxy.stiffTrans = stiffTransUnit.val;
-    customProxy.lengthSection = lengthSectionUnit.val;
-    pane.refresh();
-    buildParamsPane();
-    rebuild();
+    // Sin pane.refresh(): el panel entero se rehace con las unidades nuevas. El refresh de antes disparaba el
+    // «change» de «Fuerza» (que también rehacía el panel, dentro del refresh → TpError) y ajustaba cada deslizador
+    // a la rejilla de su unidad VIEJA.
+    reconstruirTrasUnidades();
   });
 
   // ── Sub-folder "📐 Display Units (custom)" — granular per-quantity ──
@@ -7094,7 +7097,32 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       // Clampar el valor actual al nuevo rango (evita que el slider se rompa)
       if (rebuiltOpts.min !== undefined && destino[key] < rebuiltOpts.min) destino[key] = rebuiltOpts.min;
       if (rebuiltOpts.max !== undefined && destino[key] > rebuiltOpts.max) destino[key] = rebuiltOpts.max;
-      currentBinding = fTarget.addBinding(destino, key, rebuiltOpts);
+      // ⚠️ Tweakpane fija la rejilla del `step` en el valor con que se CREA el deslizador
+      // (StepConstraint(step, origen = valor inicial), tweakpane 4.0.5). Si después el valor cambia POR PROGRAMA
+      // (preset de unidades, onParamChange de un ejemplo, __hekatanSetParam) y se llama a refresh(), Tweakpane lo
+      // ajusta a la rejilla VIEJA y lo ESCRIBE de vuelta: 50 kN·m en tonf → 5.07886 tonf·m = 49.81 kN·m (6-oct-2026,
+      // placa base). Esa escritura no es del usuario: si lo que llega es justo el valor guardado ajustado a la rejilla
+      // del deslizador, se ignora y el valor introducido se queda como está.
+      const paso = rebuiltOpts.step as number | undefined;
+      const origen = destino[key] as number;
+      let redondeoIgnorado = false;
+      const objetivo: any = (paso && paso > 0 && typeof origen === "number") ? (() => {
+        const o: any = {};
+        Object.defineProperty(o, key, { enumerable: true,
+          get: () => destino[key],
+          set: (v: number) => {
+            const c = destino[key];
+            if (typeof c === "number" && typeof v === "number" && v !== c) {
+              const or = origen % paso;
+              const ajustado = or + Math.round((c - or) / paso) * paso;
+              if (Math.abs(v - ajustado) <= 1e-9 * Math.max(Math.abs(paso), Math.abs(v))) { redondeoIgnorado = true; return; }
+            }
+            redondeoIgnorado = false;
+            destino[key] = v;
+          } });
+        return o;
+      })() : destino;
+      currentBinding = fTarget.addBinding(objetivo, key, rebuiltOpts);
       // Registrar visibilidad dinamica si el param tiene hiddenIf
       if (p.hiddenIf) hiddenBindings.push({ binding: currentBinding, hiddenIf: p.hiddenIf });
       // Tooltip nativo browser via title attribute — aparece al hover sin
@@ -7103,6 +7131,8 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
         try { (currentBinding.element as HTMLElement).title = p.description; } catch {}
       }
       currentBinding.on("change", (ev: any) => {
+        // el cambio era solo el ajuste a la rejilla de un refresh(): el valor no cambió, no hay nada que recalcular
+        if (redondeoIgnorado) { redondeoIgnorado = false; return; }
         if (currentExample?.onParamChange) {
           currentExample.onParamChange(key, currentParams);
           pane.refresh();
