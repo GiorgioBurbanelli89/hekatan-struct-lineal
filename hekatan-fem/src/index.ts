@@ -83,3 +83,6 @@ export { getTransformationMatrix } from "./utils/getTransformationMatrix";
 export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
 export type { KPano } from "./utils/shellElementK";
 export { placaAT, atJointMoments } from "./utils/placaAT";
+
+// Carga de vehículos por un carril: Multi-step Static y Moving Load de SAP2000 (5-oct-2026)
+export * from "./cargaMovil";

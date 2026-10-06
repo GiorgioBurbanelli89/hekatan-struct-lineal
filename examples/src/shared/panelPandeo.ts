@@ -19,7 +19,7 @@ export interface ModeloPandeo {
 const TIPOS: Array<[string, string]> = [
   ["Static", "✓ Hekatan Struct: el caso de carga de siempre (Settings › Caso)."],
   ["Staged Construction", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
-  ["Multi-step Static", "Próximamente en Hekatan Struct (lineal)."],
+  ["Multi-step Static", "✓ Hekatan Struct: 🚚 Carga móvil (Multi-step Static), un estático por paso, = SAP2000."],
   ["Modal", "✓ Hekatan Struct: ⚡ Modal + Animación."],
   ["Response Spectrum", "✓ Hekatan Struct: 🌎 Sismo NEC (CQC, = SAP2000)."],
   ["Time History (lineal)", "✓ Hekatan Struct: 〰 Tiempo-historia (lineal), modal o directa."],
