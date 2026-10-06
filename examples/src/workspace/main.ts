@@ -1570,7 +1570,9 @@ function encuadrarAhora() {
   // MODELO; la grilla solo manda cuando no hay nada que mirar.
   const frameGrid = nodesArr.length === 0 || modelExtent < 1e-6;
   if (frameGrid) { cx = 0; cy = 0; cz = 0; }
-  const extent = Math.max(frameGrid ? gridSz : modelExtent, 2);
+  // Mínimo 2 m solo para la grilla vacía: con un modelo pequeño (una placa base de 0.4 m, 5-oct-2026) el
+  // mínimo de 2 m lo dejaba del tamaño de una moneda en medio de la rejilla.
+  const extent = frameGrid ? Math.max(gridSz, 2) : Math.max(modelExtent, 0.3);
   controls.target.set(cx, cy, cz);
 
   // Si la cámara activa es ortográfica, sólo recalcular frustum (preservar
@@ -1580,7 +1582,7 @@ function encuadrarAhora() {
     const w = (viewerElm as HTMLElement).clientWidth || window.innerWidth;
     const h = (viewerElm as HTMLElement).clientHeight || window.innerHeight;
     const aspect = w / h;
-    const halfH = Math.max(extent * 0.6, 5);
+    const halfH = Math.max(extent * 0.6, frameGrid ? 5 : 0.2);
     orthoCamera.left = -halfH * aspect; orthoCamera.right = halfH * aspect;
     orthoCamera.top = halfH; orthoCamera.bottom = -halfH;
     // ⚠️ Y el ZOOM a 1. Se recalculaba el marco pero se dejaba el zoom que hubiera
@@ -1592,7 +1594,7 @@ function encuadrarAhora() {
     controls.update();
     render?.();
     // Solo ajustar el tamaño de grilla cuando el modelo es MÁS GRANDE que ella.
-    if (!frameGrid && s?.gridSize) s.gridSize.val = Math.max(Math.ceil(Math.max(dx, dy) * 1.2), 2);
+    if (!frameGrid && s?.gridSize) s.gridSize.val = Math.max(Math.ceil(Math.max(dx, dy) * 1.2), 1);
     return;
   }
 
@@ -1610,7 +1612,7 @@ function encuadrarAhora() {
   camera.lookAt(cx, cy, cz);
   controls.update();
   render?.();
-  if (!frameGrid && s?.gridSize) s.gridSize.val = Math.max(Math.ceil(Math.max(dx, dy) * 1.2), 2);
+  if (!frameGrid && s?.gridSize) s.gridSize.val = Math.max(Math.ceil(Math.max(dx, dy) * 1.2), 1);
 }
 
 /** Oculta opciones no aplicables del <select> "Shell results" del Settings HTML

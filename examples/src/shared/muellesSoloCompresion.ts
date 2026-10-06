@@ -27,7 +27,17 @@
  * el Winkler lineal.
  */
 
-export type Muelle = { node: number; dof: number; k: number };
+/**
+ * `traccion: true` = muelle SOLO TRACCIÓN (perno de anclaje): trabaja cuando u[dof] > 0 (el nudo sube y
+ * tira del perno) y se apaga si baja. Es el mismo Gap de CSI con el signo cambiado: el «Hook» del CSI
+ * Analysis Reference Manual, junto al Gap): f = k·(d − open) si d − open > 0, 0 en otro caso (open = 0).
+ * Abaqus: SPRING1 NONLINEAR con fuerza 0 para d < 0 y k·d para d > 0. El conjunto activo sigue siendo
+ * exacto: la energía con hormigón solo compresión y pernos solo tracción sigue siendo convexa.
+ */
+export type Muelle = { node: number; dof: number; k: number; traccion?: boolean };
+
+/** ¿Este muelle trabaja con ese desplazamiento? compresión: u < 0 · tracción: u > 0 */
+export const muelleTrabaja = (s: Muelle, u: number) => (s.traccion ? u > 0 : u < 0);
 
 export interface ResultadoSoloCompresion<D> {
   deformOutputs: D;
@@ -45,7 +55,8 @@ export interface ResultadoSoloCompresion<D> {
 /**
  * @param resolver  llama a `deform` con una lista de muelles y devuelve sus salidas
  * @param fijos     muelles lineales (y registros especiales con nudo negativo), no cambian
- * @param comp      muelles solo compresión; comprimen cuando u[dof] < 0 (suelo debajo, z arriba)
+ * @param comp      muelles solo compresión (comprimen cuando u[dof] < 0: suelo debajo, z arriba) y
+ *                  solo tracción (`traccion: true`, pernos: trabajan cuando u[dof] > 0)
  */
 export function resolverSoloCompresion<D extends { deformations?: Map<number, number[]> }>(
   resolver: (springs: Muelle[]) => D,
@@ -70,7 +81,7 @@ export function resolverSoloCompresion<D extends { deformations?: Map<number, nu
     out = resolver(lista);
     alIterar?.(it, out, activo);
     const U = out.deformations;
-    const nuevo = comp.map((s) => (U?.get(s.node)?.[s.dof] ?? 0) < 0);
+    const nuevo = comp.map((s) => muelleTrabaja(s, U?.get(s.node)?.[s.dof] ?? 0));
     if (nuevo.every((v, i) => v === activo[i]))
       return { deformOutputs: out, activo, springsFinales: lista, iteraciones: it, historial, convergio: true };
     const clave = nuevo.map((v) => (v ? 1 : 0)).join("");

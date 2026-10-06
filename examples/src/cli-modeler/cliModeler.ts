@@ -215,8 +215,11 @@ interface ParsedModel {
    *  (Jorge, 14-sep-2026: «case usa dead y combo usa combinaciones»). */
   loadsPat: Map<string, Map<number, [number, number, number, number, number, number]>>;
   frameLoadsPat: Map<string, Map<number, [number, number, number]>>;
-  /** `spring <nudo> <gdl> <k> [compresion]`: con `compresion` el muelle solo empuja (ley Gap de CSI). */
-  springs: Array<{ node: number; dof: number; k: number; comp?: boolean }>;
+  /** `spring <nudo> <gdl> <k> [compresion|traccion]`: con `compresion` el muelle solo empuja (ley Gap de CSI);
+   *  con `traccion` solo tira (perno de anclaje, el Hook de CSI). */
+  springs: Array<{ node: number; dof: number; k: number; comp?: boolean; trac?: boolean }>;
+  /** `shellnu <id|a-b> <nu>`: coeficiente de Poisson de las cáscaras (defecto 0.2, hormigón; acero 0.3). */
+  shellNu: Map<number, number>;
   /** Masa concentrada en un nudo, en toneladas — la que NO sale del peso propio.
    *  En ETABS la fuente de masa son dos interruptores: `INCLUDEELEMENTS`
    *  (rho*A*L) e `INCLUDELOADS` (patrones de carga entre g). El CIMENTAC del GAD
@@ -336,6 +339,7 @@ export function parseCliCommands(text: string): ParsedModel {
     loadsPat: new Map(),
     frameLoadsPat: new Map(),
     springs: [],
+    shellNu: new Map(),
     masses: new Map(),
     diaphragms: new Map(),
     doSolve: false,
@@ -968,7 +972,19 @@ export function parseCliCommands(text: string): ParsedModel {
           const dof = DOF_NAMES[dofName] ?? 2;
           const k = parseFloat(tokens[3] ?? "1000");
           const comp = tokens.slice(4).some(t => /^(compresion|compression|compressiononly|solocompresion)$/i.test(t));
-          m.springs.push({ node: nodeId, dof, k, ...(comp ? { comp: true } : {}) });
+          // `traccion` (tension / tensiononly / hook): perno de anclaje, solo tira (u > 0)
+          const trac = !comp && tokens.slice(4).some(t => /^(traccion|tension|tensiononly|solotraccion|hook)$/i.test(t));
+          m.springs.push({ node: nodeId, dof, k, ...(comp ? { comp: true } : {}), ...(trac ? { trac: true } : {}) });
+          break;
+        }
+        // shellnu <id|a-b> <nu>  — Poisson de las cascaras (defecto 0.2; acero 0.3)
+        case "shellnu":
+        case "poisson": {
+          const rango = (tokens[1] ?? "").match(/^(\d+)-(\d+)$/);
+          const id = parseInt(tokens[1], 10), hasta = rango ? parseInt(rango[2], 10) : id;
+          const nu = parseFloat(tokens[2] ?? "");
+          if (!isFinite(id) || !isFinite(nu) || nu <= -1 || nu >= 0.5) { m.errors.push("shellnu: uso shellnu <id|a-b> <nu>"); break; }
+          for (let k = id; k <= hasta; k++) m.shellNu.set(k, nu);
           break;
         }
         // diaph <nudo> <idDiafragma>  — diafragma rigido (ata Ux, Uy, Rz)
@@ -1739,7 +1755,9 @@ export const cliModeler: ExampleDef = {
       shearModuli.set(eIdx, s.E / (2 * 1.2));
       thicknesses.set(eIdx, s.t);
       densities.set(eIdx, s.rho ?? 2.45);
-      poissons.set(eIdx, 0.2);
+      const nuS = m.shellNu.get(s.id) ?? 0.2;
+      poissons.set(eIdx, nuS);
+      if (nuS !== 0.2) shearModuli.set(eIdx, s.E / (2 * (1 + nuS)));
       const tipo = m.shellTypes.get(s.id);
       if (tipo !== undefined) plateFormulations.set(eIdx, tipo);
       const dk = m.deckSecs.get(s.id);
@@ -1977,7 +1995,7 @@ export const cliModeler: ExampleDef = {
     // de ahí leen el modal y los exportadores; `sustituidos` son los registros que el solve cambia.
     // (Traído de la rama zapata-levantamiento, ecdcb6059, el 29-sep-2026: en main no estaba y el
     // sitio público resolvía LINEAL las zapatas con `compresion`.)
-    const springsComp: Array<{node:number; dof:number; k:number}> = [];
+    const springsComp: Array<{node:number; dof:number; k:number; traccion?: boolean}> = [];
     const sustituidos = new Set<{node:number; dof:number; k:number}>();
     const compPorNudo = new Map<number, number>();         // nudo -> k (uz) de muelles de área comp
     for (const sp of m.springs) {
@@ -1985,7 +2003,7 @@ export const cliModeler: ExampleDef = {
       if (idx === undefined) continue;
       const rec = { node: idx, dof: sp.dof, k: sp.k };
       springsList.push(rec);
-      if (sp.comp) { springsComp.push({ ...rec }); sustituidos.add(rec); }
+      if (sp.comp || sp.trac) { springsComp.push({ ...rec, ...(sp.trac ? { traccion: true } : {}) }); sustituidos.add(rec); }
     }
     // Muelles de AREA: registro con nudo negativo = -(elemento+1); gdl -1 consistente, -3 nodal
     const areaSpringsComp = new Set<number>();              // ids de shell con `compresion` ya repartidos
@@ -2321,11 +2339,16 @@ export const cliModeler: ExampleDef = {
           });
           (window as any).__hekatanCliContactoIter = { nodos: springsComp.map((s) => s.node), k: springsComp.map((s) => s.k), vueltas };
           states.deformOutputs.val = r.deformOutputs;
-          const nAct = r.activo.filter(Boolean).length;
+          // compresión (suelo/hormigón) y tracción (pernos) se cuentan aparte
+          const nTrac = springsComp.filter((s) => s.traccion).length;
+          const nAct = r.activo.filter((v, i) => v && !springsComp[i].traccion).length;
+          const nPern = r.activo.filter((v, i) => v && springsComp[i].traccion).length;
           (window as any).__hekatanCliContacto = { convergio: r.convergio, iteraciones: r.iteraciones,
-            historial: r.historial, nudosEnContacto: nAct, nudosConMuelle: springsComp.length, mensaje: r.mensaje ?? null };
-          console.log(`[CLI Modeler] suelo solo compresión: ${nAct}/${springsComp.length} nudos en contacto, ` +
-                      `${r.iteraciones} iteraciones (${r.historial.join(" → ")})${r.convergio ? "" : " — " + r.mensaje}`);
+            historial: r.historial, nudosEnContacto: nAct, nudosConMuelle: springsComp.length - nTrac,
+            pernosActivos: nPern, pernos: nTrac, activo: [...r.activo], mensaje: r.mensaje ?? null };
+          console.log(`[CLI Modeler] suelo solo compresión: ${nAct}/${springsComp.length - nTrac} nudos en contacto` +
+                      (nTrac ? `, pernos solo tracción: ${nPern}/${nTrac} activos` : "") +
+                      `, ${r.iteraciones} iteraciones (${r.historial.join(" → ")})${r.convergio ? "" : " — " + r.mensaje}`);
           if (!r.convergio) m.errors.push(`suelo solo compresión: ${r.mensaje}`);
         } else {
           states.deformOutputs.val = resolverCon(springsList);
