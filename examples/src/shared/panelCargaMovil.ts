@@ -56,6 +56,9 @@ export function montarCargaMovil(folder: any, estado: ModeloCargaMovil, pararOtr
   f.addBinding(p, "paso", { label: "Paso a ver", min: 1, max: 2000, step: 1 }).on("change", () => verPaso(Math.min(res?.length ?? 1, Math.round(p.paso)) - 1));
   f.addButton({ title: "🎞 Animar el paso del vehículo" }).on("click", () => animar());
   f.addButton({ title: "⏹ Detener" }).on("click", () => parar(true));
+  f.addButton({ title: "🎞 Cómo se usa (GIF)" }).on("click", () => {
+    try { window.open(`${(import.meta as any).env?.BASE_URL ?? "./"}tutoriales/multi_step_static.gif`, "_blank"); } catch { /* nada */ }
+  });
 
   let res: ResultadoPaso[] | null = null, antes: { d: any; a: any } | null = null, raf = 0;
   function calcular() {
