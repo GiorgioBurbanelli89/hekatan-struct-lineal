@@ -1,0 +1,185 @@
+{
+ "top": 4,
+ "props": {
+  "R0.3x0.4": {
+   "A": 0.12,
+   "As2": 0.09999998600000179,
+   "As3": 0.09999998600000179,
+   "J": 0.0019527902806242288,
+   "I22": 0.0008999999999999992,
+   "I33": 0.0015999999999999983
+  },
+  "R0.25x0.5": {
+   "A": 0.125,
+   "As2": 0.10416665208333546,
+   "As3": 0.10416665208333543,
+   "J": 0.0017897283825467206,
+   "I22": 0.0006510416666666671,
+   "I33": 0.0026041666666666683
+  }
+ },
+ "campos_masa": [
+  "Name",
+  "IsDefault",
+  "IncLateral",
+  "IncVertical",
+  "LumpMass",
+  "SourceSelf",
+  "SourceAdded",
+  "SourceLoads",
+  "MoveMass",
+  "RatioX",
+  "RatioY",
+  "LoadPattern",
+  "Multiplier",
+  "GUID"
+ ],
+ "campos_amort": [
+  "Name",
+  "DampType",
+  "FreqUnit",
+  "Frequency",
+  "MassCoeff",
+  "StiffCoeff"
+ ],
+ "campos_ss": [
+  "Name",
+  "MassSource",
+  "StiffType",
+  "NonlinCase",
+  "LoadType",
+  "LoadName",
+  "Function",
+  "LoadSF",
+  "TransAccSF",
+  "RotAccSF",
+  "PhaseAngle",
+  "GridSys",
+  "Angle",
+  "FirstFreq",
+  "LastFreq",
+  "NumFreqInc",
+  "ModalCase",
+  "AddMFreq",
+  "AddMDev",
+  "Deviation",
+  "AddSpFreq",
+  "SpecFreq",
+  "DesignType",
+  "UserDesType",
+  "GUID",
+  "Notes"
+ ],
+ "amort_defecto": {
+  "campos": [
+   "Name",
+   "DampType",
+   "MassCoeff",
+   "StiffCoeff"
+  ],
+  "datos": [
+   "PSD",
+   "Constant",
+   "0",
+   "0.05"
+  ]
+ },
+ "SS": {
+  "n": 0,
+  "steptype": [],
+  "stepnum": [],
+  "u": []
+ },
+ "SSA": {
+  "n": 0,
+  "steptype": [],
+  "stepnum": [],
+  "u": []
+ },
+ "tabla_SS": {
+  "campos": [
+   null
+  ],
+  "filas": []
+ },
+ "tabla_SSA": {
+  "campos": [
+   null
+  ],
+  "filas": []
+ },
+ "tabla_PSD": {
+  "campos": [
+   "Story",
+   "Label",
+   "UniqueName",
+   "OutputCase",
+   "CaseType",
+   "StepType",
+   "Ux",
+   "Uy",
+   "Uz",
+   "Rx",
+   "Ry",
+   "Rz"
+  ],
+  "filas": [
+   [
+    "Story1",
+    "1",
+    "5",
+    "PSD",
+    "LinSteady",
+    "Real Max",
+    "0.008594",
+    "0.004242",
+    "3.3E-05",
+    "0.001193",
+    "0.002021",
+    "0.001214"
+   ],
+   [
+    "Story1",
+    "1",
+    "5",
+    "PSD",
+    "LinSteady",
+    "Real Min",
+    "-0.008688",
+    "-0.002971",
+    "-3.2E-05",
+    "-0.002348",
+    "-0.002053",
+    "-0.001045"
+   ],
+   [
+    "Story1",
+    "1",
+    "5",
+    "PSD",
+    "LinSteady",
+    "Imag Max",
+    "-1.4E-05",
+    "0.000991",
+    "-8.612E-08",
+    "0.00293",
+    "-3E-06",
+    "0.000478"
+   ],
+   [
+    "Story1",
+    "1",
+    "5",
+    "PSD",
+    "LinSteady",
+    "Imag Min",
+    "-0.009197",
+    "-0.007063",
+    "-3.5E-05",
+    "-0.000319",
+    "-0.002168",
+    "-0.000487"
+   ]
+  ]
+ }
+}

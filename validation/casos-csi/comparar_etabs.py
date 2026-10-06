@@ -20,11 +20,13 @@ for k, v in E.get("pandeo_cascara", {}).items():
     fuera = [abs(par(v["factores"], f) / f - 1) * 100 for f in s if abs(f) < 1000]
     plano = [abs(par(v["factores"], f) / f - 1) * 100 for f in s if abs(f) >= 1000]
     print("pandeo cáscara %-12s ETABS λ1 %.6f  SAP %.6f  fuera del plano %.5f %%  en el plano %s" % (
-        k, v["factores"][0], S[k]["factores"][0], max(fuera) if fuera else 0, ("%.5f %%" % max(plano)) if plano else "—"))
+        k, v["factores"][0], S[k]["factores"][0], (max(fuera) if fuera else 0.0), ("%.5f %%" % max(plano)) if plano else "—"))
 if "hiperestatico" in E:
-    S = json.load(open(os.path.join(AQUI, "sap_hiperestatico.json")))["casos"]
+    S = json.load(open(os.path.join(RAIZ, "tests", "datos", "sap_hiperestatico.json")))["casos"]
     for c in ["PT", "HYP"]:
         e, s = E["hiperestatico"][c], S[c]
+        if not any(f["M3"] for f in e["frame"].values()):
+            print("hyperstatic %s: ETABS sin resultados de barra (su Hyperstatic solo toma TENDONES)" % c); continue
         rmax = max(abs(x) for v in s["reac"].values() for x in v) or 1
         dr = max(abs(a - b) for q in s["reac"] for a, b in zip(e["reac"][q], s["reac"][q])) / rmax * 100
         mmax = max(abs(x) for f in s["frame"].values() for x in f["M3"]) or 1

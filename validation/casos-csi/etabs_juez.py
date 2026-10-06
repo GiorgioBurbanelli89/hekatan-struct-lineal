@@ -52,6 +52,20 @@ def puntos(nodos):
     return nom
 
 
+def tabla(clave, campos, filas):
+    datos = [str(x) for f in filas for x in f]
+    r = sm.DatabaseTables.SetTableForEditingArray(clave, 0, campos, len(filas), datos)
+    a = sm.DatabaseTables.ApplyEditedTables(True, 0, 0, 0, 0, "")
+    log = [x for x in a if isinstance(x, str)]
+    if a[-1] != 0 or any(("Number of errors:  0" not in l) and ("DATABASE IMPORT" in l) for l in log): print("tabla", clave, r, a, flush=True)
+
+
+def pandeo_caso(nmodos):
+    """ETABS: cCaseBuckling NO tiene métodos en la OAPI (SetCase no existe) → tabla «Load Case Definitions - Buckling»"""
+    tabla("Load Case Definitions - Buckling", ["Name", "LoadType", "LoadName", "LoadSF", "NumModes", "EigenTol"],
+          [["BUCK", "Load Pattern", "P", 1, nmodos, 1e-12]])
+
+
 def factores(caso):
     R = sm.Results; R.Setup.DeselectAllCasesAndCombosForOutput(); R.Setup.SetCaseSelectedForOutput(caso)
     r = R.BucklingFactor(0, [], [], [], [])
@@ -93,8 +107,7 @@ if "frames" in QUE:
         for q, s in M["apoyos"].items(): sm.PointObj.SetRestraint(pn[int(q)], [bool(x) for x in s])
         sm.LoadPatterns.Add("P", 8, 0, True)
         for q, c in M["cargas"].items(): sm.PointObj.SetLoadForce(pn[int(q)], "P", [float(x) for x in c], True)
-        sm.LoadCases.Buckling.SetCase("BUCK"); sm.LoadCases.Buckling.SetLoads("BUCK", 1, ["Load"], ["P"], [1.0])
-        sm.LoadCases.Buckling.SetParameters("BUCK", 6, 1e-12)
+        pandeo_caso(6)
         guardar("pandeo_" + M["nombre"]); print("run", correr({"BUCK", "P"}), flush=True)
         out["pandeo"][M["nombre"]] = dict(factores=factores("BUCK"), props=props)
         print(M["nombre"], out["pandeo"][M["nombre"]]["factores"], flush=True)
@@ -108,21 +121,28 @@ if "cascaras" in QUE:
     out.setdefault("pandeo_cascara", {})
     for M in MC.MODELOS:
         if M.get("tipo") == 2 or M["nombre"] not in sap or M["nombre"].startswith(("muro_th", "muro_tf", "muro_h")): continue
-        nuevo(max(3.0, max(p[2] for p in M["nodos"])))
+        if os.environ.get("SOLO") and M["nombre"] not in os.environ["SOLO"].split(","): continue
+        vertical = abs(max(p[1] for p in M["nodos"])) < 1e-12 and max(p[2] for p in M["nodos"]) > 1e-9
+        # las losas en el nivel 3 m (en la cota de la base ETABS no daba los modos de pandeo fuera del plano)
+        dz = 0.0 if vertical else 3.0
+        nuevo(max(3.0, max(p[2] for p in M["nodos"]) + dz))
         sm.PropMaterial.SetMaterial("AC", 1); sm.PropMaterial.SetMPIsotropic("AC", MC.E, MC.NU, 1.2e-5)
         sm.PropMaterial.SetWeightAndMass("AC", 1, 0.0)
-        vertical = abs(max(p[1] for p in M["nodos"])) < 1e-12 and max(p[2] for p in M["nodos"]) > 1e-9
         if vertical: sm.PropArea.SetWall("SH", 1, 1, "AC", M["t"])          # eWallPropType Specified, ShellThin
         else: sm.PropArea.SetSlab("SH", 0, 1, "AC", M["t"])                  # eSlabType Slab, ShellThin
-        pn = puntos(M["nodos"])
+        pn = puntos([[p[0], p[1], p[2] + dz] for p in M["nodos"]])
+        for p in pn:
+            try: sm.PointObj.SetDiaphragm(p, 1, "")      # 1 = desconectado de todo diafragma
+            except Exception: pass
         for e, c in enumerate(M["panos"]):
             r = sm.AreaObj.AddByPoint(len(c), [pn[k] for k in c], "", "SH", ""); nm = [x for x in r if isinstance(x, str)][-1]
             if M.get("mods"): sm.AreaObj.SetModifiers(nm, [float(x) for x in M["mods"]])
+            try: sm.AreaObj.SetDiaphragm(nm, "None")
+            except Exception: pass
         for q, s in M["apoyos"].items(): sm.PointObj.SetRestraint(pn[int(q)], [bool(x) for x in s])
         sm.LoadPatterns.Add("P", 8, 0, True)
         for q, c in M["cargas"].items(): sm.PointObj.SetLoadForce(pn[int(q)], "P", [float(x) for x in c], True)
-        sm.LoadCases.Buckling.SetCase("BUCK"); sm.LoadCases.Buckling.SetLoads("BUCK", 1, ["Load"], ["P"], [1.0])
-        sm.LoadCases.Buckling.SetParameters("BUCK", 8, 1e-12)
+        pandeo_caso(8)
         guardar("pandeo_cascara_" + M["nombre"]); print("run", correr({"BUCK", "P"}), flush=True)
         # malla de análisis de ETABS: nº de nudos de análisis (si partió los paños, no es el mismo modelo)
         try:
@@ -139,10 +159,10 @@ if "cascaras" in QUE:
 # ── 4. Hyperstatic ───────────────────────────────────────────────────────────────────────────────────────────────
 if "hyp" in QUE:
     from modelo import *
-    nuevo(3)
+    nuevo(6)
     sm.PropMaterial.SetMaterial("C", 2); sm.PropMaterial.SetMPIsotropic("C", E, NU, 1e-5); sm.PropMaterial.SetWeightAndMass("C", 1, 0.0)
     sm.PropFrame.SetRectangle("R", "C", H, B)
-    pn = puntos(NODES); fr = []
+    pn = puntos([[p[0], p[1], p[2] + 3.0] for p in NODES]); fr = []   # en el nivel 3 m (en la base ETABS no la carga bien)
     for e, f in enumerate(FRAMES):
         r = sm.FrameObj.AddByPoint(pn[f[0]], pn[f[1]], "", "R", ""); fr.append(r[0])
         sm.FrameObj.SetEndLengthOffset(r[0], False, 0.0, 0.0, 0.0)
@@ -161,7 +181,14 @@ if "hyp" in QUE:
     for q, c in nodal.items(): sm.PointObj.SetLoadForce(pn[q], "PT", c, True)
     sm.LoadCases.StaticLinear.SetCase("PT"); sm.LoadCases.StaticLinear.SetLoads("PT", 1, ["Load"], ["PT"], [1.0])
     print("hyp", sm.LoadCases.HyperStatic.SetCase("HYP"), sm.LoadCases.HyperStatic.SetBaseCase("HYP", "PT"), flush=True)
+    try:   # cómo quedó definido el caso en ETABS (tipo de apoyo, puntos de restricción)
+        r = sm.DatabaseTables.GetTableForDisplayArray("Load Case Definitions - Hyperstatic", [], "", 0, [], 0, [])
+        print("tabla HYP", list(r[2]), list(r[4]), flush=True); out["hyp_definicion"] = dict(campos=list(r[2]), datos=list(r[4]))
+    except Exception as ex: print("tabla HYP no", ex, flush=True)
     guardar("hiperestatico"); print("run", correr({"PT", "HYP"}), flush=True)
+    try:
+        st = sm.Analyze.GetCaseStatus(); print("estado de casos", list(st[1]), list(st[2]), flush=True)
+    except Exception as ex: print("estado no", ex, flush=True)
     R = sm.Results; res = {}
     for c in ["PT", "HYP"]:
         R.Setup.DeselectAllCasesAndCombosForOutput(); R.Setup.SetCaseSelectedForOutput(c)
