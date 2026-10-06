@@ -56,8 +56,6 @@ const EXENTOS_EQUILIBRIO = new Set([
   "muro-manabi",
   // Winkler SIN TRACCIÓN (levantamiento): la carga la toman los muelles que siguen en contacto
   "zapata-excentrica", "zapata-levantamiento",
-  // hormigón solo compresión + pernos solo tracción: su ΣFz (= N a 1e-6 %) lo mide `placa-base-tubular`
-  "placa-base-tubular",
   // plateQ4Solve: no hay `reactions` que sumar
   "plate-thin", "plate-thick", "plate-thick-validacion", "triangular-plate",
   "plane", "layered-shell", "benchmark-safe-ex01-plate",

@@ -437,7 +437,6 @@ import { tableroPuente } from "../tablero-puente/tableroPuente";
 import { placaBaseH } from "../placa-base-h/placaBaseH";
 import { placaBaseHueca } from "../placa-base-hueca/placaBaseHueca";
 import { placaBaseCft } from "../placa-base-cft/placaBaseCft";
-import { placaBaseTubular } from "../placa-base-tubular/placaBaseTubular";   // hormigón solo compresión + pernos solo tracción (5-oct-2026)
 import { slopeStability } from "../slope-stability/slopeStability";
 // El único que sigue con su propio panel
 import { ejemplosConPanelPropio } from "./ejemplosConPanelPropio";
@@ -448,7 +447,7 @@ const graduados: ExampleDef[] = [
   gatewayArch, cableStayedBridge, twistedTower, burjKhalifa, sydneyOpera,
   shearWallQ4, cantileverBeamQ4,
   slopeStability,
-  placaBaseH, boltHoleDetail, conexionDiafragmaCft, placaBaseHueca, placaBaseCft, placaBaseTubular,
+  placaBaseH, boltHoleDetail, conexionDiafragmaCft, placaBaseHueca, placaBaseCft,
   columnaCftH8,
   vigaDobleT,
   tableroPuente,

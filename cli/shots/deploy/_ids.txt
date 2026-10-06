@@ -113,7 +113,6 @@ placa-base
 placa-base-cft
 placa-base-h
 placa-base-hueca
-placa-base-tubular
 placa-orificios
 placa-xy
 plane
