@@ -585,7 +585,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
           const e2 = un(cr(e3, e1)); e1 = un(cr(e2, e3));
           const dir = (v: number[]) => { const k = [0, 1, 2].reduce((b, c) => (Math.abs(v[c]) > Math.abs(v[b]) ? c : b), 0);
             return Math.abs(v[k]) > 0.995 ? `${v[k] > 0 ? "+" : "−"}${"XYZ"[k]}` : `(${v.map((x) => x.toFixed(2)).join(", ")})`; };
-          lines.splice(1, 0, `ejes: 1→${dir(e1)}  2→${dir(e2)}  3→${dir(e3)}`, `(11: cara ⟂ eje 1 · 22: cara ⟂ eje 2)`);
+          // los VALORES primero (lo que se busca al pasar el cursor) y los ejes debajo (6-oct-2026: con tres campos el último
+          // se salía por abajo de la pantalla)
+          lines.push(`ejes: 1→${dir(e1)}  2→${dir(e2)}  3→${dir(e3)}`, `(11: cara ⟂ eje 1 · 22: cara ⟂ eje 2)`);
         }
         if (lines.length > 0) {
           info += `\n──── results ────\n` + lines.slice(0, 14).join("\n");
@@ -654,6 +656,33 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     }
 
     return null;
+  }
+
+  /** El recuadro junto al cursor, ENTERO dentro del visor: si no cabe abajo/derecha se pasa arriba/izquierda
+   *  (6-oct-2026: en la placa base la última línea, Uz, quedaba por debajo de la pantalla). */
+  function colocarTip(cx: number, cy: number, parentRect: DOMRect) {
+    const off = 12;
+    tooltip.style.transform = "none";
+    let x = cx - parentRect.left + off, y = cy - parentRect.top + off;
+    const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+    // abajo están la ventana de comandos y la barra de estado (~90 px): el recuadro no se mete debajo
+    const W = ctx.rendererElm.clientWidth || parentRect.width;
+    const H = Math.min(ctx.rendererElm.clientHeight || parentRect.height, window.innerHeight - 92 - parentRect.top);
+    if (x + w > W - 4) x = Math.max(4, cx - parentRect.left - off - w);
+    if (y + h > H - 4) y = Math.max(4, cy - parentRect.top - off - h);
+    // ni debajo de un panel flotante que lo taparía (los paneles lo piden con data-hk-obstaculo): el visor está en
+    // z-index 1 y su recuadro no puede subir por encima de ellos, así que se pasa al otro lado del cursor
+    const tapa = (xx: number, yy: number) => [...document.querySelectorAll<HTMLElement>("[data-hk-obstaculo]")].some((o) => {
+      const r = o.getBoundingClientRect(); if (!r.width || o.style.display === "none") return false;
+      const L = parentRect.left + xx, T = parentRect.top + yy;
+      return L < r.right && L + w > r.left && T < r.bottom && T + h > r.top;
+    });
+    if (tapa(x, y)) {
+      const xi = Math.max(4, cx - parentRect.left - off - w), ya = Math.max(4, cy - parentRect.top - off - h);
+      if (!tapa(xi, y)) x = xi; else if (!tapa(x, ya)) y = ya; else { x = xi; y = ya; }
+    }
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
   }
 
   // ── Update visual del highlight ──
@@ -779,8 +808,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
     tooltip.style.display = "block";
     const rect = ctx.rendererElm.getBoundingClientRect();
     const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect() ?? rect;
-    tooltip.style.left = `${clientX - parentRect.left}px`;
-    tooltip.style.top = `${clientY - parentRect.top}px`;
+    colocarTip(clientX, clientY, parentRect);
 
     ctx.render();
   }
@@ -817,8 +845,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
         if (hover.type === "shell" && tooltip.style.display === "block") tooltip.textContent = hover.info;
         const parentRect = ctx.rendererElm.parentElement?.getBoundingClientRect()
           ?? ctx.rendererElm.getBoundingClientRect();
-        tooltip.style.left = `${e.clientX - parentRect.left}px`;
-        tooltip.style.top  = `${e.clientY - parentRect.top}px`;
+        colocarTip(e.clientX, e.clientY, parentRect);
       }
     });
   };
