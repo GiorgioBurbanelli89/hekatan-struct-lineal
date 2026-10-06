@@ -21,3 +21,7 @@ HL93F = dict(nombre="HL93F", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[9.
 HL93V = dict(nombre="HL93V", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[9.3, 9.3, 9.3, 9.3], var=(1, 9.0))
 CAM0 = dict(nombre="CAM0", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[0, 0, 0, 0])
 UNI = dict(nombre="UNI", ejes=[0.0], sep=[], unif=[1.0, 1.0])
+# Hyperstatic: cargas equivalentes de un tendón parabólico (P = 2000 kN) en cada vano, autoequilibradas:
+#   vano 1 flecha 0.4 → w = 8Pe/L² = 16 kN/m hacia arriba y 160 kN hacia abajo en cada extremo del vano;
+#   vano 2 flecha 0.3 → 12 kN/m y 120 kN; axial ±P en los extremos de la viga.
+PT = dict(P=2000.0, e=[0.4, 0.3])

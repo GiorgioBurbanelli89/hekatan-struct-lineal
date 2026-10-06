@@ -86,3 +86,5 @@ export { placaAT, atJointMoments } from "./utils/placaAT";
 
 // Carga de vehículos por un carril: Multi-step Static y Moving Load de SAP2000 (5-oct-2026)
 export * from "./cargaMovil";
+// Hyperstatic (Load Case de SAP2000): estructura sin apoyos cargada con las reacciones de un caso base (5-oct-2026)
+export * from "./hiperestatico";

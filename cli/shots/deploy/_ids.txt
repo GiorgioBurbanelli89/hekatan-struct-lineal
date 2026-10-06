@@ -78,6 +78,7 @@ guerra-ej5-zapata-combinada-trapezoidal
 guerra-ej6-zapata-unida-viga-amarre
 guerra-ej7-viga-cimentacion-new
 guerra-ej8-losa-cimentacion
+hiperestatico-sap2000
 ifc-viewer
 itw-cantilever
 itw-cook

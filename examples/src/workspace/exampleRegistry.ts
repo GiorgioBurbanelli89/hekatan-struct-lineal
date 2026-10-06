@@ -298,6 +298,7 @@ import { twisted } from "../twisted/twisted";
 import { muroQ4 } from "../muro-q4/muroQ4";
 import { pandeoSap } from "../pandeo/pandeoSap";
 import { cargaMovilCsi } from "../carga-movil-csi/cargaMovilCsi";
+import { hiperestaticoCsi } from "../hiperestatico-csi/hiperestaticoCsi";
 import { vigaQ4 } from "../viga-q4/vigaQ4";
 import { losaPlana } from "../losa-plana/losaPlana";
 import { losaRect } from "../losa-rect/losaRect";
@@ -483,7 +484,7 @@ export const examplesRegistry: ExampleDef[] = [
   //    esta ya en SU carpeta con su `index.html`; aqui se registran para que el
   //    selector los ofrezca y `categorias-arbol` los pueda mirar (18-sep-2026).
   arco, burj, eiffel, opera, talud, twisted,
-  pandeoSap, cargaMovilCsi, muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios, validacionLosasCsi,
+  pandeoSap, cargaMovilCsi, hiperestaticoCsi, muroQ4, vigaQ4, losaPlana, losaRect, placaXY, placaOrificios, validacionLosasCsi,
   // Prueba LOCAL de la placa base no lineal: solo en `npm run dev` (en el build import.meta.env.DEV = false).
   ...(import.meta.env.DEV ? [placaBaseNoLineal] : []),
   colPlaca, vigaAlta, muroContencion, puenteReticular,

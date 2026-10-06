@@ -17,6 +17,7 @@
 import { montarTiempoHistoria } from "../shared/tiempoHistoria/panelTH";
 import { montarPandeo, montarTiposDeCaso } from "../shared/panelPandeo";
 import { montarCargaMovil } from "../shared/panelCargaMovil";
+import { montarHiperestatico } from "../shared/panelHiperestatico";
 import { montarEstacionario } from "../shared/panelEstacionario";
 import { montarExplorador } from "../shared/exploradorModelo";
 import { montarNEC } from "../shared/nec/panelNEC";
@@ -7425,7 +7426,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       W_.__hekatanExplorador = ex; W_.__hekatanExploradorFolder = ex.folder;
     } catch (e) { console.warn("[explorador]", e); }
     // ── ⟂ Pandeo lineal (1-oct-2026): el Load Case «Buckling» de SAP2000 + los tipos de caso (no lineal = Pro), en TODOS ──
-    for (const k of ["__hekatanPandeoFolder", "__hekatanTiposFolder", "__hekatanEstacionarioFolder", "__hekatanCargaMovilFolder"]) if (W_[k]) { try { W_[k].dispose(); } catch {} W_[k] = null; }
+    for (const k of ["__hekatanPandeoFolder", "__hekatanTiposFolder", "__hekatanEstacionarioFolder", "__hekatanCargaMovilFolder", "__hekatanHiperFolder"]) if (W_[k]) { try { W_[k].dispose(); } catch {} W_[k] = null; }
     try {
       const pd = montarPandeo(W_.__hekatanOutputsFolder ?? pane, states as any, viewerElm, () => { try { modalAnimator.stop(); } catch {} });
       W_.__hekatanPandeo = pd; W_.__hekatanPandeoFolder = pd.folder;
@@ -7433,6 +7434,8 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       W_.__hekatanEstacionario = ssp; W_.__hekatanEstacionarioFolder = ssp.folder;
       const cm = montarCargaMovil(W_.__hekatanOutputsFolder ?? pane, states as any, () => { try { modalAnimator.stop(); } catch {} try { W_.__hekatanPandeo?.parar?.(true); } catch {} });
       W_.__hekatanCargaMovil = cm; W_.__hekatanCargaMovilFolder = cm.folder;
+      const hy = montarHiperestatico(W_.__hekatanOutputsFolder ?? pane, states as any);
+      W_.__hekatanHiper = hy; W_.__hekatanHiperFolder = hy.folder;
       const tc = montarTiposDeCaso(W_.__hekatanOutputsFolder ?? pane);
       W_.__hekatanTiposCaso = tc; W_.__hekatanTiposFolder = tc.folder;
     } catch (e) { console.warn("[pandeo]", e); }

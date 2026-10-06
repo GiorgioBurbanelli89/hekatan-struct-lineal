@@ -29,7 +29,7 @@ const TIPOS: Array<[string, string]> = [
   ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal), = SAP2000."],
   ["Steady State", "✓ Hekatan Struct: 〜 Estado estacionario (lineal), = SAP2000."],
   ["Power Spectral Density", "✓ Hekatan Struct: 〜 Estado estacionario / PSD, = SAP2000."],
-  ["Hyperstatic", "Próximamente en Hekatan Struct (lineal)."],
+  ["Hyperstatic", "✓ Hekatan Struct: 🔩 Hyperstatic (secundarios del pretensado), = SAP2000."],
 ];
 
 export function montarTiposDeCaso(folder: any) {
