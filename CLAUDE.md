@@ -419,6 +419,16 @@ el edificio dual 2×2×4 con malla de 1 m: T1 = 0.4871 (DKQ) / 0.4874 (DKMQ), < 
 un elemento ajustado a CSI. Placa apoyada 8×8 contra ETABS 19 misma malla
 (`placa-thick-thin-sano`, 15-sep-2026): Thin 0.000 %; Thick 0.37–1.9 % según t/L.
 
+**Diagnóstico Thick vs CSI (6-oct-2026)** — los 4 fallos de la suite y el pandeo Thick: misma malla nudo a nudo, Thin = SAP2000
+0.000 % en todos (malla, carga, apoyos y muelle iguales) ⇒ lo que queda es SOLO el elemento grueso. Refinando: Navier SS duro
+(t .2/.5) Struct y SAP convergen juntos (32×32: 0.05 %; Struct −0.015 % de la FSDT exacta, SAP +0.04 %); muelle 3.1 → 0.33 %;
+pandeo losa/muro 0.26/0.33 %, placa SS duro → Reddy (10.2.22) ambos ≤ 0.12 %. NO convergen (y no sirven de juez Thick): apoyos
+PUNTUALES (losa 4 esquinas, bóveda: singularidad de Mindlin) y capa límite de borde BLANDO/LIBRE (losa L, placa SS blanda):
+ahí MITC4 = DKMQ = Auricchio-Taylor a ≤ 0.2 % y SAP2000 queda ~2 % más rígido. Test `placa-gruesa-navier`; los Thick de
+malla gruesa de automesh-vs-etabs, automesh (e)/(f), muelle-area y pandeo-cascara son filas INFORMATIVAS con el Thin como juez.
+⚠️ DKMQ (`shelltype dkmq`) IGNORA los modificadores f/m/v (`shellQ4_DKMQ.cpp` no lee `shellModifiers` ni los escalares):
+muro con modificadores λ 23.1 contra 13.5 (MITC4) / 13.3 (SAP). Pendiente; no afecta al defecto (MITC4).
+
 ⚠️ El harness `cli/native/kelem_native.exe` imprime la K en ejes LOCALES del
 elemento (`localX = v01 + v32`): en un trapecio no coincide entrada a entrada
 con la K global de ETABS aunque sea la misma (autovalores idénticos).
@@ -1230,7 +1240,7 @@ solo flexión θ salía hasta 22 % de SAP2000: no volver a probarla.
   explicar) → muro de triángulos λ ≤ 4e-4 %, placa/losa 0.00000 %.
 - **Modificadores** f11 f22 f12 m11 m22 m12: λ = SAP2000 0.00000 %. Medido que CSI escala por f12 la penalización del giro y
   el reloj de arena khg (Q4 y triángulo): sin eso el estático de un muro con modificadores se iba 0.9 % (giro 16 %).
-- Pendiente: **Shell-Thick** (la K de placa gruesa de Struct ≠ CSI: λ 0.7–10 %; el test lo marca OMITIDO y el panel avisa),
+- **Shell-Thick** (6-oct-2026): diferencia de ELEMENTO en malla gruesa (λ 0.7–10 %); con malla fina 0.26–0.33 % y la placa SS duro = Reddy FSDT (test `placa-gruesa-navier`); el panel lo explica. Pendiente:
   sólidos sin G, releases dentro de G.
 
 ## Estado estacionario (Load Case «Steady State» de SAP2000) — 1-oct-2026

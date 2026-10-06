@@ -5,7 +5,8 @@
  * el C++ (hekatan-fem/src/cpp/utils/pandeo.h). Arbitrado con SAP2000: tests/casos/pandeo_sap2000.mjs (0.0000 %).
  * Barras (frames) y, desde el 5-oct-2026, CÁSCARAS Q4 y (6-oct-2026) TRIÁNGULOS (muros y losas: Kg con las fuerzas de
  * membrana del estático de r, CSiRefer p.444; = SAP2000 en tests/casos/pandeo_cascara_sap2000.mjs, también con modificadores).
- * Sólidos: sin G. Shell-Thick: la K de placa gruesa de Struct no es la de CSI (se avisa).
+ * Sólidos: sin G. Shell-Thick: Struct usa MITC4 (Bathe-Dvorkin), no la placa gruesa de CSI: con malla gruesa λ
+ * difiere hasta ~10 %; con malla fina 0.1–2 % y converge a la exacta FSDT (test placa-gruesa-navier).
  *
  * También la lista de los 11 «Load Case Type» de SAP2000: los lineales están (o estarán) en Hekatan Struct; los NO
  * LINEALES son del módulo Pro (decisión de Jorge, 1-oct-2026).
@@ -81,7 +82,7 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
       ultimo.factors.map((l, k) => `modo ${k + 1}:  λ = ${l.toFixed(4)}`).join("\n") +
       "\n" + (l1 > 1 ? "λ₁ > 1: aguanta las cargas" : l1 > 0 ? "λ₁ < 1: PANDEA antes" : "λ₁ < 0: cargas invertidas") +
       (conSolidos ? "\n⚠ sólidos: sin G todavía" : "") +
-      (gruesa ? "\n⚠ Shell-Thick: la placa gruesa de Struct no es la de SAP2000 (λ aproximado)" : "") +
+      (gruesa ? "\n⚠ Shell-Thick: placa MITC4 (Bathe-Dvorkin), no la de SAP2000: con malla gruesa λ difiere hasta ~10 %; refine la malla: Struct converge a la exacta FSDT (con malla fina 0.1–2 % de SAP2000)" : "") +
       `\n${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
     p.modo = 1; f.refresh();
   }

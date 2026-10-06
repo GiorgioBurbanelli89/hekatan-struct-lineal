@@ -42,7 +42,18 @@ export async function correr() {
     // Shell-Thick (tipo 2): OMITIDO a propósito. La K de la placa gruesa de Struct (MITC4/DSE/DKMQ) no es la de CSI
     // (ya medido en estático: 0.37–1.9 %) y el pandeo hereda esa diferencia (λ1 0.7–10 %); la Kg no se puede aislar sin
     // la K de CSI. Se informa aparte en registros/2026-10-05_struct_lo_que_falta_6_casos.md.
-    if (M.tipo === 2) { filas.push({ que: `${M.nombre}: OMITIDO (Shell-Thick: la K de placa gruesa de Struct ≠ CSI)`, medido: 0, limite: 1, ok: true, detalle: "pendiente, ver bitácora" }); continue; }
+    // 6-oct-2026: diagnosticado. Con MALLA GRUESA la diferencia es de formulación del elemento grueso (en ambos lados
+    // lejos de la analítica: placa 4×2 SAP +53 %, Struct +37 %); con malla fina losa 0.26 %, muro 0.33 % y la placa SS
+    // duro de los dos va a Reddy (10.2.22) a ≤ 0.12 % → test `placa-gruesa-navier`. Aquí queda INFORMATIVA.
+    if (M.tipo === 2) {
+      const mT = modeloStruct(M, D.E, D.nu, 0);
+      const dT = fem.deform(mT.nodes, mT.elements, mT.nodeInputs, mT.elementInputs);
+      const lT = fem.bucklingAnalysis(mT.nodes, mT.elements, mT.nodeInputs, mT.elementInputs, undefined, 2, dT.deformations).factors[0];
+      const dd = (Math.abs(lT) / Math.abs(s.factores[0]) - 1) * 100;
+      filas.push({ que: `${M.nombre}: Shell-Thick malla gruesa, diferencia de ELEMENTO (informativa)`, medido: dd.toFixed(2) + " %", limite: "info", ok: true, crudo: true,
+        detalle: `Struct ${Math.abs(lT).toFixed(4)} · SAP2000 ${Math.abs(s.factores[0]).toFixed(4)} · analítica ${M.analitico?.toFixed(4)} — malla fina en placa-gruesa-navier` });
+      continue;
+    }
     const m = modeloStruct(M, D.E, D.nu);
     const tri = M.panos.some((c) => c.length === 3);
     // TODOS los modos de SAP (también los de EN EL PLANO, λ 2600…48 000: la membrana de Struct = la de CSI).

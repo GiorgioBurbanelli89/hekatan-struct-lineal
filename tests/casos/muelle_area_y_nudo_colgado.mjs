@@ -23,12 +23,13 @@ export const nombre = "muelle-area-y-nudo-colgado";
 export const descripcion = "areaspring nodal/consistente (= spring, q/ks, vs SAFE area) y edge etabs (Hermite)";
 
 const dir = mkdtempSync(join(tmpdir(), "hkAreaSp-"));
-async function placa({ L0 = 4, N = 8, T = 0.2, E = 25e6, NU = 0.2, KS = 20000, modo, carga }) {
+async function placa({ L0 = 4, N = 8, T = 0.2, E = 25e6, NU = 0.2, KS = 20000, modo, carga, tipo }) {
   const h = L0 / N; const L = []; const id = new Map(); const k = (i, j) => `${i},${j}`;
   for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) { id.set(k(i, j), id.size + 1); L.push(`node ${id.get(k(i, j))} ${(i * h).toFixed(6)} ${(j * h).toFixed(6)} 0`); }
   let ns = 0;
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
-    ns++; L.push(`shell ${ns} ${id.get(k(i, j))} ${id.get(k(i + 1, j))} ${id.get(k(i + 1, j + 1))} ${id.get(k(i, j + 1))} ${T} ${E} ${NU} 0`);
+    ns++; // ⚠️ el 8º token de `shell` es CARGA de superficie, no ν: aquí iba `${NU} 0` = 0.2 kN/m² hacia ARRIBA (6-oct-2026)
+    L.push(`shell ${ns} ${id.get(k(i, j))} ${id.get(k(i + 1, j))} ${id.get(k(i + 1, j + 1))} ${id.get(k(i, j + 1))} ${T} ${E}`, `shellnu ${ns} ${NU}`);
     if (modo === "consistente") L.push(`areaspring ${ns} ${KS}`);
     if (modo === "nodal") L.push(`areaspring ${ns} ${KS} nodal`);
     if (carga.q) L.push(`areaload ${ns} ${carga.q}`);
@@ -38,8 +39,9 @@ async function placa({ L0 = 4, N = 8, T = 0.2, E = 25e6, NU = 0.2, KS = 20000, m
     if (modo === "mano") { const f = (i === 0 || i === N ? 0.5 : 1) * (j === 0 || j === N ? 0.5 : 1); L.push(`spring ${id.get(k(i, j))} uz ${KS * h * h * f}`); }
   }
   if (carga.P) L.push(`load ${id.get(k(N / 2, N / 2))} 0 0 ${-carga.P}`);
+  if (tipo) L.push(`shelltype 1-${ns} ${tipo}`);
   L.push("solve");
-  const ruta = join(dir, `placa_${modo}_${carga.q ? "q" : "P"}.heks`); writeFileSync(ruta, L.join("\n") + "\n", "utf-8");
+  const ruta = join(dir, `placa_${modo}_${carga.q ? "q" : "P"}_${N}_${tipo ?? "thick"}.heks`); writeFileSync(ruta, L.join("\n") + "\n", "utf-8");
   const r = await resolverHeks(ruta);
   const w = (x, y) => { const i = r.nodes.findIndex((n) => Math.abs(n[0] - x) < 1e-9 && Math.abs(n[1] - y) < 1e-9); return r.deformOutputs.deformations.get(i)[2]; };
   const todos = []; r.deformOutputs.deformations.forEach((d) => todos.push(d[2]));
@@ -69,7 +71,27 @@ export async function correr() {
     pn = Math.max(pn, Math.abs((Nn.w(s.x, s.y) * 1000) / s.w_mm - 1) * 100);
     pc = Math.max(pc, Math.abs((C.w(s.x, s.y) * 1000) / s.w_mm - 1) * 100);
   }
-  filas.push({ que: "placa flexible: NODAL vs SAFE muelle de area (9 puntos)", medido: pn, limite: 1.5, ok: pn <= 1.5, detalle: `peor ${pn.toFixed(3)} % (SAFE imprime a 4 cifras)` });
+  // 6-oct-2026: el «NODAL vs SAFE ≤ 1.5 %» se cumplía con la placa gruesa ajustada a CSI (quitada el 15-sep). Con la
+  // MITC4 publicada queda ~3.7 %, y NO es el muelle: SAP2000 con la MISMA malla y muelles nodales k = ks·A/4 da (a) en
+  // Thick = SAFE (resolución de SAFE) y (b) en Thin = Struct 0.000 %; (c) en Thick la diferencia Struct–CSI baja al
+  // refinar (8×8 3.1 %, 16×16 1.1 %, 32×32 0.33 %, 64×64 0.36 %): es el elemento grueso con malla gruesa.
+  const SMs = JSON.parse(readFileSync(new URL("../../validation/placa_gruesa/sap_misma_malla.json", import.meta.url), "utf-8")).modelos;
+  const enNudo = (m, x, y) => m.uz[m.nodos.findIndex((p) => Math.abs(p[0] - x) < 1e-9 && Math.abs(p[1] - y) < 1e-9)];
+  let ps = 0;
+  for (const s of S.results.samples_9pts) ps = Math.max(ps, Math.abs((enNudo(SMs["safeN_8_thick"], s.x, s.y) * 1000) / s.w_mm - 1) * 100);
+  filas.push({ que: "SAFE muelle de ÁREA = SAP2000 Thick + muelle NODAL, misma malla (9 puntos)", medido: ps, limite: 1.5, ok: ps <= 1.5,
+               detalle: `peor ${ps.toFixed(3)} % (la esquina (0,0) de SAFE; SAFE da 0.934/0.924 en esquinas simétricas, imprime a 4 cifras)` });
+  { const T8 = await placa({ modo: "nodal", carga: { P: 1000 }, tipo: "thin" }); const st = SMs["safeN_8_thin"];
+    let wm = 0, pe = 0; st.uz.forEach((v) => { wm = Math.max(wm, Math.abs(v)); });
+    st.nodos.forEach((p, i) => { pe = Math.max(pe, Math.abs(T8.w(p[0], p[1]) - st.uz[i])); });
+    pe = 100 * pe / wm;
+    filas.push({ que: "placa flexible Shell-Thin NODAL = SAP2000 Thin (81 nudos)", medido: pe, limite: 1e-3, ok: pe <= 1e-3, detalle: `peor ${pe.toExponential(2)} % del w máximo ⇒ muelle, carga y malla = CSI` }); }
+  { const K32 = await placa({ N: 32, modo: "nodal", carga: { P: 1000 } }); const st = SMs["safeN_32_thick"];
+    let wm = 0, pe = 0; st.uz.forEach((v) => { wm = Math.max(wm, Math.abs(v)); });
+    st.nodos.forEach((p, i) => { pe = Math.max(pe, Math.abs(K32.w(p[0], p[1]) - st.uz[i])); });
+    pe = 100 * pe / wm;
+    filas.push({ que: "placa flexible Thick 32×32 NODAL = SAP2000 Thick (malla fina)", medido: pe, limite: 0.5, ok: pe <= 0.5,
+                 detalle: `peor ${pe.toFixed(3)} % del w máximo (8×8: 3.1 %; NODAL Thick 8×8 vs SAFE: ${pn.toFixed(2)} %, diferencia de elemento en malla gruesa)` }); }
   filas.push({ que: "placa flexible: CONSISTENTE se separa de SAFE (SAFE NO es consistente)", medido: pc, limite: 10, ok: pc >= 10, detalle: `peor ${pc.toFixed(2)} % (esquinas): hace falta > 10 % para que la fila avise si SAFE cambiara` });
   // 4) edge etabs: Hermite autoconsistente
   {
