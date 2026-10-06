@@ -1216,7 +1216,13 @@ solo flexión θ salía hasta 22 % de SAP2000: no volver a probarla.
   los NO LINEALES dicen «Módulo Pro — no disponible en Hekatan Struct» (decisión de Jorge).
 - Juez: `validation/pandeo/sap_pandeo.py` (OAPI) → `sap_pandeo.json`; `node tests/run.mjs pandeo` (columna 1 y 4
   trozos, pórtico 3D con columna girada 30° y apoyo articulado, edificio 3D de 918 GDL): **0.0000 %** en 28 modos.
-- Pendiente: G de cáscaras y sólidos (muros), releases dentro de G.
+- **Cáscaras (muros y losas), 5-oct-2026**: `gCascaras` en `pandeo.h` (CSiRefer p.444): Kg = ∫ ∇Nᵀ·[Nxx Nxy; Nxy Nyy]·∇N dA
+  sobre u, v, w locales, N bilineales, Gauss 2×2; N = t·D·B·d con la B de la MEMBRANA con giro normal (Allman proyectada, tipo 8,
+  sin burbuja) en cada punto de Gauss. Viaja el estático de r: `modal(..., pandeo_u)` (último arg.) y
+  `bucklingAnalysis(..., deformaciones)`. Juez `validation/pandeo_cascara/sap_pandeo_cascara.py` → `node tests/run.mjs
+  pandeo-cascara` (26 filas: λ de todos los modos y MAC = SAP2000, Kg sola con el estático de SAP, ejemplo
+  `pandeo-cascara-sap2000`). Formulación: `registros/libros/CSiRefer_Pandeo_cascara_formulacion.md`.
+- Pendiente: triángulos de cáscara y sólidos sin G; Shell-Thick y modificadores de membrana sin medir; releases dentro de G.
 
 ## Estado estacionario (Load Case «Steady State» de SAP2000) — 1-oct-2026
 

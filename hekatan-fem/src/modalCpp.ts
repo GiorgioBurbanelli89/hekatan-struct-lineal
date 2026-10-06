@@ -38,7 +38,9 @@ export function modalCpp(
   // PANDEO LINEAL (1-oct-2026, cpp/utils/pandeo.h): axial P-delta por elemento (tracción +). Si viene, no hay modal.
   pandeoP?: number[],
   // ESTADO ESTACIONARIO (1-oct-2026, cpp: sección 8b de modal.cpp)
-  ss?: EstacionarioOpciones
+  ss?: EstacionarioOpciones,
+  // PANDEO DE CÁSCARAS (5-oct-2026, cpp/utils/pandeo.h gCascaras): estático de r, 6 por nudo (globales)
+  pandeoU?: number[]
 ): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado; steadyState?: EstacionarioResultado } {
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
 
@@ -192,6 +194,8 @@ export function modalCpp(
   }
   let pandeoPPtr = 0;
   if (pandeoP) { pandeoPPtr = allocate(pandeoP, Float64Array, mod.HEAPF64); gc.push(pandeoPPtr); }
+  let pandeoUPtr = 0;
+  if (pandeoU && pandeoU.length === 6 * nodes.length) { pandeoUPtr = allocate(pandeoU, Float64Array, mod.HEAPF64); gc.push(pandeoUPtr); }
   const pandeoOutPtr = mod._malloc(4); gc.push(pandeoOutPtr);
   const pandeoOutLen = mod._malloc(4); gc.push(pandeoOutLen);
   mod.HEAPU32[pandeoOutPtr / 4] = 0; mod.HEAPU32[pandeoOutLen / 4] = 0;
@@ -362,7 +366,8 @@ export function modalCpp(
     ssCfgPtr,
     ssCfgLen,
     ssOutPtr,
-    ssOutLen
+    ssOutLen,
+    pandeoUPtr
   );
 
   // 3- Read outputs
@@ -640,15 +645,30 @@ export type PandeoResultado = { factors: number[]; modeShapes: number[][] };
  * La axial P-delta de cada barra es la del estático de r (promedio de los dos extremos, CSIRefer cap. XXII)
  * y G se arma en el C++ (utils/pandeo.h) sobre el MISMO K que el modal (muelles, diafragmas, releases…).
  * `axiales`: las del estático de r, por elemento: [N_I, N_J] (fuerzas de extremo de analyze()).
+ * `deformaciones` (5-oct-2026): el estático de r por nudo (deformOutputs.deformations). Con él las CÁSCARAS Q4 aportan
+ * su Kg: tensiones de membrana (ITW con giro normal, Gauss 2×2) integradas con las derivadas de N (CSiRefer p.444),
+ * sobre u, v, w. = SAP2000 (validation/pandeo_cascara, tests/casos/pandeo_cascara_sap2000.mjs).
  */
 export function bucklingAnalysis(
   nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs,
-  axiales: Map<number, number[]>, numModes = 6
+  axiales: Map<number, number[]> | undefined, numModes = 6, deformaciones?: Map<number, number[]>
 ): PandeoResultado | undefined {
   const ni: any = nodeInputs;
-  const P = elements.map((_, e) => { const n = axiales.get(e); return n ? (-n[0] + n[1]) / 2 : 0; });
-  const r = modalCpp(nodes, elements, nodeInputs, elementInputs, numModes, 0, 0, 1, ni.diaphragms, ni.springs, undefined, P);
-  return r.buckling;
+  const P = elements.map((_, e) => { const n = axiales?.get(e); return n ? (-n[0] + n[1]) / 2 : 0; });
+  let U: number[] | undefined;
+  if (deformaciones && elements.some((e) => e.length >= 3)) {
+    U = new Array(6 * nodes.length).fill(0);
+    deformaciones.forEach((d, q) => { if (q >= 0 && q < nodes.length) for (let k = 0; k < 6; k++) U![6 * q + k] = d[k] ?? 0; });
+  }
+  const r = modalCpp(nodes, elements, nodeInputs, elementInputs, numModes, 0, 0, 1, ni.diaphragms, ni.springs, undefined, P, undefined, U);
+  const b = r.buckling;
+  if (!b) return b;
+  // orden: |λ| creciente; a igual |λ| (±λ, p. ej. losa en cortante) el positivo primero (el solver denso los deja al azar)
+  const o = b.factors.map((_, k) => k).sort((i, j) => {
+    const a = Math.abs(b.factors[i]), c = Math.abs(b.factors[j]);
+    return Math.abs(a - c) > 1e-9 * Math.max(a, c) ? a - c : b.factors[j] - b.factors[i] || i - j;
+  });
+  return { factors: o.map((k) => b.factors[k]), modeShapes: o.map((k) => b.modeShapes[k]) };
 }
 
 /**

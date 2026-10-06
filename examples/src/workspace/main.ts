@@ -2131,6 +2131,10 @@ function ribbonPlegadaPara(id?: string | null): boolean {
  */
 (window as any).__hekatanSetParam = (clave: string, valor: number) => {
   currentParams[clave] = valor;
+  // igual que al elegir en el panel: el ejemplo puede reaccionar (p. ej. poner las medidas de un caso) y el panel se
+  // redibuja con los valores nuevos (5-oct-2026; antes el panel se quedaba con los viejos)
+  try { currentExample?.onParamChange?.(clave, currentParams); } catch { /* nada */ }
+  try { paneActual?.refresh?.(); } catch { /* nada */ }
   rebuild();
   return currentParams[clave];
 };

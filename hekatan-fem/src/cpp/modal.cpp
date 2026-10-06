@@ -493,7 +493,10 @@ extern "C"
         // Configuración plana: [nFreq, f(Hz)×nFreq, dK, dM, nCargas, por carga: tipo(0 patrón,1 aceleración base),
         //   dir|nPares, s, θ(°), nPts, (f,v)×nPts, [(gdl, valor)×nPares], nNud, nudos…]
         // Salida: [nFreq, nNud, f×nFreq, por frecuencia y nudo: Re×6, Im×6]
-        double *ss_cfg_ptr = nullptr, int ss_cfg_len = 0, double **ss_out_ptr = nullptr, int *ss_out_len = nullptr)
+        double *ss_cfg_ptr = nullptr, int ss_cfg_len = 0, double **ss_out_ptr = nullptr, int *ss_out_len = nullptr,
+        // PANDEO DE CÁSCARAS (5-oct-2026, utils/pandeo.h gCascaras): desplazamientos del estático de r, 6 por nudo
+        // (globales). Con ellos las cáscaras Q4 aportan su Kg (tensiones de membrana en Gauss 2×2).
+        double *pandeo_u_ptr = nullptr)
     {
         if (ss_out_ptr) *ss_out_ptr = nullptr;
         if (ss_out_len) *ss_out_len = 0;
@@ -574,6 +577,11 @@ extern "C"
 
         if (pandeo_P_ptr && pandeo_out_ptr && pandeo_out_len) {
             Eigen::SparseMatrix<double> Gg = pandeo::gGlobal(nodes, element_indices, element_sizes, elementInputs, pandeo_P_ptr, dof);
+            if (pandeo_u_ptr) {
+                int nTri = 0;
+                Gg += pandeo::gCascaras(nodes, element_indices, element_sizes, elementInputs, pandeo_u_ptr, dof, &nTri);
+                if (nTri) std::cout << "pandeo: " << nTri << " triángulos de cáscara SIN Kg (solo Q4)" << std::endl;
+            }
             std::map<int, double> diafr = parseMapFromFlat(diaph_keys_ptr, diaph_values_ptr, num_diaph);
             std::vector<double> r = pandeo::resolver(K_global, Gg, nodes, nodeInputs, diafr, num_modes > 0 ? num_modes : 6);
             double *buf = (double *)malloc(sizeof(double) * r.size());

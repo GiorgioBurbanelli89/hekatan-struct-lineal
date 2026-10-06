@@ -107,6 +107,7 @@ muro-manabi
 muro-q4
 new-blank
 opera
+pandeo-cascara-sap2000
 pandeo-sap2000
 pergola
 placa-base

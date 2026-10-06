@@ -97,6 +97,128 @@ inline Eigen::SparseMatrix<double> gGlobal(const std::vector<Node> &nodes, const
     return G;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// CÁSCARAS (5-oct-2026): muros y losas. CSiRefer p.444 «Other Elements»: las tensiones de cada elemento salen de los
+// desplazamientos del estático y se INTEGRAN con las derivadas de las funciones de forma isoparamétricas → geométrica
+// «estándar», solo FUERZAS en los nudos (sin momentos). Medido contra SAP2000 24 (validation/pandeo_cascara):
+//   Kg_e = ∫ [N,x N,y]ᵀ · [Nxx Nxy; Nxy Nyy] · [N,x N,y] dA   sobre u, v y w LOCALES de cada nudo
+//   N bilineales, Gauss 2×2; N = t·σ en cada punto de Gauss con la B de la MEMBRANA con giro normal (Allman por los
+//   lados con la proyección de FEAP = drillingTypes 8, SIN la burbuja).
+// Con el estático de SAP: 0.00000 % en λ (4 modos, muro 2×3 y 8×12). Bilineal solo de u,v: +0.004 %; Allman sin
+// proyectar: −0.24 %; Gauss 1 punto: +33 %.
+namespace cascara {
+static const double RN[4] = {-1, 1, 1, -1}, SN[4] = {-1, -1, 1, 1};
+static const int ANT[4] = {3, 0, 1, 2}, SIG[4] = {1, 2, 3, 0};
+struct Partes { double dNx[4], dNy[4], g[3][4], dJ; };
+inline Partes partes(const double X[4], const double Y[4], const double cx[4], const double cy[4], double r, double s) {
+    Partes p; double dr[4], ds[4];
+    for (int i = 0; i < 4; ++i) { dr[i] = 0.25 * RN[i] * (1 + SN[i] * s); ds[i] = 0.25 * SN[i] * (1 + RN[i] * r); }
+    double J11 = 0, J12 = 0, J21 = 0, J22 = 0;
+    for (int i = 0; i < 4; ++i) { J11 += dr[i] * X[i]; J12 += dr[i] * Y[i]; J21 += ds[i] * X[i]; J22 += ds[i] * Y[i]; }
+    const double dJ = J11 * J22 - J12 * J21;
+    const double i11 = J22 / dJ, i12 = -J12 / dJ, i21 = -J21 / dJ, i22 = J11 / dJ;
+    // serendipity de los lados (ITW ec. 22-23, con el 1/2 dentro)
+    const double nsr[4] = {0.5 * (-2 * r * (1 - s)), 0.5 * (1 - s * s), 0.5 * (-2 * r * (1 + s)), 0.5 * (-(1 - s * s))};
+    const double nss[4] = {0.5 * (-(1 - r * r)), 0.5 * (-2 * s * (1 + r)), 0.5 * (1 - r * r), 0.5 * (-2 * s * (1 - r))};
+    double NSx[4], NSy[4];
+    for (int i = 0; i < 4; ++i) {
+        p.dNx[i] = i11 * dr[i] + i12 * ds[i]; p.dNy[i] = i21 * dr[i] + i22 * ds[i];
+        NSx[i] = i11 * nsr[i] + i12 * nss[i]; NSy[i] = i21 * nsr[i] + i22 * nss[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+        const int a = ANT[i];
+        p.g[0][i] = NSx[a] * cx[a] - NSx[i] * cx[i];
+        p.g[1][i] = NSy[a] * cy[a] - NSy[i] * cy[i];
+        p.g[2][i] = (NSy[a] * cx[a] - NSy[i] * cx[i]) + (NSx[a] * cy[a] - NSx[i] * cy[i]);
+    }
+    p.dJ = std::abs(dJ);
+    return p;
+}
+
+// Kg 24×24 LOCAL [u v w θx θy θz]×4 de un Q4 plano. X,Y = coordenadas locales; d12 = [u v θz]×4 locales del estático.
+inline Eigen::MatrixXd gQ4Local(const double X[4], const double Y[4], const Eigen::Matrix3d &Dt, const double d12[12]) {
+    double cx[4], cy[4];
+    for (int i = 0; i < 4; ++i) { cx[i] = (Y[SIG[i]] - Y[i]) / 8.0; cy[i] = -(X[SIG[i]] - X[i]) / 8.0; }
+    // proyección del giro (FEAP): se resta la media de las columnas θz sobre el elemento (Gauss 3×3)
+    double med[3][4] = {{0}}, area = 0;
+    const double g3[3] = {-std::sqrt(0.6), 0.0, std::sqrt(0.6)}, w3[3] = {5.0 / 9, 8.0 / 9, 5.0 / 9};
+    for (int a = 0; a < 3; ++a) for (int b = 0; b < 3; ++b) {
+        const Partes p = partes(X, Y, cx, cy, g3[a], g3[b]); const double w = w3[a] * w3[b] * p.dJ;
+        for (int k = 0; k < 3; ++k) for (int i = 0; i < 4; ++i) med[k][i] += p.g[k][i] * w;
+        area += w;
+    }
+    for (int k = 0; k < 3; ++k) for (int i = 0; i < 4; ++i) med[k][i] /= area;
+    Eigen::Matrix4d g4 = Eigen::Matrix4d::Zero();
+    const double g2 = 1.0 / std::sqrt(3.0);
+    for (int a = 0; a < 2; ++a) for (int b = 0; b < 2; ++b) {
+        const double r = a ? g2 : -g2, s = b ? g2 : -g2;
+        const Partes p = partes(X, Y, cx, cy, r, s);
+        Eigen::Vector3d eps = Eigen::Vector3d::Zero();
+        for (int i = 0; i < 4; ++i) {
+            const double u = d12[3 * i], v = d12[3 * i + 1], th = d12[3 * i + 2];
+            eps(0) += p.dNx[i] * u + (p.g[0][i] - med[0][i]) * th;
+            eps(1) += p.dNy[i] * v + (p.g[1][i] - med[1][i]) * th;
+            eps(2) += p.dNy[i] * u + p.dNx[i] * v + (p.g[2][i] - med[2][i]) * th;
+        }
+        const Eigen::Vector3d N = Dt * eps;                 // Nxx Nyy Nxy (fuerza por metro)
+        for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j)
+            g4(i, j) += p.dJ * (p.dNx[i] * (N(0) * p.dNx[j] + N(2) * p.dNy[j]) + p.dNy[i] * (N(2) * p.dNx[j] + N(1) * p.dNy[j]));
+    }
+    Eigen::MatrixXd gl = Eigen::MatrixXd::Zero(24, 24);
+    for (int i = 0; i < 4; ++i) for (int j = 0; j < 4; ++j) for (int k = 0; k < 3; ++k) gl(6 * i + k, 6 * j + k) = g4(i, j);
+    return gl;
+}
+}  // namespace cascara
+
+// Kg global de todos los Q4 de cáscara (espesor > 0) con el estático u (dof completo, global).
+inline Eigen::SparseMatrix<double> gCascaras(const std::vector<Node> &nodes, const std::vector<unsigned int> &idx,
+                                             const std::vector<unsigned int> &sizes, const ElementInputs &ei,
+                                             const double *u, int dof, int *nTri = nullptr) {
+    std::vector<Eigen::Triplet<double>> tt;
+    size_t off = 0; int tri = 0;
+    for (size_t e = 0; e < sizes.size(); off += sizes[e], ++e) {
+        if (sizes[e] == 3 && valor(ei.thicknesses, (int)e, 0.0) > 0) { tri++; continue; }
+        if (sizes[e] != 4) continue;
+        const double t = valor(ei.thicknesses, (int)e, 0.0), E = valor(ei.elasticities, (int)e, 0.0);
+        const double nu = valor(ei.poissonsRatios, (int)e, 0.2);
+        if (t <= 0 || E <= 0) continue;
+        int n4[4]; Eigen::Vector3d P[4];
+        for (int k = 0; k < 4; ++k) { n4[k] = idx[off + k]; P[k] = Eigen::Vector3d(nodes[n4[k]][0], nodes[n4[k]][1], nodes[n4[k]][2]); }
+        // ejes locales: los MISMOS que getLocalStiffnessMatrixShellThin / getTransformationMatrixShellQ4
+        Eigen::Vector3d lx = (P[1] - P[0]) + (P[2] - P[3]); if (lx.norm() < 1e-12) continue; lx.normalize();
+        Eigen::Vector3d lz = (P[2] - P[0]).cross(P[3] - P[1]); if (lz.norm() < 1e-12) continue; lz.normalize();
+        Eigen::Vector3d ly = lz.cross(lx); ly.normalize(); lx = ly.cross(lz); lx.normalize();
+        Eigen::Matrix3d R; R.row(0) = lx.transpose(); R.row(1) = ly.transpose(); R.row(2) = lz.transpose();
+        const Eigen::Vector3d c = 0.25 * (P[0] + P[1] + P[2] + P[3]);
+        double X[4], Y[4], d12[12];
+        for (int k = 0; k < 4; ++k) {
+            X[k] = (P[k] - c).dot(lx); Y[k] = (P[k] - c).dot(ly);
+            const Eigen::Vector3d ug(u[6 * n4[k]], u[6 * n4[k] + 1], u[6 * n4[k] + 2]);
+            const Eigen::Vector3d tg(u[6 * n4[k] + 3], u[6 * n4[k] + 4], u[6 * n4[k] + 5]);
+            const Eigen::Vector3d ul = R * ug, tl = R * tg;
+            d12[3 * k] = ul(0); d12[3 * k + 1] = ul(1); d12[3 * k + 2] = tl(2);
+        }
+        // constitutiva de membrana con los modificadores, como getMembraneITW (escalar o F11 F22 F12)
+        const double f = E / (1 - nu * nu);
+        Eigen::Matrix3d D; D << f, f * nu, 0, f * nu, f, 0, 0, 0, f * (1 - nu) / 2;
+        auto itM = ei.shellModifiers.find((int)e);
+        if (itM != ei.shellModifiers.end() && itM->second.size() >= 3) {
+            const double f11 = itM->second[0], f22 = itM->second[1], f12 = itM->second[2];
+            D(0, 0) *= f11; D(1, 1) *= f22; D(2, 2) *= f12; const double cc = std::sqrt(std::max(0.0, f11 * f22));
+            D(0, 1) *= cc; D(1, 0) *= cc;
+        } else D *= valor(ei.membraneModifiers, (int)e, 1.0);
+        const Eigen::MatrixXd gl = cascara::gQ4Local(X, Y, D * t, d12);
+        Eigen::MatrixXd T = Eigen::MatrixXd::Zero(24, 24);
+        for (int b = 0; b < 8; ++b) T.block<3, 3>(3 * b, 3 * b) = R;
+        const Eigen::MatrixXd g = T.transpose() * gl * T;
+        for (int a = 0; a < 24; ++a) for (int b = 0; b < 24; ++b)
+            if (g(a, b) != 0.0) tt.emplace_back(6 * n4[a / 6] + a % 6, 6 * n4[b / 6] + b % 6, g(a, b));
+    }
+    if (nTri) *nTri = tri;
+    Eigen::SparseMatrix<double> G(dof, dof); G.setFromTriplets(tt.begin(), tt.end());
+    return G;
+}
+
 // Resuelve. Kc ya trae muelles y unión muro-viga. diaf: nudo → grupo (0 = ninguno; negativo = solo ux, uy).
 // Salida plana: [nModos, λ×nModos, Ψ(nModos × dof completo, máx |Ψ| = 1)].
 inline std::vector<double> resolver(const Eigen::SparseMatrix<double> &Kc, const Eigen::SparseMatrix<double> &Gc,

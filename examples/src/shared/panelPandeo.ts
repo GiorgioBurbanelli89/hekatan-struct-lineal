@@ -3,13 +3,14 @@
  *   [K − λ·G(r)]·Ψ = 0      r = las cargas del caso que está aplicado ahora (las flechas del visor)
  * La axial P-delta de cada barra sale del estático de r (promedio de los extremos, CSiRefer cap. XXII) y G se arma en
  * el C++ (hekatan-fem/src/cpp/utils/pandeo.h). Arbitrado con SAP2000: tests/casos/pandeo_sap2000.mjs (0.0000 %).
- * Hoy: barras (frames). Cáscaras y sólidos aún no aportan G (se avisa).
+ * Barras (frames) y, desde el 5-oct-2026, CÁSCARAS Q4 (muros y losas: Kg con las fuerzas de membrana del estático de r,
+ * CSiRefer p.444; = SAP2000 en tests/casos/pandeo_cascara_sap2000.mjs). Triángulos de cáscara y sólidos: sin G (se avisa).
  *
  * También la lista de los 11 «Load Case Type» de SAP2000: los lineales están (o estarán) en Hekatan Struct; los NO
  * LINEALES son del módulo Pro (decisión de Jorge, 1-oct-2026).
  */
 import type { State } from "vanjs-core";
-import { bucklingAnalysis, type PandeoResultado } from "hekatan-fem";
+import { bucklingAnalysis, deform, type PandeoResultado } from "hekatan-fem";
 import { modelDiagonal } from "./modeScale";
 
 export interface ModeloPandeo {
@@ -26,7 +27,7 @@ const TIPOS: Array<[string, string]> = [
   ["Time History (no lineal)", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
   ["Nonlinear Static (pushover)", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
   ["Moving Load", "✓ Hekatan Struct: 🚚 Carga móvil › Moving Load (líneas de influencia, envolvente), = SAP2000."],
-  ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal), = SAP2000."],
+  ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal) de barras, muros y losas, = SAP2000."],
   ["Steady State", "✓ Hekatan Struct: 〜 Estado estacionario (lineal), = SAP2000."],
   ["Power Spectral Density", "✓ Hekatan Struct: 〜 Estado estacionario / PSD, = SAP2000."],
   ["Hyperstatic", "✓ Hekatan Struct: 🔩 Hyperstatic (secundarios del pretensado), = SAP2000."],
@@ -52,24 +53,31 @@ export function montarPandeo(folder: any, estado: ModeloPandeo, viewerElm: HTMLE
   f.addBinding(p, "modo", { label: "Modo a ver", min: 1, max: 30, step: 1 }).on("change", () => { if (raf) animar(); });
   f.addButton({ title: "🎞 Animar el modo de pandeo" }).on("click", () => animar());
   f.addButton({ title: "⏹ Detener" }).on("click", () => parar(true));
+  f.addButton({ title: "🎞 Cómo se usa (GIF): muros y losas" }).on("click", () => {
+    try { window.open(`${(import.meta as any).env?.BASE_URL ?? "./"}tutoriales/pandeo_cascaras.gif`, "_blank"); } catch { /* nada */ }
+  });
 
   function calcular() {
     parar(true);
     const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val, ei = estado.elementInputs.val;
     const normals: Map<number, number[]> | undefined = estado.analyzeOutputs.val?.normals;
     if (!nodes?.length) { p.info = "✗ no hay modelo"; f.refresh(); return; }
-    if (!normals || normals.size === 0) { p.info = "✗ el modelo no tiene barras con fuerza axial: el pandeo de cáscaras y sólidos aún no está."; f.refresh(); return; }
+    const nQ4 = elements.filter((e: number[]) => e.length === 4).length, nTri = elements.filter((e: number[]) => e.length === 3).length;
+    if ((!normals || normals.size === 0) && nQ4 === 0) { p.info = "✗ el modelo no tiene barras con fuerza axial ni cáscaras Q4 (triángulos y sólidos aún sin G)."; f.refresh(); return; }
     const t0 = performance.now();
     try {
-      ultimo = bucklingAnalysis(nodes, elements, ni, ei, normals, p.nModos) ?? null;
+      // cáscaras: la Kg sale de las fuerzas de membrana del ESTÁTICO de r (se resuelve aquí: la deformada en pantalla
+      // puede ser otra cosa, p. ej. un modo)
+      const est = nQ4 ? (deform(nodes, elements, ni, ei, (ni as any).springs) as any)?.deformations : undefined;
+      ultimo = bucklingAnalysis(nodes, elements, ni, ei, normals, p.nModos, est) ?? null;
     } catch (e) { ultimo = null; p.info = "✗ " + String(e); f.refresh(); return; }
     if (!ultimo || !ultimo.factors.length) { p.info = "✗ no se pudo resolver (¿mecanismo? ¿sin compresión?)"; f.refresh(); return; }
-    const conCascaras = elements.some((e: number[]) => e.length > 2);
+    const conCascaras = nTri > 0 || elements.some((e: number[]) => e.length > 4);
     const l1 = ultimo.factors[0];
     p.info = "λ = factor de pandeo\n" +
       ultimo.factors.map((l, k) => `modo ${k + 1}:  λ = ${l.toFixed(4)}`).join("\n") +
       "\n" + (l1 > 1 ? "λ₁ > 1: aguanta las cargas" : l1 > 0 ? "λ₁ < 1: PANDEA antes" : "λ₁ < 0: cargas invertidas") +
-      (conCascaras ? "\n⚠ cáscaras: sin G todavía" : "") +
+      (conCascaras ? "\n⚠ triángulos/sólidos: sin G todavía" : "") +
       `\n${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
     p.modo = 1; f.refresh();
   }
