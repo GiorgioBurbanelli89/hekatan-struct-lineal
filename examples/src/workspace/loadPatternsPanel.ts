@@ -37,6 +37,11 @@ const CASE_TYPES: Record<string, string> = {
   "Time History - Nonlinear": "Time History - Nonlinear",
   "Nonlinear Static (Pushover)": "Nonlinear Static (Pushover)",
   "Buckling": "Buckling",
+  "Multi-step Static": "Multi-step Static",
+  "Moving Load": "Moving Load",
+  "Steady State": "Steady State",
+  "Power Spectral Density": "Power Spectral Density",
+  "Hyperstatic": "Hyperstatic",
 };
 
 const AUTO_LAT_OPTIONS: Record<string, string> = {

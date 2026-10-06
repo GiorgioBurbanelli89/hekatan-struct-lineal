@@ -340,7 +340,12 @@ export type LoadCaseType =
   | "Time History - Linear"
   | "Time History - Nonlinear"
   | "Nonlinear Static (Pushover)"
-  | "Buckling";
+  | "Buckling"
+  | "Multi-step Static"
+  | "Moving Load"
+  | "Steady State"
+  | "Power Spectral Density"
+  | "Hyperstatic";
 
 export type LoadCase = {
   name: string;

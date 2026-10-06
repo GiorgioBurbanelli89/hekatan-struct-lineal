@@ -62,6 +62,7 @@ edificio-ladera
 edificio-mixto
 edificio-muros
 eiffel
+estacionario-sap2000
 estribo-puente
 estructura-mixta
 fem-explained

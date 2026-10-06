@@ -3,7 +3,7 @@
  *   [K − ω²M + i·(dK·K + dM·M)]·a = s·f(ω)·e^{iθ}·p     (CSiRefer cap. XXV, amortiguamiento HISTERÉTICO)
  * Carga: las fuerzas del caso aplicado (las flechas) o una aceleración unitaria en la base. Motor: steadyStateAnalysis
  * (hekatan-fem → modal.cpp, sección 8b), arbitrado con SAP2000: tests/casos/estacionario_sap2000.mjs (0.000 %).
- * Gráfica: amplitud |u| = √(Re² + Im²) del nudo de control contra la frecuencia. Animación: u(t) = Re·cos ωt + Im·sin ωt.
+ * Gráfica: módulo |u| = √(Re² + Im²), fase = atan2(Im, Re) (convención CSI: Re = cos ωt, Im = sin ωt), Re o Im del nudo de control contra la frecuencia. Animación: u(t) = Re·cos ωt + Im·sin ωt.
  */
 import type { State } from "vanjs-core";
 import { steadyStateAnalysis, psdAnalysis, type EstacionarioResultado } from "hekatan-fem";
@@ -14,7 +14,7 @@ export interface ModeloSS { nodes: State<any[]>; elements: State<any[]>; nodeInp
 
 export function montarEstacionario(folder: any, estado: ModeloSS, viewerElm: HTMLElement, pararOtras: () => void) {
   const f = folder.addFolder({ title: "〜 Estado estacionario / PSD (lineal)", expanded: false });
-  const p = { tipo: 0, psd: "0:1, 5:2, 10:0.5, 100:0.5", carga: 0, f1: 0.5, f2: 20, n: 100, dK: 0.04, dM: 0, nudo: -1, dir: 0, fver: 0, info: "Carga armónica = las fuerzas del caso aplicado. ▶ Calcular." };
+  const p = { tipo: 0, psd: "0:1, 5:2, 10:0.5, 100:0.5", carga: 0, f1: 0.5, f2: 20, n: 100, dK: 0.04, dM: 0, nudo: -1, dir: 0, graf: 0, fver: 0, info: "Carga armónica = las fuerzas del caso aplicado. ▶ Calcular." };
   let ultimo: { r: EstacionarioResultado; nudo: number } | null = null;
   f.addBinding(p, "tipo", { label: "Tipo de caso", options: { "Steady State (amplitud)": 0, "Power Spectral Density (RMS)": 1 } });
   f.addBinding(p, "psd", { label: "PSD  f:S, f:S… (Hz : carga²/Hz)" });
@@ -26,11 +26,15 @@ export function montarEstacionario(folder: any, estado: ModeloSS, viewerElm: HTM
   f.addBinding(p, "dM", { label: "dM", min: 0, max: 10, step: 0.001 });
   f.addBinding(p, "nudo", { label: "Nudo de control (−1 auto)", min: -1, max: 1e6, step: 1 });
   f.addBinding(p, "dir", { label: "Componente", options: { Ux: 0, Uy: 1, Uz: 2 } }).on("change", () => graficar());
+  f.addBinding(p, "graf", { label: "Gráfica", options: { "Módulo |u|": 0, "Fase (°) = atan2(Im, Re)": 1, "Parte real Re": 2, "Parte imaginaria Im": 3 } }).on("change", () => graficar());
   f.addButton({ title: "▶ Calcular estado estacionario" }).on("click", () => calcular());
   f.addBinding(p, "info", { label: "", readonly: true, multiline: true, rows: 5 });
   f.addBinding(p, "fver", { label: "f a animar (Hz, 0 = pico)", min: 0, max: 200, step: 0.01 });
   f.addButton({ title: "🎞 Animar a esa frecuencia" }).on("click", () => animar());
   f.addButton({ title: "⏹ Detener" }).on("click", () => parar(true));
+  f.addButton({ title: "🎞 Cómo se usa (GIF)" }).on("click", () => {
+    try { window.open(`${(import.meta as any).env?.BASE_URL ?? "./"}tutoriales/${p.tipo === 1 ? "psd" : "steady_state"}.gif`, "_blank"); } catch { /* nada */ }
+  });
 
   function frecuencias() { const a: number[] = []; for (let k = 0; k <= p.n; k++) a.push(+(p.f1 + (p.f2 - p.f1) * k / p.n).toFixed(6)); return a; }
   function cargas(): any[] | undefined {
@@ -83,9 +87,13 @@ ${(performance.now() - t0).toFixed(0)} ms`;
   function graficar() {
     if (!ultimo) return;
     const panel = getSharedChartPanel(); const c = "xyz"[p.dir];
-    panel.setTitle(p.tipo === 1 ? `PSD · √PSD de u${c} del nudo ${ultimo.nudo}` : `Estado estacionario · |u${c}| del nudo ${ultimo.nudo}`);
-    panel.setSeries([{ label: `|u${c}| [mm]  ·  pico ${picoDe().f.toFixed(2)} Hz`, data: amplitudes().map(([fr, a]) => [fr, a * 1000] as [number, number]), color: "#7f96b3", width: 2 }]);
-    panel.setAxes({ xLabel: "f (Hz)", yLabel: "|u| (mm)", grid: true });
+    const g = p.tipo === 1 ? 0 : p.graf, nombres = ["|u", "fase u", "Re u", "Im u"];
+    const re = ultimo.r.re.get(ultimo.nudo) ?? [], im = ultimo.r.im.get(ultimo.nudo) ?? [];
+    const val = (k: number) => { const a = re[k]?.[p.dir] ?? 0, b = im[k]?.[p.dir] ?? 0;
+      return g === 0 ? Math.hypot(a, b) * 1000 : g === 1 ? (Math.atan2(b, a) * 180) / Math.PI : (g === 2 ? a : b) * 1000; };
+    panel.setTitle(p.tipo === 1 ? `PSD · √PSD de u${c} del nudo ${ultimo.nudo}` : `Estado estacionario · ${nombres[g]}${c}${g === 0 ? "|" : ""} del nudo ${ultimo.nudo}`);
+    panel.setSeries([{ label: `${nombres[g]}${c}${g === 0 ? "|" : ""} ${g === 1 ? "[°]" : "[mm]"}  ·  pico ${picoDe().f.toFixed(2)} Hz`, data: ultimo.r.frecuencias.map((fr, k) => [fr, val(k)] as [number, number]), color: "#7f96b3", width: 2 }]);
+    panel.setAxes({ xLabel: "f (Hz)", yLabel: g === 1 ? "fase (°)" : g === 0 ? "|u| (mm)" : "u (mm)", grid: true, xMin: undefined, xMax: undefined, yMin: g === 1 ? -180 : undefined, yMax: g === 1 ? 180 : undefined });
     panel.show();
   }
 

@@ -11,7 +11,7 @@ import { deform, analyze, bucklingAnalysis } from "hekatan-fem";
 
 const E = 2.5e7, NU = 0.2;
 // propiedades de sección que devuelve SAP2000 (PropFrame.GetSectProps) para SetRectangle(t3 = canto, t2 = ancho)
-const SEC: Record<string, { A: number; As2: number; As3: number; J: number; I22: number; I33: number }> = {
+export const SEC: Record<string, { A: number; As2: number; As3: number; J: number; I22: number; I33: number }> = {
   "R0.3x0.3": { A: 0.09, As2: 0.075, As3: 0.075, J: 0.0011407499999999994, I22: 0.000675, I33: 0.000675 },
   "R0.3x0.4": { A: 0.12, As2: 0.1, As3: 0.1, J: 0.0019438505859374997, I22: 0.0009, I33: 0.0016 },
   "R0.25x0.5": { A: 0.125, As2: 0.10416666666666667, As3: 0.10416666666666667, J: 0.0017881266276041667, I22: 0.0006510416666666666, I33: 0.0026041666666666665 },
@@ -26,9 +26,9 @@ const SAP: Record<string, number[]> = {
 };
 
 type Barra = [number, number, string, number];   // nudo i, nudo j, sección, ángulo
-type Modelo = { nodes: number[][]; frames: Barra[]; apoyos: Map<number, boolean[]>; cargas: Map<number, number[]> };
+export type Modelo = { nodes: number[][]; frames: Barra[]; apoyos: Map<number, boolean[]>; cargas: Map<number, number[]> };
 
-function armar(tipo: number, n: number): Modelo {
+export function armar(tipo: number, n: number): Modelo {
   const nodes: number[][] = [], frames: Barra[] = [];
   const nudo = (p: number[]) => { const q = nodes.findIndex((x) => Math.max(...x.map((v, c) => Math.abs(v - p[c]))) < 1e-9); if (q >= 0) return q; nodes.push(p); return nodes.length - 1; };
   const linea = (a: number[], b: number[], sec: string, ang = 0) => {

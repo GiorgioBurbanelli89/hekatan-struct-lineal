@@ -71,5 +71,22 @@ export async function correr() {
     const rs = P.opciones["1"].u[0], rh = rp.rms.get(top); let pr = 0; for (let c = 0; c < 3; c++) pr = Math.max(pr, Math.abs(rh[c] / rs[c] - 1) * 100);
     filas.push({ que: "PSD: RMS (trapecio) Ux Uy Uz", medido: pr, limite: 1e-3, ok: pr <= 1e-3, detalle: `uy ${rh[1].toExponential(6)} vs ${rs[1].toExponential(6)}` });
   } catch (e) { filas.push({ que: "PSD", medido: 1, limite: 0, ok: false, detalle: String(e) }); }
+  // El EJEMPLO del menú (estacionario-sap2000): lo que ve el usuario en 📊 Calculados, contra SAP2000
+  try {
+    const ex = (await empaquetar(`export { estacionarioCsi } from "${R}/examples/src/estacionario-csi/estacionarioCsi";\n`, "estacionarioCsi")).estacionarioCsi;
+    const mk = () => ({ nodes: st([]), elements: st([]), nodeInputs: st({}), elementInputs: st({}), deformOutputs: st({}), analyzeOutputs: st({}), objects3D: st([]) });
+    for (const [caso, carga, comp] of [[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]]) {
+      const s2 = mk(); ex.build({ caso, carga, comp, graf: 0, dK: 0.04 }, s2); const L2 = ex.computedLabels({}, s2);
+      const num = [];
+      for (const [k, v] of Object.entries(L2)) {
+        if (v === "—") continue;
+        const m = v.match(/\(([-\d.]+) %\)/);
+        if (m) num.push([k, Math.abs(parseFloat(m[1]))]);
+        else if (/^Peor|^Fase: peor|^Módulo/.test(k)) num.push([k, Math.abs(parseFloat(v.split(":").pop()))]);
+      }
+      const peor = Math.max(...num.map(([, v]) => v));
+      filas.push({ que: `ejemplo: ${caso ? "PSD" : "Steady State"} ${carga ? "acel. base X" : "fuerzas"} u${"xy"[comp]} (Re/Im/módulo %, fase °, RMS %)`, medido: peor, limite: 1e-3, ok: num.length > 0 && peor <= 1e-3, detalle: num.map(([k, v]) => `${k} ${v}`).join("; ") });
+    }
+  } catch (e) { filas.push({ que: "ejemplo estacionario-sap2000", medido: 1, limite: 0, ok: false, detalle: String(e) }); }
   return filas;
 }
