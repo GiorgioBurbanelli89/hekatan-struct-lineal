@@ -6,21 +6,24 @@
  * en x = 10 m en TODOS los pasos. Test `node tests/run.mjs multipaso` → 0.000 % (101 pasos).
  */
 import type { ExampleDef } from "../workspace/exampleRegistry";
-import { deform, analyze, multiStepStatic, pasosVehiculoVivo, pasoUnico } from "hekatan-fem";
+import { deform, analyze, multiStepStatic, pasosVehiculoVivo, pasoUnico, cargaMovilEnvolvente } from "hekatan-fem";
 
 const E = 2.5e7, NU = 0.2;
 // propiedades de la sección que devuelve SAP2000 (PropFrame.GetSectProps) para SetRectangle(1.2, 0.5)
 const SEC = { A: 0.6, As2: 0.5, As3: 0.5, J: 0.03690796651957947, I22: 0.0125, I33: 0.072 };
 // envolventes de SAP2000 24 (caso MS, 101 pasos; barras: extremos i y j)
+// Moving Load MLF (camión 35/145/145 a 4.3/4.3 + carril 9.3 kN/m), SAP2000 24
+const SAPML = { uzMin: -0.027106909146504203, uzMax: 0.0113885248965758, m3Max: 1354.1588113403911, m3Min: -1032.079571098755, v2Max: 413.73235964188825, v2Min: -392.85520097995266, rz: 547.77389240773 };
 const SAP = { uzMin: -0.02676299148918161, m3Max: 1360.424119332922, m3Min: -777.0171440625626, v2Max: 350.4998339977974, v2Min: -354.96690177559526, pasos: 101 };
 
-let ultimo: { uz: number; m3Max: number; m3Min: number; v2Max: number; v2Min: number; pasos: number; ref: boolean } | null = null;
+let ultimo: { caso?: number; uzMax?: number; uz: number; m3Max: number; m3Min: number; v2Max: number; v2Min: number; pasos: number; ref: boolean } | null = null;
 
 export const cargaMovilCsi: ExampleDef = {
   id: "carga-movil-sap2000",
-  name: "Carga móvil (Multi-step Static) — igual que SAP2000",
+  name: "Carga móvil (Multi-step Static y Moving Load) — igual que SAP2000",
   category: "1️⃣ Frames · 🎯 2 GDL Flexión",
   params: {
+    caso: { default: 0, label: "Load Case", folder: "Modelo", options: { "Multi-step Static (paso a paso)": 0, "Moving Load (envolvente)": 1 } },
     luz: { default: 20, label: "Luz de cada vano (m)", folder: "Modelo", min: 5, max: 60, step: 1 },
     vanos: { default: 2, label: "N° de vanos", folder: "Modelo", min: 1, max: 4, step: 1 },
     v: { default: 1, label: "Velocidad (m/s)", folder: "Vehículo", min: 0.1, max: 30, step: 0.1 },
@@ -50,14 +53,22 @@ export const cargaMovilCsi: ExampleDef = {
     try {
       const d = deform(nodes as any, elements as any, states.nodeInputs.val, ei);
       states.deformOutputs.val = d; states.analyzeOutputs.val = analyze(nodes as any, elements as any, ei, d);
+      if (Math.round(p.caso) === 1) {
+        const env = cargaMovilEnvolvente(nodes as any, elements as any, { supports } as any, ei, { barras: elements.map((_, e) => e) },
+          [{ nombre: "HL93", ejes: [35, 145, 145], sep: [4.3, 4.3], unif: [9.3, 9.3, 9.3, 9.3] }], { disc: dx });
+        const o: any = { caso: 1, uz: 0, uzMax: 0, m3Max: 0, m3Min: 0, v2Max: 0, v2Min: 0, pasos: env.puntos.length, ref: L === 20 && nv === 2 };
+        for (const [, [mx, mn]] of env.disp) { o.uzMax = Math.max(o.uzMax, mx[2]); o.uz = Math.min(o.uz, mn[2]); }
+        for (const [, ex] of env.barras) for (const [mx, mn] of ex) { o.m3Max = Math.max(o.m3Max, mx[5]); o.m3Min = Math.min(o.m3Min, mn[5]); o.v2Max = Math.max(o.v2Max, mx[1]); o.v2Min = Math.min(o.v2Min, mn[1]); }
+        ultimo = o; states.objects3D.val = []; return;
+      }
       const dur = 70 * (L * nv) / 40;
       const vl = pasosVehiculoVivo(nodes as any, elements as any, ei, [{ vehiculo: { nombre: "CAM3", ejes: [35, 145, 145], sep: [4.3, 4.3] },
         carril: { barras: elements.map((_, e) => e) }, v: p.v }], Math.round(dur / p.dt) * p.dt, p.dt);
       const R = multiStepStatic(nodes as any, elements as any, { supports } as any, ei, [{ pasos: vl, sf: 1.2 }, { pasos: pasoUnico(loads), sf: 1 }]);
-      const o = { uz: 0, m3Max: -Infinity, m3Min: Infinity, v2Max: -Infinity, v2Min: Infinity, pasos: R.length,
+      const o: any = { caso: 0, uzMax: 0, uz: 0, m3Max: -Infinity, m3Min: Infinity, v2Max: -Infinity, v2Min: Infinity, pasos: R.length,
         ref: L === 20 && nv === 2 && Math.abs(p.v - 1) < 1e-9 && Math.abs(p.dt - 0.7) < 1e-9 };
       for (const r of R) {
-        for (const q of r.deformations.values()) o.uz = Math.min(o.uz, q[2]);
+        for (const q of r.deformations.values()) { o.uz = Math.min(o.uz, q[2]); o.uzMax = Math.max(o.uzMax, q[2]); }
         for (const [, m] of r.bendingsZ) { o.m3Max = Math.max(o.m3Max, -m[0], m[1]); o.m3Min = Math.min(o.m3Min, -m[0], m[1]); }
         for (const [, v] of r.shearsY) { o.v2Max = Math.max(o.v2Max, -v[0], v[1]); o.v2Min = Math.min(o.v2Min, -v[0], v[1]); }
       }
@@ -68,9 +79,24 @@ export const cargaMovilCsi: ExampleDef = {
   computedLabels() {
     const o: Record<string, string> = {};
     if (!ultimo) { o["Multi-step"] = "✗ no se pudo calcular"; return o; }
+    if (ultimo.caso === 1) {
+      const f2 = (h: number, s: number, dec: number) => ultimo!.ref ? `${h.toFixed(dec)} · SAP2000 ${s.toFixed(dec)} (${(100 * (h / s - 1)).toFixed(4)} %)` : h.toFixed(dec);
+      o["Load Case"] = "Moving Load: camión HL-93 + carril 9.3 kN/m, los dos sentidos";
+      o["Pasos / puntos de carga"] = `${ultimo.pasos} puntos de carga (líneas de influencia)`;
+      o["Uz mín (m)"] = f2(ultimo.uz, SAPML.uzMin, 6);
+      o["Uz máx (m)"] = f2(ultimo.uzMax!, SAPML.uzMax, 6);
+      o["M3 máx (kN·m)"] = f2(ultimo.m3Max, SAPML.m3Max, 3);
+      o["M3 mín (kN·m)"] = f2(ultimo.m3Min, SAPML.m3Min, 3);
+      o["V2 máx (kN)"] = f2(ultimo.v2Max, SAPML.v2Max, 3);
+      o["V2 mín (kN)"] = f2(ultimo.v2Min, SAPML.v2Min, 3);
+      o["Referencia"] = ultimo.ref ? "SAP2000 24, Moving Load MLF (validation/casos-csi/sap_movil.py)" : "sin referencia (2 × 20 m la tiene)";
+      return o;
+    }
     const fila = (h: number, s: number, dec: number) => ultimo!.ref ? `${h.toFixed(dec)} · SAP2000 ${s.toFixed(dec)} (${(100 * (h / s - 1)).toFixed(4)} %)` : h.toFixed(dec);
-    o["Pasos (dur/Δt + 1)"] = ultimo.ref ? `${ultimo.pasos} · SAP2000 ${SAP.pasos}` : String(ultimo.pasos);
+    o["Load Case"] = "Multi-step Static: un estático por paso (camión SF 1.2 + SC)";
+    o["Pasos / puntos de carga"] = ultimo.ref ? `${ultimo.pasos} pasos (dur/Δt + 1) · SAP2000 ${SAP.pasos}` : `${ultimo.pasos} pasos`;
     o["Uz mín (m)"] = fila(ultimo.uz, SAP.uzMin, 6);
+    o["Uz máx (m)"] = (ultimo.uzMax ?? 0).toFixed(6);
     o["M3 máx (kN·m)"] = fila(ultimo.m3Max, SAP.m3Max, 3);
     o["M3 mín (kN·m)"] = fila(ultimo.m3Min, SAP.m3Min, 3);
     o["V2 máx (kN)"] = fila(ultimo.v2Max, SAP.v2Max, 3);

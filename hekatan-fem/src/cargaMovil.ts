@@ -125,7 +125,8 @@ export function cargarEnCarril(paso: PasoCarga, nodes: Node[], elements: Element
     const q0 = tr[0], qn = tr[tr.length - 1];
     if (Math.abs(s - q0.s0) <= tol) { tFijo = q0; s = q0.s0; }
     else if (Math.abs(s - (qn.s0 + qn.L)) <= tol) { tFijo = qn; s = qn.s0 + qn.L; }
-    else for (const q of tr) if (Math.abs(s - (q.s0 + q.L)) <= tol) { tFijo = q; s = q.s0 + (1 - epsNudo) * q.L; break; }
+    else for (const q of tr) if (Math.abs(s - (q.s0 + q.L)) <= tol) {
+      tFijo = q; s = q.s0 + (1 - epsNudo) * q.L; break; }
   } else for (const q of tr) for (const [sn, n] of [[q.s0, q.nI], [q.s0 + q.L, q.nJ]] as Array<[number, number]>)
     if (Math.abs(s - sn) <= tol) { suma(n, [P * dir[0], P * dir[1], P * dir[2], 0, 0, 0], 0); return s; }
   const t = tFijo ?? tr.find((q) => s > q.s0 && s < q.s0 + q.L) ?? tr[0];
@@ -272,7 +273,7 @@ function interp(s: number[], eta: number[], x: number): number {
 }
 
 /** Máximo y mínimo de UNA línea de influencia bajo un vehículo (método Exact de CSI). */
-export function extremoVehiculo(s: number[], eta: number[], V: VehiculoGeneral, negOk = false): [number, number] {
+export function extremoVehiculo(s: number[], eta: number[], V: VehiculoGeneral, negOk = false, sInt: number[] = s): [number, number] {
   const n = V.ejes.length, Lc = s[s.length - 1];
   const seps: number[][] = [V.sep.slice()];
   if (V.variable) {
@@ -301,8 +302,8 @@ export function extremoVehiculo(s: number[], eta: number[], V: VehiculoGeneral, 
       for (let k = 0; k <= n; k++) {
         const w = unif[k] ?? 0; if (!w) continue;
         const [lo, hi] = tramo(k);
-        if (negOk) { const v = w * (integralSigno(s, eta, lo, hi, 1) + integralSigno(s, eta, lo, hi, -1)); ma += v; mi += v; }
-        else { ma += w * integralSigno(s, eta, lo, hi, 1); mi += w * integralSigno(s, eta, lo, hi, -1); }
+        if (negOk) { const v = w * (integralSigno(sInt, eta, lo, hi, 1) + integralSigno(sInt, eta, lo, hi, -1)); ma += v; mi += v; }
+        else { ma += w * integralSigno(sInt, eta, lo, hi, 1); mi += w * integralSigno(sInt, eta, lo, hi, -1); }
       }
       if (ma > mx) mx = ma; if (mi < mn) mn = mi;
     }
@@ -319,20 +320,22 @@ export function puntosDeCarga(Lc: number, disc: number): number[] {
 /** MOVING LOAD: envolvente (máx, mín) de desplazamientos, reacciones y fuerzas de barra (extremos) de varios vehículos
  *  (la clase de vehículos: manda el peor) en un carril. sf = factor de escala del caso. */
 export function cargaMovilEnvolvente(nodes: Node[], elements: Element[], nodeInputs: NodeInputs, elementInputs: ElementInputs,
-  carril: Carril, vehiculos: VehiculoGeneral[], op: { disc?: number; sf?: number; negOk?: boolean; epsNudo?: number } = {},
+  carril: Carril, vehiculos: VehiculoGeneral[], op: { disc?: number; sf?: number; negOk?: boolean; epsNudo?: number; tolInfl?: number } = {},
   springs?: Array<{ node: number; dof: number; k: number }>): EnvolventeMovil {
   const tr = tramosCarril(nodes, elements, carril), Lc = largoCarril(tr);
   const s0 = puntosDeCarga(Lc, op.disc ?? Math.min(...tr.map((t) => t.L)));
   // s = donde cae DE VERDAD cada punto de carga (con epsNudo, el del nudo interior queda a (1 − ε)·L): la línea de
   // influencia se interpola entre esas abscisas (medido en SAP2000: «Lane Centerline Points» 0.999 / 1.001 …)
   const s: number[] = [];
-  const pasos = s0.map((x) => { const p = pasoVacio(); s.push(cargarEnCarril(p, nodes, elements, elementInputs, tr, x, 1, [0, 0, -1], 1e-6, op.epsNudo ?? 0)); return p; });
+  const pasos = s0.map((x) => { const p = pasoVacio(); s.push(cargarEnCarril(p, nodes, elements, elementInputs, tr, x, 1, [0, 0, -1], 1e-6, op.epsNudo ?? 0.001)); return p; });
   const R = multiStepStatic(nodes, elements, { ...nodeInputs, loads: new Map() } as NodeInputs,
     { ...elementInputs, frameFixedEnd: undefined, frameLoads: undefined } as ElementInputs, [{ pasos, sf: 1 }], springs);
   const sf = op.sf ?? 1;
-  const ext = (eta: number[]): [number, number] => {
+  const ext = (eta0: number[]): [number, number] => {
     let mx = 0, mn = 0;
-    for (const V of vehiculos) { const [a, b] = extremoVehiculo(s, eta, V, op.negOk); mx = Math.max(mx, a); mn = Math.min(mn, b); }
+    const tolI = (op.tolInfl ?? 0) * Math.max(0, ...eta0.map(Math.abs));
+    const eta = tolI > 0 ? eta0.map((v) => (Math.abs(v) < tolI ? 0 : v)) : eta0;
+    for (const V of vehiculos) { const [a, b] = extremoVehiculo(s, eta, V, op.negOk, s); mx = Math.max(mx, a); mn = Math.min(mn, b); }
     return sf >= 0 ? [mx * sf, mn * sf] : [mn * sf, mx * sf];
   };
   const out: EnvolventeMovil = { disp: new Map(), reac: new Map(), barras: new Map(), puntos: s };

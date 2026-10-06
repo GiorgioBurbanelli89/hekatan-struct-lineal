@@ -2,11 +2,13 @@
  * Panel «🚚 Carga móvil» del workspace (5-oct-2026): Load Cases de SAP2000 que pasean un vehículo por un carril.
  *   · Multi-step Static: K·u_i = r_i, un estático por paso (CSiRefer p. 348 y 535-537). = SAP2000 0.000 %
  *     (tests/casos/multipaso_sap2000.mjs).
+ *   · Moving Load: envolvente máx/mín por líneas de influencia (CSiRefer cap. XXVI). = SAP2000 ≤ 0.002 % del máximo
+ *     (tests/casos/carga_movil_sap2000.mjs).
  * El carril sale solo: la cadena de barras HORIZONTALES más alta del modelo (el tablero), ordenada por su eje.
  * Las cargas del caso aplicado ahora (flechas) entran como patrón de UN paso: están en todos los pasos.
  */
 import type { State } from "vanjs-core";
-import { multiStepStatic, pasosVehiculoVivo, pasoUnico, tramosCarril, largoCarril, type ResultadoPaso } from "hekatan-fem";
+import { multiStepStatic, pasosVehiculoVivo, pasoUnico, tramosCarril, largoCarril, cargaMovilEnvolvente, type ResultadoPaso, type EnvolventeMovil } from "hekatan-fem";
 
 export interface ModeloCargaMovil {
   nodes: State<any[]>; elements: State<any[]>; nodeInputs: State<any>; elementInputs: State<any>;
@@ -43,9 +45,9 @@ export function carrilAutomatico(nodes: number[][], elements: number[][]): numbe
 }
 
 export function montarCargaMovil(folder: any, estado: ModeloCargaMovil, pararOtrasAnimaciones: () => void) {
-  const f = folder.addFolder({ title: "🚚 Carga móvil (Multi-step Static)", expanded: false });
+  const f = folder.addFolder({ title: "🚚 Carga móvil (Multi-step Static · Moving Load)", expanded: false });
   const op: Record<string, number> = {}; VEHICULOS.forEach((v, k) => (op[v.nombre] = k));
-  const p = { veh: 0, v: 1, dt: 0.7, sf: 1, conCaso: true, paso: 1, info: "Carril = barras horizontales del tablero. ▶ Calcular." };
+  const p = { veh: 0, v: 1, dt: 0.7, sf: 1, conCaso: true, carril93: true, paso: 1, info: "Carril = barras horizontales del tablero. ▶ Calcular." };
   f.addBinding(p, "veh", { label: "Vehículo", options: op });
   f.addBinding(p, "v", { label: "Velocidad (m/s)", min: 0.1, max: 30, step: 0.1 });
   f.addBinding(p, "dt", { label: "Δt (s)", min: 0.05, max: 5, step: 0.05 });
@@ -56,9 +58,13 @@ export function montarCargaMovil(folder: any, estado: ModeloCargaMovil, pararOtr
   f.addBinding(p, "paso", { label: "Paso a ver", min: 1, max: 2000, step: 1 }).on("change", () => verPaso(Math.min(res?.length ?? 1, Math.round(p.paso)) - 1));
   f.addButton({ title: "🎞 Animar el paso del vehículo" }).on("click", () => animar());
   f.addButton({ title: "⏹ Detener" }).on("click", () => parar(true));
-  f.addButton({ title: "🎞 Cómo se usa (GIF)" }).on("click", () => {
-    try { window.open(`${(import.meta as any).env?.BASE_URL ?? "./"}tutoriales/multi_step_static.gif`, "_blank"); } catch { /* nada */ }
-  });
+  f.addBinding(p, "carril93", { label: "Moving Load: + carril 9.3 kN/m" });
+  f.addButton({ title: "▶ Moving Load (envolvente por líneas de influencia)" }).on("click", () => envolvente());
+  f.addButton({ title: "⬇ Ver envolvente MÍN" }).on("click", () => verEnv(1));
+  f.addButton({ title: "⬆ Ver envolvente MÁX" }).on("click", () => verEnv(0));
+  const gif = (n: string) => { try { window.open(`${(import.meta as any).env?.BASE_URL ?? "./"}tutoriales/${n}.gif`, "_blank"); } catch { /* nada */ } };
+  f.addButton({ title: "🎞 Cómo se usa: Multi-step (GIF)" }).on("click", () => gif("multi_step_static"));
+  f.addButton({ title: "🎞 Cómo se usa: Moving Load (GIF)" }).on("click", () => gif("moving_load"));
 
   let res: ResultadoPaso[] | null = null, antes: { d: any; a: any } | null = null, raf = 0;
   function calcular() {
@@ -88,6 +94,40 @@ export function montarCargaMovil(folder: any, estado: ModeloCargaMovil, pararOtr
       `  M3 máx = ${mMax.toFixed(3)}\n  M3 mín = ${mMin.toFixed(3)}\n${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
     p.paso = 1; f.refresh();
   }
+  let env: EnvolventeMovil | null = null;
+  function envolvente() {
+    parar(true);
+    const nodes = estado.nodes.val, elements = estado.elements.val, ni = estado.nodeInputs.val, ei = estado.elementInputs.val;
+    const barras = carrilAutomatico(nodes, elements);
+    if (!barras.length) { p.info = "✗ no hay barras horizontales para el carril"; f.refresh(); return; }
+    const V = VEHICULOS[p.veh], t0 = performance.now();
+    const w = p.carril93 ? 9.3 : 0;
+    try {
+      env = cargaMovilEnvolvente(nodes as any, elements as any, ni, ei, { barras },
+        [{ nombre: V.nombre, ejes: V.ejes, sep: V.sep, unif: new Array(V.ejes.length + 1).fill(w) }], { sf: p.sf });
+    } catch (e) { env = null; p.info = "✗ " + String(e); f.refresh(); return; }
+    let uzMin = 0, uzMax = 0, mMax = 0, mMin = 0, vMax = 0, vMin = 0;
+    for (const [, [mx, mn]] of env.disp) { uzMax = Math.max(uzMax, mx[2]); uzMin = Math.min(uzMin, mn[2]); }
+    for (const [, ex] of env.barras) for (const [mx, mn] of ex) { mMax = Math.max(mMax, mx[5]); mMin = Math.min(mMin, mn[5]); vMax = Math.max(vMax, mx[1]); vMin = Math.min(vMin, mn[1]); }
+    p.info = `Moving Load (SAP2000, líneas de influencia)
+${env.puntos.length} puntos de carga · ${V.ejes.length} ejes${w ? " + carril" : ""}
+` +
+      `Uz: ${uzMin.toFixed(6)} … ${uzMax.toFixed(6)}
+M3: ${mMin.toFixed(3)} … ${mMax.toFixed(3)}
+V2: ${vMin.toFixed(3)} … ${vMax.toFixed(3)}
+` +
+      `${(performance.now() - t0).toFixed(0)} ms · como SAP2000`;
+    f.refresh(); verEnv(1);
+  }
+  function verEnv(k: 0 | 1) {
+    if (!env) return;
+    if (!antes) antes = { d: estado.deformOutputs.val, a: estado.analyzeOutputs.val };
+    const d = new Map<number, number[]>(); for (const [q, mm] of env.disp) d.set(q, mm[k]);
+    const par = (c: number) => { const m = new Map<number, [number, number]>(); for (const [e, ex] of env!.barras) {
+      const sg = c === 4 ? -1 : 1; m.set(e, [-sg * ex[0][k][c], sg * ex[1][k][c]]); } return m; };
+    estado.deformOutputs.val = { deformations: d, reactions: new Map([...env.reac].map(([q, mm]) => [q, mm[k]])) } as any;
+    estado.analyzeOutputs.val = { ...(antes.a ?? {}), normals: par(0), shearsY: par(1), shearsZ: par(2), torsions: par(3), bendingsY: par(4), bendingsZ: par(5) } as any;
+  }
   function verPaso(k: number) {
     if (!res || !res[k]) return;
     if (!antes) antes = { d: estado.deformOutputs.val, a: estado.analyzeOutputs.val };
@@ -110,5 +150,5 @@ export function montarCargaMovil(folder: any, estado: ModeloCargaMovil, pararOtr
     };
     raf = requestAnimationFrame(tick);
   }
-  return { calcular, verPaso, parar, resultado: () => res, params: p, folder: f };
+  return { calcular, envolvente, verEnv, verPaso, parar, envolventeRes: () => env, resultado: () => res, params: p, folder: f };
 }

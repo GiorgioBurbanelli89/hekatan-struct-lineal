@@ -25,7 +25,7 @@ const TIPOS: Array<[string, string]> = [
   ["Time History (lineal)", "✓ Hekatan Struct: 〰 Tiempo-historia (lineal), modal o directa."],
   ["Time History (no lineal)", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
   ["Nonlinear Static (pushover)", "Módulo Pro — no disponible en Hekatan Struct (análisis NO LINEAL)."],
-  ["Moving Load", "Próximamente en Hekatan Struct (lineal)."],
+  ["Moving Load", "✓ Hekatan Struct: 🚚 Carga móvil › Moving Load (líneas de influencia, envolvente), = SAP2000."],
   ["Buckling", "✓ Hekatan Struct: ⟂ Pandeo (lineal), = SAP2000."],
   ["Steady State", "✓ Hekatan Struct: 〜 Estado estacionario (lineal), = SAP2000."],
   ["Power Spectral Density", "✓ Hekatan Struct: 〜 Estado estacionario / PSD, = SAP2000."],

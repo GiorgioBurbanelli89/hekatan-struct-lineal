@@ -20,3 +20,4 @@ MULTI = dict(dur=70.0, dt=0.7, estacion=0.0, t0=0.0, v=1.0, sf_vl=1.2, sf_sc=1.0
 HL93F = dict(nombre="HL93F", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[9.3, 9.3, 9.3, 9.3])
 HL93V = dict(nombre="HL93V", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[9.3, 9.3, 9.3, 9.3], var=(1, 9.0))
 CAM0 = dict(nombre="CAM0", ejes=[35.0, 145.0, 145.0], sep=[4.3, 4.3], unif=[0, 0, 0, 0])
+UNI = dict(nombre="UNI", ejes=[0.0], sep=[], unif=[1.0, 1.0])
