@@ -92,8 +92,8 @@ ${(performance.now() - t0).toFixed(0)} ms`;
     const val = (k: number) => { const a = re[k]?.[p.dir] ?? 0, b = im[k]?.[p.dir] ?? 0;
       return g === 0 ? Math.hypot(a, b) * 1000 : g === 1 ? (Math.atan2(b, a) * 180) / Math.PI : (g === 2 ? a : b) * 1000; };
     panel.setTitle(p.tipo === 1 ? `PSD · √PSD de u${c} del nudo ${ultimo.nudo}` : `Estado estacionario · ${nombres[g]}${c}${g === 0 ? "|" : ""} del nudo ${ultimo.nudo}`);
-    panel.setSeries([{ label: `${nombres[g]}${c}${g === 0 ? "|" : ""} ${g === 1 ? "[°]" : "[mm]"}  ·  pico ${picoDe().f.toFixed(2)} Hz`, data: ultimo.r.frecuencias.map((fr, k) => [fr, val(k)] as [number, number]), color: "#7f96b3", width: 2 }]);
-    panel.setAxes({ xLabel: "f (Hz)", yLabel: g === 1 ? "fase (°)" : g === 0 ? "|u| (mm)" : "u (mm)", grid: true, xMin: undefined, xMax: undefined, yMin: g === 1 ? -180 : undefined, yMax: g === 1 ? 180 : undefined });
+    panel.setSeries([{ label: p.tipo === 1 ? `√PSD u${c} [mm/√Hz]  ·  pico ${picoDe().f.toFixed(2)} Hz` : `${nombres[g]}${c}${g === 0 ? "|" : ""} ${g === 1 ? "[°]" : "[mm]"}  ·  pico ${picoDe().f.toFixed(2)} Hz`, data: ultimo.r.frecuencias.map((fr, k) => [fr, val(k)] as [number, number]), color: "#7f96b3", width: 2 }]);
+    panel.setAxes({ xLabel: "f (Hz)", yLabel: p.tipo === 1 ? "√PSD (mm/√Hz)" : g === 1 ? "fase (°)" : g === 0 ? "|u| (mm)" : "u (mm)", grid: true, xMin: undefined, xMax: undefined, yMin: g === 1 ? -180 : undefined, yMax: g === 1 ? 180 : undefined });
     panel.show();
   }
 
