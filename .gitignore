@@ -134,3 +134,7 @@ validation/opensees/**/*.mp4
 # Modelos de CLIENTE y cachés binarios: NUNCA a un repo público (22-sep-2026)
 validation/04-cimentaciones-safe/radier-mod002/
 **/*.pkl
+
+# Modelos de clientes: PRIVADOS (nunca al repo ni al deploy)
+validation/modelos/privado/
+registros/*quispe*

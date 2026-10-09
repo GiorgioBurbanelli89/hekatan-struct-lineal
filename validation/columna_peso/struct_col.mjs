@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+import { empaquetar, R, cargarFem } from "../../tests/lib/bundle.mjs";
+const mod = await empaquetar(`export { parseS2k } from "${R}/examples/src/shared/s2kParser";\n`, "s2k");
+const fem = await cargarFem();
+const m = mod.parseS2k(readFileSync("validation/columna_peso/col.$2k", "latin1"));
+console.log("nudos", m.nodes.length, "elem", m.elements.length, "cargas", JSON.stringify([...m.nodeInputs.loads]), "frameFixedEnd", JSON.stringify([...(m.elementInputs.frameFixedEnd ?? [])]), "frameLoads", JSON.stringify([...(m.elementInputs.frameLoads ?? [])]));
+const d = fem.deform(m.nodes, m.elements, m.nodeInputs, m.elementInputs, m.nodeInputs.springs);
+const a = fem.analyze(m.nodes, m.elements, m.elementInputs, d);
+console.log("uz tope Struct", d.deformations.get(1)?.[2], " (SAP -1.08e-06)");
+console.log("N Struct", JSON.stringify(a.normals.get(0)), " (SAP P base -2250, tope 0)");

@@ -6783,6 +6783,7 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
             plantas: [],
             supports: [...((model.nodeInputs?.supports as Map<number, boolean[]>) ?? new Map()).entries()],
             loads: [...loadsMap.entries()],
+            springs: ((model.nodeInputs as any)?.springs ?? []) as Array<{ node: number; dof: number; k: number }>,   // el suelo (muelles de area): sin esto el importado quedaba SIN suelo
             elementInputs: ei,
             info: model.info,
           };

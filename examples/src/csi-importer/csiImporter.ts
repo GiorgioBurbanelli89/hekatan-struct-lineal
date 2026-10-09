@@ -35,6 +35,8 @@ interface ModeloImportado {
   plantas: string[];              // planta por elemento
   supports: [number, boolean[]][];
   loads: [number, number[]][];
+  /** muelles de suelo (balasto de area ya repartido a nudos): [{node, dof, k}] */
+  springs?: Array<{ node: number; dof: number; k: number }>;
   elementInputs: Record<string, [number, number][]>;
   info?: Record<string, unknown>;
 }
@@ -341,8 +343,13 @@ export const csiImporter: ExampleDef = {
     states.nodeInputs.val = {
       supports: new Map((m.supports ?? []) as any),
       loads: loadsMap,
-    };
+      ...(m.springs?.length ? { springs: m.springs } : {}),
+    } as any;
     states.elementInputs.val = ei as any;
+    // Con suelo (muelles de area) y cascaras de zapata: panel «Zapatas en planta» sobre el modelo importado.
+    if (m.springs?.length && !p.cubierta) {
+      import("../plantillas/cimentacionImportadaUI").then((u) => u.montarEditorImportado(states, m!.archivo ?? "modelo")).catch((e) => console.warn("[Zapatas]", e));
+    }
 
     // Color por tipo, para que se lea de un vistazo que hay en el archivo
     const objs: THREE.Object3D[] = [];

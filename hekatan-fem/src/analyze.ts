@@ -1,3 +1,4 @@
+import { aCentroide } from "./utils/insertionPoint";
 import { multiply, matrix, Matrix, mean } from "mathjs";
 import {
   Node,
@@ -87,7 +88,9 @@ export function analyze(
         elmNodes,
         elementInputs?.localAngles?.get(i) ?? 0
       );
-      const dxLocal = multiply(T, dxGlobal);
+      let dxLocal = multiply(T, dxGlobal);
+      const ins = elementInputs?.insertionOffsets?.get(i);
+      if (ins) dxLocal = aCentroide(dxLocal, ins[0], ins[1]);      // esfuerzos del CENTROIDE, como CSI
       const kLocal = getLocalStiffnessMatrix(elmNodes, elementInputs, i);
       let fLocal = multiply(kLocal, dxLocal);
 

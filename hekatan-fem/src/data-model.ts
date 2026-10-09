@@ -117,6 +117,9 @@ export type ElementInputs = {
   // ALARGA la barra): aqui el brazo va DENTRO de la luz y lo que se acorta es
   // el tramo flexible. Con rz = 0 —el defecto de ETABS— no cambia la rigidez.
   endOffsets?: Map<number, [number, number, number]>;
+  /** PUNTO DE INSERCION (cardinal point de CSI): vector nudo -> centroide [d2, d3] en ejes LOCALES
+   *  (m). K = R^T K R y esfuerzos del centroide; ver utils/insertionPoint.ts. Ausente = centroide. */
+  insertionOffsets?: Map<number, [number, number]>;
   /**
    * Angulo de eje local de barra, en GRADOS, alrededor del eje 1 — el "local
    * axis angle" de CSI (`FrameObj.SetLocalAxes` de ETABS). Ausente = 0.

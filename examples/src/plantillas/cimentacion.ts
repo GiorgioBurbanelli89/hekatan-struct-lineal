@@ -190,6 +190,18 @@ function verificarContacto(
   return { traccion, despegado };
 }
 
+/**
+ * EDICIÓN DE ZAPATAS DESDE LA PLANTA.
+ *
+ * Cada zapata se mide desde las CARAS EXTERIORES de las columnas que lleva: cuánto sobresale
+ * por el oeste (w), este (e), sur (s) y norte (n). Cero = la zapata llega justo a la cara de
+ * la columna (lindero: la cara toca la línea de propiedad). Es lo que se dibuja y se
+ * acota en planta; el panel (`cimentacionPlanta.ts`) escribe aquí y reconstruye.
+ * Clave = sub-tipo de plantilla; así, cambiar de plantilla no arrastra la edición ajena.
+ */
+export interface VueloZapata { w: number; e: number; s: number; n: number; }
+export const EDICION_ZAPATAS = new Map<number, Record<number, VueloZapata>>();
+
 /** Una zapata: rectángulo en planta y canto. */
 interface Zapata { x0: number; y0: number; x1: number; y1: number; t: number; }
 /** Una columna: dónde cae su EJE, su lado y la carga que baja. */
@@ -269,6 +281,35 @@ export function construirCimentacion(p: any, states: any, sub = CIM_REJILLA) {
     cuadrada(bcol / 2, sy, B); columnas.push({ x: bcol / 2, y: sy, b: bcol, P });
     vigas.push([bcol / 2, bcol / 2, sx, bcol / 2], [bcol / 2, bcol / 2, bcol / 2, sy]);
   }
+
+  // ── 1b. edición desde planta: vuelos por cara, medidos desde las columnas ──
+  const dentroDe = (z: Zapata) => columnas.filter((c) => c.x >= z.x0 - 1e-6 && c.x <= z.x1 + 1e-6 &&
+                                                         c.y >= z.y0 - 1e-6 && c.y <= z.y1 + 1e-6);
+  const cajaCol = (z: Zapata) => {
+    const d = dentroDe(z);
+    if (!d.length) return null;
+    return { x0: Math.min(...d.map((c) => c.x - c.b / 2)), x1: Math.max(...d.map((c) => c.x + c.b / 2)),
+             y0: Math.min(...d.map((c) => c.y - c.b / 2)), y1: Math.max(...d.map((c) => c.y + c.b / 2)) };
+  };
+  const cajas = zapatas.map(cajaCol);                       // con el rectángulo ORIGINAL
+  const vuelosBase: VueloZapata[] = zapatas.map((z, i) => {
+    const c = cajas[i];
+    return c ? { w: c.x0 - z.x0, e: z.x1 - c.x1, s: c.y0 - z.y0, n: z.y1 - c.y1 } : { w: 0, e: 0, s: 0, n: 0 };
+  });
+  const edicion = EDICION_ZAPATAS.get(sub) ?? {};
+  zapatas.forEach((z, i) => {
+    const o = edicion[i], c = cajas[i];
+    if (!o || !c) return;
+    z.x0 = c.x0 - Math.max(0, o.w); z.x1 = c.x1 + Math.max(0, o.e);
+    z.y0 = c.y0 - Math.max(0, o.s); z.y1 = c.y1 + Math.max(0, o.n);
+  });
+  (states as any).__cimPlanta = {
+    sub, bcol,
+    zapatas: zapatas.map((z, i) => ({ ...z, vuelos: edicion[i] ?? vuelosBase[i], base: vuelosBase[i] })),
+    columnas: columnas.map((c) => ({ ...c })), vigas: vigas.map((v) => [...v]),
+  };
+  if (typeof document !== "undefined" && !p.__soloModelo)
+    import("./cimentacionPlanta").then((m) => m.montarPanelPlanta(states)).catch(() => {});
 
   // ── 2. el MODELO, igual para todas ───────────────────────────────────────
   const nodes: Node[] = [], elements: Element[] = [];

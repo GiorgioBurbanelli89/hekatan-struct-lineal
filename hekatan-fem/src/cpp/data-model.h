@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <map>
+#include <array>
 #include <string>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -36,6 +37,10 @@ struct ElementInputs
     // Angulo de eje local de barra, en GRADOS, alrededor del eje 1 — el "local
     // axis angle" de CSI (`FrameObj.SetLocalAxes` de ETABS). Ausente = 0.
     std::map<int, double> localAngles;
+    // PUNTO DE INSERCION (cardinal point de CSI): vector nudo -> centroide en ejes LOCALES 2 y 3 [d2, d3].
+    // K_e = R^T K R con R = traslado de cuerpo rigido (u_c = u + theta x r, r = (0,d2,d3)). Ausente = centroide.
+    // Llega por la lista de muelles con nudo negativo y gdl -5 (d2) / -6 (d3): ver springsExtra.h.
+    std::map<int, std::array<double, 2>> insertion;
     // Releases via static condensation. Two formats:
     //  6 flags: [TI,M2I,M3I, TJ,M2J,M3J]  (rotational only, legacy)
     // 12 flags: [FxI,FyI,FzI,TI,M2I,M3I, FxJ,FyJ,FzJ,TJ,M2J,M3J] (all DOFs)

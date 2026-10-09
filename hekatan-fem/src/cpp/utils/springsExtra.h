@@ -26,6 +26,18 @@
 
 namespace springsExtra {
 
+/** PUNTO DE INSERCION de barras: entradas [nudo = -(elem+1), gdl = -5 | -6, k = d2 | d3]. Se lee ANTES de
+ *  ensamblar (el desfase entra en la K de cada barra, no se suma despues). */
+template <class Map>
+inline void leerInsercion(const double *springs, int n, Map &out) {
+    for (int i = 0; i < n; ++i) {
+        const int nodo = (int)springs[3 * i], d = (int)springs[3 * i + 1];
+        if (nodo >= 0 || (d != -5 && d != -6)) continue;
+        auto &v = out[-nodo - 1];          // std::array<double,2> inicia en 0
+        v[d == -5 ? 0 : 1] = springs[3 * i + 2];
+    }
+}
+
 using Node = std::vector<double>;
 
 inline void nodosDeElemento(const std::vector<unsigned int> &idx, const std::vector<unsigned int> &sizes,
@@ -214,6 +226,7 @@ inline bool despacharMuelleExtra(Eigen::SparseMatrix<double> &K, const std::vect
                                  const std::vector<unsigned int> &idx, const std::vector<unsigned int> &sizes,
                                  int nodo, int d, double k, std::vector<Colgado> *pendientes = nullptr) {
     if (nodo >= 0) return false;
+    if (d == -5 || d == -6) return true;   // punto de insercion: ya leido por leerInsercion(), aqui no suma rigidez
     if (pendientes && (d == -2 || d == -4)) { pendientes->push_back({ -nodo - 1, (int)std::llround(k), d == -4 }); return true; }
     std::vector<int> en;
     nodosDeElemento(idx, sizes, -nodo - 1, en);

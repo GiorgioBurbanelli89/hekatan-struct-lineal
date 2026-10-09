@@ -159,6 +159,7 @@ extern "C"
         elementInputs.solidIncompatible = solid_incompatible != 0;
         if (num_endoff > 0 && endoff_keys_ptr && endoff_values_ptr)
             elementInputs.endOffsets = parseMapVecFromFlat(endoff_keys_ptr, endoff_values_ptr, num_endoff, 3);
+        springsExtra::leerInsercion(springs_flat_ptr, num_springs, elementInputs.insertion);
 
         // --- 2. Core FEA Calculation using Eigen ---
         int dof = num_nodes * 6; // Total degrees of freedom

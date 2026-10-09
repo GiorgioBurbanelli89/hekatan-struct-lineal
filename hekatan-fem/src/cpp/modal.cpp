@@ -550,6 +550,7 @@ extern "C"
         elementInputs.shearAreasY = parseMapFromFlat(shearY_keys_ptr, shearY_values_ptr, num_shearY);
         elementInputs.shearAreasZ = parseMapFromFlat(shearZ_keys_ptr, shearZ_values_ptr, num_shearZ);
         elementInputs.localAngles = parseMapFromFlat(locang_keys_ptr, locang_values_ptr, num_locang);
+        springsExtra::leerInsercion(springs_flat_ptr, num_springs, elementInputs.insertion);
         elementInputs.momentReleases = parseMapBoolVecFromFlat(release_keys_ptr, release_values_ptr, num_releases, 12);
         if (num_endoff > 0 && endoff_keys_ptr && endoff_values_ptr)
             elementInputs.endOffsets = parseMapVecFromFlat(endoff_keys_ptr, endoff_values_ptr, num_endoff, 3);

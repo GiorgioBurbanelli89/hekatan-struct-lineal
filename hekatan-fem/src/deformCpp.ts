@@ -1,3 +1,4 @@
+import { insertionSprings } from "./utils/insertionPoint";
 import {
   Node,
   Element,
@@ -117,9 +118,9 @@ export function deformCpp(
   gc.push(reactionsSizeOutPtr);
 
   // Springs (Winkler foundation, nodal). Layout: [node, dof, k, ...]
-  const springsFlat: number[] = springs
-    ? springs.flatMap((s) => [s.node, s.dof, s.k])
-    : [];
+  // + el PUNTO DE INSERCION de las barras (nudo negativo, gdl -5/-6): utils/insertionPoint.ts
+  const springsAll = [...(springs ?? []), ...insertionSprings(elementInputs)];
+  const springsFlat: number[] = springsAll.flatMap((s) => [s.node, s.dof, s.k]);
   const springsPtr = allocate(
     springsFlat.length > 0 ? springsFlat : [0],
     Float64Array,
@@ -277,7 +278,7 @@ export function deformCpp(
     // detras del angulo de eje local.
     // Springs (Winkler): flat [node, dof, k, ...] array
     springsPtr,
-    springs ? springs.length : 0,
+    springsAll.length,
     // Plate formulation switch (Shell-Thin vs Shell-Thick): map<elemIdx, int>
     plateFormKeysPtr,
     plateFormValuesPtr,

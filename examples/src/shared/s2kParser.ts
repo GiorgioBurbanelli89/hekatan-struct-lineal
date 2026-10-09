@@ -58,6 +58,9 @@ function parseKV(line: string): Map<string, string> {
   return map;
 }
 
+/** Auto edge constraint (nudos colgados atados a la arista): APAGADO. Probado en el Quispe: con el, uz SAP vs Struct sube de 2.9 % a 53 %: SAP NO lo aplica a estas areas. */
+export const S2K_OPCIONES = { edgeAuto: false };
+
 export function parseS2k(text: string): S2kModel {
   const rawLines = text.split(/\r?\n/);
 
@@ -195,6 +198,15 @@ function parseTableFormat(rawLines: string[]): S2kModel {
             // modificadores de masa y peso de la seccion (defecto 1)
             MMod: kv.has("MMod") ? parseNum(kv.get("MMod")) : 1,
             WMod: kv.has("WMod") ? parseNum(kv.get("WMod")) : 1,
+            // MODIFICADORES DE RIGIDEZ de la seccion (Define > Section > Set Modifiers). Hasta el 9-oct-2026
+            // se ignoraban: vigas del Quispe con JMod = 0.0001 (torsion anulada) entraban con J completa y
+            // el modelo salia ~3 % mas rigido que SAP2000. Defecto 1.
+            AMod: kv.has("AMod") ? parseNum(kv.get("AMod")) : 1,
+            A2Mod: kv.has("A2Mod") ? parseNum(kv.get("A2Mod")) : 1,
+            A3Mod: kv.has("A3Mod") ? parseNum(kv.get("A3Mod")) : 1,
+            JMod: kv.has("JMod") ? parseNum(kv.get("JMod")) : 1,
+            I2Mod: kv.has("I2Mod") ? parseNum(kv.get("I2Mod")) : 1,
+            I3Mod: kv.has("I3Mod") ? parseNum(kv.get("I3Mod")) : 1,
           } as any);
         }
         break;
@@ -289,6 +301,26 @@ function parseTableFormat(rawLines: string[]): S2kModel {
       case "JOINT SPRING ASSIGNMENTS 1 - UNCOUPLED": {
         const name = kv.get("Joint");
         if (name) jointSprings.set(name, ["U1", "U2", "U3", "R1", "R2", "R3"].map(c => parseFloat(kv.get(c) ?? "0") || 0));
+        break;
+      }
+
+      case "FRAME INSERTION POINT ASSIGNMENTS": {
+        // `Frame=370 CardinalPt="8 (top center)" Mirror2=No Mirror3=No Transform=Yes`. Solo el numero.
+        const fr = kv.get("Frame"); const cp = parseInt((kv.get("CardinalPt") ?? "10").replace(/"/g, ""), 10);
+        if (fr && cp && cp !== 10) ((cargasTabla as any).insercion ??= new Map<string, number>()).set(fr, cp);
+        break;
+      }
+
+      case "AREA SPRING ASSIGNMENTS": {
+        // Muelle de AREA (balasto, kgf/cm3 en las unidades del modelo): Stiffness a lo largo del vector
+        // local (0,0,1) = normal → U3; (1,0,0) → U1; (0,1,0) → U2. SAP2000 lo reparte a los nudos por area
+        // tributaria (medido 8-sep-2026: = muelles nodales a mano), asi que aqui se arma ya nodal.
+        const ar = kv.get("Area"); const k = parseNum(kv.get("Stiffness"));
+        if (!ar || !k) break;
+        const vx = parseNum(kv.get("VecX")), vy = parseNum(kv.get("VecY")), vz = parseNum(kv.get("VecZ"));
+        const dof = Math.abs(vz) >= Math.abs(vx) && Math.abs(vz) >= Math.abs(vy) ? 2 : Math.abs(vx) >= Math.abs(vy) ? 0 : 1;
+        const m = ((cargasTabla as any).areaSprings ??= new Map<string, number[]>());
+        const v = m.get(ar) ?? [0, 0, 0]; v[dof] += k; m.set(ar, v);
         break;
       }
 
@@ -570,6 +602,7 @@ function buildModel(
 ): S2kModel {
   const nodeNames: string[] = [];
   const nodeNameToIdx = new Map<string, number>();
+  const edgeAuto = S2K_OPCIONES.edgeAuto;
   const nodesArr: Node[] = [];
   for (const [name, coords] of joints) {
     nodeNameToIdx.set(name, nodesArr.length);
@@ -668,15 +701,27 @@ function buildModel(
       const G = mat.G || E / (2 * (1 + nu));
       ei.elasticities!.set(i, E);
       ei.shearModuli!.set(i, G);
-      ei.areas!.set(i, sec.A || sec.D * sec.B);
-      ei.momentsOfInertiaZ!.set(i, sec.Iz || sec.B * sec.D ** 3 / 12);
-      ei.momentsOfInertiaY!.set(i, sec.Iy || sec.D * sec.B ** 3 / 12);
-      ei.torsionalConstants!.set(i, sec.J || 0);
+      const sm_: any = sec;   // modificadores de rigidez de la seccion (defecto 1)
+      ei.areas!.set(i, (sec.A || sec.D * sec.B) * (sm_.AMod ?? 1));
+      ei.momentsOfInertiaZ!.set(i, (sec.Iz || sec.B * sec.D ** 3 / 12) * (sm_.I3Mod ?? 1));
+      ei.momentsOfInertiaY!.set(i, (sec.Iy || sec.D * sec.B ** 3 / 12) * (sm_.I2Mod ?? 1));
+      ei.torsionalConstants!.set(i, (sec.J || 0) * (sm_.JMod ?? 1));
       ei.densities!.set(i, mat.density || 0);
-      if (sec.As2) (ei as any).shearAreasZ ??= new Map(), (ei as any).shearAreasZ.set(i, sec.As2);
-      if (sec.As3) (ei as any).shearAreasY ??= new Map(), (ei as any).shearAreasY.set(i, sec.As3);
+      if (sec.As2) (ei as any).shearAreasZ ??= new Map(), (ei as any).shearAreasZ.set(i, sec.As2 * (sm_.A2Mod ?? 1));
+      if (sec.As3) (ei as any).shearAreasY ??= new Map(), (ei as any).shearAreasY.set(i, sec.As3 * (sm_.A3Mod ?? 1));
       const off = (piezas.get(elementNames[i])?.length ?? 1) === 1 ? offsets.get(elementNames[i]) : undefined;
       if (off) (ei as any).endOffsets ??= new Map(), (ei as any).endOffsets.set(i, off);
+      // PUNTO DE INSERCION: el nudo cae en el punto cardinal, no en el centroide. Vertical (2/5/8: abajo, medio,
+      // arriba) implementado y MEDIDO contra SAP2000; lateral (1,3,4,6,7,9) y 11 (centro de cortante) aun no.
+      const cp = (cargasTabla as any).insercion?.get(nombreBase(elementNames[i]));
+      if (cp) {
+        const D = sec.D || 0;
+        const fila = cp <= 3 ? -1 : cp >= 7 && cp <= 9 ? 1 : 0;           // 1-3 abajo, 4-6 medio, 7-9 arriba
+        const d2 = fila === 0 ? 0 : -fila * D / 2;                        // arriba: el centroide queda D/2 por DEBAJO del nudo
+        const lateral = [1, 3, 4, 6, 7, 9, 11].includes(cp);
+        if (lateral) console.warn(`[S2K] barra ${elementNames[i]}: CardinalPt ${cp} tiene parte lateral/centro de cortante; solo se aplica la vertical.`);
+        if (d2) (ei as any).insertionOffsets ??= new Map(), (ei as any).insertionOffsets.set(i, [d2, 0]);
+      }
       const ang = angles.get(nombreBase(elementNames[i]));
       if (ang) (ei as any).localAngles ??= new Map(), (ei as any).localAngles.set(i, ang);
       const sx: any = sec;
@@ -780,6 +825,45 @@ function buildModel(
       const idx = nodeNameToIdx.get(name);
       if (idx === undefined) continue;
       v.forEach((k, dof) => { if (k > 0) spr.push({ node: idx, dof, k }); });
+    }
+    // Muelles de AREA → nodales por area tributaria (A/4 en un cuadrilatero, A/3 en un triangulo).
+    const asp: Map<string, number[]> | undefined = (cargasTabla as any).areaSprings;
+    if (asp) {
+      const acum = new Map<string, number>();
+      elementNames.forEach((nm, i) => {
+        const v = asp.get(nm), el = elements[i];
+        if (!v || el.length < 3) return;
+        const P = el.map((n: number) => nodesArr[n]);
+        const A = el.length === 4
+          ? 0.5 * Math.hypot(...[0, 1, 2].map(k => (P[2][(k + 1) % 3] - P[0][(k + 1) % 3]) * (P[3][(k + 2) % 3] - P[1][(k + 2) % 3]) - (P[2][(k + 2) % 3] - P[0][(k + 2) % 3]) * (P[3][(k + 1) % 3] - P[1][(k + 1) % 3])) as [number, number, number])
+          : 0.5 * Math.hypot(...[0, 1, 2].map(k => (P[1][(k + 1) % 3] - P[0][(k + 1) % 3]) * (P[2][(k + 2) % 3] - P[0][(k + 2) % 3]) - (P[1][(k + 2) % 3] - P[0][(k + 2) % 3]) * (P[2][(k + 1) % 3] - P[0][(k + 1) % 3])) as [number, number, number]);
+        for (const n of el) v.forEach((ks, dof) => { if (ks > 0) acum.set(`${n},${dof}`, (acum.get(`${n},${dof}`) ?? 0) + ks * A / el.length); });
+      });
+      for (const [key, k] of acum) { const [n, dof] = key.split(",").map(Number); spr.push({ node: n, dof, k }); }
+    }
+    // AUTO EDGE CONSTRAINT de SAP2000: un nudo que cae en la ARISTA de una cascara ajena (malla no
+    // conforme) queda atado a ella con interpolacion lineal en los 6 GDL (gdl -4 de springsExtra.h;
+    // el mismo mecanismo que `edge lineal` del .heks). Sin esto el nudo queda colgado y suelto.
+    if (edgeAuto) {
+      for (let e = 0; e < elements.length; e++) {
+        const el = elements[e]; if (el.length !== 3 && el.length !== 4) continue;
+        const P = el.map((n: number) => nodesArr[n]);
+        const bb = [0, 1, 2].map(d => [Math.min(...P.map(q => q[d])), Math.max(...P.map(q => q[d]))]);
+        for (let h = 0; h < nodesArr.length; h++) {
+          if (el.includes(h)) continue;
+          const X = nodesArr[h];
+          const hb = 1e-4 * Math.max(bb[0][1] - bb[0][0], bb[1][1] - bb[1][0], bb[2][1] - bb[2][0]);
+          if (X[0] < bb[0][0] - hb || X[0] > bb[0][1] + hb || X[1] < bb[1][0] - hb || X[1] > bb[1][1] + hb || X[2] < bb[2][0] - hb || X[2] > bb[2][1] + hb) continue;
+          for (let k = 0; k < el.length; k++) {
+            const A = P[k], B = P[(k + 1) % el.length];
+            const d = [B[0] - A[0], B[1] - A[1], B[2] - A[2]]; const L2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2]; if (L2 < 1e-24) continue;
+            const q = [X[0] - A[0], X[1] - A[1], X[2] - A[2]]; const t = (q[0] * d[0] + q[1] * d[1] + q[2] * d[2]) / L2;
+            if (t <= 1e-6 || t >= 1 - 1e-6) continue;
+            const r = [q[0] - t * d[0], q[1] - t * d[1], q[2] - t * d[2]];
+            if (Math.hypot(r[0], r[1], r[2]) <= 1e-4 * Math.sqrt(L2)) { spr.push({ node: -(e + 1), dof: -4, k: h }); break; }
+          }
+        }
+      }
     }
     if (spr.length) (ni as any).springs = spr;
   }
@@ -954,6 +1038,7 @@ function buildModel(
         const mw = cargasTabla.areaMW.get(elementNames[i]);
         if (mw && ei.densities!.has(i)) ei.densities!.set(i, ei.densities!.get(i)! * mw[0]);
         const q = sw * (mat?.weight ?? 0) * (ss?.thickness ?? 0) * (mw ? mw[1] : 1);
+        if (q) ((ei as any).pesoArea ??= new Map<number, number>()).set(i, q);   // peso por unidad de area: lo usa el editor de zapatas
         if (!q) continue;
         const { w } = repartoArea(el.map(j => nodesArr[j]));
         el.forEach((j, k) => sumaF(j, [0, 0, -q * w[k]]));

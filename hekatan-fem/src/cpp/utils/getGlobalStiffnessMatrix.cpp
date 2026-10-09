@@ -66,6 +66,25 @@ Eigen::SparseMatrix<double> getGlobalStiffnessMatrix(
         // Calculate the local stiffness matrix (kLocal) for the element
         Eigen::MatrixXd kLocal = getLocalStiffnessMatrix(elmNodes, elementInputs, i);
 
+        // PUNTO DE INSERCION: la barra (centroide) esta desplazada del nudo por r = (0, d2, d3) en ejes
+        // locales. u_centroide = u_nudo + theta x r  ->  K = R^T K R, igual en los dos extremos.
+        if (numElementNodes == 2)
+        {
+            const auto itIns = elementInputs.insertion.find(i);
+            if (itIns != elementInputs.insertion.end() && (std::abs(itIns->second[0]) > 1e-12 || std::abs(itIns->second[1]) > 1e-12))
+            {
+                const double d2 = itIns->second[0], d3 = itIns->second[1];
+                Eigen::MatrixXd Ri = Eigen::MatrixXd::Identity(12, 12);
+                for (int o = 0; o <= 6; o += 6)
+                {
+                    Ri(o + 0, o + 4) = d3;  Ri(o + 0, o + 5) = -d2;
+                    Ri(o + 1, o + 3) = -d3;
+                    Ri(o + 2, o + 3) = d2;
+                }
+                kLocal = Ri.transpose() * kLocal * Ri;
+            }
+        }
+
         // Calculate the transformation matrix (T) for the element
         // El angulo de eje local de la barra entra AQUI: gira el marco local
         // antes de llevar kLocal a globales.

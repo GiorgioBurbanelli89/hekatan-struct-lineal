@@ -1,3 +1,4 @@
+import { insertionSprings } from "./utils/insertionPoint";
 import {
   Node,
   Element,
@@ -165,9 +166,8 @@ export function modalCpp(
   // Va indexada por NUDO, no por elemento, pero el empaquetado es el mismo.
   const nodalMasses = processElementInput(nodeInputs.masses);
   const diaph = processElementInput(diaphragms ?? (nodeInputs as any).diaphragms);
-  const resortes = springs ?? (nodeInputs as any).springs;
-  const springsFlat: number[] = resortes
-    ? resortes.flatMap((s: any) => [s.node, s.dof, s.k]) : [];
+  const resortes = [...(springs ?? (nodeInputs as any).springs ?? []), ...insertionSprings(elementInputs)];
+  const springsFlat: number[] = resortes.flatMap((s: any) => [s.node, s.dof, s.k]);
   const springsPtr = allocate(springsFlat.length > 0 ? springsFlat : [0],
                               Float64Array, mod.HEAPF64);
   gc.push(springsPtr);
@@ -329,7 +329,7 @@ export function modalCpp(
     diaph.valuesPtr,
     diaph.size,
     springsPtr,
-    resortes ? resortes.length : 0,
+    resortes.length,
     // la union viga-muro de ETABS (`etabsjoint 1`), apagada por defecto
     (elementInputs as any).etabsWallJoint === false ? 0 : 1,   // por defecto como ETABS
     // control
