@@ -405,6 +405,26 @@ export function exportS2k(input: S2kExportInput): string {
     }
   }
 
+  // ── FRAME INSERTION POINT ASSIGNMENTS ──
+  // Punto de insercion (cardinal point). Struct lo guarda como desplazamiento VERTICAL del centroide
+  // (insertionOffsets[i][0] = d2; el parser pone d2 = -D/2 para «arriba»). Sin esta tabla SAP2000 deja
+  // las vigas en CP 10 (centroide) y se separa ~3 % del modelo de Struct (Quispe, 9-oct-2026).
+  // Solo la parte vertical: 8 (arriba, centro) si d2 < 0, 2 (abajo, centro) si d2 > 0.
+  {
+    const conIns = frameIdx.filter(i => {
+      const d = (elementInputs as any).insertionOffsets?.get(i)?.[0];
+      return d !== undefined && isFinite(d) && Math.abs(d) > 1e-12;
+    });
+    if (conIns.length > 0) {
+      push(`TABLE:  "FRAME INSERTION POINT ASSIGNMENTS"`);
+      for (const i of conIns) {
+        const d = (elementInputs as any).insertionOffsets.get(i)[0] as number;
+        push(`   Frame=${i + 1}   CardinalPt="${d < 0 ? "8 (top center)" : "2 (bottom center)"}"   Mirror2=No   Mirror3=No   Transform=Yes`);
+      }
+      blank();
+    }
+  }
+
   // ── END LENGTH OFFSETS ───────────────────────────────────────────────────
   //
   // ⚠️ Esto NO se escribia, y en SAP2000 hay que escribirlo: **SAP no pone

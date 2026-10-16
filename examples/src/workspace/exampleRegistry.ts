@@ -354,7 +354,7 @@ import { plateThick } from "../plate-thick/plateThick";
 import { membrana } from "../membrana-pstress/membrana";
 import { drillingDof } from "../test/drillingDof";
 import { placaNavier } from "../test/placaNavier";
-import { itwPatchTest, itwCantilever, itwCook, itwHemisferio } from "../test/itwBenchmarks";
+import { itwPatchTest, itwCantilever, itwCook, itwHemisferio, itwPatch41 } from "../test/itwBenchmarks";
 import { shellThin } from "../shell-thin/shellThin";
 import { benchmark3way } from "../benchmark-3way/benchmark3way";
 import { benchmarkCft } from "../benchmark-cft/benchmarkCft";
@@ -475,6 +475,7 @@ export const examplesRegistry: ExampleDef[] = [
   // 🧪 TEST — casos de prueba / desarrollo (categoría "test")
   drillingDof,            // 2 muros + viga de acople (drilling DOF + test exportador e2k)
   placaNavier,            // Placa apoyada 8x8: momentos vs Navier y SAP2000 (test placa-momentos-navier)
+  itwPatch41,            // ITW 4.1 — patch test de UN elemento sesgado (Fig 2)
   itwPatchTest,           // ITW I   — patch test de orden superior (exacto 1.5 / 0.6)
   itwCantilever,          // ITW II  — cantilever corto (exacto 0.3553)
   itwCook,                // ITW III — membrana de Cook (referencia 23.91 en C)

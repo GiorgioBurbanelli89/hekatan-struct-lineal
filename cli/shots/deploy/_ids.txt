@@ -86,6 +86,7 @@ itw-cook
 itw-hemisferio
 itw-muro-acople
 itw-muro-frame
+itw-patch-41
 itw-patch-test
 itw-test-1-flexion-pura
 itw-test-2-voladizo
@@ -114,6 +115,7 @@ placa-base
 placa-base-cft
 placa-base-h
 placa-base-hueca
+placa-navier
 placa-orificios
 placa-xy
 plane
