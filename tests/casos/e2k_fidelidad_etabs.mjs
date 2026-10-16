@@ -9,7 +9,9 @@
  *   - CARDINALPT / MIRROR3 y ADDRESTRAINT "Yes": no se devolvian
  *   - «Concrete L» con IGNOREFLANGEAREA y TYPE "Beam": entraba como rectangulo lleno D×B
  *
- * Con todo eso, el TACNA reexportado da en ETABS peso propio −0.24 % y T1 −1.05 %
+ *   - J del rectangulo con D > B: la formula de Roark iba con a = D como lado corto (×8 a ×277)
+ *
+ * Con todo eso, el TACNA reexportado da en ETABS peso propio −0.24 %, T1 −0.13 %, T3 −3.1 %
  * (antes −16 % y ×3.8).
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
@@ -34,7 +36,7 @@ $ MATERIAL PROPERTIES
   MATERIAL  "C280"    SYMTYPE "Isotropic"  E 2526713.2  U 0.15  A 9.9E-06
 $ FRAME SECTIONS
   FRAMESECTION  "COL"  MATERIAL "C280"  SHAPE "Concrete Rectangular"  D 0.5 B 0.5
-  FRAMESECTION  "VIG"  MATERIAL "C280"  SHAPE "Concrete Rectangular"  D 0.6 B 0.3
+  FRAMESECTION  "VIG"  MATERIAL "C280"  SHAPE "Concrete Rectangular"  D 0.8 B 0.3
   FRAMESECTION  "CL"  MATERIAL "C280"  SHAPE "Concrete L"  D 1.4 B 1 TF 0.4 TW 0.4 TWB 0.4 IGNOREFLANGEAREA  "Yes"  MIRROR3 "Yes"
 $ CONCRETE SECTIONS
   CONCRETESECTION  "CL"  TYPE "Beam"  COVERTOP 0.06 COVERBOTTOM 0.06
@@ -134,6 +136,10 @@ export async function correr() {
     "A solo el alma: IGNOREFLANGEAREA + TYPE Beam");
   const okSec = /SHAPE "Concrete L"\s+D 1400 B 1000 TF 400 TW 400/.test(txt) && /CONCRETESECTION\s+"CL"\s+TYPE "Beam"/.test(txt);
   fila("se devuelve la Concrete L y su TYPE Beam", okSec ? "si" : "no", "si", okSec);
+  // J de una viga PERALTADA (D > B): la formula usaba a = D como lado corto y salia ×59.
+  const iV = m.elementNames.findIndex((n, i) => n === "B1" && m.elements[i].length === 2);
+  const Jv = m.elementInputs.torsionalConstants.get(iV), dJ = Math.abs(Jv / 0.005508134264954427 - 1) * 100;
+  fila("J viga 0.3×0.8 vs ETABS 22 (0.005508)", `${Jv.toFixed(6)} (${dJ.toFixed(2)} %)`, "< 0.2 %", dJ < 0.2, "antes 0.3277 (×59)");
   const sx = /SEISMIC "SX".*TOPSTORY "PISO 2"/.test(txt);
   fila("sismo estatico copiado (nombres de planta)", sx ? "si" : "no", "si", sx);
   return filas;

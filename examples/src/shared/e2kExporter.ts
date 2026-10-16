@@ -1118,6 +1118,13 @@ function exportFromScratch(input: ExportE2kInput): string {
     // Punto de insercion y espejos del e2k leido (`CARDINALPT 8`, `MIRROR3 "Yes"`), tal cual.
     const extraE2k = (elementInputs as any).asignaLineaE2k?.get(i) as string | undefined;
     if (extraE2k) parts.push(extraE2k);
+    // Desplazamiento del eje en los nudos (globales), como lo trae el e2k: ETABS lo escribe en su
+    // propia LINEASSIGN pero acepta los campos en la misma (sin el, TACNA T3 −8.4 %).
+    const dn = (elementInputs as any).desplazaNudoE2k?.get(i) as number[] | undefined;
+    if (dn && dn.some(v => Math.abs(v) > 1e-12)) {
+      const k = ["OFFSETXI", "OFFSETYI", "OFFSETZI", "OFFSETXJ", "OFFSETYJ", "OFFSETZJ"];
+      parts.push(dn.map((v, j) => Math.abs(v) > 1e-12 ? `${k[j]} ${rd(cL(v))}` : "").filter(Boolean).join("  "));
+    }
 
     return parts.length > 0 ? ` ${parts.join(" ")} ` : "";
   };
@@ -1274,8 +1281,9 @@ function exportFromScratch(input: ExportE2kInput): string {
   // objeto en los niveles para la rigidez), la masa si.
   const lineasEmitidas = new Map<string, string>();   // nombre -> fila LINE
   chains.forEach((ch, ci) => {
-    // Extras usa el primer elemento de la cadena (asumimos uniforme)
-    const extras = buildLineExtras(ch.elemIndices[0]);
+    // Los extras van POR PLANTA (el primer tramo de cada grupo), no los del primero de la cadena:
+    // la cadena no es uniforme. En el TACNA la columna C3 no lleva desplazamiento en el semisotano
+    // y si en los 7 pisos de encima; con los extras del tramo de abajo se perdian los 7 (T3 −8.4 %).
     // Grupos por planta: un grupo acaba en el tramo cuyo nudo de arriba cae
     // exactamente en un nivel (dz = 0). Un nudo intermedio de «Div. columnas»
     // se queda dentro del grupo y va al MINNUMSTA.
@@ -1288,6 +1296,7 @@ function exportFromScratch(input: ExportE2kInput): string {
       if (plantaDe(nodes[top][2]).dz === 0 || k === ch.elemIndices.length - 1) { grupos.push(actual); actual = []; }
     });
     grupos.forEach(g => {
+      const extras = buildLineExtras(g[0]);
       const [a0, b0] = elements[g[0]];
       const bot = nodes[a0][2] <= nodes[b0][2] ? a0 : b0;
       const [a1, b1] = elements[g[g.length - 1]];

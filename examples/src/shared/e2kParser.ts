@@ -242,6 +242,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const puntosDeclarados = new Set<string>();
   /** Seccion → `CONCRETESECTION … TYPE "Beam"|"Column"` con sus recubrimientos (unidades del fichero). */
   const tipoHormigon = new Map<string, { tipo: string; ct: number; cb: number }>();
+  /** "linea@planta" → [dxI, dyI, dzI, dxJ, dyJ, dzJ] (globales, unidades del fichero). */
+  const desplazaNudoLinea = new Map<string, number[]>();
   // UNIFF: `val` en toda la barra. TRAPF (lo que ETABS escribe para trapecios Y parciales, varias
   // lineas por barra que se suman): FSTART/FEND en RDSTART/RDEND (distancias RELATIVAS).
   const frameLoads: { line: string; story: string; type: string; dir: string; lc: string; val: number;
@@ -490,6 +492,17 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     }
 
     // ── LINE ASSIGNS ──
+    // Desplazamiento del eje respecto a los nudos (`OFFSETXI 0.5 OFFSETYI -0.3 OFFSETXJ …`, en
+    // globales). ETABS lo escribe en una LINEASSIGN APARTE, sin SECTION, que no se leia: el TACNA
+    // perdia la excentricidad de 37 columnas y salia 8.4 % mas rigido en torsion (16-oct-2026).
+    if (currentSection === "LINE ASSIGNS" && /OFFSET[XYZ][IJ]\s/.test(line)) {
+      const lk = line.match(/LINEASSIGN\s+"([^"]+)"\s+"([^"]+)"/);
+      if (lk) {
+        const v = ["OFFSETXI", "OFFSETYI", "OFFSETZI", "OFFSETXJ", "OFFSETYJ", "OFFSETZJ"]
+          .map(k => parseFloat(line.match(new RegExp(`\\b${k}\\s+([-\\d.eE+]+)`))?.[1] ?? "0"));
+        desplazaNudoLinea.set(`${lk[1]}@${lk[2]}`, v);
+      }
+    }
     if (currentSection === "LINE ASSIGNS") {
       const lam = line.match(/LINEASSIGN\s+"([^"]+)"\s+"([^"]+)".*SECTION\s+"([^"]+)"/);
       if (lam) {
@@ -989,6 +1002,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const asignaLineaE2k = new Map<number, string>();
   /** Areas (indice del motor) con `ADDRESTRAINT "Yes"`. */
   const areaConRestriccion = new Set<number>();
+  /** Elemento → desplazamiento del eje en sus dos nudos (OFFSETXI…ZJ), ya en m tras el bloque de unidades. */
+  const desplazaNudo = new Map<number, number[]>();
   const momentReleases = new Map<number, boolean[]>();
   // `ANG` de la LINEASSIGN: el local axis angle de CSI. Se leia (entry.angle)
   // pero NO se emitia: las 156 barras giradas del galpon (cordones en C,
@@ -1056,6 +1071,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (la.rigidZone > 0) zonaRigida.set(elemIdx, la.rigidZone);
         if (la.luzLibre) luzLibre.add(elemIdx);
         if ((la as any).extraE2k) asignaLineaE2k.set(elemIdx, (la as any).extraE2k);
+        const dn = desplazaNudoLinea.get(`${lc.name}@${story}`);
+        if (dn) desplazaNudo.set(elemIdx, [...dn]);
         if (la.angle) localAngles.set(elemIdx, la.angle);
         if (la.offsets) endOffsets.set(elemIdx, [la.offsets[0], la.offsets[1], la.rigidZone]);
         // Releases (12: FxI,FyI,FzI,TI,M2I,M3I, FxJ,FyJ,FzJ,TJ,M2J,M3J).
@@ -1150,7 +1167,14 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         A = D * B;
         Iz = B * D ** 3 / 12;
         Iy = D * B ** 3 / 12;
-        J = (B * D ** 3) * (1/3 - 0.21 * (D/B) * (1 - D**4 / (12 * B**4)));
+      {
+        // Roark: J = b·a³·(1/3 − 0.21·(a/b)·(1 − a⁴/(12·b⁴))) con a = lado CORTO, b = LARGO. Iba con
+        // a = D y b = B fijos: bien en losas/vigas chatas, pero con D > B (vigas peraltadas, columnas
+        // 0.3×1.0) J salia ×8 a ×277 — el TACNA 8.4 % mas rigido en torsion (T3). Contra ETABS 22
+        // (GetSectProps): 0.4×0.8 0.011719 / 0.011729, 0.3×0.8 0.005502 / 0.005508 (−0.1 %), 16-oct-2026.
+        const a = Math.min(D, B), b = Math.max(D, B);
+        J = (b * a ** 3) * (1/3 - 0.21 * (a/b) * (1 - a**4 / (12 * b**4)));
+      }
         AsY = AsZ = 5 / 6 * A; // rectangular shear area factor
         shapeType = "rect";
         break;
@@ -1284,7 +1308,9 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       default:
         if (D > 0 && B > 0) {
           A = D * B; Iz = B * D ** 3 / 12; Iy = D * B ** 3 / 12;
-          J = Math.min(D, B) * Math.max(D, B) ** 3 / 3 * 0.3;
+          // Roark con a = lado corto (como «Concrete Rectangular»); era min·max³/3·0.3, al reves.
+          const a = Math.min(D, B), b = Math.max(D, B);
+          J = (b * a ** 3) * (1/3 - 0.21 * (a/b) * (1 - a**4 / (12 * b**4)));
           AsY = AsZ = 5 / 6 * A;
         }
         break;
@@ -1787,6 +1813,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     // no se ejecuta. Por eso las plantillas y el galpon nunca lo vieron.
     for (const [i, par] of rigidOffsets) rigidOffsets.set(i, [par[0] * L, par[1] * L]);
     for (const [i, v] of endOffsets) endOffsets.set(i, [v[0] * L, v[1] * L, v[2]]);
+    for (const [i, v] of desplazaNudo) desplazaNudo.set(i, v.map(x => x * L));
     // Cargas: las fuerzas en F y los momentos en F*L, en el mismo vector.
     for (const [i, v] of loads) {
       loads.set(i, v.map((x, k) => x * (k < 3 ? F : F * L)) as typeof v);
@@ -2035,6 +2062,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       zonaRigidaE2k: zonaRigida.size ? zonaRigida : undefined,
       asignaLineaE2k: asignaLineaE2k.size ? asignaLineaE2k : undefined,
       areaConRestriccionE2k: areaConRestriccion.size ? areaConRestriccion : undefined,
+      desplazaNudoE2k: desplazaNudo.size ? desplazaNudo : undefined,
     },
     sectionShapes,
     grids,
