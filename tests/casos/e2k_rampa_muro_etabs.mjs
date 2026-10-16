@@ -7,8 +7,14 @@
  * sus rampas tienen una esquina sobre el borde de un muro. Arreglo: hekatan-fem utils/atarAristas.
  *
  * Referencia: ETABS 22.6 por OAPI, el MISMO e2k, sin mallar (NOAUTOMESH), empuje FX 1, FY 1, FZ -2 tonf
- * en la esquina libre de la rampa. Hoy la rampa queda a ~4 % y el borde del muro a ~10 %: la flexion
- * fuera del plano que pasa por la atadura (Hermite) no es exactamente la de ETABS (pendiente).
+ * en la esquina libre de la rampa. Hoy la rampa queda a ~4 % y la esquina del muro (0,0,3) a ~9 %.
+ *
+ * Ese resto se investigo el 16-oct-2026 (registros/TACNA_e2k_struct_vs_etabs.md, parte 5) y NO es del muro
+ * ni de la rampa: el muro solo = ETABS exacto, la rampa apoyada en la esquina = ETABS a 0.07 %. Es la ATADURA.
+ * Caja negra con 30 casos de ETABS: el nudo colgado NO es funcion solo de los dos extremos de la arista
+ * (residuo 4 %): ETABS interpola con el campo interno de su elemento (modos incompatibles). Lo mas cercano con
+ * nudos (Hermite tambien en el plano, con el drilling, y en los giros) baja la rampa a 1.4 % pero deja la
+ * esquina del muro en 8.4 % y no cambia el TACNA (0.03 %): no se adopto. No volver a probar variantes nodales.
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
 
