@@ -8,7 +8,9 @@
  */
 import { FUNDAMENTOS, mostrarFundamento } from "./fundamentos";
 import { exportarFortran } from "./fortranExporter";
-type Entrada = { id: string; icono: string; titulo: string; detalle: string; abrir: () => void; orden: number };
+type Entrada = { id: string; icono: string; titulo: string; detalle: string; abrir: () => void; orden: number; activo?: () => boolean };
+// el comportamiento que lleva el .heks abierto (0 = del fichero), para marcarlo con ✓ en el menú
+const compElegido = (): number => (window as any).__hekatanGetComportamiento?.() ?? 0;
 const menus: Record<string, Entrada[]> = {
   analisis: [
     { id: "estatico", orden: 1, icono: "▶", titulo: "Analizar (estático)", detalle: "Resuelve el modelo con el caso o la combinación elegida en «Resultados».",
@@ -21,16 +23,16 @@ const menus: Record<string, Entrada[]> = {
     // por defecto de cada programa con una sola directiva (`comportamiento …`, cliModeler.ts).
     { id: "comp-etabs", orden: 4, icono: "🏢", titulo: "Comportamiento: ETABS",
       detalle: "Unión viga-muro de ETABS, losas membrana cosidas, aristas de muro atadas, brazos rígidos automáticos, masa por pisos.",
-      abrir: () => (window as any).__hekatanSetComportamiento?.(1) },
+      abrir: () => (window as any).__hekatanSetComportamiento?.(1), activo: () => compElegido() === 1 },
     { id: "comp-sap", orden: 5, icono: "🏗", titulo: "Comportamiento: SAP2000",
       detalle: "Solo conecta lo que se malla: sin brazos, sin atar aristas, sin unión viga-muro de ETABS, masa sin agrupar por pisos.",
-      abrir: () => (window as any).__hekatanSetComportamiento?.(2) },
+      abrir: () => (window as any).__hekatanSetComportamiento?.(2), activo: () => compElegido() === 2 },
     { id: "comp-safe", orden: 6, icono: "🧱", titulo: "Comportamiento: SAFE",
       detalle: "Torsión de vigas ×0.1 (J de SAFE) y muelle de área nodal.",
-      abrir: () => (window as any).__hekatanSetComportamiento?.(3) },
+      abrir: () => (window as any).__hekatanSetComportamiento?.(3), activo: () => compElegido() === 3 },
     { id: "comp-fichero", orden: 7, icono: "📄", titulo: "Comportamiento: del fichero",
       detalle: "Quita la elección: mandan las directivas que traiga el .heks.",
-      abrir: () => (window as any).__hekatanSetComportamiento?.(0) },
+      abrir: () => (window as any).__hekatanSetComportamiento?.(0), activo: () => compElegido() === 0 },
   ],
   diseno: [],
   // EXPORTAR — Jorge, 21-sep-2026: «no veo un boton para exportar modelos ya hechos a
@@ -274,9 +276,10 @@ function abrirMenu(k: string, btn: HTMLButtonElement) {
       `con cimentación o zapata y volverán a aparecer en este menú.</div>`
     : "";
   m.innerHTML = `<div style="padding:2px 6px 6px;color:#9cc">${AYUDA[k]}</div>` + vacio + menus[k].map((e) =>
-    `<div data-id="${e.id}" style="padding:6px 8px;border-radius:4px;cursor:pointer"><b>${e.icono} ${e.titulo}</b><div style="opacity:.75;margin-top:2px">${e.detalle}</div></div>`).join("");
+    `<div data-id="${e.id}" style="padding:6px 8px;border-radius:4px;cursor:pointer${e.activo?.() ? ";border-left:3px solid #4ade80;background:#14301f" : ""}"><b>${e.activo?.() ? "✓ " : ""}${e.icono} ${e.titulo}</b><div style="opacity:.75;margin-top:2px">${e.detalle}</div></div>`).join("");
   m.querySelectorAll<HTMLDivElement>("[data-id]").forEach((d) => {
-    d.onmouseenter = () => (d.style.background = "#1f3b5a"); d.onmouseleave = () => (d.style.background = "");
+    const fondo = d.style.background;   // la entrada activa (✓) conserva su verde al salir el ratón
+    d.onmouseenter = () => (d.style.background = "#1f3b5a"); d.onmouseleave = () => (d.style.background = fondo);
     d.onclick = () => { cerrar(); menus[k].find((x) => x.id === d.dataset.id)?.abrir(); };
   });
   document.body.appendChild(m);
