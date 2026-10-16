@@ -1,3 +1,4 @@
+import { diafragmaConApoyo } from "./utils/diafragmaConApoyo";
 import { insertionSprings } from "./utils/insertionPoint";
 import {
   Node,
@@ -20,6 +21,11 @@ export function deformCpp(
   springs?: Array<{ node: number; dof: number; k: number }>
 ): DeformOutputs {
   if (nodes.length === 0) return;
+  // Apoyos dentro de un diafragma: fijan el diafragma, como en ETABS (utils/diafragmaConApoyo).
+  {
+    const dc = diafragmaConApoyo(nodeInputs.supports as any, (nodeInputs as any).diaphragms);
+    nodeInputs = { ...nodeInputs, supports: dc.supports as any, diaphragms: dc.diaphragms } as NodeInputs;
+  }
 
   const gc: number[] = []; // Garage Collector
 

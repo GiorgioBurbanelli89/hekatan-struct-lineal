@@ -1,3 +1,4 @@
+import { diafragmaConApoyo } from "./utils/diafragmaConApoyo";
 import { insertionSprings } from "./utils/insertionPoint";
 import {
   Node,
@@ -44,6 +45,12 @@ export function modalCpp(
   pandeoU?: number[]
 ): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado; steadyState?: EstacionarioResultado } {
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
+  // Apoyos dentro de un diafragma: fijan el diafragma, como en ETABS (utils/diafragmaConApoyo).
+  {
+    const dc = diafragmaConApoyo(nodeInputs.supports as any, diaphragms ?? (nodeInputs as any).diaphragms);
+    nodeInputs = { ...nodeInputs, supports: dc.supports as any, diaphragms: dc.diaphragms } as NodeInputs;
+    diaphragms = dc.diaphragms;
+  }
 
   const gc: number[] = [];
 
