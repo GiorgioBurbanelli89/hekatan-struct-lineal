@@ -17,6 +17,20 @@ const menus: Record<string, Entrada[]> = {
       abrir: () => (window as any).__hekatanRunModalAnimate?.() },
     { id: "parar", orden: 3, icono: "■", titulo: "Parar animación", detalle: "Detiene la animación del modo.",
       abrir: () => (window as any).__hekatanModalStop?.() },
+    // COMPORTAMIENTO (Jorge, 16-oct-2026): «una lista que elija cómo se comporta la estructura» — las reglas
+    // por defecto de cada programa con una sola directiva (`comportamiento …`, cliModeler.ts).
+    { id: "comp-etabs", orden: 4, icono: "🏢", titulo: "Comportamiento: ETABS",
+      detalle: "Unión viga-muro de ETABS, losas membrana cosidas, aristas de muro atadas, brazos rígidos automáticos, masa por pisos.",
+      abrir: () => (window as any).__hekatanSetComportamiento?.(1) },
+    { id: "comp-sap", orden: 5, icono: "🏗", titulo: "Comportamiento: SAP2000",
+      detalle: "Solo conecta lo que se malla: sin brazos, sin atar aristas, sin unión viga-muro de ETABS, masa sin agrupar por pisos.",
+      abrir: () => (window as any).__hekatanSetComportamiento?.(2) },
+    { id: "comp-safe", orden: 6, icono: "🧱", titulo: "Comportamiento: SAFE",
+      detalle: "Torsión de vigas ×0.1 (J de SAFE) y muelle de área nodal.",
+      abrir: () => (window as any).__hekatanSetComportamiento?.(3) },
+    { id: "comp-fichero", orden: 7, icono: "📄", titulo: "Comportamiento: del fichero",
+      detalle: "Quita la elección: mandan las directivas que traiga el .heks.",
+      abrir: () => (window as any).__hekatanSetComportamiento?.(0) },
   ],
   diseno: [],
   // EXPORTAR — Jorge, 21-sep-2026: «no veo un boton para exportar modelos ya hechos a

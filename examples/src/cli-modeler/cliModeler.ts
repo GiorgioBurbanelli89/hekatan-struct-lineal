@@ -128,6 +128,9 @@ interface ParsedModel {
   /** `rigidzone auto [f]`: brazos AUTOMATICOS de ETABS por conectividad (viga ½ lado de columna, columna
    *  canto de viga arriba) en las barras sin `endoffset`, con factor f (0 por defecto, como ETABS). */
   rigidZoneAuto?: number;
+  /** `comportamiento etabs|sap2000|safe`: las reglas POR DEFECTO de ese programa, de una vez (ver
+   *  `aplicarComportamiento`). Manda sobre las directivas sueltas que toca. */
+  comportamiento?: "etabs" | "sap2000" | "safe";
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -725,6 +728,16 @@ export function parseCliCommands(text: string): ParsedModel {
           const id = parseInt(tokens[1], 10);
           if (!isFinite(id)) { m.errors.push("apoyoborde: uso apoyoborde areaID DOFs"); break; }
           m.apoyosBorde.push({ area: id, spec: tokens.slice(2).join(" ") || "pinned" });
+          break;
+        }
+        case "comportamiento":
+        case "semantica":
+        case "behavior": {
+          const v = (tokens[1] ?? "").toLowerCase();
+          if (v === "etabs") m.comportamiento = "etabs";
+          else if (v === "sap" || v === "sap2000") m.comportamiento = "sap2000";
+          else if (v === "safe") m.comportamiento = "safe";
+          else m.errors.push("comportamiento: uso comportamiento etabs | sap2000 | safe");
           break;
         }
         case "meshcross":
@@ -1460,6 +1473,35 @@ function aplicarDeckEtabs(m: ParsedModel) {
   }
 }
 
+/**
+ * `comportamiento etabs|sap2000|safe` (16-oct-2026): lo que cada programa hace POR DEFECTO, medido contra
+ * el propio programa (cada regla con su test). Elegirlo en la lista «Comportamiento» del panel .heks.
+ *
+ *   ETABS   etabsjoint 1 · deck etabs (paños membrana cosidos y su peso a las vigas) · edge muros (Auto
+ *           Edge Constraint) · meshcross 1 · brazos automáticos RZ 0 (rigidzone auto) si no hay endoffset
+ *   SAP2000 etabsjoint 0 · sin deck · sin edge · meshcross 0 · sin brazos (barras de nudo a nudo) · la masa
+ *           no se agrupa por pisos (SAP no tiene pisos). TACNA: Struct = SAP2000 a 0.044 %.
+ *   SAFE    J×0.1 en las barras (torsion safe) · muelle de área NODAL (∫N dA).
+ */
+function aplicarComportamiento(m: ParsedModel) {
+  const c = m.comportamiento;
+  if (!c) return;
+  if (c === "etabs") {
+    m.etabsWallJoint = true; m.deckEtabs = true; m.meshCross = true;
+    m.edgeEtabs = true; m.edgeSoloFlexion = true; m.edgeLineal = false;
+    if (m.rigidZone === "off") m.rigidZone = undefined;
+    if (!m.frameEndOffsets.size && m.rigidZoneAuto === undefined) m.rigidZoneAuto = 0;
+  } else if (c === "sap2000") {
+    m.etabsWallJoint = false; m.deckEtabs = false; m.meshCross = false;
+    m.edgeEtabs = false; m.edgeSoloFlexion = false; m.edgeLineal = false;
+    m.rigidZone = "off"; m.rigidZoneAuto = undefined;
+    if (m.fuenteMasa) m.fuenteMasa = { ...m.fuenteMasa, lump: false };
+  } else if (c === "safe") {
+    m.torsionFactor = 0.1;
+    for (const a of m.areaSprings) a.nodal = true;
+  }
+}
+
 export const cliModeler: ExampleDef = {
   id: "cli-modeler",
   name: "CLI Modeler (comandos)",
@@ -1508,6 +1550,7 @@ export const cliModeler: ExampleDef = {
     const script = (window as any).__hekatanCliScript ?? DEFAULT_SCRIPT;
     (window as any).__hekatanCliLastScript = script;
     const m = parseCliCommands(script);
+    aplicarComportamiento(m);
     if (m.autoMesh > 0 || m.areasPoligonales.length) aplicarAutomesh(m, m.autoMesh > 0 ? m.autoMesh : 1e9);
     if (m.deckEtabs) aplicarDeckEtabs(m);
 

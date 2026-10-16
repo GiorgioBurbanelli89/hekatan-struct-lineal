@@ -117,3 +117,6 @@ export async function correr() {
     detalle: `Struct (.heks) ${uh.map((v) => v.toFixed(4)).join(" ")}` });
   return filas;
 }
+
+// para tests/casos/comportamiento.mjs (misma rampa, mismo juez)
+export { E2K as E2K_RAMPA, ETABS as ETABS_RAMPA };

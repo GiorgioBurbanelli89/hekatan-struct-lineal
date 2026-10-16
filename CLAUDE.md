@@ -1295,3 +1295,13 @@ como un enlace #h= (casos por patrón, modal, panel NEC; «Compartir enlace» ll
   sismo y la malla se escriben en SU e2k y ETABS lo relee) → `node tests/run.mjs e2k-orificios` (13 filas: reacciones
   y masa 0.000 %, nada dentro de los orificios, T1-3 ≤ 0.3 %). Comparar un modelo cualquiera: `cli/_e2k_a_heks.mjs`,
   `cli/_e2k_vs_etabs.mjs` (patrón a patrón, nudo a nudo, modos y espectro), `cli/_e2k_app_check.mjs` (la app).
+
+## Comportamiento: ETABS / SAP2000 / SAFE por defecto (16-oct-2026)
+
+`comportamiento etabs|sap2000|safe` en el `.heks` (lista «Comportamiento» del panel .heks y menú ▶ Análisis) pone de una vez las
+reglas por defecto de cada programa; manda sobre las directivas sueltas (`aplicarComportamiento` en cliModeler.ts):
+- **etabs**: etabsjoint 1 · deck etabs · edge muros · meshcross 1 · `rigidzone auto 0` si no hay endoffset.
+- **sap2000**: etabsjoint 0 · sin deck ni edge · meshcross 0 · rigidzone off · masa sin agrupar por pisos.
+  TACNA (privado, fuera del repo): Struct = SAP2000 a 2e-10 % en 357 nudos.
+- **safe**: torsion safe (J×0.1) · muelle de área nodal.
+Test `node tests/run.mjs comportamiento`. ⚠️ Contra SAP2000 sin esto, `etabsjoint` (defecto 1) da un 5 % falso.

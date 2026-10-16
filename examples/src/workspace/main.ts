@@ -5034,6 +5034,7 @@ function buildParamsPane() {
     // `e2kAHeks` y se calcula por el mismo camino que un enlace #h=, con casos, modal y panel NEC).
     (window as any).__hekatanAbrirHeks = (txt: string) => {
       ta.value = txt;
+      (window as any).__hekatanSyncComportamiento?.();
       applyCliScript();
       userCameraInteracted = false;
       try { abrirConResultados(); } catch (e) { console.warn("[abrir .heks] resultados por defecto:", e); }
@@ -5065,23 +5066,34 @@ function buildParamsPane() {
       const errs = (window as any).__hekatanCliErrors as string[] | undefined;
       if (errs?.length) alert("⚠ Errores:\n" + errs.slice(0, 5).join("\n"));
     });
-    // ── Con quien se compara: SAP2000 o ETABS (regla de Jorge, 4-sep-2026: primero SAP2000,
-    //    que solo conecta lo que se malla; luego ETABS anadiendo SU semantica con nombre).
-    //    ETABS = `deck etabs` (panos membrana cosidos a todo nudo de borde y su peso a las
-    //    vigas por area tributaria) + `etabsjoint 1` (union viga-muro) + `meshcross 1` (las
-    //    barras que se cruzan se parten). SAP2000 = nada de eso.
-    const DIRECTIVAS = /^(deck|deckmode|etabsjoint|etabswalljoint|meshcross|meshatintersections)\b/i;
-    const semObj = { modo: /^\s*deck\s+etabs/m.test(ta.value) ? 1 : 0 };
+    // ── COMPORTAMIENTO (16-oct-2026, pedido de Jorge): «una lista que elija cómo se comporta la estructura».
+    //    Cada programa tiene SUS reglas por defecto (unión viga-muro, deck, aristas, brazos, masa por pisos,
+    //    J de SAFE…): una sola directiva `comportamiento etabs|sap2000|safe` las pone todas (cliModeler.ts,
+    //    aplicarComportamiento). «Del fichero» = lo que digan las directivas sueltas del .heks.
+    const RE_COMP = /^[ \t]*(comportamiento|semantica|behavior)\b.*(\r?\n)?/gim;
+    const compActual = (): number => {
+      const mm = /^\s*(?:comportamiento|semantica|behavior)\s+(\w+)/im.exec(ta.value)?.[1]?.toLowerCase();
+      return mm === "etabs" ? 1 : mm === "sap" || mm === "sap2000" ? 2 : mm === "safe" ? 3 : 0;
+    };
+    const semObj = { modo: compActual() };
     fCli.addBinding(semObj, "modo", {
-      label: "Comparar con",
-      options: { "SAP2000 (sin directivas)": 0, "ETABS (deck etabs · etabsjoint · meshcross)": 1 },
-    }).on("change", (ev) => {
-      const cuerpo = ta.value.split("\n").filter((l) => !DIRECTIVAS.test(l.trim()));
-      const cab = ev.value === 1 ? ["deck etabs", "etabsjoint 1", "meshcross 1"] : ["etabsjoint 0", "meshcross 0"];
-      ta.value = [...cab, ...cuerpo].join("\n");
+      label: "Comportamiento",
+      options: { "Del fichero (.heks)": 0, "ETABS (por defecto)": 1, "SAP2000 (por defecto)": 2, "SAFE (por defecto)": 3 },
+    }).on("change", (ev) => fijarComportamiento(ev.value as number));
+    function fijarComportamiento(v: number) {
+      const cuerpo = ta.value.replace(RE_COMP, "");
+      const nom = ["", "etabs", "sap2000", "safe"][v];
+      ta.value = nom ? `comportamiento ${nom}\n${cuerpo}` : cuerpo;
       if (liveTimer) clearTimeout(liveTimer);
       applyCliScript();
-    });
+    }
+    // el menú ▶ Análisis (menuDiseno.ts) llega aquí: 0 del fichero · 1 ETABS · 2 SAP2000 · 3 SAFE
+    (window as any).__hekatanSetComportamiento = (v: number) => {
+      semObj.modo = v; (fCli as any).refresh?.(); fijarComportamiento(v);
+    };
+    (window as any).__hekatanGetComportamiento = () => compActual();
+    // al abrir otro .heks (Importar E2K, enlace) la lista dice lo que trae el fichero nuevo
+    (window as any).__hekatanSyncComportamiento = () => { semObj.modo = compActual(); (fCli as any).refresh?.(); };
     fCli.addButton({ title: "🗑 Limpiar comandos" }).on("click", () => {
       ta.value = "";
       (window as any).__hekatanCliScript = "";
