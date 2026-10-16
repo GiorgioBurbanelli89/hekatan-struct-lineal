@@ -14,6 +14,19 @@ import { releasesA12 } from "./utils/releasesA12";
 // @ts-ignore, load wasm
 const mod = await createModule();
 
+// Pisos del modelo para LUMPATSTORIES (`pisos` del .heks / STORY del e2k). Sin ellos el C++ adivina
+// los niveles por poblacion de cotas. Se fija en CADA llamada (vacio = adivinar) para no heredar los del
+// modelo anterior.
+function fijarPisos(ei: any) {
+  const z: number[] = Array.isArray(ei?.pisosZ) ? ei.pisosZ : [];
+  if (typeof mod._set_niveles_piso !== "function") return;
+  const p = mod._malloc(Math.max(1, z.length) * 8);
+  mod.HEAPF64.set(new Float64Array(z), p / 8);
+  mod._set_niveles_piso(p, z.length);
+  mod._free(p);
+}
+
+
 export function modalCpp(
   nodes: Node[],
   elements: Element[],
@@ -258,6 +271,7 @@ export function modalCpp(
   const dirModValuesPtr = mod._malloc(Math.max(1, dirModValues.length) * 8);
   mod.HEAPF64.set(new Float64Array(dirModValues), dirModValuesPtr / 8); gc.push(dirModValuesPtr);
 
+  fijarPisos(elementInputs);
   mod._modal(
     nodesPtr,
     nodes.length,
@@ -751,6 +765,7 @@ export function jointMass(nodes: Node[], elements: Element[], elementInputs: Ele
   const ar = P(elementInputs.areas as any), de = P(elementInputs.densities as any), th = P(elementInputs.thicknesses as any);
   const nm = P(opc.masaNodal);
   const out = mod._malloc(nodes.length * 6 * 8); gc.push(out);
+  fijarPisos(elementInputs);
   mod._assembled_joint_mass(nP, nodes.length, eP, eI.length, eS, elements.length,
     ar.kp, ar.vp, ar.size, de.kp, de.vp, de.size, th.kp, th.vp, th.size, nm.kp, nm.vp, nm.size,
     opc.incluyeElementos ?? 1, opc.lateral ?? 0, opc.lump ?? 0, out);

@@ -169,6 +169,9 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
   if (fm) {
     L.push(`# fuente de masa de ETABS (MASSSOURCE): elementos ${fm.elementos ? "sí" : "no"}, cargas ${fm.cargas ? "sí (" + fm.patrones.map(([p, f]) => `${p}×${N(f)}`).join(" + ") + ", en las líneas mass)" : "no"}`);
     L.push(`masssource elementos ${fm.elementos ? 1 : 0} lateral ${fm.lateral ? 1 : 0} lump ${fm.lump ? 1 : 0}`);
+    // LUMPATSTORIES agrupa en los STORY del fichero, no en cualquier cota poblada (descansos de escalera)
+    const pl = (ei?.plantasE2k ?? []) as Array<{ elev: number }>;
+    if (fm.lump && pl.length >= 2) L.push(`pisos ${pl.map((q) => N(q.elev)).join(" ")}`);
   }
   if (an?.metodoDirecto?.barras)
     L.push(`# AISC método de análisis directo (ETABS ${[an.metodoDirecto.acero && "acero " + an.metodoDirecto.acero, an.metodoDirecto.compuesto && "compuestas " + an.metodoDirecto.compuesto].filter(Boolean).join(", ")}): EI y EA × 0.8 (τb = 1) en ${an.metodoDirecto.barras} barras, ya en su E`);

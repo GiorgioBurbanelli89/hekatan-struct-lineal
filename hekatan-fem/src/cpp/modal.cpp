@@ -51,6 +51,17 @@ static Eigen::SparseMatrix<double> extractBlock(
 //   2b. solo lateral     (INCLUDEVERTICALMASS "No")
 //   2c. LUMPATSTORIES    (concentrar por pisos)
 // El diafragma (2d) NO entra aca: eso ya no es masa, es una restriccion.
+// Pisos del MODELO para LUMPATSTORIES (16-oct-2026). Si el llamador los da (los STORY del e2k,
+// directiva `pisos` del .heks) mandan; si no, se adivinan por poblacion de cotas como antes.
+// Por que: en el TACNA los descansos de escalera (14 nudos por cota) pasaban el filtro de
+// poblacion y se quedaban su masa; ETABS los tiene a CERO y la sube a los pisos.
+static std::vector<double> g_nivelesPiso;
+extern "C" void set_niveles_piso(const double* z, int n)
+{
+    g_nivelesPiso.assign(z, z + (n > 0 ? n : 0));
+    std::sort(g_nivelesPiso.begin(), g_nivelesPiso.end());
+}
+
 static Eigen::SparseMatrix<double> ensamblarMasa(
     const std::vector<Node> &nodes,
     const std::vector<unsigned int> &element_indices,
@@ -165,6 +176,7 @@ static Eigen::SparseMatrix<double> ensamblarMasa(
         std::vector<double> niveles;
         for (size_t k = 0; k < cota.size(); ++k)
             if (cuantos[k] >= MINIMO) niveles.push_back(cota[k]);
+        if (g_nivelesPiso.size() >= 2) niveles = g_nivelesPiso;
 
         if (niveles.size() >= 2)
         {

@@ -108,6 +108,7 @@ export async function correr() {
   filas.push({ que: "el .heks de la app lleva `edge muros`", crudo: true, medido: lleva ? "si" : "no", limite: "si", ok: lleva });
   const dir = mkdtempSync(join(tmpdir(), "hkRampa-")), ruta = join(dir, "rampa.heks");
   writeFileSync(ruta, hk.split(/\r?\n/).filter((l) => !/^load /.test(l) || / EMPUJE$/.test(l)).join("\n"));
+  delete globalThis.__hekatanFactoresPatron;   // otro test de la suite lo deja puesto y EMPUJE entraria con factor 0
   const r = await resolverHeks(ruta);
   const iH = r.nodes.findIndex((n) => Math.abs(n[0] - 1.2) < 1e-3 && Math.abs(n[1] - 3) < 1e-3 && Math.abs(n[2] - 3) < 1e-3);
   const uh = (r.deformOutputs.deformations.get(iH) ?? [NaN, NaN, NaN]).slice(0, 3).map((v) => v * 1000);

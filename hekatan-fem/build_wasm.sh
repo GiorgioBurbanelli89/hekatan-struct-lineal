@@ -26,7 +26,7 @@ SRCS="./src/cpp/deform.cpp ./src/cpp/modal.cpp ./src/cpp/modal_paz.cpp ./src/cpp
 ./src/cpp/utils/getGlobalMassMatrix.cpp ./src/cpp/utils/getLocalMassMatrixPaz.cpp \
 ./src/cpp/utils/getGlobalMassMatrixPaz.cpp"
 
-EXPORTS="_malloc,_free,_deform,_modal,_assembled_joint_mass,_modal_paz,_didactic_solve,_plate_q4_solve,\
+EXPORTS="_malloc,_free,_deform,_modal,_assembled_joint_mass,_set_niveles_piso,_modal_paz,_didactic_solve,_plate_q4_solve,\
 _slopeStabilitySolver,_slopeAllocDouble,_nonlinear_dynamic,_steel02_test,_cyclic_pushover,\
 _concrete02_test,_hex8_solve,_hex8_stress"
 

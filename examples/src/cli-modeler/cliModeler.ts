@@ -236,6 +236,7 @@ interface ParsedModel {
    *  (MASSSOURCE). Con patrones, cada nudo recibe Σ factor·(−Fz del patrón)/g de masa; con
    *  `elementos 0` el modal NO usa ρ·A·L (INCLUDEELEMENTS "No"). */
   fuenteMasa?: { elementos: boolean; lateral: boolean; lump: boolean; patrones: Array<[string, number]> };
+  pisosZ?: number[];   // `pisos z1 z2 …`: cotas de piso para LUMPATSTORIES (los STORY del e2k)
   /** `sismocoef NOMBRE X|Y C k [ecc e] [signo +|-]`: el SEISMIC "User Coefficient" de ETABS. V = C·W
    *  (W = peso de la fuente de masa sobre la base), F_x = V·w_x·h_x^k/Σ w·h^k en el CENTRO DE MASA de
    *  cada planta, y la excentricidad accidental ±e·(lado de la planta perpendicular) como torsor. */
@@ -1007,6 +1008,13 @@ export function parseCliCommands(text: string): ParsedModel {
           const nodeId = parseInt(tokens[1], 10);
           const d = parseInt(tokens[2] ?? "1", 10);
           if (isFinite(nodeId) && isFinite(d) && d > 0) m.diaphragms.set(nodeId, d);
+          break;
+        }
+        case "pisos":
+        case "stories": {
+          const z = tokens.slice(1).map(Number);
+          if (z.length < 2 || z.some((v) => !isFinite(v))) { m.errors.push("pisos: uso pisos z1 z2 … (cotas en m)"); break; }
+          m.pisosZ = z.sort((a, b) => a - b);
           break;
         }
         case "masssource":
@@ -2231,6 +2239,7 @@ export const cliModeler: ExampleDef = {
       })(),
       combos: m.combos,
       fuenteMasa: m.fuenteMasa,
+      pisosZ: m.pisosZ,
       espectros: m.espectros,
       casosRS: m.casosRS,
       fcExport: m.fc,
