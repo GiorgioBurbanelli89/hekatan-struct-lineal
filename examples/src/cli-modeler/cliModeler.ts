@@ -186,6 +186,9 @@ interface ParsedModel {
    *  AUTO EDGE CONSTRAINT de SAFE/SAP2000 (Line Constraint `@LC`); ata TODO nudo sobre una arista,
    *  tambien un punto cargado que no toca otro elemento. gdl -4 en utils/springsExtra.h. */
   edgeLineal: boolean;
+  /** `edge muros`: como `edge etabs` pero solo con cáscaras CON flexión de anfitrionas (muros); las membranas
+   *  (losas, deck) no atan: así lo hace ETABS (TACNA, 16-oct-2026: atar también a losas = el doble de rígido). */
+  edgeSoloFlexion: boolean;
   /** `hex ID n1..n8 [E nu rho]`: hexaedros H8 (solidos). Se resuelven con hex8Solve
    *  (Wilson–Taylor por defecto; `incompatible 0` lo quita). */
   solids: Array<{ id: number; pts: number[]; E: number; nu: number; rho: number }>;
@@ -328,6 +331,7 @@ export function parseCliCommands(text: string): ParsedModel {
     combos: [],
     edgeEtabs: false,
     edgeLineal: false,
+    edgeSoloFlexion: false,
     solids: [],
     solidIncompatible: true,
     etabsWallJoint: true,     // por DEFECTO como ETABS (decision de Jorge, 3-sep-2026); `etabsjoint 0` = modo SAP2000
@@ -669,6 +673,8 @@ export function parseCliCommands(text: string): ParsedModel {
           m.edgeEtabs = v === "etabs" || v === "1" || v === "on" || v === "si" || v === "hermite";
           m.edgeLineal = v === "lineal" || v === "linear" || v === "safe" || v === "sap" || v === "linea";
           if (m.edgeLineal) m.edgeEtabs = true;
+          m.edgeSoloFlexion = v === "muros" || v === "muro" || v === "walls";
+          if (m.edgeSoloFlexion) m.edgeEtabs = true;
           break;
         }
         // automesh [tam_m | off]   — 1.25 m es el defecto de ETABS
@@ -2049,6 +2055,14 @@ export const cliModeler: ExampleDef = {
       const enShell = new Set<number>();
       const shellsIdx: number[] = [];
       elements.forEach((el, e) => { if (el.length === 3 || el.length === 4) { shellsIdx.push(e); for (const n of el) enShell.add(n); } });
+      if (m.edgeSoloFlexion) {
+        // fuera las membranas: flexión M11 M22 M12 = 0 en `shellmod`
+        const idDe = new Map<number, number>(); for (const [id, ix] of shellIdxOf) idDe.set(ix, id);
+        for (let q = shellsIdx.length - 1; q >= 0; q--) {
+          const d = m.shellModsDir.get(idDe.get(shellsIdx[q]) ?? -1);
+          if (d && Math.abs(d[3] ?? 1) + Math.abs(d[4] ?? 1) + Math.abs(d[5] ?? 1) < 1e-9) shellsIdx.splice(q, 1);
+        }
+      }
       let nColgados = 0;
       for (const e of shellsIdx) {
         const el = elements[e] as number[];

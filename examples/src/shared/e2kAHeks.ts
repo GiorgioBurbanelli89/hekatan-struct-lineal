@@ -268,6 +268,10 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     for (const [d, ns] of porGrupo) for (let k = 0; k < ns.length; k += 40) L.push(`diaph grupo ${d} ${ns.slice(k, k + 40).join(" ")}`);
     L.push("");
   }
+  // Auto Edge Constraint de ETABS (activo en todas sus áreas): los nudos que caen sobre la arista de un MURO
+  // quedan atados a ella; las membranas (losas, deck) no atan. Sin esto la rampa de escalera del TACNA colgaba y
+  // el edificio salía 10 % más flexible por piso (16-oct-2026).
+  L.push("# nudos sobre aristas de muros: atados (Auto Edge Constraint de ETABS)", "edge muros", "");
 
   if (masas.size) {
     L.push("# masa de la fuente (t): mass nudo m");

@@ -17,6 +17,10 @@
  * esquina del muro en 8.4 % y no cambia el TACNA (0.03 %): no se adopto. No volver a probar variantes nodales.
  */
 import { empaquetar, R } from "../lib/bundle.mjs";
+import { resolverHeks } from "../lib/heks.mjs";
+import { writeFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 export const nombre = "e2k-rampa-muro-etabs";
 export const descripcion = "rampa inclinada con una esquina sobre el borde de un muro: atada como en ETABS";
@@ -95,5 +99,20 @@ export async function correr() {
   const pm = u([0, 3, 3]), em = ETABS["[0.0, 3.0, 3.0]"], dm = Math.hypot(...pm.map((v, k) => v - em[k])) / Math.hypot(...em) * 100;
   filas.push({ que: "esquina de la rampa sobre el muro vs ETABS", medido: dm, limite: 5, ok: dm < 5,
     detalle: `Struct ${pm.map((v) => v.toFixed(4)).join(" ")} · ETABS ${em.map((v) => v.toFixed(4)).join(" ")}` });
+  // El camino de la APP (Importar E2K): e2k -> .heks (e2kAHeks) -> cliModeler. Hasta el 16-oct-2026 el .heks no
+  // llevaba la atadura y la rampa colgaba ahi aunque el lector directo si la atara.
+  const { e2kAHeks } = await empaquetar(`export { e2kAHeks } from "${R}/examples/src/shared/e2kAHeks";
+`, "rampaHeks");
+  const hk = e2kAHeks(E2K, "rampa.e2k").heks;
+  const lleva = /^edge muros$/m.test(hk);
+  filas.push({ que: "el .heks de la app lleva `edge muros`", crudo: true, medido: lleva ? "si" : "no", limite: "si", ok: lleva });
+  const dir = mkdtempSync(join(tmpdir(), "hkRampa-")), ruta = join(dir, "rampa.heks");
+  writeFileSync(ruta, hk.split(/\r?\n/).filter((l) => !/^load /.test(l) || / EMPUJE$/.test(l)).join("\n"));
+  const r = await resolverHeks(ruta);
+  const iH = r.nodes.findIndex((n) => Math.abs(n[0] - 1.2) < 1e-3 && Math.abs(n[1] - 3) < 1e-3 && Math.abs(n[2] - 3) < 1e-3);
+  const uh = (r.deformOutputs.deformations.get(iH) ?? [NaN, NaN, NaN]).slice(0, 3).map((v) => v * 1000);
+  const dh = Math.hypot(...uh.map((v, k) => v - e[k])) / nE * 100;
+  filas.push({ que: "camino de la app: esquina libre de la rampa vs ETABS", medido: dh, limite: 5, ok: dh < 5,
+    detalle: `Struct (.heks) ${uh.map((v) => v.toFixed(4)).join(" ")}` });
   return filas;
 }
