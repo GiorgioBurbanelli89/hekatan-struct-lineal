@@ -1002,6 +1002,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const asignaLineaE2k = new Map<number, string>();
   /** Areas (indice del motor) con `ADDRESTRAINT "Yes"`. */
   const areaConRestriccion = new Set<number>();
+  /** Area (indice del motor) → tipo de objeto del fichero: PANEL (muro) o FLOOR. */
+  const tipoArea = new Map<number, string>();
   /** Elemento → desplazamiento del eje en sus dos nudos (OFFSETXI…ZJ), ya en m tras el bloque de unidades. */
   const desplazaNudo = new Map<number, number[]>();
   const momentReleases = new Map<number, boolean[]>();
@@ -1607,6 +1609,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     areaNames.push(ac.name);
     if (aa.spring) springAssigns.set(ei, aa.spring);
     if (aa.addRestraint) areaConRestriccion.add(ei);
+    if (/^(PANEL|FLOOR)$/i.test(ac.tipo)) tipoArea.set(ei, ac.tipo.toUpperCase());
 
     const sp = shellProps.get(aa.section);
     if (sp) {
@@ -2063,6 +2066,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       asignaLineaE2k: asignaLineaE2k.size ? asignaLineaE2k : undefined,
       areaConRestriccionE2k: areaConRestriccion.size ? areaConRestriccion : undefined,
       desplazaNudoE2k: desplazaNudo.size ? desplazaNudo : undefined,
+      tipoAreaE2k: tipoArea.size ? tipoArea : undefined,
     },
     sectionShapes,
     grids,

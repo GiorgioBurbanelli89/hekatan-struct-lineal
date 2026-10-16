@@ -1448,7 +1448,11 @@ function exportFromScratch(input: ExportE2kInput): string {
   // ═══════════════════════════════════════════
   // AREA ELEMENTS (Q4 shells: walls + slabs)
   // ═══════════════════════════════════════════
-  const areaElements: { idx: number; el: number[]; isWall: boolean }[] = [];
+  const areaElements: { idx: number; el: number[]; isWall: boolean; panel?: boolean }[] = [];
+  /** Tipo de OBJETO del e2k leido ("PANEL"/"FLOOR"). Manda sobre la geometria solo para el objeto, no para
+   *  la propiedad: el TACNA tiene losas de escalera (membrana) como PANEL; escritas como FLOOR ETABS las
+   *  malla y ata de otra forma (T3 −3.1 %), 16-oct-2026. */
+  const tipoAreaE2k = (elementInputs as any).tipoAreaE2k as Map<number, string> | undefined;
   // Areas COMO LAS DIBUJO el usuario. Si el modelo las trae, se exporta el
   // objeto y NO sus celdas: ETABS guarda 1 area y la malla el solo. Exportar
   // las 90 celdas daba un modelo que analiza igual pero con la malla
@@ -1478,7 +1482,8 @@ function exportFromScratch(input: ExportE2kInput): string {
       const nLen = Math.sqrt(nx*nx + ny*ny + nz*nz);
       const isWall = nLen > 1e-10 && (Math.abs(nz) / nLen) < 0.5;
       // |nz|/|n| close to 1 → horizontal slab; close to 0 → vertical wall.
-      areaElements.push({ idx: i, el, isWall });
+      const te = tipoAreaE2k?.get(i);
+      areaElements.push({ idx: i, el, isWall, panel: te ? te === "PANEL" : undefined });
       if (celdaDeObjeto.has(i)) areaElements.pop();   // la cubre su objeto padre
     }
   });
@@ -1793,7 +1798,8 @@ function exportFromScratch(input: ExportE2kInput): string {
     lines.push(`$ AREA CONNECTIVITIES`);
     const aaEntries: string[] = [];
     areaElements.forEach((ae, ai) => {
-      const { el, isWall } = ae;
+      const { el } = ae;
+      const isWall = ae.panel ?? ae.isWall;   // el OBJETO; la propiedad va por ae.isWall (secDe)
       const aName = isWall ? `W${ai + 1}` : `F${ai + 1}`;
       const aType = isWall ? "PANEL" : "FLOOR";
       // Get plan points for 4 nodes
@@ -1828,6 +1834,8 @@ function exportFromScratch(input: ExportE2kInput): string {
           // hecho por OAPI sin tocar nada). No se veia en las plantillas porque alli la malla ya
           // va hecha en el fichero y ETABS no crea ni un nudo.
           aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          // Un PANEL tambien lleva cargas de area (escaleras del TACNA: 28 AREALOAD que se perdian).
+          areaLoadRefs.push({ name: aName, story: storyNames[iTop], idx: ae.idx });
           return;
         }
         // Use bottom-left and bottom-right points (Z-up: n[2] = elevation)
@@ -1837,6 +1845,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         // Assign at story of top nodes
         const topStory = ps[bot0 === 0 ? 2 : 0].story;
         aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        areaLoadRefs.push({ name: aName, story: topStory, idx: ae.idx });
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 + el salto de planta de cada punto — y con 3
         // puntos, un triangulo. El contador y el numero de saltos siguen al

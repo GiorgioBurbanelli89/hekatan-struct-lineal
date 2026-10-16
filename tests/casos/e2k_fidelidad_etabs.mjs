@@ -38,6 +38,8 @@ $ FRAME SECTIONS
   FRAMESECTION  "COL"  MATERIAL "C280"  SHAPE "Concrete Rectangular"  D 0.5 B 0.5
   FRAMESECTION  "VIG"  MATERIAL "C280"  SHAPE "Concrete Rectangular"  D 0.8 B 0.3
   FRAMESECTION  "CL"  MATERIAL "C280"  SHAPE "Concrete L"  D 1.4 B 1 TF 0.4 TW 0.4 TWB 0.4 IGNOREFLANGEAREA  "Yes"  MIRROR3 "Yes"
+$ SLAB PROPERTIES
+  SHELLPROP  "ESC"  PROPTYPE  "Slab"  MATERIAL "C280"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS 0.3
 $ CONCRETE SECTIONS
   CONCRETESECTION  "CL"  TYPE "Beam"  COVERTOP 0.06 COVERBOTTOM 0.06
 $ POINT COORDINATES
@@ -58,6 +60,8 @@ $ LINE CONNECTIVITIES
   LINE  "B2"  BEAM  "2"  "3"  0
   LINE  "B3"  BEAM  "3"  "4"  0
   LINE  "B4"  BEAM  "4"  "1"  0
+$ AREA CONNECTIVITIES
+  AREA "W1"  PANEL  4  "1"  "2"  "3"  "4"  0  0  0  0
 $ POINT ASSIGNS
   POINTASSIGN  "1"  "Base"  RESTRAINT "UX UY UZ RX RY RZ"
   POINTASSIGN  "2"  "Base"  RESTRAINT "UX UY UZ RX RY RZ"
@@ -92,10 +96,15 @@ $ LINE ASSIGNS
   LINEASSIGN  "B2"  "PISO 2"  SECTION "VIG"  RIGIDZONE 1 CARDINALPT 8
   LINEASSIGN  "B3"  "PISO 2"  SECTION "VIG"  RIGIDZONE 1 CARDINALPT 8
   LINEASSIGN  "B4"  "PISO 2"  SECTION "VIG"  RIGIDZONE 1 CARDINALPT 8
+$ AREA ASSIGNS
+  AREAASSIGN  "W1"  "PISO 1"  SECTION "ESC"
 $ LOAD PATTERNS
   LOADPATTERN "PP"  TYPE  "Dead"  SELFWEIGHT  1
   SEISMIC "SX"  "User Coefficient"    DIR "X"    TOPSTORY "PISO 2"    BOTTOMSTORY "PISO 1"    SHEARCOEFF 0.2  HEIGHTEXPONENT 1
   LOADPATTERN "SX"  TYPE  "Seismic"  SELFWEIGHT  0
+  LOADPATTERN "CV"  TYPE  "Live"  SELFWEIGHT  0
+$ SHELL OBJECT LOADS
+  AREALOAD  "W1"  "PISO 1"  TYPE "UNIFF"  DIR "GRAV"  LC "CV"  FVAL 0.25
   END
 $ END OF MODEL FILE
 `;
@@ -140,6 +149,9 @@ export async function correr() {
   const iV = m.elementNames.findIndex((n, i) => n === "B1" && m.elements[i].length === 2);
   const Jv = m.elementInputs.torsionalConstants.get(iV), dJ = Math.abs(Jv / 0.005508134264954427 - 1) * 100;
   fila("J viga 0.3×0.8 vs ETABS 22 (0.005508)", `${Jv.toFixed(6)} (${dJ.toFixed(2)} %)`, "< 0.2 %", dJ < 0.2, "antes 0.3277 (×59)");
+  // Losa de escalera escrita por ETABS como objeto MURO (PANEL, membrana): sigue siendo PANEL y con su carga.
+  const pan = /AREA "W\d+"\s+PANEL\s+4/.test(txt) && /AREALOAD\s+"W\d+".*LC "CV"/.test(txt) && /PROPTYPE\s+"Slab".*MODELINGTYPE "Membrane"/.test(txt);
+  fila("PANEL horizontal (escalera) sigue PANEL, con AREALOAD y prop. losa", pan ? "si" : "no", "si", pan, "como FLOOR: T3 −3.1 % en el TACNA");
   const sx = /SEISMIC "SX".*TOPSTORY "PISO 2"/.test(txt);
   fila("sismo estatico copiado (nombres de planta)", sx ? "si" : "no", "si", sx);
   return filas;
