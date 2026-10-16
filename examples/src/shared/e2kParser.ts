@@ -2067,6 +2067,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       areaConRestriccionE2k: areaConRestriccion.size ? areaConRestriccion : undefined,
       desplazaNudoE2k: desplazaNudo.size ? desplazaNudo : undefined,
       tipoAreaE2k: tipoArea.size ? tipoArea : undefined,
+      // Auto edge constraint de ETABS: nudos sobre aristas de muros quedan atados (hekatan-fem utils/atarAristas).
+      atarAristas: true,
     },
     sectionShapes,
     grids,

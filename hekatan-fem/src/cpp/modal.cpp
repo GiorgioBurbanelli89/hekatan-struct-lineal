@@ -573,6 +573,21 @@ extern "C"
             if (nodo < 0 || nodo >= num_nodes || d < 0 || d > 5 || k == 0.0) continue;
             K_global.coeffRef(nodo * 6 + d, nodo * 6 + d) += k;
         }
+        // K ANTES de las ataduras (16-oct-2026): la deteccion de grados sueltos de mas abajo se mide con
+        // la MEDIA de la diagonal, y la penalizacion (1e6 * max|diag|) la inflaba: en el TACNA dejaba dentro
+        // ~565 grados sin masa y casi sin rigidez y el modal daba T1 = 0.25 s con Rayleigh en 0.54 s.
+        // Se decide con esta K y los nudos que participan en una atadura no se descartan nunca.
+        Eigen::SparseMatrix<double> K_sinColgados;
+        std::vector<char> enAtadura(num_nodes, 0);
+        if (!colgados.empty()) {
+            K_sinColgados = K_global;
+            std::vector<int> enc;
+            for (const auto &c : colgados) {
+                if (c.h >= 0 && c.h < num_nodes) enAtadura[c.h] = 1;
+                springsExtra::nodosDeElemento(element_indices, element_sizes, c.elem, enc);
+                for (int q : enc) if (q >= 0 && q < num_nodes) enAtadura[q] = 1;
+            }
+        }
         springsExtra::aplicarColgados(K_global, nodes, element_indices, element_sizes, colgados);
         if (etabs_wall_joint) addEtabsWallJoint(K_global, nodes, element_indices, element_sizes, elementInputs);
 
@@ -707,6 +722,7 @@ extern "C"
                 T_dia.setFromTriplets(tt.begin(), tt.end());
                 M_completa = M_global;      // hace falta para el centro de masa
                 K_global = (T_dia.transpose() * K_global * T_dia).pruned();
+                if (!colgados.empty()) K_sinColgados = (T_dia.transpose() * K_sinColgados * T_dia).pruned();
                 M_global = (T_dia.transpose() * M_global * T_dia).pruned();
                 dof = nred;
             }
@@ -752,10 +768,21 @@ extern "C"
         // Se mira la DIAGONAL de K: si es practicamente cero comparada con la
         // media, ese grado no esta sujeto a nada.
         {
+            const Eigen::SparseMatrix<double> &K_det = colgados.empty() ? K_global : K_sinColgados;
+            // columnas (ya reducidas si hay diafragma) de los nudos que participan en una atadura
+            std::vector<char> atCol(dof, 0);
+            for (int i = 0; i < num_nodes; ++i) {
+                if (!enAtadura[i]) continue;
+                for (int k = 0; k < 6; ++k) {
+                    const int c = hayDiafragma ? colDe[i * 6 + k] : i * 6 + k;
+                    if (c >= 0 && c < dof) atCol[c] = 1;
+                    else if (hayDiafragma && diaDe[i] > 0) { const int cm = colMaestro[diaDe[i]]; for (int q = 0; q < 3; ++q) if (cm + q < dof) atCol[cm + q] = 1; }
+                }
+            }
             double media = 0.0;
             int cuantos = 0;
             for (int c : freeIndices) {
-                const double k = K_global.coeff(c, c);
+                const double k = K_det.coeff(c, c);
                 if (k > 0) { media += k; cuantos++; }
             }
             if (cuantos > 0) {
@@ -785,10 +812,11 @@ extern "C"
                 conRigidez.reserve(freeIndices.size());
                 int fuera = 0, sueltos = 0;
                 for (int c : freeIndices) {
-                    if (K_global.coeff(c, c) <= MINIMO) { fuera++; continue; }
+                    if (atCol[c]) { conRigidez.push_back(c); continue; }
+                    if (K_det.coeff(c, c) <= MINIMO) { fuera++; continue; }
                     if (M_global.coeff(c, c) <= 0.0) {
                         double fila = 0.0;
-                        for (Eigen::SparseMatrix<double>::InnerIterator it(K_global, c); it; ++it)
+                        for (Eigen::SparseMatrix<double>::InnerIterator it(K_det, c); it; ++it)
                             fila = std::max(fila, std::abs(it.value()));
                         if (fila < DESCONECTADO) { sueltos++; continue; }
                     }

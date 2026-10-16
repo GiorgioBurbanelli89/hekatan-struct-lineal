@@ -1,5 +1,6 @@
 import { diafragmaConApoyo } from "./utils/diafragmaConApoyo";
 import { insertionSprings } from "./utils/insertionPoint";
+import { atadurasDeArista } from "./utils/atarAristas";
 import {
   Node,
   Element,
@@ -173,7 +174,7 @@ export function modalCpp(
   // Va indexada por NUDO, no por elemento, pero el empaquetado es el mismo.
   const nodalMasses = processElementInput(nodeInputs.masses);
   const diaph = processElementInput(diaphragms ?? (nodeInputs as any).diaphragms);
-  const resortes = [...(springs ?? (nodeInputs as any).springs ?? []), ...insertionSprings(elementInputs)];
+  const resortes = [...(springs ?? (nodeInputs as any).springs ?? []), ...insertionSprings(elementInputs), ...atadurasDeArista(nodes, elements, elementInputs)];
   const springsFlat: number[] = resortes.flatMap((s: any) => [s.node, s.dof, s.k]);
   const springsPtr = allocate(springsFlat.length > 0 ? springsFlat : [0],
                               Float64Array, mod.HEAPF64);

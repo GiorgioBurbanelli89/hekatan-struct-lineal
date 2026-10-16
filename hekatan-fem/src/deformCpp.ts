@@ -1,5 +1,6 @@
 import { diafragmaConApoyo } from "./utils/diafragmaConApoyo";
 import { insertionSprings } from "./utils/insertionPoint";
+import { atadurasDeArista } from "./utils/atarAristas";
 import {
   Node,
   Element,
@@ -125,7 +126,7 @@ export function deformCpp(
 
   // Springs (Winkler foundation, nodal). Layout: [node, dof, k, ...]
   // + el PUNTO DE INSERCION de las barras (nudo negativo, gdl -5/-6): utils/insertionPoint.ts
-  const springsAll = [...(springs ?? []), ...insertionSprings(elementInputs)];
+  const springsAll = [...(springs ?? []), ...insertionSprings(elementInputs), ...atadurasDeArista(nodes, elements, elementInputs)];
   const springsFlat: number[] = springsAll.flatMap((s) => [s.node, s.dof, s.k]);
   const springsPtr = allocate(
     springsFlat.length > 0 ? springsFlat : [0],
