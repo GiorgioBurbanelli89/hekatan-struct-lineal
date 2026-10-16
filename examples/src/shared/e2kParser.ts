@@ -36,6 +36,20 @@ export interface E2kPlanoRef {
   z: number;
 }
 
+/** `LOADPATTERN "CM" TYPE "Super Dead" SELFWEIGHT 0` */
+export interface E2kPatron { name: string; type: string; sw: number }
+
+/** Las cargas del fichero separadas por patron, ya en kN y m. `elem`/`node` = indice del motor. */
+export interface E2kCargasPorPatron {
+  patrones: E2kPatron[];
+  /** Lineas `MASSSOURCE…` tal cual (solo nombres de patron y factores). */
+  masaFuente: string[];
+  barras: { elem: number; lc: string; dir: string; type: "UNIFF" | "TRAPF";
+            val: number; fs?: number; fe?: number; rs?: number; re?: number }[];
+  areas: { elem: number; lc: string; dir: string; q: number }[];
+  puntuales: { node: number; lc: string; v: number[] }[];
+}
+
 export interface E2kModel {
   units: { force: string; length: string };
   stories: { name: string; height: number; elev: number }[];
@@ -255,6 +269,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // ETABS. Hasta el 2-sep-2026 el parser lo ignoraba: un e2k en modo "auto"
   // entraba a Hekatan sin el peso de la estructura (mezanine: 2252 de 3473 kN).
   let selfWeightMult = 0;
+  // Las cargas POR PATRON, tal cual vienen (16-oct-2026). Para resolver se suman todas
+  // en `loads`, pero el exportador las necesita separadas: sin esto el e2k que Struct
+  // escribia del TACNA salia con 2 patrones y ΣFZ = 0 (CM, CV, CV TECHO y las LINELOAD
+  // fundidas en nudos y luego omitidas como si fueran peso propio).
+  const patrones: E2kPatron[] = [];
+  const masaFuente: string[] = [];
   const grids: E2kGrid[] = [];
   const planosRef: E2kPlanoRef[] = [];
   let title = "";
@@ -527,6 +547,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     if (currentSection === "LOAD PATTERNS") {
       const lp = line.match(/LOADPATTERN\s+"([^"]+)"\s+TYPE\s+"([^"]+)"\s+SELFWEIGHT\s+([\d.eE+-]+)/);
       if (lp && /dead/i.test(lp[2])) selfWeightMult = Math.max(selfWeightMult, parseFloat(lp[3]));
+      if (lp) patrones.push({ name: lp[1], type: lp[2], sw: parseFloat(lp[3]) });
       if (lp) {
         const nl = line.match(/NOTIONALLOAD\s+"([^"]+)"\s+NOTIONALFACTOR\s+([-\d.eE+]+)\s+NOTIONALDIR\s+"([XY])"/);
         analisis.patrones.push({ nombre: lp[1], tipo: lp[2], pesoPropio: parseFloat(lp[3]),
@@ -597,6 +618,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         }
       }
     }
+    // La fuente de masa: solo nombres de patron y factores, sin unidades → se copia tal cual.
+    if (currentSection === "MASS SOURCE" && /MASSSOURCE/.test(line)) masaFuente.push(line.trim());
 
     // ── POINT OBJECT LOADS ──
     if (currentSection === "POINT OBJECT LOADS") {
@@ -1270,6 +1293,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     mp.set(n, prev);
   };
   const fefDescarte = new Map<number, number[]>();
+  /** Las mismas cargas, separadas por patron (unidades del fichero hasta el bloque de unidades). */
+  const porPatron: E2kCargasPorPatron = { patrones, masaFuente, barras: [], areas: [], puntuales: [] };
 
   // Build element lookup: "lineName@story" → element index
   const elemLookup = new Map<string, number>();
@@ -1306,6 +1331,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       : cargaBarraConsistente(p1, p2, 0, L, fl.val, fl.val, dir);
     acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, elemIdx, n1, n2, eq);
     acumularCargaBarra(mapaPatron(fl.lc), fefDescarte, elemIdx, n1, n2, eq);
+    porPatron.barras.push({ elem: elemIdx, lc: fl.lc, dir: fl.dir, type: fl.type === "TRAPF" ? "TRAPF" : "UNIFF",
+      val: fl.val, fs: fl.fs, fe: fl.fe, rs: fl.rs, re: fl.re });
   }
   if (lineLoadsSinDir)
     console.warn(`[e2kParser] ${lineLoadsSinDir} LINELOAD en ejes LOCALES (DIR 1/2/3) no se leen: esa carga se pierde.`);
@@ -1557,6 +1584,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     for (let k = 0; k < 6; k++) prev[k] += pl.v[k];
     loads.set(ni, prev);
     sumarPatron(pl.lc, ni, pl.v);
+    porPatron.puntuales.push({ node: ni, lc: pl.lc, v: [...pl.v] });
   }
   if (pointLoads.length)
     console.log(`[e2kParser] cargas puntuales: ${pointLoads.length - puntualesSinNudo} aplicadas · ${puntualesSinNudo} sin nudo (punto@planta que no existe)`);
@@ -1589,6 +1617,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     let q = 0;
     for (const t of trozos) q += t.val;
     if (!q) { if (!contada) sinValor++; contada = true; break; }
+    for (const t of trozos) if (t.val) porPatron.areas.push({ elem: idx, lc: t.lc, dir: al.dir, q: t.val });
     if (!contada) aplicadas++;
     contada = true;
 
@@ -1698,6 +1727,14 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     // el SF del espectro lleva la aceleración (L/s²): 9806.65 mm/s² → 9.80665 m/s²
     for (const c of analisis.casosRS) c.sf *= L;
     for (const k of Object.keys(analisis.orificios.areaPorSeccion)) analisis.orificios.areaPorSeccion[k] *= L * L;
+    // Por patron: barra F/L (las RD son relativas, no se tocan), area F/L², puntual F y F·L.
+    for (const b of porPatron.barras) {
+      b.val *= F / L;
+      if (b.fs !== undefined) b.fs *= F / L;
+      if (b.fe !== undefined) b.fe *= F / L;
+    }
+    for (const a of porPatron.areas) a.q *= F / (L * L);
+    for (const p of porPatron.puntuales) p.v = p.v.map((x, k) => x * (k < 3 ? F : F * L));
     // Los MUELLES. Cada tipo lleva su potencia de la longitud, porque cada uno
     // vale una cosa distinta:
     //   punto  F/L        (kgf/m)     -> * F / L
@@ -1918,6 +1955,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       sectionInfo,
       springNames: springAssigns,
       mallaEnCruces,
+      // Solo si el fichero trae patrones: lo lee e2kExporter para escribirlas por patron.
+      cargasPorPatron: patrones.length ? porPatron : undefined,
     },
     sectionShapes,
     grids,

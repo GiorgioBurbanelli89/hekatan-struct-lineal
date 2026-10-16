@@ -7,7 +7,7 @@
  *  - When no e2kModel exists (model created from scratch), reconstruct best-effort.
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
-import type { E2kModel } from "./e2kParser";
+import type { E2kModel, E2kCargasPorPatron } from "./e2kParser";
 import { muellesParaExportar } from "./muellesParaExportar";
 import { gdlDisponibles } from "./gdlDisponibles";
 
@@ -1054,6 +1054,10 @@ function exportFromScratch(input: ExportE2kInput): string {
 
     // Insertion Point (Cardinal Point en ETABS, valor 1-11; 10 = centroid)
     // hekatan guarda offset [dy, dz] del centroide; si es (0,0) → centroid (10).
+    // Punto cardinal vertical que llega del .s2k (insertionOffsets[i][0] = d2: <0 → 8 arriba-centro,
+    // >0 → 2 abajo-centro; solo la parte vertical). Sin esto ETABS dejaba las vigas en CP 10 (centroide).
+    const d2ins = (elementInputs as any).insertionOffsets?.get(i)?.[0] as number | undefined;
+    if (d2ins !== undefined && isFinite(d2ins) && Math.abs(d2ins) > 1e-12) parts.push(`CARDINALPT ${d2ins < 0 ? 8 : 2}`, `TRANSFORMSTIFF "Yes"`);   // sin TRANSFORMSTIFF ETABS lo deja solo geométrico (3.6 %)
     const ip = elementInputs.insertionPoints?.get(i);
     if (ip && (Math.abs(ip[0]) > 1e-9 || Math.abs(ip[1]) > 1e-9)) {
       parts.push(`LATEROFFSET ${rd(cL(ip[0]))} TRANSOFFSET ${rd(cL(ip[1]))}`);
@@ -1844,7 +1848,14 @@ function exportFromScratch(input: ExportE2kInput): string {
   //     después de TYPE para mayor compatibilidad con ETABS.
   const selfWt = weightMode === "manual" ? 0 : (swDecl ?? 1);
   lines.push(`$ LOAD PATTERNS`);
-  const pats = input.loadPatterns?.length
+  // Modelo leido de un e2k: sus patrones y sus cargas por patron (16-oct-2026). Sin esto el
+  // TACNA salia con Dead/Live y ΣFZ = 0: CM, CV, CV TECHO y las LINELOAD iban fundidas en los
+  // nudos y el modo "auto" omitia toda FZ creyendola peso propio.
+  const cpp = (elementInputs as any).cargasPorPatron as E2kCargasPorPatron | undefined;
+  const porPatron = !!cpp?.patrones.length;
+  const pats = porPatron
+    ? cpp!.patrones.map(p => ({ name: p.name, type: p.type, selfWeightMultiplier: p.sw }))
+    : input.loadPatterns?.length
     ? input.loadPatterns
     : [{ name: "Dead", type: "Dead", selfWeightMultiplier: selfWt },
        { name: "Live", type: "Live", selfWeightMultiplier: 0 }];
@@ -1918,14 +1929,32 @@ function exportFromScratch(input: ExportE2kInput): string {
     === (pats.find(p => p.type === "Dead")?.name ?? pats[0].name);
   const emitirFz = weightMode === "manual" || !esPatronDePesoPropio || modoExacto;
 
-  if (nodeInputs.loads && nodeInputs.loads.size > 0) {
+  if (porPatron) {
+    // Las puntuales del fichero, cada una en su patron. `nodeInputs.loads` NO se mira: es la
+    // suma de todo (peso propio incluido) y escribirla duplicaria lo que va por patron.
+    const porNudo = new Map<string, { node: number; lc: string; v: number[] }>();
+    for (const p of cpp!.puntuales) {
+      const k = `${p.node}|${p.lc}`;
+      const a = porNudo.get(k) ?? { node: p.node, lc: p.lc, v: [0, 0, 0, 0, 0, 0] };
+      p.v.forEach((x, i) => { a.v[i] += x; });
+      porNudo.set(k, a);
+    }
+    for (const { node, lc, v } of porNudo.values()) {
+      if (v.every(x => Math.abs(x) <= 1e-10)) continue;
+      const ps = nodeToPS(node);
+      userLoadLines.push(
+        `  POINTLOAD  "${ps.pt}"  "${ps.story}"  TYPE "FORCE"  LC "${lc}"` +
+        `  FX ${rp(cFN(v[0]))}  FY ${rp(cFN(v[1]))}  FZ ${rp(cFN(v[2]))}` +
+        `  MX ${rp(cMN(v[3]))}  MY ${rp(cMN(v[4]))}  MZ ${rp(cMN(v[5]))}`);
+    }
+  } else if (nodeInputs.loads && nodeInputs.loads.size > 0) {
     nodeInputs.loads.forEach((load, nodeIdx) => {
       const [fx, fy, fz] = cargaPropia(nodeIdx, load);
       const [mx, my, mz] = momentoPropio(nodeIdx, load);
       meter(nodeIdx, [fx, fy, emitirFz ? fz : 0, mx, my, mz]);
     });
   }
-  if ((nodeInputs as any).moments && (nodeInputs as any).moments.size > 0) {
+  if (!porPatron && (nodeInputs as any).moments && (nodeInputs as any).moments.size > 0) {
     (nodeInputs as any).moments.forEach((m: number[], nodeIdx: number) => {
       meter(nodeIdx, [0, 0, 0, m[0] ?? 0, m[1] ?? 0, m[2] ?? 0]);
     });
@@ -1949,7 +1978,22 @@ function exportFromScratch(input: ExportE2kInput): string {
   // LC "Dead" FVAL w  (N/mm; GRAV positivo hacia abajo). Una barra que quedo
   // dentro de una cadena de columnas no tiene LINE propia: su carga se queda
   // repartida en los nudos (no se desconto arriba).
-  if (modoExacto && conLineLoad.size > 0) {
+  if (porPatron) {
+    // Cada LINELOAD del fichero en su patron y con su forma (UNIFF o TRAPF), en N/mm.
+    // GRAV positivo = hacia abajo, igual que en el fichero: el valor va tal cual.
+    const cw = (v: number) => rp(cF(v) / lengthFactor);
+    const ll: string[] = [];
+    let sinLinea = 0;
+    for (const b of cpp!.barras) {
+      const ln = lineaDe.get(b.elem);
+      if (!ln) { sinLinea++; continue; }
+      ll.push(b.type === "TRAPF"
+        ? `  LINELOAD  "${ln.name}"  "${ln.story}"  TYPE "TRAPF"  DIR "${b.dir}"  LC "${b.lc}"  FSTART ${cw(b.fs ?? 0)}  FEND ${cw(b.fe ?? 0)}  RDSTART ${rp(b.rs ?? 0)}  RDEND ${rp(b.re ?? 1)}`
+        : `  LINELOAD  "${ln.name}"  "${ln.story}"  TYPE "UNIFF"  DIR "${b.dir}"  LC "${b.lc}"  FVAL ${cw(b.val)}`);
+    }
+    if (sinLinea) console.warn(`[e2k] ${sinLinea} cargas de barra caen en una cadena de columnas sin LINE propia: no se escriben.`);
+    if (ll.length) { lines.push(`$ FRAME OBJECT LOADS`); ll.forEach(l => lines.push(l)); lines.push(``); }
+  } else if (modoExacto && conLineLoad.size > 0) {
     const ll: string[] = [];
     for (const idx of conLineLoad) {
       const w = fLoadsAll!.get(idx)!; const ln = lineaDe.get(idx);
@@ -1968,7 +2012,18 @@ function exportFromScratch(input: ExportE2kInput): string {
   // el e2k deja de parecerse al de ETABS y, peor, al reimportarlo la carga
   // queda clavada en los nudos: cambias la malla y ya no se redistribuye.
   //   TYPE "UNIFF"  DIR "GRAV"  — asi lo escribe ETABS (medido, no supuesto).
-  if (shellLoads && shellLoads.size > 0 && areaLoadRefs.length > 0) {
+  if (porPatron) {
+    // Cada AREALOAD del fichero en su patron, sobre el area (o los trozos de un poligono
+    // triangulado) que la lleva. FVAL es presion: N/mm².
+    const refDe = new Map(areaLoadRefs.map(r => [r.idx, r]));
+    const al: string[] = [];
+    for (const a of cpp!.areas) {
+      const ref = refDe.get(a.elem);
+      if (!ref) continue;
+      al.push(`  AREALOAD  "${ref.name}"  "${ref.story}"  TYPE "UNIFF"  DIR "${a.dir}"  LC "${a.lc}"  FVAL ${rp(cF(a.q) / (lengthFactor * lengthFactor))}`);
+    }
+    if (al.length) { lines.push(`$ SHELL OBJECT LOADS`); al.forEach(l => lines.push(l)); lines.push(``); }
+  } else if (shellLoads && shellLoads.size > 0 && areaLoadRefs.length > 0) {
     const shellLoadLines: string[] = [];
     for (const ref of areaLoadRefs) {
       const qObj = qDeObjeto.get(ref.idx);
@@ -2050,8 +2105,13 @@ function exportFromScratch(input: ExportE2kInput): string {
   // LumpMass). Ver validation/opensees/README.md.
   const masaDeElementos = weightMode === "manual";
   lines.push(`$ MASS SOURCE`);
-  lines.push(`  MASSSOURCE  "MsSrc1"    INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "Yes"    LUMPATSTORIES "No"    ISDEFAULT "Yes"  `);
+  if (porPatron && cpp!.masaFuente.length) {
+    // La del fichero tal cual: solo nombra patrones (que ahora son los mismos) y factores.
+    cpp!.masaFuente.forEach(l => lines.push(`  ${l}`));
+  } else {
+  lines.push(`  MASSSOURCE  "MsSrc1"   INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "Yes"    LUMPATSTORIES "No"    ISDEFAULT "Yes"  `);
   if (!masaDeElementos) lines.push(`  MASSSOURCELOAD  "MsSrc1"  "Dead"  1 `);
+  }
   lines.push(``);
 
   // ── LOAD CASES (Linear Static) ─────────────────────────────────────
