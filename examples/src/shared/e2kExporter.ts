@@ -566,12 +566,23 @@ function exportFromScratch(input: ExportE2kInput): string {
 
   const storyNames: string[] = [];
   const zToStory = new Map<number, string>();
+  // Modelo leido de un e2k: SUS plantas, con sus nombres (16-oct-2026). Con el criterio de
+  // arriba los puntos a media altura del TACNA (caida 2.2 m, 2 columnas y vigas de descanso)
+  // salian como plantas: 8 → 15 y 542 joints en vez de 371. Lo que no cae en planta cuelga
+  // de la de encima con su descenso, como en el fichero original.
+  const plantasIn = (elementInputs as any).plantasE2k as { name: string; elev: number }[] | undefined;
+  if (plantasIn && plantasIn.length >= 2) {
+    const pl = [...plantasIn].sort((a, b) => a.elev - b.elev);
+    sortedZ = pl.map(p => rd(p.elev));
+    pl.forEach((p, i) => { storyNames.push(i === 0 ? "Base" : p.name); zToStory.set(sortedZ[i], storyNames[i]); });
+  } else {
   storyNames.push("Base");
   zToStory.set(sortedZ[0], "Base");
   for (let i = 1; i < sortedZ.length; i++) {
     const name = `Level_${i}`;
     storyNames.push(name);
     zToStory.set(sortedZ[i], name);
+  }
   }
   /** Planta de una cota cualquiera: la primera >= z (se cuelga con descenso). */
   const plantaDe = (z: number): { story: string; dz: number } => {
@@ -739,6 +750,10 @@ function exportFromScratch(input: ExportE2kInput): string {
   //                b  = A / h
   lines.push(`$ FRAME SECTIONS`);
   const writtenSections = new Set<string>();
+  /** "Yes" solo en las areas que lo traian del e2k leido (muros del TACNA); el defecto es "No" (ver AREAASSIGN). */
+  const addR = (i: number) => (elementInputs as any).areaConRestriccionE2k?.has(i) ? "Yes" : "No";
+  /** Lineas `CONCRETESECTION` (tipo de diseno) de las secciones que lo traen. */
+  const seccionesHormigon: string[] = [];
   const elemToSecName = new Map<number, string>();
   const shapeKeyToSecName = new Map<string, string>();
 
@@ -905,6 +920,18 @@ function exportFromScratch(input: ExportE2kInput): string {
     }
     if (stype === "2L" && h > 0 && b > 0 && tfw > 0 && tww > 0) {
       lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Steel Double Angle"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} DIS ${rd(cL(shp?.dis ?? 0))} `);
+      return;
+    }
+    // Columna en L de HORMIGON leida de un e2k: se devuelve la «Concrete L» con sus cotas y ETABS
+    // recalcula sus propiedades (J y As de Hekatan son aproximados, ver e2kParser). Como General
+    // con D×B salia la L 1.0×1.4 con 1.4 m² en vez de 0.40 (TACNA: +262 t de peso, 16-oct-2026).
+    if (stype === "L" && shp?.concretoL && h > 0 && b > 0 && tfw > 0 && tww > 0) {
+      const cl = shp.concretoL;
+      lines.push(`  FRAMESECTION  "${secName}"  MATERIAL "${matName}"  SHAPE "Concrete L"  D ${rd(cL(h))} B ${rd(cL(b))} TF ${rd(cL(tfw))} TW ${rd(cL(tww))} TWB ${rd(cL(cl.twb ?? tww))} IGNOREFLANGEAREA  "${cl.sinAla ? "Yes" : "No"}"` +
+        `${cl.mirror2 ? `  MIRROR2 "Yes"` : ""}${cl.mirror3 ? `  MIRROR3 "Yes"` : ""}  `);
+      // Y su tipo de diseno: con TYPE "Beam" ETABS quita el ala del area (ver e2kParser).
+      if (cl.diseno) seccionesHormigon.push(
+        `  CONCRETESECTION  "${secName}"  TYPE "${cl.diseno.tipo}"  COVERTOP ${rd(cL(cl.diseno.ct))} COVERBOTTOM ${rd(cL(cl.diseno.cb))}`);
       return;
     }
     const tieneProps = A > 0 && I33 > 0 && I22 > 0;
@@ -1082,7 +1109,15 @@ function exportFromScratch(input: ExportE2kInput): string {
       // ⚠️ En MM, como todo el fichero: iban en metros y ETABS leia 0.25 mm
       // (medido 2-sep-2026: GetEndLengthOffset devolvia 0.0003 m).
       parts.push(`LENGTHOFFI ${rd(cL(offL[0]))} LENGTHOFFJ ${rd(cL(offL[1]))} RIGIDZONE ${rd(rz)}`);
+    } else {
+      // Brazo AUTOMATICO de un e2k leido (`RIGIDZONE 1` sin longitudes): ETABS lo recalcula
+      // de las secciones que se cruzan. Se devuelve igual que vino.
+      const f = (elementInputs as any).zonaRigidaE2k?.get(i) as number | undefined;
+      if (f) parts.push(`RIGIDZONE ${rd(f)}`);
     }
+    // Punto de insercion y espejos del e2k leido (`CARDINALPT 8`, `MIRROR3 "Yes"`), tal cual.
+    const extraE2k = (elementInputs as any).asignaLineaE2k?.get(i) as string | undefined;
+    if (extraE2k) parts.push(extraE2k);
 
     return parts.length > 0 ? ` ${parts.join(" ")} ` : "";
   };
@@ -1197,7 +1232,14 @@ function exportFromScratch(input: ExportE2kInput): string {
     const psBot = nodeToPS(botNode);
     if (elemIdx !== undefined) lineaDe.set(elemIdx, { name: eName, story: psTop.story });
     const salto = idxDe(psTop.story) - idxDe(psBot.story);
-    if (salto <= 0) {
+    // Una COLUMNA VERTICAL con los dos extremos en la misma planta (el de abajo con descenso)
+    // sigue siendo COLUMN con salto 0, como la escribe ETABS (`LINE "C2" COLUMN "27" "18" 0`).
+    // Como BEAM ETABS le cambia los ejes locales y no le pone el brazo de columna (TACNA).
+    const nb = nodes[botNode], nt = nodes[topNode];
+    const vertical = Math.hypot(nt[0] - nb[0], nt[1] - nb[1]) < 1e-6 && nt[2] - nb[2] > 1e-6;
+    if (salto <= 0 && tipo === "COLUMN" && vertical) {
+      lines.push(`  LINE  "${eName}"  COLUMN  "${psBot.pt}"  "${psTop.pt}"  0`);
+    } else if (salto <= 0) {
       // Los dos extremos cuelgan de la MISMA planta (cada uno con su descenso):
       // eso en el e2k es una BEAM, aunque la barra suba.
       lines.push(`  LINE  "${eName}"  BEAM  "${psBot.pt}"  "${psTop.pt}"  0`);
@@ -1305,7 +1347,10 @@ function exportFromScratch(input: ExportE2kInput): string {
     if (sup[3]) dofs.push("RX"); if (sup[4]) dofs.push("RY"); if (sup[5]) dofs.push("RZ");
     if (dofs.length > 0) {
       const ps = nodeToPS(nodeIdx);
-      const diaphClause = ps.story === "Base" ? ` DIAPH "DISCONNECTED" ` : "";
+      // Un nudo con apoyo Y diafragma (el semisotano del TACNA: RESTRAINT "UX UY RZ" DIAPH "D00")
+      // tiene que llevar los dos aqui: el paso 2 se salta los ya emitidos y el diafragma se perdia.
+      const enDiaf = (input.diaphragm ?? "auto") !== "none" && (nodeInputs.diaphragms?.get(nodeIdx) ?? 0) !== 0;
+      const diaphClause = ps.story === "Base" ? ` DIAPH "DISCONNECTED" ` : enDiaf ? ` DIAPH "D1" ` : "";
       const sprClause = springDeNudo.has(nodeIdx) ? ` SPRINGPROP "${springDeNudo.get(nodeIdx)}" ` : "";
       lines.push(`  POINTASSIGN  "${ps.pt}"  "${ps.story}"  RESTRAINT "${dofs.join(" ")}" ${diaphClause}${sprClause} `);
       emittedPointAssigns.add(`${ps.pt}@${ps.story}`);
@@ -1773,7 +1818,7 @@ function exportFromScratch(input: ExportE2kInput): string {
           // a 0.00000 %. Y "No" es lo que escribe ETABS en su propio .$et (medido con un modelo
           // hecho por OAPI sin tocar nada). No se veia en las plantillas porque alli la malla ya
           // va hecha en el fichero y ETABS no crea ni un nudo.
-          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           return;
         }
         // Use bottom-left and bottom-right points (Z-up: n[2] = elevation)
@@ -1782,7 +1827,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  1  1  0  0  `);
         // Assign at story of top nodes
         const topStory = ps[bot0 === 0 ? 2 : 0].story;
-        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 + el salto de planta de cada punto — y con 3
         // puntos, un triangulo. El contador y el numero de saltos siguen al
@@ -1821,12 +1866,12 @@ function exportFromScratch(input: ExportE2kInput): string {
         // incluidas las losas macizas, y los demas grupos quedaban escritos y
         // sin usar. Se decide POR ELEMENTO y se asigna SU grupo.
         aaEntries.push(esMembranaDe(ae.idx)
-          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
+          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
           // DIAPH en el AREA hace que ETABS ate TODA la malla de la losa (medido
           // el 8-sep-2026: no es lo mismo que atar los POINTs de eje). Solo va si
           // Hekatan ata los cuatro nudos del elemento; si solo ata los ejes de
           // columna (como SAP2000), el area no lleva DIAPH.
-          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "No"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: storyArea, idx: ae.idx });
       }
     });
@@ -1882,6 +1927,8 @@ function exportFromScratch(input: ExportE2kInput): string {
     }
     lines.push(`  LOADPATTERN "${lp.name}"  TYPE  "${lp.type ?? "Other"}"  SELFWEIGHT  ${sw}`);
   }
+  // Sismo estatico del fichero: nombra plantas, que son las del fichero si vino `plantasE2k`.
+  if (porPatron && plantasIn?.length) cpp!.sismoEstatico?.forEach(l => lines.push(`  ${l}`));
   lines.push(``);
   // El LC al que se cuelgan las cargas nodales: el primer patron de gravedad
   // del modelo. Antes era la cadena "Dead" fija, asi que si el modelo llamaba
@@ -2166,6 +2213,13 @@ function exportFromScratch(input: ExportE2kInput): string {
 
   lines.push(`  END`);
   lines.push(`$ END OF MODEL FILE`);
+  if (seccionesHormigon.length) {
+    // Detras de las secciones de barra, antes de las de area (el orden que escribe ETABS).
+    const antes = ["$ SLAB PROPERTIES", "$ DECK PROPERTIES", "$ WALL PROPERTIES", "$ POINT COORDINATES"]
+      .map(h => lines.indexOf(h)).filter(k => k >= 0);
+    const at = antes.length ? Math.min(...antes) : lines.length - 2;
+    lines.splice(at, 0, `$ CONCRETE SECTIONS`, ...seccionesHormigon, ``);
+  }
   return lines.join("\r\n");
 }
 

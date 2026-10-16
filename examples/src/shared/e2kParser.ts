@@ -44,6 +44,8 @@ export interface E2kCargasPorPatron {
   patrones: E2kPatron[];
   /** Lineas `MASSSOURCE…` tal cual (solo nombres de patron y factores). */
   masaFuente: string[];
+  /** Lineas `SEISMIC …` tal cual (coeficientes y nombres de planta). */
+  sismoEstatico: string[];
   barras: { elem: number; lc: string; dir: string; type: "UNIFF" | "TRAPF";
             val: number; fs?: number; fe?: number; rs?: number; re?: number }[];
   areas: { elem: number; lc: string; dir: string; q: number }[];
@@ -175,7 +177,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // por eso es una LISTA. Con un solo valor por nombre la última planta pisaba a las demás y la casa
   // MOD_001 perdía 23 de sus 36 losas nervadas (−474 kN de peso, 22-sep-2026).
   const areaAssigns = new Map<string, Array<{ story: string; section: string; spring?: string;
-    diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean; ang?: number }>>();
+    diaph?: string; malla?: string; tamMalla?: number; mallaEnVigas?: boolean; ang?: number;
+    addRestraint?: boolean }>>();
   // ORIFICIOS: `AREAASSIGN "A1" "N1" OPENING "Yes"` no lleva SECTION, así que la regex de arriba no
   // lo leía y el área contaba como «sin AREAASSIGN»: el hueco de la escalera se perdía y la losa
   // quedaba ENTERA (con su carga y su masa). Ahora se guardan por planta y recortan la losa.
@@ -237,6 +240,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const pointSprings = new Map<string, string>();
   /** Todo joint que el fichero declara con un `POINTASSIGN`, tenga o no apoyo. */
   const puntosDeclarados = new Set<string>();
+  /** Seccion → `CONCRETESECTION … TYPE "Beam"|"Column"` con sus recubrimientos (unidades del fichero). */
+  const tipoHormigon = new Map<string, { tipo: string; ct: number; cb: number }>();
   // UNIFF: `val` en toda la barra. TRAPF (lo que ETABS escribe para trapecios Y parciales, varias
   // lineas por barra que se suman): FSTART/FEND en RDSTART/RDEND (distancias RELATIVAS).
   const frameLoads: { line: string; story: string; type: string; dir: string; lc: string; val: number;
@@ -275,6 +280,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // fundidas en nudos y luego omitidas como si fueran peso propio).
   const patrones: E2kPatron[] = [];
   const masaFuente: string[] = [];
+  const sismoEstatico: string[] = [];
   const grids: E2kGrid[] = [];
   const planosRef: E2kPlanoRef[] = [];
   let title = "";
@@ -361,6 +367,17 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       }
     }
 
+    // ── CONCRETE SECTIONS: tipo de diseno (Beam/Column) y recubrimientos ──
+    // Cambia el ANALISIS: una «Concrete L/Tee» con IGNOREFLANGEAREA solo pierde el ala si es
+    // TYPE "Beam" (medido en ETABS 22: la L 1.0×1.4 del TACNA, A 0.40 como Beam, 0.80 sin el bloque).
+    if (currentSection === "CONCRETE SECTIONS") {
+      const cs = line.match(/CONCRETESECTION\s+"([^"]+)".*TYPE\s+"([^"]+)"/);
+      if (cs) {
+        const ct = line.match(/COVERTOP\s+([\d.eE+-]+)/), cb = line.match(/COVERBOTTOM\s+([\d.eE+-]+)/);
+        tipoHormigon.set(cs[1], { tipo: cs[2], ct: ct ? parseFloat(ct[1]) : 0, cb: cb ? parseFloat(cb[1]) : 0 });
+      }
+    }
+
     // ── FRAME SECTIONS ──
     if (currentSection === "FRAME SECTIONS") {
       const fsm = line.match(/FRAMESECTION\s+"([^"]+)"/);
@@ -408,6 +425,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (tM && !sec.TF && !sec.TW) { sec.TF = parseFloat(tM[1]); sec.TW = parseFloat(tM[1]); }
         const lipM = line.match(/\bLIP\s+([\d.eE+-]+)/);
         if (lipM) (sec as any).LIP = parseFloat(lipM[1]);
+        // «Concrete L»: `TWB`, `IGNOREFLANGEAREA` y los espejos, para devolverla tal cual.
+        const twbM = line.match(/\bTWB\s+([\d.eE+-]+)/);
+        if (twbM) (sec as any).TWB = parseFloat(twbM[1]);
+        if (/IGNOREFLANGEAREA\s+"Yes"/i.test(line)) (sec as any).sinAla = true;
+        if (/MIRROR2\s+"Yes"/i.test(line)) (sec as any).mirror2 = true;
+        if (/MIRROR3\s+"Yes"/i.test(line)) (sec as any).mirror3 = true;
         // separación del «Steel Double Angle» (B es el ancho TOTAL)
         const disM = line.match(/\bDIS\s+([\d.eE+-]+)/);
         if (disM) (sec as any).DIS = parseFloat(disM[1]);
@@ -440,8 +463,9 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       if (pj) puntosDeclarados.add(`${pj[1]}@${pj[2]}`);
       const pm = line.match(/POINTASSIGN\s+"([^"]+)"\s+"([^"]+)".*SPRINGPROP\s+"([^"]+)"/);
       if (pm) pointSprings.set(`${pm[1]}@${pm[2]}`, pm[3]);
+      // DIAPH "DISCONNECTED" no es un diafragma: con el se ataban juntos los nudos desconectados de cada planta.
       const pd = line.match(/POINTASSIGN\s+"([^"]+)"\s+"([^"]+)".*\bDIAPH(?:RAGM)?\s+"([^"]+)"/);
-      if (pd) pointDiaph.set(`${pd[1]}@${pd[2]}`, pd[3]);
+      if (pd && pd[3].toUpperCase() !== "DISCONNECTED") pointDiaph.set(`${pd[1]}@${pd[2]}`, pd[3]);
     }
 
     // ── MUELLES: las propiedades, vengan de la seccion que vengan ──
@@ -474,6 +498,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         };
         const rzm = line.match(/RIGIDZONE\s+([\d.eE+-]+)/);
         if (rzm) entry.rigidZone = parseFloat(rzm[1]);
+        // Punto de insercion y espejos (TACNA: vigas CARDINALPT 8, columnas L 5 + MIRROR3). ETABS
+        // transforma la rigidez al punto de insercion por defecto, asi que cambian el analisis.
+        // Se guardan tal cual para devolverlos al exportar (el motor aun no los modela).
+        const extra = [line.match(/CARDINALPT\s+\d+/)?.[0], line.match(/MIRROR2\s+"Yes"/i)?.[0],
+                       line.match(/MIRROR3\s+"Yes"/i)?.[0]].filter(Boolean).join("  ");
+        if (extra) (entry as any).extraE2k = extra;
         // LENGTHOFFI/J: las longitudes del brazo (unidades del fichero). Van a
         // `endOffsets` [offI, offJ, rz]: con rz = 0 no rigidizan, pero la viga
         // PESA por su luz libre (ETABS no pesa el brazo rigido).
@@ -548,6 +578,9 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       const lp = line.match(/LOADPATTERN\s+"([^"]+)"\s+TYPE\s+"([^"]+)"\s+SELFWEIGHT\s+([\d.eE+-]+)/);
       if (lp && /dead/i.test(lp[2])) selfWeightMult = Math.max(selfWeightMult, parseFloat(lp[3]));
       if (lp) patrones.push({ name: lp[1], type: lp[2], sw: parseFloat(lp[3]) });
+      // Sismo estatico (`SEISMIC "sismo E x-x" "User Coefficient" DIR "X" ... SHEARCOEFF 0.2422`):
+      // coeficientes y nombres de planta, sin unidades → se copia tal cual.
+      if (/^\s*SEISMIC\s/.test(line)) sismoEstatico.push(line.trim());
       if (lp) {
         const nl = line.match(/NOTIONALLOAD\s+"([^"]+)"\s+NOTIONALFACTOR\s+([-\d.eE+]+)\s+NOTIONALDIR\s+"([XY])"/);
         analisis.patrones.push({ nombre: lp[1], tipo: lp[2], pesoPropio: parseFloat(lp[3]),
@@ -700,7 +733,9 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         malla: line.match(/OBJMESHTYPE\s+"([^"]+)"/)?.[1]?.toUpperCase(),
         tamMalla: (() => { const q = line.match(/MAXMESHSIZE\s+([\d.eE+-]+)/); return q ? parseFloat(q[1]) : undefined; })(),
         mallaEnVigas: /MESHAT\s+"BEAMS"/i.test(line),
-        ang: (() => { const q = line.match(/\bANG\s+([-\d.eE+]+)/); return q ? parseFloat(q[1]) : undefined; })() });
+        ang: (() => { const q = line.match(/\bANG\s+([-\d.eE+]+)/); return q ? parseFloat(q[1]) : undefined; })(),
+        // ADDRESTRAINT "Yes": al mallar, ETABS restringe los nudos nuevos del borde que tocan un apoyo.
+        addRestraint: /ADDRESTRAINT\s+"Yes"/i.test(line) || undefined });
       const ao = line.match(/AREAASSIGN\s+"([^"]+)"\s+"([^"]+)"\s+.*\bOPENING\s+"Yes"/i);
       if (ao && !aa) { (orificiosAsig.get(ao[1]) ?? orificiosAsig.set(ao[1], []).get(ao[1])!).push(ao[2]); analisis.orificios.leidos++; }
     }
@@ -950,6 +985,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const rigidOffsets = new Map<number, [number, number]>();
   const zonaRigida = new Map<number, number>();
   const luzLibre = new Set<number>();
+  /** Elemento → `CARDINALPT n  MIRROR3 "Yes"` del LINEASSIGN, tal cual. */
+  const asignaLineaE2k = new Map<number, string>();
+  /** Areas (indice del motor) con `ADDRESTRAINT "Yes"`. */
+  const areaConRestriccion = new Set<number>();
   const momentReleases = new Map<number, boolean[]>();
   // `ANG` de la LINEASSIGN: el local axis angle de CSI. Se leia (entry.angle)
   // pero NO se emitia: las 156 barras giradas del galpon (cordones en C,
@@ -983,6 +1022,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         // `stories` va de arriba abajo: del indice grande (abajo) al pequeño.
         for (let k = bottomIdx; k > storyIdx; k--)
           cadenaKeys.push(nodeKey(lc.pt1, stories[k].name));
+        // Salto 0: el de abajo cuelga de la MISMA planta (la cota la da su caida). El bucle de
+        // arriba no lo mete y la barra se quedaba con un nudo: el TACNA perdia 16 columnas de
+        // 2.2 m (`LINE "C2" COLUMN "27" "18" 0`, POINT "27" 0 0 2.2), 16-oct-2026.
+        if (bottomIdx === storyIdx) cadenaKeys.push(nodeKey(lc.pt1, story));
         cadenaKeys.push(nodeKey(lc.pt2, story));            // el de arriba
       } else {
         cadenaKeys.push(nodeKey(lc.pt1, story), nodeKey(lc.pt2, story));
@@ -1008,9 +1051,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         elementSections.set(elemIdx, la.section);
         if (la.spring) springAssigns.set(elemIdx, la.spring);
         if (la.mallaEnCruces) mallaEnCruces.set(elemIdx, true);
-        if (la.rigidZone > 0) rigidOffsets.set(elemIdx, [la.rigidZone, la.rigidZone]);
+        // `RIGIDZONE f` es el FACTOR de zona rigida, no una fraccion de la luz: no va a `rigidOffsets`
+        // (el exportador lo escribia como 1 m de brazo flexible, LENGTHOFFI 1000 RIGIDZONE 0), 16-oct-2026.
         if (la.rigidZone > 0) zonaRigida.set(elemIdx, la.rigidZone);
         if (la.luzLibre) luzLibre.add(elemIdx);
+        if ((la as any).extraE2k) asignaLineaE2k.set(elemIdx, (la as any).extraE2k);
         if (la.angle) localAngles.set(elemIdx, la.angle);
         if (la.offsets) endOffsets.set(elemIdx, [la.offsets[0], la.offsets[1], la.rigidZone]);
         // Releases (12: FxI,FyI,FzI,TI,M2I,M3I, FxJ,FyJ,FzJ,TJ,M2J,M3J).
@@ -1173,6 +1218,27 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         shapeType = "L";
         break;
       }
+      case "Concrete L": {
+        // Columna en L de hormigon: ala B×TF + alma TW×(D−TF). MEDIDO en ETABS 22 (GetSectProps,
+        // TACNA, 16-oct-2026): I33 e I22 = los de la L COMPLETA sobre su centroide (0.050033 y
+        // 0.136667/0.056667, exactos); el AREA = solo el alma (D−TF)·TW con IGNOREFLANGEAREA "Yes"
+        // (0.24 y 0.40, = el peso de su tabla). Antes caia al rectangulo D×B: 1.0 y 1.4 m².
+        // ⚠️ J y As son APROXIMADOS (pared delgada): ETABS da J 0.030742 / As 0.4425 en la 1.0×1.0 y
+        // aqui salen +11 % y −10 %. El e2k exportado devuelve la «Concrete L» y ETABS pone los suyos.
+        const tfl = tf, twl = tw, hw = D - tfl;
+        const Af = B * tfl, Aw = twl * hw, At = Af + Aw;
+        const yc = (Af * tfl / 2 + Aw * (tfl + hw / 2)) / At;
+        const xc = (Af * B / 2 + Aw * twl / 2) / At;
+        Iz = B * tfl ** 3 / 12 + Af * (tfl / 2 - yc) ** 2 + twl * hw ** 3 / 12 + Aw * (tfl + hw / 2 - yc) ** 2;
+        Iy = tfl * B ** 3 / 12 + Af * (B / 2 - xc) ** 2 + hw * twl ** 3 / 12 + Aw * (twl / 2 - xc) ** 2;
+        // ETABS solo quita el ala si la seccion se disena como VIGA (CONCRETESECTION TYPE "Beam").
+        A = (sec as any).sinAla && /^beam$/i.test(tipoHormigon.get(secName)?.tipo ?? "") ? Aw : At;
+        J = (B + hw) * Math.min(tfl, twl) ** 3 / 3;
+        AsZ = D * twl;   // V2 (con I33): el alma entera
+        AsY = B * tfl;   // V3 (con I22): el ala
+        shapeType = "L";
+        break;
+      }
       case "Steel Channel": {
         // (14-sep-2026) fórmulas de SAP2000 «Channel» medidas por OAPI (channelSectionCsi). ETABS usa otras para
         // As2/As3/J (C200: As2 −1.1 %, As3 −11 %, J +2.4 %); el juez es SAP2000, como en el I.
@@ -1245,7 +1311,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       tf: tf || undefined,
       r: sec.R,
       name: secName,
-    });
+      ...(sec.shape === "Concrete L" ? { concretoL: { twb: (sec as any).TWB ?? tw, sinAla: !!(sec as any).sinAla,
+           mirror2: !!(sec as any).mirror2, mirror3: !!(sec as any).mirror3,
+           diseno: tipoHormigon.get(secName) ? { ...tipoHormigon.get(secName)! } : undefined } } : {}),
+    } as any);
 
     sectionInfo.set(elemIdx, {
       name: secName,
@@ -1294,7 +1363,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   };
   const fefDescarte = new Map<number, number[]>();
   /** Las mismas cargas, separadas por patron (unidades del fichero hasta el bloque de unidades). */
-  const porPatron: E2kCargasPorPatron = { patrones, masaFuente, barras: [], areas: [], puntuales: [] };
+  const porPatron: E2kCargasPorPatron = { patrones, masaFuente, sismoEstatico, barras: [], areas: [], puntuales: [] };
 
   // Build element lookup: "lineName@story" → element index
   const elemLookup = new Map<string, number>();
@@ -1511,6 +1580,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     elementStoriesArr.push(aa.story);
     areaNames.push(ac.name);
     if (aa.spring) springAssigns.set(ei, aa.spring);
+    if (aa.addRestraint) areaConRestriccion.add(ei);
 
     const sp = shellProps.get(aa.section);
     if (sp) {
@@ -1754,6 +1824,9 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (typeof o[k] === "number") o[k] *= L;
       }
       if (typeof sh.fillE === "number") sh.fillE *= F / (L * L);   // el E del relleno del CFT
+      const cl = (sh as any).concretoL;
+      if (cl && typeof cl.twb === "number") cl.twb *= L;
+      if (cl?.diseno) { cl.diseno.ct *= L; cl.diseno.cb *= L; }
     }
   }
 
@@ -1922,7 +1995,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     // Los muelles de PUNTO van ya como `springs` (lo que lee el motor); los de
     // linea/area siguen necesitando `muellesDelModelo` (dependen de la malla).
     nodeInputs: { supports, loads: cargasFinales, springNames: nodeSprings,
-                  springs: springsDePunto() },
+                  springs: springsDePunto(), diaphragms: diafragmas.size ? diafragmas : undefined },
     elementInputs: {
       elasticities,
       shearModuli,
@@ -1957,6 +2030,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       mallaEnCruces,
       // Solo si el fichero trae patrones: lo lee e2kExporter para escribirlas por patron.
       cargasPorPatron: patrones.length ? porPatron : undefined,
+      // Las plantas del fichero (m): el exportador las reusa en vez de deducirlas de las cotas.
+      plantasE2k: stories.map(s => ({ name: s.name, elev: s.elev })),
+      zonaRigidaE2k: zonaRigida.size ? zonaRigida : undefined,
+      asignaLineaE2k: asignaLineaE2k.size ? asignaLineaE2k : undefined,
+      areaConRestriccionE2k: areaConRestriccion.size ? areaConRestriccion : undefined,
     },
     sectionShapes,
     grids,
