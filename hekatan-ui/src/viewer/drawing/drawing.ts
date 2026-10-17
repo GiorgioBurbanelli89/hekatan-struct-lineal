@@ -3599,7 +3599,24 @@ export function drawing({
       if (curTool === "select" || !curTool) {
         const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
         // Prioridad: NODO > SEGMENTO > AUX. Más fácil seleccionar un punto.
-        const ptIdx = findClosestPoint(p.x, p.y, p.z, tol);
+        let ptIdx = findClosestPoint(p.x, p.y, p.z, tol);
+        // En PLANTA los nudos de todos los pisos caen uno encima de otro y el OSNAP podía enganchar el
+        // de abajo: la carga que se ponía en la cubierta (z = 12) iba a parar a z = 9 (test
+        // ctl_edificio_revit, 17-oct-2026). Si hay un nudo EN el plano de trabajo bajo el cursor, ese manda.
+        {
+          const gt = drawingObj.gridTarget?.rawVal;
+          const nz = gt ? new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)) : null;   // GridHelper: normal = Y local
+          if (gt && nz && Math.abs(Math.abs(nz.z) - 1) < 1e-6) {
+            const zp = gt.position[2], P = drawingObj.points?.rawVal ?? [];
+            let mejor = -1, dmin = tol;
+            for (let i = 0; i < P.length; i++) {
+              if (Math.abs(P[i][2] - zp) > 1e-6) continue;
+              const d = Math.hypot(P[i][0] - p.x, P[i][1] - p.y);
+              if (d <= dmin) { dmin = d; mejor = i; }
+            }
+            if (mejor >= 0) ptIdx = mejor;
+          }
+        }
         const found = findClosestPoly(p.x, p.y, p.z, tol);
         const auxIdx = findClosestAuxLine(p.x, p.y, p.z, tol);
         if (ptIdx >= 0) {

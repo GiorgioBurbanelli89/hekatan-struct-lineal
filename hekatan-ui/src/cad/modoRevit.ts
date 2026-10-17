@@ -378,6 +378,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
       for (let y = r.bottom - 2; y > r.top + r.height * 0.5; y -= 4) if (!libre(r.left + r.width / 2, y)) abajo = r.bottom - y + 6;
       // la barra de opciones aparece al elegir herramienta: su sitio se reserva siempre
       arriba = Math.max(arriba, (parseFloat(opc.style.top) || 74) + 40 - (r.top - host.getBoundingClientRect().top));
+      if (!encendido) arriba += 56;   // cinta clásica: el rótulo «Dibujando en PLANTA» sale bajo ella, sobre el borde del modelo
       const der = (nav.getBoundingClientRect().width || 150) + 24, izq = 24;
       const fa = fachada();
       // en planta se encaja la REJILLA entera (las burbujas van fuera de ella) más el sitio de las burbujas
@@ -908,7 +909,14 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     // secciones EXTRUIDAS: en planta una columna de línea es un punto invisible; Revit la dibuja con su
     // sección (cuadrado). Al salir se deja como estaba.
     try { const sv = W().__hekatanSettings?.(); if (sv?.extruded) { if (v) { extruAntes = sv.extruded.rawVal; sv.extruded.val = true; } else if (extruAntes !== null) sv.extruded.val = extruAntes; } } catch {}
-    if (v) { try { W().__hekatanAccesoRapido?.(false); } catch {} asegurarNiveles(); pintarNav(); usar("modificar"); } else { limpiarFantasma(); }
+    if (v) { try { W().__hekatanAccesoRapido?.(false); } catch {} asegurarNiveles(); pintarNav(); usar("modificar"); }
+    else {
+      limpiarFantasma();
+      // la cinta clásica es más alta que la barra de Revit: sin reencuadrar, tapaba la fila de arriba de la
+      // planta (test ctl_edificio_revit: 5 de 20 apoyos caían sobre la cinta). encuadrar() mide lo que tapa.
+      const m = vista === "alzado" ? "alzado" : vista === "3d" ? "iso" : "plan";
+      setTimeout(() => encuadrar(m), 250); setTimeout(() => encuadrar(m), 600);
+    }
   };
   tog.onclick = () => poner(!encendido);
   // La barra de título de la app es FIJA (30 px) y el lienzo empieza debajo de ella: todo se baja

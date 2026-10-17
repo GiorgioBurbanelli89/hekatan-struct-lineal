@@ -279,6 +279,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // evita una segunda forma de poner apoyos que despues no coincida con la
   // primera.
   let modoAplicar: "apoyo" | "carga" | "cargaq" | null = null;
+  // main.ts lo lee para NO reencuadrar mientras se ponen apoyos o cargas (cada clic reconstruye el modelo
+  // y la cámara saltaba: la fila de arriba quedaba bajo la cinta. AutoCAD nunca hace zoom solo).
+  Object.defineProperty(window, "__hekatanAplicando", { get: () => modoAplicar, configurable: true });
   const cargaVert = { kN: -10, kNm: -5 };
   const aplicarASeleccion = () => {
     if (!modoAplicar) return;

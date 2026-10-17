@@ -2047,7 +2047,7 @@ function rebuild() {
   // que el siguiente punto caía bajo el panel derecho. AutoCAD nunca hace zoom solo al dibujar.
   const _tool = (window as any).__hekatanCadState?.get?.()?.tool;
   const _pts = ((window as any).__hekatanDrawingPoints?.val ?? []).length;
-  const _dibujando = !!_tool && _tool !== "select" && _tool !== "none" && _pts > 0;
+  const _dibujando = (!!_tool && _tool !== "select" && _tool !== "none" && _pts > 0) || !!(window as any).__hekatanAplicando;
   // Modo Revit (17-oct-2026): la vista es la del nivel que se eligió; dibujar no la mueve.
   const _revit = document.body.classList.contains("hk-revit-on");
   if (!userCameraInteracted && !_dibujando && !_revit) autoFitCamera();
