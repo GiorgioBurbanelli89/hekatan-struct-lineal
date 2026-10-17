@@ -319,18 +319,28 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const w = viewerElm.clientWidth || innerWidth, h = viewerElm.clientHeight || innerHeight;
     if (modo === "plan" && c.orthoCamera) {
-      // margen: el vuelo de los ejes y sus burbujas (que quedan fuera del edificio), y a la derecha el
-      // ancho del panel de NIVELES, que no puede tapar ninguna burbuja
-      const navW = (nav.getBoundingClientRect().width || 150) + 16;
-      const m = 0.35, hw = (x1 - x0) / 2 * (1 + m) + 2, hh = (y1 - y0) / 2 * (1 + m) + 2;
-      const util = Math.max(0.4, 1 - navW / w);                 // fracción del ancho que queda libre
-      const halfH = Math.max(hh, (hw / util) * h / w), halfW = halfH * w / h;
-      const corr = halfW * (1 - util);                          // corre el centro para dejar libre el panel
-      const cxv = cx + corr;
+      // Parte LIBRE del lienzo, medida: lo que tapan la barra de herramientas + opciones (arriba), la
+      // línea de órdenes (abajo) y el panel de niveles (derecha). Regla de Jorge: nada choca, así que
+      // el edificio y sus burbujas se encajan solo ahí (antes las burbujas A–E caían bajo la línea de
+      // órdenes y la fila de arriba bajo la barra de opciones).
+      const cv = canvas()!; const r = cv.getBoundingClientRect();
+      const libre = (x: number, y: number) => document.elementFromPoint(x, y) === cv;
+      let arriba = 0, abajo = 0;
+      for (let y = r.top + 2; y < r.top + r.height * 0.5; y += 4) if (!libre(r.left + r.width / 2, y)) arriba = y - r.top + 6;
+      for (let y = r.bottom - 2; y > r.top + r.height * 0.5; y -= 4) if (!libre(r.left + r.width / 2, y)) abajo = r.bottom - y + 6;
+      // la barra de opciones aparece al elegir herramienta: su sitio se reserva siempre
+      arriba = Math.max(arriba, (parseFloat(opc.style.top) || 74) + 40 - (r.top - host.getBoundingClientRect().top));
+      const der = (nav.getBoundingClientRect().width || 150) + 24, izq = 24;
+      const aw = Math.max(200, w - izq - der), ah = Math.max(150, h - arriba - abajo);
+      const m = 0.35, Wc = (x1 - x0) * (1 + m) + 4, Hc = (y1 - y0) * (1 + m) + 4;
+      const halfH = Math.max(Wc * h / (2 * aw), Hc * h / (2 * ah)), halfW = halfH * w / h;
+      const mpp = 2 * halfH / h;                                  // metros por píxel
+      const dx = (izq + (w - der)) / 2 - w / 2, dy = (arriba + (h - abajo)) / 2 - h / 2;
+      const cxv = cx - dx * mpp, cyv = cy + dy * mpp;
       const o = c.orthoCamera;
       o.left = -halfW; o.right = halfW; o.top = halfH; o.bottom = -halfH; o.zoom = 1;
-      o.position.set(cxv, cy, zAct + 1000); o.up.set(0, 1, 0); o.lookAt(cxv, cy, zAct); o.updateProjectionMatrix();
-      c.controls?.target?.set(cxv, cy, zAct);
+      o.position.set(cxv, cyv, zAct + 1000); o.up.set(0, 1, 0); o.lookAt(cxv, cyv, zAct); o.updateProjectionMatrix();
+      c.controls?.target?.set(cxv, cyv, zAct);
     } else if (c.perspCamera) {
       const cz = (z0 + z1) / 2, d = Math.hypot(x1 - x0, y1 - y0, z1 - z0) * 1.7 + 5;
       const pc = c.perspCamera;
@@ -538,6 +548,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   // ── encender / apagar ───────────────────────────────────────────────────
   const tog = document.createElement("button"); tog.id = "hk-revit-toggle"; tog.type = "button";
   let encendido = false;
+  let extruAntes: boolean | null = null;
   const poner = (v: boolean) => {
     encendido = v;
     document.body.classList.toggle("hk-revit-on", v);
@@ -548,6 +559,9 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     tog.title = v ? "Volver a la cinta de herramientas de siempre" : "Dibujar por niveles: Columna, Viga, Losa, Muro";
     hooks.cinta(!v);
     try { localStorage.setItem(LS, v ? "1" : "0"); } catch {}
+    // secciones EXTRUIDAS: en planta una columna de línea es un punto invisible; Revit la dibuja con su
+    // sección (cuadrado). Al salir se deja como estaba.
+    try { const sv = W().__hekatanSettings?.(); if (sv?.extruded) { if (v) { extruAntes = sv.extruded.rawVal; sv.extruded.val = true; } else if (extruAntes !== null) sv.extruded.val = extruAntes; } } catch {}
     if (v) { try { W().__hekatanAccesoRapido?.(false); } catch {} asegurarNiveles(); pintarNav(); usar("modificar"); } else { limpiarFantasma(); }
   };
   tog.onclick = () => poner(!encendido);
