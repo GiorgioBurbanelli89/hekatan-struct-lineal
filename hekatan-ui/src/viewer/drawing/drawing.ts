@@ -3599,24 +3599,7 @@ export function drawing({
       if (curTool === "select" || !curTool) {
         const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
         // Prioridad: NODO > SEGMENTO > AUX. Más fácil seleccionar un punto.
-        let ptIdx = findClosestPoint(p.x, p.y, p.z, tol);
-        // En PLANTA los nudos de todos los pisos caen uno encima de otro y el OSNAP podía enganchar el
-        // de abajo: la carga que se ponía en la cubierta (z = 12) iba a parar a z = 9 (test
-        // ctl_edificio_revit, 17-oct-2026). Si hay un nudo EN el plano de trabajo bajo el cursor, ese manda.
-        {
-          const gt = drawingObj.gridTarget?.rawVal;
-          const nz = gt ? new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)) : null;   // GridHelper: normal = Y local
-          if (gt && nz && Math.abs(Math.abs(nz.z) - 1) < 1e-6) {
-            const zp = gt.position[2], P = drawingObj.points?.rawVal ?? [];
-            let mejor = -1, dmin = tol;
-            for (let i = 0; i < P.length; i++) {
-              if (Math.abs(P[i][2] - zp) > 1e-6) continue;
-              const d = Math.hypot(P[i][0] - p.x, P[i][1] - p.y);
-              if (d <= dmin) { dmin = d; mejor = i; }
-            }
-            if (mejor >= 0) ptIdx = mejor;
-          }
-        }
+        const ptIdx = nudoBajo(p, tol);
         const found = findClosestPoly(p.x, p.y, p.z, tol);
         const auxIdx = findClosestAuxLine(p.x, p.y, p.z, tol);
         if (ptIdx >= 0) {
@@ -5324,7 +5307,9 @@ export function drawing({
       propsPaneInstance.dispose();
       propsPaneInstance = null;
     }
-    if (selection.size === 0) {
+    // poniendo apoyos o cargas a clic, el panel de propiedades del nudo tapaba media planta y se comía
+    // los clics siguientes (1 de 20 apoyos en el panel de vista previa, 17-oct-2026): no se abre
+    if (selection.size === 0 || (window as any).__hekatanAplicando) {
       propsContainer.style.display = "none";
       return;
     }
@@ -7501,6 +7486,26 @@ export function drawing({
     return senoRasante >= 0.026;                    // sen(1.5°)
   };
 
+  /** El nudo bajo un punto. En PLANTA los nudos de todos los pisos caen uno encima de otro y el OSNAP
+   *  podía enganchar el de abajo: la carga puesta en la cubierta (z = 12) iba a z = 9 (test
+   *  ctl_edificio_revit, 17-oct-2026). Si hay un nudo EN el plano de trabajo bajo el cursor, ese manda. */
+  const nudoBajo = (p: THREE.Vector3, tol: number): number => {
+    let ptIdx = findClosestPoint(p.x, p.y, p.z, tol);
+    const gt = drawingObj.gridTarget?.rawVal;
+    const nz = gt ? new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)) : null;   // GridHelper: normal = Y local
+    if (gt && nz && Math.abs(Math.abs(nz.z) - 1) < 1e-6) {
+      const zp = gt.position[2], P = drawingObj.points?.rawVal ?? [];
+      let mejor = -1, dmin = tol;
+      for (let i = 0; i < P.length; i++) {
+        if (Math.abs(P[i][2] - zp) > 1e-6) continue;
+        const d = Math.hypot(P[i][0] - p.x, P[i][1] - p.y);
+        if (d <= dmin) { dmin = d; mejor = i; }
+      }
+      if (mejor >= 0) ptIdx = mejor;
+    }
+    return ptIdx;
+  };
+
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
@@ -7534,6 +7539,14 @@ export function drawing({
       // ── Click selecciona el item bajo el cursor (hover detectado en pointermove) ──
       // Ctrl+Click agrega/quita de selección múltiple. Click simple reemplaza
       // toda la selección por el item nuevo (o limpia si no hay hover).
+      // Un clic SIN movimiento antes (pantalla táctil, tableta, el panel de vista previa) no tenía hover:
+      // Apoyo y Carga no encontraban el nudo (0 de 20 apoyos, 17-oct-2026). Se busca en el punto del clic.
+      // Y el nudo del clic MANDA sobre el hover guardado: sin movimiento entre clics el hover se quedaba
+      // en el nudo anterior y cada clic volvía a elegir el mismo.
+      if (point) {
+        const k = nudoBajo(point, ((window as any).__hekatanSnap2D ?? 0.5) * 1.5);
+        if (k >= 0) hoverItem = { kind: "pt", a: k };
+      }
       if (hoverItem) {
         // Si hay click-click activo y el usuario clickea sobre un objeto,
         // cancelar el modo (no tiene sentido seguir el rect).
@@ -7545,6 +7558,7 @@ export function drawing({
         if (selection.has(id)) selection.delete(id);
         else selection.add(id);
         refreshSelectionGroup();
+        if ((window as any).__hekatanAplicando) { try { (window as any).__hekatanAplicarSeleccion?.(); } catch {} }
         updateStatus(`✓ Seleccionados ${selection.size} elemento(s) — Ctrl+Click para multi-selección`);
       } else {
         // Click en vacío. Tres casos:

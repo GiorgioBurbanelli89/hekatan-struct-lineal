@@ -282,6 +282,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
   // main.ts lo lee para NO reencuadrar mientras se ponen apoyos o cargas (cada clic reconstruye el modelo
   // y la cámara saltaba: la fila de arriba quedaba bajo la cinta. AutoCAD nunca hace zoom solo).
   Object.defineProperty(window, "__hekatanAplicando", { get: () => modoAplicar, configurable: true });
+  // el motor la llama en el MISMO clic en que selecciona (el setTimeout de 120 ms perdía el clic anterior
+  // si el siguiente llegaba antes: 12 de 20 apoyos con clics seguidos, 17-oct-2026)
+  (window as any).__hekatanAplicarSeleccion = () => aplicarASeleccion();
   const cargaVert = { kN: -10, kNm: -5 };
   const aplicarASeleccion = () => {
     if (!modoAplicar) return;

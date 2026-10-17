@@ -1,3 +1,4 @@
+import { confirmar } from "hekatan-ui/src/cad/confirmar";
 /**
  * hekatanCadSkin.ts — la piel de Hekatan Struct con forma de ventana CAD.
  *
@@ -447,10 +448,14 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     const W = window as any;
     const b = (t: string) => tit.querySelector<HTMLButtonElement>(`button[title="${t}"]`);
     const bN = b("Nuevo"), bU = b("Deshacer"), bR = b("Rehacer");
-    if (bN) bN.onclick = () => {
+    if (bN) bN.onclick = async () => {
       const hay = (W.__hekatanDrawingPoints?.rawVal?.length ?? 0) > 0;
-      if (hay && !confirm("¿Archivo nuevo? Se borra todo lo dibujado.")) return;
+      if (hay && !(await confirmar("¿Archivo nuevo? Se borra todo lo dibujado.", "Nuevo"))) return;
       W.__hekatanCadState?.reset?.();
+      // un modelo nuevo de verdad: también apoyos, cargas, ejes y niveles (como ETABS «New Model»)
+      try { W.__hekatanManualSupports?.clear?.(); W.__hekatanManualLoads?.clear?.(); } catch {}
+      try { if (Array.isArray(W.__hekatanAxisGrids)) { W.__hekatanAxisGrids.length = 0; W.__hekatanRefreshAxes?.(); } } catch {}
+      try { if (Array.isArray(W.__hekatanLevels)) { W.__hekatanLevels.length = 0; W.__hekatanRefreshLevels?.(); } } catch {}
       if (W.__hekatanDrawingPoints) W.__hekatanDrawingPoints.val = [];
       if (W.__hekatanDrawingPolylines) W.__hekatanDrawingPolylines.val = [[]];
       if (W.__hekatanDrawingAreas) W.__hekatanDrawingAreas.val = [];

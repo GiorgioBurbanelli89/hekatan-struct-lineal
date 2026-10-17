@@ -1598,6 +1598,14 @@ function encuadrarAhora() {
     // aparecía descentrada y a trozos. «Encuadrar» quiere decir que se ve TODO.
     orthoCamera.zoom = 1;
     orthoCamera.updateProjectionMatrix();
+    // encajar en el HUECO libre (cinta, barra de órdenes, botones): ancho × alto según hacia dónde mira
+    if (!frameGrid) {
+      const dir = new THREE.Vector3(); orthoCamera.getWorldDirection(dir);
+      const ax = Math.abs(dir.x), ay = Math.abs(dir.y), az = Math.abs(dir.z);
+      const [an, al] = az >= ax && az >= ay ? [dx, dy] : ay >= ax ? [dx, dz] : [dy, dz];
+      orthoCamera.position.set(cx, cy, cz).addScaledVector(dir, -1000);
+      encajarOrtoEnHueco(orthoCamera, controls, new THREE.Vector3(cx, cy, cz), an || 1, al || 1);
+    }
     controls.update();
     render?.();
     // Solo ajustar el tamaño de grilla cuando el modelo es MÁS GRANDE que ella.
@@ -3992,6 +4000,51 @@ function diagLienzo(): number {
   const gs = Number((window as any).__hekatanGridConfig?.gridSize) || 20;
   return gs * Math.SQRT2;
 }
+/**
+ * Encaja una vista ORTOGONAL en el hueco LIBRE del lienzo (17-oct-2026). La cinta clásica, la barra de
+ * órdenes y los paneles tapan el lienzo: encuadrando en el lienzo entero, la fila de arriba de la planta
+ * quedaba bajo la cinta (y en el panel de vista previa, de 800 px, la cinta ocupa cuatro filas). Se mide
+ * con elementFromPoint qué tapa cada lado y el modelo (ancho × alto en pantalla) se centra en lo que queda.
+ */
+function encajarOrtoEnHueco(ortho: any, controls: any, centro: THREE.Vector3, anchoM: number, altoM: number) {
+  const cv = (viewerElm as HTMLElement).querySelector("canvas") as HTMLCanvasElement | null;
+  const w = (viewerElm as HTMLElement).clientWidth || window.innerWidth;
+  const h = (viewerElm as HTMLElement).clientHeight || window.innerHeight;
+  let arriba = 0, abajo = 0, izq = 0, der = 0;
+  if (cv) {
+    const r = cv.getBoundingClientRect();
+    const libre = (x: number, y: number) => document.elementFromPoint(x, y) === cv;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    // tres líneas por lado (25 · 50 · 75 %): los botones flotantes de las esquinas no están en la del centro
+    // primero arriba/abajo (columnas), luego izquierda/derecha con filas DENTRO de ese hueco (una fila a la
+    // altura de la cinta veía sus botones de lado a lado y el modelo salía diminuto)
+    for (const f of [0.25, 0.5, 0.75]) {
+      const xf = r.left + r.width * f;
+      for (let y = r.top + 2; y < cy; y += 4) if (!libre(xf, y)) arriba = Math.max(arriba, y - r.top + 8);
+      for (let y = r.bottom - 2; y > cy; y -= 4) if (!libre(xf, y)) abajo = Math.max(abajo, r.bottom - y + 8);
+    }
+    const y0 = r.top + arriba, y1 = r.bottom - abajo;
+    for (const f of [0.1, 0.5, 0.9]) {
+      const yf = y0 + (y1 - y0) * f;
+      for (let x = r.left + 2; x < cx; x += 4) if (!libre(x, yf)) izq = Math.max(izq, x - r.left + 8);
+      for (let x = r.right - 2; x > cx; x -= 4) if (!libre(x, yf)) der = Math.max(der, r.right - x + 8);
+    }
+  }
+  const aw = Math.max(120, w - izq - der), ah = Math.max(120, h - arriba - abajo);
+  const m = 1.15;                                                    // margen alrededor del modelo
+  const halfH = Math.max((altoM * m) * h / (2 * ah), (anchoM * m) * h / (2 * aw), 1);
+  const halfW = halfH * w / h, mpp = 2 * halfH / h;                  // metros por píxel
+  ortho.left = -halfW; ortho.right = halfW; ortho.top = halfH; ortho.bottom = -halfH; ortho.zoom = 1;
+  // desplazar la cámara para que el centro del modelo caiga en el centro del HUECO
+  const dxp = (izq - der) / 2, dyp = (arriba - abajo) / 2;           // + = el hueco está a la derecha / abajo
+  ortho.updateMatrixWorld();
+  const derecha = new THREE.Vector3().setFromMatrixColumn(ortho.matrixWorld, 0);
+  const arribaV = new THREE.Vector3().setFromMatrixColumn(ortho.matrixWorld, 1);
+  const off = derecha.multiplyScalar(-dxp * mpp).add(arribaV.multiplyScalar(dyp * mpp));
+  ortho.position.add(off); controls?.target?.copy(centro.clone().add(off));
+  ortho.updateProjectionMatrix();
+}
+
 function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
   vistaActual = preset;
   // Sincroniza plano CAD + drawing plane con la vista
@@ -4064,8 +4117,8 @@ function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
   // BBox con fallback robusto (lienzo vacío → centrado en origen, diag=10)
   const nodesArr = states.nodes.rawVal ?? [];
   let cx = 0, cy = 0, cz = 0, diag = diagLienzo();
+  let xMin=Infinity,yMin=Infinity,zMin=Infinity,xMax=-Infinity,yMax=-Infinity,zMax=-Infinity;
   if (nodesArr.length > 0) {
-    let xMin=Infinity,yMin=Infinity,zMin=Infinity,xMax=-Infinity,yMax=-Infinity,zMax=-Infinity;
     for (const n of nodesArr) {
       if (n[0]<xMin) xMin=n[0]; if (n[0]>xMax) xMax=n[0];
       if (n[1]<yMin) yMin=n[1]; if (n[1]>yMax) yMax=n[1];
@@ -4113,6 +4166,12 @@ function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
     orthoCamera.updateProjectionMatrix();
     orthoCamera.lookAt(cx, cy, cz);
     setActiveCamera(orthoCamera);
+    // la diagonal 3D (con la altura) no sirve en una vista PLANA: se encaja el ancho × alto que se ve
+    if (isFinite(xMin)) {
+      const ex = (xMax - xMin) || 1, ey = (yMax - yMin) || 1, ez = (zMax - zMin) || 1;
+      const [an, al] = preset === "plan" ? [ex, ey] : preset === "elevX" ? [ex, ez] : [ey, ez];
+      encajarOrtoEnHueco(orthoCamera, controls, new THREE.Vector3(cx, cy, cz), an, al);
+    }
   }
 
   controls.update();

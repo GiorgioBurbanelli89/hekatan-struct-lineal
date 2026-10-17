@@ -30,7 +30,10 @@ await ev(() => { window.__hekatanModoRevit?.poner(false); window.__hekatanRibbon
 // 1. Nuevo
 await ev(() => { window.__hekatanDrawingPoints.val = [[0, 0, 0], [1, 0, 0]]; window.__hekatanDrawingPolylines.val = [[0, 1], []]; });
 await espera(300);
-const t0 = Date.now(); await ev(() => document.querySelector('#hk-cad-tit button[title="Nuevo"]').click()); await espera(500);
+// «Nuevo» pregunta con el cuadro PROPIO de la app (#hk-confirmar), no con confirm() del navegador
+const aceptarCuadro = () => ev(async () => { for (let i = 0; i < 20 && !document.querySelector("#hk-confirmar"); i++) await new Promise((r) => setTimeout(r, 50));
+  const b = [...document.querySelectorAll("#hk-confirmar button")].pop(); b?.click(); return !!b; });
+const t0 = Date.now(); await ev(() => document.querySelector('#hk-cad-tit button[title="Nuevo"]').click()); await aceptarCuadro(); await espera(500);
 ok("➕ Nuevo borra lo dibujado", (await n()).P === 0, `nudos ${(await n()).P}`);
 // 2. Rejilla + Subir sin duplicados
 await clicBoton("🏗 Rejilla"); await espera(1500);
@@ -52,7 +55,8 @@ await pag.select("#hk-nivel", "6"); await espera(500);
 const z = await ev(() => window.__hekatanDrawingGridTarget.rawVal.position[2]);
 ok("lista Nivel: niveles de la rejilla y plano a N+6.00", opciones.includes("N+6.00") && Math.abs(z - 6) < 1e-9, `${opciones.join(" ")} → z = ${z}`);
 // 5. Modo Revit
-await ev(() => { window.confirm = () => true; document.querySelector('#hk-cad-tit button[title="Nuevo"]').click(); window.__hekatanModoRevit.poner(true); });
+await ev(() => document.querySelector('#hk-cad-tit button[title="Nuevo"]').click()); await aceptarCuadro(); await espera(300);
+await ev(() => window.__hekatanModoRevit.poner(true));
 await espera(500);
 await ev(() => window.__hekatanModoRevit.abrirEjes()); await espera(200);
 await ev(() => [...document.querySelectorAll("#hk-revit .rv-op button")].find((b) => /Crear/.test(b.textContent)).click()); await espera(1500);
@@ -124,7 +128,7 @@ ok("pegado: N+3.00 → 3.50 sube los nudos de esa planta y renombra el nivel", !
 ok("pegado: el eje B de 6 → 7 m arrastra sus nudos (mismo número de nudos)", !peg.e2 && peg.xs === "0,7,12,18,24" && peg.n === 100, `x ${peg.xs} · ${peg.n} nudos`);
 ok("pegado: un nivel no puede saltar por encima del de arriba", !!peg.e3, peg.e3 ?? "");
 // 6. la rejilla encierra el dibujo, y es UNA (las copias de cada nivel, la misma)
-await espera(1500);   // la rejilla gira con animación al volver del alzado a la planta: se mide quieta
+await espera(4000);   // la rejilla gira con animación al volver del alzado a la planta: se mide quieta
 const rej = await ev(() => { const s = window.__hekatanViewerCtx().scene; const out = [];
   s.traverse((o) => { if (!/^hekatan-grid/.test(o.name)) return; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     // en coordenadas del MUNDO (la rejilla de planta estuvo volteada rotX(π) y la geometría sola no lo ve)
