@@ -219,6 +219,16 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
       if (a2 !== undefined || a3 !== undefined) L.push(`as ${e + 1} ${N(a2)} ${N(a3)}`);
     }
     for (const e of barras) { const a = g(ei.localAngles, e); if (a) L.push(`ang ${e + 1} ${N(a)}`); }
+    // Columnas en L de hormigón y su punto de inserción/espejos (16-oct-2026): el .e2k las devuelve como vinieron.
+    // Como General con los mismos A, I, J, As (e incluso I23) ETABS no da lo mismo que su «Concrete L»: TACNA UY +9 %.
+    for (const e of barras) {
+      const sh = ei.sectionShapes?.get?.(e), cl = sh?.concretoL;
+      if (sh?.type === "L" && cl && sh.h > 0 && sh.b > 0 && sh.tf > 0 && sh.tw > 0)
+        L.push(`concretol ${e + 1} ${N(sh.h)} ${N(sh.b)} ${N(sh.tf)} ${N(sh.tw)} ${N(cl.twb ?? sh.tw)} ${cl.sinAla ? 1 : 0} ${cl.mirror2 ? 1 : 0} ${cl.mirror3 ? 1 : 0}` +
+               (cl.diseno ? ` ${cl.diseno.tipo} ${N(cl.diseno.ct)} ${N(cl.diseno.cb)}` : ""));
+      const ln = ei.asignaLineaE2k?.get?.(e);
+      if (ln) L.push(`e2klinea ${e + 1} ${ln}`);
+    }
     for (const e of barras) {
       const r = g(ei.momentReleases, e) as boolean[] | undefined;
       if (r?.some(Boolean)) L.push(`release ${e + 1} ${r.map((b) => (b ? 1 : 0)).join(" ")}`);

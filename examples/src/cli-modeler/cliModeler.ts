@@ -139,6 +139,11 @@ interface ParsedModel {
   unionMuroN?: number;
   /** Líneas del e2k leído que Struct no calcula pero se EXPORTAN tal cual: casos de espectro, funciones, combinaciones. */
   e2kPaso?: { casos: string[]; combos: string[]; funcs: string[] };
+  /** `concretol id D B TF TW TWB ala m2 m3 [tipo ct cb]`: columna en L de hormigón del e2k leído; el .e2k la devuelve
+   *  como `Concrete L` (ETABS no la trata como una General con los mismos números: TACNA UY +9 %). */
+  frameConcretoL?: Map<number, { D: number; B: number; TF: number; TW: number; TWB: number; sinAla: boolean; m2: boolean; m3: boolean; tipo?: string; ct?: number; cb?: number }>;
+  /** `e2klinea id <tokens>`: punto de inserción y espejos de la barra en el e2k leído (CARDINALPT, MIRROR2/3). */
+  e2kLinea?: Map<number, string>;
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -757,6 +762,18 @@ export function parseCliCommands(text: string): ParsedModel {
           else if (v === "sap" || v === "sap2000") m.comportamiento = "sap2000";
           else if (v === "safe") m.comportamiento = "safe";
           else m.errors.push("comportamiento: uso comportamiento etabs | sap2000 | safe");
+          break;
+        }
+        case "concretol": {
+          const id = parseInt(tokens[1], 10), v = tokens.slice(2, 7).map(Number);
+          if (!isFinite(id) || v.length < 5 || v.some((x) => !isFinite(x) || x <= 0)) { m.errors.push("concretol: uso concretol id D B TF TW TWB ala m2 m3 [tipo ct cb]"); break; }
+          (m.frameConcretoL ??= new Map()).set(id, { D: v[0], B: v[1], TF: v[2], TW: v[3], TWB: v[4], sinAla: tokens[7] === "1", m2: tokens[8] === "1", m3: tokens[9] === "1",
+            ...(tokens[10] ? { tipo: tokens[10], ct: parseFloat(tokens[11] ?? "0") || 0, cb: parseFloat(tokens[12] ?? "0") || 0 } : {}) });
+          break;
+        }
+        case "e2klinea": {
+          const id = parseInt(tokens[1], 10);
+          if (isFinite(id)) (m.e2kLinea ??= new Map()).set(id, raw.split(/\s+/).slice(2).join(" "));
           break;
         }
         case "e2kcaso":
@@ -1675,6 +1692,7 @@ export const cliModeler: ExampleDef = {
     const cantos = new Map<number, number>();
     const anchos = new Map<number, number>();
     const sectionShapes = new Map<number, any>();
+    const asignaLinea = new Map<number, string>();   // `e2klinea`: CARDINALPT / MIRROR del e2k leído
     const localAngles = new Map<number, number>();
     const momentReleases = new Map<number, boolean[]>();
     // `rigidzone`: un solo factor para todo el modelo (u "off" = sin brazos, SAP2000)
@@ -1745,6 +1763,12 @@ export const cliModeler: ExampleDef = {
         if (f.B !== undefined && isFinite(f.B)) sh.b = f.B;
         sectionShapes.set(eIdx, sh);
       }
+      // columna en L del e2k leído: la FORMA para que el .e2k la devuelva como «Concrete L» (no como General)
+      const clF = m.frameConcretoL?.get(f.id);
+      if (clF) sectionShapes.set(eIdx, { type: "L", name: f.sec, h: clF.D, b: clF.B, tf: clF.TF, tw: clF.TW,
+        concretoL: { twb: clF.TWB, sinAla: clF.sinAla, mirror2: clF.m2, mirror3: clF.m3, diseno: clF.tipo ? { tipo: clF.tipo, ct: clF.ct ?? 0, cb: clF.cb ?? 0 } : undefined } });
+      const lnF = m.e2kLinea?.get(f.id);
+      if (lnF) asignaLinea.set(eIdx, lnF);
       // Perfil I / tubo PARAMÉTRICOS (14-sep-2026, Jorge: «cotas modificables, nada de catálogo»):
       // pisan A, I33, I22, J y As con las fórmulas de SAP2000 (medidas por OAPI) y dejan la FORMA con sus
       // cotas para que el s2k/e2k los escriban como «I/Wide Flange» / «Box/Tube» editables.
@@ -2391,7 +2415,8 @@ export const cliModeler: ExampleDef = {
       areaSpringsExport: new Map(m.areaSprings.map(a => [shellIdxOf.get(a.id), { ks: a.ks, nodal: a.nodal, comp: !!a.comp }]).filter(([e]) => e !== undefined) as any),
       meshAtIntersections: m.meshCross,
       comportamiento: m.comportamiento,
-      e2kPaso: m.e2kPaso,   // casos de espectro, funciones y combinaciones del e2k leído: al .e2k tal cual   // los exportadores escriben las reglas del programa elegido
+      e2kPaso: m.e2kPaso,
+      asignaLineaE2k: asignaLinea.size ? asignaLinea : undefined,   // CARDINALPT / MIRROR por barra, al .e2k tal cual   // casos de espectro, funciones y combinaciones del e2k leído: al .e2k tal cual   // los exportadores escriben las reglas del programa elegido
       solidIncompatible: m.solidIncompatible,
       // El `selfweight` del .heks, para que el exportador e2k en modo "auto"
       // escriba SELFWEIGHT con el multiplicador del MODELO (0 si no lo lleva)
