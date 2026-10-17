@@ -4190,7 +4190,7 @@ export function drawing({
       new THREE.Vector3(1, 0, 0), Math.PI / 2
     );
     interpolate(
-      gridObj,
+      gridVivo(),
       {
         position: new THREE.Vector3(...drawingObj.gridTarget.val.position),
         quaternion: qPlano.clone().multiply(qPreGeo),
@@ -4229,6 +4229,10 @@ export function drawing({
   // Las copias de rejilla por cota, aparte: las llama el derive de arriba y
   // también quien AÑADE una grilla auxiliar (`__hekatanRefrescarGrillas`), que
   // no cambia el plano de trabajo y por tanto no dispara aquel derive.
+  // ⚠️ La rejilla la REHACE getViewer (al cambiar de tamaño, de tema o de rectángulo) y aquí quedaba la
+  // referencia a la VIEJA: las copias de cada nivel salían de otra rejilla y se veían dos encimadas que no
+  // coincidían (Jorge, 17-oct-2026). Siempre la que está en la escena.
+  function gridVivo(): THREE.Object3D { return (scene.getObjectByName("hekatan-grid") as THREE.Object3D) ?? (gridObj as any); }
   function redibujarGrillasNivel(wz: number, enPlanta: boolean, qPreGeo: THREE.Quaternion) {
     {
       for (const g of sueloGrids) { scene.remove(g); disposeSuelo(g); }
@@ -4244,9 +4248,13 @@ export function drawing({
         for (const l of ((window as any).__hekatanLevels ?? []) as Array<{ z: number }>)
           if (isFinite(l?.z)) { cotas.add(+l.z.toFixed(3)); pedidas.add(+l.z.toFixed(3)); }
         const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
+        // Modo Revit: una rejilla por nivel apilada en 3D era un enrejado ilegible (Jorge, 17-oct-2026).
+        // Se ve la del nivel activo y, tenue, la del suelo; los niveles ya están en el navegador.
+        const revit = document.body.classList.contains("hk-revit-on");
         for (const z of lista) {
           if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
-          const copia = gridObj.clone(true);
+          if (revit && Math.abs(z) > 1e-6) continue;
+          const copia = gridVivo().clone(true);
           copia.name = `hekatan-grid-nivel-${z}`;
           copia.traverse((o: any) => {
             if (!o.material) return;
@@ -4255,7 +4263,7 @@ export function drawing({
             // el suelo (0) se ve algo más que los pisos intermedios: es la base.
             // Una grilla auxiliar PEDIDA a mano se ve casi como la de trabajo.
             o.material.opacity = (o.material.opacity ?? 1) *
-              (pedidas.has(z) ? 0.65 : Math.abs(z) < 1e-6 ? 0.5 : 0.22);
+              (revit ? 0.3 : pedidas.has(z) ? 0.65 : Math.abs(z) < 1e-6 ? 0.5 : 0.22);
           });
           copia.position.set(0, 0, z);
           // ⚠️ IDENTIDAD, no la pre-rotación. La geometría de la rejilla ya viene con sus
@@ -4278,7 +4286,7 @@ export function drawing({
       for (const g of aux.slice(0, 24)) {
         if (g.plano === "xy" || !isFinite(g.d)) continue;            // las de planta van arriba
         if (g.plano === wpAhora && Math.abs(g.d - dAhora) < 1e-6) continue;  // esa es la de trabajo
-        const copia = gridObj.clone(true);
+        const copia = gridVivo().clone(true);
         copia.name = `hekatan-grid-${g.plano}-${g.d}`;
         copia.traverse((o: any) => {
           if (!o.material) return;

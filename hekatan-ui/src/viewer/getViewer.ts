@@ -269,15 +269,53 @@ export function getViewer({
   // 5× ese valor para destacar cada 5 subdivisiones (convención CAD común).
   // Además, el snap del cursor en drawing.ts lee window.__hekatanSnap2D que
   // sincronizamos abajo con gridStep.
+  const gridRect = van.state<{ x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } | null>(null);
   const gridOptions = () => {
     const minor = settings.gridStep.rawVal;
     // gridMajor ahora es ABSOLUTO en metros (no multiplicador). Permite
     // configuraciones libres como minor=0.5 + major=2 (cada 4 menores hay
     // una mayor) o minor=0.1 + major=1 (cada 10 menores hay una mayor).
     const major = Math.max(minor, settings.gridMajor.rawVal);
-    return { planes: activePlanes(), majorStep: major, minorStep: minor };
+    return { planes: activePlanes(), majorStep: major, minorStep: minor, rect: gridRect.rawVal };
   };
   let gridObj = grid(settings.gridSize.rawVal, gridOptions());
+  // ── LA REJILLA SIEMPRE CUBRE EL DIBUJO (17-oct-2026) ─────────────────────────
+  // Jorge: «el dibujo no puede quedar nunca fuera de la interfaz; si el dibujo es más grande que la
+  // interfaz, la interfaz se amplía». La rejilla era un cuadrado de `gridSize` centrado en el ORIGEN:
+  // un edificio de 0..24 × 0..15 con la rejilla de 29 m se salía 9.5 m por un lado. Ahora, cuando hay
+  // algo (nudos, puntos dibujados o ejes), la rejilla es el rectángulo que lo encierra con margen,
+  // redondeado a la línea mayor; la rejilla de cada nivel copia la misma.
+  function rectDeseado(): { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } | null {
+    const W = window as any;
+    const pts: number[][] = [
+      ...((mesh?.nodes?.rawVal ?? []) as number[][]),
+      ...((W.__hekatanDrawingPoints?.rawVal ?? []) as number[][]),
+    ];
+    for (const a of (W.__hekatanAxisGrids ?? []) as { start: number[]; end: number[] }[]) pts.push(a.start, a.end);
+    if (!pts.length) return null;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of pts) {
+      if (!p || !isFinite(p[0])) continue;
+      x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+      z0 = Math.min(z0, p[2] ?? 0); z1 = Math.max(z1, p[2] ?? 0);
+    }
+    if (!isFinite(x0)) return null;
+    const def = settings.gridSize.rawVal / 2;
+    // Mientras el dibujo quepa en la rejilla de siempre, se queda la de siempre (centrada en el origen).
+    if (x0 >= -def && x1 <= def && y0 >= -def && y1 <= def && z0 >= -def && z1 <= def) return null;
+    const M = Math.max(settings.gridMajor.rawVal, settings.gridStep.rawVal, 0.1);
+    const L = Math.max(x1 - x0, y1 - y0, z1 - z0, 1);
+    // margen: el vuelo de ejes y niveles (10 %) + sitio para sus etiquetas, que no choquen con nada
+    const mar = Math.max(2 * M, 0.25 * L);
+    const abajo = (v: number) => Math.floor((v - mar) / M) * M, arriba = (v: number) => Math.ceil((v + mar) / M) * M;
+    return { x0: abajo(x0), x1: arriba(x1), y0: abajo(y0), y1: arriba(y1), z0: abajo(Math.min(z0, 0)), z1: arriba(z1) };
+  }
+  function ajustarRejilla() {
+    const r = rectDeseado(), a = gridRect.rawVal;
+    if (JSON.stringify(r) !== JSON.stringify(a)) gridRect.val = r;
+  }
+  (window as any).__hekatanAjustarRejilla = ajustarRejilla;
+  van.derive(() => { void mesh?.nodes?.val; setTimeout(ajustarRejilla, 0); });
   gridObj.visible = settings.gridVisible.rawVal;
   // Inicializar snap del cursor — slider INDEPENDIENTE del paso visual
   (window as any).__hekatanSnap2D = settings.cursorSnap.rawVal;
@@ -396,6 +434,7 @@ export function getViewer({
   van.derive(() => {
     // Subscribe a los 5 toggles + tamaño (suficiente para reactividad)
     const gs = settings.gridSize.val;
+    void gridRect.val;
     const fa = settings.flipAxes.val;
     const xy = settings.gridXY.val;
     const xz = settings.gridXZ.val;
@@ -405,6 +444,7 @@ export function getViewer({
     void xy; void xz; void yz; void step; void major;
     if (_skipFirstGridDerive) { _skipFirstGridDerive = false; return; }
     // Reemplazar grid — ahora es Group (mayor + minor lines), dispose recursivo
+    const posAntes = gridObj.position.clone(), giroAntes = gridObj.quaternion.clone();
     scene.remove(gridObj);
     (gridObj as any).traverse?.((o: any) => {
       o.geometry?.dispose?.();
@@ -412,7 +452,10 @@ export function getViewer({
     });
     gridObj = grid(gs, gridOptions());
     gridObj.visible = settings.gridVisible.rawVal;
+    // la nueva, donde estaba la vieja (el plano de trabajo puede estar en la cota 3, no en 0)
+    gridObj.position.copy(posAntes); gridObj.quaternion.copy(giroAntes);
     scene.add(gridObj);
+    setTimeout(() => { try { (window as any).__hekatanRefrescarGrillas?.(); } catch {} }, 0);
     applyGridOpacity();  // re-aplica el factor del slider sobre el nuevo gridObj
     // Reemplazar axes (tamaño = gridSize / 2 por convención)
     scene.remove(axesObj);
@@ -880,7 +923,7 @@ export function getViewer({
       o.geometry?.dispose?.();
       o.material?.dispose?.();
     });
-    gridObj = grid(settings.gridSize.rawVal, { planes: activePlanes() });
+    gridObj = grid(settings.gridSize.rawVal, gridOptions());
     scene.add(gridObj);
     // Update CSS custom properties for legend etc.
     viewerElm.style.setProperty("--hk-legend-color", colors.legendMarker);

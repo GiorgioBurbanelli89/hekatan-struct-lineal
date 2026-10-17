@@ -22,6 +22,10 @@ export function grid(
     planes?: GridPlane[];
     majorStep?: number;
     minorStep?: number;
+    /** Rectángulo que tiene que cubrir la rejilla (17-oct-2026, Jorge: «el dibujo no puede quedar nunca
+     *  fuera de la interfaz; si el dibujo es más grande, la interfaz se amplía»). Sin él, cuadrado de lado
+     *  `gridSize` centrado en el origen, como siempre. */
+    rect?: { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number } | null;
   },
 ): THREE.Group {
   const t = getTheme();
@@ -54,6 +58,11 @@ export function grid(
   // i = -nMax..nMax) → el centro (0,0,0) siempre está en la grilla y las
   // mayores marcan el origen.
   const halfSize = gridSize / 2;
+  const R = options?.rect ?? null;
+  // límites (u0..u1, v0..v1) de cada plano: los del rectángulo pedido o el cuadrado de siempre
+  const lim = (plane: GridPlane): [number, number, number, number] => !R ? [-halfSize, halfSize, -halfSize, halfSize]
+    : plane === "xy" ? [R.x0, R.x1, R.y0, R.y1] : plane === "xz" ? [R.x0, R.x1, R.z0, R.z1] : [R.y0, R.y1, R.z0, R.z1];
+  if (R) { const L = Math.max(R.x1 - R.x0, R.y1 - R.y0); while (L / minorStep > 500) minorStep *= 2; while (L / majorStep > 100) majorStep *= 2; }
   const majorEff = Math.max(minorStep, Math.round(majorStep / minorStep) * minorStep);
   majorStep = majorEff;
   // La MAYOR es la referencia que se mira (cada 5 m): va un punto por encima del
@@ -87,20 +96,15 @@ export function grid(
     // Ahora: iteramos en múltiplos de step en ambas direcciones desde 0.
     // Esto GARANTIZA que el origen (0,0,0) esté siempre en la grilla
     // y que las líneas mayores marquen el centro.
-    const nMax = Math.floor(halfSize / step);
-    // Líneas paralelas al eje V (varían en U)
-    for (let i = -nMax; i <= nMax; i++) {
+    // múltiplos enteros del paso dentro de los límites: el origen, si cae dentro, siempre es línea
+    const [u0, u1, v0, v1] = lim(plane);
+    for (let i = Math.ceil(u0 / step - 1e-9); i * step <= u1 + 1e-9; i++) {
       const u = i * step;
-      const a = mapper(u, -halfSize);
-      const b = mapper(u, halfSize);
-      positions.push(...a, ...b);
+      positions.push(...mapper(u, v0), ...mapper(u, v1));
     }
-    // Líneas paralelas al eje U (varían en V)
-    for (let j = -nMax; j <= nMax; j++) {
+    for (let j = Math.ceil(v0 / step - 1e-9); j * step <= v1 + 1e-9; j++) {
       const v = j * step;
-      const a = mapper(-halfSize, v);
-      const b = mapper(halfSize, v);
-      positions.push(...a, ...b);
+      positions.push(...mapper(u0, v), ...mapper(u1, v));
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -122,10 +126,8 @@ export function grid(
       plane === "xy" ? (u, v) => [u, v, 0]
       : plane === "xz" ? (u, v) => [u, 0, v]
       : (u, v) => [0, u, v];
-    const corners: [number, number][] = [
-      [-halfSize, -halfSize], [halfSize, -halfSize],
-      [halfSize, halfSize],   [-halfSize, halfSize],
-    ];
+    const [u0, u1, v0, v1] = lim(plane);
+    const corners: [number, number][] = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
     const positions: number[] = [];
     for (const [u, v] of corners) positions.push(...mapper(u, v));
     const geo = new THREE.BufferGeometry();
@@ -153,9 +155,10 @@ export function grid(
       plane === "xy" ? (u, v) => [u, v, 0]
       : plane === "xz" ? (u, v) => [u, 0, v]
       : (u, v) => [0, u, v];
+    const [u0, u1, v0, v1] = lim(plane);
     const p = cual === "u"
-      ? [...mapper(-halfSize, 0), ...mapper(halfSize, 0)]
-      : [...mapper(0, -halfSize), ...mapper(0, halfSize)];
+      ? [...mapper(u0, 0), ...mapper(u1, 0)]
+      : [...mapper(0, v0), ...mapper(0, v1)];
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.Float32BufferAttribute(p, 3));
     // Opacidad baja a propósito: tienen que ORIENTAR, no competir con el
@@ -179,8 +182,9 @@ export function grid(
     group.add(buildPlaneGrid(plane, minorStep, minorColor, 0.12));
     group.add(buildPlaneGrid(plane, majorStep, majorColor, 0.40));
     const [cu, cv] = COLOR_EJE[plane];
-    group.add(ejeOrigen(plane, "u", cu));
-    group.add(ejeOrigen(plane, "v", cv));
+    const [u0, u1, v0, v1] = lim(plane);
+    if (v0 <= 0 && v1 >= 0) group.add(ejeOrigen(plane, "u", cu));
+    if (u0 <= 0 && u1 >= 0) group.add(ejeOrigen(plane, "v", cv));
     // Borde perimetral del grid — SIEMPRE resaltado (rectángulo cerrado
     // con los 4 lados del plano). Independiente del multiplicador major.
     // Usa la misma escala de opacity que las mayores pero con renderOrder
@@ -194,7 +198,7 @@ export function grid(
   // gridSize coincide con lo solicitado (sin snap). majorStep puede haber
   // sido ajustado para que sea múltiplo entero de minorStep.
   (window as any).__hekatanGridConfig = {
-    majorStep, minorStep, gridSize, planes: [...planes],
+    majorStep, minorStep, gridSize, planes: [...planes], rect: R,
   };
 
   return group;

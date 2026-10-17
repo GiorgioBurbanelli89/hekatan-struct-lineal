@@ -111,6 +111,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     Pw.val = P; PLw.val = PL; if (Aw) Aw.val = A;
     try { W().__hekatanRebuild?.(); } catch {}
     reponer(); setTimeout(reponer, 60); setTimeout(reponer, 400);
+    W().__hekatanAjustarRejilla?.();
     return n;
   };
 
@@ -234,14 +235,20 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const w = viewerElm.clientWidth || innerWidth, h = viewerElm.clientHeight || innerHeight;
     if (modo === "plan" && c.orthoCamera) {
-      const m = 0.18, hw = (x1 - x0) / 2 * (1 + m) + 2, hh = (y1 - y0) / 2 * (1 + m) + 2;
-      const halfH = Math.max(hh, hw * h / w), halfW = halfH * w / h;
+      // margen: el vuelo de los ejes y sus burbujas (que quedan fuera del edificio), y a la derecha el
+      // ancho del panel de NIVELES, que no puede tapar ninguna burbuja
+      const navW = (nav.getBoundingClientRect().width || 150) + 16;
+      const m = 0.35, hw = (x1 - x0) / 2 * (1 + m) + 2, hh = (y1 - y0) / 2 * (1 + m) + 2;
+      const util = Math.max(0.4, 1 - navW / w);                 // fracción del ancho que queda libre
+      const halfH = Math.max(hh, (hw / util) * h / w), halfW = halfH * w / h;
+      const corr = halfW * (1 - util);                          // corre el centro para dejar libre el panel
+      const cxv = cx + corr;
       const o = c.orthoCamera;
       o.left = -halfW; o.right = halfW; o.top = halfH; o.bottom = -halfH; o.zoom = 1;
-      o.position.set(cx, cy, zAct + 1000); o.up.set(0, 1, 0); o.lookAt(cx, cy, zAct); o.updateProjectionMatrix();
-      c.controls?.target?.set(cx, cy, zAct);
+      o.position.set(cxv, cy, zAct + 1000); o.up.set(0, 1, 0); o.lookAt(cxv, cy, zAct); o.updateProjectionMatrix();
+      c.controls?.target?.set(cxv, cy, zAct);
     } else if (c.perspCamera) {
-      const cz = (z0 + z1) / 2, d = Math.hypot(x1 - x0, y1 - y0, z1 - z0) * 1.45 + 5;
+      const cz = (z0 + z1) / 2, d = Math.hypot(x1 - x0, y1 - y0, z1 - z0) * 1.7 + 5;
       const pc = c.perspCamera;
       pc.position.set(cx + d * 0.6, cy - d * 0.7, cz + d * 0.55); pc.up.set(0, 0, 1); pc.lookAt(cx, cy, cz); pc.updateProjectionMatrix();
       c.controls?.target?.set(cx, cy, cz);
@@ -330,6 +337,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const b = document.createElement("button"); b.textContent = "Crear ejes y niveles"; opc.appendChild(b);
     b.onclick = () => {
       W().__hekatanGenerarRejilla?.(ix.value, iy.value, iz.value, false);
+      setTimeout(() => W().__hekatanAjustarRejilla?.(), 50);
       setTimeout(() => { pintarNav(); activarNivel(nivelArriba(0) ?? 0); usar("columna"); }, 400);
     };
     decir("EJES: escribe los vanos y pulsa «Crear ejes y niveles». Después: Columna → En ejes.");
@@ -449,6 +457,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   const poner = (v: boolean) => {
     encendido = v;
     document.body.classList.toggle("hk-revit-on", v);
+    setTimeout(() => { try { W().__hekatanRefrescarGrillas?.(); } catch {} }, 0);
     colocar();
     raiz.style.display = v ? "block" : "none";
     tog.textContent = v ? "Cinta clásica" : "🏛 Modo Revit";

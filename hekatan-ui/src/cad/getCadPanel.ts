@@ -343,6 +343,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     if (!sc) return;
     if (!refGroup.parent) sc.add(refGroup);
     refGroup.position.set(p[0], p[1], p[2]);
+    // Modo Revit: el nivel activo ya está en el navegador; el rótulo «PLANTA Z = …» aquí decía la cota
+    // del último punto, no la del nivel (Z = 0.00 con el plano en 3), y confundía.
+    refGroup.visible = !document.body.classList.contains("hk-revit-on");
     // Los brazos miden ~1/12 del grid: bastante para verse, poco para estorbar.
     const gs = ((viewerElm as any).__settings?.gridSize?.rawVal ?? 30) / 12;
     refGroup.scale.set(gs, gs, gs);
@@ -357,7 +360,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     rotulo.position.set(0, 0, 1.35);
     // En perspectiva (iso) el marcador del plano sobra: se quedaba flotando sobre la
     // cercha en el 3D del Tutorial 9 aunque la cinta lo escondía (setView es asíncrono).
-    refGroup.visible = !(ctx?.camera as any)?.isPerspectiveCamera;
+    const enRevit = () => document.body.classList.contains("hk-revit-on");
+    refGroup.visible = !(ctx?.camera as any)?.isPerspectiveCamera && !enRevit();
     // 26-sep-2026: al pulsar «Plano XZ» desde el 3D la cámara aún es perspectiva en este instante
     // (setView es asíncrono) y el marcador quedaba OCULTO para siempre, ya con la vista de alzado
     // puesta: la barra decía «pasa por Y = 15» y en el lienzo no había nada (lo cazó ctl_ribbon).
@@ -365,7 +369,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     setTimeout(() => {
       const c2 = (viewerElm as any).__ctx?.camera as any;
       if ((window as any).__hekatanPlanoRef !== kind) return;      // ya se cambió de plano
-      refGroup.visible = !c2?.isPerspectiveCamera;
+      refGroup.visible = !c2?.isPerspectiveCamera && !enRevit();
       try { (viewerElm as any).__ctx?.render?.(); } catch {}
     }, 700);
     (window as any).__hekatanPuntoRef = p;
@@ -835,7 +839,9 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     // Ejes con LETRA = los de X (van de lado a lado en Y), como en el gremio.
     X.forEach((x, i) => axisList.push({
       label: nextAxisLabel(axisList.filter((a) => !/^\d+$/.test(a.label)).map((a) => a.label)),
-      start: [x, y0, 0], end: [x, y1, 0],
+      // la burbuja va en `end`: en el lado del FRENTE (y0), el que se ve en planta y en la isométrica.
+      // En el del fondo quedaba detrás del edificio, encima de las vigas (17-oct-2026).
+      start: [x, y1, 0], end: [x, y0, 0],
     }));
     // Ejes con NUMERO = los de Y.
     Y.forEach((y, i) => axisList.push({

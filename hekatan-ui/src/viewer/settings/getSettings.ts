@@ -274,24 +274,9 @@ export function getSettings(
     gridFolder.addBinding(settings.gridXY, "val", { label: "Plano XY (planta)" });
     gridFolder.addBinding(settings.gridXZ, "val", { label: "Plano XZ (frontal)" });
     gridFolder.addBinding(settings.gridYZ, "val", { label: "Plano YZ (lateral)" });
-    // «Separación» sube al nivel principal: es lo único de la rejilla que se toca al dibujar
-    // (también es el paso del imán, F9). El resto queda en «Ajuste fino».
-    gridFolder.addBinding(settings.gridStep, "val", {
-      label: "Separación = paso del imán (m)", min: 0.05, max: 5, step: 0.05,
-    });
-    const gridFino = gridFolder.addFolder({ title: "⚙ Ajuste fino", expanded: false });
-    gridFino.addBinding(settings.gridSize, "val", {
-      label: "Dimensión (m)", min: 1, max: 100, step: 1,
-    });
-    gridFino.addBinding(settings.gridMajor, "val", {
-      label: "Separación mayores (m)", min: 0.1, max: 50, step: 0.1,
-    });
-    gridFino.addBinding(settings.cursorSnap, "val", {
-      label: "Radio de captura (m)", min: 0.05, max: 5, step: 0.05,
-    });
-    gridFino.addBinding(settings.gridOpacity, "val", {
-      label: "Opacidad", min: 0, max: 1, step: 0.05,
-    });
+    // 17-oct-2026, Jorge: «una grid debe ser exacta… hay sliders de más, elimínalos; si los necesitamos
+    // los agregamos». Fuera Separación, Dimensión, Separación mayores, Radio de captura y Opacidad: la
+    // rejilla va cada 1 m con la mayor cada 5 m, y su tamaño lo pone el dibujo (getViewer, rectDeseado).
 
     // NOTA: deformScale XY/Z se bindean en Analysis Outputs JUNTO al toggle
     // "Deformed shape" para evitar duplicacion y mantener UX coherente.

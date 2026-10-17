@@ -123,6 +123,41 @@ export function nextLevelLabel(existing: Level[], z: number): string {
  * (círculo con la letra/número). El sprite es siempre face-camera y de
  * tamaño constante en pantalla (no crece con zoom).
  */
+
+/**
+ * La etiqueta (burbuja de eje, rótulo de nivel) mide lo mismo EN PANTALLA siempre, así que, centrada en
+ * la punta de la línea, al alejar la vista caía encima del modelo (Jorge, 17-oct-2026: «los textos
+ * colisionan con el dibujo»). Se ancla por su borde INTERIOR a la punta y crece HACIA FUERA, en la
+ * dirección en que la línea sale del modelo tal como se ve en pantalla (se recalcula en cada cuadro).
+ */
+function anclarHaciaFuera(sprite: THREE.Sprite, desde: THREE.Vector3, punta: THREE.Vector3, ocultarEnPlanta = false) {
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), mira = new THREE.Vector3();
+  sprite.onBeforeRender = (_r, _s, camera) => {
+    // `sizeAttenuation: false` solo vale con cámara en PERSPECTIVA (three multiplica por la profundidad).
+    // Con la ortográfica de planta la escala se lee en METROS y la burbuja medía 3 cm: no se veía.
+    // Se pasa la fracción de pantalla a metros con el alto del encuadre ortográfico.
+    const base = (sprite.userData.escalaPantalla ??= [sprite.scale.x, sprite.scale.y]) as number[];
+    const oc = camera as THREE.OrthographicCamera;
+    if (oc.isOrthographicCamera) {
+      const alto = (oc.top - oc.bottom) / (oc.zoom || 1);
+      sprite.scale.set(base[0] * alto, base[1] * alto, 1);
+    } else sprite.scale.set(base[0], base[1], 1);
+    // el rótulo de nivel no dice nada mirando desde arriba (todos caen en la misma línea, apilados)
+    if (ocultarEnPlanta) {
+      camera.getWorldDirection(mira);
+      (sprite.material as THREE.SpriteMaterial).opacity = Math.abs(mira.z) > 0.98 ? 0 : 1;
+    }
+    a.copy(desde).applyMatrix4(sprite.parent?.matrixWorld ?? new THREE.Matrix4()).project(camera);
+    b.copy(punta).applyMatrix4(sprite.parent?.matrixWorld ?? new THREE.Matrix4()).project(camera);
+    let dx = b.x - a.x, dy = b.y - a.y; const L = Math.hypot(dx, dy);
+    if (L < 1e-9) { sprite.center.set(0.5, 0.5); return; }
+    dx /= L; dy /= L;
+    // el centro del sprite se corre al lado contrario: su borde queda en la punta y el resto, fuera
+    const k = Math.max(Math.abs(dx), Math.abs(dy));
+    sprite.center.set(0.5 - 0.5 * dx / k, 0.5 - 0.5 * dy / k);
+  };
+}
+
 export function buildAxisGridMesh(axis: AxisGrid): THREE.Group {
   const g = new THREE.Group();
   g.name = `axis-${axis.label}`;
@@ -133,8 +168,11 @@ export function buildAxisGridMesh(axis: AxisGrid): THREE.Group {
   const dir = new THREE.Vector3().subVectors(B, A);
   const largo = dir.length() || 1;
   dir.divideScalar(largo);
-  const a = A.clone().addScaledVector(dir, -AXIS_VUELO);
-  const b = B.clone().addScaledVector(dir, AXIS_VUELO);
+  // vuelo proporcional al eje (10 % de su largo, mínimo el de siempre): con 1 m fijo, en un edificio de
+  // 24 m la burbuja quedaba pegada a la columna de esquina
+  const vuelo = Math.max(AXIS_VUELO, 0.1 * largo);
+  const a = A.clone().addScaledVector(dir, -vuelo);
+  const b = B.clone().addScaledVector(dir, vuelo);
 
   const lineGeo = new THREE.BufferGeometry().setFromPoints([a, b]);
   // `LineDashedMaterial` NO dibuja los trazos si falta `computeLineDistances()`:
@@ -186,6 +224,7 @@ export function buildAxisGridMesh(axis: AxisGrid): THREE.Group {
   // Al final del VUELO, no en el extremo del eje: ahi esta el borde de la
   // planta y la burbuja caia justo encima de las columnas de esquina.
   sprite.position.copy(b);
+  anclarHaciaFuera(sprite, B, b);
   // 0.028 = 2.8 % de la altura del viewport, ~28 px en una pantalla de 1000.
   // Con 0.045 (45 px) las burbujas de ejes contiguos se tocaban entre si.
   sprite.scale.set(0.028, 0.028, 1);
@@ -209,7 +248,9 @@ export function buildLevelMesh(
   // una linea simetrica se pasa de largo por el lado negativo y se queda corta
   // por el positivo — y la etiqueta, colgada de ese extremo, acababa a veinte
   // metros del modelo, detras del panel de Settings.
-  const [x0, x1] = Array.isArray(extent) ? extent : [-extent, extent];
+  const [xm0, x1] = Array.isArray(extent) ? extent : [-extent, extent];
+  // la línea sale por la izquierda lo mismo que vuelan los ejes (10 % del ancho): ahí va el rótulo
+  const x0 = xm0 - Math.max(1.2, 0.1 * (x1 - xm0));
   const lineGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(x0, 0, lvl.z),
     new THREE.Vector3(x1, 0, lvl.z),
@@ -250,7 +291,8 @@ export function buildLevelMesh(
   // quedan fuera del dibujo, que es donde va la cota de niveles en un alzado.
   // Pegada al arranque de la linea y por fuera: es donde va la cota de niveles
   // en un alzado.
-  sprite.position.set(x0 - 1.2, 0, lvl.z);
+  sprite.position.set(x0, 0, lvl.z);
+  anclarHaciaFuera(sprite, new THREE.Vector3(xm0, 0, lvl.z), new THREE.Vector3(x0, 0, lvl.z), true);
   // ~80x20 px. Con 0.16 (160 px de ancho) las cinco etiquetas de un edificio
   // de 4 pisos se apilaban una encima de otra y tapaban el centro del modelo.
   sprite.scale.set(0.08, 0.02, 1);
