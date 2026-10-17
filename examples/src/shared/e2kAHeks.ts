@@ -179,7 +179,8 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     if (/user coefficient/i.test(s.tipo) && s.coef !== undefined) {
       const zDe = (p?: string) => (p ? m.stories.find((q) => q.name === p)?.elev : undefined);
       const zb = zDe(s.pisoBase), zt = zDe(s.pisoTope);
-      L.push(`sismocoef ${s.nombre} ${s.dir} ${N(s.coef)} ${N(s.k ?? 1)} ecc ${N(s.ecc)} signo ${s.signoEcc >= 0 ? "+" : "-"}` +
+      // el nombre con «_» como los patrones: con espacios el lector lo rechazaba y los sismos estáticos se perdían
+      L.push(`sismocoef ${s.nombre.replace(/\s+/g, "_")} ${s.dir} ${N(s.coef)} ${N(s.k ?? 1)} ecc ${N(s.ecc)} signo ${s.signoEcc >= 0 ? "+" : "-"}` +
         (zb !== undefined ? ` zbase ${N(zb)}` : "") + (zt !== undefined ? ` ztope ${N(zt)}` : ""));
     } else {
       avisos.push(`sismo «${s.nombre}» (${s.tipo}): solo se calcula el «User Coefficient»; este patrón entra sin carga`);
