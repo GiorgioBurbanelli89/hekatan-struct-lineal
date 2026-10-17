@@ -66,15 +66,20 @@
   function leer() {
     const S = W.__hekatanStates;
     const N = S?.nodes?.rawVal ?? [], E = S?.elements?.rawVal ?? [];
-    const frames = [], shells = [], otros = {};
+    const frames = [], shells = [], otros = {}; let colapsados = 0;
     for (const e of E) {
       if (e.length === 2) frames.push([N[e[0]], N[e[1]]]);
-      else if (e.length === 3 || e.length === 4) shells.push(e.map((i) => N[i]));
+      else if (e.length === 3 || e.length === 4) {
+        // un Q4 «colapsado» (4.º nudo = 3.º) es un TRIÁNGULO mal escrito: se dibuja como triángulo
+        const v = []; for (const i of e) { const p = N[i]; if (!v.some((q) => clavePunto(q) === clavePunto(p))) v.push(p); }
+        if (v.length < e.length) colapsados++;
+        if (v.length >= 3) shells.push(v);
+      }
       else otros[e.length] = (otros[e.length] ?? 0) + 1;
     }
     const m = { id: new URLSearchParams(location.search).get("t"), frames, shells, otros, nudos: N.length };
     try { sessionStorage.setItem(CLAVE, JSON.stringify(m)); } catch {}
-    return { id: m.id, nudos: N.length, barras: frames.length, cascaras: shells.length, otros };
+    return { id: m.id, nudos: N.length, barras: frames.length, cascaras: shells.length, otros, colapsados };
   }
 
   // ── 2. dibujarlo con la interfaz ─────────────────────────────────────────────
