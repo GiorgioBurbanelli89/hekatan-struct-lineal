@@ -68,7 +68,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   };
 
   // ── escribir en el dibujo (una sola asignación por operación) ───────────
-  const editar = (fn: (e: { punto: (p: V3) => number; barra: (a: V3, b: V3) => boolean; area: (ps: V3[]) => boolean }) => void) => {
+  const editar = (fn: (e: { punto: (p: V3) => number; barra: (a: V3, b: V3) => boolean; area: (ps: V3[]) => boolean; P: number[][] }) => void) => {
     const Pw = W().__hekatanDrawingPoints, PLw = W().__hekatanDrawingPolylines, Aw = W().__hekatanDrawingAreas;
     if (!Pw || !PLw) return 0;
     const P: number[][] = [...Pw.rawVal];
@@ -91,7 +91,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
       const f = firma(pl, true); if (hay.has(f)) return false; hay.add(f); PL.push(pl); A.push(PL.length - 1); n++; return true;
     };
     W().__hekatanPushUndo?.();
-    fn({ punto, barra, area });
+    fn({ punto, barra, area, P });
     PL.push([]);
     // El rebuild REENCUADRA la cámara al modelo: con una sola columna hacía un zoom enorme y los
     // clics siguientes caían en otro sitio (medido en el navegador). En Revit dibujar no mueve la vista.
@@ -132,7 +132,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     background:rgba(8,47,73,.96);border:1px solid #0e7490;border-radius:8px;padding:5px 10px;white-space:nowrap}
   #hk-revit .rv-op button{height:24px;padding:0 10px;border-radius:6px;border:1px solid #22d3ee;background:#0e7490;color:#ecfeff;font:600 11px inherit;cursor:pointer}
   #hk-revit .rv-op input[type=text]{width:46px;height:22px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;text-align:center;font:12px Consolas,monospace}
-  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:150px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:10px;padding:6px}
+  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:170px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:10px;padding:6px}
   #hk-revit .rv-nav h4{margin:2px 4px 6px;font:700 11px inherit;color:#7dd3fc;letter-spacing:.4px}
   #hk-revit .rv-niv{display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;cursor:pointer;font:12px Consolas,monospace}
   #hk-revit .rv-niv:hover{background:#12304a}
@@ -176,14 +176,71 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     b.addEventListener("click", () => ver3D()); barra.appendChild(b); }
 
   // ── navegador de niveles ────────────────────────────────────────────────
+  // ── PEGADO a niveles y ejes (Revit: los elementos van atados a su nivel y a su eje) ──
+  // Jorge, 17-oct-2026: «una opción para que los elementos queden pegados al nivel y a la grid: cuando se
+  // modifique, que cambien». Con el pegado puesto, cambiar la cota de un nivel mueve TODOS los nudos que
+  // están en esa cota, y mover un eje mueve los nudos que están sobre él. Sin pegado, solo la referencia.
+  let pegado = true;
+  try { pegado = localStorage.getItem("hk_revit_pegado") !== "0"; } catch {}
+  const moverNivel = (zViejo: number, zNuevo: number): string | null => {
+    if (!isFinite(zNuevo)) return "Cota no válida.";
+    const N = niveles(); const i = N.findIndex((l) => Math.abs(l.z - zViejo) < 1e-6);
+    if (i < 0) return "No encuentro el nivel.";
+    const abajo = N[i - 1]?.z ?? -Infinity, arriba = N[i + 1]?.z ?? Infinity;
+    if (!(zNuevo > abajo + 1e-6 && zNuevo < arriba - 1e-6)) return "La cota tiene que quedar entre el nivel de abajo y el de arriba.";
+    const L = W().__hekatanLevels as { label: string; z: number }[];
+    const lv = L.find((l) => Math.abs(l.z - zViejo) < 1e-6)!;
+    const auto = /^N[+-]?\d/.test(lv.label);
+    lv.z = zNuevo; if (auto) lv.label = `N${zNuevo >= 0 ? "+" : ""}${zNuevo.toFixed(2)}`;
+    if (pegado) editar(({ P }) => { for (let k = 0; k < P.length; k++) if (P[k] && Math.abs(P[k][2] - zViejo) < 1e-6) P[k] = [P[k][0], P[k][1], zNuevo]; });
+    W().__hekatanRefreshLevels?.(); W().__hekatanAjustarRejilla?.();
+    if (Math.abs(zAct - zViejo) < 1e-6) activarNivel(zNuevo); else pintarNav();
+    return null;
+  };
+  const moverEje = (label: string, nuevo: number): string | null => {
+    if (!isFinite(nuevo)) return "Posición no válida.";
+    const A = (W().__hekatanAxisGrids ?? []) as { label: string; start: number[]; end: number[] }[];
+    const ax = A.find((a) => a.label === label); if (!ax) return "No encuentro el eje.";
+    const k = Math.abs(ax.start[0] - ax.end[0]) < 1e-6 ? 0 : 1;          // 0: eje de x constante (letra)
+    const viejo = ax.start[k];
+    if (A.some((a) => a !== ax && Math.abs(a.start[k] - a.end[k]) < 1e-6 && Math.abs(a.start[k] - nuevo) < 1e-6)) return "Ya hay un eje en esa posición.";
+    ax.start[k] = nuevo; ax.end[k] = nuevo;
+    // los ejes perpendiculares se alargan o acortan para seguir cubriendo la retícula
+    const otros = A.filter((a) => Math.abs(a.start[k] - a.end[k]) < 1e-6).map((a) => a.start[k]);
+    const lo = Math.min(...otros), hi = Math.max(...otros);
+    for (const a of A) if (Math.abs(a.start[k] - a.end[k]) > 1e-6) {
+      const dir = a.end[k] >= a.start[k]; a.start[k] = dir ? lo : hi; a.end[k] = dir ? hi : lo;
+    }
+    if (pegado) editar(({ P }) => { for (let q = 0; q < P.length; q++) if (P[q] && Math.abs(P[q][k] - viejo) < 1e-6) { const c = [...P[q]]; c[k] = nuevo; P[q] = c; } });
+    W().__hekatanRefreshAxes?.(); W().__hekatanAjustarRejilla?.(); pintarNav();
+    return null;
+  };
+  /** casilla que se vuelve editable con doble clic; Enter aplica, Esc cancela */
+  const editable = (span: HTMLElement, valor: number, aplicar: (v: number) => string | null) => {
+    span.title = "Doble clic para cambiar";
+    span.addEventListener("dblclick", (ev) => {
+      ev.stopPropagation();
+      const i = document.createElement("input"); i.type = "text"; i.value = valor.toFixed(2);
+      i.style.cssText = "width:58px;height:20px;background:#0a1622;border:1px solid #22d3ee;border-radius:4px;color:#ecfeff;font:12px Consolas,monospace;text-align:right";
+      span.replaceWith(i); i.focus(); i.select();
+      const fin = (ok: boolean) => {
+        if (ok) { const e = aplicar(parseFloat(i.value.replace(",", "."))); if (e) { decir(e); pintarNav(); } }
+        else pintarNav();
+      };
+      i.addEventListener("keydown", (k) => { k.stopPropagation(); if (k.key === "Enter") fin(true); if (k.key === "Escape") fin(false); });
+      i.addEventListener("blur", () => fin(false));
+      i.addEventListener("click", (k) => k.stopPropagation());
+    });
+  };
   const pintarNav = () => {
     nav.innerHTML = "<h4>NIVELES</h4>";
     const N = [...niveles()].reverse();
     for (const l of N) {
       const d = document.createElement("div"); d.className = "rv-niv" + (Math.abs(l.z - zAct) < 1e-6 ? " on" : "");
       d.dataset.z = String(l.z);
-      d.innerHTML = `<span>${l.label}</span><span style="color:#64748b">${l.z.toFixed(2)}</span>`;
+      d.innerHTML = `<span>${l.label}</span><span class="rv-cota" style="color:#94a3b8">${l.z.toFixed(2)}</span>`;
       d.addEventListener("click", () => activarNivel(l.z));
+      editable(d.querySelector(".rv-cota") as HTMLElement, l.z, (v) => moverNivel(l.z, v));
       nav.appendChild(d);
     }
     const mini = document.createElement("div"); mini.className = "rv-mini";
@@ -192,6 +249,25 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const bMenos = document.createElement("button"); bMenos.textContent = "− Nivel"; bMenos.title = "Quita el nivel de arriba (si no tiene nada)";
     bMenos.onclick = () => quitarNivel();
     mini.append(bMas, bMenos); nav.appendChild(mini);
+    // EJES: posición editable de cada eje (doble clic)
+    const A = (W().__hekatanAxisGrids ?? []) as { label: string; start: number[]; end: number[] }[];
+    if (A.length) {
+      const h = document.createElement("h4"); h.textContent = "EJES"; h.style.marginTop = "10px"; nav.appendChild(h);
+      const caja = document.createElement("div"); caja.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:0 6px;max-height:190px;overflow:auto";
+      for (const a of A) {
+        const k = Math.abs(a.start[0] - a.end[0]) < 1e-6 ? 0 : 1;
+        const d = document.createElement("div"); d.className = "rv-niv"; d.dataset.eje = a.label;
+        d.innerHTML = `<span>${a.label}</span><span class="rv-cota" style="color:#94a3b8">${a.start[k].toFixed(2)}</span>`;
+        editable(d.querySelector(".rv-cota") as HTMLElement, a.start[k], (v) => moverEje(a.label, v));
+        caja.appendChild(d);
+      }
+      nav.appendChild(caja);
+    }
+    const lp = document.createElement("label"); lp.style.cssText = "display:flex;gap:6px;align-items:center;margin:8px 4px 2px;cursor:pointer;font-size:11px";
+    lp.title = "Con esto puesto, al cambiar la cota de un nivel o mover un eje, los elementos se mueven con él (como en Revit)";
+    lp.innerHTML = `<input type="checkbox" ${pegado ? "checked" : ""}> 📎 Pegado a niveles y ejes`;
+    (lp.firstChild as HTMLInputElement).onchange = (e) => { pegado = (e.target as HTMLInputElement).checked; try { localStorage.setItem("hk_revit_pegado", pegado ? "1" : "0"); } catch {} };
+    nav.appendChild(lp);
   };
   const nuevoNivel = (h = parseFloat(String(W().__hekatanAlturaPiso ?? 3)) || 3) => {
     asegurarNiveles();
@@ -220,7 +296,15 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     pintarNav();
     decir(`Planta ${niveles().find((l) => Math.abs(l.z - z) < 1e-6)?.label ?? z} — elige Columna, Viga, Losa o Muro.`);
   };
-  const ver3D = () => { hooks.setView("iso"); encuadrar("iso"); setTimeout(() => encuadrar("iso"), 150); };
+  // En 3D la rejilla (el plano de trabajo) va al SUELO: a media altura cortaba el edificio (Jorge,
+  // 17-oct-2026). En planta vuelve al nivel activo (activarNivel). Revit tampoco la pone a media altura.
+  const ver3D = () => {
+    hooks.setView("iso");
+    const gt = W().__hekatanDrawingGridTarget;
+    const z0 = niveles()[0]?.z ?? 0;
+    if (gt) gt.val = { position: [0, 0, z0], rotation: [Math.PI / 2, 0, 0] };
+    encuadrar("iso"); setTimeout(() => encuadrar("iso"), 150);
+  };
   // Encuadre por la RETÍCULA (ejes + niveles + lo dibujado), no por los nudos del modelo: con el
   // lienzo recién hecho no hay nudos y la planta salía centrada en el origen, sin los ejes a la vista.
   const encuadrar = (modo: "plan" | "iso") => {
@@ -483,7 +567,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   if (ini) setTimeout(() => poner(true), 300);
 
   (window as any).__hekatanModoRevit = {
-    poner, usar, activarNivel, nuevoNivel, columnasEnEjes, vigasEnEjes, losasTodas, abrirEjes,
+    poner, usar, activarNivel, nuevoNivel, moverNivel, moverEje, pegado: (v?: boolean) => (v === undefined ? pegado : (pegado = v)), columnasEnEjes, vigasEnEjes, losasTodas, abrirEjes,
     estado: () => ({ encendido, herr, zAct, niveles: niveles(), ejes: ejes() }),
   };
 }

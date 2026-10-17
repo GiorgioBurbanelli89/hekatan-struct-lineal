@@ -130,9 +130,14 @@ export function nextLevelLabel(existing: Level[], z: number): string {
  * colisionan con el dibujo»). Se ancla por su borde INTERIOR a la punta y crece HACIA FUERA, en la
  * dirección en que la línea sale del modelo tal como se ve en pantalla (se recalcula en cada cuadro).
  */
+// Regla de Jorge (17-oct-2026): «no puede haber colisiones de gráficas, texto, etc.». Cada cuadro, las
+// etiquetas se van apuntando con su rectángulo en pantalla; la que pisa a una ya pintada no se pinta (en
+// una vista casi de frente, las burbujas 1-2-3-4 caían una encima de otra).
+let marcoEtiquetas = -1;
+const ocupadas: number[][] = [];
 function anclarHaciaFuera(sprite: THREE.Sprite, desde: THREE.Vector3, punta: THREE.Vector3, ocultarEnPlanta = false) {
-  const a = new THREE.Vector3(), b = new THREE.Vector3(), mira = new THREE.Vector3();
-  sprite.onBeforeRender = (_r, _s, camera) => {
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), mira = new THREE.Vector3(), tam = new THREE.Vector2();
+  sprite.onBeforeRender = (renderer, _s, camera) => {
     // `sizeAttenuation: false` solo vale con cámara en PERSPECTIVA (three multiplica por la profundidad).
     // Con la ortográfica de planta la escala se lee en METROS y la burbuja medía 3 cm: no se veía.
     // Se pasa la fracción de pantalla a metros con el alto del encuadre ortográfico.
@@ -143,18 +148,34 @@ function anclarHaciaFuera(sprite: THREE.Sprite, desde: THREE.Vector3, punta: THR
       sprite.scale.set(base[0] * alto, base[1] * alto, 1);
     } else sprite.scale.set(base[0], base[1], 1);
     // el rótulo de nivel no dice nada mirando desde arriba (todos caen en la misma línea, apilados)
-    if (ocultarEnPlanta) {
-      camera.getWorldDirection(mira);
-      (sprite.material as THREE.SpriteMaterial).opacity = Math.abs(mira.z) > 0.98 ? 0 : 1;
-    }
+
     a.copy(desde).applyMatrix4(sprite.parent?.matrixWorld ?? new THREE.Matrix4()).project(camera);
     b.copy(punta).applyMatrix4(sprite.parent?.matrixWorld ?? new THREE.Matrix4()).project(camera);
     let dx = b.x - a.x, dy = b.y - a.y; const L = Math.hypot(dx, dy);
-    if (L < 1e-9) { sprite.center.set(0.5, 0.5); return; }
-    dx /= L; dy /= L;
-    // el centro del sprite se corre al lado contrario: su borde queda en la punta y el resto, fuera
-    const k = Math.max(Math.abs(dx), Math.abs(dy));
-    sprite.center.set(0.5 - 0.5 * dx / k, 0.5 - 0.5 * dy / k);
+    if (L < 1e-9) sprite.center.set(0.5, 0.5);
+    else {
+      dx /= L; dy /= L;
+      // el centro del sprite se corre al lado contrario: su borde queda en la punta y el resto, fuera
+      const k = Math.max(Math.abs(dx), Math.abs(dy));
+      sprite.center.set(0.5 - 0.5 * dx / k, 0.5 - 0.5 * dy / k);
+    }
+    const mat = sprite.material as THREE.SpriteMaterial;
+    mat.opacity = 1;
+    if (ocultarEnPlanta) {
+      camera.getWorldDirection(mira);
+      if (Math.abs(mira.z) > 0.98) { mat.opacity = 0; return; }
+    }
+    // rectángulo en pantalla (px): centro proyectado + tamaño (fracción del alto) corrido por `center`
+    const f = renderer.info.render.frame;
+    if (f !== marcoEtiquetas) { marcoEtiquetas = f; ocupadas.length = 0; }
+    renderer.getSize(tam);
+    const base2 = sprite.userData.escalaPantalla as number[];
+    const hPx = base2[1] * tam.y * 1.2, wPx = base2[0] * tam.y * 1.2;   // 1.2: un poco de aire entre etiquetas
+    const cx = (b.x * 0.5 + 0.5) * tam.x + (0.5 - sprite.center.x) * wPx;
+    const cy = (-b.y * 0.5 + 0.5) * tam.y - (0.5 - sprite.center.y) * hPx;
+    const r = [cx - wPx / 2, cy - hPx / 2, cx + wPx / 2, cy + hPx / 2];
+    if (ocupadas.some((o) => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) { mat.opacity = 0; return; }
+    ocupadas.push(r);
   };
 }
 

@@ -80,6 +80,15 @@ ok("Revit: la vista NO se mueve al dibujar", cam0 === cam1, cam0 === cam1 ? "" :
 await ev(() => { const R = window.__hekatanModoRevit; R.columnasEnEjes(true); R.vigasEnEjes(true); R.losasTodas(true); }); await espera(800);
 const tot = await ev(() => { const A = window.__hekatanDrawingAreas.rawVal; return { b: window.__hekatanDrawingPolylines.rawVal.filter((p) => p.length).length - A.length, a: A.length, n: window.__hekatanStates.nodes.rawVal.length }; });
 ok("Revit: «En ejes» / «Todas» en los 4 pisos = 80 columnas + 124 vigas + 48 losas, sin duplicar lo dibujado a mano", tot.b === 204 && tot.a === 48, `${tot.b} barras, ${tot.a} losas, ${tot.n} nudos del modelo`);
+// 5b. pegado a niveles y ejes: cambiar la cota de un nivel o mover un eje arrastra los nudos
+const peg = await ev(async () => { const R = window.__hekatanModoRevit; R.pegado(true);
+  const e1 = R.moverNivel(3, 3.5); await new Promise((r) => setTimeout(r, 300)); const e2 = R.moverEje("B", 7); await new Promise((r) => setTimeout(r, 300));
+  const P = window.__hekatanDrawingPoints.rawVal; const zs = [...new Set(P.map((p) => p[2]))].sort((a, b) => a - b), xs = [...new Set(P.map((p) => p[0]))].sort((a, b) => a - b);
+  const e3 = R.moverNivel(3.5, 7);   // no puede saltar por encima de N+6.00
+  return { e1, e2, e3, zs: zs.join(","), xs: xs.join(","), niv: R.estado().niveles.map((l) => l.label).join(" "), n: P.length }; });
+ok("pegado: N+3.00 → 3.50 sube los nudos de esa planta y renombra el nivel", !peg.e1 && peg.zs === "0,3.5,6,9,12" && peg.niv.includes("N+3.50"), `cotas ${peg.zs} · ${peg.niv}`);
+ok("pegado: el eje B de 6 → 7 m arrastra sus nudos (mismo número de nudos)", !peg.e2 && peg.xs === "0,7,12,18,24" && peg.n === 100, `x ${peg.xs} · ${peg.n} nudos`);
+ok("pegado: un nivel no puede saltar por encima del de arriba", !!peg.e3, peg.e3 ?? "");
 // 6. la rejilla encierra el dibujo, y es UNA (las copias de cada nivel, la misma)
 const rej = await ev(() => { const s = window.__hekatanViewerCtx().scene; const out = [];
   s.traverse((o) => { if (!/^hekatan-grid/.test(o.name)) return; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
