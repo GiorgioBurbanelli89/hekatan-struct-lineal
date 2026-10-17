@@ -119,7 +119,7 @@ van.derive(() => {
   localStorage.setItem(AUTO_MESH_KEY, String(autoMeshShellsEnabled.val));
 });
 import {
-  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, addCadPanel, addCadRibbon, addCadStatusBar,
+  getToolbar, getViewer, colorMapForceUnit, colorMapDispUnit, colorMapStressUnit, addCadPanel, addCadRibbon, addCadStatusBar, addModoRevit,
   // 🛠 Orquestador unificado de Herramientas FEM (folder Tweakpane completo)
   attachFemTools,
   // el tema del VISOR: el fondo lo pinta WebGL, no el CSS, asi que la piel
@@ -2048,7 +2048,9 @@ function rebuild() {
   const _tool = (window as any).__hekatanCadState?.get?.()?.tool;
   const _pts = ((window as any).__hekatanDrawingPoints?.val ?? []).length;
   const _dibujando = !!_tool && _tool !== "select" && _tool !== "none" && _pts > 0;
-  if (!userCameraInteracted && !_dibujando) autoFitCamera();
+  // Modo Revit (17-oct-2026): la vista es la del nivel que se eligió; dibujar no la mueve.
+  const _revit = document.body.classList.contains("hk-revit-on");
+  if (!userCameraInteracted && !_dibujando && !_revit) autoFitCamera();
   // Refrescar el folder "📊 Calculados" con los nuevos valores derivados
   if (currentExample.computedLabels && computedObj) {
     const latest = calculadosEnSistema(currentExample.computedLabels(currentParams, states));
@@ -4940,6 +4942,18 @@ function buildParamsPane() {
       // La barra de estado de abajo (SNAP · ORTO · POLAR · OSNAP, coordenadas,
       // plano y mensaje), como la de AutoCAD. Una sola vez.
       if (!document.getElementById("hk-statusbar")) addCadStatusBar();
+      // 🏛 Modo Revit (17-oct-2026): niveles + Columna/Viga/Losa/Muro. Encendido en el lienzo nuevo.
+      addModoRevit(viewerElm as HTMLElement, host, {
+        setView,
+        setPlane: (k) => {
+          const st = (window as any).__hekatanCadState?.get?.();
+          if (st) st.workPlane = k;
+          const wz = st?.workZ ?? 0;
+          if (k === "xy") drawingGridTarget.val = { position: [0, 0, wz], rotation: [Math.PI / 2, 0, 0] };
+        },
+        cinta: (v) => { try { (window as any).__hekatanRibbonPlegar?.(!v); } catch {} },
+        encendidoPorDefecto: currentExample?.id === "new-blank",
+      });
     }
   }
   // (Aqui vivia un bloque `if (false && currentExample) { ... }` de 368 lineas:

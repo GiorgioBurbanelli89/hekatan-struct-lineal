@@ -518,6 +518,37 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     decir(`Plano de planta a la cota Z = ${z.toFixed(2)} m. Lo que dibujes cae ahi.`);
     refrescar();
   };
+  // ── NIVEL: elegir el piso por su nombre (17-oct-2026) ─────────────────────
+  // Jorge: «¿y para niveles dónde está esa herramienta?». Solo estaba la casilla de la cota:
+  // había que saber y teclear 3, 6, 9… La lista trae los niveles de la Rejilla (o las cotas
+  // de lo dibujado) y lleva el plano de planta a ese nivel, como el selector de pisos de ETABS.
+  const selNivel = document.createElement("select");
+  selNivel.id = "hk-nivel";
+  selNivel.title = "Nivel de dibujo: lleva el plano de planta a ese piso";
+  selNivel.style.cssText = "height:26px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;" +
+    "color:#cdeefb;font:12px Consolas,monospace;outline:none;max-width:92px;";
+  const llenarNiveles = () => {
+    const W = window as any;
+    let zs: number[] = ((W.__hekatanLevels ?? []) as Array<{ z: number }>).map((l) => +l.z).filter(isFinite);
+    if (!zs.length) zs = ((W.__hekatanDrawingPoints?.rawVal ?? []) as number[][]).map((q) => q[2]);
+    zs = [...new Set([0, ...zs].map((z) => Math.round(z * 1000) / 1000))].sort((u, v) => u - v);
+    const actual = parseFloat(inCotaZ.value) || 0;
+    selNivel.innerHTML = "";
+    for (const z of zs) {
+      const o = document.createElement("option");
+      o.value = String(z); o.textContent = `N${z >= 0 ? "+" : ""}${z.toFixed(2)}`;
+      if (Math.abs(z - actual) < 1e-6) o.selected = true;
+      selNivel.appendChild(o);
+    }
+  };
+  selNivel.addEventListener("pointerdown", llenarNiveles);
+  selNivel.addEventListener("focus", llenarNiveles);
+  selNivel.addEventListener("change", () => {
+    if (planoActual() !== "xy") hooks.setPlane("xy");
+    inCotaZ.value = selNivel.value;
+    ponerZ();
+  });
+  (window as any).__hekatanLlenarNiveles = llenarNiveles;
   inCotaZ.addEventListener("change", ponerZ);
   inCotaZ.addEventListener("keydown", (e) => { if (e.key === "Enter") ponerZ(); });
   const bSubir = document.createElement("button");
@@ -542,7 +573,9 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     sel.clear();
     try { w.__hekatanRefreshSelection?.(); } catch {}
     try { w.__hekatanRebuild?.(); } catch {}
-    decir(`${hechas} copia${hechas === 1 ? "" : "s"} cada ${h} m. Ya hay ${n + 1} plantas.`);
+    const rep = w.__hekatanReplicaRepetidos ?? 0;
+    decir(`${hechas} copia${hechas === 1 ? "" : "s"} cada ${h} m. Ya hay ${n + 1} plantas.` +
+      (rep ? ` ${rep} objetos ya estaban en su sitio: no se duplican.` : ""));
   });
   // ── GRILLA AUXILIAR: dejar puesto dónde referenciarse a esa altura ────────
   //
@@ -749,7 +782,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     const nombre = plano === "xy" ? "PLANTA" : plano === "xz" ? "ALZADO FRONTAL" : "ALZADO LATERAL";
     decir(`Vista de ${nombre} en ${L} = ${d.toFixed(2)} m — mirando el plano de frente.`);
   });
-  filaZ.append(inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bLimpiar, bVerPlano, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
+  filaZ.append(selNivel, inCotaZ, slider, bMover, bGrillaAux, bRepGrid, bLimpiar, bVerPlano, bSCU, bSubir, inAltPiso, document.createTextNode("×"), inNumPisos);
   const rotZ = document.createElement("div");
   rotZ.id = "hk-dist-rotulo";
   rotZ.textContent = "Cota Z · ▦+ grilla · subir alt × nº";
@@ -1254,7 +1287,17 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     const tool = hooks.getTool();
     if (!tool || tool === "select" || tool === "none") return;
     plegar(true, false);
+    plegadaSola = true;
   };
+  // …y VUELVE sola al terminar la herramienta (Esc, Enter, C): la prueba con el ratón real
+  // (17-oct-2026) se quedaba sin cinta después de cada viga y había que buscar «✏ Dibujar»
+  // para elegir la losa. AutoCAD tampoco esconde las herramientas entre una orden y otra.
+  let plegadaSola = false;
+  setInterval(() => {
+    if (!plegadaSola || !plegado) { plegadaSola = false; return; }
+    const tool = hooks.getTool();
+    if (!tool || tool === "select" || tool === "none") { plegadaSola = false; plegar(false, false); }
+  }, 250);
   host.addEventListener("pointerdown", plegarSola, true);
   bPlegar.addEventListener("click", () => plegar(true));
   bAbrir.addEventListener("click", () => { abiertaAMano = true; plegar(false); });

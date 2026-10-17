@@ -441,6 +441,25 @@ export function aplicarPielCad(doc = "sin titulo"): void {
     '<span class="marca">Hekatan Struct lineal</span>' +
     "</span>";
   document.body.appendChild(tit);
+  // ➕ ↩ ↪ no hacían NADA (sin manejador): la prueba con el ratón real (17-oct-2026) pulsó «Nuevo»
+  // y el dibujo seguía ahí. Abrir / Guardar los conecta main.ts (necesitan el lector del .heks).
+  {
+    const W = window as any;
+    const b = (t: string) => tit.querySelector<HTMLButtonElement>(`button[title="${t}"]`);
+    const bN = b("Nuevo"), bU = b("Deshacer"), bR = b("Rehacer");
+    if (bN) bN.onclick = () => {
+      const hay = (W.__hekatanDrawingPoints?.rawVal?.length ?? 0) > 0;
+      if (hay && !confirm("¿Archivo nuevo? Se borra todo lo dibujado.")) return;
+      W.__hekatanCadState?.reset?.();
+      if (W.__hekatanDrawingPoints) W.__hekatanDrawingPoints.val = [];
+      if (W.__hekatanDrawingPolylines) W.__hekatanDrawingPolylines.val = [[]];
+      if (W.__hekatanDrawingAreas) W.__hekatanDrawingAreas.val = [];
+      if (W.__hekatanDrawingAuxLines) W.__hekatanDrawingAuxLines.val = [];
+      try { W.__hekatanRebuild?.(); } catch {}
+    };
+    if (bU) bU.onclick = () => { if (!W.__hekatanCadOption?.("u")) W.__hekatanUndo?.(); };
+    if (bR) bR.onclick = () => W.__hekatanRedo?.();
+  }
   vigilarSolapes();
   // «🎬 Tutorial»: el panel de clips se trae SOLO al pulsar (import dinámico): cero peso al arrancar
   tit.querySelector<HTMLButtonElement>("#hk-cad-tutorial")?.addEventListener("click", () => {

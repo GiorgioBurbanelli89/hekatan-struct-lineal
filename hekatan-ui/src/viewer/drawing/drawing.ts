@@ -7100,21 +7100,42 @@ export function drawing({
     if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
     const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
     const origNodes = [...nodeSet];
+    // Lo que YA está no se vuelve a poner (17-oct-2026): «⇈ Subir» después de la Rejilla (que
+    // ya trae las columnas de todos los pisos) dejaba 240 columnas duplicadas encima de las 80,
+    // sin nada en pantalla que lo delatara. Un nudo en el mismo sitio se reutiliza y una barra
+    // o un paño con los mismos nudos no se copia — ETABS tampoco deja dos objetos superpuestos.
+    const clave = (q: number[]) => q.map((v) => Math.round(v * 1e6)).join(",");
+    const nudoEn = new Map<string, number>();
+    newPts.forEach((q, k) => { if (q && !nudoEn.has(clave(q))) nudoEn.set(clave(q), k); });
+    const firma = (pl: number[], area: boolean) => (area ? "A" : "L") + [...pl].sort((u, v) => u - v).join(",");
+    const hay = new Set<string>();
+    newPolys.forEach((pl, k) => { if (pl.length >= 2) hay.add(firma(pl, areaSet.has(k))); });
+    let repetidos = 0;
+    const poner = (pl: number[], area: boolean): number => {
+      const f = firma(pl, area);
+      if (hay.has(f)) { repetidos++; return -1; }
+      hay.add(f); newPolys.push(pl); return newPolys.length - 1;
+    };
     for (let i = 1; i <= count; i++) {
       const j = desde + i;
       const ox = dx * j, oy = dy * j, oz = dz * j;
       const map = new Map<number, number>();
       origNodes.forEach((n) => {
-        map.set(n, newPts.length);
-        newPts.push([pts[n][0] + ox, pts[n][1] + oy, pts[n][2] + oz]);
+        const q = [pts[n][0] + ox, pts[n][1] + oy, pts[n][2] + oz];
+        const ya = nudoEn.get(clave(q));
+        if (ya != null) { map.set(n, ya); return; }
+        map.set(n, newPts.length); nudoEn.set(clave(q), newPts.length);
+        newPts.push(q as [number, number, number]);
       });
       polyIdxSet.forEach((p) => {
         const cloned = polys[p].map((n) => (map.has(n) ? map.get(n)! : n));
-        const at = newPolys.length; newPolys.push(cloned);
-        if (areaSet.has(p)) newAreas.push(at);
+        const at = poner(cloned, areaSet.has(p));
+        if (at >= 0 && areaSet.has(p)) newAreas.push(at);
       });
-      segPairs.forEach(([a, b]) => { newPolys.push([map.get(a)!, map.get(b)!]); });
+      segPairs.forEach(([a, b]) => { poner([map.get(a)!, map.get(b)!], false); });
     }
+    (window as any).__hekatanReplicaRepetidos = repetidos;
+    if (repetidos) updateStatus(`Replicar: ${repetidos} objeto${repetidos === 1 ? "" : "s"} ya estaba${repetidos === 1 ? "" : "n"} en su sitio — no se duplica${repetidos === 1 ? "" : "n"}.`);
     newPolys.push([]);
     drawingObj.points.val = newPts;
     if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
