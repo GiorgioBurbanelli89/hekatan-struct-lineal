@@ -265,6 +265,17 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
       const md = g(ei.shellModifiers, e) as number[] | undefined;
       if (md && md.some((v) => v !== 1)) L.push(`shellmod ${e + 1} ${md.slice(0, 8).map((v) => N(v)).join(" ")}`);
     }
+    // Tipo de OBJETO del e2k (PANEL/FLOOR) cuando no es el que da la geometría (17-oct-2026): los tramos de escalera
+    // del TACNA son PANEL. Escritos como FLOOR, ETABS los conecta de otra forma: UY del techo +5.8 % (con PANEL −0.15 %).
+    for (const e of cascaras) {
+      const tp = ei.tipoAreaE2k?.get?.(e) as string | undefined;
+      if (!tp) continue;
+      const P = elements[e].map((n: number) => (m.nodes as unknown as number[][])[n]);
+      const zs = P.map((p) => p[2]);
+      const xy = P.map((p) => `${Math.round(p[0] * 1000)}|${Math.round(p[1] * 1000)}`);
+      const vertical = Math.max(...zs) - Math.min(...zs) > 1e-3 && new Set(xy).size <= 2;
+      if ((tp === "PANEL") !== vertical) L.push(`tipoarea ${e + 1} ${tp}`);
+    }
     L.push("");
   }
 
@@ -343,6 +354,9 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
       lc.forEach((l) => L.push(`e2kcaso ${ren(l)}`));
       lk.forEach((l) => L.push(`e2kcombo ${ren(l)}`));
     }
+    // la FUENTE DE MASA del e2k (con sus patrones): sin ella el .e2k exportado solo llevaba la masa de los elementos
+    // y ETABS daba los periodos un 26 % cortos (17-oct-2026)
+    raws("MASS SOURCE").filter((l) => /^MASSSOURCE(LOAD)?\s+"/.test(l)).forEach((l) => L.push(`e2kmasa ${ren(l)}`));
   }
   // abre mostrando el asiento del caso Dead (el patrón de peso propio)
   const muerto = (an?.patrones ?? []).find((p) => p.pesoPropio > 0)?.nombre ?? "Dead";

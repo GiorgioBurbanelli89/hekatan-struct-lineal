@@ -68,23 +68,38 @@ export async function correr() {
   const hk = e2kAHeks(E2K_RAMPA, "rampa.e2k").heks;
   const conOrigen = /^origen etabs$/m.test(hk);
   filas.push({ que: "importar un .e2k deja `origen etabs` en el .heks", crudo: true, medido: conOrigen ? "si" : "no", limite: "si", ok: conOrigen });
-  const { aS2k } = await empaquetar(`
+  const { aS2k, aE2k } = await empaquetar(`
 const g = globalThis; g.window = g;
 const nodo = () => ({ style:{}, appendChild(){}, setAttribute(){}, addEventListener(){}, classList:{add(){},remove(){},toggle(){},contains:()=>false}, getContext:()=>null, querySelector:()=>null, querySelectorAll:()=>[], remove(){} });
 g.document = g.document ?? { createElement: nodo, createElementNS: nodo, body: nodo(), head: nodo(), documentElement: nodo(), querySelector:()=>null, querySelectorAll:()=>[], addEventListener(){}, getElementById:()=>null };
 const { cliModeler } = await import("${R}/examples/src/cli-modeler/cliModeler");
 const { exportS2k } = await import("${R}/examples/src/shared/s2kExporter");
+const { exportE2k } = await import("${R}/examples/src/shared/e2kExporter");
 export function aS2k(texto) {
   const st = (v) => ({ val: v });
   const s = { nodes: st([]), elements: st([]), nodeInputs: st({}), elementInputs: st({}), deformOutputs: st({}), analyzeOutputs: st({}), objects3D: st([]) };
   globalThis.window.__hekatanCliScript = texto;
   cliModeler.build({}, s);
   return exportS2k({ nodes: s.nodes.val, elements: s.elements.val, nodeInputs: s.nodeInputs.val, elementInputs: s.elementInputs.val, title: "t" });
+}
+export function aE2k(texto) {
+  const st = (v) => ({ val: v });
+  const s = { nodes: st([]), elements: st([]), nodeInputs: st({}), elementInputs: st({}), deformOutputs: st({}), analyzeOutputs: st({}), objects3D: st([]) };
+  globalThis.window.__hekatanCliScript = texto;
+  cliModeler.build({}, s);
+  return exportE2k({ nodes: s.nodes.val, elements: s.elements.val, nodeInputs: s.nodeInputs.val, elementInputs: s.elementInputs.val, title: "t", weightMode: "manual" });
 }`, "compS2k");
   const s2kTal = aS2k(hk), s2kSap = aS2k(["comportamiento sap2000", hk].join("\n"));
   const atadoTal = /AREA EDGE CONSTRAINT ASSIGNMENTS/.test(s2kTal), atadoSap = /AREA EDGE CONSTRAINT ASSIGNMENTS/.test(s2kSap);
   filas.push({ que: "tal cual (origen ETABS) → .s2k con la atadura de aristas de ETABS", crudo: true, medido: atadoTal ? "si" : "no", limite: "si", ok: atadoTal,
     detalle: "TACNA medido: SAP2000 8.863 mm, ETABS 8.482 (la diferencia: unión viga-muro de ETABS)" });
   filas.push({ que: "eligiendo SAP2000 por defecto → .s2k sin atadura", crudo: true, medido: atadoSap ? "si" : "no", limite: "no", ok: !atadoSap });
+  // 8-9. tipo de objeto (17-oct-2026): la rampa inclinada es PANEL en el e2k; como FLOOR ETABS la conecta de otra forma
+  // (TACNA: UY del techo +5.8 %; con PANEL −0.15 % del original)
+  const conTipo = /^tipoarea \d+ PANEL$/m.test(hk);
+  filas.push({ que: "la rampa inclinada lleva `tipoarea … PANEL` en el .heks", crudo: true, medido: conTipo ? "si" : "no", limite: "si", ok: conTipo });
+  const e2k = aE2k(hk);
+  const panelInclinado = e2k.split(String.fromCharCode(10)).some((l) => /AREA "[^"]+"\s+PANEL\s+4/.test(l) && new Set(l.match(/"[^"]+"/g).slice(1)).size === 4);
+  filas.push({ que: "el .e2k devuelve la rampa como PANEL (4 puntos distintos)", crudo: true, medido: panelInclinado ? "si" : "no", limite: "si", ok: !!panelInclinado });
   return filas;
 }

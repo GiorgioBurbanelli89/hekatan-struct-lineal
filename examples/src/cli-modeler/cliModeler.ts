@@ -138,12 +138,14 @@ interface ParsedModel {
   unionMuroBarras?: boolean;
   unionMuroN?: number;
   /** Líneas del e2k leído que Struct no calcula pero se EXPORTAN tal cual: casos de espectro, funciones, combinaciones. */
-  e2kPaso?: { casos: string[]; combos: string[]; funcs: string[] };
+  e2kPaso?: { casos: string[]; combos: string[]; funcs: string[]; masa?: string[] };
   /** `concretol id D B TF TW TWB ala m2 m3 [tipo ct cb]`: columna en L de hormigón del e2k leído; el .e2k la devuelve
    *  como `Concrete L` (ETABS no la trata como una General con los mismos números: TACNA UY +9 %). */
   frameConcretoL?: Map<number, { D: number; B: number; TF: number; TW: number; TWB: number; sinAla: boolean; m2: boolean; m3: boolean; tipo?: string; ct?: number; cb?: number }>;
   /** `e2klinea id <tokens>`: punto de inserción y espejos de la barra en el e2k leído (CARDINALPT, MIRROR2/3). */
   e2kLinea?: Map<number, string>;
+  /** `tipoarea id PANEL|FLOOR`: tipo de objeto del e2k leído cuando no es el de la geometría (tramos de escalera = PANEL). */
+  tipoArea?: Map<number, string>;
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -771,6 +773,12 @@ export function parseCliCommands(text: string): ParsedModel {
             ...(tokens[10] ? { tipo: tokens[10], ct: parseFloat(tokens[11] ?? "0") || 0, cb: parseFloat(tokens[12] ?? "0") || 0 } : {}) });
           break;
         }
+        case "tipoarea": {
+          const id = parseInt(tokens[1], 10), tp = (tokens[2] ?? "").toUpperCase();
+          if (isFinite(id) && (tp === "PANEL" || tp === "FLOOR")) (m.tipoArea ??= new Map()).set(id, tp);
+          else m.errors.push("tipoarea: uso tipoarea id PANEL|FLOOR");
+          break;
+        }
         case "e2klinea": {
           const id = parseInt(tokens[1], 10);
           if (isFinite(id)) (m.e2kLinea ??= new Map()).set(id, raw.split(/\s+/).slice(2).join(" "));
@@ -778,10 +786,11 @@ export function parseCliCommands(text: string): ParsedModel {
         }
         case "e2kcaso":
         case "e2kcombo":
+        case "e2kmasa":
         case "e2kfunc": {
           const p = (m.e2kPaso ??= { casos: [], combos: [], funcs: [] });
           const resto = raw.slice(tokens[0].length).trim();
-          (cmd === "e2kcaso" ? p.casos : cmd === "e2kcombo" ? p.combos : p.funcs).push(resto);
+          (cmd === "e2kcaso" ? p.casos : cmd === "e2kcombo" ? p.combos : cmd === "e2kmasa" ? (p.masa ??= []) : p.funcs).push(resto);
           break;
         }
         case "unionmuro": {
@@ -2416,6 +2425,7 @@ export const cliModeler: ExampleDef = {
       meshAtIntersections: m.meshCross,
       comportamiento: m.comportamiento,
       e2kPaso: m.e2kPaso,
+      tipoAreaE2k: m.tipoArea?.size ? new Map([...m.tipoArea].map(([sid, tp]) => [shellIdxOf.get(sid), tp]).filter(([e]) => e !== undefined) as [number, string][]) : undefined,
       asignaLineaE2k: asignaLinea.size ? asignaLinea : undefined,   // CARDINALPT / MIRROR por barra, al .e2k tal cual   // casos de espectro, funciones y combinaciones del e2k leído: al .e2k tal cual   // los exportadores escriben las reglas del programa elegido
       solidIncompatible: m.solidIncompatible,
       // El `selfweight` del .heks, para que el exportador e2k en modo "auto"

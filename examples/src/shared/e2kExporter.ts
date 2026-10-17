@@ -1786,7 +1786,7 @@ function exportFromScratch(input: ExportE2kInput): string {
       // con tc (medido, 13-sep-2026), o sea 0.54·t, y pesa los nervios aparte — otro
       // modelo. El Deck de verdad solo cuando hay cotas (d1).
       else
-      lines.push(`  SHELLPROP  "${DECK_SEC}"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t_slab))} `);
+      lines.push(`  SHELLPROP  "${DECK_SEC}"  PROPTYPE  "Slab"  MATERIAL "${g1?.mat ?? defaultShellMat}"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t_slab))} `);
     } else {
       lines.push(`$ SLAB PROPERTIES`);
       // el material DE LA LOSA (30-sep-2026): con una sola losa se usaba el «por defecto» y una waffle con su peso
@@ -1833,8 +1833,10 @@ function exportFromScratch(input: ExportE2kInput): string {
         ? lineaDeck(g.nombre, deckDe(g.idx)!)
         : g.mem
         // Membrana sin cotas de deck: losa Membrane, mismo t y mismo peso (ver arriba).
-        ? `  SHELLPROP  "${g.nombre}"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t))} `
-        : `  SHELLPROP  "${g.nombre}"  PROPTYPE  "Slab"  MATERIAL "${defaultShellMat}"  MODELINGTYPE "${modelingDeGrupo(g.pf)}"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t))} `);
+        // con el material DEL GRUPO (su densidad): con el «por defecto» el aligerado del TACNA (ρ equivalente 7) pesaba
+        // como una losa maciza de 5 cm y ETABS daba los periodos un 7 % cortos (17-oct-2026)
+        ? `  SHELLPROP  "${g.nombre}"  PROPTYPE  "Slab"  MATERIAL "${g.mat ?? defaultShellMat}"  MODELINGTYPE "Membrane"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t))} `
+        : `  SHELLPROP  "${g.nombre}"  PROPTYPE  "Slab"  MATERIAL "${g.mat ?? defaultShellMat}"  MODELINGTYPE "${modelingDeGrupo(g.pf)}"  SLABTYPE "Slab"  SLABTHICKNESS ${rd(cL(t))} `);
       const lm = lineaModsGrupo(g.nombre, k);
       if (lm) lines.push(lm);
     }
@@ -1977,7 +1979,7 @@ function exportFromScratch(input: ExportE2kInput): string {
     const tipoDe = (p: string) => /^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? "Super Dead" : /^(live|viva|l)$/i.test(p) ? "Live" : "Other";
     cpp = {
       patrones: Object.keys(ppHeks).map((p) => ({ name: p, type: tipoDe(p), sw: undefined })),   // el peso propio lo decide el modo (auto: ETABS; manual: 0)
-      masaFuente: [], sismoEstatico: [], barras: [], areas: [],
+      masaFuente: ((elementInputs as any).e2kPaso?.masa as string[] | undefined) ?? [], sismoEstatico: [], barras: [], areas: [],
       puntuales: Object.entries(ppHeks).flatMap(([lc, m]) => [...(m ?? new Map())].map(([node, v]) => ({ node, lc, v: [...v] }))),
     } as unknown as E2kCargasPorPatron;
   }

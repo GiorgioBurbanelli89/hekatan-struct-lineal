@@ -16,6 +16,12 @@ node 4 4 0 0
 frame 1 1 2 25000000 0.16 0.002133 0.002133 0.0036 0.2 2.4
 frame 2 2 3 25000000 0.16 0.002133 0.002133 0.0036 0.2 2.4
 frame 3 4 3 25000000 0.16 0.002133 0.002133 0.0036 0.2 2.4
+node 5 0 4 3
+node 6 4 4 3
+shell 1 2 3 6 5 0.3 25000000 0 2.4
+shell 2 2 3 6 5 0.05 25000000 0 7
+shellmod 1 1 1 1 0 0 0 0 0
+shellmod 2 1 1 1 0 0 0 0 0
 support 1 fixed
 support 4 fixed
 load 2 10 0 0 0 0 0
@@ -50,7 +56,14 @@ export function aE2k(texto) {
   const e2k = mod.aE2k(HEKS);
   const fila = (que, ok, detalle) => ({ que, crudo: true, medido: ok ? "si" : "no", limite: "si", ok, detalle });
   const sf = e2k.match(/LOADCASE "SISMO_D_X-X"\s+ACCEL\s+"U1"\s+FUNC\s+"SISTEMA_DE_MUROS"\s+SF\s+([\d.]+)/)?.[1];
+  // la losa membrana con densidad equivalente (aligerado del TACNA, ρ = 7) tiene que llevar SU material: con el
+  // «por defecto» (ρ = 2.4) ETABS daba los periodos un 7 % cortos (17-oct-2026)
+  const props = [...e2k.matchAll(/SHELLPROP\s+"([^"]+)"\s+PROPTYPE\s+"Slab"\s+MATERIAL\s+"([^"]+)"[^\n]*SLABTHICKNESS\s+([\d.]+)/g)].map((m) => ({ t: +m[3], mat: m[2] }));
+  const pesos = Object.fromEntries([...e2k.matchAll(/MATERIAL\s+"([^"]+)"\s+TYPE\s+"[^"]+"\s+WEIGHTPERVOLUME\s+([\d.eE+-]+)/g)].map((m) => [m[1], +m[2]]));
+  const fina = props.find((p) => Math.abs(p.t - 50) < 1), gruesa = props.find((p) => Math.abs(p.t - 300) < 1);
+  const ratio = fina && gruesa ? pesos[fina.mat] / pesos[gruesa.mat] : NaN;
   return [
+    fila("la losa membrana de ρ = 7 lleva su material (peso 7/2.4 del de la de ρ = 2.4)", Math.abs(ratio - 7 / 2.4) < 1e-3, `cociente de pesos ${ratio.toFixed(4)}`),
     fila("la función del espectro va en $ FUNCTIONS", /\$ FUNCTIONS[\s\S]*FUNCTION "SISTEMA_DE_MUROS"\s+FUNCTYPE "SPECTRUM"/.test(e2k)),
     fila("el caso de espectro lleva sus DOS componentes", /ACCEL\s+"U1"/.test(e2k) && /ACCEL\s+"U2"/.test(e2k)),
     fila("SF de la aceleración pasa de m/s² a mm/s² (9.8067 → 9806.7)", sf === "9806.7", `SF escrito: ${sf}`),
