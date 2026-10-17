@@ -2100,11 +2100,24 @@ function ribbonPlegadaPara(id?: string | null): boolean {
 // (también usado por el csi-importer para forceRebuildAndFit).
 // Al RECONSTRUIR también: si dibujas la primera losa, «Shell results» tiene que
 // encenderse solo; si borras la última, apagarse.
-(window as any).__hekatanRebuild = (...a: any[]) => {
+// LIMITADOR (17-oct-2026): el dibujo llama a esto en cada punto, barra o losa, y cada llamada rehace el
+// modelo entero → dibujar n barras costaba n reconstrucciones (n²): el redibujo de galpon-bodega (992
+// barras) o de una conexión de 540 losas no acababa en 3 minutos. La PRIMERA llamada corre al instante
+// (un clic suelto responde igual); las que llegan en ráfaga se juntan en UNA al final de 120 ms.
+let _rbUltimo = 0, _rbPend: any[] | null = null, _rbTimer: any = null;
+const _rbCorrer = (a: any[]) => {
+  _rbUltimo = performance.now();
   const r = (rebuild as any)(...a);
   try { setTimeout(ajustarResultadosAlModelo, 60); } catch {}
   return r;
 };
+(window as any).__hekatanRebuild = (...a: any[]) => {
+  if (!_rbTimer && performance.now() - _rbUltimo > 120) return _rbCorrer(a);
+  _rbPend = a;
+  if (!_rbTimer) _rbTimer = setTimeout(() => { _rbTimer = null; const p = _rbPend; _rbPend = null; if (p) _rbCorrer(p); }, 120);
+};
+/** Rehace YA lo que esté pendiente del limitador (para quien necesite el modelo al día en el acto). */
+(window as any).__hekatanRebuildAhora = () => { if (_rbTimer) { clearTimeout(_rbTimer); _rbTimer = null; } const p = _rbPend ?? []; _rbPend = null; return _rbCorrer(p); };
 (window as any).__hekatanAutoFit = autoFitCamera;
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.

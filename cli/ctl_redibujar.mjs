@@ -12,7 +12,7 @@ const BASE = opt("--base", "http://localhost:4600"), MS = +opt("--ms", "0"), JSO
 const ids = args;
 const PILOTO = fs.readFileSync(new URL("./piloto_redibujo.js", import.meta.url), "utf8");
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const nav = await puppeteer.launch({ headless: "new", protocolTimeout: 900000, args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const filas = [];
 for (const id of ids) {
   const t0 = Date.now(); const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });

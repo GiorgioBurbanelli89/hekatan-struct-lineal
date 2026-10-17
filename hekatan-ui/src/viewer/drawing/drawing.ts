@@ -6569,6 +6569,20 @@ export function drawing({
    */
   function cerrarPolilinea(): void {
     if (!drawingObj.polylines) return;
+    // LOSA de 3 vértices: al terminar (Enter, Esc o cambiar de herramienta) se cierra como TRIÁNGULO,
+    // como Draw Floor de ETABS (cierra con ≥ 3 puntos). Antes solo cerraba al 4.º clic y una losa
+    // triangular no se podía dibujar (redibujo de triangular-plate, slope-stability, validacion-losas-csi).
+    // Cuando llega aquí la herramienta ya puede haber cambiado: manda con qué se pusieron los puntos.
+    {
+      const polys = drawingObj.polylines.rawVal, k = polys.length - 1, last = polys[k] ?? [];
+      if (ultHerrDibujo === "area" && last.length === 3 && drawingObj.areas && !drawingObj.areas.rawVal.includes(k)) {
+        drawingObj.polylines.val = [...polys.slice(0, -1), [...last, last[0]]];
+        drawingObj.areas.val = [...drawingObj.areas.rawVal, k];
+        updateStatus(`▦ Losa triangular creada — 3 vértices.`);
+        try { (window as any).__hekatanRebuild?.(); } catch {}
+      }
+      ultHerrDibujo = null;
+    }
     const buenas = drawingObj.polylines.rawVal.filter((p) => p.length >= 2);
     drawingObj.polylines.val = [...buenas, []];
   }
@@ -7486,6 +7500,7 @@ export function drawing({
     return senoRasante >= 0.026;                    // sen(1.5°)
   };
 
+  let ultHerrDibujo: string | null = null;   // con qué herramienta se pusieron los últimos puntos
   /** El nudo bajo un punto. En PLANTA los nudos de todos los pisos caen uno encima de otro y el OSNAP
    *  podía enganchar el de abajo: la carga puesta en la cubierta (z = 12) iba a z = 9 (test
    *  ctl_edificio_revit, 17-oct-2026). Si hay un nudo EN el plano de trabajo bajo el cursor, ese manda. */
@@ -7508,6 +7523,7 @@ export function drawing({
 
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
+    if (tool === "area" || tool === "line" || tool === "polyline") ultHerrDibujo = tool;
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
     const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
                             tool === "medir" || tool === "move" || tool === "copy" ||

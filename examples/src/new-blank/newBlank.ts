@@ -244,11 +244,17 @@ export const newBlank: ExampleDef = {
         // ─ ÁREA → shell Q4 ─
         // El click handler cierra la polilínea agregando poly[0] al final,
         // así que poly = [v0, v1, v2, v3, v0]. Tomamos los 4 vértices únicos.
-        const verts = (poly.length === 5 ? poly.slice(0, 4) : poly.slice(0, Math.min(4, poly.length)))
-          .map(sold);
-        if (verts.length !== 4) continue;
+        // cerrada = el último repite el primero: [v0 v1 v2 v3 v0] (cuadrilátero) o [v0 v1 v2 v0] (TRIÁNGULO)
+        const abierta = poly.length > 1 && poly[poly.length - 1] === poly[0] ? poly.slice(0, -1) : poly;
+        const verts = abierta.slice(0, 4).map(sold);
+        if (verts.length !== 4 && verts.length !== 3) continue;
         if (verts.some(v => nodes[v] === undefined)) continue;
-        if (nMalla <= 1) {
+        if (verts.length === 3) {          // cáscara triangular (DKT + membrana de Allman en el motor)
+          const eIdx = elements.length;
+          elements.push(verts as unknown as Element);
+          shellIdx.add(eIdx); zapataShells.add(eIdx);
+          for (const v of verts) zapataNodes.add(v);
+        } else if (nMalla <= 1) {
           const eIdx = elements.length;
           elements.push(verts as unknown as Element);
           shellIdx.add(eIdx); zapataShells.add(eIdx);
@@ -733,7 +739,7 @@ export const newBlank: ExampleDef = {
     const es = states.elements.val.length;
     let frames = 0, shells = 0;
     for (const e of states.elements.val) {
-      if ((e as number[]).length === 4) shells++;
+      if ((e as number[]).length === 4 || (e as number[]).length === 3) shells++;
       else frames++;
     }
     out["Stats"] = `${ns} nodos · ${frames} frames · ${shells} shells`;
