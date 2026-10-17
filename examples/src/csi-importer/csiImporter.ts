@@ -345,6 +345,8 @@ export const csiImporter: ExampleDef = {
       loads: loadsMap,
       ...(m.springs?.length ? { springs: m.springs } : {}),
     } as any;
+    // El modelo pasa TAL CUAL al otro programa: el exportador escribe las reglas del programa de origen (16-oct-2026).
+    (ei as any).comportamiento ??= m.fuente === "S2K" ? "sap2000" : m.fuente === "E2K" ? "etabs" : m.fuente === "F2K" ? "safe" : undefined;
     states.elementInputs.val = ei as any;
     // Con suelo (muelles de area) y cascaras de zapata: panel «Zapatas en planta» sobre el modelo importado.
     if (m.springs?.length && !p.cubierta) {

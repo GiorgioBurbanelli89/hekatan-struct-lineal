@@ -425,6 +425,14 @@ function parseTableFormat(rawLines: string[]): S2kModel {
         break;
       }
 
+      // Atadura de aristas por área (SAP2000 la trae APAGADA; solo se listan las encendidas). Al pasar a ETABS
+      // (que la trae encendida en todas) el .e2k apaga las demás y deja estas (16-oct-2026).
+      case "AREA EDGE CONSTRAINT ASSIGNMENTS": {
+        const ar = kv.get("Area");
+        if (ar && /^yes$/i.test(kv.get("Constrained") ?? "")) ((cargasTabla as any).areasAtadas ??= new Set<string>()).add(ar);
+        break;
+      }
+
       case "FRAME OFFSET ALONG LENGTH ASSIGNMENTS": {
         const fr = kv.get("Frame");
         if (fr) offsets.set(fr, [parseNum(kv.get("LengthI")), parseNum(kv.get("LengthJ")), parseNum(kv.get("RigidFactor"))]);
@@ -902,6 +910,8 @@ function buildModel(
     const frameIdx = new Map<string, number>(), areaIdx = new Map<string, number>();
     elementNames.forEach((n, i) => (i < nFrames ? frameIdx : i < nFrames + nShells ? areaIdx : new Map()).set(n, i));
     const esFrame = (i: number | undefined) => i !== undefined && i < nFrames;
+    const atadas: Set<string> | undefined = (cargasTabla as any).areasAtadas;
+    if (atadas?.size) (ei as any).areasAtadasCsi = new Set([...atadas].map((a) => areaIdx.get(a)).filter((i) => i !== undefined));
 
     // ── VIENTO perpendicular al zinc (Jorge, 25-sep-2026) ─────────────────────────
     // «Es un galpón curvo: el viento va perpendicular al zinc.» SAP solo sabe escribir

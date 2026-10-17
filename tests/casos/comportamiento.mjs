@@ -64,5 +64,27 @@ export async function correr() {
   const uP = esquina(rP), libre = uP.every((v) => Math.abs(v) < 100);
   filas.push({ que: "comportamiento sap2000: sin atadura de aristas", crudo: true, medido: libre ? "atada" : "suelta", limite: "suelta",
     ok: !libre, detalle: "SAP2000 por defecto no cose el nudo a mitad de arista" });
+  // 5-7. TAL CUAL (16-oct-2026): el modelo pasa con las reglas de su programa de origen salvo que se elija otra
+  const hk = e2kAHeks(E2K_RAMPA, "rampa.e2k").heks;
+  const conOrigen = /^origen etabs$/m.test(hk);
+  filas.push({ que: "importar un .e2k deja `origen etabs` en el .heks", crudo: true, medido: conOrigen ? "si" : "no", limite: "si", ok: conOrigen });
+  const { aS2k } = await empaquetar(`
+const g = globalThis; g.window = g;
+const nodo = () => ({ style:{}, appendChild(){}, setAttribute(){}, addEventListener(){}, classList:{add(){},remove(){},toggle(){},contains:()=>false}, getContext:()=>null, querySelector:()=>null, querySelectorAll:()=>[], remove(){} });
+g.document = g.document ?? { createElement: nodo, createElementNS: nodo, body: nodo(), head: nodo(), documentElement: nodo(), querySelector:()=>null, querySelectorAll:()=>[], addEventListener(){}, getElementById:()=>null };
+const { cliModeler } = await import("${R}/examples/src/cli-modeler/cliModeler");
+const { exportS2k } = await import("${R}/examples/src/shared/s2kExporter");
+export function aS2k(texto) {
+  const st = (v) => ({ val: v });
+  const s = { nodes: st([]), elements: st([]), nodeInputs: st({}), elementInputs: st({}), deformOutputs: st({}), analyzeOutputs: st({}), objects3D: st([]) };
+  globalThis.window.__hekatanCliScript = texto;
+  cliModeler.build({}, s);
+  return exportS2k({ nodes: s.nodes.val, elements: s.elements.val, nodeInputs: s.nodeInputs.val, elementInputs: s.elementInputs.val, title: "t" });
+}`, "compS2k");
+  const s2kTal = aS2k(hk), s2kSap = aS2k(["comportamiento sap2000", hk].join("\n"));
+  const atadoTal = /AREA EDGE CONSTRAINT ASSIGNMENTS/.test(s2kTal), atadoSap = /AREA EDGE CONSTRAINT ASSIGNMENTS/.test(s2kSap);
+  filas.push({ que: "tal cual (origen ETABS) → .s2k con la atadura de aristas de ETABS", crudo: true, medido: atadoTal ? "si" : "no", limite: "si", ok: atadoTal,
+    detalle: "TACNA medido: SAP2000 8.863 mm, ETABS 8.482 (la diferencia: unión viga-muro de ETABS)" });
+  filas.push({ que: "eligiendo SAP2000 por defecto → .s2k sin atadura", crudo: true, medido: atadoSap ? "si" : "no", limite: "no", ok: !atadoSap });
   return filas;
 }

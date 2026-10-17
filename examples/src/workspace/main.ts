@@ -5069,7 +5069,7 @@ function buildParamsPane() {
     // ── COMPORTAMIENTO (16-oct-2026, pedido de Jorge): «una lista que elija cómo se comporta la estructura».
     //    Cada programa tiene SUS reglas por defecto (unión viga-muro, deck, aristas, brazos, masa por pisos,
     //    J de SAFE…): una sola directiva `comportamiento etabs|sap2000|safe` las pone todas (cliModeler.ts,
-    //    aplicarComportamiento). «Del fichero» = lo que digan las directivas sueltas del .heks.
+    //    aplicarComportamiento). «Tal cual» = las reglas del programa de origen (`origen` que escribe el importador).
     const RE_COMP = /^[ \t]*(comportamiento|semantica|behavior)\b.*(\r?\n)?/gim;
     const compActual = (): number => {
       const mm = /^\s*(?:comportamiento|semantica|behavior)\s+(\w+)/im.exec(ta.value)?.[1]?.toLowerCase();
@@ -5078,7 +5078,7 @@ function buildParamsPane() {
     const semObj = { modo: compActual() };
     fCli.addBinding(semObj, "modo", {
       label: "Comportamiento",
-      options: { "Del fichero (.heks)": 0, "ETABS (por defecto)": 1, "SAP2000 (por defecto)": 2, "SAFE (por defecto)": 3 },
+      options: { "Tal cual (programa de origen)": 0, "ETABS (por defecto)": 1, "SAP2000 (por defecto)": 2, "SAFE (por defecto)": 3 },
     }).on("change", (ev) => fijarComportamiento(ev.value as number));
     function fijarComportamiento(v: number) {
       const cuerpo = ta.value.replace(RE_COMP, "");
@@ -6750,6 +6750,8 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
           elementInputs: states.elementInputs.val,
           title: `${currentExample!.name} — Hekatan export`,
           cftAs: sapOpts.cftAs,
+          // modelo con patrones (.heks importado): cada patrón por separado, para comparar caso a caso en SAP2000
+          patrones: Object.values(((states.nodeInputs.val as any)?.cargasPorPatron ?? {}) as Record<string, Map<number, number[]>>).some((m) => (m?.size ?? 0) > 0),
         });
         const fname = `${currentExample!.id}_${Date.now()}.s2k`;
         downloadText(text, fname);

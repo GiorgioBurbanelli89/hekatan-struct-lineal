@@ -787,7 +787,9 @@ function exportFromScratch(input: ExportE2kInput): string {
   const addR = (i: number) => (elementInputs as any).areaConRestriccionE2k?.has(i) ? "Yes" : "No";
   // Comportamiento SAP2000: sin atadura de aristas. ETABS la trae ENCENDIDA en toda área (medido, 16-oct-2026);
   // apagada la escribe `LINECONSTRAINT  "No"` en el AREAASSIGN.
-  const sinAtarE2k = (elementInputs as any).comportamiento === "sap2000" ? `  LINECONSTRAINT  "No"` : "";
+  // Las que SAP2000 sí tenía atadas (AREA EDGE CONSTRAINT del .s2k leído) siguen atadas: el modelo pasa tal cual.
+  const atadasCsi = (elementInputs as any).areasAtadasCsi as Set<number> | undefined;
+  const sinAtar = (i: number) => (elementInputs as any).comportamiento === "sap2000" && !atadasCsi?.has(i) ? `  LINECONSTRAINT  "No"` : "";
   /** Lineas `CONCRETESECTION` (tipo de diseno) de las secciones que lo traen. */
   const seccionesHormigon: string[] = [];
   const elemToSecName = new Map<number, string>();
@@ -1878,7 +1880,7 @@ function exportFromScratch(input: ExportE2kInput): string {
           // a 0.00000 %. Y "No" es lo que escribe ETABS en su propio .$et (medido con un modelo
           // hecho por OAPI sin tocar nada). No se veia en las plantillas porque alli la malla ya
           // va hecha en el fichero y ETABS no crea ni un nudo.
-          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtar(ae.idx)}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           // Un PANEL tambien lleva cargas de area (escaleras del TACNA: 28 AREALOAD que se perdian).
           areaLoadRefs.push({ name: aName, story: storyNames[iTop], idx: ae.idx });
           return;
@@ -1893,7 +1895,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         // 8.46: ETABS (y Struct al releer) perdía la mitad baja del muro y el edificio daba 9 veces más flexible.
         const sJ = Math.max(1, idxPl(topStory) - idxPl(ps[bot0].story));
         lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  ${sJ}  ${sJ}  0  0  `);
-        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtar(ae.idx)}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: topStory, idx: ae.idx });
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 + el salto de planta de cada punto — y con 3
@@ -1933,12 +1935,12 @@ function exportFromScratch(input: ExportE2kInput): string {
         // incluidas las losas macizas, y los demas grupos quedaban escritos y
         // sin usar. Se decide POR ELEMENTO y se asigna SU grupo.
         aaEntries.push(esMembranaDe(ae.idx)
-          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
+          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtar(ae.idx)}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
           // DIAPH en el AREA hace que ETABS ate TODA la malla de la losa (medido
           // el 8-sep-2026: no es lo mismo que atar los POINTs de eje). Solo va si
           // Hekatan ata los cuatro nudos del elemento; si solo ata los ejes de
           // columna (como SAP2000), el area no lleva DIAPH.
-          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtar(ae.idx)}  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: storyArea, idx: ae.idx });
       }
     });
@@ -1963,7 +1965,22 @@ function exportFromScratch(input: ExportE2kInput): string {
   // Modelo leido de un e2k: sus patrones y sus cargas por patron (16-oct-2026). Sin esto el
   // TACNA salia con Dead/Live y ΣFZ = 0: CM, CV, CV TECHO y las LINELOAD iban fundidas en los
   // nudos y el modo "auto" omitia toda FZ creyendola peso propio.
-  const cpp = (elementInputs as any).cargasPorPatron as E2kCargasPorPatron | undefined;
+  let cpp = (elementInputs as any).cargasPorPatron as E2kCargasPorPatron | undefined;
+  // Desde un .heks (Importar E2K/S2K → .heks → Exportar E2K): sus patrones están en nodeInputs.cargasPorPatron
+  // (patrón → nudo → 6 fuerzas). Antes se perdían y solo salía «Dead» con la suma: el EMPUJE del TACNA no llegaba
+  // a ETABS (16-oct-2026). Cada patrón con su LOADPATTERN, su caso y sus POINTLOAD, como el .s2k con `patrones`.
+  // Patrones COMPLETOS de cliModeler; en modo «auto» el Dead va sin el peso propio (lo pone ETABS con SELFWEIGHT).
+  const ppHeks0 = (nodeInputs as any).patronesFinales as Record<string, Map<number, number[]>> | undefined;
+  const ppHeks = ppHeks0 && weightMode !== "manual" && (nodeInputs as any).deadSinPeso
+    ? { ...ppHeks0, Dead: (nodeInputs as any).deadSinPeso as Map<number, number[]> } : ppHeks0;
+  if (!cpp?.patrones.length && ppHeks && Object.keys(ppHeks).some((p) => !/^dead$/i.test(p) && (ppHeks[p]?.size ?? 0) > 0)) {   // solo con más patrones que Dead
+    const tipoDe = (p: string) => /^dead$/i.test(p) ? "Dead" : /^(dne|sdead|scm|superdead)$/i.test(p) ? "Super Dead" : /^(live|viva|l)$/i.test(p) ? "Live" : "Other";
+    cpp = {
+      patrones: Object.keys(ppHeks).map((p) => ({ name: p, type: tipoDe(p), sw: undefined })),   // el peso propio lo decide el modo (auto: ETABS; manual: 0)
+      masaFuente: [], sismoEstatico: [], barras: [], areas: [],
+      puntuales: Object.entries(ppHeks).flatMap(([lc, m]) => [...(m ?? new Map())].map(([node, v]) => ({ node, lc, v: [...v] }))),
+    } as unknown as E2kCargasPorPatron;
+  }
   const porPatron = !!cpp?.patrones.length;
   const pats = porPatron
     ? cpp!.patrones.map(p => ({ name: p.name, type: p.type, selfWeightMultiplier: p.sw }))

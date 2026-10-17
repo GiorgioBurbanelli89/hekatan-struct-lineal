@@ -485,6 +485,13 @@ export function exportS2k(input: S2kExportInput): string {
     }
   }
 
+  // Modelo que vino de SAP2000 con aristas atadas en algunas áreas: se devuelven igual.
+  if ((elementInputs as any).comportamiento !== "etabs") {
+    const at = (elementInputs as any).areasAtadasCsi as Set<number> | undefined;
+    const lista = shellIdx.filter((i) => at?.has(i));
+    if (lista.length) { push(`TABLE:  "AREA EDGE CONSTRAINT ASSIGNMENTS"`); for (const i of lista) push(`   Area=${i + 1}   Constrained=Yes`); blank(); }
+  }
+
   // ── LAYERED SHELL: si se provee, todos los shells usan la misma seccion ──
   const isLayered = !!input.layeredSection && shellIdx.length > 0;
   const layeredSec = input.layeredSection;

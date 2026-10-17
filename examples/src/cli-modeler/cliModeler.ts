@@ -131,6 +131,9 @@ interface ParsedModel {
   /** `comportamiento etabs|sap2000|safe`: las reglas POR DEFECTO de ese programa, de una vez (ver
    *  `aplicarComportamiento`). Manda sobre las directivas sueltas que toca. */
   comportamiento?: "etabs" | "sap2000" | "safe";
+  /** `origen etabs|sap2000|safe`: de qué programa vino el modelo (lo escribe el importador). Si el usuario no elige
+   *  `comportamiento`, manda el origen: el modelo se resuelve y se EXPORTA tal cual lo tenía su programa. */
+  origen?: "etabs" | "sap2000" | "safe";
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -738,6 +741,12 @@ export function parseCliCommands(text: string): ParsedModel {
           else if (v === "sap" || v === "sap2000") m.comportamiento = "sap2000";
           else if (v === "safe") m.comportamiento = "safe";
           else m.errors.push("comportamiento: uso comportamiento etabs | sap2000 | safe");
+          break;
+        }
+        case "origen": {
+          const v = (tokens[1] ?? "").toLowerCase();
+          m.origen = v === "etabs" ? "etabs" : v === "sap" || v === "sap2000" ? "sap2000" : v === "safe" ? "safe" : undefined;
+          if (!m.origen) m.errors.push("origen: uso origen etabs | sap2000 | safe");
           break;
         }
         case "meshcross":
@@ -1484,7 +1493,8 @@ function aplicarDeckEtabs(m: ParsedModel) {
  *   SAFE    J×0.1 en las barras (torsion safe) · muelle de área NODAL (∫N dA).
  */
 function aplicarComportamiento(m: ParsedModel) {
-  const c = m.comportamiento;
+  // lo elegido en la lista manda; si no, el programa del que vino el modelo (tal cual)
+  const c = (m.comportamiento ??= m.origen);
   if (!c) return;
   if (c === "etabs") {
     m.etabsWallJoint = true; m.deckEtabs = true; m.meshCross = true;
@@ -1991,6 +2001,8 @@ export const cliModeler: ExampleDef = {
     // rho*A*L*g repartido a medias, cascaras rho*t*A/4 a cada esquina. La barra
     // con `endoffset` pesa por su luz libre si es VIGA (< 20 grados con la
     // horizontal); columna y diagonal por la longitud entera.
+    // Dead SIN el peso propio (usuario + cargas de barra): para exportar en modo «auto», donde el peso lo pone CSI.
+    const deadSinPeso = new Map([...loads].map(([k, v]) => [k, [...v]]));
     if (m.selfWeight) {
       const G = 9.80665;
       const swSkip = new Set<number>();   // `deck etabs`: membranas cuyo peso ya fue a las barras
@@ -2207,7 +2219,11 @@ export const cliModeler: ExampleDef = {
         }
       }
     }
-    states.nodeInputs.val = { supports, loads, masses, diaphragms, cargasPorPatron,
+    // Cada patrón COMPLETO (cargas de barra incluidas; Dead con y sin peso propio): el .e2k lo escribe por patrón
+    // para que ETABS y SAP2000 tengan los mismos casos que Struct (16-oct-2026).
+    const patronesFinales: Record<string, Map<number, number[]>> = { Dead: new Map([...loads].map(([k, v]) => [k, [...v]])) };
+    for (const [p, mp] of loadsOtros) patronesFinales[p] = new Map([...mp].map(([k, v]) => [k, [...v]]));
+    states.nodeInputs.val = { supports, loads, masses, diaphragms, cargasPorPatron, patronesFinales, deadSinPeso,
                               springs: springsList } as any;
     if ((states as any).springs) (states as any).springs.val = springsList;
     // Modificadores por elemento, indexados como los shells en `elements`

@@ -275,6 +275,8 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
   // quedan atados a ella; las membranas (losas, deck) no atan. Sin esto la rampa de escalera del TACNA colgaba y
   // el edificio salía 10 % más flexible por piso (16-oct-2026).
   L.push("# nudos sobre aristas de muros: atados (Auto Edge Constraint de ETABS)", "edge muros", "");
+  // el modelo viene de ETABS: sin otra elección, se resuelve y se exporta con SUS reglas (brazos, aristas, cruces)
+  L.push("# viene de ETABS: se exporta tal cual (lista Comportamiento para cambiarlo)", "origen etabs", "");
 
   if (masas.size) {
     L.push("# masa de la fuente (t): mass nudo m");

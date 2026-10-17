@@ -7512,7 +7512,8 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
           if (ioAction === "export-e2k") {
             downloadText(exportE2k({ ...input, title: "Hekatan Model", e2kModel: lastImportedE2k ?? undefined }), "model.e2k");
           } else if (ioAction === "export-s2k") {
-            downloadText(exportS2k({ ...input, title: "Hekatan Model" }), "model.s2k");
+            const conPatrones = Object.values(((input.nodeInputs as any)?.cargasPorPatron ?? {}) as Record<string, Map<number, number[]>>).some((m) => (m?.size ?? 0) > 0);
+            downloadText(exportS2k({ ...input, title: "Hekatan Model", patrones: conPatrones }), "model.s2k");
           } else if (ioAction === "export-py") {
             downloadText(exportOpenSeesPy(input), "model_opensees.py");
           } else if (ioAction === "export-tcl") {
