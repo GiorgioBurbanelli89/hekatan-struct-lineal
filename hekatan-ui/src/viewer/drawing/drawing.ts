@@ -4189,11 +4189,16 @@ export function drawing({
     const qPreGeo = new THREE.Quaternion().setFromAxisAngle(
       new THREE.Vector3(1, 0, 0), Math.PI / 2
     );
+    // En PLANTA esa composición da rotX(π): la rejilla queda plana pero VOLTEADA (y → −y). Cuadrada y
+    // centrada en el origen no se notaba; ajustada al dibujo (0..24 × −10..25) cubría −25..10 y el
+    // edificio quedaba medio fuera (Jorge, 17-oct-2026: «se ven 2 grids»). En planta, sin giro.
+    const qGrid = qPlano.clone().multiply(qPreGeo);
+    if (Math.abs(Math.abs(qGrid.x) - 1) < 1e-6) qGrid.identity();
     interpolate(
       gridVivo(),
       {
         position: new THREE.Vector3(...drawingObj.gridTarget.val.position),
-        quaternion: qPlano.clone().multiply(qPreGeo),
+        quaternion: qGrid,
       },
       viewerRender
     );
@@ -4249,11 +4254,13 @@ export function drawing({
           if (isFinite(l?.z)) { cotas.add(+l.z.toFixed(3)); pedidas.add(+l.z.toFixed(3)); }
         const lista = [...cotas].sort((a, b) => a - b).slice(0, 24);
         // Modo Revit: una rejilla por nivel apilada en 3D era un enrejado ilegible (Jorge, 17-oct-2026).
-        // Se ve la del nivel activo y, tenue, la del suelo; los niveles ya están en el navegador.
+        // Se ve SOLO la del nivel activo; los niveles ya están en el navegador.
         const revit = document.body.classList.contains("hk-revit-on");
         for (const z of lista) {
           if (Math.abs(z - wz) < 1e-6) continue;          // esa la dibuja la de verdad
-          if (revit && Math.abs(z) > 1e-6) continue;
+          // ni siquiera la del suelo: en planta se veía encima de la del nivel activo, una más marcada que
+          // otra (Jorge, 17-oct-2026, «por qué se ven 2 grids»). UNA rejilla, la del nivel en que se dibuja.
+          if (revit) continue;
           const copia = gridVivo().clone(true);
           copia.name = `hekatan-grid-nivel-${z}`;
           copia.traverse((o: any) => {

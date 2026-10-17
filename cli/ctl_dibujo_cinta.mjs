@@ -83,10 +83,12 @@ ok("Revit: «En ejes» / «Todas» en los 4 pisos = 80 columnas + 124 vigas + 48
 // 6. la rejilla encierra el dibujo, y es UNA (las copias de cada nivel, la misma)
 const rej = await ev(() => { const s = window.__hekatanViewerCtx().scene; const out = [];
   s.traverse((o) => { if (!/^hekatan-grid/.test(o.name)) return; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-    o.traverse((c) => { const p = c.geometry?.attributes?.position; if (!p) return; for (let i = 0; i < p.count; i++) { x0 = Math.min(x0, p.getX(i)); x1 = Math.max(x1, p.getX(i)); y0 = Math.min(y0, p.getY(i)); y1 = Math.max(y1, p.getY(i)); } });
+    // en coordenadas del MUNDO (la rejilla de planta estuvo volteada rotX(π) y la geometría sola no lo ve)
+    o.updateMatrixWorld(true); const V = Object.getPrototypeOf(o.position).constructor, q = new V();
+    o.traverse((c) => { const p = c.geometry?.attributes?.position; if (!p) return; for (let i = 0; i < p.count; i++) { q.set(p.getX(i), p.getY(i), p.getZ(i)).applyMatrix4(c.matrixWorld); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); } });
     out.push([x0, x1, y0, y1].join(",")); }); return out; });
 const r0r = rej[0]?.split(",").map(Number) ?? [];
-ok("rejilla: encierra el edificio (0..24 × 0..15) con margen y todas iguales", rej.length >= 1 && new Set(rej).size === 1 && r0r[0] < 0 && r0r[1] > 24 && r0r[2] < 0 && r0r[3] > 15, rej[0]);
+ok("rejilla: UNA sola y encierra el edificio (0..24 × 0..15) con margen", rej.length === 1 && r0r[0] < 0 && r0r[1] > 24 && r0r[2] < 0 && r0r[3] > 15, rej[0]);
 ok("sin errores de página", errs.length === 0, errs.join(" | "));
 console.log(`${filas.filter(Boolean).length}/${filas.length} OK (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
 await nav.close(); process.exit(filas.every(Boolean) ? 0 : 1);
