@@ -85,8 +85,9 @@
     try {
       if (!m) throw new Error("no hay modelo leído: primero __piloto.leer() en el ejemplo");
       estado.total = m.frames.length + m.shells.length;
-      // cinta clásica (el Modo Revit no tiene Línea ni Losa libres)
-      if (document.body.classList.contains("hk-revit-on")) {
+      // cinta clásica (el Modo Revit no tiene Línea ni Losa libres); al final se deja como estaba
+      estado.revitAntes = document.body.classList.contains("hk-revit-on");
+      if (estado.revitAntes) {
         estado.paso = "cinta clásica";
         await pulsar([...document.querySelectorAll("button")].find((b) => /Cinta clásica/.test(b.textContent) && b.getBoundingClientRect().width > 0), ms * 3);
         await esperar(700);
@@ -116,6 +117,7 @@
         escape(); estado.hechos++;
         if (ms === 0 && estado.hechos % 50 === 0) await esperar(0);
       }
+      if (estado.revitAntes) { const t = document.getElementById("hk-revit-toggle"); if (t) await pulsar(t, ms * 3); }
       estado.paso = "listo";
     } catch (e) { estado.error = String(e?.message ?? e); }
     estado.fin = true;

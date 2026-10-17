@@ -142,6 +142,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   #hk-revit .rv-msg{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;background:rgba(15,23,42,.92);border:1px solid #1e3a4a;
     border-radius:8px;padding:5px 12px;color:#cbd5e1;font:12px inherit;pointer-events:none;max-width:70%;text-align:center}
   body.hk-revit-on #hk-ribbon-abrir,body.hk-revit-on #hk-dyn,body.hk-revit-on #hk-ribbon-guia,body.hk-revit-on #hk-osnap-etiqueta{display:none!important}
+  #hk-revit-toggle.en-cinta{position:static!important;align-self:center;margin:4px 6px;top:auto!important}
   #hk-revit-toggle{position:absolute;right:10px;top:8px;z-index:56;height:30px;padding:0 12px;border-radius:8px;border:1px solid #22d3ee;
     background:#0e7490;color:#ecfeff;font:600 12px system-ui,sans-serif;cursor:pointer;pointer-events:auto}`;
   document.head.appendChild(css);
@@ -905,6 +906,9 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     tog.textContent = v ? "Cinta clásica" : "🏛 Modo Revit";
     tog.title = v ? "Volver a la cinta de herramientas de siempre" : "Dibujar por niveles: Columna, Viga, Losa, Muro";
     hooks.cinta(!v);
+    // con la cinta clásica el botón quedaba DEBAJO de ella (z 56 < 60; solo asomaba «…it» y Jorge no
+    // encontraba cómo volver): pasa a ser un botón más DENTRO de la cinta. En Revit vuelve a su sitio.
+    setTimeout(ubicarToggle, 0);
     try { localStorage.setItem(LS, v ? "1" : "0"); } catch {}
     // secciones EXTRUIDAS: en planta una columna de línea es un punto invisible; Revit la dibuja con su
     // sección (cuadrado). Al salir se deja como estaba.
@@ -921,6 +925,11 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   tog.onclick = () => poner(!encendido);
   // La barra de título de la app es FIJA (30 px) y el lienzo empieza debajo de ella: todo se baja
   // lo que tape, medido (si no, la fila de herramientas quedaba cortada por arriba).
+  const ubicarToggle = () => {
+    const cintaEl = document.getElementById("hk-ribbon");
+    if (!encendido && cintaEl) { if (tog.parentElement !== cintaEl) cintaEl.appendChild(tog); tog.classList.add("en-cinta"); }
+    else if (tog.parentElement !== host) { host.append(tog); tog.classList.remove("en-cinta"); colocar(); }
+  };
   const colocar = () => {
     const tope = Math.max(0, (document.getElementById("hk-cad-tit")?.getBoundingClientRect().bottom ?? 0) - host.getBoundingClientRect().top);
     barra.style.top = `${tope + 8}px`; opc.style.top = `${tope + 74}px`;
@@ -933,6 +942,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   try { const g = localStorage.getItem(LS); if (g !== null) ini = g === "1"; } catch {}
   raiz.style.display = "none"; tog.textContent = "🏛 Modo Revit";
   if (ini) setTimeout(() => poner(true), 300);
+  else { setTimeout(ubicarToggle, 300); setTimeout(ubicarToggle, 1500); }   // la cinta puede crearse después
 
   (window as any).__hekatanModoRevit = {
     poner, usar, activarNivel, activarFrente, activarAlzado, ver3D, vista: () => ({ vista, dirAlz }), nuevoNivel, cotas: () => cotas.map((c) => ({ valor: c.valor, editable: !!c.aplicar })), moverNivel, moverEje, pegado: (v?: boolean) => (v === undefined ? pegado : (pegado = v)), columnasEnEjes, vigasEnEjes, losasTodas, abrirEjes,
