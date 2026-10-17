@@ -2289,6 +2289,7 @@ export const cliModeler: ExampleDef = {
       // muelle de AREA por cascara (indice de elemento): ks, nodal, solo compresion
       areaSpringsExport: new Map(m.areaSprings.map(a => [shellIdxOf.get(a.id), { ks: a.ks, nodal: a.nodal, comp: !!a.comp }]).filter(([e]) => e !== undefined) as any),
       meshAtIntersections: m.meshCross,
+      comportamiento: m.comportamiento,   // los exportadores escriben las reglas del programa elegido
       solidIncompatible: m.solidIncompatible,
       // El `selfweight` del .heks, para que el exportador e2k en modo "auto"
       // escriba SELFWEIGHT con el multiplicador del MODELO (0 si no lo lleva)

@@ -780,6 +780,9 @@ function exportFromScratch(input: ExportE2kInput): string {
   const writtenSections = new Set<string>();
   /** "Yes" solo en las areas que lo traian del e2k leido (muros del TACNA); el defecto es "No" (ver AREAASSIGN). */
   const addR = (i: number) => (elementInputs as any).areaConRestriccionE2k?.has(i) ? "Yes" : "No";
+  // Comportamiento SAP2000: sin atadura de aristas. ETABS la trae ENCENDIDA en toda área (medido, 16-oct-2026);
+  // apagada la escribe `LINECONSTRAINT  "No"` en el AREAASSIGN.
+  const sinAtarE2k = (elementInputs as any).comportamiento === "sap2000" ? `  LINECONSTRAINT  "No"` : "";
   /** Lineas `CONCRETESECTION` (tipo de diseno) de las secciones que lo traen. */
   const seccionesHormigon: string[] = [];
   const elemToSecName = new Map<number, string>();
@@ -1147,7 +1150,10 @@ function exportFromScratch(input: ExportE2kInput): string {
       // Brazo AUTOMATICO de un e2k leido (`RIGIDZONE 1` sin longitudes): ETABS lo recalcula
       // de las secciones que se cruzan. Se devuelve igual que vino.
       const f = (elementInputs as any).zonaRigidaE2k?.get(i) as number | undefined;
-      if (f) parts.push(`RIGIDZONE ${rd(f)}`);
+      // Comportamiento SAP2000: ETABS pone brazos AUTOMATICOS si la linea no dice nada (medido, 16-oct-2026:
+      // su $et no escribe nada para el automatico y `LENGTHOFFI 0 LENGTHOFFJ 0` para el manual con 0).
+      if ((elementInputs as any).comportamiento === "sap2000") parts.push(`LENGTHOFFI 0 LENGTHOFFJ 0`);
+      else if (f) parts.push(`RIGIDZONE ${rd(f)}`);
     }
     // Punto de insercion y espejos del e2k leido (`CARDINALPT 8`, `MIRROR3 "Yes"`), tal cual.
     const extraE2k = (elementInputs as any).asignaLineaE2k?.get(i) as string | undefined;
@@ -1867,7 +1873,7 @@ function exportFromScratch(input: ExportE2kInput): string {
           // a 0.00000 %. Y "No" es lo que escribe ETABS en su propio .$et (medido con un modelo
           // hecho por OAPI sin tocar nada). No se veia en las plantillas porque alli la malla ya
           // va hecha en el fichero y ETABS no crea ni un nudo.
-          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          aaEntries.push(`  AREAASSIGN  "${aName}"  "${storyNames[iTop]}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
           // Un PANEL tambien lleva cargas de area (escaleras del TACNA: 28 AREALOAD que se perdian).
           areaLoadRefs.push({ name: aName, story: storyNames[iTop], idx: ae.idx });
           return;
@@ -1878,7 +1884,7 @@ function exportFromScratch(input: ExportE2kInput): string {
         lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  1  1  0  0  `);
         // Assign at story of top nodes
         const topStory = ps[bot0 === 0 ? 2 : 0].story;
-        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+        aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: topStory, idx: ae.idx });
       } else {
         // FLOOR: pt1 pt2 pt3 pt4 + el salto de planta de cada punto — y con 3
@@ -1918,12 +1924,12 @@ function exportFromScratch(input: ExportE2kInput): string {
         // incluidas las losas macizas, y los demas grupos quedaban escritos y
         // sin usar. Se decide POR ELEMENTO y se asigna SU grupo.
         aaEntries.push(esMembranaDe(ae.idx)
-          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
+          ? `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}"  ANG ${rd(ang ?? 0)} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `
           // DIAPH en el AREA hace que ETABS ate TODA la malla de la losa (medido
           // el 8-sep-2026: no es lo mismo que atar los POINTs de eje). Solo va si
           // Hekatan ata los cuatro nudos del elemento; si solo ata los ejes de
           // columna (como SAP2000), el area no lleva DIAPH.
-          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
+          : `  AREAASSIGN  "${aName}"  "${storyArea}"  SECTION "${secDe(ae)}" ${usarDiafragma && (!nudosDiaf.size || (elements[ae.idx] ?? []).every((n) => nudosDiaf.has(n))) ? ` DIAPH  "D1" ` : ""} OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "TOP"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: storyArea, idx: ae.idx });
       }
     });
@@ -2206,7 +2212,12 @@ function exportFromScratch(input: ExportE2kInput): string {
   lines.push(`$ MASS SOURCE`);
   if (porPatron && cpp!.masaFuente.length) {
     // La del fichero tal cual: solo nombra patrones (que ahora son los mismos) y factores.
-    cpp!.masaFuente.forEach(l => lines.push(`  ${l}`));
+    // Comportamiento SAP2000: su fuente de masa no tiene «solo lateral» ni «agrupar por pisos» (medido en su .$2k:
+    // MASS SOURCE solo Elements/Masses/Loads), así que la masa va en las 3 direcciones y donde cae.
+    const sapMasa = (elementInputs as any).comportamiento === "sap2000";
+    cpp!.masaFuente.forEach(l => lines.push(`  ${sapMasa
+      ? l.replace(/INCLUDEVERTICALMASS\s+"No"/i, `INCLUDEVERTICALMASS "Yes"`).replace(/LUMPATSTORIES\s+"Yes"/i, `LUMPATSTORIES "No"`)
+      : l}`));
   } else {
   lines.push(`  MASSSOURCE  "MsSrc1"   INCLUDEELEMENTS "${masaDeElementos ? "Yes" : "No"}"    INCLUDEADDEDMASS "No"    INCLUDELOADS "${masaDeElementos ? "No" : "Yes"}"    INCLUDEMOVE "No"    INCLUDELATERALMASS "Yes"    INCLUDEVERTICALMASS "Yes"    LUMPATSTORIES "No"    ISDEFAULT "Yes"  `);
   if (!masaDeElementos) lines.push(`  MASSSOURCELOAD  "MsSrc1"  "Dead"  1 `);

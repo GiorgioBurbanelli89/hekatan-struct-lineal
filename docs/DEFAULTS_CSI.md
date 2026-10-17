@@ -100,3 +100,37 @@ O sea: **Hekatan puede no tenerlo mientras cosa la malla** — por construcción
 hace su trabajo. Donde haría falta es en un modelo con mallas que no casen, y ahí
 Hekatan tampoco lo resolvería: los nudos sueltos se verían con
 `cli/chequeo_conexion.py`, que es el camino que ya se usa.
+
+---
+
+## 16-oct-2026 — leído del FICHERO que escribe cada programa (`.$2k`, `.$et`, `.$sf`)
+
+Modelo mínimo por OAPI (columnas, vigas, muro o losa), guardado, y leído el texto que el programa escribe solo.
+Scripts: scratchpad `sintaxis/medir.py sap|etabs`, `medir_safe.py` (SAFE: 68 tablas de definición).
+
+| ajuste (cambia el comportamiento) | ETABS 22.6 | SAP2000 24.1 | SAFE 20.3 |
+|---|---|---|---|
+| brazos rígidos de barra | **automático** (el `$et` no escribe nada) | manual 0 (`Type=User LengthI=0 LengthJ=0`) | **Auto** (`OffsetOpt Auto`, `SelfWtOpt Auto`) |
+| factor de zona rígida | 0 | 0 | 0 |
+| atadura de aristas (edge constraint) | **Sí** en toda área (apagada: `LINECONSTRAINT "No"`) | No (encendida: `AREA EDGE CONSTRAINT ASSIGNMENTS Area=… Constrained=Yes`) | **Sí** (`Auto Edge Constraints Yes`) |
+| barras partidas en nudos intermedios | Sí (`AUTOMESH "YES"`) | Sí (`AtJoints=Yes`) | Sí |
+| barras partidas en CRUCES con otras barras | **Sí** (`MESHATINTERSECTIONS "YES"`) | **No** (`AtFrames=No`) | **Sí** (`AtIntersect Yes`) |
+| malla automática de losas/muros | 1.25 m (`AUTOMESHOPTIONS GENERAL 1250`) | — (se malla a mano) | 1.25 m |
+| fuente de masa: elementos / añadida / cargas | Sí / Sí / No | Sí / Sí / No | Sí / Sí / No |
+| masa LATERAL | **Sí** | Sí (las 3 direcciones, sin opción) | **No** |
+| masa VERTICAL | **No** | Sí | **Sí** |
+| masa agrupada por pisos | **Sí** (`LUMPATSTORIES`) | no existe la opción | **Sí** |
+| diafragma | D1 rígido definido (sin asignar) | no tiene | D1 |
+| J de las vigas | ×1 | ×1 | ×1 en el fichero; **×0.1 al analizar** (medido aparte, `torsion safe`) |
+| unión viga-muro | la de ETABS (`etabsjoint 1`) | la normal | — |
+| cáscara por defecto | ShellThin | Shell-Thin, `DrillDOF=Yes` | ShellThin (losa) |
+| P-Delta | ninguno | ninguno | — |
+
+### Qué hace Hekatan con esto (lista «Comportamiento» y exportadores)
+
+- **Comportamiento ETABS → `.s2k`**: brazos (`FRAME OFFSET ALONG LENGTH`), `AREA EDGE CONSTRAINT ASSIGNMENTS Constrained=Yes`
+  en todas las áreas y `FRAME AUTO MESH AtFrames=Yes`. NO se puede pedir a SAP2000: masa solo lateral agrupada por
+  pisos ni la unión viga-muro de ETABS (≈5 % en el TACNA).
+- **Comportamiento SAP2000 → `.e2k`**: `LENGTHOFFI 0 LENGTHOFFJ 0` en toda línea sin brazos (si no, ETABS pone los
+  suyos), `LINECONSTRAINT "No"` en toda área, `MESHATINTERSECTIONS "NO"`, masa `INCLUDEVERTICALMASS "Yes"
+  LUMPATSTORIES "No"`.

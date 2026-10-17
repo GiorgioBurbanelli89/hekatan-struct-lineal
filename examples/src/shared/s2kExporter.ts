@@ -466,6 +466,25 @@ export function exportS2k(input: S2kExportInput): string {
     }
   }
 
+  // ── COMPORTAMIENTO ETABS exportado a SAP2000 (16-oct-2026) ──
+  // SAP2000 de fábrica NO ata aristas ni parte las barras en los cruces; ETABS sí (medido: el .$2k que escribe
+  // SAP con esos ajustes y el .$et de ETABS, scratchpad sintaxis/). Con «Comportamiento: ETABS» el .s2k los pide
+  // con las tablas del propio SAP, para que SAP2000 resuelva la estructura de ETABS. Los brazos ya van arriba
+  // (FRAME OFFSET ALONG LENGTH: `rigidzone auto` los calcula). Lo que SAP2000 NO puede pedir por fichero: masa
+  // solo lateral agrupada por pisos (su MASS SOURCE no tiene esas opciones) y la unión viga-muro de ETABS.
+  if ((elementInputs as any).comportamiento === "etabs") {
+    if (shellIdx.length) {
+      push(`TABLE:  "AREA EDGE CONSTRAINT ASSIGNMENTS"`);
+      for (const i of shellIdx) push(`   Area=${i + 1}   Constrained=Yes`);
+      blank();
+    }
+    if (frameIdx.length) {
+      push(`TABLE:  "FRAME AUTO MESH ASSIGNMENTS"`);
+      for (const i of frameIdx) push(`   Frame=${i + 1}   AutoMesh=Yes   AtJoints=Yes   AtFrames=Yes   NumSegments=0   MaxLength=0   MaxDegrees=0`);
+      blank();
+    }
+  }
+
   // ── LAYERED SHELL: si se provee, todos los shells usan la misma seccion ──
   const isLayered = !!input.layeredSection && shellIdx.length > 0;
   const layeredSec = input.layeredSection;
