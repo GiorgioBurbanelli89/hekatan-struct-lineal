@@ -80,6 +80,40 @@ ok("Revit: la vista NO se mueve al dibujar", cam0 === cam1, cam0 === cam1 ? "" :
 await ev(() => { const R = window.__hekatanModoRevit; R.columnasEnEjes(true); R.vigasEnEjes(true); R.losasTodas(true); }); await espera(800);
 const tot = await ev(() => { const A = window.__hekatanDrawingAreas.rawVal; return { b: window.__hekatanDrawingPolylines.rawVal.filter((p) => p.length).length - A.length, a: A.length, n: window.__hekatanStates.nodes.rawVal.length }; });
 ok("Revit: «En ejes» / «Todas» en los 4 pisos = 80 columnas + 124 vigas + 48 losas, sin duplicar lo dibujado a mano", tot.b === 204 && tot.a === 48, `${tot.b} barras, ${tot.a} losas, ${tot.n} nudos del modelo`);
+// 5a. EJE dibujado (dos clics, burbuja sola) y su COTA TEMPORAL editable; NIVEL dibujado en el ALZADO
+await ev(() => window.__hekatanModoRevit.activarNivel(3)); await espera(500);
+await ev(() => window.__hekatanModoRevit.usar("eje")); await espera(300);
+await clicEn([30, -2, 3]); await clicEn([30, 17, 3]); await espera(300);
+const eF = await ev(() => { const a = window.__hekatanAxisGrids.find((e) => e.label === "F"); return { F: a ? a.start[0] : null, cotas: window.__hekatanModoRevit.cotas() }; });
+ok("Eje: dos clics crean el eje F (~30, paso 0.25) con su burbuja y una cota editable al eje E", Math.abs(eF.F - 30) <= 0.25 + 1e-9 && eF.cotas.some((c) => c.editable && Math.abs(c.valor - (eF.F - 24)) < 1e-9), JSON.stringify(eF));
+const cotaClic = async (texto) => { const r = await ev(() => { const t = document.querySelector("#hk-revit .rv-cota-t[title]"); if (!t) return null; const q = t.getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; });
+  if (!r) return false; await pag.mouse.click(r[0], r[1]); await espera(150); await pag.keyboard.down("Control"); await pag.keyboard.press("a"); await pag.keyboard.up("Control"); await pag.keyboard.type(texto); await pag.keyboard.press("Enter"); await espera(500); return true; };
+await cotaClic("5");
+const eF2 = await ev(() => window.__hekatanAxisGrids.find((e) => e.label === "F")?.start[0]);
+ok("Eje: pulsar la cota y escribir 5 mueve F a 5 m de E (x = 29)", Math.abs(eF2 - 29) < 1e-9, `F en x = ${eF2}`);
+await ev(() => window.__hekatanModoRevit.usar("modificar")); await espera(200);
+await clicEn([6, 7.5, 3]); await espera(300);
+const cB = await ev(() => window.__hekatanModoRevit.cotas());
+ok("Modificar: un clic sobre el eje B enseña sus dos cotas (6.00 a A y 6.00 a C)", cB.length === 2 && cB.every((c) => Math.abs(c.valor - 6) < 1e-9 && c.editable), JSON.stringify(cB));
+await ev(() => document.querySelector('#hk-revit .rv-niv[data-alzado="S"]').click()); await espera(700);
+await ev(() => window.__hekatanModoRevit.usar("nivel")); await espera(300);
+await clicEn([12, 0, 15]); await espera(400);
+const nv = await ev(() => ({ niv: window.__hekatanModoRevit.estado().niveles.map((l) => l.z), cotas: window.__hekatanModoRevit.cotas() }));
+const zNuevo = nv.niv.find((z) => z > 12);
+ok("Nivel: un clic en el alzado Sur a ~15 m crea el nivel (paso 0.10) con su cota editable al N+12.00", zNuevo !== undefined && Math.abs(zNuevo - 15) <= 0.1 + 1e-9 && nv.cotas.some((c) => c.editable && Math.abs(c.valor - (zNuevo - 12)) < 1e-9), JSON.stringify(nv));
+await cotaClic("3.5");
+const nv2 = await ev(() => window.__hekatanModoRevit.estado().niveles.map((l) => l.z));
+ok("Nivel: pulsar la cota y escribir 3.5 lo deja a 15.50 exactos", nv2.includes(15.5) && !nv2.includes(zNuevo), nv2.join(" "));
+// los cuatro alzados: ejes perpendiculares a la fachada en vertical, con burbuja arriba, y un rótulo por nivel
+const alz = await ev(async () => { const out = {};
+  for (const k of ["S", "N", "O", "E"]) { document.querySelector(`#hk-revit .rv-niv[data-alzado="${k}"]`).click(); await new Promise((r) => setTimeout(r, 500));
+    const g = window.__hekatanViewerCtx().scene.getObjectByName("hk-revit-datos"); out[k] = { lineas: g?.children.length ?? 0, vista: window.__hekatanModoRevit.vista() }; }
+  return out; });
+ok("Alzados Sur/Norte/Este/Oeste: niveles (6) + ejes que cortan la fachada (S/N 6 ejes A–F; E/O 4 ejes 1–4)",
+  alz.S.lineas === 12 && alz.N.lineas === 12 && alz.O.lineas === 10 && alz.E.lineas === 10, JSON.stringify(alz));
+await ev(() => { const L = window.__hekatanLevels; const i = L.findIndex((l) => l.z === 15.5); if (i >= 0) L.splice(i, 1); window.__hekatanRefreshLevels?.();
+  const A = window.__hekatanAxisGrids; const j = A.findIndex((e) => e.label === "F"); if (j >= 0) A.splice(j, 1); window.__hekatanRefreshAxes?.(); window.__hekatanModoRevit.activarNivel(3); });
+await espera(500);
 // 5b. pegado a niveles y ejes: cambiar la cota de un nivel o mover un eje arrastra los nudos
 const peg = await ev(async () => { const R = window.__hekatanModoRevit; R.pegado(true);
   const e1 = R.moverNivel(3, 3.5); await new Promise((r) => setTimeout(r, 300)); const e2 = R.moverEje("B", 7); await new Promise((r) => setTimeout(r, 300));

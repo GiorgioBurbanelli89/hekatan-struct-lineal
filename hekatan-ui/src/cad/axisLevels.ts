@@ -135,6 +135,15 @@ export function nextLevelLabel(existing: Level[], z: number): string {
 // una vista casi de frente, las burbujas 1-2-3-4 caían una encima de otra).
 let marcoEtiquetas = -1;
 const ocupadas: number[][] = [];
+/** Borde de la rejilla en planta (x0, x1, y0, y1). Regla de Jorge (17-oct-2026): los rótulos y las
+ *  burbujas van FUERA de la rejilla, nunca dentro; las líneas de eje y de nivel llegan hasta su borde. */
+function bordeRejilla(): [number, number, number, number] | null {
+  const g = (window as any).__hekatanGridConfig; if (!g) return null;
+  if (g.rect) return [g.rect.x0, g.rect.x1, g.rect.y0, g.rect.y1];
+  const h = (g.gridSize ?? 30) / 2; return [-h, h, -h, h];
+}
+const FUERA = 0.4;   // cuánto sale la línea más allá del borde, para que la etiqueta no lo toque
+
 function anclarHaciaFuera(sprite: THREE.Sprite, desde: THREE.Vector3, punta: THREE.Vector3, ocultarEnPlanta = false) {
   const a = new THREE.Vector3(), b = new THREE.Vector3(), mira = new THREE.Vector3(), tam = new THREE.Vector2();
   sprite.onBeforeRender = (renderer, _s, camera) => {
@@ -191,8 +200,19 @@ export function buildAxisGridMesh(axis: AxisGrid): THREE.Group {
   dir.divideScalar(largo);
   // vuelo proporcional al eje (10 % de su largo, mínimo el de siempre): con 1 m fijo, en un edificio de
   // 24 m la burbuja quedaba pegada a la columna de esquina
-  const vuelo = Math.max(AXIS_VUELO, 0.1 * largo);
-  const a = A.clone().addScaledVector(dir, -vuelo);
+  let vuelo = Math.max(AXIS_VUELO, 0.1 * largo), vueloA = vuelo;
+  // hasta el borde de la rejilla y un poco más: la burbuja queda FUERA
+  const bd = bordeRejilla();
+  if (bd) {
+    const hasta = (P: THREE.Vector3, d: THREE.Vector3) => {
+      let t = Infinity;
+      if (d.x > 1e-9) t = Math.min(t, (bd[1] - P.x) / d.x); else if (d.x < -1e-9) t = Math.min(t, (bd[0] - P.x) / d.x);
+      if (d.y > 1e-9) t = Math.min(t, (bd[3] - P.y) / d.y); else if (d.y < -1e-9) t = Math.min(t, (bd[2] - P.y) / d.y);
+      return isFinite(t) && t > 0 ? t + FUERA : null;
+    };
+    vuelo = hasta(B, dir) ?? vuelo; vueloA = hasta(A, dir.clone().negate()) ?? vueloA;
+  }
+  const a = A.clone().addScaledVector(dir, -vueloA);
   const b = B.clone().addScaledVector(dir, vuelo);
 
   const lineGeo = new THREE.BufferGeometry().setFromPoints([a, b]);
@@ -271,7 +291,8 @@ export function buildLevelMesh(
   // metros del modelo, detras del panel de Settings.
   const [xm0, x1] = Array.isArray(extent) ? extent : [-extent, extent];
   // la línea sale por la izquierda lo mismo que vuelan los ejes (10 % del ancho): ahí va el rótulo
-  const x0 = xm0 - Math.max(1.2, 0.1 * (x1 - xm0));
+  const bd = bordeRejilla();
+  const x0 = bd ? Math.min(bd[0], xm0) - FUERA : xm0 - Math.max(1.2, 0.1 * (x1 - xm0));
   const lineGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(x0, 0, lvl.z),
     new THREE.Vector3(x1, 0, lvl.z),

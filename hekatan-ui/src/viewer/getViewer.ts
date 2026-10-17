@@ -455,7 +455,7 @@ export function getViewer({
     // la nueva, donde estaba la vieja (el plano de trabajo puede estar en la cota 3, no en 0)
     gridObj.position.copy(posAntes); gridObj.quaternion.copy(giroAntes);
     scene.add(gridObj);
-    setTimeout(() => { try { (window as any).__hekatanRefrescarGrillas?.(); } catch {} }, 0);
+    setTimeout(() => { try { const W = window as any; W.__hekatanRefrescarGrillas?.(); W.__hekatanRefreshAxes?.(); W.__hekatanRefreshLevels?.(); } catch {} }, 0);
     applyGridOpacity();  // re-aplica el factor del slider sobre el nuevo gridObj
     // Reemplazar axes (tamaño = gridSize / 2 por convención)
     scene.remove(axesObj);
@@ -495,7 +495,9 @@ export function getViewer({
     // mirando a (0,0,0) desde 8.5 m — el edificio, fuera de cuadro y gigante. Eso era
     // el «bug visual» al mover el volado con el modal animando.
     const hayModelo = ((mesh?.nodes?.rawVal ?? mesh?.nodes?.val ?? []) as unknown[]).length > 0;
-    if (!hayModelo) {
+    // con la rejilla ajustada al DIBUJO (ejes ya puestos, aún sin barras) tampoco: la cámara se iba al origen
+    // cada vez que un eje nuevo agrandaba la rejilla (17-oct-2026, herramienta Eje del Modo Revit)
+    if (!hayModelo && !gridRect.rawVal) {
       if (isPlan) {
         camera.position.set(0, 0, z2fit2);
       } else {

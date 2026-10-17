@@ -12,6 +12,8 @@ mkdirSync(DIR, { recursive: true });
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--enable-webgl"] });
 const pag = await nav.newPage();
+// la tarjeta va APAGADA por defecto desde el 17-oct-2026 (Settings › Al pasar el cursor): aquí se enciende
+await pag.evaluateOnNewDocument(() => { try { localStorage.setItem("hk_hover_prefs_v3", JSON.stringify({ nudos: true, barras: true, areas: true, kBarras: true, kAreas: true, todos: false })); } catch {} });
 await pag.setViewport({ width: 1600, height: 1000 });
 const errores = [];
 pag.on("pageerror", (e) => errores.push(e.message));

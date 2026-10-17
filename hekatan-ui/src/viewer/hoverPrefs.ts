@@ -11,13 +11,15 @@ import van, { State } from "vanjs-core";
 // la ventana (dos matrices de 12×12): al pasar por una placa se abría ENCIMA del cursor, se quedaba con los eventos del
 // ratón y el recuadro de resultados se congelaba en el primer paño («no funciona el hover en la placa», Jorge, 5-oct).
 // Se enciende en Settings › 🖱 Al pasar el cursor › «matriz K de áreas». Lo demás se hereda de v1.
-const CLAVE = "hk_hover_prefs_v2";
+// v3 (17-oct-2026): la de las BARRAS también, apagada por defecto. Jorge: «¿por qué me sale la matriz de rigidez
+// cuando no la necesito? Solo cuando la active debe salir». Las dos se encienden en esa misma carpeta.
+const CLAVE = "hk_hover_prefs_v3";
 const leer = (k: string): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(k) ?? "{}"); } catch { return {}; } };
-const v2 = leer(CLAVE), v1 = leer("hk_hover_prefs_v1");
-const ini: Record<string, boolean> = Object.keys(v2).length ? v2 : { ...v1, kAreas: false };
+const v3 = leer(CLAVE), v2 = leer("hk_hover_prefs_v2"), v1 = leer("hk_hover_prefs_v1");
+const ini: Record<string, boolean> = Object.keys(v3).length ? v3 : { ...v1, ...v2, kBarras: false, kAreas: false };
 const st = (k: string, d = true) => van.state<boolean>(ini[k] ?? d);
 export const hoverPrefs: Record<"nudos" | "barras" | "areas" | "kBarras" | "kAreas" | "todos", State<boolean>> = {
-  nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras"), kAreas: st("kAreas", false),
+  nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras", false), kAreas: st("kAreas", false),
   // false = el recuadro de una cáscara enseña SOLO el resultado elegido en «Resultados de cáscara»
   todos: van.state<boolean>(ini["todos"] ?? false),
 };
