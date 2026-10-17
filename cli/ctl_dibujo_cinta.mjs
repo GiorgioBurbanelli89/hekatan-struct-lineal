@@ -124,6 +124,7 @@ ok("pegado: N+3.00 → 3.50 sube los nudos de esa planta y renombra el nivel", !
 ok("pegado: el eje B de 6 → 7 m arrastra sus nudos (mismo número de nudos)", !peg.e2 && peg.xs === "0,7,12,18,24" && peg.n === 100, `x ${peg.xs} · ${peg.n} nudos`);
 ok("pegado: un nivel no puede saltar por encima del de arriba", !!peg.e3, peg.e3 ?? "");
 // 6. la rejilla encierra el dibujo, y es UNA (las copias de cada nivel, la misma)
+await espera(1500);   // la rejilla gira con animación al volver del alzado a la planta: se mide quieta
 const rej = await ev(() => { const s = window.__hekatanViewerCtx().scene; const out = [];
   s.traverse((o) => { if (!/^hekatan-grid/.test(o.name)) return; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     // en coordenadas del MUNDO (la rejilla de planta estuvo volteada rotX(π) y la geometría sola no lo ve)
