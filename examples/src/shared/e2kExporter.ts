@@ -585,7 +585,12 @@ function exportFromScratch(input: ExportE2kInput): string {
   // arriba los puntos a media altura del TACNA (caida 2.2 m, 2 columnas y vigas de descanso)
   // salian como plantas: 8 → 15 y 542 joints en vez de 371. Lo que no cae en planta cuelga
   // de la de encima con su descenso, como en el fichero original.
-  const plantasIn = (elementInputs as any).plantasE2k as { name: string; elev: number }[] | undefined;
+  let plantasIn = (elementInputs as any).plantasE2k as { name: string; elev: number }[] | undefined;
+  // Desde un .heks (Importar E2K → .heks → Exportar E2K): sus pisos vienen en la directiva `pisos` (los STORY
+  // del e2k leído). Sin esto los descansos de escalera del TACNA salían como plantas (16-oct-2026).
+  const pisosZ = (elementInputs as any).pisosZ as number[] | undefined;
+  if ((!plantasIn || plantasIn.length < 2) && pisosZ && pisosZ.length >= 2)
+    plantasIn = pisosZ.map((z, i) => ({ name: i === 0 ? "Base" : `Level_${i}`, elev: z }));
   if (plantasIn && plantasIn.length >= 2) {
     const pl = [...plantasIn].sort((a, b) => a.elev - b.elev);
     sortedZ = pl.map(p => rd(p.elev));
@@ -1881,9 +1886,13 @@ function exportFromScratch(input: ExportE2kInput): string {
         // Use bottom-left and bottom-right points (Z-up: n[2] = elevation)
         const bot0 = nodes[el[0]][2] <= nodes[el[2]][2] ? 0 : 2;
         const bot1 = nodes[el[1]][2] <= nodes[el[3]][2] ? 1 : 3;
-        lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  1  1  0  0  `);
         // Assign at story of top nodes
         const topStory = ps[bot0 === 0 ? 2 : 0].story;
+        // Salto de planta = cuántas plantas hay entre el pie y la cabeza del muro, NO 1 fijo (16-oct-2026).
+        // Con un piso en cada descanso de escalera (TACNA: 2.03, 6.26…), un muro de 4.23 a 8.46 salía de 6.26 a
+        // 8.46: ETABS (y Struct al releer) perdía la mitad baja del muro y el edificio daba 9 veces más flexible.
+        const sJ = Math.max(1, idxPl(topStory) - idxPl(ps[bot0].story));
+        lines.push(`  AREA "${aName}"  ${aType}  4  "${ps[bot0].pt}"  "${ps[bot1].pt}"  "${ps[bot1].pt}"  "${ps[bot0].pt}"  ${sJ}  ${sJ}  0  0  `);
         aaEntries.push(`  AREAASSIGN  "${aName}"  "${topStory}"  SECTION "${secDe(ae)}"  OBJMESHTYPE "DEFAULT"  ADDRESTRAINT "${addR(ae.idx)}"${sinAtarE2k}  CARDINALPOINT "MIDDLE"  TRANSFORMSTIFFNESSFOROFFSETS "No"  `);
         areaLoadRefs.push({ name: aName, story: topStory, idx: ae.idx });
       } else {
