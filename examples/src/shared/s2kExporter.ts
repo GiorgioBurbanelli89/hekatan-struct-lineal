@@ -495,6 +495,23 @@ export function exportS2k(input: S2kExportInput): string {
     }
   }
 
+  // ── MODAL y MASA AÑADIDA (16-oct-2026) ──
+  // Sin esto SAP2000 abría el .s2k sin caso modal y sin la masa de las cargas (CM + 0.5·CV… del .heks: `mass`):
+  // periodos imposibles de comparar. Sintaxis leída del .$2k que escribe SAP2000 (PointObj.SetMass, ModalEigen).
+  push(`TABLE:  "CASE - MODAL 1 - GENERAL"`);
+  push(`   Case=MODAL   ModeType=Eigen   MaxNumModes=${(input as any).modalModes ?? 12}   MinNumModes=1   EigenShift=0   EigenCutoff=0   EigenTol=1E-09   AutoShift=Yes`);
+  blank();
+  {
+    const ms = (nodeInputs as any).masses as Map<number, number | number[]> | undefined;
+    const filas: string[] = [];
+    for (const [n, v] of ms ?? new Map()) {
+      const m = Array.isArray(v) ? v[0] : v;
+      if (!(Math.abs(m) > 1e-12)) continue;
+      filas.push(`   Joint=${n + 1}   CoordSys=Global   Mass1=${fmt(m)}   Mass2=${fmt(m)}   Mass3=${fmt(m)}   MMI1=0   MMI2=0   MMI3=0`);
+    }
+    if (filas.length) { push(`TABLE:  "JOINT ADDED MASS ASSIGNMENTS"`); filas.forEach((f) => push(f)); blank(); }
+  }
+
   // ── COMPORTAMIENTO ETABS exportado a SAP2000 (16-oct-2026) ──
   // SAP2000 de fábrica NO ata aristas ni parte las barras en los cruces; ETABS sí (medido: el .$2k que escribe
   // SAP con esos ajustes y el .$et de ETABS, scratchpad sintaxis/). Con «Comportamiento: ETABS» el .s2k los pide
@@ -718,6 +735,7 @@ export function exportS2k(input: S2kExportInput): string {
     blank();
     push(`TABLE:  "LOAD CASE DEFINITIONS"`);
     for (const p of pats) push(`   Case=${p}   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=${tipoDe(p)}   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes`);
+    push(`   Case=MODAL   Type=LinModal   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Other   DesActOpt="Prog Det"   DesignAct=Other   AutoType=None   RunCase=Yes`);   // modal (sintaxis del .$2k de SAP2000, 16-oct-2026)
     blank();
     push(`TABLE:  "CASE - STATIC 1 - LOAD ASSIGNMENTS"`);
     for (const p of pats) push(`   Case=${p}   LoadType="Load pattern"   LoadName=${p}   LoadSF=1`);
@@ -756,6 +774,7 @@ export function exportS2k(input: S2kExportInput): string {
     // ── LOAD CASE DEFINITIONS ──
     push(`TABLE:  "LOAD CASE DEFINITIONS"`);
     push(`   Case=DEAD   Type=LinStatic   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Dead   DesActOpt="Prog Det"   DesignAct=Non-Composite   AutoType=None   RunCase=Yes`);
+    push(`   Case=MODAL   Type=LinModal   InitialCond=Zero   DesTypeOpt="Prog Det"   DesignType=Other   DesActOpt="Prog Det"   DesignAct=Other   AutoType=None   RunCase=Yes`);
     blank();
   
     // ── CASE - STATIC 1 - LOAD ASSIGNMENTS ──
