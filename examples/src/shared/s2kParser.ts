@@ -427,6 +427,13 @@ function parseTableFormat(rawLines: string[]): S2kModel {
 
       // Atadura de aristas por área (SAP2000 la trae APAGADA; solo se listan las encendidas). Al pasar a ETABS
       // (que la trae encendida en todas) el .e2k apaga las demás y deja estas (16-oct-2026).
+      case "FRAME RELEASE ASSIGNMENTS 1 - GENERAL": {
+        const fr = kv.get("Frame");
+        const v = ["PI", "V2I", "V3I", "TI", "M2I", "M3I", "PJ", "V2J", "V3J", "TJ", "M2J", "M3J"].map((k) => /^yes$/i.test(kv.get(k) ?? ""));
+        if (fr && v.some(Boolean)) ((cargasTabla as any).releases ??= new Map<string, boolean[]>()).set(fr, v);
+        break;
+      }
+
       case "AREA EDGE CONSTRAINT ASSIGNMENTS": {
         const ar = kv.get("Area");
         if (ar && /^yes$/i.test(kv.get("Constrained") ?? "")) ((cargasTabla as any).areasAtadas ??= new Set<string>()).add(ar);
@@ -910,6 +917,8 @@ function buildModel(
     const frameIdx = new Map<string, number>(), areaIdx = new Map<string, number>();
     elementNames.forEach((n, i) => (i < nFrames ? frameIdx : i < nFrames + nShells ? areaIdx : new Map()).set(n, i));
     const esFrame = (i: number | undefined) => i !== undefined && i < nFrames;
+    const relTab: Map<string, boolean[]> | undefined = (cargasTabla as any).releases;
+    if (relTab?.size) for (const [fr, v] of relTab) { const i = frameIdx.get(fr); if (i !== undefined) ((ei as any).momentReleases ??= new Map()).set(i, v); }
     const atadas: Set<string> | undefined = (cargasTabla as any).areasAtadas;
     if (atadas?.size) (ei as any).areasAtadasCsi = new Set([...atadas].map((a) => areaIdx.get(a)).filter((i) => i !== undefined));
 

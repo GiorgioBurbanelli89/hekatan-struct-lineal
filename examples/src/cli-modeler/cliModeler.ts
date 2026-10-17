@@ -134,6 +134,9 @@ interface ParsedModel {
   /** `origen etabs|sap2000|safe`: de qué programa vino el modelo (lo escribe el importador). Si el usuario no elige
    *  `comportamiento`, manda el origen: el modelo se resuelve y se EXPORTA tal cual lo tenía su programa. */
   origen?: "etabs" | "sap2000" | "safe";
+  /** `unionmuro barras`: la unión viga-muro de ETABS como barras «fantasma» (ver aplicarUnionMuroBarras). */
+  unionMuroBarras?: boolean;
+  unionMuroN?: number;
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -741,6 +744,11 @@ export function parseCliCommands(text: string): ParsedModel {
           else if (v === "sap" || v === "sap2000") m.comportamiento = "sap2000";
           else if (v === "safe") m.comportamiento = "safe";
           else m.errors.push("comportamiento: uso comportamiento etabs | sap2000 | safe");
+          break;
+        }
+        case "unionmuro": {
+          const v = (tokens[1] ?? "barras").toLowerCase();
+          m.unionMuroBarras = v === "barras" || v === "1" || v === "si";
           break;
         }
         case "origen": {
@@ -1512,6 +1520,61 @@ function aplicarComportamiento(m: ParsedModel) {
   }
 }
 
+/**
+ * `unionmuro barras` (16-oct-2026): la UNIÓN VIGA-MURO de ETABS escrita con elementos que SAP2000 sí tiene.
+ *
+ * ETABS (etabsWallJoint.h, medido el 2-sep-2026) suma en cada nudo n de un muro al que llega una barra, por cada
+ * elemento de muro que lo contiene, c·v·vᵀ con v = (u_h − u_n)·e2 − L·θ_n·e3 y c = E·t·(H/L)³/32 (h = vecino por la
+ * arista horizontal, L su largo, H la altura del elemento, e3 = normal del muro). Una barra n→h EMPOTRADA en n y
+ * ARTICULADA en h (M3 liberado) tiene exactamente la rigidez (3·EI/L³)·v·vᵀ en el plano del muro, con el mismo v.
+ * Con EI = c·L³/3 es la MISMA matriz: la barra «fantasma» (sin área, sin inercia fuera del plano, sin torsión, sin
+ * peso ni masa) idealiza la unión monolítica en SAP2000 igual que ETABS. Apaga `etabsjoint` (no se cuenta dos veces).
+ */
+function aplicarUnionMuroBarras(m: ParsedModel) {
+  if (!m.unionMuroBarras) return;
+  const conBarra = new Set<number>();
+  for (const f of m.frames) { conBarra.add(f.nI); conBarra.add(f.nJ); }
+  const sub = (a: number[], b: number[]) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const cruz = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const nrm = (a: number[]) => Math.hypot(a[0], a[1], a[2]);
+  const acum = new Map<string, { n: number; h: number; EI: number; E: number }>();
+  for (const s of m.shells) {
+    if (s.pts.length !== 4 || !(s.E > 0) || !(s.t > 0)) continue;
+    if (!s.pts.some((p) => conBarra.has(p))) continue;
+    const P = s.pts.map((p) => m.nodes.get(p)) as number[][];
+    if (P.some((q) => !q)) continue;
+    const nv = cruz(sub(P[2], P[0]), sub(P[3], P[1])), nn = nrm(nv);
+    if (nn < 1e-12 || Math.abs(nv[2] / nn) > 1e-6) continue;          // solo muros (verticales), como ETABS
+    for (let a = 0; a < 4; a++) {
+      const nd = s.pts[a];
+      if (!conBarra.has(nd)) continue;
+      const iPrev = (a + 3) % 4, iNext = (a + 1) % 4;
+      const dp = sub(P[iPrev], P[a]), dn = sub(P[iNext], P[a]);
+      const hp = Math.abs(dp[2]) / Math.max(nrm(dp), 1e-12), hn = Math.abs(dn[2]) / Math.max(nrm(dn), 1e-12);
+      const ih = hp <= hn ? iPrev : iNext, iv = hp <= hn ? iNext : iPrev;
+      const L = nrm(sub(P[ih], P[a])), H = nrm(sub(P[iv], P[a]));
+      if (L < 1e-12 || H < 1e-12) continue;
+      const c = s.E * s.t * (H / L) ** 3 / 32;
+      const h = s.pts[ih], k = `${nd}|${h}`;
+      const e = acum.get(k) ?? { n: nd, h, EI: 0, E: s.E };
+      e.EI += c * L ** 3 / 3;
+      acum.set(k, e);
+    }
+  }
+  let id = Math.max(0, ...m.frames.map((f) => f.id)) + 1;
+  for (const { n, h, EI, E } of acum.values()) {
+    const fid = id++;
+    // token 6 = I22 (fuera del plano), token 7 = I33 (en el plano del muro: eje 2 vertical, eje 3 = normal del muro)
+    m.frames.push({ id: fid, nI: n, nJ: h, E, A: 1e-9, I: 1e-12, Iy: EI / E, J: 1e-12, nu: 0.2, rho: 0, sec: "UNION_MURO" });
+    m.frameShearAreas.set(fid, [1e3, 1e3]);                         // sin deformación por cortante (Euler-Bernoulli)
+    const rel = new Array<boolean>(12).fill(false); rel[11] = true;  // M3 liberado en el extremo h
+    m.frameReleases.set(fid, rel);
+    m.frameEndOffsets.set(fid, [0, 0, 0]);                           // sin brazos automáticos en la barra fantasma
+  }
+  m.etabsWallJoint = false;
+  m.unionMuroN = acum.size;
+}
+
 export const cliModeler: ExampleDef = {
   id: "cli-modeler",
   name: "CLI Modeler (comandos)",
@@ -1561,6 +1624,7 @@ export const cliModeler: ExampleDef = {
     (window as any).__hekatanCliLastScript = script;
     const m = parseCliCommands(script);
     aplicarComportamiento(m);
+    aplicarUnionMuroBarras(m);
     if (m.autoMesh > 0 || m.areasPoligonales.length) aplicarAutomesh(m, m.autoMesh > 0 ? m.autoMesh : 1e9);
     if (m.deckEtabs) aplicarDeckEtabs(m);
 

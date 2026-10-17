@@ -13,6 +13,7 @@
 import type { Node, Element, NodeInputs, ElementInputs } from "hekatan-fem";
 import { muellesParaExportar } from "./muellesParaExportar";
 import { gdlDisponibles } from "./gdlDisponibles";
+import { conBarrasUnionMuro } from "./unionMuroBarras";
 
 /** Capa de un Shell-Layered. */
 export interface S2kLayer {
@@ -66,7 +67,14 @@ export interface S2kExportInput {
 }
 
 export function exportS2k(input: S2kExportInput): string {
-  const { nodes, elements, nodeInputs, elementInputs } = input;
+  const { nodes, nodeInputs } = input;
+  let { elements, elementInputs } = input;
+  // Modelo con las reglas de ETABS (origen o elegido): la UNIÓN VIGA-MURO de ETABS, que SAP2000 no tiene, va como
+  // barras «fantasma» articuladas (unionMuroBarras.ts). Sin ellas SAP2000 salía 4.5 % más flexible en el TACNA.
+  if ((elementInputs as any).comportamiento === "etabs" && (elementInputs as any).etabsWallJoint !== false) {
+    const r = conBarrasUnionMuro(nodes as unknown as number[][], elements as unknown as number[][], elementInputs);
+    if (r.n) { elements = r.elements as unknown as Element[]; elementInputs = r.ei; }
+  }
   // ⚠️ `units.force` SOLO pone la etiqueta `CurrUnits` del bloque PROGRAM
   // CONTROL — no convierte NADA. Ni las cargas, ni el módulo, ni las densidades:
   // todos los valores se escriben tal cual salen del modelo, que trabaja en
@@ -421,6 +429,27 @@ export function exportS2k(input: S2kExportInput): string {
         const d = (elementInputs as any).insertionOffsets.get(i)[0] as number;
         push(`   Frame=${i + 1}   CardinalPt="${d < 0 ? "8 (top center)" : "2 (bottom center)"}"   Mirror2=No   Mirror3=No   Transform=Yes`);
       }
+      blank();
+    }
+  }
+
+  // ── END RELEASES (16-oct-2026) ──
+  // No se escribían: toda barra articulada llegaba a SAP2000 EMPOTRADA. Formato leído del .$2k que escribe SAP2000
+  // con FrameObj.SetReleases (scratchpad sintaxis/medir_rel.py): mismo orden que Hekatan (U1 U2 U3 R1 R2 R3 por extremo).
+  {
+    const rels = (elementInputs as any).momentReleases as Map<number, boolean[]> | undefined;
+    const filas: string[] = [];
+    for (const i of frameIdx) {
+      const r = rels?.get(i);
+      if (!r || !r.some(Boolean)) continue;
+      const v = r.length >= 12 ? r : [false, false, false, r[0], r[1], r[2], false, false, false, r[3], r[4], r[5]];
+      const yn = (b: boolean) => (b ? "Yes" : "No");
+      const n = ["PI", "V2I", "V3I", "TI", "M2I", "M3I", "PJ", "V2J", "V3J", "TJ", "M2J", "M3J"];
+      filas.push(`   Frame=${i + 1}   ` + n.map((k, j) => `${k}=${yn(!!v[j])}`).join("   "));
+    }
+    if (filas.length) {
+      push(`TABLE:  "FRAME RELEASE ASSIGNMENTS 1 - GENERAL"`);
+      filas.forEach((f) => push(f));
       blank();
     }
   }
