@@ -310,6 +310,29 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     if (!items.every(([p]) => conocidos.has(p))) continue;
     L.push(`combo ${nom.replace(/\s+/g, "_")} ${items.map(([p, f]) => `${p.replace(/\s+/g, "_")} ${N(f)}`).join(" ")}`);
   }
+  // ── Lo que Struct no calcula entero pero ETABS sí: pasa TAL CUAL al exportar (16-oct-2026) ──
+  // Casos de espectro con todas sus componentes (U1 + U2 + U3, DIRCOMBO ABS…), sus funciones y TODAS las
+  // combinaciones (también las de espectro y las envolventes). Los nombres que el .heks escribe con «_» en vez de
+  // espacios se cambian igual dentro de esas líneas, para que el .e2k exportado nombre los mismos casos.
+  {
+    const raws = (sec: string) => (m.rawSections?.get(sec) ?? []).map((l) => l.trim()).filter(Boolean);
+    const nombres = new Set<string>();
+    for (const [sec, kw] of [["LOAD PATTERNS", "LOADPATTERN"], ["LOAD CASES", "LOADCASE"], ["LOAD COMBINATIONS", "COMBO"], ["FUNCTIONS", "FUNCTION"]] as const)
+      for (const l of raws(sec)) { const mm = l.match(new RegExp(`^${kw}\\s+"([^"]+)"`)); if (mm) nombres.add(mm[1]); }
+    const ren = (l: string) => l.replace(/"([^"]+)"/g, (s, n) => (nombres.has(n) ? `"${n.replace(/\s+/g, "_")}"` : s));
+    const casosRS = new Set(raws("LOAD CASES").map((l) => l.match(/^LOADCASE\s+"([^"]+)"\s+TYPE\s+"Response Spectrum"/)?.[1]).filter(Boolean) as string[]);
+    const funcs = new Set<string>();
+    for (const l of raws("LOAD CASES")) { const mm = l.match(/^LOADCASE\s+"([^"]+)"\s+ACCEL\s+"U[123]"\s+FUNC\s+"([^"]+)"/); if (mm && casosRS.has(mm[1])) funcs.add(mm[2]); }
+    const lf = raws("FUNCTIONS").filter((l) => funcs.has(l.match(/^FUNCTION\s+"([^"]+)"/)?.[1] ?? ""));
+    const lc = raws("LOAD CASES").filter((l) => casosRS.has(l.match(/^LOADCASE\s+"([^"]+)"/)?.[1] ?? ""));
+    const lk = raws("LOAD COMBINATIONS").filter((l) => /^COMBO\s+"/.test(l));
+    if (lf.length || lc.length || lk.length) {
+      L.push(`# del e2k, para exportar tal cual: ${casosRS.size} casos de espectro, ${funcs.size} funciones, ${new Set(lk.map((l) => l.match(/^COMBO\s+"([^"]+)"/)?.[1])).size} combinaciones`);
+      lf.forEach((l) => L.push(`e2kfunc ${ren(l)}`));
+      lc.forEach((l) => L.push(`e2kcaso ${ren(l)}`));
+      lk.forEach((l) => L.push(`e2kcombo ${ren(l)}`));
+    }
+  }
   // abre mostrando el asiento del caso Dead (el patrón de peso propio)
   const muerto = (an?.patrones ?? []).find((p) => p.pesoPropio > 0)?.nombre ?? "Dead";
   L.push(`vista displacementZ ${muerto.replace(/\s+/g, "_")}`);

@@ -2253,6 +2253,10 @@ function exportFromScratch(input: ExportE2kInput): string {
   // ── LOAD CASES (Linear Static) ─────────────────────────────────────
   // Sin esto ETABS NO corre análisis. Define Dead y Live como casos
   // estáticos lineales independientes.
+  {
+    const pf = (elementInputs as any).e2kPaso?.funcs as string[] | undefined;
+    if (pf?.length) { lines.push(`$ FUNCTIONS`); pf.forEach((l) => lines.push(`  ${l}`)); lines.push(``); }
+  }
   lines.push(`$ LOAD CASES`);
   const casos = input.loadCases?.length
     ? input.loadCases
@@ -2280,6 +2284,14 @@ function exportFromScratch(input: ExportE2kInput): string {
   const nModosModal = input.modalModes ?? 12;
   lines.push(`  LOADCASE "Modal"  TYPE  "Modal - Eigen"  INITCOND  "PRESET"  `);
   lines.push(`  LOADCASE "Modal"  MAXMODES ${nModosModal}  MINMODES 1  EIGENSHIFTFREQ 0  EIGENCUTOFFFREQ 0  EIGENTOL 1E-09  ALLOWAUTOFREQSHIFT "Yes"  `);
+  // ── Casos de ESPECTRO del e2k leído, tal cual (16-oct-2026) ──
+  // Struct no los resuelve con todas sus componentes (U1 9.81 + U2 2.94 + U3…, DIRCOMBO ABS), pero ETABS sí: van
+  // como vinieron. La aceleración (SF, m/s² en el fichero leído) pasa a las unidades de este fichero.
+  const pasoE2k = (elementInputs as any).e2kPaso as { casos: string[]; combos: string[]; funcs: string[] } | undefined;
+  if (pasoE2k?.casos.length) {
+    for (const l of pasoE2k.casos)
+      lines.push(`  ${l.replace(/(ACCEL\s+"U[123]"\s+FUNC\s+"[^"]+"\s+SF\s+)([-\d.eE+]+)/, (_s, a, v) => a + rd(cL(parseFloat(v))))}`);
+  }
   lines.push(``);
 
   // ── LOAD COMBINATIONS ──────────────────────────────────────────────
@@ -2297,6 +2309,11 @@ function exportFromScratch(input: ExportE2kInput): string {
         lines.push(`  COMBO "${cm.name}"  LOADCASE  "${c.case}"  SF ${c.scaleFactor} `);
       }
     }
+    lines.push(``);
+  } else if ((elementInputs as any).e2kPaso?.combos?.length) {
+    // las 30 combinaciones del e2k leído (Linear Add, Envelope, con casos de espectro): tal cual
+    lines.push(`$ LOAD COMBINATIONS`);
+    ((elementInputs as any).e2kPaso.combos as string[]).forEach((l) => lines.push(`  ${l}`));
     lines.push(``);
   }
 

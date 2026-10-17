@@ -137,6 +137,8 @@ interface ParsedModel {
   /** `unionmuro barras`: la unión viga-muro de ETABS como barras «fantasma» (ver aplicarUnionMuroBarras). */
   unionMuroBarras?: boolean;
   unionMuroN?: number;
+  /** Líneas del e2k leído que Struct no calcula pero se EXPORTAN tal cual: casos de espectro, funciones, combinaciones. */
+  e2kPaso?: { casos: string[]; combos: string[]; funcs: string[] };
   selfWeight: number;                    // multiplicador de peso propio (`selfweight`)
   etabsWallJoint: boolean;               // `etabsjoint 1`: la union viga-muro de ETABS
   /** `meshcross 0/1`: partir con un nudo las barras que se CRUZAN sin compartirlo (las X de
@@ -488,7 +490,18 @@ export function parseCliCommands(text: string): ParsedModel {
           // contra el original. El tokenizador no descarta el comentario
           // inline (solo salta las lineas que EMPIEZAN por #), asi que esta ahi.
           const iCom = tokens.indexOf("#");
-          const sec = iCom >= 0 && tokens[iCom + 1] ? tokens[iCom + 1] : undefined;
+          // El nombre ENTERO del comentario (16-oct-2026). Se tomaba solo la primera palabra: en el TACNA
+          // «C ELE 1.0X1.0 M», «C ELE 1.00X1.40M», «C TEE…» salían TODAS como «C» y el .e2k les daba la misma
+          // sección (23 columnas de 1.0×1.0 llegaban a ETABS como 1.0×1.4: UY del techo +7 %).
+          let sec = iCom >= 0 && tokens[iCom + 1] ? tokens.slice(iCom + 1).join(" ").trim() : undefined;
+          // y dos secciones DISTINTAS con el mismo nombre nunca se funden: la segunda lleva sufijo
+          if (sec) {
+            const firma = [E, A, I, Iy, J, nu, rho].map((v) => (v === undefined ? "-" : Number(v).toPrecision(6))).join("|");
+            const vistos = (m as any).__firmasSec ??= new Map<string, string>();
+            let nom = sec, k = 2;
+            while (vistos.has(nom) && vistos.get(nom) !== firma) nom = `${sec} (${k++})`;
+            vistos.set(nom, firma); sec = nom;
+          }
           m.frames.push({ id, nI, nJ, E, A, I, Iy, J, nu, rho, D, B, sec });
           break;
         }
@@ -744,6 +757,14 @@ export function parseCliCommands(text: string): ParsedModel {
           else if (v === "sap" || v === "sap2000") m.comportamiento = "sap2000";
           else if (v === "safe") m.comportamiento = "safe";
           else m.errors.push("comportamiento: uso comportamiento etabs | sap2000 | safe");
+          break;
+        }
+        case "e2kcaso":
+        case "e2kcombo":
+        case "e2kfunc": {
+          const p = (m.e2kPaso ??= { casos: [], combos: [], funcs: [] });
+          const resto = raw.slice(tokens[0].length).trim();
+          (cmd === "e2kcaso" ? p.casos : cmd === "e2kcombo" ? p.combos : p.funcs).push(resto);
           break;
         }
         case "unionmuro": {
@@ -2369,7 +2390,8 @@ export const cliModeler: ExampleDef = {
       // muelle de AREA por cascara (indice de elemento): ks, nodal, solo compresion
       areaSpringsExport: new Map(m.areaSprings.map(a => [shellIdxOf.get(a.id), { ks: a.ks, nodal: a.nodal, comp: !!a.comp }]).filter(([e]) => e !== undefined) as any),
       meshAtIntersections: m.meshCross,
-      comportamiento: m.comportamiento,   // los exportadores escriben las reglas del programa elegido
+      comportamiento: m.comportamiento,
+      e2kPaso: m.e2kPaso,   // casos de espectro, funciones y combinaciones del e2k leído: al .e2k tal cual   // los exportadores escriben las reglas del programa elegido
       solidIncompatible: m.solidIncompatible,
       // El `selfweight` del .heks, para que el exportador e2k en modo "auto"
       // escriba SELFWEIGHT con el multiplicador del MODELO (0 si no lo lleva)
