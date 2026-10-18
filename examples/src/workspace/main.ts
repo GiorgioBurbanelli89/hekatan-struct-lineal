@@ -780,6 +780,14 @@ function loadExample(ex: ExampleDef) {
   _navegandoAtras = false;
   try { (window as any).__hekatanActualizarBotonVolver?.(exampleHistory.length > 0); } catch {}
   currentExample = ex;
+  // PALETA del programa que manda en cada tipo de modelo (Jorge, 17-oct-2026: «no es SAFE, es ETABS»):
+  // SAFE solo en cimentaciones; edificios, losas, muros y lo demás, ETABS. Las dos usan la misma tabla de
+  // 15 bandas de CSI, pero el nombre dice con qué programa se compara. Una paleta elegida a mano
+  // (jet, viridis…) no se toca.
+  try {
+    const pal = (window as any).__hekatanColorPalette;
+    if (pal && ["safe", "etabs", "sap2000", "csi"].includes(pal.val)) pal.val = /Cimentaci/i.test(ex.category ?? "") ? "safe" : "etabs";
+  } catch {}
   // aviso de cambio de ejemplo: lo que un ejemplo deja montado fuera del visor (p. ej. el panel de verificación de la
   // placa base de Pro) se quita al salir de él
   try { (window as any).__hekatanExampleId = ex.id; window.dispatchEvent(new CustomEvent("hk:example", { detail: { id: ex.id } })); } catch {}
@@ -1936,7 +1944,7 @@ function abrirConResultados() {
   try { mountCaseResultsInSettings(); } catch { /* no-op */ }
   const s = (viewerElm as any).__settings;
   if (s?.shellResults) s.shellResults.val = campo;
-  // paleta: la del visor ya es SAFE por defecto (colorMapPalette = "safe" en hekatan-ui/getColorMap.ts)
+  // paleta: la pone loadExample (SAFE en cimentaciones, ETABS en lo demás)
 }
 
 /**
@@ -4031,16 +4039,28 @@ function encajarOrtoEnHueco(ortho: any, controls: any, centro: THREE.Vector3, an
     // tres líneas por lado (25 · 50 · 75 %): los botones flotantes de las esquinas no están en la del centro
     // primero arriba/abajo (columnas), luego izquierda/derecha con filas DENTRO de ese hueco (una fila a la
     // altura de la cinta veía sus botones de lado a lado y el modelo salía diminuto)
+    // Si algo tapa CASI MEDIA pantalla en esa dirección es un panel LATERAL que la cruza entera (Acceso
+    // rápido), no una barra: no cuenta para arriba/abajo (dejaba el hueco en nada y el modelo diminuto).
+    const tope = (v: number, dim: number) => (v < dim * 0.42 ? v : 0);
     for (const f of [0.25, 0.5, 0.75]) {
-      const xf = r.left + r.width * f;
-      for (let y = r.top + 2; y < cy; y += 4) if (!libre(xf, y)) arriba = Math.max(arriba, y - r.top + 8);
-      for (let y = r.bottom - 2; y > cy; y -= 4) if (!libre(xf, y)) abajo = Math.max(abajo, r.bottom - y + 8);
+      const xf = r.left + r.width * f; let a = 0, b = 0;
+      for (let y = r.top + 2; y < cy; y += 4) if (!libre(xf, y)) a = y - r.top + 8;
+      for (let y = r.bottom - 2; y > cy; y -= 4) if (!libre(xf, y)) b = r.bottom - y + 8;
+      arriba = Math.max(arriba, tope(a, r.height)); abajo = Math.max(abajo, tope(b, r.height));
     }
     const y0 = r.top + arriba, y1 = r.bottom - abajo;
     for (const f of [0.1, 0.5, 0.9]) {
-      const yf = y0 + (y1 - y0) * f;
-      for (let x = r.left + 2; x < cx; x += 4) if (!libre(x, yf)) izq = Math.max(izq, x - r.left + 8);
-      for (let x = r.right - 2; x > cx; x -= 4) if (!libre(x, yf)) der = Math.max(der, r.right - x + 8);
+      const yf = y0 + (y1 - y0) * f; let i = 0, d = 0;
+      for (let x = r.left + 2; x < cx; x += 4) if (!libre(x, yf)) i = x - r.left + 8;
+      for (let x = r.right - 2; x > cx; x -= 4) if (!libre(x, yf)) d = r.right - x + 8;
+      izq = Math.max(izq, tope(i, r.width)); der = Math.max(der, tope(d, r.width));
+    }
+    // la barra de colores lleva pointer-events:none (elementFromPoint no la ve): se mide su rectángulo
+    const ley = document.getElementById("legend");
+    if (ley && ley.offsetParent !== null) {
+      const q = ley.getBoundingClientRect();
+      if (q.width > 0 && q.left > cx) der = Math.max(der, tope(r.right - q.left + 12, r.width));
+      else if (q.width > 0 && q.right < cx) izq = Math.max(izq, tope(q.right - r.left + 12, r.width));
     }
   }
   const aw = Math.max(120, w - izq - der), ah = Math.max(120, h - arriba - abajo);

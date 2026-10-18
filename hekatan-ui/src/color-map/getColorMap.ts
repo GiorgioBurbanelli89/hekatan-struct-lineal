@@ -292,6 +292,16 @@ export function getColorMap(
   van.derive(() => {
     const esq = colorMapEsquinas.val;
     if (esq && familia?.val !== "solido") { pintarPorEsquinas(esq); return; }
+    // PROMEDIADO en los nudos (el defecto, «como CSI»): se pintaba con 2 triángulos por Q4 y color LINEAL
+    // en cada uno → manchas en ROMBO y la diagonal marcada (Jorge, 17-oct-2026: «me está interpolando de
+    // forma errónea», M12 de una losa sobre columnas). SAFE/ETABS/SAP2000 dibujan la superficie BILINEAL
+    // del cuadrilátero: se reusa la subdivisión de «sin promediar» con el valor de cada nudo en sus esquinas.
+    // Con sólidos en el modelo se deja el camino de siempre (su piel va por el índice compartido).
+    if (familia?.val !== "solido" && !elements.val.some((e) => e.length === 8)) {
+      const V = values.val, m = new Map<number, number[]>();
+      elements.val.forEach((e, ei) => { if (e.length === 3 || e.length === 4) m.set(ei, e.map((n) => V[n])); });
+      if (m.size) { pintarPorEsquinas(m); return; }
+    }
     // Update geometry
     colorMap.geometry.setAttribute(
       "position",
@@ -385,7 +395,7 @@ export function getColorMap(
     };
     // Q4: la superficie BILINEAL de los 4 valores, como la dibuja SAP2000 (lineal entre los joints a lo largo de
     // cada dirección). Con 2 triángulos el color era lineal por triángulo y la diagonal se notaba: se subdivide.
-    const SUB = 6;
+    const SUB = elements.val.length > 4000 ? 3 : elements.val.length > 1500 ? 4 : 6;   // tope de triángulos en modelos grandes
     elements.val.forEach((e, ei) => {
       const v = esq.get(ei); if (!v || (e.length !== 3 && e.length !== 4)) return;
       if (e.length === 3) { tri(e, v, 0, 1, 2, ei, 0); return; }
@@ -408,8 +418,9 @@ export function getColorMap(
     const rng = fixedColorMapRange.val;
     let [vMin, vMax] = rng ? [Math.min(rng[0], rng[1]), Math.max(rng[0], rng[1])] : robustRange(ok);
     if (vMax === vMin) { const eps = Math.max(Math.abs(vMax) * 1e-6, 1e-9); vMax += eps; vMin -= eps; }
+    const inv = !!(rng && rng[0] > rng[1]) && !isDiscreteCsiPalette(colorMapPalette.val);   // igual que el camino indexado
     const sc = new Float32Array(vals.length);
-    vals.forEach((x, i) => { sc[i] = Number.isFinite(x) ? Math.max(0, Math.min(1, (x - vMin) / (vMax - vMin))) : -1; });
+    vals.forEach((x, i) => { if (!Number.isFinite(x)) { sc[i] = -1; return; } const xv = inv ? vMax + vMin - x : x; sc[i] = Math.max(0, Math.min(1, (xv - vMin) / (vMax - vMin))); });
     colorMap.geometry.setAttribute("scalar", new THREE.BufferAttribute(sc, 1));
   }
 
