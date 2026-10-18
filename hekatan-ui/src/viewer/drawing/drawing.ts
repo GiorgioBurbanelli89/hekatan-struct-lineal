@@ -7634,6 +7634,7 @@ export function drawing({
         if (selection.has(id)) selection.delete(id);
         else selection.add(id);
         refreshSelectionGroup();
+        hoverPtHL.visible = false; hoverHL.visible = false;   // el resaltado de hover tapaba el cuadrado azul recién puesto
         if ((window as any).__hekatanAplicando) { try { (window as any).__hekatanAplicarSeleccion?.(); } catch {} }
         updateStatus(`✓ Seleccionados ${selection.size} elemento(s) — Ctrl+Click para multi-selección`);
       } else {

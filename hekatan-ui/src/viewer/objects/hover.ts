@@ -64,7 +64,9 @@ const HOVER_COLOR_NODE = 0x7f96b3;     // azul acero de Struct (nada de amarillo
 const HOVER_COLOR_FRAME = 0x00ddff;    // cyan (hover)
 const HOVER_COLOR_SHELL = 0x00ddff;    // cyan (hover)
 const HOVER_COLOR_SOLID = 0x00ddff;    // cyan (hover)
-const SELECT_COLOR = 0x00ff66;         // green (selección persistente)
+// MAGENTA, como la selección del dibujo (drawing.ts): antes verde y no se parecía a la de la ventana (18-oct-2026)
+const SELECT_COLOR = 0xff3fd2;
+const GRIP_COLOR = 0x3b82f6;           // nudo designado: cuadrado azul de pantalla, el «grip» de AutoCAD
 
 export function setupHover(ctx: HoverContext): THREE.Group {
   const group = new THREE.Group();
@@ -138,7 +140,8 @@ export function setupHover(ctx: HoverContext): THREE.Group {
   solidHL.renderOrder = 100;
   group.add(solidHL);
 
-  // ── SELECTION PERSISTENTE (verde, queda fijo al click) ──
+  let tipCallado: { x: number; y: number } | null = null;   // dónde se hizo el último clic (recuadro callado)
+  // ── SELECTION PERSISTENTE (magenta, queda fija al click) ──
   const selNodeMat = new THREE.MeshBasicMaterial({
     color: SELECT_COLOR, transparent: true, opacity: 0.95, depthTest: false,
   });
@@ -803,6 +806,9 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       ctx.render();
       return;
     }
+    // tras un CLIC el recuadro no vuelve hasta que el ratón se aleja: tapaba lo que se acababa de seleccionar
+    if (tipCallado && Math.hypot(clientX - tipCallado.x, clientY - tipCallado.y) < 12) { tooltip.style.display = "none"; ctx.render(); return; }
+    tipCallado = null;
     tooltip.textContent = hover.info;
     tooltip.style.whiteSpace = "pre-line";
     tooltip.style.display = "block";
@@ -904,6 +910,7 @@ export function setupHover(ctx: HoverContext): THREE.Group {
   ctx.rendererElm.addEventListener("pointerdown", (e: PointerEvent) => {
     if (e.button !== 0) return;  // solo left click
     pointerDownPos = { x: e.clientX, y: e.clientY };
+    tipCallado = { x: e.clientX, y: e.clientY }; tooltip.style.display = "none";   // al seleccionar, fuera el recuadro
   });
   ctx.rendererElm.addEventListener("pointerup", (e: PointerEvent) => {
     if (e.button !== 0 || !pointerDownPos) return;
@@ -1005,11 +1012,10 @@ export function setupHover(ctx: HoverContext): THREE.Group {
       if (!p) return;
       // Tamaño = consistente con nodes.ts (radio = diámetro/2 * 1.7 = más grande
       // que el hover para distinguir selección persistente)
-      const m = new THREE.Mesh(nodeGeom, selNodeMat);
-      m.position.copy(p);
-      // 7 px de radio: un nudo designado canta sin tapar nada. `nodeGeom` mide 1 m,
-      // así que la escala son directamente los metros que se quieren.
-      m.scale.setScalar(Math.max(1e-4, 7 * metrosPorPixel(p)));
+      // cuadrado azul de 11 px fijos en pantalla, IGUAL que el nudo designado con ventana (drawing.ts):
+      // antes era una bola verde y el mismo nudo se veía distinto según cómo se seleccionara
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute([p.x, p.y, p.z], 3));
+      const m = new THREE.Points(g, new THREE.PointsMaterial({ color: GRIP_COLOR, size: 11, sizeAttenuation: false, depthTest: false, transparent: true, opacity: 0.95 }));
       m.renderOrder = 101;
       selGroup.add(m);
     } else if (sel.type === "frame" && elements) {
