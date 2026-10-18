@@ -779,7 +779,14 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
       return Math.hypot(ev.clientX - (ax + t * vx), ev.clientY - (ay + t * vy)); };
     if (vista === "planta") {
       let mejor: Eje | null = null, dm = 7;
-      for (const a of listaEjes()) { const dd = d([a.start[0], a.start[1], zAct], [a.end[0], a.end[1], zAct]); if (dd < dm) { dm = dd; mejor = a; } }
+      // la línea del eje se DIBUJA hasta el borde de la rejilla (y la burbuja más allá): ese tramo, fuera del
+      // modelo, es donde se designa el eje cuando sobre él hay vigas (que mandan)
+      const R = (W().__hekatanGridConfig ?? {}).rect;
+      for (const a of listaEjes()) {
+        let p0: V3 = [a.start[0], a.start[1], zAct], p1: V3 = [a.end[0], a.end[1], zAct];
+        if (R) { if (Math.abs(p0[0] - p1[0]) < 1e-9) { p0 = [p0[0], R.y0, zAct]; p1 = [p1[0], R.y1, zAct]; } else if (Math.abs(p0[1] - p1[1]) < 1e-9) { p0 = [R.x0, p0[1], zAct]; p1 = [R.x1, p1[1], zAct]; } }
+        const dd = d(p0, p1); if (dd < dm) { dm = dd; mejor = a; }
+      }
       if (!mejor) return false;
       datoSel = { tipo: "eje", id: mejor.label }; ponerCotas(cotasDeEje(mejor.label));
       decir(`Eje ${mejor.label} designado: pulsa una cota azul y escribe la distancia.`); return true;

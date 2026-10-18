@@ -96,7 +96,8 @@ await cotaClic("5");
 const eF2 = await ev(() => window.__hekatanAxisGrids.find((e) => e.label === "F")?.start[0]);
 ok("Eje: pulsar la cota y escribir 5 mueve F a 5 m de E (x = 29)", Math.abs(eF2 - 29) < 1e-9, `F en x = ${eF2}`);
 await ev(() => window.__hekatanModoRevit.usar("modificar")); await espera(200);
-await clicEn([6, 7.5, 3]); await espera(300);
+await pag.keyboard.press("Escape"); await espera(150);   // por si quedó una ventana de selección empezada
+await clicEn([6, -1.5, 3]); await espera(300);   // en el tramo del eje FUERA del modelo: sobre una viga manda la viga (como Revit)
 const cB = await ev(() => window.__hekatanModoRevit.cotas());
 ok("Modificar: un clic sobre el eje B enseña sus dos cotas (6.00 a A y 6.00 a C)", cB.length === 2 && cB.every((c) => Math.abs(c.valor - 6) < 1e-9 && c.editable), JSON.stringify(cB));
 await ev(() => document.querySelector('#hk-revit .rv-niv[data-alzado="S"]').click()); await espera(700);
