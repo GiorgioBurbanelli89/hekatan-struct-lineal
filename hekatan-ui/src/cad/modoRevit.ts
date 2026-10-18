@@ -972,5 +972,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   (window as any).__hekatanModoRevit = {
     poner, usar, activarNivel, activarFrente, activarAlzado, ver3D, vista: () => ({ vista, dirAlz }), nuevoNivel, cotas: () => cotas.map((c) => ({ valor: c.valor, editable: !!c.aplicar })), moverNivel, moverEje, pegado: (v?: boolean) => (v === undefined ? pegado : (pegado = v)), columnasEnEjes, vigasEnEjes, losasTodas, abrirEjes,
     estado: () => ({ encendido, herr, zAct, niveles: niveles(), ejes: ejes() }),
+    /** repinta el navegador (Plantas/Alzados/Ejes) tras reponer niveles y ejes guardados */
+    refrescar: () => { pintarNav(); },
   };
 }

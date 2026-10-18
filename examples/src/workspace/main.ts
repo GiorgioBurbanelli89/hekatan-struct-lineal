@@ -385,6 +385,65 @@ van.derive(() => {
     }
   } catch {}
 });
+// ── NIVELES y EJES (Modo Revit) se guardan CON el dibujo (Jorge, 18-oct-2026: al recargar volvía el
+// dibujo pero solo quedaban N+0.00 y N+3.00, sin ejes). Viven en window.__hekatanLevels / __hekatanAxisGrids
+// (arrays de getCadPanel; __hekatanLevels a veces se REASIGNA, por eso se lee siempre de window).
+const DATUM_NIV_KEY = "hk_levels", DATUM_EJES_KEY = "hk_axisGrids";
+let datumsListos = false;   // no se guarda NADA hasta haber repuesto lo de la sesión: al arrancar se guardaban
+                            // los niveles vacíos (o los dos por defecto del Revit) ENCIMA de los buenos
+const guardarDatums = () => {
+  if (!datumsListos) return;
+  try {
+    const W = window as any;
+    const niv = JSON.stringify(W.__hekatanLevels ?? []), ejes = JSON.stringify(W.__hekatanAxisGrids ?? []);
+    sessionStorage.setItem(DATUM_NIV_KEY, niv); sessionStorage.setItem(DATUM_EJES_KEY, ejes);
+    if (drawingPoints.rawVal.length > 0) { localStorage.setItem(DATUM_NIV_KEY, niv); localStorage.setItem(DATUM_EJES_KEY, ejes); }
+  } catch {}
+};
+/** Repone niveles y ejes guardados (de la sesión o del respaldo) en los MISMOS arrays y los redibuja. */
+const reponerDatums = (st: Storage): boolean => {
+  try {
+    const W = window as any;
+    const niv = JSON.parse(st.getItem(DATUM_NIV_KEY) || "null"), ejes = JSON.parse(st.getItem(DATUM_EJES_KEY) || "null");
+    if (!Array.isArray(niv) || !Array.isArray(ejes) || (!niv.length && !ejes.length)) return false;
+    const L = W.__hekatanLevels, A = W.__hekatanAxisGrids;
+    if (!Array.isArray(L) || !Array.isArray(A)) return false;
+    L.splice(0, L.length, ...niv); A.splice(0, A.length, ...ejes);
+    W.__hekatanRefreshLevels?.(); W.__hekatanRefreshAxes?.(); W.__hekatanRefrescarGrillas?.();
+    W.__hekatanModoRevit?.refrescar?.();
+    return true;
+  } catch { return false; }
+};
+// Guardar cada vez que se redibujan ejes o niveles (crear, mover, borrar, «Nuevo»…) y con cada cambio del
+// dibujo. Las funciones de refresco las define getCadPanel más tarde: se envuelven cuando aparecen.
+van.derive(() => { drawingPoints.val; drawingPolylines.val; drawingAreas.val; setTimeout(guardarDatums, 0); });
+// y SIEMPRE al salir de la página (F5, cerrar, navegar): la Rejilla del Revit redibuja con las funciones
+// INTERNAS de getCadPanel (no pasa por las de window) y sin nudos el derive de arriba no salta
+window.addEventListener("pagehide", guardarDatums);
+window.addEventListener("beforeunload", guardarDatums);
+{
+  let intentos = 0, repuesto = false;
+  const engancharDatums = () => {
+    const W = window as any;
+    if (!W.__hekatanRefreshLevels || !W.__hekatanRefreshAxes || !Array.isArray(W.__hekatanLevels)) {
+      if (++intentos < 100) setTimeout(engancharDatums, 100); return;
+    }
+    for (const k of ["__hekatanRefreshLevels", "__hekatanRefreshAxes"]) {
+      const f = W[k]; if (f.__conGuardado) continue;
+      const g = (...a: any[]) => { const r = f(...a); guardarDatums(); return r; }; (g as any).__conGuardado = true; W[k] = g;
+    }
+    // F5: lo que la SESIÓN (esta pestaña) tenía vuelve, haya o no nudos — la Rejilla del Revit crea ejes y
+    // niveles sin nudos. «Nuevo» guarda la sesión vacía, así que tras «Nuevo» no vuelve nada. Se repite a
+    // los 600 ms porque el Modo Revit pone sus dos niveles por defecto al arrancar (a los 300 ms).
+    if (!repuesto) {
+      repuesto = true;
+      if (reponerDatums(sessionStorage)) setTimeout(() => { reponerDatums(sessionStorage); datumsListos = true; guardarDatums(); }, 600);
+      else datumsListos = true;
+    }
+  };
+  setTimeout(engancharDatums, 50);
+}
+
 /**
  * Si el lienzo arranca vacio pero hay un dibujo guardado de otra sesion, se
  * OFRECE recuperarlo. No se impone: imponerlo es justo lo que hacia que
@@ -425,6 +484,7 @@ function ofrecerRecuperar(): void {
     "background:#78350f;color:#fde68a;font:600 11px inherit";
   bSi.onclick = () => {
     drawingPoints.val = pts; drawingPolylines.val = polys; drawingAreas.val = areas;
+    reponerDatums(localStorage);              // y sus niveles y ejes
     (window as any).__hekatanRebuild?.();
     (window as any).__hekatanAutoFit?.();
     cerrar();
@@ -435,7 +495,8 @@ function ofrecerRecuperar(): void {
     "background:transparent;color:#94a3b8;font:11px inherit";
   bNo.onclick = () => {
     try { localStorage.removeItem(DRAW_PTS_KEY); localStorage.removeItem(DRAW_POLYS_KEY);
-          localStorage.removeItem(DRAW_AREAS_KEY); } catch {}
+          localStorage.removeItem(DRAW_AREAS_KEY);
+          localStorage.removeItem(DATUM_NIV_KEY); localStorage.removeItem(DATUM_EJES_KEY); } catch {}
     cerrar();
   };
   av.append(bSi, bNo);
