@@ -13,6 +13,8 @@ for d in sorted(glob.glob(os.path.join(RAIZ, "*", "meta.json"))):
     for i, ft in enumerate(fotos):
         if i % paso and i != len(fotos) - 1 and not ft["texto"].startswith(("✓", "✗")): continue
         im = Image.open(os.path.join(base, f"f{ft['f']:04d}.png")).convert("RGB")
+        if os.environ.get("CROP"):   # recorte x0,y0,x1,y1 en px del fotograma (para ver el modelo más grande)
+            im = im.crop(tuple(int(v) for v in os.environ["CROP"].split(",")))
         h = round(im.height * ANCHO / im.width); im = im.resize((ANCHO, h), Image.LANCZOS)
         c = Image.new("RGB", (ANCHO, h + BAR), (0, 0, 0)); c.paste(im, (0, BAR))
         dr = ImageDraw.Draw(c)
