@@ -8451,7 +8451,13 @@ function interpolate(
     position: object3D.position.clone(),
     quaternion: object3D.quaternion.clone(),
   };
+  // UNA animación por objeto: al pasar deprisa Sur → Norte → Oeste → Este → Planta se acumulaban varios
+  // setInterval y, con la página cargada, uno VIEJO podía acabar después del nuevo y dejar la rejilla en
+  // el plano de un alzado (medido en el deploy, 18-oct-2026). La nueva cancela la anterior.
+  const previa = (object3D.userData as any).__hkAnim;
+  if (previa) clearInterval(previa);
   const animationID = setInterval(animate, 1000 / fps);
+  (object3D.userData as any).__hkAnim = animationID;
 
   let step = 0;
   function animate() {
@@ -8467,6 +8473,6 @@ function interpolate(
 
     if (onAnimate) onAnimate();
 
-    if (step == steps) clearInterval(animationID);
+    if (step >= steps) { clearInterval(animationID); if ((object3D.userData as any).__hkAnim === animationID) (object3D.userData as any).__hkAnim = null; }
   }
 }
