@@ -4078,6 +4078,39 @@ function encajarOrtoEnHueco(ortho: any, controls: any, centro: THREE.Vector3, an
   ortho.updateProjectionMatrix();
 }
 
+/** Si el panel de propiedades (o lo que se abra) TAPA el modelo en una vista ortogonal, reencuadrarlo en el
+ *  hueco libre con la misma orientación. Regla de Jorge: nada choca con el modelo. */
+function reencuadrarSiTapa(panel: HTMLElement | null) {
+  const ctx = (viewerElm as any).__ctx; if (!ctx || !panel) return;
+  const { camera, orthoCamera, controls } = ctx;
+  if (!orthoCamera || camera !== orthoCamera) return;            // en 3D (perspectiva) no se toca
+  const N = [...(states.nodes.rawVal || []), ...(((window as any).__hekatanDrawingPoints?.rawVal) ?? [])] as number[][];
+  if (!N.length) return;
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (const n of N) { if (!n) continue; x0 = Math.min(x0, n[0]); x1 = Math.max(x1, n[0]); y0 = Math.min(y0, n[1]); y1 = Math.max(y1, n[1]); z0 = Math.min(z0, n[2]); z1 = Math.max(z1, n[2]); }
+  const cv = (viewerElm as HTMLElement).querySelector("canvas"); if (!cv) return;
+  const r = cv.getBoundingClientRect(), q = panel.getBoundingClientRect();
+  if (!q.width || !q.height) return;
+  // rectángulo del modelo en pantalla
+  let sx0 = Infinity, sy0 = Infinity, sx1 = -Infinity, sy1 = -Infinity;
+  for (const X of [x0, x1]) for (const Y of [y0, y1]) for (const Z of [z0, z1]) {
+    const v = new THREE.Vector3(X, Y, Z).project(camera);
+    const px = r.left + (v.x * 0.5 + 0.5) * r.width, py = r.top + (-v.y * 0.5 + 0.5) * r.height;
+    sx0 = Math.min(sx0, px); sx1 = Math.max(sx1, px); sy0 = Math.min(sy0, py); sy1 = Math.max(sy1, py);
+  }
+  const tapa = q.left < sx1 && q.right > sx0 && q.top < sy1 && q.bottom > sy0;
+  if (!tapa) return;
+  const dir = new THREE.Vector3(); orthoCamera.getWorldDirection(dir);
+  const ax = Math.abs(dir.x), ay = Math.abs(dir.y), az = Math.abs(dir.z);
+  const ex = x1 - x0 || 1, ey = y1 - y0 || 1, ez = z1 - z0 || 1;
+  const [an, al] = az >= ax && az >= ay ? [ex, ey] : ay >= ax ? [ex, ez] : [ey, ez];
+  const c = new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+  orthoCamera.position.copy(c).addScaledVector(dir, -1000);
+  encajarOrtoEnHueco(orthoCamera, controls, c, an, al);
+  controls?.update?.(); ctx.render?.();
+}
+window.addEventListener("hk:panel-propiedades", () => { try { reencuadrarSiTapa(document.getElementById("hk-properties-pane")); } catch {} });
+
 function setView(preset: "iso" | "plan" | "elevX" | "elevY") {
   vistaActual = preset;
   // Sincroniza plano CAD + drawing plane con la vista

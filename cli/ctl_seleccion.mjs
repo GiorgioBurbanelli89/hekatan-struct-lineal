@@ -5,6 +5,8 @@
  */
 import puppeteer from "puppeteer";
 const args = process.argv.slice(2); const ib = args.indexOf("--base"); const BASE = ib >= 0 ? args[ib + 1] : "http://localhost:4600";
+const ip = args.indexOf("--png"); const PNG = ip >= 0 ? args[ip + 1] : null;
+import fs from "node:fs"; if (PNG) fs.mkdirSync(PNG, { recursive: true });
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });
@@ -38,6 +40,19 @@ const a2 = await mundo([9.4, 6.3, 3]), b2 = await mundo([8.6, 3.7, 3]);   // los
 await clic(a2); await clic(b2);
 s = await sel(); ok("captura der→izq sobre la viga del eje 2 entre B y C: la viga (que solo TOCA el recuadro)", s.seg === 1 && s.pt === 0, JSON.stringify(s));
 await pag.keyboard.press("Escape"); await espera(300);
+// 3b. RESALTADO: mientras se mueve (antes de soltar) se ve lo que va a entrar, y después lo seleccionado
+const foto = async (n) => { if (PNG) await pag.screenshot({ path: `${PNG}/${n}.png` }); };
+const resaltado = () => ev(() => { const g = window.__hekatanViewerCtx().scene.getObjectByName("hk-seleccion-previa"); return { previa: window.__hekatanPreviaN ?? 0, lineasPrevia: g?.children.length ?? 0 }; });
+for (const [nom, A, Bp, esperaPrevia] of [["izq_a_der", a1, b1, 8], ["der_a_izq", a2, b2, 1]]) {
+  await clic(A); await pag.mouse.move((A[0] + Bp[0]) / 2, (A[1] + Bp[1]) / 2, { steps: 4 }); await pag.mouse.move(Bp[0], Bp[1], { steps: 6 }); await espera(250);
+  const r = await resaltado(); await foto(`${nom}_1_moviendo`);
+  ok(`${nom}: mientras se mueve, VISTA PREVIA de lo que entra (${esperaPrevia} objetos) resaltada`, r.previa === esperaPrevia && r.lineasPrevia > 0, JSON.stringify(r));
+  await pag.mouse.click(Bp[0], Bp[1]); await espera(400);
+  const sl = await ev(() => { const g = window.__hekatanViewerCtx().scene.children.find((o) => o.children?.some?.((c) => c.isLineSegments2 && c.material?.linewidth === 5)); return { sel: window.__hekatanSelection?.size ?? 0, gruesas: !!g, previa: window.__hekatanPreviaN ?? 0 }; });
+  await foto(`${nom}_2_seleccionado`);
+  ok(`${nom}: al soltar, lo seleccionado queda resaltado en línea GRUESA y la vista previa se quita`, sl.sel === esperaPrevia && sl.gruesas && sl.previa === 0, JSON.stringify(sl));
+  await pag.keyboard.press("Escape"); await espera(300);
+}
 // 4. lo mismo ARRASTRANDO
 const arrastra = async (a, b) => { await pag.mouse.move(a[0], a[1]); await pag.mouse.down(); await pag.mouse.move(b[0], b[1], { steps: 12 }); await pag.mouse.up(); await espera(400); };
 await arrastra(a1, b1); s = await sel(); ok("arrastrando izq→der: la misma ventana", s.pt === 4 && s.seg === 4, JSON.stringify(s));

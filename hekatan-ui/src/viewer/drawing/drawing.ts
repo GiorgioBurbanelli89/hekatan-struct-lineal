@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import van, { State } from "vanjs-core";
 import { Pane } from "tweakpane";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 // Todo: refactor isInPlane to a function
 
@@ -1764,7 +1767,9 @@ export function drawing({
   const selectionGroup = new THREE.Group();
   selectionGroup.frustumCulled = false;
   scene.add(selectionGroup);
-  const selColor = 0x22d3ee;  // cyan
+  // MAGENTA, no cian: las vigas ya son cian y lo seleccionado no se veía encima (Jorge, 18-oct-2026)
+  const selColor = 0xff3fd2;
+  const gripColor = 0x3b82f6;   // nudos seleccionados: azul, como los «grips» de AutoCAD
   // Estado de hover actual (lo que se va a seleccionar al click)
   let hoverItem: { kind: "pt" | "seg" | "poly" | "aux"; a: number; b?: number } | null = null;
 
@@ -1783,6 +1788,15 @@ export function drawing({
   };
 
   // Reconstruye los meshes cyan del grupo selectionGroup según el Set selection
+  /** Barras GRUESAS (px de pantalla): WebGL dibuja THREE.Line siempre a 1 px y no se veía la selección. */
+  const lineasGruesas = (segs: number[][][], color: number, ancho: number, opac: number) => {
+    const pos: number[] = []; for (const [a, b] of segs) pos.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+    const g = new LineSegmentsGeometry(); g.setPositions(pos);
+    const m = new LineMaterial({ color, linewidth: ancho, transparent: true, opacity: opac, depthTest: false });
+    const o = new LineSegments2(g, m); o.renderOrder = 998;
+    o.onBeforeRender = (rnd: any) => { const v = rnd.getSize(new THREE.Vector2()); m.resolution.set(v.x, v.y); };
+    return o;
+  };
   const refreshSelectionGroup = () => {
     while (selectionGroup.children.length) {
       const c = selectionGroup.children.pop()!;
@@ -1793,6 +1807,8 @@ export function drawing({
     const polys = drawingObj.polylines?.rawVal ?? [];
     const auxState = (window as any).__hekatanDrawingAuxLines;
     const aux: number[][] = auxState?.rawVal ?? [];
+    const segsSel: number[][][] = [];
+    const gripsSel: number[] = [];   // nudos: cuadrados azules de 11 px fijos en pantalla, como los «grips» de AutoCAD
     for (const id of selection) {
       const [kind, ...rest] = id.split(":");
       if (kind === "pt") {
@@ -1801,27 +1817,12 @@ export function drawing({
         // Radio base 0.025m (~consistente con hover/snap markers).
         // El scale se ajusta en updateSelectionPtScale() para que el tamaño
         // aparente en pantalla sea constante (~8 px) a cualquier zoom.
-        const m = new THREE.Mesh(
-          new THREE.SphereGeometry(0.025, 12, 12),
-          new THREE.MeshBasicMaterial({ color: selColor, transparent: true, opacity: 0.9, depthTest: false }),
-        );
-        m.position.set(p[0], p[1], p[2]);
-        m.renderOrder = 999;
-        (m as any).__isSelectionPt = true;
-        selectionGroup.add(m);
+        gripsSel.push(p[0], p[1], p[2]);
       } else if (kind === "seg") {
         const poly = polys[+rest[0]];
         const a = pts[poly?.[+rest[1]]], b = pts[poly?.[+rest[1]+1]];
         if (!a || !b) continue;
-        const g = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(a[0], a[1], a[2]),
-          new THREE.Vector3(b[0], b[1], b[2]),
-        ]);
-        const ln = new THREE.Line(g, new THREE.LineBasicMaterial({
-          color: selColor, transparent: true, opacity: 0.95, depthTest: false,
-        }));
-        ln.renderOrder = 999;
-        selectionGroup.add(ln);
+        segsSel.push([a, b]);
       } else if (kind === "poly") {
         const poly = polys[+rest[0]];
         const ptsLine = poly.map(idx => {
@@ -1868,9 +1869,39 @@ export function drawing({
     //
     // Se llama por window porque la funcion se declara mas abajo.
     try { (window as any).__hekatanUpdateSelectionPtScale?.(); } catch {}
+    if (segsSel.length) selectionGroup.add(lineasGruesas(segsSel, selColor, 5, 0.95));
+    if (gripsSel.length) {
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(gripsSel, 3));
+      const pt = new THREE.Points(g, new THREE.PointsMaterial({ color: gripColor, size: 11, sizeAttenuation: false, depthTest: false, transparent: true, opacity: 0.95 }));
+      pt.renderOrder = 999; selectionGroup.add(pt);
+    }
     viewerRender();
   };
   (window as any).__hekatanRefreshSelection = refreshSelectionGroup;
+  /** VISTA PREVIA mientras se mueve la ventana/captura (el «selection preview» de AutoCAD): lo que va a
+   *  quedar seleccionado se resalta ANTES de soltar. null = quitarla. */
+  const previaGroup = new THREE.Group(); previaGroup.name = "hk-seleccion-previa";
+  scene.add(previaGroup);
+  const pintarPrevia = (ids: Set<string> | null | void) => {
+    while (previaGroup.children.length) { const c: any = previaGroup.children.pop(); c.geometry?.dispose?.(); c.material?.dispose?.(); }
+    if (ids && ids.size) {
+      const pts = drawingObj.points?.rawVal ?? [], polys = drawingObj.polylines?.rawVal ?? [];
+      const segs: number[][][] = [];
+      for (const id of ids) {
+        const [k, x, y] = id.split(":");
+        if (k === "seg") { const pl = polys[+x]; const a = pts[pl?.[+y]], b = pts[pl?.[+y + 1]]; if (a && b) segs.push([a, b]); }
+        else if (k === "poly") { const pl = polys[+x] ?? []; for (let j = 0; j + 1 < pl.length; j++) { const a = pts[pl[j]], b = pts[pl[j + 1]]; if (a && b) segs.push([a, b]); } }
+      }
+      if (segs.length) previaGroup.add(lineasGruesas(segs, selColor, 3, 0.55));
+    }
+    (window as any).__hekatanPreviaN = ids ? ids.size : 0;   // para los tests
+    viewerRender();
+  };
+  let _ultPrevia = 0;
+  const previaRect = (aX: number, aY: number, bX: number, bY: number) => {
+    const t = performance.now(); if (t - _ultPrevia < 50) return; _ultPrevia = t;
+    try { pintarPrevia(finalizeRectSelection(aX, aY, bX, bY, false, true)); } catch {}
+  };
   // Designar por ids («poly:3», «seg:1:2», «pt:7») — para automatizar y para el CLI.
   (window as any).__hekatanSelectIds = (ids: string[]) => { selection.clear(); for (const id of ids) selection.add(id); try { (window as any).__hekatanRefreshSelection?.(); } catch {} viewerRender(); return selection.size; };
   (window as any).__hekatanClearSelection = () => {
@@ -4680,8 +4711,8 @@ export function drawing({
   // Helper compartido: ejecuta la selección dado un par de esquinas en
   // pantalla. Lo usan AMBOS modos (drag-and-release y click-click).
   const finalizeRectSelection = (
-    aX: number, aY: number, bX: number, bY: number, isMulti: boolean,
-  ) => {
+    aX: number, aY: number, bX: number, bY: number, isMulti: boolean, soloPrevia = false,
+  ): Set<string> | void => {
     const x0 = Math.min(aX, bX);
     const x1 = Math.max(aX, bX);
     const y0 = Math.min(aY, bY);
@@ -4707,7 +4738,8 @@ export function drawing({
       if (a.y > y1 && b.y > y1) return false;
       return true;
     };
-    if (!isMulti) selection.clear();
+    // se calcula QUÉ cae en el recuadro; con soloPrevia se devuelve sin tocar la selección (vista previa)
+    const destino = new Set<string>();
     let added = 0;
     const pts = drawingObj.points?.rawVal ?? [];
     // VISTA ORTOGONAL de frente al plano de trabajo (planta o alzado): solo cuenta lo que está EN ese plano,
@@ -4727,7 +4759,7 @@ export function drawing({
     }
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i]; if (!p || !enPlano(p)) continue;
-      if (inRect(projectToScreen(p))) { selection.add(`pt:${i}`); added++; }
+      if (inRect(projectToScreen(p))) { destino.add(`pt:${i}`); added++; }
     }
     // ── Regla estilo AutoCAD ──
     //   WINDOW (izq→der, azul):  selecciona SOLO si está COMPLETAMENTE dentro
@@ -4756,11 +4788,11 @@ export function drawing({
             if (segMatch(projectToScreen(a), projectToScreen(b))) { areaMatch = true; break; }
           }
         }
-        if (areaMatch) { selection.add(`poly:${i}`); added++; }
+        if (areaMatch) { destino.add(`poly:${i}`); added++; }
       } else {
         for (let j = 0; j < poly.length - 1; j++) {
           const a = pts[poly[j]], b = pts[poly[j + 1]]; if (!a || !b || !enPlano(a) || !enPlano(b)) continue;
-          if (segMatch(projectToScreen(a), projectToScreen(b))) { selection.add(`seg:${i}:${j}`); added++; }
+          if (segMatch(projectToScreen(a), projectToScreen(b))) { destino.add(`seg:${i}:${j}`); added++; }
         }
       }
     }
@@ -4771,8 +4803,12 @@ export function drawing({
       if (!ln || ln.length !== 6) continue;
       const sa = projectToScreen([ln[0], ln[1], ln[2]]);
       const sb = projectToScreen([ln[3], ln[4], ln[5]]);
-      if (segMatch(sa, sb)) { selection.add(`aux:${i}`); added++; }
+      if (segMatch(sa, sb)) { destino.add(`aux:${i}`); added++; }
     }
+    if (soloPrevia) return destino;
+    if (!isMulti) selection.clear();
+    for (const id of destino) selection.add(id);
+    pintarPrevia(null);
     refreshSelectionGroup();
     // Si la VENTANA (izq→der) no cogió nada, se dice por qué: no es que no
     // funcione, es que exige el objeto ENTERO dentro. Es la primera confusión de
@@ -4788,6 +4824,7 @@ export function drawing({
   // de tool, otra acción).
   (window as any).__hekatanRectEnCurso = () => !!ccAnchor;   // el Modo Revit no debe quedarse con el 2.º clic
   const cancelClickClick = () => {
+    try { pintarPrevia(null); } catch {}
     if (ccAnchor) {
       ccAnchor = null;
       dragRect.style.display = "none";
@@ -5704,9 +5741,13 @@ export function drawing({
       refreshSelectionGroup();
     });
 
+    const estabaOculto = propsContainer.style.display === "none" || !propsContainer.style.display;
     propsContainer.style.display = "block";
     // Re-attach drag handler al nuevo title bar (Tweakpane se recrea cada vez)
     setupPropsDrag();
+    // al APARECER el panel se avisa: main.ts reencuadra si tapa el modelo (Jorge, 18-oct-2026: «que el panel
+    // de propiedades no tape el modelo»). Solo al aparecer, para que la cámara no salte con cada clic.
+    if (estabaOculto) setTimeout(() => window.dispatchEvent(new CustomEvent("hk:panel-propiedades", { detail: { visible: true } })), 30);
   };
 
   (window as any).__hekatanRefreshPropsPane = updatePropsPane;
@@ -5851,6 +5892,7 @@ export function drawing({
     if (ccAnchor && ev.buttons === 0) {
       const isCrossing = ev.clientX < ccAnchor.x;
       paintDragRect(ccAnchor.x, ccAnchor.y, ev.clientX, ev.clientY, isCrossing);
+      previaRect(ccAnchor.x, ccAnchor.y, ev.clientX, ev.clientY);
       return;
     }
     // ── Modo drag-and-release tradicional ──
@@ -5862,6 +5904,7 @@ export function drawing({
     dragActive = true;
     const isCrossing = ev.clientX < dragStart.x;  // R→L = crossing
     paintDragRect(dragStart.x, dragStart.y, ev.clientX, ev.clientY, isCrossing);
+    previaRect(dragStart.x, dragStart.y, ev.clientX, ev.clientY);
   });
   rendererElm.addEventListener("pointerup", (ev: PointerEvent) => {
     if (!dragStart) return;
