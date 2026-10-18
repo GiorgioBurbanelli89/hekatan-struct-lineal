@@ -58,6 +58,10 @@ export function modalCpp(
   // PANDEO DE CÁSCARAS (5-oct-2026, cpp/utils/pandeo.h gCascaras): estático de r, 6 por nudo (globales)
   pandeoU?: number[]
 ): ModalOutputs & { timeHistory?: THResultado; buckling?: PandeoResultado; steadyState?: EstacionarioResultado } {
+  // «N° de modos» de Settings › ⚡ Modal + Animación (18-oct-2026): un número > 0 manda sobre el que trae
+  // cada ejemplo (47 llamadas con su número fijo: 12 en plantillas, 3·pisos+6 en el edificio…). 0 = el del ejemplo.
+  const nGlobal = Number((globalThis as any).__hekatanNModos) || 0;
+  if (nGlobal > 0) numModes = Math.round(nGlobal);
   if (nodes.length === 0) return { frequencies: [], modeShapes: [], massParticipation: [] };
   // Apoyos dentro de un diafragma: fijan el diafragma, como en ETABS (utils/diafragmaConApoyo).
   {

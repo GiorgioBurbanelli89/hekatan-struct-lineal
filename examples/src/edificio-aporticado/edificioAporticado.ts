@@ -2236,7 +2236,7 @@ export const edificioAporticado: ExampleDef = {
       const nvx = Math.round(p.nVanosX), nvy = Math.round(p.nVanosY), np = Math.round(p.nPisos);
       const lumpFactor = massCols > 0 ? 1 + massSlab / massCols : 1;
       modalPanel.render(out, {
-        title: `Edificio ${nvx}×${nvy} vanos × ${np} pisos · ${nModes} modos`,
+        title: `Edificio ${nvx}×${nvy} vanos × ${np} pisos · ${out?.frequencies?.length ?? nModes} modos`,   // los que SE CORRIERON (el N° de modos de Settings manda)
         properties: [
           `Material cols=${p.matCol<0.5?'Hormigón':'Acero'} vigas=${p.matViga<0.5?'Hormigón':'Acero'}  f'c=${p.fcConcr} kg/cm²`,
           `Apoyo: ${['Empotrado','Articulado','Rótula'][Math.round(p.apoyo)]}${p.slabOn>=0.5?` + Losa (lumped: ×${lumpFactor.toFixed(2)} dens cols, ${massSlab.toFixed(0)} kN/g)`:''}${p.bracesMode>0?' + Diagonales':''}${(p.murosMode??0)>0?' + Muros Q4':''}`,

@@ -7563,6 +7563,18 @@ Impórtalo en SAFE 20.x: File → Import → SAFE .f2k Text File`);
       modalPanel.div.style.display = __modalTableShown ? "block" : "none";
       if (currentExample!.runModal) currentExample!.runModal(toSIParams(), states, captureModalPanel);
     };
+    // «N° de modos» para TODOS los ejemplos (Jorge, 18-oct-2026: «¿dónde aumento los modos? se me
+    // perdieron»): solo test-m lo traía. 0 = el que trae el ejemplo; > 0 manda (lo lee modalCpp). Si el
+    // ejemplo ya tiene el suyo (inModal nModes), no se duplica.
+    if (!Object.entries(currentExample.params ?? {}).some(([k, p]) => (p as any).inModal && /modes|modos/i.test(k))) {
+      const nm = { modos: Number((window as any).__hekatanNModos) || 0 };
+      const fN = fModal.addFolder({ title: "🔢 N° de modos (0 = el del ejemplo)", expanded: true });
+      fN.addBinding(nm, "modos", { label: "cantidad", min: 0, max: 200, step: 1 }).on("change", (e: any) => {
+        (window as any).__hekatanNModos = e.value;
+        if (e.last === false) return;                       // al soltar el deslizador, no en cada paso
+        try { if ((window as any).__modalActivo || __lastModalResults) runModalAnimate(); } catch {}
+      });
+    }
     const __btnModal = fModal.addButton({ title: "▶ Correr modal + animar" });
     __btnModal.on("click", runModalAnimate);
     // ── GDL del modal, A LA VISTA (Jorge, 29-sep-2026: «debe salir en un lugar que se vea») ──
