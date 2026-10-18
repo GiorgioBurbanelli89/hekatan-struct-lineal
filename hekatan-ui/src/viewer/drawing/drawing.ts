@@ -4710,8 +4710,23 @@ export function drawing({
     if (!isMulti) selection.clear();
     let added = 0;
     const pts = drawingObj.points?.rawVal ?? [];
+    // VISTA ORTOGONAL de frente al plano de trabajo (planta o alzado): solo cuenta lo que está EN ese plano,
+    // como ETABS («One Story»). En planta los 5 pisos caen en el mismo punto de la pantalla y la ventana
+    // del vano 6–12 × 5–10 cogía 20 nudos y 32 barras en vez de 4 y 4 (Jorge, 18-oct-2026). En 3D, todo.
+    let enPlano: (p: number[]) => boolean = () => true;
+    {
+      const gt = drawingObj.gridTarget?.rawVal;
+      const dirCam = new THREE.Vector3(); cam.getWorldDirection(dirCam);
+      if (gt && (cam as any).isOrthographicCamera) {
+        const n = new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(...gt.rotation)).normalize();   // GridHelper: normal = Y local
+        if (Math.abs(n.dot(dirCam)) > 0.99) {
+          const d = n.x * gt.position[0] + n.y * gt.position[1] + n.z * gt.position[2];
+          enPlano = (p) => Math.abs(n.x * p[0] + n.y * p[1] + n.z * p[2] - d) < 1e-6;
+        }
+      }
+    }
     for (let i = 0; i < pts.length; i++) {
-      const p = pts[i]; if (!p) continue;
+      const p = pts[i]; if (!p || !enPlano(p)) continue;
       if (inRect(projectToScreen(p))) { selection.add(`pt:${i}`); added++; }
     }
     // ── Regla estilo AutoCAD ──
@@ -4729,6 +4744,7 @@ export function drawing({
       const poly = polys[i];
       const isArea = areas.includes(i);
       if (isArea) {
+        if (!poly.every((idx) => !pts[idx] || enPlano(pts[idx]))) continue;
         // Window: TODOS los vértices del área adentro. Crossing: cualquier arista toca.
         let areaMatch: boolean;
         if (!isCrossing) {
@@ -4743,7 +4759,7 @@ export function drawing({
         if (areaMatch) { selection.add(`poly:${i}`); added++; }
       } else {
         for (let j = 0; j < poly.length - 1; j++) {
-          const a = pts[poly[j]], b = pts[poly[j + 1]]; if (!a || !b) continue;
+          const a = pts[poly[j]], b = pts[poly[j + 1]]; if (!a || !b || !enPlano(a) || !enPlano(b)) continue;
           if (segMatch(projectToScreen(a), projectToScreen(b))) { selection.add(`seg:${i}:${j}`); added++; }
         }
       }
@@ -4770,6 +4786,7 @@ export function drawing({
   };
   // API pública: cancela el modo click-click si está activo (Esc, cambio
   // de tool, otra acción).
+  (window as any).__hekatanRectEnCurso = () => !!ccAnchor;   // el Modo Revit no debe quedarse con el 2.º clic
   const cancelClickClick = () => {
     if (ccAnchor) {
       ccAnchor = null;

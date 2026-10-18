@@ -755,7 +755,25 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   };
   let datoSel: { tipo: "eje" | "nivel"; id: string } | null = null;
   /** Modificar: ¿el clic cae sobre un eje (planta) o un nivel (alzado)? */
+  /** ¿Hay un nudo o una barra del MODELO bajo el cursor (≤ 8 px)? Entonces manda la selección, no el eje. */
+  const modeloBajo = (ev: MouseEvent): boolean => {
+    const P = (W().__hekatanDrawingPoints?.rawVal ?? []) as V3[], L = (W().__hekatanDrawingPolylines?.rawVal ?? []) as number[][];
+    const tol = 8, mx = ev.clientX, my = ev.clientY;
+    const pant = P.map((p) => aPantalla(p));
+    for (const [x, y] of pant) if (Math.hypot(x - mx, y - my) <= tol) return true;
+    for (const pl of L) for (let i = 0; i + 1 < (pl?.length ?? 0); i++) {
+      const A = pant[pl[i]], B = pant[pl[i + 1]]; if (!A || !B) continue;
+      const vx = B[0] - A[0], vy = B[1] - A[1], L2 = vx * vx + vy * vy || 1;
+      const t = Math.max(0, Math.min(1, ((mx - A[0]) * vx + (my - A[1]) * vy) / L2));
+      if (Math.hypot(mx - (A[0] + t * vx), my - (A[1] + t * vy)) <= tol / 2) return true;
+    }
+    return false;
+  };
   const designarDato = (ev: MouseEvent): boolean => {
+    // Como Revit/AutoCAD: el elemento del modelo manda sobre la línea de referencia. En planta TODOS los
+    // nudos están sobre ejes y el clic se iba al eje (enseñaba sus cotas): no se podía seleccionar ni un
+    // nudo, ni cerrar una ventana de selección cerca de un eje (Jorge, 18-oct-2026).
+    if (modeloBajo(ev) || W().__hekatanRectEnCurso?.()) return false;
     const d = (p: V3, q: V3) => { const [ax, ay] = aPantalla(p), [bx, by] = aPantalla(q);
       const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1; const t = Math.max(0, Math.min(1, ((ev.clientX - ax) * vx + (ev.clientY - ay) * vy) / L2));
       return Math.hypot(ev.clientX - (ax + t * vx), ev.clientY - (ay + t * vy)); };

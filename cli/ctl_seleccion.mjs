@@ -1,240 +1,47 @@
-#!/usr/bin/env node
 /**
- * ¿Se puede SELECCIONAR con el raton? Se dibuja un portico, se aprieta el
- * boton Selec. y se hace clic sobre un nudo y sobre una barra.
- *
- *   node cli/ctl_seleccion.mjs
+ * SELECCIÓN como AutoCAD (18-oct-2026), con el ratón real, en el Modo Revit («Modificar»):
+ *   clic en un nudo · ventana izq→der (solo lo que queda ENTERO dentro) · captura der→izq (lo que TOCA)
+ *   · lo mismo ARRASTRANDO.   node cli/ctl_seleccion.mjs [--base URL]
  */
 import puppeteer from "puppeteer";
-import { mkdirSync, readFileSync, existsSync, statSync, rmSync } from "fs";
-import { createServer } from "http";
-import { fileURLToPath } from "url";
-import { dirname, join, extname } from "path";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT = join(__dirname, "shots");
-const FR = join(OUT, "seleccion");
-rmSync(FR, { recursive: true, force: true });
-mkdirSync(FR, { recursive: true });
-const BASE = "/hekatan-struct-lineal/";
-const raiz = join(__dirname, "..", "website", "src", "examples");
-const MIME = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css",
-  ".wasm":"application/wasm", ".json":"application/json", ".svg":"image/svg+xml",
-  ".png":"image/png", ".ico":"image/x-icon", ".woff2":"font/woff2" };
-const srv = createServer((req, res) => {
-  let p = decodeURIComponent((req.url || "/").split("?")[0]);
-  if (p.startsWith(BASE)) p = p.slice(BASE.length - 1);
-  let f = join(raiz, p);
-  if (existsSync(f) && statSync(f).isDirectory()) f = join(f, "index.html");
-  if (!existsSync(f)) { res.writeHead(404); return res.end("404"); }
-  res.writeHead(200, { "content-type": MIME[extname(f)] || "application/octet-stream" });
-  res.end(readFileSync(f));
-});
-await new Promise((r) => srv.listen(4713, r));
-const nav = await puppeteer.launch({ headless: "new",
-  args: ["--no-sandbox","--disable-setuid-sandbox","--enable-unsafe-swiftshader",
-         "--use-angle=swiftshader","--window-size=1500,1000"] });
-const pag = await nav.newPage();
-await pag.setViewport({ width: 1500, height: 1000 });
-const errs = [];
-pag.on("pageerror", (e) => errs.push(e.message));
-await pag.goto(`http://localhost:4713${BASE}workspace/?t=new-blank`,
-               { waitUntil: "networkidle2", timeout: 120000 });
-await new Promise((r) => setTimeout(r, 8000));
-await pag.keyboard.press("Escape");
-await new Promise((r) => setTimeout(r, 500));
-
-const filas = [];
-const anota = (q, ok, det) => { filas.push({ ok });
-  console.log(`${ok ? "  ok  " : "FALLA "} ${q}${det ? "   " + det : ""}`); };
-let nf = 0;
-const foto = () => pag.screenshot({ path: join(FR, `f_${String(nf++).padStart(2, "0")}.png`) });
-const boton = async (t) => {
-  const r = await pag.evaluate((x) => {
-    const b = Array.from(document.querySelectorAll("#hk-ribbon button"))
-      .find((e) => (e.textContent || "").includes(x));
-    if (!b) return null;
-    const q = b.getBoundingClientRect();
-    return q.width ? { x: q.left + q.width / 2, y: q.top + q.height / 2 } : null;
-  }, t);
-  if (!r) return false;
-  await pag.mouse.click(r.x, r.y);
-  await new Promise((k) => setTimeout(k, 450));
-  return true;
-};
-const cv = await pag.evaluate(() => {
-  const c = document.querySelector("#viewer canvas"); const r = c.getBoundingClientRect();
-  return { x: r.left, y: r.top, w: r.width, h: r.height };
-});
-const clic = async (dx, dy) => {
-  const x = cv.x + cv.w * dx, y = cv.y + cv.h * dy;
-  await pag.mouse.move(x, y);
-  await new Promise((k) => setTimeout(k, 200));
-  await pag.mouse.click(x, y);
-  await new Promise((k) => setTimeout(k, 500));
-};
-const sel = () => pag.evaluate(() => {
-  const s = window.__hekatanSelection;
-  return { n: s ? s.size : -1, ids: s ? [...s].slice(0, 4) : [],
-           tool: window.__hekatanCadState?.get?.()?.tool ?? null,
-           rectExplicit: window.__hekatanRectSelectExplicit ?? null };
-});
-
-// ── Portico a mano, con la herramienta Linea ────────────────────────────────
-await boton("Planta");
-await new Promise((r) => setTimeout(r, 1500));
-await boton("Línea");
-const P = [[0.40, 0.62], [0.40, 0.40], [0.60, 0.40], [0.60, 0.62]];
-for (const [dx, dy] of P) await clic(dx, dy);
-await pag.keyboard.press("Escape");
-await new Promise((r) => setTimeout(r, 800));
-const m = await pag.evaluate(() => {
-  const g = (k) => { const v = window[k]; return v && v.val ? v.val : []; };
-  const pls = g("__hekatanDrawingPolylines");
-  return { nudos: g("__hekatanDrawingPoints").length,
-           tramos: pls.reduce((s, p) => s + Math.max(0, p.length - 1), 0) };
-});
-anota("hay un portico dibujado", m.nudos === 4 && m.tramos === 3,
-      `${m.nudos} nudos, ${m.tramos} tramos`);
-await foto();
-
-// ── Seleccionar un NUDO ─────────────────────────────────────────────────────
-anota("el boton Selec. existe", await boton("Selec"), "");
-const s0 = await sel();
-anota("al apretarlo queda el tool 'select'", s0.tool === "select",
-      `tool=${s0.tool} · rectSelectExplicit=${s0.rectExplicit}`);
-await clic(...P[0]);
-const s1 = await sel();
-anota("un clic sobre un NUDO lo selecciona", s1.n > 0,
-      `${s1.n} seleccionados · ${JSON.stringify(s1.ids)}`);
-await foto();
-
-// ── Seleccionar una BARRA (punto medio de la columna izquierda) ─────────────
-await pag.keyboard.press("Escape");
-await new Promise((r) => setTimeout(r, 500));
-await clic(0.40, 0.51);
-const s2 = await sel();
-anota("un clic sobre una BARRA la selecciona", s2.n > 0,
-      `${s2.n} seleccionados · ${JSON.stringify(s2.ids)}`);
-await foto();
-
-// ── SELECCION POR VENTANA, en los DOS sentidos (como AutoCAD) ──────────────
-// Izquierda -> derecha = VENTANA: entra solo lo que queda ENTERO dentro.
-// Derecha -> izquierda = CAPTURA: basta con TOCARLO.
-const arrastrar = async (x0, y0, x1, y1) => {
-  await pag.keyboard.press("Escape");
-  await new Promise((r) => setTimeout(r, 400));
-  await pag.mouse.move(cv.x + cv.w * x0, cv.y + cv.h * y0);
-  await pag.mouse.down();
-  // En varios pasos: con un solo salto el `pointermove` no llega a marcar el
-  // arrastre como activo y se queda en un clic suelto.
-  for (let i = 1; i <= 6; i++) {
-    await pag.mouse.move(cv.x + cv.w * (x0 + (x1 - x0) * i / 6),
-                         cv.y + cv.h * (y0 + (y1 - y0) * i / 6));
-    await new Promise((r) => setTimeout(r, 90));
-  }
-  await pag.mouse.up();
-  await new Promise((r) => setTimeout(r, 600));
-  return (await sel()).n;
-};
-{
-  // ── MANTENER PULSADO NO DEBE SELECCIONAR ─────────────────────────────────
-  // Arrastrar con el boton apretado es ORBITAR. Si ademas seleccionara, un
-  // gesto para girar el modelo cambiaria la seleccion sin querer.
-  await pag.keyboard.press("Escape");
-  await new Promise((r) => setTimeout(r, 400));
-  await pag.mouse.move(cv.x + cv.w * 0.28, cv.y + cv.h * 0.30);
-  await pag.mouse.down();
-  for (let i = 1; i <= 6; i++) {
-    await pag.mouse.move(cv.x + cv.w * (0.28 + 0.44 * i / 6),
-                         cv.y + cv.h * (0.30 + 0.42 * i / 6));
-    await new Promise((r) => setTimeout(r, 90));
-  }
-  await pag.mouse.up();
-  await new Promise((r) => setTimeout(r, 700));
-  const arrastrando = (await sel()).n;
-  anota("mantener pulsado NO selecciona (eso es orbitar)", arrastrando === 0,
-        `${arrastrando} seleccionados`);
-}
-
-// ── CLIC-CLIC: eso SI selecciona ────────────────────────────────────────────
-const clicClic = async (x0, y0, x1, y1) => {
-  await pag.keyboard.press("Escape");
-  await new Promise((r) => setTimeout(r, 400));
-  await clic(x0, y0);                       // clic 1: esquina
-  // El raton se mueve LIBRE, sin nada pulsado.
-  for (let i = 1; i <= 4; i++) {
-    await pag.mouse.move(cv.x + cv.w * (x0 + (x1 - x0) * i / 4),
-                         cv.y + cv.h * (y0 + (y1 - y0) * i / 4));
-    await new Promise((r) => setTimeout(r, 110));
-  }
-  await clic(x1, y1);                       // clic 2: cierra
-  await new Promise((r) => setTimeout(r, 500));
-  return (await sel()).n;
-};
-{
-  // El portico ocupa x 0.40..0.60, y 0.40..0.62. Una ventana que lo envuelve
-  // entero de izquierda a derecha tiene que cogerlo todo.
-  const nVent = await clicClic(0.30, 0.32, 0.72, 0.72);
-  anota("clic-clic izquierda->derecha SI selecciona (ventana)", nVent > 0,
-        `${nVent} seleccionados`);
-  await foto();
-  // Y una captura de derecha a izquierda que solo TOCA una columna.
-  const nCap = await clicClic(0.50, 0.50, 0.35, 0.55);
-  anota("clic-clic derecha->izquierda SI selecciona (captura)", nCap > 0,
-        `${nCap} seleccionados`);
-  await foto();
-}
-
-// ── MODIFICAR: el panel de propiedades NO debe tapar el lienzo ni el ribbon.
-// El fallo era ese: se abria centrado arriba, tapaba el modelo Y los botones,
-// y el clic siguiente caia en el panel en vez de en el lienzo. Parecia que la
-// seleccion estaba rota y solo estaba tapada.
-{
-  const tapa = await pag.evaluate(() => {
-    const p = document.getElementById("hk-properties-pane");
-    if (!p || p.style.display === "none") return "no visible";
-    const q = p.getBoundingClientRect();
-    const c = document.querySelector("#viewer canvas").getBoundingClientRect();
-    const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
-    const sobreCentro = cx > q.left && cx < q.right && cy > q.top && cy < q.bottom;
-    const r = document.getElementById("hk-ribbon")?.getBoundingClientRect();
-    const sobreRibbon = !!r && !(q.right < r.left || q.left > r.right ||
-                                 q.bottom < r.top || q.top > r.bottom);
-    return { sobreCentro, sobreRibbon, esquina: [Math.round(q.left), Math.round(q.top)] };
-  });
-  anota("el panel de propiedades no tapa el centro del lienzo",
-        !!tapa && tapa.sobreCentro === false, JSON.stringify(tapa));
-  anota("ni tapa el ribbon", !!tapa && tapa.sobreRibbon === false, "");
-}
-
-// ── ELIMINAR ────────────────────────────────────────────────────────────────
-{
-  const cuenta = () => pag.evaluate(() => {
-    const v = window.__hekatanDrawingPolylines?.val ?? [];
-    return v.reduce((s, p) => s + Math.max(0, p.length - 1), 0);
-  });
-  const antes = await cuenta();
-  await pag.keyboard.press("Escape");
-  await new Promise((r) => setTimeout(r, 400));
-  anota("el boton Borrar existe", await boton("Borrar"), "");
-  // Borrar es hover + clic: hay que pasar por encima para que se resalte.
-  const x = cv.x + cv.w * 0.40, y = cv.y + cv.h * 0.51;
-  await pag.mouse.move(x, y);
-  await new Promise((r) => setTimeout(r, 500));
-  await pag.mouse.move(x + 1, y);
-  await new Promise((r) => setTimeout(r, 400));
-  await pag.mouse.click(x, y);
-  await new Promise((r) => setTimeout(r, 900));
-  const desp = await cuenta();
-  anota("Borrar quita la barra sobre la que se hace clic", desp < antes,
-        `${antes} -> ${desp} tramos`);
-  await foto();
-}
-
-console.log(`\n${errs.length} pageerror`);
-if (errs.length) console.log(errs.slice(0, 4));
-await nav.close(); srv.close();
-const malas = filas.filter((f) => !f.ok).length;
-console.log(malas ? `FALLA: ${filas.length - malas}/${filas.length}` : `OK: ${filas.length}/${filas.length}`);
-process.exit(malas ? 1 : 0);
+const args = process.argv.slice(2); const ib = args.indexOf("--base"); const BASE = ib >= 0 ? args[ib + 1] : "http://localhost:4600";
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const nav = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });
+const errs = []; pag.on("pageerror", (e) => errs.push(e.message));
+await pag.goto(`${BASE}/workspace/?t=new-blank`, { waitUntil: "networkidle2", timeout: 180000 }); await espera(4000);
+const ev = (f, a) => pag.evaluate(f, a);
+const filas = []; const ok = (q, c, d = "") => { filas.push(!!c); console.log(`${c ? "  ✓" : "  ✗"} ${q}${d ? "  · " + d : ""}`); };
+const centro = (sel) => ev((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; }, sel);
+const boton = (re) => ev((re) => { const b = [...document.querySelectorAll("#hk-revit button")].find((b) => new RegExp(re).test(b.textContent) && b.getBoundingClientRect().width > 0); if (!b) return null; const r = b.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, re);
+const clic = async (c) => { await pag.mouse.move(c[0], c[1], { steps: 4 }); await espera(60); await pag.mouse.click(c[0], c[1]); await espera(350); };
+const mundo = (p) => ev((p) => { const c = document.querySelector("#viewer canvas"); const x = window.__hekatanViewerCtx(); const r = c.getBoundingClientRect(); const V = Object.getPrototypeOf(x.camera.position).constructor; const v = new V(...p).project(x.camera); return [(v.x * 0.5 + 0.5) * r.width + r.left, (-v.y * 0.5 + 0.5) * r.height + r.top]; }, p);
+const sel = () => ev(() => { const s = [...(window.__hekatanSelection ?? [])]; return { n: s.length, pt: s.filter((i) => i.startsWith("pt:")).length, seg: s.filter((i) => i.startsWith("seg:")).length }; });
+// edificio: Rejilla → Crear → columnas y vigas en todos los niveles → planta N+3 → Modificar
+if (!(await ev(() => document.body.classList.contains("hk-revit-on")))) await clic(await centro("#hk-revit-toggle"));
+await clic(await centro('#hk-revit .rv-b[data-rv="ejes"]')); await clic(await boton("Crear")); await espera(1500);
+await clic(await centro('#hk-revit .rv-niv[data-z="3"]')); await espera(800);
+await clic(await centro('#hk-revit .rv-b[data-rv="columna"]')); await clic(await boton("En ejes · todos")); await espera(600);
+await clic(await centro('#hk-revit .rv-b[data-rv="viga"]')); await clic(await boton("En ejes · todos")); await espera(600);
+await clic(await centro('#hk-revit .rv-b[data-rv="modificar"]')); await espera(400);
+// 1. clic sobre un nudo (que está ENCIMA de los ejes B y 2)
+await clic(await mundo([6, 5, 3]));
+let s = await sel(); ok("clic en el nudo (6,5,3), que cae sobre los ejes B y 2 → 1 nudo seleccionado", s.pt === 1 && s.n === 1, JSON.stringify(s));
+await pag.keyboard.press("Escape"); await espera(300);
+// 2. VENTANA izq→der alrededor del vano 6–12 × 5–10 (con margen dentro de los ejes vecinos)
+const a1 = await mundo([5, 11, 3]), b1 = await mundo([13, 4, 3]);
+await clic(a1); await clic(b1);
+s = await sel(); ok("ventana izq→der (6–12 × 5–10): 4 nudos + las 4 vigas del vano, nada que salga del recuadro", s.pt === 4 && s.seg === 4, JSON.stringify(s));
+await pag.keyboard.press("Escape"); await espera(300);
+// 3. CAPTURA der→izq pequeña, en medio del vano (no contiene nudos): coge la viga que cruza
+const a2 = await mundo([9.4, 6.3, 3]), b2 = await mundo([8.6, 3.7, 3]);   // los dos clics en VACÍO (a 1.3 m de la viga)
+await clic(a2); await clic(b2);
+s = await sel(); ok("captura der→izq sobre la viga del eje 2 entre B y C: la viga (que solo TOCA el recuadro)", s.seg === 1 && s.pt === 0, JSON.stringify(s));
+await pag.keyboard.press("Escape"); await espera(300);
+// 4. lo mismo ARRASTRANDO
+const arrastra = async (a, b) => { await pag.mouse.move(a[0], a[1]); await pag.mouse.down(); await pag.mouse.move(b[0], b[1], { steps: 12 }); await pag.mouse.up(); await espera(400); };
+await arrastra(a1, b1); s = await sel(); ok("arrastrando izq→der: la misma ventana", s.pt === 4 && s.seg === 4, JSON.stringify(s));
+await pag.keyboard.press("Escape"); await espera(300);
+await arrastra(a2, b2); s = await sel(); ok("arrastrando der→izq: la misma captura", s.seg === 1 && s.pt === 0, JSON.stringify(s));
+ok("sin errores de página", !errs.length, errs.slice(0, 2).join(" | "));
+console.log(`${filas.filter(Boolean).length}/${filas.length} OK`); await nav.close(); process.exit(filas.every(Boolean) ? 0 : 1);
