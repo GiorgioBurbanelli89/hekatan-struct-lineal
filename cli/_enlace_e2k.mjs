@@ -2,7 +2,7 @@
 import puppeteer from "puppeteer";
 import { writeFileSync } from "node:fs";
 const [fichero, salida, png] = process.argv.slice(2);
-const b = await puppeteer.launch({ headless: "new", args: ["--no-sandbox","--enable-unsafe-swiftshader","--use-angle=swiftshader","--enable-webgl"] });
+const b = await puppeteer.launch({ headless: "new", executablePath: process.env.CHROME || "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--no-sandbox","--enable-unsafe-swiftshader","--use-angle=swiftshader","--enable-webgl"] });
 const p = await b.newPage(); await p.setViewport({ width: 1600, height: 950 });
 const errs = []; p.on("pageerror", e => errs.push(String(e).slice(0,150)));
 p.on("dialog", async d => { console.log("aviso:", d.message().slice(0,160).replace(/\n/g," ")); await d.accept(); });
