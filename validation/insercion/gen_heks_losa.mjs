@@ -1,0 +1,20 @@
+// Escribe el .heks de la losa Shell-Thin 4x4 + 4 vigas + 4 columnas (kN, m), la MISMA geometria de struct_losa.mjs.
+import { writeFileSync } from "node:fs";
+const Lx = 4, H = 3, n = 4, h = Lx / n, Q = 5, t = 0.145, E = 2.5e7, nu = 0.2, G = E / (2 * (1 + nu));
+const N = [], idx = new Map(); const nodo = (x, y, z) => { const k = [x, y, z].map(v => v.toFixed(4)).join(","); if (!idx.has(k)) { idx.set(k, N.length + 1); N.push([x, y, z]); } return idx.get(k); };
+const L = []; let id = 1;
+const fr = [], sh = [];
+for (const [x, y] of [[0,0],[Lx,0],[Lx,Lx],[0,Lx]]) fr.push(["col", nodo(x, y, 0), nodo(x, y, H)]);
+for (let i = 0; i < n; i++) for (const [x0, y0, x1, y1] of [[i*h,0,(i+1)*h,0],[Lx,i*h,Lx,(i+1)*h],[Lx-i*h,Lx,Lx-(i+1)*h,Lx],[0,Lx-i*h,0,Lx-(i+1)*h]]) fr.push(["viga", nodo(x0, y0, H), nodo(x1, y1, H)]);
+for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) sh.push([nodo(i*h, j*h, H), nodo((i+1)*h, j*h, H), nodo((i+1)*h, (j+1)*h, H), nodo(i*h, (j+1)*h, H)]);
+N.forEach((p, i) => L.push(`node ${i + 1} ${p[0]} ${p[1]} ${p[2]}`));
+const J = (a, b) => a * b ** 3 * (1 / 3 - 0.21 * (b / a) * (1 - b ** 4 / (12 * a ** 4)));
+fr.forEach(([tp, a, b]) => { const [t2, t3] = tp === "col" ? [0.25, 0.25] : [0.2, 0.4];
+  L.push(`frame ${id++} ${a} ${b} ${E} ${t2 * t3} ${t3 * t2 ** 3 / 12} ${t2 * t3 ** 3 / 12} ${J(Math.max(t2, t3), Math.min(t2, t3))} ${nu} 0`); });
+const s0 = id; sh.forEach(q => L.push(`shell ${id++} ${q.join(" ")} ${t} ${E} 0 0`));
+L.push(`shelltype ${s0}-${id - 1} thin`, `shellnu ${s0}-${id - 1} ${nu}`);
+for (const [tp, a] of fr.filter(f => f[0] === "col").map(f => [f[0], f[1]])) L.push(`support ${a} fixed`);
+const cargas = new Map(); sh.forEach(q => q.forEach(nd => cargas.set(nd, (cargas.get(nd) ?? 0) - Q * h * h / 4)));
+for (const [nd, f] of cargas) L.push(`load ${nd} 0 0 ${f} 0 0 0`);
+L.push("selfweight 0", "solve");
+writeFileSync("validation/insercion/etabs/losa.heks", L.join("\n") + "\n"); console.log(N.length, "nudos", fr.length, "barras", sh.length, "losas");

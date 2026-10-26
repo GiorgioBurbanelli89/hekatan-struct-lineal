@@ -385,6 +385,7 @@ import { edificioAceroV2 } from "../edificio-acero-v2/edificioAceroV2";
 import { edificioMixto } from "../edificio-mixto/edificioMixto";
 import { edificioMuros } from "../edificio-muros/edificioMuros";
 import { edificioDual } from "../edificio-dual/edificioDual";
+import { edificiosTorsion } from "../edificios-torsion/edificiosTorsion";
 import { columnaCft } from "../columna-cft/columnaCft";
 import { triangularPlate } from "../triangular-plate/triangularPlate";
 import { conexionRbs } from "../conexion-rbs/conexionRbs";
@@ -562,6 +563,7 @@ export const examplesRegistry: ExampleDef[] = [
   edificioMixto,
   edificioMuros,
   edificioDual,
+  edificiosTorsion,        // 20 edificios (10 regulares + 10 irregulares): Tu con el Insertion Point, = ETABS
   // Legacy (se mantienen por compatibilidad con URLs existentes)
   edificioConLosa,
   edificioConMuros,

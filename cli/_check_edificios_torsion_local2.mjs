@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const BASE = "http://localhost:4712/hekatan-struct-lineal/workspace/";
+const nav = await puppeteer.launch({ headless: "new", executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader"] });
+const p = await nav.newPage(); await p.setViewport({ width: 1500, height: 950 });
+const errs = []; p.on("pageerror", (e) => errs.push(String(e.message).slice(0, 200)));
+await p.goto(`${BASE}?t=edificios-torsion`, { waitUntil: "networkidle2", timeout: 120000 });
+await new Promise((r) => setTimeout(r, 9000));
+const filas = await p.evaluate(() => [...document.querySelectorAll(".tp-lblv")].filter((e) => /Tu envolvente|Cambio del Tu|Combinación que manda|Vigas con Tu|Tcr de la/.test(e.textContent)).map((e) => e.innerHTML.replace(/<[^>]+>/g, " | ").replace(/\s+/g, " ").slice(0, 160)));
+console.log(JSON.stringify(filas, null, 1));
+console.log("errores:", errs.slice(0, 3));
+await nav.close();

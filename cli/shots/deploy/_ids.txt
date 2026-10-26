@@ -61,6 +61,7 @@ edificio-hormigon
 edificio-ladera
 edificio-mixto
 edificio-muros
+edificios-torsion
 eiffel
 estacionario-sap2000
 estribo-puente

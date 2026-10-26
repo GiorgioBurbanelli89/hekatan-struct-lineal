@@ -1,0 +1,642 @@
+{
+ "R1": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 14.693251814182421,
+   "TuGrav": 12.305044861324484,
+   "TuSism": 14.693251814182421,
+   "combo": "1.2D+L+EY",
+   "nVigas": 180,
+   "nSobreUmbral": 96,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 14.69325181418326,
+   "TuGrav": 12.305044861324479,
+   "TuSism": 14.69325181418326,
+   "combo": "1.2D+L+EY",
+   "nVigas": 180,
+   "nSobreUmbral": 96,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 11.127585252318978,
+   "TuGrav": 9.551525892145255,
+   "TuSism": 11.127585252318978,
+   "combo": "1.2D+L+EY",
+   "nVigas": 180,
+   "nSobreUmbral": 72,
+   "nSobreTcr": 0
+  }
+ },
+ "R2": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 15.641691765916981,
+   "TuGrav": 12.258974339132585,
+   "TuSism": 15.641691765916981,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 176,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 15.641691765915322,
+   "TuGrav": 12.258974339132578,
+   "TuSism": 15.641691765915322,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 176,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 11.783668611288666,
+   "TuGrav": 9.47608038628237,
+   "TuSism": 11.783668611288666,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 120,
+   "nSobreTcr": 0
+  }
+ },
+ "R3": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 22.385697011207526,
+   "TuGrav": 13.876979814251152,
+   "TuSism": 22.385697011207526,
+   "combo": "1.2D+L+EY",
+   "nVigas": 720,
+   "nSobreUmbral": 432,
+   "nSobreTcr": 72
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 22.385697011210222,
+   "TuGrav": 13.876979814251147,
+   "TuSism": 22.385697011210222,
+   "combo": "1.2D+L+EY",
+   "nVigas": 720,
+   "nSobreUmbral": 432,
+   "nSobreTcr": 72
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 16.35385226867544,
+   "TuGrav": 10.930429263422646,
+   "TuSism": 16.35385226867544,
+   "combo": "1.2D+L+EY",
+   "nVigas": 720,
+   "nSobreUmbral": 352,
+   "nSobreTcr": 0
+  }
+ },
+ "R4": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 36.212657021597714,
+   "TuGrav": 31.505108506055983,
+   "TuSism": 36.212657021597714,
+   "combo": "1.2D+L+EY",
+   "nVigas": 252,
+   "nSobreUmbral": 172,
+   "nSobreTcr": 88
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 36.212657021600364,
+   "TuGrav": 31.505108506056004,
+   "TuSism": 36.212657021600364,
+   "combo": "1.2D+L+EY",
+   "nVigas": 252,
+   "nSobreUmbral": 172,
+   "nSobreTcr": 88
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 27.156531498632027,
+   "TuGrav": 24.196218986848603,
+   "TuSism": 27.156531498632027,
+   "combo": "1.2D+L+EY",
+   "nVigas": 252,
+   "nSobreUmbral": 156,
+   "nSobreTcr": 64
+  }
+ },
+ "R5": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 15.488649863563893,
+   "TuGrav": 12.294358421459803,
+   "TuSism": 15.488649863563893,
+   "combo": "1.2D+L+EY",
+   "nVigas": 330,
+   "nSobreUmbral": 158,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 15.488649863566,
+   "TuGrav": 12.294358421459794,
+   "TuSism": 15.488649863566,
+   "combo": "1.2D+L+EY",
+   "nVigas": 330,
+   "nSobreUmbral": 158,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 11.666122634614922,
+   "TuGrav": 9.533524063425215,
+   "TuSism": 11.666122634614922,
+   "combo": "1.2D+L+EY",
+   "nVigas": 330,
+   "nSobreUmbral": 120,
+   "nSobreTcr": 0
+  }
+ },
+ "R6": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 8.167784581337752,
+   "TuGrav": 6.93096236332188,
+   "TuSism": 8.167784581337752,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 56,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 8.167784581338084,
+   "TuGrav": 6.930962363321882,
+   "TuSism": 8.167784581338084,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 56,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 6.1037967377494216,
+   "TuGrav": 5.013888995283555,
+   "TuSism": 6.1037967377494216,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 8,
+   "nSobreTcr": 0
+  }
+ },
+ "R7": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 14.340999704447547,
+   "TuGrav": 9.034642211898536,
+   "TuSism": 14.340999704447547,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 144,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 14.340999704447333,
+   "TuGrav": 9.034642211898525,
+   "TuSism": 14.340999704447333,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 144,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 10.349744992382668,
+   "TuGrav": 7.086823835421036,
+   "TuSism": 10.349744992382668,
+   "combo": "1.2D+L+EX",
+   "nVigas": 360,
+   "nSobreUmbral": 80,
+   "nSobreTcr": 0
+  }
+ },
+ "R8": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 13.949094614190328,
+   "TuGrav": 12.206869073897476,
+   "TuSism": 13.949094614190328,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 152,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 13.949094614190553,
+   "TuGrav": 12.206869073897472,
+   "TuSism": 13.949094614190553,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 152,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 10.72871017635889,
+   "TuGrav": 9.532194372602339,
+   "TuSism": 10.72871017635889,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 144,
+   "nSobreTcr": 0
+  }
+ },
+ "R9": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 13.688526265955721,
+   "TuGrav": 9.390705113770702,
+   "TuSism": 13.688526265955721,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 216,
+   "nSobreTcr": 56
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 13.68852626595389,
+   "TuGrav": 9.39070511377071,
+   "TuSism": 13.68852626595389,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 216,
+   "nSobreTcr": 56
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 10.085761991961823,
+   "TuGrav": 7.529964109551321,
+   "TuSism": 10.085761991961823,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 192,
+   "nSobreTcr": 8
+  }
+ },
+ "R10": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 19.578115583710996,
+   "TuGrav": 12.84456844752171,
+   "TuSism": 19.578115583710996,
+   "combo": "1.2D+L+EY",
+   "nVigas": 480,
+   "nSobreUmbral": 256,
+   "nSobreTcr": 16
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 19.578115583718255,
+   "TuGrav": 12.844568447521704,
+   "TuSism": 19.578115583718255,
+   "combo": "1.2D+L+EY",
+   "nVigas": 480,
+   "nSobreUmbral": 256,
+   "nSobreTcr": 16
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 14.624213466094897,
+   "TuGrav": 10.013793260227636,
+   "TuSism": 14.624213466094897,
+   "combo": "1.2D+L+EY",
+   "nVigas": 480,
+   "nSobreUmbral": 192,
+   "nSobreTcr": 0
+  }
+ },
+ "I1": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 8.518943589004687,
+   "TuGrav": 6.8582367673377576,
+   "TuSism": 8.518943589004687,
+   "combo": "1.2D+L+EY",
+   "nVigas": 384,
+   "nSobreUmbral": 86,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 8.518943589004715,
+   "TuGrav": 6.858236767337754,
+   "TuSism": 8.518943589004715,
+   "combo": "1.2D+L+EY",
+   "nVigas": 384,
+   "nSobreUmbral": 86,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 6.474109526579301,
+   "TuGrav": 5.245345716198934,
+   "TuSism": 6.474109526579301,
+   "combo": "1.2D+L+EY",
+   "nVigas": 384,
+   "nSobreUmbral": 76,
+   "nSobreTcr": 0
+  }
+ },
+ "I2": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 8.203629933956567,
+   "TuGrav": 7.032139902073721,
+   "TuSism": 8.203629933956567,
+   "combo": "1.2D+L+EX",
+   "nVigas": 264,
+   "nSobreUmbral": 86,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 8.203629933956698,
+   "TuGrav": 7.03213990207372,
+   "TuSism": 8.203629933956698,
+   "combo": "1.2D+L+EX",
+   "nVigas": 264,
+   "nSobreUmbral": 86,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 6.168287732100355,
+   "TuGrav": 5.12465774979154,
+   "TuSism": 6.168287732100355,
+   "combo": "1.2D+L+EX",
+   "nVigas": 264,
+   "nSobreUmbral": 60,
+   "nSobreTcr": 0
+  }
+ },
+ "I3": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 8.02787112710933,
+   "TuGrav": 6.954213742389145,
+   "TuSism": 8.02787112710933,
+   "combo": "1.2D+L+EY",
+   "nVigas": 192,
+   "nSobreUmbral": 66,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 8.027871127109641,
+   "TuGrav": 6.954213742389148,
+   "TuSism": 8.027871127109641,
+   "combo": "1.2D+L+EY",
+   "nVigas": 192,
+   "nSobreUmbral": 66,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 5.92804907626167,
+   "TuGrav": 4.95488202547762,
+   "TuSism": 5.92804907626167,
+   "combo": "1.2D+L-EX",
+   "nVigas": 192,
+   "nSobreUmbral": 44,
+   "nSobreTcr": 0
+  }
+ },
+ "I4": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 15.34089553104053,
+   "TuGrav": 12.331766490188443,
+   "TuSism": 15.34089553104053,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 208,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 15.340895531040948,
+   "TuGrav": 12.331766490188443,
+   "TuSism": 15.340895531040948,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 208,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 11.508745084989863,
+   "TuGrav": 9.443964131665885,
+   "TuSism": 11.508745084989863,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 168,
+   "nSobreTcr": 0
+  }
+ },
+ "I5": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 15.026074316579694,
+   "TuGrav": 12.4202403577165,
+   "TuSism": 15.026074316579694,
+   "combo": "1.2D+L+EY",
+   "nVigas": 240,
+   "nSobreUmbral": 108,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 15.026074316580125,
+   "TuGrav": 12.420240357716525,
+   "TuSism": 15.026074316580125,
+   "combo": "1.2D+L+EY",
+   "nVigas": 240,
+   "nSobreUmbral": 108,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 11.168982893436564,
+   "TuGrav": 9.531519447198573,
+   "TuSism": 11.168982893436564,
+   "combo": "1.2D+L+EY",
+   "nVigas": 240,
+   "nSobreUmbral": 88,
+   "nSobreTcr": 0
+  }
+ },
+ "I6": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 17.8545991410732,
+   "TuGrav": 12.521545765118105,
+   "TuSism": 17.8545991410732,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 168,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 17.854599141073237,
+   "TuGrav": 12.521545765118104,
+   "TuSism": 17.854599141073237,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 168,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 13.38392985948198,
+   "TuGrav": 9.712068939909495,
+   "TuSism": 13.38392985948198,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 128,
+   "nSobreTcr": 0
+  }
+ },
+ "I7": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 23.504381155103033,
+   "TuGrav": 20.94088249734967,
+   "TuSism": 23.504381155103033,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 210,
+   "nSobreTcr": 10
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 23.504381155104483,
+   "TuGrav": 20.940882497349577,
+   "TuSism": 23.504381155104483,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 210,
+   "nSobreTcr": 10
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 16.61217578557047,
+   "TuGrav": 14.684902835776054,
+   "TuSism": 16.61217578557047,
+   "combo": "1.2D+L-EY",
+   "nVigas": 360,
+   "nSobreUmbral": 126,
+   "nSobreTcr": 0
+  }
+ },
+ "I8": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 12.40150165586417,
+   "TuGrav": 10.936865087799431,
+   "TuSism": 12.40150165586417,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 92,
+   "nSobreTcr": 0
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 12.401501655863672,
+   "TuGrav": 10.936865087799461,
+   "TuSism": 12.401501655863672,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 92,
+   "nSobreTcr": 0
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 9.514322539363306,
+   "TuGrav": 8.760188771578857,
+   "TuSism": 9.514322539363306,
+   "combo": "1.2D+L+EY",
+   "nVigas": 288,
+   "nSobreUmbral": 32,
+   "nSobreTcr": 0
+  }
+ },
+ "I9": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 24.94869971997292,
+   "TuGrav": 22.198272212748996,
+   "TuSism": 24.94869971997292,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 188,
+   "nSobreTcr": 4
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 24.94869971997289,
+   "TuGrav": 22.198272212748982,
+   "TuSism": 24.94869971997289,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 188,
+   "nSobreTcr": 4
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 18.84302548045288,
+   "TuGrav": 17.175142895736094,
+   "TuSism": 18.84302548045288,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 126,
+   "nSobreTcr": 2
+  }
+ },
+ "I10": {
+  "1_centroid": {
+   "run": 0,
+   "Tu": 19.03132162741426,
+   "TuGrav": 14.2987981623907,
+   "TuSism": 19.03132162741426,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 150,
+   "nSobreTcr": 4
+  },
+  "2_top_marcada": {
+   "run": 0,
+   "Tu": 19.031321627414716,
+   "TuGrav": 14.298798162390689,
+   "TuSism": 19.031321627414716,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 150,
+   "nSobreTcr": 4
+  },
+  "3_top_desmarcada": {
+   "run": 0,
+   "Tu": 14.320953806456478,
+   "TuGrav": 10.971399146439108,
+   "TuSism": 14.320953806456478,
+   "combo": "1.2D+L+EY",
+   "nVigas": 360,
+   "nSobreUmbral": 128,
+   "nSobreTcr": 0
+  }
+ }
+}
