@@ -9,6 +9,7 @@ import {
 } from "./data-model";
 import { mitc4JointMoments } from "./utils/mitc4Joints";
 import { dkqJointMoments, dkqJointShear } from "./utils/dkqJoints";
+import { dktJointMoments } from "./utils/dktJoints";
 import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -196,6 +197,45 @@ export function analyze(
       analyzeOutputsElements.bendingXX.set(i, Mx);
       analyzeOutputsElements.bendingYY.set(i, My);
       analyzeOutputsElements.bendingXY.set(i, Mxy);
+
+      // Shell-Thin en TRIANGULOS = DKT (plateFormulations 1): el campo CST de arriba no tiene flexion de
+      // placa (daba 2166.9 donde SAP2000/ETABS dan 1662.8 en el centro del triangulo de validacion). Los
+      // momentos salen de la B del DKT (utils/dktJoints.ts, espejo de plateDKT.h) evaluada en los 3 nudos,
+      // con el signo de CSI (M11 > 0 = traccion abajo); el centroide es la media (M es lineal en el DKT).
+      if (((elementInputs as any)?.plateFormulations?.get(i) ?? 0) === 1) {
+        const p0 = elmNodes[0], p1 = elmNodes[1], p2 = elmNodes[2];
+        const u = [p1[0]-p0[0], p1[1]-p0[1], p1[2]-p0[2]], v = [p2[0]-p0[0], p2[1]-p0[1], p2[2]-p0[2]];
+        const nz = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
+        const mz = Math.hypot(nz[0], nz[1], nz[2]);
+        if (mz > 1e-20) {
+          const lz = [nz[0]/mz, nz[1]/mz, nz[2]/mz];
+          // ejes de CSI (Area Local Axes, angulo 0): horizontal -> eje 1 = +X; si no, eje 1 = Z x n
+          let lx = [1, 0, 0];
+          if (Math.abs(lz[2]) <= 1 - 1e-6) { const h = Math.hypot(lz[1], lz[0]) || 1; lx = [-lz[1]/h, lz[0]/h, 0]; }
+          const ly0 = [lz[1]*lx[2]-lz[2]*lx[1], lz[2]*lx[0]-lz[0]*lx[2], lz[0]*lx[1]-lz[1]*lx[0]];
+          const my = Math.hypot(ly0[0], ly0[1], ly0[2]) || 1, ly = [ly0[0]/my, ly0[1]/my, ly0[2]/my];
+          lx = [ly[1]*lz[2]-ly[2]*lz[1], ly[2]*lz[0]-ly[0]*lz[2], ly[0]*lz[1]-ly[1]*lz[0]];
+          const cx = (p0[0]+p1[0]+p2[0])/3, cy = (p0[1]+p1[1]+p2[1])/3, cz = (p0[2]+p1[2]+p2[2])/3;
+          const xl: number[] = [], yl: number[] = [], R = [lx, ly, lz], u9: number[] = [];
+          for (let n = 0; n < 3; n++) {
+            const dx = elmNodes[n][0]-cx, dy = elmNodes[n][1]-cy, dz = elmNodes[n][2]-cz;
+            xl.push(dx*lx[0]+dy*lx[1]+dz*lx[2]); yl.push(dx*ly[0]+dy*ly[1]+dz*ly[2]);
+            const g = n * 6, loc = (o: number, r: number) => R[r][0]*dxGlobal[g+o] + R[r][1]*dxGlobal[g+o+1] + R[r][2]*dxGlobal[g+o+2];
+            u9.push(loc(0, 2), loc(3, 0), loc(3, 1));          // w, θx, θy locales
+          }
+          try {
+            const Mt = dktJointMoments(xl, yl, u9, elementInputs.elasticities?.get(i) ?? 0,
+                                       elementInputs.poissonsRatios?.get(i) ?? 0, thickness).map((m) => m.map((q) => -q));
+            if (!Mt.some((m) => m.some((q) => !Number.isFinite(q)))) {
+              jointBending.set(i, Mt);
+              const mean3 = (c: number) => (Mt[0][c] + Mt[1][c] + Mt[2][c]) / 3;
+              analyzeOutputsElements.bendingXX.set(i, mean3(0));
+              analyzeOutputsElements.bendingYY.set(i, mean3(1));
+              analyzeOutputsElements.bendingXY.set(i, mean3(2));
+            }
+          } catch { /* se queda el campo CST */ }
+        }
+      }
     }
   });
 
