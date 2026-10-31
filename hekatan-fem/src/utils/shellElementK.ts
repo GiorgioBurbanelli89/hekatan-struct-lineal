@@ -125,7 +125,7 @@ export function kPano(
 ): KPano {
   const n = p.length;
   if (n !== 4 && n !== 3) throw new Error("La K de paño es la de un Q4 o un triángulo.");
-  // DKMQ y DSE son de Q4: en un triángulo el motor usa la placa gruesa de siempre (CS-DSG3)
+  // DKMQ y DSE son de Q4: en un triángulo el motor usa la placa gruesa de CSI (thickTriCSI)
   const tipoPlaca = n === 3 && (opts.tipoPlaca === 3 || opts.tipoPlaca === 4) ? 0 : (opts.tipoPlaca ?? 0);
   const tipoDrill = opts.tipoDrill ?? 13;
   const gammaFac = opts.gammaFac ?? 0.4;
@@ -137,7 +137,7 @@ export function kPano(
     const m = kLocalMotor(p, E, nu, t);
     ex = m.lambda[0]; ey = m.lambda[1]; ez = m.lambda[2];
     flexion = bloque(m.K, n, [2, 3, 4]);
-    formulacion = n === 4 ? "Shell-Thick del motor: MITC4 (Dvorkin-Bathe 1985)" : "Shell-Thick del motor (triángulo)";
+    formulacion = n === 4 ? "Shell-Thick del motor: MITC4 (Dvorkin-Bathe 1985)" : "Shell-Thick del motor (triángulo de CSI, forma cerrada)";
     if (n === 3) { membrana = bloque(m.K, n, [0, 1, 5]); formulacion += " · placa y membrana leídas del motor (didactic_solve)"; }
     else if (drillDefecto) { membrana = bloque(m.K, n, [0, 1, 5]); formulacion += " + membrana ITW tipo 13 · leída del motor (didactic_solve)"; }
     else if (n === 4) {

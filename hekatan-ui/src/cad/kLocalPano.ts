@@ -155,12 +155,14 @@ export function formulacionPano(d: DatosPano): { placa: string; membrana: string
     : t === 3 ? "placa DKMQ (Katili, 1993)"
     : t === 4 ? "placa DSE (Wilson, cap. 8)"
     : d.p.length === 4 ? "Shell-Thick: placa MITC4 (Bathe y Dvorkin, 1985) con modos incompatibles de Wilson"
-    : "Shell-Thick en triángulo: placa CS-DSG3 (Nguyen-Thoi et al., 2012), cortante suavizado en las tres subceldas";
+    : "Shell-Thick en triángulo: placa de CSI (giros nodales y de lado, sin burbuja; cortante de lado de Wilson, constante en el triángulo; tres puntos medios y B-barra)";
   const membrana = d.tipoDrill === 13
     ? "membrana con giro de Ibrahimbegović, Taylor y Wilson (1990), Gauss 2×2, penalización γ = 0.4·G y estabilización del reloj de arena"
     : `membrana con giro, tipo ${d.tipoDrill}`;
   const cita = t === 1
     ? "Batoz y Tahar (1982), IJNME 18:1655 · Ibrahimbegović, Taylor y Wilson (1990), IJNME 30:445"
+    : d.p.length === 3
+    ? "Wilson et al. (1973), cap. 8 · Ibrahimbegović, Taylor y Wilson (1990), IJNME 30:445 · medido en SAP2000 24 y ETABS 22 (K, M y V a 1e-12)"
     : "Bathe y Dvorkin (1985), IJNME 21:367 · Wilson et al. (1973) · Ibrahimbegović, Taylor y Wilson (1990), IJNME 30:445";
   return { placa, membrana, cita };
 }
@@ -233,6 +235,9 @@ export function hojaPano(d: DatosPano): string {
       ? "DKQ: la B_{b} sale de los giros de Kirchhoff impuestos en los lados (Batoz y Tahar, 1982)."
       : "MITC4: el cortante B_{s} no se toma de las funciones de forma sino de cuatro puntos en la mitad de los lados, para que el paño delgado no se bloquee (Bathe y Dvorkin, 1985). A la flexión se le suman cuatro modos incompatibles de Wilson, que se condensan: K = K_{cc} − K_{ci}·K_{ii}⁻¹·K_{ic}."}`,
     "#: Membrana: los lados llevan el giro en el plano (interpolación de Allman) y una burbuja que se condensa; el giro se ata al giro del sólido con la penalización γ = 0.4·G en el centro (Ibrahimbegović, Taylor y Wilson, 1990).",
+  );
+  else if (!thin) T.push(
+    "#: **Lo propio del triángulo grueso (CSI).** Los giros llevan, además de los tres nodales, uno de **lado** por cada lado (función 4·L_{a}·L_{b}); no hay burbuja. El cortante de cada lado es el de Wilson (cap. 8) y el cortante del triángulo es **constante**: el promedio del campo MITC3 de los tres cortantes de lado. Se integra en los tres puntos medios de lado (peso A/3), con B-barra sobre las columnas de lado y la penalización 1000·tr(D_{b}) de la divergencia de los giros.",
   );
   // ── con números ──
   const D0 = (d.E * d.t ** 3) / (12 * (1 - d.nu ** 2));
