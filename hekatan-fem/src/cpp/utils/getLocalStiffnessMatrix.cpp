@@ -817,6 +817,109 @@ static Eigen::Matrix<double, 9, 9> membranaTriCSI(const double x[3], const doubl
 }
 
 // Ejes locales del triángulo: los MISMOS de getTransformationMatrixShell (getTransformationMatrix.cpp).
+// ───────────────────────────────────────────────────────────────────────────────────────────
+// Placa GRUESA del TRIÁNGULO de CSI (Shell-Thick de SAP2000 24 / ETABS 22), forma cerrada (30-oct-2026).
+// Sacada del binario (ETABS 19, emulando FUN_18097f8c0 con unicorn) y verificada contra SAP2000 y ETABS
+// a 1e-12 (K, M de joints y V13/V23). Receta: registros/2026-10-30_placa_DKT_DKQ_hlisp.md.
+//   · giros: 3 nodales L_i + 3 de LADO jerárquicos 4·La·Lb (2 comp. c/u), SIN burbuja
+//   · cortantes de lado de Wilson (cap. 8, 8.7) g_k; cortante asumido CONSTANTE:
+//       (γr, γs) = C·(g1·L1, g2·L2, g3·L3),  C = [2/3 -1/3 -1/3; 1/3 1/3 -2/3],  γ = J⁻¹(γr, γs)
+//   · 3 puntos medios de lado, peso A/3; B-barra en las 6 columnas de lado (media de las 3 filas de curvatura)
+//   · penalización 1000·tr(Db)·(div θ)²; condensación de las 6 internas saltando pivotes nulos
+// GDL por nudo [w, θx, θy] (θx = ∂w/∂y, θy = −∂w/∂x). Devuelve la K 9×9 y, si se pide, la condensación
+// u_int = Cnd·u (6×9) y los datos de recuperación.
+static Eigen::Matrix<double, 9, 9> thickTriCSI(const double x[3], const double y[3], const Eigen::Matrix3d &Db,
+                                               const Eigen::Matrix2d &Ds)
+{
+    const double A2 = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]);
+    const double A = 0.5 * A2;
+    double gL[3][2] = {{(y[1] - y[2]) / A2, (x[2] - x[1]) / A2},
+                       {(y[2] - y[0]) / A2, (x[0] - x[2]) / A2},
+                       {(y[0] - y[1]) / A2, (x[1] - x[0]) / A2}};
+    const int sa[3] = {0, 1, 2}, sb[3] = {1, 2, 0};
+    Eigen::Matrix<double, 3, 15> Gs = Eigen::Matrix<double, 3, 15>::Zero();
+    double Ls[3];
+    for (int k = 0; k < 3; ++k)
+    {
+        const int a = sa[k], b = sb[k];
+        const double dx = x[b] - x[a], dy = y[b] - y[a], L = std::hypot(dx, dy), ca = dx / L, sn = dy / L;
+        Ls[k] = L;
+        Gs(k, 3 * b) += 1.0 / L;
+        Gs(k, 3 * a) -= 1.0 / L;
+        for (int n : {a, b})
+        {
+            Gs(k, 3 * n + 1) -= sn / 2.0;
+            Gs(k, 3 * n + 2) += ca / 2.0;
+        }
+        Gs(k, 9 + 2 * k) -= 2.0 / 3.0 * sn;
+        Gs(k, 10 + 2 * k) += 2.0 / 3.0 * ca;
+    }
+    Eigen::Matrix<double, 2, 3> Cm;
+    Cm << 2.0 / 3.0, -1.0 / 3.0, -1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0, -2.0 / 3.0;
+    Eigen::Matrix2d J;
+    J << x[1] - x[0], y[1] - y[0], x[2] - x[0], y[2] - y[0];
+    Eigen::Matrix<double, 3, 3> LsD = Eigen::Matrix3d::Zero();
+    for (int k = 0; k < 3; ++k) LsD(k, k) = Ls[k];
+    const Eigen::Matrix<double, 2, 15> Bsh = J.inverse() * Cm * LsD * Gs;
+
+    const double mid[3][3] = {{0.5, 0.5, 0.0}, {0.0, 0.5, 0.5}, {0.5, 0.0, 0.5}};
+    Eigen::Matrix<double, 5, 15> B[3];
+    Eigen::Matrix<double, 15, 1> v[3];
+    for (int q = 0; q < 3; ++q)
+    {
+        B[q].setZero();
+        v[q].setZero();
+        auto giro = [&](int col, double a, double b, double fx, double fy) {
+            B[q](0, col) += b * fx;
+            B[q](1, col) -= a * fy;
+            B[q](2, col) += b * fy - a * fx;
+            v[q](col) += a * fx + b * fy;
+        };
+        for (int i = 0; i < 3; ++i)
+        {
+            giro(3 * i + 1, 1, 0, gL[i][0], gL[i][1]);
+            giro(3 * i + 2, 0, 1, gL[i][0], gL[i][1]);
+        }
+        for (int k = 0; k < 3; ++k)
+        {
+            const int a = sa[k], b = sb[k];
+            const double gx = 4.0 * (mid[q][a] * gL[b][0] + mid[q][b] * gL[a][0]);
+            const double gy = 4.0 * (mid[q][a] * gL[b][1] + mid[q][b] * gL[a][1]);
+            giro(9 + 2 * k, 1, 0, gx, gy);
+            giro(10 + 2 * k, 0, 1, gx, gy);
+        }
+        B[q].block<2, 15>(3, 0) = Bsh;
+    }
+    Eigen::Matrix<double, 3, 6> media = Eigen::Matrix<double, 3, 6>::Zero();
+    for (int q = 0; q < 3; ++q) media += B[q].block<3, 6>(0, 9);
+    media /= 3.0;
+    for (int q = 0; q < 3; ++q) B[q].block<3, 6>(0, 9) -= media;
+
+    Eigen::Matrix<double, 5, 5> D = Eigen::Matrix<double, 5, 5>::Zero();
+    D.block<3, 3>(0, 0) = Db;
+    D.block<2, 2>(3, 3) = Ds;
+    const double pen = 1000.0 * Db.trace();
+    Eigen::Matrix<double, 15, 15> K = Eigen::Matrix<double, 15, 15>::Zero();
+    for (int q = 0; q < 3; ++q)
+        K += (B[q].transpose() * D * B[q] + pen * (v[q] * v[q].transpose())) * (A / 3.0);
+    // condensación de las 6 internas (Gauss saltando pivotes nulos, como el kernel)
+    const double esc = K.cwiseAbs().maxCoeff();
+    if (esc > 0.0)
+    {
+        for (int i = 9; i < 15; ++i)
+        {
+            const double p = K(i, i);
+            if (std::abs(p) <= 1e-14 * esc) continue;
+            const Eigen::Matrix<double, 15, 1> col = K.col(i);
+            const Eigen::Matrix<double, 1, 15> fila = K.row(i);
+            K -= col * fila / p;
+            K.row(i).setZero();
+            K.col(i).setZero();
+        }
+    }
+    return K.block<9, 9>(0, 0);
+}
+
 Eigen::Matrix3d ejesTriangulo(const Node &n0, const Node &n1, const Node &n2)
 {
     const Eigen::Vector3d p0(n0[0], n0[1], n0[2]), p1(n1[0], n1[1], n1[2]), p2(n2[0], n2[1], n2[2]);
@@ -954,7 +1057,28 @@ Eigen::MatrixXd getLocalStiffnessMatrixShell(
     // Shell-Thin (plateFormulations = 1): la flexion del triangulo es la DKT, no la
     // placa gruesa de arriba. Antes el `shelltype thin` no llegaba a los triangulos.
     auto itPF = elementInputs.plateFormulations.find(index);
-    if (itPF != elementInputs.plateFormulations.end() && itPF->second == 1)
+    const bool esThinTri = (itPF != elementInputs.plateFormulations.end() && itPF->second == 1);
+    if (!esThinTri)
+    {
+        // Shell-Thick del triángulo = el de CSI en forma cerrada (thickTriCSI, 30-oct-2026); sustituye al CS-DSG3.
+        Eigen::Matrix2d DsT = shearStiffnessMatrix;
+        auto itV = elementInputs.shellModifiers.find(index);
+        if (itV != elementInputs.shellModifiers.end() && itV->second.size() >= 8)
+        {
+            const double s1 = std::sqrt(std::max(0.0, itV->second[6])), s2 = std::sqrt(std::max(0.0, itV->second[7]));
+            Eigen::Matrix2d S = Eigen::Matrix2d::Zero();
+            S(0, 0) = s1; S(1, 1) = s2;
+            DsT = S * shearStiffnessMatrix * S;
+        }
+        const double xd[3] = {x1, x2, x3}, yd[3] = {y1, y2, y3};
+        const Eigen::Matrix<double, 9, 9> Kt = thickTriCSI(xd, yd, bendingStiffnessMatrix, DsT);
+        const int map[9] = {2, 3, 4, 8, 9, 10, 14, 15, 16};
+        Kp = Eigen::MatrixXd::Zero(18, 18);
+        for (int r = 0; r < 9; ++r)
+            for (int c = 0; c < 9; ++c)
+                Kp(map[r], map[c]) = Kt(r, c);
+    }
+    if (esThinTri)
     {
         const double xd[3] = {x1, x2, x3}, yd[3] = {y1, y2, y3};
         const Eigen::Matrix<double, 9, 9> Kb = dktK(xd, yd, bendingStiffnessMatrix);

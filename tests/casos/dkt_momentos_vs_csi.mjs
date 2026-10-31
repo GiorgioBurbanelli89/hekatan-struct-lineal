@@ -17,12 +17,16 @@ export const nombre = "dkt-momentos-vs-csi";
 export const descripcion = "Shell-Thin triangulo (DKT): M11/M22/M12 en los 3 joints = SAP2000 y ETABS";
 
 const fThin = [3644.278276, -82.364302, -555.595142, -2513.109557, 642.343285, -3290.592954, -1131.168719, 2393.328875, -1745.615377];
+// Shell-Thick del triangulo: reacciones y resultados de SAP2000 24 con los mismos desplazamientos impuestos
+const fThick = [1439.386675, -528.210803, 852.730577, -1675.224363, -57.306496, -2838.572066, 235.837688, 1069.372950, -1246.688392];
+const MThick = [[-73.268026, -923.355267, 494.199195], [5627.313614, 3070.332005, 166.099293], [946.723825, 1412.268053, 1751.751702]];
+const VThick = [-2350.930823, -351.895018];
 const P = [[0, 0], [2, 0.5], [0.5, 1.5]];
 const SAP = [[-611.491059, -740.226019, 836.777239], [5144.695506, 4237.836331, 700.908084], [455.257503, 1573.941943, 2153.497718]];
 const ETABS = [[-611.490864, -740.226179, 836.777226], [5144.69518, 4237.835935, 700.908183], [455.257903, 1573.942229, 2153.497644]];
 
 async function resolver(tipo) {
-  const f = fThin;
+  const f = tipo === "thick" ? fThick : fThin;
   const L = P.map((p, i) => `node ${i + 1} ${p[0]} ${p[1]} 0`);
   L.push("tri 1 1 2 3 0.1 24850000", `shelltype 1 ${tipo}`);
   P.forEach((_, i) => L.push(`support ${i + 1} ux uy rz` + (i === 0 ? " uz rx ry" : "")));
@@ -48,5 +52,15 @@ export async function correr() {
   const vx = a.tranverseShearXjoint?.get(0)?.[0], vy = a.tranverseShearYjoint?.get(0)?.[0];
   const ev = 100 * Math.hypot(vx - (-3928.102218), vy - (-464.414828)) / Math.hypot(3928.102218, 464.414828);
   filas.push({ que: "DKT V13/V23 vs SAP2000 (-3928.1022, -464.4148)", medido: ev, limite: 0.001, ok: ev <= 0.001, detalle: `${vx?.toFixed(4)}, ${vy?.toFixed(4)}` });
+  // Shell-Thick: el triangulo de CSI en forma cerrada (K en C++, recuperacion en TS), 1e-12 contra SAP2000/ETABS
+  const at = await resolver("thick");
+  const Mt = [at.bendingXXjoint.get(0), at.bendingYYjoint.get(0), at.bendingXYjoint.get(0)];   // [campo][nudo]
+  let num = 0, den = 0;
+  for (let n = 0; n < 3; n++) for (let c = 0; c < 3; c++) { num += (Mt[c][n] - MThick[n][c]) ** 2; den += MThick[n][c] ** 2; }
+  const eMt = 100 * Math.sqrt(num / den);
+  filas.push({ que: "Thick M11/M22/M12 en los 3 joints vs SAP2000", medido: eMt, limite: 0.001, ok: eMt <= 0.001, detalle: "% norma, signo CSI" });
+  const vxt = at.tranverseShearXjoint?.get(0)?.[0], vyt = at.tranverseShearYjoint?.get(0)?.[0];
+  const eVt = 100 * Math.hypot(vxt - VThick[0], vyt - VThick[1]) / Math.hypot(...VThick);
+  filas.push({ que: "Thick V13/V23 vs SAP2000", medido: eVt, limite: 0.001, ok: eVt <= 0.001, detalle: `${vxt?.toFixed(4)}, ${vyt?.toFixed(4)}` });
   return filas;
 }

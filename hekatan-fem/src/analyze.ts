@@ -10,6 +10,7 @@ import {
 import { mitc4JointMoments } from "./utils/mitc4Joints";
 import { dkqJointMoments, dkqJointShear } from "./utils/dkqJoints";
 import { dktJointMoments } from "./utils/dktJoints";
+import { thickTriRecovery } from "./utils/thickTriJoints";
 import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -234,17 +235,16 @@ export function analyze(
             if (thin) {
               Mt = dktJointMoments(xl, yl, u9, Et, nut, thickness).map((m) => m.map((q) => -q));
             } else {
-              const A2 = (xl[1]-xl[0])*(yl[2]-yl[0]) - (xl[2]-xl[0])*(yl[1]-yl[0]);
-              const dNdx = [yl[1]-yl[2], yl[2]-yl[0], yl[0]-yl[1]].map((q) => q / A2);
-              const dNdy = [xl[2]-xl[1], xl[0]-xl[2], xl[1]-xl[0]].map((q) => q / A2);
-              let kxx = 0, kyy = 0, kxy = 0;
-              for (let n = 0; n < 3; n++) {
-                kxx += dNdx[n] * u9[3*n+2]; kyy += -dNdy[n] * u9[3*n+1];
-                kxy += -dNdx[n] * u9[3*n+1] + dNdy[n] * u9[3*n+2];
+              // Shell-Thick = el triángulo de CSI en forma cerrada (utils/thickTriJoints.ts, 1e-12 contra SAP2000 y ETABS)
+              const sm = (elementInputs as any)?.shellModifiers?.get(i);
+              const mods = Array.isArray(sm) && sm.length >= 8 ? { m11: sm[3], m22: sm[4], m12: sm[5], v13: sm[6], v23: sm[7] } : undefined;
+              const rr = thickTriRecovery(xl, yl, u9, Et, nut, thickness, mods);
+              Mt = rr.M;
+              if (rr.V.every(Number.isFinite)) {
+                jointShear.set(i, [rr.V, rr.V, rr.V]);
+                analyzeOutputsElements.tranverseShearX.set(i, rr.V[0]);
+                analyzeOutputsElements.tranverseShearY.set(i, rr.V[1]);
               }
-              const D0 = Et * thickness ** 3 / (12 * (1 - nut * nut));
-              const m = [-(D0 * (kxx + nut * kyy)), -(D0 * (nut * kxx + kyy)), -(D0 * (1 - nut) / 2 * kxy)];
-              Mt = [m, m, m];
             }
             if (!Mt.some((m) => m.some((q) => !Number.isFinite(q)))) {
               jointBending.set(i, Mt);

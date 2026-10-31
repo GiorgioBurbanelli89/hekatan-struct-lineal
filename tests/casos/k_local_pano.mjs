@@ -95,11 +95,12 @@ export async function correr() {
     filas.push({ crudo: true, que: `${c.nombre}: desplazamientos, tarjeta vs WASM`, medido: `${(rel * 100).toExponential(2)} %`,
       limite: "1e-6 %", ok: rel < 1e-8, detalle: `${d.k.formulacion}` });
     const cp = pn.comprobarPano(d.k);
-    // El CS-DSG3 suelto tiene 4 modos nulos en la placa (ver arriba): es su formulación, no un error.
-    const nulosPlaca = c.csdsg3 ? 4 : 3;
+    // Hasta el 30-oct-2026 el CS-DSG3 suelto tenía 4 modos nulos en la placa (uno de más). El triángulo Thick ya es el de CSI
+    // (thickTriCSI, sin modo espurio): 3 modos nulos de cuerpo rígido, como el resto.
+    const nulosPlaca = 3;
     filas.push({ crudo: true, que: `${c.nombre}: simétrica y ${nulosPlaca} + 3 modos nulos`, medido: `${cp.simetrica ? "sí" : "no"} · ${cp.nulosFlexion} + ${cp.nulosMembrana}`,
       limite: `sí · ${nulosPlaca} + 3`, ok: cp.simetrica && cp.nulosFlexion === nulosPlaca && cp.nulosMembrana === 3,
-      detalle: c.csdsg3 ? "CS-DSG3 suelto: un modo de más, que en malla no aparece" : "" });
+      detalle: c.csdsg3 ? "triángulo Thick de CSI: sin el modo espurio del CS-DSG3" : "" });
     // la hoja se arma sin reventar y lleva sus secciones
     const h = pn.hojaPano(d);
     const okHoja = /D_b = E\*t\^3/.test(h) && /## 7/.test(h) && !/NaN|undefined|e[+-]\d/.test(h.replace(/^#.*$/gm, ""));
