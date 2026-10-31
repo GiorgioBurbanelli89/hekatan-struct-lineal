@@ -828,8 +828,18 @@ static Eigen::Matrix<double, 9, 9> membranaTriCSI(const double x[3], const doubl
 //   · penalización 1000·tr(Db)·(div θ)²; condensación de las 6 internas saltando pivotes nulos
 // GDL por nudo [w, θx, θy] (θx = ∂w/∂y, θy = −∂w/∂x). Devuelve la K 9×9 y, si se pide, la condensación
 // u_int = Cnd·u (6×9) y los datos de recuperación.
+// Datos para recuperar M y V despues de resolver (mismo elemento, una sola copia).
+struct ThickTriRec
+{
+    double gL[3][2];
+    Eigen::Matrix<double, 2, 15> Bsh;
+    Eigen::Matrix<double, 3, 6> media;
+    Eigen::Matrix<double, 6, 15> fila;   // fila de cada interna en el momento de eliminarla
+    double piv[6];                       // 0 = pivote nulo, saltado
+};
+
 static Eigen::Matrix<double, 9, 9> thickTriCSI(const double x[3], const double y[3], const Eigen::Matrix3d &Db,
-                                               const Eigen::Matrix2d &Ds)
+                                               const Eigen::Matrix2d &Ds, ThickTriRec *rec = nullptr)
 {
     const double A2 = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]);
     const double A = 0.5 * A2;
@@ -903,6 +913,12 @@ static Eigen::Matrix<double, 9, 9> thickTriCSI(const double x[3], const double y
     for (int q = 0; q < 3; ++q)
         K += (B[q].transpose() * D * B[q] + pen * (v[q] * v[q].transpose())) * (A / 3.0);
     // condensación de las 6 internas (Gauss saltando pivotes nulos, como el kernel)
+    if (rec)
+    {
+        for (int i = 0; i < 3; ++i) for (int j = 0; j < 2; ++j) rec->gL[i][j] = gL[i][j];
+        rec->Bsh = Bsh; rec->media = media; rec->fila.setZero();
+        for (int i = 0; i < 6; ++i) rec->piv[i] = 0.0;
+    }
     const double esc = K.cwiseAbs().maxCoeff();
     if (esc > 0.0)
     {
@@ -912,12 +928,95 @@ static Eigen::Matrix<double, 9, 9> thickTriCSI(const double x[3], const double y
             if (std::abs(p) <= 1e-14 * esc) continue;
             const Eigen::Matrix<double, 15, 1> col = K.col(i);
             const Eigen::Matrix<double, 1, 15> fila = K.row(i);
+            if (rec) { rec->fila.row(i - 9) = fila; rec->piv[i - 9] = p; }
             K -= col * fila / p;
             K.row(i).setZero();
             K.col(i).setZero();
         }
     }
     return K.block<9, 9>(0, 0);
+}
+
+// Recuperacion de esfuerzos del TRIANGULO de placa en los 3 JOINTS, con el signo de CSI (30-oct-2026).
+// Una sola copia del elemento: la K de arriba y esto salen del mismo codigo (antes M y V vivian tambien en TypeScript).
+//   thin = 1 -> DKT (Shell-Thin): M = -Db·B(joint)·u ; V = -(dM11/dx+dM12/dy, dM22/dy+dM12/dx) del campo lineal por los 3 joints
+//   thin = 0 -> Shell-Thick de CSI: M = -Db·kappa(joint) (B-barra, internas condensadas) ; V = Ds·gamma, constante
+// xy = [x1,y1,x2,y2,x3,y3] locales; u9 = [w,thx,thy]x3; mods = [m11,m22,m12,v13,v23]; out = [M(3x3 por joint: M11,M22,M12), V13, V23].
+extern "C" int tri_recovery(int thin, const double *xy, const double *u9, double E, double nu, double t, const double *mods,
+                            double *out)
+{
+    const double x[3] = {xy[0], xy[2], xy[4]}, y[3] = {xy[1], xy[3], xy[5]};
+    const double m11 = mods[0], m22 = mods[1], m12 = mods[2], v13 = std::max(0.0, mods[3]), v23 = std::max(0.0, mods[4]);
+    const double D0 = E * t * t * t / (12.0 * (1.0 - nu * nu));
+    const double cm = std::sqrt(std::max(0.0, m11 * m22));
+    Eigen::Matrix3d Db;
+    Db << D0 * m11, D0 * nu * cm, 0, D0 * nu * cm, D0 * m22, 0, 0, 0, D0 * (1 - nu) / 2 * m12;
+    Eigen::Matrix<double, 9, 1> u;
+    for (int i = 0; i < 9; ++i) u(i) = u9[i];
+    double M[3][3];
+    double V[2];
+    if (thin)
+    {
+        Eigen::Matrix3d DbT;   // el DKT de la K usa el Db sin modificadores de flexion en la recuperacion (como analyze)
+        const double Dn = D0;
+        DbT << Dn, Dn * nu, 0, Dn * nu, Dn, 0, 0, 0, Dn * (1 - nu) / 2;
+        const double pts[3][2] = {{0, 0}, {1, 0}, {0, 1}};
+        for (int j = 0; j < 3; ++j)
+        {
+            double area;
+            const Eigen::Vector3d k = dktB(x, y, pts[j][0], pts[j][1], area) * u;
+            const Eigen::Vector3d m = -(DbT * k);
+            for (int c = 0; c < 3; ++c) M[j][c] = m(c);
+        }
+        const double A2 = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]);
+        auto gx = [&](int c) { return (M[0][c] * (y[1] - y[2]) + M[1][c] * (y[2] - y[0]) + M[2][c] * (y[0] - y[1])) / A2; };
+        auto gy = [&](int c) { return (M[0][c] * (x[2] - x[1]) + M[1][c] * (x[0] - x[2]) + M[2][c] * (x[1] - x[0])) / A2; };
+        V[0] = -(gx(0) + gy(2));
+        V[1] = -(gy(1) + gx(2));
+    }
+    else
+    {
+        const double Gs = (5.0 / 6.0) * (E / (2.0 * (1.0 + nu))) * t;
+        Eigen::Matrix2d Ds = Eigen::Matrix2d::Zero();
+        Ds(0, 0) = Gs * v13; Ds(1, 1) = Gs * v23;
+        ThickTriRec rec;
+        thickTriCSI(x, y, Db, Ds, &rec);
+        Eigen::Matrix<double, 15, 1> u15 = Eigen::Matrix<double, 15, 1>::Zero();
+        u15.head<9>() = u;
+        for (int i = 14; i >= 9; --i)
+        {
+            const double p = rec.piv[i - 9];
+            if (p == 0.0) continue;
+            Eigen::Matrix<double, 1, 15> f = rec.fila.row(i - 9);
+            f(i) = 0.0;
+            u15(i) = -(f * u15)(0) / p;
+        }
+        const int sa[3] = {0, 1, 2}, sb[3] = {1, 2, 0};
+        const double Lv[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        for (int j = 0; j < 3; ++j)
+        {
+            Eigen::Matrix<double, 3, 15> B = Eigen::Matrix<double, 3, 15>::Zero();
+            auto giro = [&](int col, double a, double b, double fx, double fy) {
+                B(0, col) += b * fx; B(1, col) -= a * fy; B(2, col) += b * fy - a * fx;
+            };
+            for (int i = 0; i < 3; ++i) { giro(3 * i + 1, 1, 0, rec.gL[i][0], rec.gL[i][1]); giro(3 * i + 2, 0, 1, rec.gL[i][0], rec.gL[i][1]); }
+            for (int k = 0; k < 3; ++k)
+            {
+                const int a = sa[k], b = sb[k];
+                const double gxx = 4.0 * (Lv[j][a] * rec.gL[b][0] + Lv[j][b] * rec.gL[a][0]);
+                const double gyy = 4.0 * (Lv[j][a] * rec.gL[b][1] + Lv[j][b] * rec.gL[a][1]);
+                giro(9 + 2 * k, 1, 0, gxx, gyy); giro(10 + 2 * k, 0, 1, gxx, gyy);
+            }
+            B.block<3, 6>(0, 9) -= rec.media;
+            const Eigen::Vector3d m = -(Db * (B * u15));
+            for (int c = 0; c < 3; ++c) M[j][c] = m(c);
+        }
+        const Eigen::Vector2d g = rec.Bsh * u15;
+        V[0] = Ds(0, 0) * g(0); V[1] = Ds(1, 1) * g(1);
+    }
+    for (int j = 0; j < 3; ++j) for (int c = 0; c < 3; ++c) out[3 * j + c] = M[j][c];
+    out[9] = V[0]; out[10] = V[1];
+    return 0;
 }
 
 Eigen::Matrix3d ejesTriangulo(const Node &n0, const Node &n1, const Node &n2)

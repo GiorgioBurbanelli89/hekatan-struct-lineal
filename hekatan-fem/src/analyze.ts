@@ -9,8 +9,7 @@ import {
 } from "./data-model";
 import { mitc4JointMoments } from "./utils/mitc4Joints";
 import { dkqJointMoments, dkqJointShear } from "./utils/dkqJoints";
-import { dktJointMoments } from "./utils/dktJoints";
-import { thickTriRecovery } from "./utils/thickTriJoints";
+import { triRecovery } from "./utils/triRecoveryCpp";
 import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -231,17 +230,14 @@ export function analyze(
           }
           const Et = elementInputs.elasticities?.get(i) ?? 0, nut = elementInputs.poissonsRatios?.get(i) ?? 0;
           try {
-            let Mt: number[][];
-            if (thin) {
-              Mt = dktJointMoments(xl, yl, u9, Et, nut, thickness).map((m) => m.map((q) => -q));
-            } else {
-              // Shell-Thick = el triángulo de CSI en forma cerrada (utils/thickTriJoints.ts, 1e-12 contra SAP2000 y ETABS)
-              const sm = (elementInputs as any)?.shellModifiers?.get(i);
-              const mods = Array.isArray(sm) && sm.length >= 8 ? { m11: sm[3], m22: sm[4], m12: sm[5], v13: sm[6], v23: sm[7] } : undefined;
-              const rr = thickTriRecovery(xl, yl, u9, Et, nut, thickness, mods);
-              Mt = rr.M;
-              if (rr.V.every(Number.isFinite)) {
-                jointShear.set(i, [rr.V, rr.V, rr.V]);
+            // El elemento vive en C++ (tri_recovery): DKT para Shell-Thin, triángulo de CSI para Shell-Thick.
+            const sm = (elementInputs as any)?.shellModifiers?.get(i);
+            const mods = !thin && Array.isArray(sm) && sm.length >= 8 ? { m11: sm[3], m22: sm[4], m12: sm[5], v13: sm[6], v23: sm[7] } : undefined;
+            const rr = triRecovery(thin, xl, yl, u9, Et, nut, thickness, mods);
+            const Mt = rr.M;
+            if (rr.V.every(Number.isFinite)) {
+              jointShear.set(i, [rr.V, rr.V, rr.V]);
+              if (!thin) {
                 analyzeOutputsElements.tranverseShearX.set(i, rr.V[0]);
                 analyzeOutputsElements.tranverseShearY.set(i, rr.V[1]);
               }
@@ -252,14 +248,6 @@ export function analyze(
               analyzeOutputsElements.bendingXX.set(i, mean3(0));
               analyzeOutputsElements.bendingYY.set(i, mean3(1));
               analyzeOutputsElements.bendingXY.set(i, mean3(2));
-              if (thin) {
-                // campo lineal por los 3 joints: gradiente por coordenadas baricentricas
-                const A2 = (xl[1]-xl[0])*(yl[2]-yl[0]) - (xl[2]-xl[0])*(yl[1]-yl[0]);
-                const gx = (c: number) => (Mt[0][c]*(yl[1]-yl[2]) + Mt[1][c]*(yl[2]-yl[0]) + Mt[2][c]*(yl[0]-yl[1])) / A2;
-                const gy = (c: number) => (Mt[0][c]*(xl[2]-xl[1]) + Mt[1][c]*(xl[0]-xl[2]) + Mt[2][c]*(xl[1]-xl[0])) / A2;
-                const V = [-(gx(0) + gy(2)), -(gy(1) + gx(2))];
-                if (V.every(Number.isFinite)) jointShear.set(i, [V, V, V]);
-              }
             }
           } catch { /* se queda el campo CST */ }
         }
