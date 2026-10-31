@@ -136,6 +136,8 @@ export function kPano(
     // el defecto del motor: la K se LEE del C++ (no se reescribe)
     const m = kLocalMotor(p, E, nu, t);
     ex = m.lambda[0]; ey = m.lambda[1]; ez = m.lambda[2];
+    // el triángulo del motor usa SUS ejes (eje 1 = X global si no es vertical): las coordenadas tienen que ir en ESOS ejes
+    if (n === 3) ({ xl, yl } = coordsEnEjes(p, ex, ey));
     flexion = bloque(m.K, n, [2, 3, 4]);
     formulacion = n === 4 ? "Shell-Thick del motor: MITC4 (Dvorkin-Bathe 1985)" : "Shell-Thick del motor (triángulo de CSI, forma cerrada)";
     if (n === 3) { membrana = bloque(m.K, n, [0, 1, 5]); formulacion += " · placa y membrana leídas del motor (didactic_solve)"; }
@@ -154,6 +156,7 @@ export function kPano(
     // leída del motor con SU formulación (didactic_solve recibe plateFormulations)
     const m = kLocalMotor(p, E, nu, t, { tipoPlaca, tipoDrill, gammaFac });
     ex = m.lambda[0]; ey = m.lambda[1]; ez = m.lambda[2];
+    if (n === 3) ({ xl, yl } = coordsEnEjes(p, ex, ey));
     flexion = bloque(m.K, n, [2, 3, 4]);
     membrana = bloque(m.K, n, [0, 1, 5]);
     const nom = tipoPlaca === 1 ? "Shell-Thin (DKT, Batoz 1980) en triángulo" : tipoPlaca === 3 ? "DKMQ (Katili 1993)" : "DSE (Wilson, cap. 8)";
@@ -173,6 +176,19 @@ export function kPanoQ4(p: number[][], E: number, nu: number, t: number,
   opts: { tipoPlaca?: number; tipoDrill?: number; gammaFac?: number; mod?: number[] | null } = {}): KPano {
   if (p.length !== 4) throw new Error("La K de paño de esta función es la del Q4: hacen falta 4 nudos.");
   return kPano(p, E, nu, t, opts);
+}
+
+/** Coordenadas de los nudos en unos ejes dados (referidas al centroide). */
+function coordsEnEjes(p: number[][], ex: number[], ey: number[]) {
+  const n = p.length;
+  const c = [0, 1, 2].map((k) => p.reduce((s, q) => s + q[k], 0) / n);
+  const xl: number[] = [], yl: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = [p[i][0] - c[0], p[i][1] - c[1], p[i][2] - c[2]];
+    xl.push(d[0] * ex[0] + d[1] * ex[1] + d[2] * ex[2]);
+    yl.push(d[0] * ey[0] + d[1] * ey[1] + d[2] * ey[2]);
+  }
+  return { xl, yl };
 }
 
 /** Ejes de un triángulo (eje 1 = lado 0→1, eje 3 = normal) y coordenadas en ellos. */

@@ -106,6 +106,13 @@ export async function correr() {
     const okHoja = /D_b = E\*t\^3/.test(h) && /## 7/.test(h) && !/NaN|undefined|e[+-]\d/.test(h.replace(/^#.*$/gm, ""));
     filas.push({ crudo: true, que: `${c.nombre}: hoja LISP (letras + números, sin notación científica)`, medido: okHoja ? "bien" : "mal",
       limite: "bien", ok: okHoja, detalle: "" });
+    // la hoja simbólica y la numérica de DKT / DKQ / triángulo grueso son las de Hekatan LISP (placas_BATOZ), sin marcas sin rellenar
+    const kind = pn.kindPlaca(d);
+    if (kind) {
+      const hs = pn.hojaPanoSimbolica(d), hn = pn.hojaPanoNumerica(d);
+      const okK = !/%%|NaN|undefined/.test(hs + hn) && /## 7 · La matriz que usa/.test(hn) && /^#numerico/m.test(hn) && hs.length > 500;
+      filas.push({ crudo: true, que: `${c.nombre}: hojas simbólica y numérica = las de Hekatan LISP (${kind})`, medido: okK ? "bien" : "mal", limite: "bien", ok: okK, detalle: "" });
+    }
   }
   // Las FÓRMULAS de cada casilla (tarjeta «En letras» y hoja simbólica) contra el producto B_iᵀ·D·B_j
   // hecho con matrices, con valores al azar de a_i, b_i, N_i. Si una casilla está mal puesta o con otro

@@ -19,6 +19,7 @@
  */
 import { kPano, type KPano } from "hekatan-fem";
 import { estados, lit } from "./kLocalBarra";
+import { PLANTILLAS, type KindPlaca } from "./hojasPlacaLisp";
 
 export interface DatosPano {
   idx: number;
@@ -327,8 +328,34 @@ const bloquesFormula = (f: (r: number, c: number) => { lisp: string }, n: number
   T.push(`#: Los bloques de debajo de la diagonal son los de arriba traspuestos: ${nombre.replace(/_/, "_{")}ji} = ${nombre.replace(/_/, "_{")}ij}ᵀ.`);
 };
 
-/** Hoja SIMBÓLICA del paño: funciones de forma, jacobiano, D, la integral y las dos matrices con sus fórmulas. */
+/**
+ * Las tres placas con hoja propia de Hekatan LISP (hekatan-school/PLACAS_BATOZ): DKT, DKQ y el triángulo grueso de CSI.
+ * La formulación simbólica y la numérica de la tarjeta son ESAS hojas, con los datos del paño (30-oct-2026).
+ */
+export function kindPlaca(d: DatosPano): KindPlaca | null {
+  const tri = d.p.length === 3, thin = d.tipoPlaca === 1;
+  if (tri) return thin ? "dkt" : (d.tipoPlaca === 0 || d.tipoPlaca === 2 ? "thick-tri" : null);
+  return thin ? "dkq" : null;
+}
+
+function rellenarPlantilla(t: string, d: DatosPano): string {
+  const v: Record<string, string> = { E: lit(d.E), nu: n(d.nu, 6), t: n(d.t, 6) };
+  // coordenadas con todas sus cifras: con 6 decimales la K de la hoja se aparta 4e-7 de la del solver
+  const cifras = (q: number) => (Math.abs(q) < 1e-13 ? "0" : String(+q.toPrecision(14)));
+  d.k.xl.forEach((x, i) => { v["x" + (i + 1)] = cifras(x); v["X" + (i + 1)] = cifras(x); });
+  d.k.yl.forEach((y, i) => { v["y" + (i + 1)] = cifras(y); v["Y" + (i + 1)] = cifras(y); });
+  return t.replace(/%%(\w+)%%/g, (_, k) => v[k] ?? "0");
+}
+
+/** Hoja SIMBÓLICA del paño: la de Hekatan LISP si hay (DKT, DKQ, triángulo grueso); si no, la genérica. */
 export function hojaPanoSimbolica(d: DatosPano): string {
+  const kind = kindPlaca(d);
+  if (kind) return rellenarPlantilla(PLANTILLAS[kind].simbolica, d);
+  return hojaPanoSimbolicaGenerica(d);
+}
+
+/** Hoja simbólica genérica: funciones de forma, jacobiano, D, la integral y las dos matrices con sus fórmulas. */
+function hojaPanoSimbolicaGenerica(d: DatosPano): string {
   const t = hojaPano(d).split("\n");
   const i = t.findIndex((l) => l.startsWith("## 5 · Los datos"));
   const n = d.p.length, gruesa = d.tipoPlaca !== 1;
@@ -354,6 +381,13 @@ export function hojaPanoSimbolica(d: DatosPano): string {
 
 /** Hoja NUMÉRICA del paño: sus datos, las D con números, det J en Gauss y la matriz del solver. */
 export function hojaPanoNumerica(d: DatosPano): string {
+  const kind = kindPlaca(d);
+  if (kind) {
+    // la hoja de Hekatan LISP con los datos del paño (calcula su K dentro de la hoja) + la matriz del solver, para cruzarlas
+    const u = hojaPano(d).split("\n");
+    const j = u.findIndex((l) => l.startsWith("## 7 · La matriz que usa"));
+    return rellenarPlantilla(PLANTILLAS[kind].numerica, d) + "\n\n" + u.slice(j).join("\n");
+  }
   const t = hojaPano(d).split("\n");
   const i = t.findIndex((l) => l.startsWith("## 5 · Los datos"));
   return [t[0] + " · formulación numérica", t[1], t[2], t[3], "", ...t.slice(i)].join("\n");
