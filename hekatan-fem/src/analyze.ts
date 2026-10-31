@@ -198,11 +198,16 @@ export function analyze(
       analyzeOutputsElements.bendingYY.set(i, My);
       analyzeOutputsElements.bendingXY.set(i, Mxy);
 
-      // Shell-Thin en TRIANGULOS = DKT (plateFormulations 1): el campo CST de arriba no tiene flexion de
-      // placa (daba 2166.9 donde SAP2000/ETABS dan 1662.8 en el centro del triangulo de validacion). Los
-      // momentos salen de la B del DKT (utils/dktJoints.ts, espejo de plateDKT.h) evaluada en los 3 nudos,
-      // con el signo de CSI (M11 > 0 = traccion abajo); el centroide es la media (M es lineal en el DKT).
-      if (((elementInputs as any)?.plateFormulations?.get(i) ?? 0) === 1) {
+      // Flexion de placa del TRIANGULO (el CST de arriba no la tiene: daba 2166.9 donde SAP2000/ETABS dan
+      // 1662.8 en el centro del triangulo de validacion, 30-oct-2026).
+      //  · Shell-Thin (plateFormulations 1) = DKT: B de utils/dktJoints.ts (espejo de plateDKT.h) en los 3 nudos.
+      //    Cortante V13/V23 = la receta de CSI medida en SAP2000: el campo M es lineal (3 joints) y
+      //    V = -(dM11/dx + dM12/dy, dM22/dy + dM12/dx), constante en el elemento (1e-12 contra SAP2000).
+      //  · Shell-Thick (CS-DSG3): curvatura constante de los giros (la B de la K). Medido en SAP2000: la MEDIA de
+      //    sus 3 joints = este valor (0.0000 %); sus joints se apartan de la media con un termino lineal que
+      //    depende tambien de w y que NO esta resuelto (ver registros/2026-10-30_placa_DKT_DKQ_hlisp.md).
+      {
+        const thin = ((elementInputs as any)?.plateFormulations?.get(i) ?? 0) === 1;
         const p0 = elmNodes[0], p1 = elmNodes[1], p2 = elmNodes[2];
         const u = [p1[0]-p0[0], p1[1]-p0[1], p1[2]-p0[2]], v = [p2[0]-p0[0], p2[1]-p0[1], p2[2]-p0[2]];
         const nz = [u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
@@ -223,15 +228,38 @@ export function analyze(
             const g = n * 6, loc = (o: number, r: number) => R[r][0]*dxGlobal[g+o] + R[r][1]*dxGlobal[g+o+1] + R[r][2]*dxGlobal[g+o+2];
             u9.push(loc(0, 2), loc(3, 0), loc(3, 1));          // w, θx, θy locales
           }
+          const Et = elementInputs.elasticities?.get(i) ?? 0, nut = elementInputs.poissonsRatios?.get(i) ?? 0;
           try {
-            const Mt = dktJointMoments(xl, yl, u9, elementInputs.elasticities?.get(i) ?? 0,
-                                       elementInputs.poissonsRatios?.get(i) ?? 0, thickness).map((m) => m.map((q) => -q));
+            let Mt: number[][];
+            if (thin) {
+              Mt = dktJointMoments(xl, yl, u9, Et, nut, thickness).map((m) => m.map((q) => -q));
+            } else {
+              const A2 = (xl[1]-xl[0])*(yl[2]-yl[0]) - (xl[2]-xl[0])*(yl[1]-yl[0]);
+              const dNdx = [yl[1]-yl[2], yl[2]-yl[0], yl[0]-yl[1]].map((q) => q / A2);
+              const dNdy = [xl[2]-xl[1], xl[0]-xl[2], xl[1]-xl[0]].map((q) => q / A2);
+              let kxx = 0, kyy = 0, kxy = 0;
+              for (let n = 0; n < 3; n++) {
+                kxx += dNdx[n] * u9[3*n+2]; kyy += -dNdy[n] * u9[3*n+1];
+                kxy += -dNdx[n] * u9[3*n+1] + dNdy[n] * u9[3*n+2];
+              }
+              const D0 = Et * thickness ** 3 / (12 * (1 - nut * nut));
+              const m = [-(D0 * (kxx + nut * kyy)), -(D0 * (nut * kxx + kyy)), -(D0 * (1 - nut) / 2 * kxy)];
+              Mt = [m, m, m];
+            }
             if (!Mt.some((m) => m.some((q) => !Number.isFinite(q)))) {
               jointBending.set(i, Mt);
               const mean3 = (c: number) => (Mt[0][c] + Mt[1][c] + Mt[2][c]) / 3;
               analyzeOutputsElements.bendingXX.set(i, mean3(0));
               analyzeOutputsElements.bendingYY.set(i, mean3(1));
               analyzeOutputsElements.bendingXY.set(i, mean3(2));
+              if (thin) {
+                // campo lineal por los 3 joints: gradiente por coordenadas baricentricas
+                const A2 = (xl[1]-xl[0])*(yl[2]-yl[0]) - (xl[2]-xl[0])*(yl[1]-yl[0]);
+                const gx = (c: number) => (Mt[0][c]*(yl[1]-yl[2]) + Mt[1][c]*(yl[2]-yl[0]) + Mt[2][c]*(yl[0]-yl[1])) / A2;
+                const gy = (c: number) => (Mt[0][c]*(xl[2]-xl[1]) + Mt[1][c]*(xl[0]-xl[2]) + Mt[2][c]*(xl[1]-xl[0])) / A2;
+                const V = [-(gx(0) + gy(2)), -(gy(1) + gx(2))];
+                if (V.every(Number.isFinite)) jointShear.set(i, [V, V, V]);
+              }
             }
           } catch { /* se queda el campo CST */ }
         }
