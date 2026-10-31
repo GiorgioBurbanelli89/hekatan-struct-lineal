@@ -104,7 +104,7 @@ export const FUNDAMENTOS: Fundamento[] = [
     donde: [
       { ruta: "hekatan-fem/src/cpp/utils/plateDKQ.h" },
       { ruta: "hekatan-fem/src/cpp/utils/shellThin.cpp" },
-      { ruta: "hekatan-fem/src/utils/dkqJoints.ts", nota: "recuperación de momentos en los joints" },
+      { ruta: "hekatan-fem/src/cpp/utils/getLocalStiffnessMatrix.cpp", nota: "q4_recovery: momentos y cortante en los joints" },
     ],
     estado: "Activo (`shelltype thin`).",
   },
@@ -124,7 +124,7 @@ export const FUNDAMENTOS: Fundamento[] = [
     donde: [
       { ruta: "hekatan-fem/src/cpp/utils/shellQ4.cpp", nota: "getBendingK" },
       { ruta: "hekatan-fem/src/cpp/utils/shellQ4_DKMQ.cpp", nota: "DKMQ" },
-      { ruta: "hekatan-fem/src/utils/mitc4Joints.ts" },
+      { ruta: "hekatan-fem/src/cpp/utils/getLocalStiffnessMatrix.cpp" },
     ],
     estado: "Activo (defecto de las placas gruesas).",
   },

@@ -1,4 +1,5 @@
 #include "plateDKT.h"
+#include "plateDKQ.h"
 #include "../data-model.h"
 #include <vector>
 #include <cmath>
@@ -1017,6 +1018,87 @@ extern "C" int tri_recovery(int thin, const double *xy, const double *u9, double
     for (int j = 0; j < 3; ++j) for (int c = 0; c < 3; ++c) out[3 * j + c] = M[j][c];
     out[9] = V[0]; out[10] = V[1];
     return 0;
+}
+
+// Recuperacion de esfuerzos del Q4 de placa en los 4 JOINTS, signo CSI (SIGNO_CSI = -1), 30-oct-2026.
+//   thick = 0 -> Shell-Thin (DKQ): M en Gauss 2x2 extrapolado a las esquinas (modo 0) o evaluado en la esquina (modo 1);
+//                V13/V23 = receta de CSI (campo bilineal de los M de Gauss, derivada en Gauss, extrapolada)
+//   thick = 1 -> Shell-Thick (MITC4): curvatura bilineal de los giros en Gauss 2x2 extrapolada (los modos de Wilson no se recuperan)
+// xy = [x1,y1,..,x4,y4] locales; u12 = [w,thx,thy]x4; out = [M(4x3: M11,M22,M12), V(4x2: V13,V23)]. Devuelve 1 si hay V.
+extern "C" int q4_recovery(int thick, int modo, const double *xy, const double *u12, double E, double nu, double t,
+                           double *out)
+{
+    double x[4], y[4];
+    for (int i = 0; i < 4; ++i) { x[i] = xy[2 * i]; y[i] = xy[2 * i + 1]; }
+    const double D0 = E * t * t * t / (12.0 * (1.0 - nu * nu));
+    Eigen::Matrix3d Db;
+    Db << D0, D0 * nu, 0, D0 * nu, D0, 0, 0, 0, D0 * (1 - nu) / 2;
+    Eigen::Matrix<double, 12, 1> u;
+    for (int i = 0; i < 12; ++i) u(i) = u12[i];
+    const double esq[4][2] = {{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+    const double g = 1.0 / std::sqrt(3.0), r3 = std::sqrt(3.0);
+    auto Men = [&](double xi, double et) -> Eigen::Vector3d {
+        Eigen::Vector3d k;
+        if (!thick)
+        {
+            double dJ;
+            k = dkqBat(x, y, xi, et, dJ) * u;
+        }
+        else
+        {
+            const double dNxi[4] = {-0.25 * (1 - et), 0.25 * (1 - et), 0.25 * (1 + et), -0.25 * (1 + et)};
+            const double dNet[4] = {-0.25 * (1 - xi), -0.25 * (1 + xi), 0.25 * (1 + xi), 0.25 * (1 - xi)};
+            double J00 = 0, J01 = 0, J10 = 0, J11 = 0;
+            for (int i = 0; i < 4; ++i) { J00 += dNxi[i] * x[i]; J01 += dNxi[i] * y[i]; J10 += dNet[i] * x[i]; J11 += dNet[i] * y[i]; }
+            const double det = J00 * J11 - J01 * J10;
+            const double i00 = J11 / det, i01 = -J01 / det, i10 = -J10 / det, i11 = J00 / det;
+            double kx = 0, ky = 0, kxy = 0;
+            for (int i = 0; i < 4; ++i)
+            {
+                const double dx = i00 * dNxi[i] + i01 * dNet[i], dy = i10 * dNxi[i] + i11 * dNet[i];
+                const double thx = u(3 * i + 1), thy = u(3 * i + 2);
+                kx += dx * thy; ky += -dy * thx; kxy += dy * thy - dx * thx;
+            }
+            k << kx, ky, kxy;
+        }
+        return Db * k;
+    };
+    // extrapolacion bilineal de 4 valores de Gauss a las esquinas
+    auto ext = [&](const Eigen::Vector3d Mg[4], Eigen::Vector3d Mj[4]) {
+        for (int j = 0; j < 4; ++j)
+        {
+            const double R = esq[j][0] * r3, S = esq[j][1] * r3;
+            Mj[j].setZero();
+            for (int k = 0; k < 4; ++k) Mj[j] += (((1 + esq[k][0] * R) * (1 + esq[k][1] * S)) / 4.0) * Mg[k];
+        }
+    };
+    Eigen::Vector3d Mg[4], Mj[4];
+    for (int k = 0; k < 4; ++k) Mg[k] = Men(esq[k][0] * g, esq[k][1] * g);
+    if (!thick && modo == 1) for (int j = 0; j < 4; ++j) Mj[j] = Men(esq[j][0], esq[j][1]);
+    else ext(Mg, Mj);
+    for (int j = 0; j < 4; ++j) for (int c = 0; c < 3; ++c) out[3 * j + c] = -Mj[j](c);
+    if (thick) { for (int i = 12; i < 20; ++i) out[i] = 0.0; return 0; }
+    // V13/V23: campo bilineal de los Mj; derivada con el jacobiano de cada punto de Gauss; extrapolada
+    Eigen::Vector3d MjG[4];   // M de Batoz extrapolados desde Gauss (el campo bilineal de la receta, aunque M salga en la esquina)
+    ext(Mg, MjG);
+    Eigen::Vector3d Vg[4];   // (Vx, Vy, 0)
+    for (int p = 0; p < 4; ++p)
+    {
+        const double xi = esq[p][0] * g, et = esq[p][1] * g;
+        const double dNxi[4] = {-(1 - et) / 4, (1 - et) / 4, (1 + et) / 4, -(1 + et) / 4};
+        const double dNet[4] = {-(1 - xi) / 4, -(1 + xi) / 4, (1 + xi) / 4, (1 - xi) / 4};
+        double J11 = 0, J12 = 0, J21 = 0, J22 = 0;
+        for (int i = 0; i < 4; ++i) { J11 += dNxi[i] * x[i]; J12 += dNxi[i] * y[i]; J21 += dNet[i] * x[i]; J22 += dNet[i] * y[i]; }
+        const double dJ = J11 * J22 - J12 * J21, i11 = J22 / dJ, i12 = -J12 / dJ, i21 = -J21 / dJ, i22 = J11 / dJ;
+        auto d = [&](int c, const double *dN) { double a = 0; for (int k = 0; k < 4; ++k) a += dN[k] * MjG[k](c); return a; };
+        auto dX = [&](int c) { return i11 * d(c, dNxi) + i12 * d(c, dNet); };
+        auto dY = [&](int c) { return i21 * d(c, dNxi) + i22 * d(c, dNet); };
+        Vg[p] << -(dX(0) + dY(2)), -(dY(1) + dX(2)), 0.0;
+    }
+    Eigen::Vector3d Vj[4];
+    ext(Vg, Vj);
+    for (int j = 0; j < 4; ++j) { out[12 + 2 * j] = -Vj[j](0); out[13 + 2 * j] = -Vj[j](1); }
+    return 1;
 }
 
 Eigen::Matrix3d ejesTriangulo(const Node &n0, const Node &n1, const Node &n2)

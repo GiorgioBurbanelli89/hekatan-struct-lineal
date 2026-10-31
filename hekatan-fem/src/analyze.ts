@@ -7,9 +7,7 @@ import {
   DeformOutputs,
   ElementInputs,
 } from "./data-model";
-import { mitc4JointMoments } from "./utils/mitc4Joints";
-import { dkqJointMoments, dkqJointShear } from "./utils/dkqJoints";
-import { triRecovery } from "./utils/triRecoveryCpp";
+import { triRecovery, q4Recovery } from "./utils/triRecoveryCpp";
 import { atJointMoments } from "./utils/placaAT";
 import { itwJointForces } from "./utils/itwJoints";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
@@ -688,16 +686,16 @@ function computeQ4ShellStresses(
       const modoDKQ = (globalThis as any).__hekatanDkqJoints ?? "gauss";
       // 5 = Auricchio-Taylor: su propio campo (burbujas y cortante recuperados, strepq de FEAPpv)
       const pf = (elementInputs as any)?.plateFormulations?.get(elemIdx) ?? 0;
-      Mj = (pf === 5 ? atJointMoments(xl, yl, u12, E, nu, t)
-            : esPlacaGruesa ? mitc4JointMoments(xl, yl, u12, E, nu, t)
-                            : dkqJointMoments(xl, yl, u12, E, nu, t, modoDKQ))
-             .map((m) => m.map((v) => SIGNO_CSI * v));
-      if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
-      // cortante V13/V23 en los joints: la receta de CSI para el Shell-Thin (dkqJointShear)
-      if (Mj && !esPlacaGruesa && pf !== 5) {
-        Vj = dkqJointShear(xl, yl, u12, E, nu, t).map((v) => v.map((x) => SIGNO_CSI * x));
-        if (Vj.some((v) => v.some((x) => !Number.isFinite(x)))) Vj = null;
+      if (pf === 5) {
+        Mj = atJointMoments(xl, yl, u12, E, nu, t).map((m) => m.map((v) => SIGNO_CSI * v));
+      } else {
+        // El elemento vive en C++ (q4_recovery): DKQ para Shell-Thin (con V13/V23 de la receta de CSI), MITC4 para Shell-Thick.
+        const rq = q4Recovery(esPlacaGruesa, xl, yl, u12, E, nu, t, modoDKQ);
+        Mj = rq.M;
+        if (rq.V) Vj = rq.V;
       }
+      if (Mj.some((m) => m.some((v) => !Number.isFinite(v)))) Mj = null;
+      if (Vj && Vj.some((v) => v.some((x) => !Number.isFinite(x)))) Vj = null;
     } catch { Mj = null; }
   }
 

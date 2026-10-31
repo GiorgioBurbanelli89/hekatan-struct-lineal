@@ -23,3 +23,25 @@ export function triRecovery(
     return { M: [o.slice(0, 3), o.slice(3, 6), o.slice(6, 9)], V: [o[9], o[10]] };
   } finally { m._free(pIn); m._free(pOut); }
 }
+
+/**
+ * Esfuerzos del Q4 de placa en los 4 joints, signo de CSI (ya aplicado). El cálculo vive en C++ (`q4_recovery`).
+ *   thick = false → DKQ (Shell-Thin): M en Gauss 2×2 extrapolado ("gauss") o en la esquina ("esquinas") y V13/V23 de la receta de CSI
+ *   thick = true  → MITC4 (Shell-Thick): curvatura bilineal en Gauss extrapolada; sin V
+ */
+export function q4Recovery(
+  thick: boolean, xl: number[], yl: number[], u12: number[], E: number, nu: number, t: number, modo: "gauss" | "esquinas" = "gauss"
+): { M: number[][]; V: number[][] | null } {
+  const m = mod as any;
+  const entrada = [xl[0], yl[0], xl[1], yl[1], xl[2], yl[2], xl[3], yl[3], ...u12];
+  const pIn = m._malloc(8 * entrada.length), pOut = m._malloc(8 * 20);
+  try {
+    m.HEAPF64.set(entrada, pIn / 8);
+    const hayV = m._q4_recovery(thick ? 1 : 0, modo === "esquinas" ? 1 : 0, pIn, pIn + 8 * 8, E, nu, t, pOut);
+    const o = Array.from(m.HEAPF64.subarray(pOut / 8, pOut / 8 + 20)) as number[];
+    return {
+      M: [0, 1, 2, 3].map((j) => o.slice(3 * j, 3 * j + 3)),
+      V: hayV ? [0, 1, 2, 3].map((j) => [o[12 + 2 * j], o[13 + 2 * j]]) : null,
+    };
+  } finally { m._free(pIn); m._free(pOut); }
+}

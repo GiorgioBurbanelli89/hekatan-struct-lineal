@@ -46,16 +46,9 @@ static void serendip8(double xi, double et, double N[8],
     N[7] = 0.5*(1-xi)*(1-et*et);   dNxi[7] = -0.5*(1-et*et);    dNet[7] = -et*(1-xi);
 }
 
-static Eigen::MatrixXd getBendingK_DKQ_D(const double x[4], const double y[4],
-                                double E, double nu, double t,
-                                double m11 = 1.0, double m22 = 1.0, double m12 = 1.0)
+// B(xi,eta) del DKQ (3x12) en cartesianas locales; devuelve |J| en dJ. Una sola copia: la usan la K y la recuperacion.
+static Eigen::Matrix<double, 3, 12> dkqBat(const double x[4], const double y[4], double xi, double et, double &dJ)
 {
-    double D0 = E*t*t*t/(12.0*(1.0-nu*nu));
-    Eigen::Matrix3d Db;
-    Db << D0*m11,        D0*nu*std::sqrt(m11*m22), 0,
-          D0*nu*std::sqrt(m11*m22), D0*m22,        0,
-          0,             0,        D0*(1-nu)/2.0*m12;
-
     // coeficientes por lado k (k = 0..3 -> lados 1-2, 2-3, 3-4, 4-1)
     double ak[4], bk[4], ck[4], dk[4], ek[4];
     for (int k = 0; k < 4; k++) {
@@ -69,61 +62,75 @@ static Eigen::MatrixXd getBendingK_DKQ_D(const double x[4], const double y[4],
         ek[k] = (0.25*yij*yij - 0.5*xij*xij)/l2;
     }
 
+    double N[8], dNxi[8], dNet[8];
+    serendip8(xi, et, N, dNxi, dNet);
+
+    // jacobiano con las 4 esquinas (el DKQ usa geometria bilineal)
+    double dNx4[4] = {-(1-et)/4, (1-et)/4, (1+et)/4, -(1+et)/4};
+    double dNy4[4] = {-(1-xi)/4, -(1+xi)/4, (1+xi)/4, (1-xi)/4};
+    double J11=0, J12=0, J21=0, J22=0;
+    for (int i = 0; i < 4; i++) {
+    J11 += dNx4[i]*x[i]; J12 += dNx4[i]*y[i];
+    J21 += dNy4[i]*x[i]; J22 += dNy4[i]*y[i];
+    }
+    dJ = J11*J22 - J12*J21;
+    double i11 =  J22/dJ, i12 = -J12/dJ, i21 = -J21/dJ, i22 = J11/dJ;
+
+    // Hx y Hy en (xi,eta): 12 componentes cada uno, derivados en xi y eta
+    Eigen::RowVectorXd Hx_x(12), Hx_e(12), Hy_x(12), Hy_e(12);
+    Hx_x.setZero(); Hx_e.setZero(); Hy_x.setZero(); Hy_e.setZero();
+    for (int i = 0; i < 4; i++) {
+    int kp = (i+3) % 4;       // lado que ENTRA al nudo i
+    int kn = i;           // lado que SALE del nudo i
+    int m_p = 4 + kp, m_n = 4 + kn;   // sus puntos medios
+    // Hx
+    double c0x = 1.5*(ak[kn]*dNxi[m_n] - ak[kp]*dNxi[m_p]);
+    double c0e = 1.5*(ak[kn]*dNet[m_n] - ak[kp]*dNet[m_p]);
+    double c1x = bk[kn]*dNxi[m_n] + bk[kp]*dNxi[m_p];
+    double c1e = bk[kn]*dNet[m_n] + bk[kp]*dNet[m_p];
+    double c2x = dNxi[i] - ck[kn]*dNxi[m_n] - ck[kp]*dNxi[m_p];
+    double c2e = dNet[i] - ck[kn]*dNet[m_n] - ck[kp]*dNet[m_p];
+    Hx_x(3*i) = c0x; Hx_e(3*i) = c0e;
+    Hx_x(3*i+1) = c1x; Hx_e(3*i+1) = c1e;
+    Hx_x(3*i+2) = c2x; Hx_e(3*i+2) = c2e;
+    // Hy
+    double d0x = 1.5*(dk[kn]*dNxi[m_n] - dk[kp]*dNxi[m_p]);
+    double d0e = 1.5*(dk[kn]*dNet[m_n] - dk[kp]*dNet[m_p]);
+    double d1x = -dNxi[i] + ek[kn]*dNxi[m_n] + ek[kp]*dNxi[m_p];
+    double d1e = -dNet[i] + ek[kn]*dNet[m_n] + ek[kp]*dNet[m_p];
+    double d2x = -c1x, d2e = -c1e;
+    Hy_x(3*i) = d0x; Hy_e(3*i) = d0e;
+    Hy_x(3*i+1) = d1x; Hy_e(3*i+1) = d1e;
+    Hy_x(3*i+2) = d2x; Hy_e(3*i+2) = d2e;
+    }
+    // a cartesianas
+    Eigen::RowVectorXd Hx_X = i11*Hx_x + i12*Hx_e;
+    Eigen::RowVectorXd Hx_Y = i21*Hx_x + i22*Hx_e;
+    Eigen::RowVectorXd Hy_X = i11*Hy_x + i12*Hy_e;
+    Eigen::RowVectorXd Hy_Y = i21*Hy_x + i22*Hy_e;
+
+    Eigen::Matrix<double, 3, 12> B;
+    B.row(0) = Hx_X;
+    B.row(1) = Hy_Y;
+    B.row(2) = Hx_Y + Hy_X;
+    return B;
+}
+
+static Eigen::MatrixXd getBendingK_DKQ_D(const double x[4], const double y[4],
+                                double E, double nu, double t,
+                                double m11 = 1.0, double m22 = 1.0, double m12 = 1.0)
+{
+    double D0 = E*t*t*t/(12.0*(1.0-nu*nu));
+    Eigen::Matrix3d Db;
+    Db << D0*m11,        D0*nu*std::sqrt(m11*m22), 0,
+          D0*nu*std::sqrt(m11*m22), D0*m22,        0,
+          0,             0,        D0*(1-nu)/2.0*m12;
+
     Eigen::MatrixXd K = Eigen::MatrixXd::Zero(12, 12);
     const double gp[2] = {-0.5773502691896258, 0.5773502691896258};
     for (int ix = 0; ix < 2; ix++) for (int iy = 0; iy < 2; iy++) {
-        double xi = gp[ix], et = gp[iy];
-        double N[8], dNxi[8], dNet[8];
-        serendip8(xi, et, N, dNxi, dNet);
-
-        // jacobiano con las 4 esquinas (el DKQ usa geometria bilineal)
-        double dNx4[4] = {-(1-et)/4, (1-et)/4, (1+et)/4, -(1+et)/4};
-        double dNy4[4] = {-(1-xi)/4, -(1+xi)/4, (1+xi)/4, (1-xi)/4};
-        double J11=0, J12=0, J21=0, J22=0;
-        for (int i = 0; i < 4; i++) {
-            J11 += dNx4[i]*x[i]; J12 += dNx4[i]*y[i];
-            J21 += dNy4[i]*x[i]; J22 += dNy4[i]*y[i];
-        }
-        double dJ = J11*J22 - J12*J21;
-        double i11 =  J22/dJ, i12 = -J12/dJ, i21 = -J21/dJ, i22 = J11/dJ;
-
-        // Hx y Hy en (xi,eta): 12 componentes cada uno, derivados en xi y eta
-        Eigen::RowVectorXd Hx_x(12), Hx_e(12), Hy_x(12), Hy_e(12);
-        Hx_x.setZero(); Hx_e.setZero(); Hy_x.setZero(); Hy_e.setZero();
-        for (int i = 0; i < 4; i++) {
-            int kp = (i+3) % 4;       // lado que ENTRA al nudo i
-            int kn = i;               // lado que SALE del nudo i
-            int m_p = 4 + kp, m_n = 4 + kn;   // sus puntos medios
-            // Hx
-            double c0x = 1.5*(ak[kn]*dNxi[m_n] - ak[kp]*dNxi[m_p]);
-            double c0e = 1.5*(ak[kn]*dNet[m_n] - ak[kp]*dNet[m_p]);
-            double c1x = bk[kn]*dNxi[m_n] + bk[kp]*dNxi[m_p];
-            double c1e = bk[kn]*dNet[m_n] + bk[kp]*dNet[m_p];
-            double c2x = dNxi[i] - ck[kn]*dNxi[m_n] - ck[kp]*dNxi[m_p];
-            double c2e = dNet[i] - ck[kn]*dNet[m_n] - ck[kp]*dNet[m_p];
-            Hx_x(3*i) = c0x; Hx_e(3*i) = c0e;
-            Hx_x(3*i+1) = c1x; Hx_e(3*i+1) = c1e;
-            Hx_x(3*i+2) = c2x; Hx_e(3*i+2) = c2e;
-            // Hy
-            double d0x = 1.5*(dk[kn]*dNxi[m_n] - dk[kp]*dNxi[m_p]);
-            double d0e = 1.5*(dk[kn]*dNet[m_n] - dk[kp]*dNet[m_p]);
-            double d1x = -dNxi[i] + ek[kn]*dNxi[m_n] + ek[kp]*dNxi[m_p];
-            double d1e = -dNet[i] + ek[kn]*dNet[m_n] + ek[kp]*dNet[m_p];
-            double d2x = -c1x, d2e = -c1e;
-            Hy_x(3*i) = d0x; Hy_e(3*i) = d0e;
-            Hy_x(3*i+1) = d1x; Hy_e(3*i+1) = d1e;
-            Hy_x(3*i+2) = d2x; Hy_e(3*i+2) = d2e;
-        }
-        // a cartesianas
-        Eigen::RowVectorXd Hx_X = i11*Hx_x + i12*Hx_e;
-        Eigen::RowVectorXd Hx_Y = i21*Hx_x + i22*Hx_e;
-        Eigen::RowVectorXd Hy_X = i11*Hy_x + i12*Hy_e;
-        Eigen::RowVectorXd Hy_Y = i21*Hy_x + i22*Hy_e;
-
-        Eigen::MatrixXd B(3, 12);
-        B.row(0) = Hx_X;
-        B.row(1) = Hy_Y;
-        B.row(2) = Hx_Y + Hy_X;
+        double dJ;
+        const Eigen::Matrix<double, 3, 12> B = dkqBat(x, y, gp[ix], gp[iy], dJ);
         K += B.transpose() * Db * B * std::abs(dJ);   // peso 1 en 2x2
     }
     return K;
