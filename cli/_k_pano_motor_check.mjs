@@ -8,7 +8,7 @@
  */
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 const mod = await empaquetar(`export { kPano, kLocalMotor, ejesLocalesQ4 } from "${R}/hekatan-fem/src/utils/shellElementK";
-export { itwMembraneK } from "${R}/hekatan-fem/src/utils/itwJoints";`, "kpanomotor");
+export { itwMembraneK } from "${R}/hekatan-fem/src/utils/triRecoveryCpp";`, "kpanomotor");
 const casos = [
   { n: "cuadrado 1x1", P: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]], E: 2.2e7, nu: 0.2, t: 0.20 },
   { n: "trapecio", P: [[0,0,0],[4,0,0],[3.2,2.5,0],[0.6,2.2,0]], E: 2.1e7, nu: 0.25, t: 0.30 },

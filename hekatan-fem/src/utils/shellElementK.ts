@@ -20,7 +20,7 @@
  * eje 3 = d02 × d13. NO son los ejes con los que `analyze()` REPORTA M11/M22 (esos
  * son los «Area Local Axes»: eje 1 = +X global si el paño es horizontal).
  */
-import { itwMembraneK } from "./itwJoints";
+import { itwMembraneK } from "./triRecoveryCpp";
 import { didacticSolveCpp } from "../didacticCpp";
 import { dkqB } from "./dkqJoints";
 

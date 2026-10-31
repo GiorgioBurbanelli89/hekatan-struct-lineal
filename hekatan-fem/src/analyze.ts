@@ -7,9 +7,7 @@ import {
   DeformOutputs,
   ElementInputs,
 } from "./data-model";
-import { triRecovery, q4Recovery } from "./utils/triRecoveryCpp";
-import { atJointMoments } from "./utils/placaAT";
-import { itwJointForces } from "./utils/itwJoints";
+import { triRecovery, q4Recovery, itwJointForces, atJointMoments } from "./utils/triRecoveryCpp";
 import { getTransformationMatrix } from "./utils/getTransformationMatrix";
 import {
   getLocalStiffnessMatrix,
@@ -643,7 +641,7 @@ function computeQ4ShellStresses(
 
   // ── FUERZAS DE MEMBRANA EN LOS JOINTS (ITW, tipo 8 por defecto) ──
   // Allman + burbuja recuperada + proyección del drilling, Gauss 2×2 extrapolado
-  // (utils/itwJoints.ts). Signo: tracción positiva, el de CSI.
+  // (C++: recuperacionJoints.h, itw_recovery). Signo: tracción positiva, el de CSI.
   let Nj: number[][] | null = null;
   if (Math.abs(detJ) > 1e-20) {
     const u12m: number[] = [];

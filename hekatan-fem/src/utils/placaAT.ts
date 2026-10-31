@@ -143,9 +143,3 @@ export function placaAT(x: number[], y: number[], E: number, nu: number, t: numb
   };
   return { K, F, momentos };
 }
-
-/** Momentos [Mx, My, Mxy] en las 4 esquinas (evaluados en la esquina, como strepq). */
-export function atJointMoments(x: number[], y: number[], u12: number[], E: number, nu: number, t: number, mod?: number[]) {
-  const { momentos } = placaAT(x, y, E, nu, t, 0, mod);
-  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([r, s]) => momentos(u12, r, s));
-}

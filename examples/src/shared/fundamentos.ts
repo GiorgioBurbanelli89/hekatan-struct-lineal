@@ -89,7 +89,7 @@ export const FUNDAMENTOS: Fundamento[] = [
     donde: [
       { ruta: "hekatan-fem/src/cpp/utils/shellQ4.cpp", nota: "getMembraneITW" },
       { ruta: "hekatan-fem/src/cpp/utils/shellThin.cpp", nota: "la reutiliza" },
-      { ruta: "hekatan-fem/src/utils/itwJoints.ts", nota: "fuerzas de membrana en los joints" },
+      { ruta: "hekatan-fem/src/cpp/utils/recuperacionJoints.h", nota: "fuerzas de membrana en los joints" },
     ],
     estado: "Activo (membrana de todas las cáscaras).",
   },

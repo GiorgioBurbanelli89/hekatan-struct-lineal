@@ -1,5 +1,6 @@
 #include "plateDKT.h"
 #include "plateDKQ.h"
+#include "recuperacionJoints.h"
 #include "../data-model.h"
 #include <vector>
 #include <cmath>
@@ -1098,6 +1099,27 @@ extern "C" int q4_recovery(int thick, int modo, const double *xy, const double *
     Eigen::Vector3d Vj[4];
     ext(Vg, Vj);
     for (int j = 0; j < 4; ++j) { out[12 + 2 * j] = -Vj[j](0); out[13 + 2 * j] = -Vj[j](1); }
+    return 1;
+}
+
+// Entradas para el WASM de la recuperacion en los joints (recuperacionJoints.h). xy = [x1,y1,..,x4,y4] locales.
+// mod: 3 doubles (f11,f22,f12) para la membrana, 5 (m11,m22,m12,v13,v23) para la placa AT; hayMod = 0 si no hay.
+extern "C" int itw_recovery(int tipo, double gammaFac, int hayMod, const double *mod, const double *xy, const double *u12, double E,
+                            double nu, double t, double *out)
+{
+    const double x[4] = {xy[0], xy[2], xy[4], xy[6]}, y[4] = {xy[1], xy[3], xy[5], xy[7]};
+    return itwJointForces(x, y, u12, E, nu, t, tipo, gammaFac, hayMod ? mod : nullptr, out) ? 1 : 0;
+}
+extern "C" int itw_k12(int tipo, double gammaFac, int hayMod, const double *mod, const double *xy, double E, double nu, double t,
+                       double *out)
+{
+    const double x[4] = {xy[0], xy[2], xy[4], xy[6]}, y[4] = {xy[1], xy[3], xy[5], xy[7]};
+    return itwK12(x, y, E, nu, t, tipo, gammaFac, hayMod ? mod : nullptr, out) ? 1 : 0;
+}
+extern "C" int at_recovery(int hayMod, const double *mod, const double *xy, const double *u12, double E, double nu, double t, double *out)
+{
+    const double x[4] = {xy[0], xy[2], xy[4], xy[6]}, y[4] = {xy[1], xy[3], xy[5], xy[7]};
+    atJointMoments(x, y, u12, E, nu, t, hayMod ? mod : nullptr, out);
     return 1;
 }
 

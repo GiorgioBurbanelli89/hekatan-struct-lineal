@@ -36,7 +36,8 @@ const navier = (t) => { const D = E * t ** 3 / (12 * (1 - NU * NU)); let w = 0;
 
 export async function correr() {
   const P = JSON.parse(readFileSync(new URL("../datos/placa_auricchio_taylor_py.json", import.meta.url), "utf-8"));
-  const { placaAT, atJointMoments } = await empaquetar(`export { placaAT, atJointMoments } from "${R}/hekatan-fem/src/utils/placaAT";\n`, "placaAT");
+  const { placaAT, atJointMoments } = await empaquetar(`export { placaAT } from "${R}/hekatan-fem/src/utils/placaAT";
+export { atJointMoments } from "${R}/hekatan-fem/src/utils/triRecoveryCpp";\n`, "placaAT");
   const x = P.xl.map((p) => p[0]), y = P.xl.map((p) => p[1]);
   const { K, F } = placaAT(x, y, P.E, P.nu, P.t, P.q);
   const M = atJointMoments(x, y, P.u, P.E, P.nu, P.t);
