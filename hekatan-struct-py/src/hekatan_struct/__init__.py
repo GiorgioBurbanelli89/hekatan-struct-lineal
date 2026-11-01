@@ -29,6 +29,8 @@ from .extensions import (
     compare_picks,
 )
 
+from .placa_modelo import Placa
+
 __version__ = "0.1.0"
 __all__ = [
     # core re-exported
@@ -41,4 +43,5 @@ __all__ = [
     "apply_selfweight", "apply_rigid_diaphragm",
     "apply_cardinal_point_8", "apply_stiffness_modifiers",
     "compute_picks", "compare_picks",
+    "Placa",
 ]

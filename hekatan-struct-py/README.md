@@ -98,3 +98,20 @@ P = [(0, 0), (2, 0.5), (0.5, 1.5)]
 M = momentos("thick", P, 24850000, 0.2, 0.1, campo_patch(P))     # M (3×3) y V = (V13, V23)
 ```
 `pytest tests/test_placas_batoz.py` — 17 pruebas contra SAP2000/ETABS (hojas) y contra el WASM de Struct.
+
+### Modelo multi-elemento de placas (`Placa`)
+
+Malla de triángulos (DKT, thick) o cuadriláteros (DKQ), apoyos simple/empotrado, cargas nodales y de área (consistente),
+`solve()` → w, θ, reacciones, momentos nodales (signo CSI) y PNG. Usa los K validados de `placas.py`.
+
+```python
+from hekatan_struct_py import Placa
+p = Placa.rectangular(4, 4, 16, 16, "dkq", E=2.1e8, nu=0.3, t=0.1)     # a, b, nx, ny, tipo
+p.apoyar_borde("simple")                                               # o "empotrado"
+p.carga_area(-10)                                                      # kN/m2 (+w)
+r = p.solve()                                                          # r["w"], r["R"], r["sumRz"]
+M = p.momentos_nodales()                                               # (n×3) M11 M22 M12
+p.png("w.png", "w"); p.png("m11.png", "M11")
+```
+`pytest tests/test_placa_modelo.py` — Navier/Timoshenko (simple 0.00406 y 0.0479; empotrada 0.00126 y 0.0231), convergencia y ΣR.
+Ejemplo: `examples/06_placa_navier.py`.
