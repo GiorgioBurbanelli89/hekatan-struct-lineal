@@ -28,9 +28,9 @@ def plantilla(arch, hasta, simb, datos):
     def sub(lineas):
         out = []
         for l in lineas:
-            m = re.match(r"^([A-Za-z]\w*) = [-0-9.eE+]+$", l)
+            m = re.match(r"^([A-Za-z]\w*) = [-0-9.eE+]+(\s*\[[^\]]*\])?(\s*'.*)?$", l)   # con unidades y texto: «Em = 24850000 [kN/m²] 'módulo…»
             if m and m.group(1) in pendiente:
-                l = f"{m.group(1)} = %%{pendiente.pop(m.group(1))}%%"
+                l = f"{m.group(1)} = %%{pendiente.pop(m.group(1))}%%" + (m.group(2) or "") + (m.group(3) or "")
             out.append(l)
         return out
     S = [sub(s) for s in sec]
