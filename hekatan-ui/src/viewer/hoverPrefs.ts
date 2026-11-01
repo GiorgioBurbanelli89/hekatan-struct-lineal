@@ -13,10 +13,13 @@ import van, { State } from "vanjs-core";
 // Se enciende en Settings › 🖱 Al pasar el cursor › «matriz K de áreas». Lo demás se hereda de v1.
 // v3 (17-oct-2026): la de las BARRAS también, apagada por defecto. Jorge: «¿por qué me sale la matriz de rigidez
 // cuando no la necesito? Solo cuando la active debe salir». Las dos se encienden en esa misma carpeta.
-const CLAVE = "hk_hover_prefs_v3";
+// v4 (1-nov-2026): Jorge, «debes desactivar por defecto que se vean fórmulas numéricas y simbólicas de barras o áreas: eso no deja ver el hover».
+// Un valor ENCENDIDO guardado por versiones anteriores ganaba sobre el defecto: se sube la versión y las dos tarjetas de K arrancan APAGADAS
+// para todos (se enciende a propósito en Settings › 🖱 Al pasar el cursor). Lo demás (nudos, barras, áreas, todos) se hereda.
+const CLAVE = "hk_hover_prefs_v4";
 const leer = (k: string): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(k) ?? "{}"); } catch { return {}; } };
-const v3 = leer(CLAVE), v2 = leer("hk_hover_prefs_v2"), v1 = leer("hk_hover_prefs_v1");
-const ini: Record<string, boolean> = Object.keys(v3).length ? v3 : { ...v1, ...v2, kBarras: false, kAreas: false };
+const v4 = leer(CLAVE), v3 = leer("hk_hover_prefs_v3"), v2 = leer("hk_hover_prefs_v2"), v1 = leer("hk_hover_prefs_v1");
+const ini: Record<string, boolean> = Object.keys(v4).length ? v4 : { ...v1, ...v2, ...v3, kBarras: false, kAreas: false };
 const st = (k: string, d = true) => van.state<boolean>(ini[k] ?? d);
 export const hoverPrefs: Record<"nudos" | "barras" | "areas" | "kBarras" | "kAreas" | "todos", State<boolean>> = {
   nudos: st("nudos"), barras: st("barras"), areas: st("areas"), kBarras: st("kBarras", false), kAreas: st("kAreas", false),
