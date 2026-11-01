@@ -31,7 +31,7 @@ sliders = ["ipywidgets>=8.0", "trame>=3.0", "trame-vuetify>=2.0", "trame-vtk>=2.
 dev = ["pytest>=7", "pytest-cov>=4"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hekatan_struct"]
+packages = ["src/hekatan_struct", "src/hekatan_struct_py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

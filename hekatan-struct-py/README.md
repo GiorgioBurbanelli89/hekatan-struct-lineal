@@ -80,3 +80,21 @@ ambos nudo a nudo.
 ## Licencia
 
 MIT
+
+## Placas de Batoz y triángulo grueso de CSI (`hekatan_struct_py.placas`)
+
+DKT (Batoz, Bathe y Ho 1980), DKQ (Batoz y Ben Tahar 1982) y el triángulo Shell-Thick de CSI (medido del binario), con K,
+momentos nodales (signo CSI, kN·m/m) y cortante V13/V23, en kN y m. Mismo álgebra que las hojas de Hekatan LISP 152-154.
+
+```bash
+pip install -e hekatan-struct-py          # numpy, scipy; matplotlib para el PNG
+python -m hekatan_struct_py placa --tipo dkt   --nodos 0 0 2 0.5 0.5 1.5 --png dkt.png
+python -m hekatan_struct_py placa --tipo thick --nodos 0 0 2 0.5 0.5 1.5 --json
+python -m hekatan_struct_py placa --tipo dkq   --nodos 0 0 2 0.2 2.2 1.8 0.1 1.6 --png dkq.png --comp 1
+```
+```python
+from hekatan_struct_py.placas import k_dkt, momentos, campo_patch
+P = [(0, 0), (2, 0.5), (0.5, 1.5)]
+M = momentos("thick", P, 24850000, 0.2, 0.1, campo_patch(P))     # M (3×3) y V = (V13, V23)
+```
+`pytest tests/test_placas_batoz.py` — 17 pruebas contra SAP2000/ETABS (hojas) y contra el WASM de Struct.
