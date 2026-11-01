@@ -42,9 +42,9 @@ def plantilla(arch, hasta, simb, datos):
 dk3 = {"Em": "E", "nu": "nu", "t": "t", "x1": "x1", "y1": "y1", "x2": "x2", "y2": "y2", "x3": "x3", "y3": "y3"}
 dk4 = {"Em": "E", "nu": "nu", "t": "t", **{f"{c}{i}": f"{c.lower()}{i}" for i in range(1, 5) for c in "XY"}}
 T = {
-  "dkt": plantilla("placa_DKT.lisp", 6, {1, 2}, dk3),
-  "dkq": plantilla("placa_DKQ.lisp", 6, {1, 3}, dk4),
-  "thick-tri": plantilla("placa_thick_triangulo_csi.lisp", 7, {1}, dk3),
+  "dkt": plantilla("placa_DKT.lisp", 6, {0, 1, 2}, dk3),
+  "dkq": plantilla("placa_DKQ.lisp", 6, {0, 1, 3}, dk4),
+  "thick-tri": plantilla("placa_thick_triangulo_csi.lisp", 7, {0, 1}, dk3),
 }
 js = lambda s: json.dumps(s, ensure_ascii=False)
 o = ["// GENERADO por cli/gen_hojas_placa_lisp.py desde hekatan-school/PLACAS_BATOZ/*.lisp. No editar a mano.",
