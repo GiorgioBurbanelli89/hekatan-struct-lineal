@@ -30,6 +30,8 @@ from .extensions import (
 )
 
 from .placa_modelo import Placa
+from . import placas_wilson               # DKE y DSE de Wilson (libro 2005, cap. 8)
+from .placas_wilson import k_dke, k_dse
 
 __version__ = "0.1.0"
 __all__ = [
@@ -43,5 +45,5 @@ __all__ = [
     "apply_selfweight", "apply_rigid_diaphragm",
     "apply_cardinal_point_8", "apply_stiffness_modifiers",
     "compute_picks", "compare_picks",
-    "Placa",
+    "Placa", "placas_wilson", "k_dke", "k_dse",
 ]
