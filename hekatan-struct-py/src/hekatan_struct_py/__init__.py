@@ -13,3 +13,4 @@ from hekatan_struct.placas import (k_dkt, k_dkq, k_grueso, rigidez, momentos, ca
 from hekatan_struct.placa_modelo import Placa  # noqa: F401  (modelo multi-elemento de placas)
 from hekatan_struct import placas_wilson  # noqa: F401  (DKE y DSE de Wilson, libro 2005 cap. 8)
 from hekatan_struct.placas_wilson import k_dke, k_dse, cuadrante_placa_cuadrada, viga_un_elemento  # noqa: F401
+from hekatan_struct import csi  # noqa: F401  (membrana, Shell-Thin, Shell-Thick de SAP2000/ETABS; k_<elem>(xy, E, nu, t))
