@@ -200,15 +200,21 @@ _DRILLING = {
     # 9 = las dos cosas. La mejor en cascara CURVA (hemisferio 8x8: -0.50 %)
     9: dict(regla="itw8", n_gauss=3, con_burbuja=False, w_alpha=0.99,
             proyectar_drilling=True, khg=0.0),
+    # 13 = el 8 con Gauss 2x2 y el reloj de arena khg = 2e-4 (1/5000*G*t*A).
+    #      DEFECTO del C++ desde el 16-sep-2026 (6b7688d89: shellQ4.cpp,
+    #      shellThin.cpp y shellQ4_DKMQ.cpp); el Python se quedo en el 8 y daba
+    #      otros numeros que el WASM. Patch test exacto y 3 modos nulos.
+    13: dict(regla="gauss", n_gauss=2, con_burbuja=True, proyectar_drilling=True,
+             khg=2.0e-4),
 }
 
 # El defecto, y en un solo sitio. Es el mismo numero que
-# `getMapVal(elementInputs.drillingTypes, index, 8)` de `shellQ4.cpp`.
-TIPO_DRILLING_DEFECTO = 8
+# `getMapVal(elementInputs.drillingTypes, index, 13)` de `shellQ4.cpp`.
+TIPO_DRILLING_DEFECTO = 13
 
 # Los tipos que van por el elemento ITW (los otros son el Q4 clasico con la
 # penalizacion pegada aparte). Mismo rango que `usaITW` en el C++.
-TIPOS_ITW = (3, 4, 5, 6, 7, 8, 9)
+TIPOS_ITW = (3, 4, 5, 6, 7, 8, 9, 13)
 
 
 def kwargs_drilling(tipo: int) -> dict:
@@ -229,23 +235,23 @@ def kwargs_drilling(tipo: int) -> dict:
 
 
 def k_membrana_itw(pts, E: float, nu: float, t: float,
-                   gamma_fac: float = 0.4, n_gauss: int = 3,
+                   gamma_fac: float = 0.4, n_gauss: int = 2,
                    con_burbuja: bool = True, con_penal: bool = True,
                    mod_dir=None, regla: str = "gauss",
                    w_alpha: float = 0.99, penal_full: bool = False,
                    proyectar_drilling: bool = True,
                    penal_integrada: bool = False,
                    theta_relativo: bool = False,
-                   khg: float = 0.0) -> np.ndarray:
+                   khg: float = 2.0e-4) -> np.ndarray:
     # NOTA sobre `penal_full`: ver el aviso al final del docstring. NO USAR.
     """Rigidez 12x12 del elemento, GDL `[u0,v0,tz0, u1,v1,tz1, ...]`.
 
     `pts` son los cuatro `(x, y)` EN EL PLANO DEL ELEMENTO, antihorarios.
     `gamma_fac` es `gamma/mu`; el defecto 0.4 es lo medido de ETABS.
 
-    ⚠️ **El defecto es el `drillingTypes = 8`** — Gauss 3x3 CON la proyeccion.
-    Es el mismo defecto que `shellQ4.cpp`. Los argumentos SIN pedir nada tienen
-    que ser los del tipo 8 (lo vigila `test_el_defecto_de_python_es_el_defecto_del_cpp`). Para el 1990 puro hay que pedirlo
+    ⚠️ **El defecto es el `drillingTypes = 13`** — Gauss 2x2 CON la proyeccion
+    y el reloj de arena khg = 2e-4. Es el mismo defecto que `shellQ4.cpp`. Los
+    argumentos SIN pedir nada tienen que ser los del tipo 13 (lo vigila `test_el_defecto_de_python_es_el_defecto_del_cpp`). Para el 1990 puro hay que pedirlo
     (`proyectar_drilling=False`), o mejor: `**kwargs_drilling(3)`.
 
     `regla` elige QUE PAPER se integra:
