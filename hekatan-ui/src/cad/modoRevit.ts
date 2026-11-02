@@ -322,7 +322,15 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     hooks.setView("iso");
     const gt = W().__hekatanDrawingGridTarget;
     const z0 = niveles()[0]?.z ?? 0;
-    if (gt) gt.val = { position: [0, 0, z0], rotation: [Math.PI / 2, 0, 0] };
+    // La plataforma de «Vista 3D» era SIEMPRE la horizontal en el nivel más bajo: con el plano de trabajo XZ/YZ
+    // (galpón, arcos) desaparecía la plataforma donde se dibuja y los clics caían en el vacío. Ahora solo se
+    // reinicia si se trabaja en planta; con XZ/YZ se conserva su plataforma vertical.
+    const wp = String(W().__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    // en planta, solo si la plataforma NO está ya horizontal (si no, se pisaba la cota Z elegida: la plataforma
+    // volvía a Z=0 y los clics de «Copiar por 2 puntos» caían en otro nivel que el del galpón)
+    const rot0 = (gt?.rawVal?.rotation as number[] | undefined) ?? [];
+    const horizontal = Math.abs((rot0[0] ?? 0) - Math.PI / 2) < 1e-6 && Math.abs(rot0[1] ?? 0) < 1e-6 && Math.abs(rot0[2] ?? 0) < 1e-6;
+    if (gt && wp === "xy" && !horizontal) gt.val = { position: [0, 0, z0], rotation: [Math.PI / 2, 0, 0] };
     encuadrar("iso"); setTimeout(() => encuadrar("iso"), 150);
   };
   // Encuadre por la RETÍCULA (ejes + niveles + lo dibujado), no por los nudos del modelo: con el
@@ -447,8 +455,15 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
       texto("Clic-clic: muro del nivel de abajo a este");
     } else if (h === "eje") {
       texto("Clic-clic: el eje y su burbuja · la cota azul al eje paralelo se pulsa y se escribe");
+      { const n = document.createElement("input"), d = document.createElement("input"); n.type = d.type = "number"; n.value = "1"; d.value = "5"; n.style.width = "46px"; d.style.width = "58px"; n.title = "Cuántas copias"; d.title = "Distancia entre copias (m)";
+        texto("Replicar:"); opc.appendChild(n); texto("copia(s) cada"); opc.appendChild(d); texto("m");
+        boton("⧉ Replicar eje", () => replicarEje(parseInt(n.value), parseFloat(d.value)), "Copia el eje seleccionado (o el último) y deja la cota azul editable"); }
     } else if (h === "nivel") {
       texto("Clic a la altura del nivel · la cota azul al nivel vecino se pulsa y se escribe");
+      { const n = document.createElement("input"), d = document.createElement("input"); n.type = d.type = "number"; n.value = "1"; d.value = "3"; n.style.width = "46px"; d.style.width = "58px"; n.title = "Cuántas copias"; d.title = "Distancia entre copias (m)";
+        texto("Replicar:"); opc.appendChild(n); texto("copia(s) cada"); opc.appendChild(d); texto("m");
+        const cb = document.createElement("label"); cb.innerHTML = `<input type="checkbox" checked> con lo dibujado`; cb.title = "Copia también las columnas, vigas y losas del nivel"; opc.appendChild(cb);
+        boton("⧉ Replicar nivel", () => replicarNivel(parseInt(n.value), parseFloat(d.value), (cb.firstChild as HTMLInputElement).checked), "Copia el nivel seleccionado (o el último) con su piso y deja la cota azul editable"); }
     }
     if (opc.childNodes.length) opc.style.display = "flex";
     const ayuda: Record<Herr, string> = {
@@ -850,6 +865,54 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     decir(`Eje ${label} creado. Pulsa la cota azul para fijar la distancia exacta.`);
   }
 
+  // ── REPLICAR (como copiar un eje o un nivel en Revit): n copias a una distancia, y la cota azul de la última se edita ──
+  function replicarEje(n: number, d: number) {
+    const A = listaEjes(); const base = (datoSel?.tipo === "eje" ? A.find((a) => a.label === datoSel!.id) : undefined) ?? A[A.length - 1];
+    if (!base) { decir("REPLICAR: primero un eje (dibújalo o pulsa uno con Modificar)."); return; }
+    const k = kEje(base); if (k < 0) { decir("REPLICAR: solo ejes horizontales o verticales."); return; }
+    if (!(n >= 1) || !(d !== 0) || !isFinite(d)) { decir("REPLICAR: copias ≥ 1 y distancia distinta de 0."); return; }
+    let ultimo = base.label;
+    for (let i = 1; i <= n; i++) {
+      const pos = +(base.start[k] + i * d).toFixed(6);
+      if (A.some((a) => kEje(a) === k && Math.abs(a.start[k] - pos) < 1e-6)) { decir(`Ya hay un eje en ${pos} m.`); break; }
+      const label = siguienteEtiqueta(k === 0); const s0 = [...base.start], e0 = [...base.end]; s0[k] = pos; e0[k] = pos;
+      A.push({ label, start: s0, end: e0 }); ultimo = label;
+    }
+    W().__hekatanRefreshAxes?.(); W().__hekatanAjustarRejilla?.(); pintarNav(); limpiarFantasma();
+    datoSel = { tipo: "eje", id: ultimo }; ponerCotas(cotasDeEje(ultimo, true));
+    decir(`Replicado: ${n} eje(s) cada ${d} m. Pulsa la cota azul de «${ultimo}» para ajustar la distancia.`);
+  }
+  function replicarNivel(n: number, h: number, conLoDibujado = false) {
+    const N = niveles(); if (!N.length) { decir("REPLICAR: no hay niveles."); return; }
+    if (!(n >= 1) || !(h !== 0) || !isFinite(h)) { decir("REPLICAR: copias ≥ 1 y altura distinta de 0."); return; }
+    const z0 = datoSel?.tipo === "nivel" ? +datoSel.id : (N.some((l) => Math.abs(l.z - zAct) < 1e-6) ? zAct : N[N.length - 1].z); let ultimo = z0;
+    // «con lo dibujado»: el piso entero (nudos, columnas, vigas, losas de ESE nivel) se copia a cada nivel nuevo
+    let copiados = 0;
+    if (conLoDibujado) {
+      const w = W(); const sel: Set<string> | undefined = w.__hekatanSelection;
+      const P = (w.__hekatanDrawingPoints?.rawVal ?? []) as number[][], L = (w.__hekatanDrawingPolylines?.rawVal ?? []) as number[][];
+      if (sel) {
+        sel.clear(); const enNivel = (i: number) => !!P[i] && Math.abs(P[i][2] - z0) < 1e-6;
+        const usados = new Set<number>();
+        L.forEach((pl, i) => { if (pl.length >= 2 && pl.every(enNivel)) { sel.add("poly:" + i); pl.forEach((q) => usados.add(q)); } });
+        P.forEach((_, i) => { if (enNivel(i) && !usados.has(i)) sel.add("pt:" + i); });
+        copiados = w.__hekatanReplicateSelection?.(0, 0, h, n) ?? 0; sel.clear();
+        try { w.__hekatanRefreshSelection?.(); } catch {}
+      }
+    }
+    asegurarNiveles();
+    for (let i = 1; i <= n; i++) {
+      const z = +(z0 + i * h).toFixed(6);
+      if (niveles().some((l) => Math.abs(l.z - z) < 1e-6)) { decir(`Ya hay un nivel a ${z} m.`); break; }
+      (W().__hekatanLevels as { label: string; z: number }[]).push({ label: `N${z >= 0 ? "+" : ""}${z.toFixed(2)}`, z }); ultimo = z;
+    }
+    W().__hekatanRefreshLevels?.(); W().__hekatanAjustarRejilla?.(); pintarNav(); limpiarFantasma(); pintarDatos();
+    try { if (conLoDibujado) W().__hekatanRebuild?.(); } catch {}
+    datoSel = { tipo: "nivel", id: String(ultimo) }; ponerCotas(cotasDeNivel(ultimo, true));
+    decir(`Replicado: ${n} nivel(es) cada ${h} m${conLoDibujado ? ` con lo dibujado (${copiados} copia${copiados === 1 ? "" : "s"})` : ""}. Pulsa la cota azul para ajustar la altura.`);
+  }
+  (W() as any).__hekatanReplicarEje = replicarEje; (W() as any).__hekatanReplicarNivel = replicarNivel;
+
   // ── herramienta NIVEL (LL): en el alzado, un clic a la altura ─────────────────────────────────
   const zNivel = (ev: MouseEvent): number | null => {
     const q = enPlano(ev); if (!q) return null;
@@ -921,7 +984,6 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   // ── encender / apagar ───────────────────────────────────────────────────
   const tog = document.createElement("button"); tog.id = "hk-revit-toggle"; tog.type = "button";
   let encendido = false;
-  let extruAntes: boolean | null = null;
   const poner = (v: boolean) => {
     encendido = v;
     document.body.classList.toggle("hk-revit-on", v);
@@ -935,9 +997,8 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     // encontraba cómo volver): pasa a ser un botón más DENTRO de la cinta. En Revit vuelve a su sitio.
     setTimeout(ubicarToggle, 0);
     try { localStorage.setItem(LS, v ? "1" : "0"); } catch {}
-    // secciones EXTRUIDAS: en planta una columna de línea es un punto invisible; Revit la dibuja con su
-    // sección (cuadrado). Al salir se deja como estaba.
-    try { const sv = W().__hekatanSettings?.(); if (sv?.extruded) { if (v) { extruAntes = sv.extruded.rawVal; sv.extruded.val = true; } else if (extruAntes !== null) sv.extruded.val = extruAntes; } } catch {}
+    // (antes aqui se FORZABA «Extruido (3D)» = true al entrar en Modo Revit: el ajuste quedaba activado
+    // aunque estuviera apagado. Ahora el Modo Revit no toca ese ajuste: manda el casillero de la vista.)
     if (v) { try { W().__hekatanAccesoRapido?.(false); } catch {} asegurarNiveles(); pintarNav(); usar("modificar"); }
     else {
       limpiarFantasma();

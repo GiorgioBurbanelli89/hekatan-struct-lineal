@@ -5437,6 +5437,15 @@ export function drawing({
         const n = (window as any).__hekatanReplicateSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
         updateStatus(n ? `⧉ Replicado ×${n} (Δ ${editState.dx},${editState.dy},${editState.dz} m)` : "⚠ Nada que replicar — seleccioná nodos/frames/áreas");
       });
+      // COPIAR por dos puntos con SNAP (a nudos / grilla / niveles), en la vista que se esté usando —también la
+      // isométrica—: clic en el punto base y clic en el destino; sigue copiando hasta Esc. Sin teclear Δ.
+      fEdit.addButton({ title: "⧉ Copiar por 2 puntos (snap)" }).on("click", () => {
+        if (!selection.size) { updateStatus("⚠ Designe objetos (ventana) y vuelva a pulsar"); return; }
+        pendingClicks = [];
+        (window as any).__hekatanCadState?.setTool?.("copy");
+        updateStatus("COPIAR — clic en el punto BASE y luego en el DESTINO (snap a nudos/grilla). Repite hasta Esc.");
+        refreshPrompt();
+      });
       fEdit.addButton({ title: "⇗ Extruir: nudo → línea, línea → área" }).on("click", () => {
         const r = (window as any).__hekatanExtrudeSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
         updateStatus(r && (r.lineas || r.areas)
@@ -7010,7 +7019,8 @@ export function drawing({
     else n = nudosDeSeleccion().size, (window as any).__hekatanReplicateSelection?.(d[0], d[1], d[2], 1);
     updateStatus(`✓ ${tool === "move" ? "Movidos" : "Copiados"} ${n} nudo${n === 1 ? "" : "s"} — Δ (${d[0].toFixed(2)}, ${d[1].toFixed(2)}, ${d[2].toFixed(2)}) m.`);
     if (tool === "move") { selection.clear(); refreshSelectionGroup(); }
-    (window as any).__hekatanCadState?.setTool?.("select");
+    // COPIAR sigue activo (varias copias seguidas, como AutoCAD); MOVER termina. Esc sale.
+    if (tool !== "copy") (window as any).__hekatanCadState?.setTool?.("select");
     refreshPrompt();
   };
   (window as any).__hekatanPasoMoverCopiar = pasoMoverCopiar;
