@@ -1,0 +1,24 @@
+// Prueba el MCP como lo haría Claude: cliente MCP por stdio, llamando a las herramientas.
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { writeFileSync } from "fs";
+const t = new StdioClientTransport({ command: "node", args: ["server.mjs"], env: { ...process.env } });
+const c = new Client({ name: "prueba", version: "1" });
+await c.connect(t);
+console.log("herramientas:", (await c.listTools()).tools.map((x) => x.name).join(", "));
+const L = async (n, a = {}) => { const r = await c.callTool({ name: n, arguments: a });
+  const tx = r.content.find((x) => x.type === "text"); const im = r.content.find((x) => x.type === "image");
+  if (im) writeFileSync(process.argv[2] + `/mcp_${n}.png`, Buffer.from(im.data, "base64"));
+  console.log(n, r.isError ? "ERROR" : "ok", tx ? tx.text.slice(0, 700) : "(imagen)"); return r; };
+await L("abrir", { ejemplo: "new-blank" });
+await L("captura");
+await L("botones");
+await L("carpeta", { titulo: "Dibujar" });
+await L("boton", { texto: "Plano XY (planta)" });
+await L("boton", { texto: "Línea (frame)" });
+await L("dibujar_linea", { puntos: [[0.34, 0.38], [0.56, 0.38], [0.56, 0.62], [0.34, 0.62], [0.34, 0.38]] });
+await L("modelo");
+await L("captura");
+await L("errores");
+await L("cerrar");
+await c.close();
