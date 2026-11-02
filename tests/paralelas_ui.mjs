@@ -1,0 +1,26 @@
+// COTA DE PARALELAS: dibujar una línea paralela a otra → cota editable → teclear distancia → separación exacta.
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless: "new", channel: "chrome", args: ["--no-sandbox"] });
+const p = await b.newPage(); await p.setViewport({ width: 1500, height: 1000 });
+const err = []; p.on("pageerror", (e) => err.push(e.message));
+await p.goto("http://localhost:4600/workspace/?t=new-blank", { waitUntil: "networkidle2" });
+const w = (ms) => new Promise((r) => setTimeout(r, ms)); await w(5000);
+let ok = 0, mal = 0; const check = (n, c, d = "") => { c ? ok++ : mal++; console.log((c ? "  ✓ " : "  ✗ ") + n + (d ? "  " + d : "")); };
+const pts = () => p.evaluate(() => (window.__hekatanDrawingPoints?.val || []).map((q) => q.map((v) => +v.toFixed(3))));
+await p.evaluate(() => { window.__hekatanDrawingPoints.val = [[0,0,0],[8,0,0]]; window.__hekatanDrawingPolylines.val = [[0,1],[]]; window.__hekatanRebuild?.(); window.__hekatanCadState.setTool("line"); });
+await w(500);
+const pix = (x, y, z) => p.evaluate((x, y, z) => { const el = [...document.querySelectorAll("*")].find((e) => e.__ctx); const cam = el.__ctx.camera; const v = new (cam.position.constructor)(x, y, z).project(cam); const c = document.querySelector("canvas").getBoundingClientRect(); return [c.left + (v.x * .5 + .5) * c.width, c.top + (-v.y * .5 + .5) * c.height]; }, x, y, z);
+const [ax, ay] = await pix(1, 3, 0), [bx, by] = await pix(7, 3, 0);
+await p.mouse.move(ax, ay); await w(200); await p.mouse.click(ax, ay); await w(300);
+await p.mouse.move((ax + bx) / 2, (ay + by) / 2); await w(250); await p.mouse.move(bx, by); await w(400);
+const vis = await p.evaluate(() => { const i = document.getElementById("hk-paralela"); return i && i.style.display !== "none" ? { v: i.value, ro: i.readOnly } : null; });
+check("aparece la cota entre paralelas", !!vis, JSON.stringify(vis));
+check("vale ≈3 m y es editable", !!vis && Math.abs(parseFloat(vis.v) - 3) < 0.6 && !vis.ro);
+const px = await p.evaluate(() => { const i = document.getElementById("hk-paralela"); const r = i.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+await p.mouse.click(px[0], px[1]); await w(200);
+await p.keyboard.down("Control"); await p.keyboard.press("a"); await p.keyboard.up("Control");
+await p.keyboard.type("5"); await p.keyboard.press("Enter"); await w(600);
+const P = await pts();
+check("el punto de partida quedó a 5 m exactos de la referencia", P.length >= 3 && Math.abs(Math.abs(P[2][1]) - 5) < 1e-6, JSON.stringify(P));
+console.log(`\n${ok} ok · ${mal} fallan · errores ${err.length}`); if (err.length) console.log(err);
+await b.close(); process.exit(mal ? 1 : 0);

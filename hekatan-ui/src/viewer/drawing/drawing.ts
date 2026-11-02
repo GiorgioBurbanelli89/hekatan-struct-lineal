@@ -697,6 +697,61 @@ export function drawing({
   // perderíamos lo que está tipeando). Se resetea al confirmar (Enter), al
   // hacer Esc, o al hacer un click nuevo.
   let rubberUserEditing = false;
+  // ── COTA DE PARALELAS (cota temporal de Revit): al trazar una línea paralela a otra, se ve la distancia entre
+  // ellas con una línea auxiliar perpendicular y un campo EDITABLE. Teclear la distancia + Enter coloca el punto
+  // de partida a esa separación (solo si la línea es nueva, o sea su punto de partida es el único de la polilínea).
+  const paraLinea = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 0.15, gapSize: 0.1, depthTest: false }));
+  paraLinea.visible = false; paraLinea.renderOrder = 999; scene.add(paraLinea);
+  const paraInput = document.createElement("input");
+  paraInput.id = "hk-paralela"; paraInput.type = "text"; paraInput.title = "Distancia entre las dos paralelas: escriba el valor y Enter";
+  paraInput.style.cssText = "position:fixed;display:none;z-index:99996;width:62px;padding:1px 4px;background:#0b1220;color:#7dd3fc;border:1px solid #38bdf8;border-radius:4px;font:600 12px Consolas,monospace;text-align:center;transform:translate(-50%,-50%);outline:none";
+  document.body.appendChild(paraInput);
+  let paraInfo: { idx: number; foot: THREE.Vector3; n: THREE.Vector3; editable: boolean } | null = null;
+  const ocultarPara = () => { if (document.activeElement === paraInput) return; paraLinea.visible = false; paraInput.style.display = "none"; paraInfo = null; };
+  /** Busca la barra más cercana PARALELA al tramo en curso y pinta la cota entre ambas. */
+  const cotaParalela = (lastIdx: number, lastPt: number[], p: THREE.Vector3, polyLen: number) => {
+    if (document.activeElement === paraInput) return;
+    const pts = drawingObj.points.rawVal, polys = drawingObj.polylines?.rawVal ?? [];
+    const d = new THREE.Vector3(p.x - lastPt[0], p.y - lastPt[1], p.z - lastPt[2]); const L = d.length();
+    if (L < 0.3) { ocultarPara(); return; }
+    d.divideScalar(L);
+    const P0 = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
+    let mejor: { dist: number; foot: THREE.Vector3; n: THREE.Vector3 } | null = null;
+    for (const pl of polys) for (let i = 0; i + 1 < (pl?.length ?? 0); i++) {
+      if (pl[i] === lastIdx || pl[i + 1] === lastIdx) continue;
+      const A = pts[pl[i]], B = pts[pl[i + 1]]; if (!A || !B) continue;
+      const u = new THREE.Vector3(B[0] - A[0], B[1] - A[1], B[2] - A[2]); const lu = u.length(); if (lu < 0.2) continue; u.divideScalar(lu);
+      if (new THREE.Vector3().crossVectors(d, u).length() > 0.03) continue;           // ≈1.7° de tolerancia
+      const w = P0.clone().sub(new THREE.Vector3(A[0], A[1], A[2]));
+      const perp = w.clone().sub(u.clone().multiplyScalar(w.dot(u)));
+      const dist = perp.length(); if (dist < 0.02 || dist > 60) continue;
+      if (!mejor || dist < mejor.dist) mejor = { dist, foot: P0.clone().sub(perp), n: perp.clone().divideScalar(dist) };
+    }
+    if (!mejor) { ocultarPara(); return; }
+    paraInfo = { idx: lastIdx, foot: mejor.foot, n: mejor.n, editable: polyLen === 1 };
+    paraLinea.geometry.setFromPoints([P0, mejor.foot]); (paraLinea as any).computeLineDistances?.(); paraLinea.visible = true;
+    const mid = P0.clone().add(mejor.foot).multiplyScalar(0.5).project(getActiveCamera());
+    const rect = rendererElm.getBoundingClientRect();
+    paraInput.style.left = (rect.left + (mid.x * 0.5 + 0.5) * rect.width) + "px";
+    paraInput.style.top = (rect.top + (-mid.y * 0.5 + 0.5) * rect.height + 16) + "px";
+    paraInput.value = mejor.dist.toFixed(2);
+    paraInput.readOnly = !paraInfo.editable; paraInput.style.cursor = paraInfo.editable ? "text" : "default";
+    paraInput.style.display = "block";
+  };
+  paraInput.addEventListener("keydown", (ev) => {
+    ev.stopPropagation();
+    if (ev.key === "Escape") { paraInput.blur(); ocultarPara(); return; }
+    if (ev.key !== "Enter" || !paraInfo || !paraInfo.editable) return;
+    const v = parseFloat(paraInput.value.replace(",", "."));
+    if (!(v > 0)) { updateStatus("⚠ La distancia tiene que ser mayor que cero."); return; }
+    const np = paraInfo.foot.clone().add(paraInfo.n.clone().multiplyScalar(v));
+    pushUndo();
+    const nuevos = drawingObj.points.rawVal.map((q, i) => (i === paraInfo!.idx ? [np.x, np.y, np.z] : q)) as [number, number, number][];
+    drawingObj.points.val = nuevos;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    updateStatus(`✓ Paralela a ${v} m de la línea de referencia.`);
+    paraInput.blur(); paraInfo = null; ocultarPara(); viewerRender();
+  });
   const _rubberMid = new THREE.Vector3();
   const updateRubberLabel = (ax: number, ay: number, az: number, bx: number, by: number, bz: number) => {
     const dx = bx - ax, dy = by - ay, dz = bz - az;
@@ -3847,6 +3902,7 @@ export function drawing({
       const polys = drawingObj.polylines?.rawVal ?? [];
       const lastPoly = polys[polys.length - 1] ?? [];
       const allPts = drawingObj.points.rawVal ?? [];
+      if (!(lastPoly.length > 0 && allPts[lastPoly[lastPoly.length - 1]])) ocultarPara();
       if (lastPoly.length > 0 && allPts[lastPoly[lastPoly.length - 1]]) {
         const lastIdx = lastPoly[lastPoly.length - 1];
         const lastPt = allPts[lastIdx];
@@ -4138,6 +4194,7 @@ export function drawing({
         rubberBand.visible = true;
         // Dim label en midpoint del rubber band (referencial mientras se dibuja)
         updateRubberLabel(lastPt[0], lastPt[1], lastPt[2], p.x, p.y, p.z);
+        cotaParalela(lastIdx, lastPt, p, lastPoly.length);
         // ── Polar tracking — líneas X/Y/Z extendidas desde el último punto
         // hasta los bordes del modelo (longitud 5m por dirección, ajustable)
         // Tamaño configurable desde Tweakpane vía window.__hekatanOrthoExt.
