@@ -750,6 +750,33 @@ export function drawing({
     if (document.activeElement === rubberLabelInput) rubberLabelInput.blur();
   };
   // Confirma el endpoint a la distancia tipeada: nuevo punto = start + dir*L
+  // ARCO por 2 PUNTOS + ALTURA (flecha): el arco simétrico cuya cima está sobre el centro de la cuerda.
+  // La altura se da con un clic (distancia perpendicular a la cuerda, con signo) o TECLEADA (es la cota
+  // editable); negativa = para el otro lado. Sirve para arcos que «dan al centro» (galpones, bóvedas, puentes).
+  const arcoPorAltura = (a: [number, number, number], b: [number, number, number], h: number, haciaDonde: number[] | null = null): boolean => {
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const n: [number, number, number] = wp === "xz" ? [0, 1, 0] : wp === "yz" ? [1, 0, 0] : [0, 0, 1];
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    // v = n × u  (perpendicular a la cuerda DENTRO del plano de trabajo)
+    let v = [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]];
+    const L = Math.hypot(v[0], v[1], v[2]);
+    if (L < 1e-9 || Math.abs(h) < 1e-9) { updateStatus("⚠ Arco: la cuerda o la altura son nulas."); return false; }
+    v = v.map((x) => x / L);
+    // en planos verticales la normal «hacia arriba» es la que se espera para h > 0
+    if (wp !== "xy" && v[2] < 0) v = v.map((x) => -x);
+    // cifra tecleada: sube hacia el lado donde está el cursor (el signo tecleado la invierte)
+    if (haciaDonde && v[0] * haciaDonde[0] + v[1] * haciaDonde[1] + v[2] * haciaDonde[2] < 0) h = -h;
+    const crown: [number, number, number] = [(a[0] + b[0]) / 2 + v[0] * h, (a[1] + b[1]) / 2 + v[1] * h, (a[2] + b[2]) / 2 + v[2] * h];
+    const segs = (window as any).__hekatanArcSegs ?? 12;
+    (window as any).__hekatanDrawArc?.(a, crown, b, segs);
+    updateStatus(`✓ Arco por 2 puntos + altura ${+h.toFixed(3)} m (cuerda ${+Math.hypot(u[0], u[1], u[2]).toFixed(3)} m) — ${segs} segmentos`);
+    pendingClicks = [];
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
+    return true;
+  };
+  (window as any).__hekatanArcoPorAltura = arcoPorAltura;
+
   const commitTypedDistance = (lengthM: number) => {
     // Para tools 3D (col/wall/extp/extl) la "distancia" tipeada es la ALTURA
     // del elemento — la guardamos para que el próximo click la use.
@@ -759,6 +786,13 @@ export function drawing({
       updateStatus(`⇉ DESFASE distancia ${lengthM} m — designe la línea y luego el lado.`);
       rubberLabelInput.blur();
       try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
+      return;
+    }
+    if (curTool === "arc2h" && pendingClicks.length === 2) {
+      const hint = rubberDir ? [rubberDir[0], rubberDir[1], rubberDir[2]] : null;
+      rubberStart = null;
+      arcoPorAltura(pendingClicks[0], pendingClicks[1], lengthM, hint);
+      rubberLabelInput.blur();
       return;
     }
     if (curTool === "circle" && pendingClicks.length === 1) {
@@ -4163,7 +4197,7 @@ export function drawing({
         // coordenada también puede ingresarse por teclado, no sólo click.
         const drawingTools = new Set([
           "line", "polyline", "area", "node",
-          "column", "wall", "rect", "circle", "arc",
+          "column", "wall", "rect", "circle", "arc", "arc2h",
           "polyline-multi", "axis", "chaflan",
         ]);
         if (drawingTools.has(curTool)) {
@@ -6624,6 +6658,7 @@ export function drawing({
       case "medir": return P(`REGLA ${measurePts.length === 1 ? "Marque el 2º punto (distancia en vivo):" : "Marque el 1er punto a medir (sobre el modelo o la grilla):"}`);
       case "rect": return n ? P("RECTÁNGULO Precise otra esquina:") : P("RECTÁNGULO Precise primera esquina:");
       case "circle": return n ? P("CÍRCULO Precise radio (clic o teclee la cifra):") : P("CÍRCULO Precise centro:");
+      case "arc2h": return n === 0 ? P("ARCO (2 ptos + altura) Precise punto inicial:") : n === 1 ? P("ARCO Precise punto final:") : P("ARCO Precise la ALTURA (clic o teclee la cifra; negativa = al otro lado):");
       case "arc": return n === 0 ? P("ARCO Precise punto inicial:") : n === 1 ? P("ARCO Precise segundo punto:") : P("ARCO Precise punto final:");
       case "parabola": return P(`PARÁBOLA Precise punto ${n + 1} de 3 (pasa por los tres):`);
       case "cubica": return P(`CÚBICA Precise punto ${n + 1} de 4 (pasa por los cuatro):`);
@@ -8046,6 +8081,41 @@ export function drawing({
       mostrarCadena(null);
       try { (window as any).__hekatanRebuild?.(); } catch {}
       viewerRender();
+      return;
+    }
+    if (tool === "arc2h") {
+      // 3 pasos: inicio · final · altura (clic o cifra tecleada = cota editable)
+      pendingClicks.push([point.x, point.y, point.z]);
+      if (pendingClicks.length === 1) { updateStatus("⌒ Arco 2 ptos + altura — click 1/3 OK (inicio). Marcá el punto final."); return; }
+      if (pendingClicks.length === 2) {
+        const [pa, pb] = pendingClicks;
+        const wpx = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+        const nx: [number, number, number] = wpx === "xz" ? [0, 1, 0] : wpx === "yz" ? [1, 0, 0] : [0, 0, 1];
+        const ux = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]];
+        let vx = [nx[1] * ux[2] - nx[2] * ux[1], nx[2] * ux[0] - nx[0] * ux[2], nx[0] * ux[1] - nx[1] * ux[0]];
+        const Lx = Math.hypot(vx[0], vx[1], vx[2]) || 1; vx = vx.map((q) => q / Lx);
+        if (wpx !== "xy" && vx[2] < 0) vx = vx.map((q) => -q);
+        // la goma (y su cota viva) sale del CENTRO de la cuerda: así se ve la altura mientras se mueve el cursor,
+        // y una cifra tecleada + Enter la fija (commitTypedDistance → arcoPorAltura)
+        rubberStart = [(pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, (pa[2] + pb[2]) / 2];
+        rubberDir = [vx[0], vx[1], vx[2]] as any;
+        updateStatus("⌒ Arco — click 2/3 OK (final). Ahora la ALTURA: clic hacia donde sube, o teclee la cifra + Enter.");
+        return;
+      }
+      const [a1, b1, c1] = pendingClicks;
+      const wp1 = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+      const n1: [number, number, number] = wp1 === "xz" ? [0, 1, 0] : wp1 === "yz" ? [1, 0, 0] : [0, 0, 1];
+      const u1 = [b1[0] - a1[0], b1[1] - a1[1], b1[2] - a1[2]];
+      let v1 = [n1[1] * u1[2] - n1[2] * u1[1], n1[2] * u1[0] - n1[0] * u1[2], n1[0] * u1[1] - n1[1] * u1[0]];
+      const L1 = Math.hypot(v1[0], v1[1], v1[2]) || 1;
+      v1 = v1.map((x) => x / L1);
+      if (wp1 !== "xy" && v1[2] < 0) v1 = v1.map((x) => -x);
+      const mid1 = [(a1[0] + b1[0]) / 2, (a1[1] + b1[1]) / 2, (a1[2] + b1[2]) / 2];
+      let h1 = (c1[0] - mid1[0]) * v1[0] + (c1[1] - mid1[1]) * v1[1] + (c1[2] - mid1[2]) * v1[2];
+      const paso = (window as any).__hekatanGridConfig?.minorStep || 0;
+      if (paso > 0 && (window as any).__hekatanSnapEnabled !== false) h1 = Math.round(h1 / paso) * paso;
+      rubberStart = null;
+      arcoPorAltura(a1, b1, h1);
       return;
     }
     if (tool === "arc") {

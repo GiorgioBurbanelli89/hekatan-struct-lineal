@@ -79,6 +79,7 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
       { id: "rect",     icono: "▭", nombre: "Rectáng.",  tecla: "REC", ayuda: "clic en dos esquinas opuestas." },
       { id: "circle",   icono: "○", nombre: "Círculo",   tecla: "C",   ayuda: "clic en el centro, clic en el radio (o teclea el radio)." },
       { id: "arc",      icono: "⌒", nombre: "Arco",      tecla: "A",   ayuda: "clic inicio, medio y fin." },
+      { id: "arc2h",    icono: "⌓", nombre: "Arco 2P+h", tecla: "A2",  ayuda: "clic inicio y final; la altura (flecha) con un clic o tecleada. Arco simétrico: la cima cae al centro." },
       { id: "parabola", icono: "∪", nombre: "Parábola",  tecla: "PAR", ayuda: "3 clics en el plano de la vista: la parábola que pasa por los tres." },
       { id: "cubica",   icono: "∿", nombre: "Cúbica",    tecla: "CUB", ayuda: "4 clics: el polinomio de 3er grado que pasa por los cuatro." },
     ],
@@ -124,6 +125,7 @@ const GRUPOS: Array<{ titulo: string; fila: 1 | 2; items: Herr[] }> = [
       { id: "offset", icono: "⇉", nombre: "Desfase",  tecla: "O",  ayuda: "teclea la distancia + Enter; clic en la línea y clic en el lado." },
       { id: "trim",   icono: "✂", nombre: "Recortar", tecla: "TR", ayuda: "clic en el contorno de corte, luego en el trozo que sobra." },
       { id: "extend", icono: "↦", nombre: "Alargar",  tecla: "EX", ayuda: "clic en el contorno, luego en la línea a alargar, cerca del extremo." },
+      { id: "divide", icono: "⫶", nombre: "Dividir",  tecla: "DIV", ayuda: "clic en la barra (cerca del extremo de referencia) y teclea 2,3,4 (longitudes) · 4 (partes iguales) · «s» pegada al final (2,3s) = simétrico; pone un nudo en cada corte." },
       // El «Reshape Object» de ETABS (Draw ▸ Reshape Object): designar y arrastrar
       // el extremo. No es «Alargar» de AutoCAD, que necesita un contorno de destino.
       { id: "reshape", icono: "⇲", nombre: "Remodelar", tecla: "RE",

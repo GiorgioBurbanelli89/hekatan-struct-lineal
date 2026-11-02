@@ -143,6 +143,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   fDib.addButton({ title: "▭ Rectángulo" }).on("click", () => setActiveTool("rect"));
   fDib.addButton({ title: "○ Círculo" }).on("click", () => setActiveTool("circle"));
   fDib.addButton({ title: "⌒ Arco (3 ptos)" }).on("click", () => setActiveTool("arc"));
+  fDib.addButton({ title: "⌒ Arco (2 ptos + altura)" }).on("click", () => setActiveTool("arc2h"));
   // Curvas por puntos (Jorge, 13-sep-2026: «una parábola, una parábola de 3er grado,
   // todo con el mouse»): el polinomio que pasa por los clics, en N tramos rectos.
   fDib.addButton({ title: "∪ Parábola (3 ptos)" }).on("click", () => setActiveTool("parabola"));

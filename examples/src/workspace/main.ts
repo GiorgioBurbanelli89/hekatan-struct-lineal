@@ -4389,7 +4389,7 @@ const ACCIONES: Record<string, () => void> = {
   "Ver ▸ Sección transversal": () => { mostrarSeccionConAviso(); },
   // Acceso rápido de dibujo (clic derecho en vacío): herramienta o plano con un clic.
   ...Object.fromEntries(([
-    ["Dibujar ▸ Línea", "line"], ["Dibujar ▸ Polilínea", "polyline"], ["Dibujar ▸ Arco (3 ptos)", "arc"],
+    ["Dibujar ▸ Línea", "line"], ["Dibujar ▸ Polilínea", "polyline"], ["Dibujar ▸ Arco (3 ptos)", "arc"], ["Dibujar ▸ Arco (2 ptos + altura)", "arc2h"],
     ["Dibujar ▸ Rectángulo", "rect"], ["Dibujar ▸ Círculo", "circle"], ["Dibujar ▸ Nodo", "node"],
     ["Dibujar ▸ Parábola", "parabola"], ["Dibujar ▸ Cúbica", "cubica"],
   ] as [string, string][]).map(([k, t]) => [k, () => (window as any).__hekatanAcciones?.herramienta?.(t)])),
@@ -8251,7 +8251,7 @@ try {
     polyline: "polyline", pline: "polyline", pl: "polyline", polilinea: "polyline", "polilínea": "polyline",
     rectangle: "rect", rec: "rect", rectang: "rect", rectangulo: "rect", "rectángulo": "rect", rect: "rect",
     circle: "circle", c: "circle", circ: "circle", circulo: "circle", "círculo": "circle",
-    arc: "arc", a: "arc", arco: "arc",
+    arc: "arc", a: "arc", arco: "arc", arc2h: "arc2h", a2: "arc2h", arcoh: "arc2h",
     column: "col", col: "col", columna: "col", k: "col",
     wall: "wall", w: "wall", muro: "wall", pared: "wall", mu: "wall",
     move: "move", m: "move", mover: "move", desplazar: "move",
@@ -8278,7 +8278,7 @@ try {
   const TOOL_CANON: Record<string, string> = {
     line: "line", node: "node", area: "losa", polyline: "polyline", rect: "rectangle",
     rectarea: "rectarea", polyarea: "polyarea", plane3: "plane3",
-    circle: "circle", arc: "arc", col: "column", wall: "wall", delete: "delete",
+    circle: "circle", arc: "arc", arc2h: "arc2h", col: "column", wall: "wall", delete: "delete",
     select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset", divide: "divide",
     axis: "axis", chaflan: "chamfer",
   };
