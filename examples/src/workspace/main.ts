@@ -22,6 +22,7 @@ import { montarEstacionario } from "../shared/panelEstacionario";
 import { montarExplorador } from "../shared/exploradorModelo";
 import { montarNEC } from "../shared/nec/panelNEC";
 import { montarAccesoRapido } from "../shared/accesoRapido";
+import { montarBarraRapida } from "../shared/barraRapida";
 import { montarCorte } from "../shared/panelCorte";
 import van, { State } from "vanjs-core";
 import * as THREE from "three";
@@ -3288,6 +3289,7 @@ if (window.innerWidth > 600) {
     if (cual === "ninguno") { setPaneHidden(true); setLeftHidden(true); }
   };
   montarAccesoRapido();
+  montarBarraRapida();
 }
 
 // ── Botón «← Volver» al ejemplo anterior (navegación que no existía) ──
