@@ -1,7 +1,7 @@
 {
   "solver": "SAFE 20 via API (construido desde cero, mesh 12\u00d716 + SubModulus override)",
   "case": "Losa de Cimentaci\u00f3n 6\u00d78\u00d70.50m, 6 columnas",
-  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\losa-cimentacion\\Losa_Hekatan_via_API.fdb",
+  "saved_at": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\losa-cimentacion\\Losa_Hekatan_via_API.fdb",
   "params": {
     "Lz": 6.0,
     "Bz": 8.0,

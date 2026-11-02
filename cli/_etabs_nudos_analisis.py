@@ -3,7 +3,7 @@
 «Objects and Elements - Joints» a CSV, y cuenta los nudos que NO están en el .heks (por cota z).
     python cli/_etabs_nudos_analisis.py RUTA.EDB RUTA_heks_dead.json SALIDA.csv"""
 import sys, os, json, math, csv
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 edb, refj, salida = [os.path.abspath(a) for a in sys.argv[1:4]]
 _, S, _ = c.start_engine("etabs", 6, True)

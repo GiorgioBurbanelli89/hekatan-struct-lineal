@@ -5,7 +5,7 @@
 # ============================================================================
 
 param(
-    [string]$OutPath = "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\etabs\composite_slab_thin_frame_oapi.json",
+    [string]$OutPath = "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\etabs\composite_slab_thin_frame_oapi.json",
     [ValidateSet("ShellThin","ShellThick","Membrane")]
     [string]$ShellType = "ShellThin"
 )

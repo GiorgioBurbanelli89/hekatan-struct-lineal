@@ -11,7 +11,7 @@
 # ============================================================================
 
 param(
-    [string] $F2KPath = "C:\Users\j-b-j\Downloads\Zapata_Hekatan_1777645102733.f2k",
+    [string] $F2KPath = "C:\Users\USUARIO\Downloads\Zapata_Hekatan_1777645102733.f2k",
     [string] $OutPath = "$PSScriptRoot\zapata_safe_debug.json",
     [switch] $Visible = $true
 )

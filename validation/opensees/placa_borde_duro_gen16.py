@@ -5,7 +5,7 @@ que es el ensayo de la Tabla 8.4 de Wilson (8.9.3). L=10, E=2.2e7, nu=0.2
 Carga nodal consolidada: q*A/4 repartido por elemento (esquina q*a^2/4, borde /2, interior entero).
 """
 import os
-D = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
+D = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
 N, L, E, NU, Q = 16, 10.0, 2.2e7, 0.2, 1.0
 a = L / N
 for h, tag, form in [(x, t, f) for x in (1.0, 0.01, 0.0001) for t, f in (("thin", "thin"), ("wil", "wilson"), ("mitc", "thick"))]:

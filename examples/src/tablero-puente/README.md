@@ -35,7 +35,7 @@ Diferencia clave Naive ↔ Eccentric: **M_eccentric / M_naive ≈ 1.88** (la vig
 Tu SAP2000 corre **elevado** (Administrator), lo que rompe COM directo desde Claude Code (Medium integrity). Por eso ya tenés un **bridge server elevado** construido en:
 
 ```
-C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\python api sap 2000 claude\
+C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\python api sap 2000 claude\
 ```
 
 El script `sap2000_test_solar_bridge.py` usa tu `SAP2000Bridge` client + `iniciar_bridge.bat`.
@@ -46,7 +46,7 @@ El script `sap2000_test_solar_bridge.py` usa tu `SAP2000Bridge` client + `inicia
 2. **Click derecho** en `iniciar_bridge.bat` (en la carpeta de arriba) → **"Ejecutar como administrador"**. La consola del bridge mostrará "Servidor listo".
 3. **Correr el script** (sin elevar):
 ```bash
-cd "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\examples\src\tablero-puente"
+cd "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\examples\src\tablero-puente"
 python sap2000_test_solar_bridge.py
 ```
 

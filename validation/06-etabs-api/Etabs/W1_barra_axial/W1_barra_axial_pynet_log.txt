@@ -2,7 +2,7 @@
   BARRA AXIAL 1D — pythonnet (.NET direct, no COM)
 ======================================================================
   DLL    : C:\Program Files\Computers and Structures\ETABS 22\ETABSv1.dll
-  EDB    : C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial_pynet.edb
+  EDB    : C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial_pynet.edb
 
 [1] Add-Reference ETABSv1.dll...
     [OK] ETABSv1 namespace cargado

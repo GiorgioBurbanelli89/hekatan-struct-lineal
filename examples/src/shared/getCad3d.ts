@@ -7109,7 +7109,7 @@ Util:     cad.info()  cad.clear()  cad.help()  cad.helpFull()
       py.push(`    if abs(float(c[2]) - ${maxY}) < 0.01:`);
       py.push(`        SapModel.PointObj.SetLoadForce(names[1][i], "Lat", [10,0,0,0,0,0])`);
       py.push(``);
-      py.push(`SapModel.File.Save(r"C:\\Users\\j-b-j\\Downloads\\validation_${test.name.replace(/[^a-zA-Z0-9]/g, '_')}.EDB")`);
+      py.push(`SapModel.File.Save(__import__("os").path.join(__import__("os").path.expanduser("~"), "Downloads", "validation_${test.name.replace(/[^a-zA-Z0-9]/g, '_')}.EDB"))`);
       py.push(`time.sleep(1)`);
       py.push(`SapModel.Analyze.RunAnalysis()`);
       py.push(`time.sleep(5)`);

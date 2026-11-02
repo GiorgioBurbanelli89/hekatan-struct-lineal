@@ -5,7 +5,7 @@ Mide: ux del borde cargado (2×5 kN en el plano por paño) y el PESO PROPIO que 
     python cli/csi_deck_desde_hekatan.py sap|etabs
 """
 import sys, os, json
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 
 motor = sys.argv[1] if len(sys.argv) > 1 else "sap"

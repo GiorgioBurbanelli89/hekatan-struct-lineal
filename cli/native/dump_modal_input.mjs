@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, mkdtempSync, copyFileSync, existsSync } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const RAIZ = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct";
+const RAIZ = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct";
 const { build } = await import(
   pathToFileURL(`${RAIZ}/node_modules/esbuild/lib/main.js`).href);
 

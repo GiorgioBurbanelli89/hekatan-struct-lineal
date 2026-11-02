@@ -11,7 +11,7 @@ public class Sim {
 }
 "@
 
-$snip = 'C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\tools\snip.ps1'
+$snip = 'C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\tools\snip.ps1'
 Write-Host 'Lanzando snip.ps1 directamente...'
 Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$snip`"") -WindowStyle Hidden
 

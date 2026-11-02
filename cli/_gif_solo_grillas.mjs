@@ -188,7 +188,7 @@ console.log("tras Ctrl+Z vuelven:", vuelven, "· pageerror:", err.length, "· fo
 await pag.evaluate(() => window.__vn(""));
 await nav.close(); srv.close();
 
-const FF = "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const FF = (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const lista = fs.readdirSync(out).filter((f) => f.endsWith(".png")).sort();
 fs.writeFileSync(`${out}/lista.txt`, lista.map((f) => `file '${f}'\nduration 0.42`).join("\n") + `\nfile '${lista.at(-1)}'\n`);
 execFileSync(FF, ["-y", "-f", "concat", "-safe", "0", "-i", `${out}/lista.txt`,

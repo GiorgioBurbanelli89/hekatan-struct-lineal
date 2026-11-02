@@ -8,7 +8,7 @@ ETABS forense:
 import os, time, json
 import comtypes.client
 
-EDB_DIR = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
+EDB_DIR = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 CASES = ["steelOnly", "filled", "concreteOnly"]
 
@@ -120,7 +120,7 @@ def main():
             res.append({"case": c, "error": str(e)})
 
     # Save
-    out = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_inspect_mesh.json"
+    out = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_inspect_mesh.json"
     with open(out, "w") as f:
         json.dump(res, f, indent=2, default=str)
     print(f"\n[OK] {out}", flush=True)

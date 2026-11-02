@@ -11,4 +11,4 @@
   Reacciones (Dead):
     2: Fz=8.5771 kN  Mx=0.0000  My=0.0000
 
-[OK] C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever_results.json
+[OK] C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever_results.json

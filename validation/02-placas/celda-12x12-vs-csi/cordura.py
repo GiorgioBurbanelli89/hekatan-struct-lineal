@@ -8,7 +8,7 @@ que la del Thin, la medida esta mal y todo lo que se deduzca de ella tambien.
 """
 import json, os
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 
 for arch in ["flex12.json", "flex12_sap.json", "flex12_thin.json", "flex12_t.json"]:
     p = os.path.join(GAL, arch)

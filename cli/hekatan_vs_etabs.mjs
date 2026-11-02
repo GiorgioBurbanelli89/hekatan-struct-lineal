@@ -18,7 +18,7 @@ writeFileSync(tmp, src.slice(0, cut) + "\nexport { buildEdificio, deform, modalA
 const lib = await import(pathToFileURL(tmp).href);
 
 const etabsPath = process.argv[2] ||
-  "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/validacion/etabs-api/etabs_testm_sweep.json";
+  (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/validacion/etabs-api/etabs_testm_sweep.json";
 const etabs = existsSync(etabsPath) ? JSON.parse(readFileSync(etabsPath, "utf8")) : [];
 const findE = (nbx, nby, nF) => etabs.find(e => e.nbx === nbx && e.nby === nby && e.nF === nF);
 

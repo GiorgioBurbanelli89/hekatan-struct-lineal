@@ -56,7 +56,7 @@ def corrige(K, pts):
 
 if __name__ == "__main__":
     import json, os
-    GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+    GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
     print("  %-28s %12s %12s" % ("caso", "razon w/(t*r)", "factor"))
     for f, ks in (("celda_sap_mods.json", ["entera"]),
                   ("celda_sap2000.json", None),

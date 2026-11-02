@@ -46,7 +46,7 @@ if ($SetFolder) {
 
 $defaultFolder = Get-DefaultFolder
 if (-not $defaultFolder) {
-    $defaultFolder = 'C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\ScreenShoot'
+    $defaultFolder = 'C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\ScreenShoot'
     if (-not (Test-Path $defaultFolder)) { New-Item -ItemType Directory -Path $defaultFolder -Force | Out-Null }
     $cfg = @{ defaultFolder = $defaultFolder } | ConvertTo-Json
     Set-Content -Path $ConfigPath -Value $cfg -Encoding UTF8

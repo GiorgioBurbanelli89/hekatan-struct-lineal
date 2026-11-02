@@ -18,7 +18,7 @@ Todas son **portables sin toolboxes** (solo `zeros`, `eye`, `inv`, ops básicos)
 ## Uso
 
 ```matlab
-addpath('C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\Matlab\lib');
+addpath('C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\Matlab\lib');
 
 % Datos del elemento
 E   = 2549290.5;   % concrete kN/m^2 (escala tonf-m)

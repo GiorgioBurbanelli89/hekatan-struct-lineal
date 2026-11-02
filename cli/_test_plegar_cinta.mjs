@@ -13,7 +13,7 @@ import { fileURLToPath } from "url";
 import { dirname, join, extname } from "path";
 import { execFileSync } from "child_process";
 
-const __dirname = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli";
+const __dirname = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli";
 const OUT = join(__dirname, "shots_bench");
 const FR = join(OUT, "bench");
 rmSync(FR, { recursive: true, force: true });

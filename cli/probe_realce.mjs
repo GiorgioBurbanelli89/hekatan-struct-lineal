@@ -5,8 +5,8 @@ import { readFileSync, existsSync, statSync, mkdirSync } from "fs";
 import { createServer } from "http";
 import { join, extname } from "path";
 const BASE = "/hekatan-struct-lineal/";
-const raiz = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/website/src/examples";
-const OUT = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli/shots/realce";
+const raiz = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct/website/src/examples";
+const OUT = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli/shots/realce";
 mkdirSync(OUT, { recursive: true });
 const MIME = { ".html":"text/html", ".js":"text/javascript", ".css":"text/css",
   ".wasm":"application/wasm", ".json":"application/json", ".svg":"image/svg+xml",

@@ -5,8 +5,8 @@
 """
 import json, os, subprocess, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
-RAIZ= r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+RAIZ= os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct"
 KEL = os.path.join(RAIZ,"cli","native","kelem_native.exe")
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 def rec(v):

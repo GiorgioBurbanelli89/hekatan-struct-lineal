@@ -4,7 +4,7 @@
 import { readFileSync } from "fs";
 import { parseZapataF2k } from "./f2kImporter.ts";
 
-const path = "C:\\Users\\j-b-j\\Documents\\Zapata_Bench_2x2_P10tonf.f2k";
+const path = (process.env.USERPROFILE ?? "") + "\\Documents\\Zapata_Bench_2x2_P10tonf.f2k";
 const text = readFileSync(path, "utf8");
 const parsed = parseZapataF2k(text);
 

@@ -1,5 +1,5 @@
 import puppeteer from "puppeteer"; import fs from "node:fs"; import { createServer } from "http"; import { join, extname } from "path";
-const raiz="C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct-deploy/website/src/examples", BASE="/hekatan-struct-lineal/";
+const raiz=(process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct-deploy/website/src/examples", BASE="/hekatan-struct-lineal/";
 const MIME={".html":"text/html",".js":"text/javascript",".css":"text/css",".wasm":"application/wasm",".json":"application/json",".svg":"image/svg+xml",".png":"image/png",".ico":"image/x-icon",".woff2":"font/woff2"};
 const srv=createServer((q,r)=>{let p=decodeURIComponent((q.url||"/").split("?")[0]);if(p.startsWith(BASE))p=p.slice(BASE.length-1);let f=join(raiz,p);if(fs.existsSync(f)&&fs.statSync(f).isDirectory())f=join(f,"index.html");if(!fs.existsSync(f)){r.writeHead(404);return r.end("404");}r.writeHead(200,{"content-type":MIME[extname(f)]||"application/octet-stream"});r.end(fs.readFileSync(f));});
 await new Promise(r=>srv.listen(4807,r));

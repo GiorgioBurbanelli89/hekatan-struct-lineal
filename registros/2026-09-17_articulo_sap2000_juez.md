@@ -6,8 +6,8 @@ El artículo rev2 validaba contra ETABS.
 
 | | |
 |---|---|
-| Original (NO tocado) | `C:\Users\j-b-j\Downloads\Articulo_Revista_Politecnica_Hekatan_rev2.docx` |
-| Salida | `C:\Users\j-b-j\Downloads\Articulo_Revista_Politecnica_Hekatan_rev3_SAP.docx` |
+| Original (NO tocado) | `C:\Users\USUARIO\Downloads\Articulo_Revista_Politecnica_Hekatan_rev2.docx` |
+| Salida | `C:\Users\USUARIO\Downloads\Articulo_Revista_Politecnica_Hekatan_rev3_SAP.docx` |
 | Evidencia archivada en el repo | `validation/articulo-revista/` (52 KB) |
 
 ---

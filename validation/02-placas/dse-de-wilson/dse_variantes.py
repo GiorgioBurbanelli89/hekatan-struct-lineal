@@ -5,7 +5,7 @@ import json, os, sys, importlib
 import numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import dse_wilson as W
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 src=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"dse_wilson.py"),
          encoding="utf-8").read()
 VAR={

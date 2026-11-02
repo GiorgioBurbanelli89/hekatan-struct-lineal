@@ -1,3 +1,4 @@
+import os
 """
 Validación FEM Python — Guerra Ej.1 Zapata Aislada Cuadrada
 Plate Q4 MINDLIN (ShellThick) con Winkler springs + self-weight + P + M.
@@ -263,7 +264,7 @@ ax2.set_xlabel('X (m)'); ax2.set_ylabel('Y (m)')
 ax2.set_aspect('equal')
 
 plt.tight_layout()
-out_path = r'C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\guerra_ej1_python_fem.png'
+out_path = os.path.expanduser("~") + r'\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\guerra_ej1_python_fem.png'
 plt.savefig(out_path, dpi=120, bbox_inches='tight')
 print(f"\nPNG guardada: {out_path}")
 plt.close()

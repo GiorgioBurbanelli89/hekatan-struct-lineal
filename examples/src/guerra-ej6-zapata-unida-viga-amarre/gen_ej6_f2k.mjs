@@ -71,7 +71,7 @@ const vigasAmarre = [{
 
 const f2k = exportEdificioCimentacionF2k({ zapatas, vigasAmarre, ks_kNm3: ks, Z: 0 });
 
-const out = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\validacion\\safe-api\\ej6_hekatan.f2k";
+const out = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\validacion\\safe-api\\ej6_hekatan.f2k";
 writeFileSync(out, f2k, "utf8");
 console.log("F2K Ej.6 exportado:", out);
 console.log("  ", f2k.length, "bytes,", f2k.split("\n").length, "lineas");

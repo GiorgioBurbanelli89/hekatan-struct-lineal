@@ -1,7 +1,7 @@
 {
   "solver": "SAFE 20 via API (construido desde cero, mesh 16\u00d78 + SubModulus override)",
   "case": "Viga de Cimentaci\u00f3n 8\u00d71\u00d70.50m, 4 columnas alineadas",
-  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\viga-cimentacion\\Viga_Cimentacion_via_API.fdb",
+  "saved_at": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\viga-cimentacion\\Viga_Cimentacion_via_API.fdb",
   "params": {
     "Lz": 8.0,
     "Bz": 1.0,

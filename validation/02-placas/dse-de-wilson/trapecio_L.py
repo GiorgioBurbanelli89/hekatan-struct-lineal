@@ -23,7 +23,7 @@ import numpy as np
 from dse_wilson import K_DSE
 from factor_hg import fuera
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 
 
 def escalas(pts):

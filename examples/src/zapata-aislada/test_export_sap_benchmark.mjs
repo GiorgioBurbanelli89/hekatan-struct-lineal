@@ -18,7 +18,7 @@ const params = {
   nx: 10, ny: 10,
 };
 
-const docs = "C:\\Users\\j-b-j\\Documents\\";
+const docs = (process.env.USERPROFILE ?? "") + "\\Documents\\";
 const base = "Zapata_Bench_2x2_P10tonf";
 
 writeFileSync(docs + base + ".f2k", exportZapataF2k(params), "utf8");

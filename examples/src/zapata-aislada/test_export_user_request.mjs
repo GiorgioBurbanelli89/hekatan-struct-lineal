@@ -51,7 +51,7 @@ const exportPairs = [
 
 for (const [name, ks] of exportPairs) {
   const text = exportZapataF2k({ ...baseData, ks_kNm3: ks });
-  const path = `C:\\Users\\j-b-j\\Documents\\Zapata_Hekatan_1.5x1.5_P20_Mx05_My05_${name}.f2k`;
+  const path = `${process.env.USERPROFILE}\\Documents\\Zapata_Hekatan_1.5x1.5_P20_Mx05_My05_${name}.f2k`;
   writeFileSync(path, text, "utf8");
   console.log(`✓ Generado: ${path}`);
 }

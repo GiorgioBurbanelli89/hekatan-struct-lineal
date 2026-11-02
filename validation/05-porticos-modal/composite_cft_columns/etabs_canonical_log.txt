@@ -28,4 +28,4 @@ cantileverColumn       | Ux    |     6.2880
 clampedClampedBeam     | Uz    |    -0.1419
 cantileverBeam         | Uz    |    -6.2880
 
-[OK] C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_canonical_results.json
+[OK] C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_canonical_results.json

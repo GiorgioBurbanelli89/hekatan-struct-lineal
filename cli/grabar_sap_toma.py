@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
 """Toma de SAP2000 (juez) con el MOUSE REAL, grabada del escritorio con ffmpeg gdigrab.
     python cli/grabar_sap_toma.py SALIDA.mkv
 Coordenadas FÍSICAS (2560×1600) de SAP2000 maximizado (medidas el 13-sep-2026, _gui/sap_*.png)."""
 import sys, time, subprocess, warnings
 warnings.filterwarnings("ignore")
 import pyautogui
-FF = r"C:\Users\j-b-j\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+FF = os.path.expanduser("~") + r"\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
 salida = sys.argv[1]
 pyautogui.PAUSE = 0.1
 

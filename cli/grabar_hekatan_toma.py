@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 """Toma de Hekatan Struct en el NAVEGADOR REAL (enlace público, GPU) con el mouse real, gdigrab del escritorio.
     python cli/grabar_hekatan_toma.py SALIDA.mkv
 Coordenadas FÍSICAS (2560×1600) medidas el 13-sep-2026 con el enlace ?m=7nF68EUiy5UVJuli&modal=80
@@ -6,7 +7,7 @@ Coordenadas FÍSICAS (2560×1600) medidas el 13-sep-2026 con el enlace ?m=7nF68E
 import sys, time, subprocess, warnings
 warnings.filterwarnings("ignore")
 import pyautogui
-FF = r"C:\Users\j-b-j\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+FF = os.path.expanduser("~") + r"\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
 salida = sys.argv[1]
 pyautogui.PAUSE = 0.1
 def ir(x, y, d=0.8): pyautogui.moveTo(x, y, duration=d)

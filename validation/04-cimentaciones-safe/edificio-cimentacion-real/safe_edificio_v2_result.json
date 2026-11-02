@@ -1,7 +1,7 @@
 {
   "solver": "SAFE 20 via API (9 zap + 12 vigas + 9 cargas reales del edificio)",
   "case": "Cimentaci\u00f3n Edificio Real (9 zapatas + 12 vigas amarre)",
-  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\edificio-cimentacion-real\\Edificio_Cimentacion_via_API.fdb",
+  "saved_at": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\edificio-cimentacion-real\\Edificio_Cimentacion_via_API.fdb",
   "params": {
     "tz": 0.3,
     "E_kNm2": 24855000.0,

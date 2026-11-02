@@ -9,8 +9,8 @@ import comtypes.client
 sys.stdout.reconfigure(encoding='utf-8')
 OUT = os.path.dirname(os.path.abspath(__file__))
 
-E2K_RIGID = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\Validaciones con python\perimeter_walls.e2k"
-E2K_SEMI = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\Validaciones con python\perimeter_walls_semi_rigid.e2k"
+E2K_RIGID = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\Validaciones con python\perimeter_walls.e2k"
+E2K_SEMI = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\Validaciones con python\perimeter_walls_semi_rigid.e2k"
 
 print("Conectando…")
 obj = comtypes.client.GetActiveObject("CSI.ETABS.API.ETABSObject")

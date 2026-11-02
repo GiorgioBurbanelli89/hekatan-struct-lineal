@@ -7,7 +7,7 @@ flex12_analiza.py y se compara con la que saca kb12.exe del motor.
 import json, subprocess, sys, os
 import numpy as np
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 KB12 = sys.argv[1] if len(sys.argv) > 1 else "kb12.exe"
 OCT = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin"
 os.environ["PATH"] = OCT + os.pathsep + os.environ["PATH"]

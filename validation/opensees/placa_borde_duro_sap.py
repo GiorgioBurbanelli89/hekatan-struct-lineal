@@ -8,7 +8,7 @@ borde para comprobar que el borde DURO llego de verdad.
 import sys, os, json, time, runpy
 import comtypes.client
 
-VAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
+VAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
 SCRIPT = os.path.join(VAL, "csi_modal_fuerzas.py")
 TS = ["0.001", "0.01", "0.05", "0.1", "0.2"]
 

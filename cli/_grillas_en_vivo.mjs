@@ -228,7 +228,7 @@ await nota("");
 await nav.close(); srv.close();
 
 // GIF con todos los fotogramas en orden
-const FF = "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const FF = (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const lista = fs.readdirSync(out).filter((f) => f.endsWith(".png")).sort();
 fs.writeFileSync(`${out}/lista.txt`,
   lista.map((f) => `file '${f}'\nduration 0.6`).join("\n") + `\nfile '${lista[lista.length - 1]}'\n`);

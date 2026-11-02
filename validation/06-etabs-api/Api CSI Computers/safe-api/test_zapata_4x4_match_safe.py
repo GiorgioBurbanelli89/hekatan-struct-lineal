@@ -1,3 +1,4 @@
+import os
 """
 Replicar Test.f2k de SAFE en Python:
 - Footing 4x4m, h=0.6m, Shell-Thin, HORMIGON 210
@@ -249,7 +250,7 @@ ax.set_xlabel('X (m)'); ax.set_ylabel('Y (m)')
 ax.legend(loc='upper right', fontsize=9)
 
 plt.tight_layout()
-out = r'C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\test_zapata_4x4_match_safe.png'
+out = os.path.expanduser("~") + r'\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\test_zapata_4x4_match_safe.png'
 plt.savefig(out, dpi=120, bbox_inches='tight')
 plt.close()
 print(f"\nPNG: {out}")

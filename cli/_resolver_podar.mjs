@@ -1,7 +1,7 @@
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 import { readFileSync } from "node:fs";
 const m = await empaquetar(`export * from "${R}/examples/src/shared/e2kParser";\nexport * from "${R}/examples/src/shared/e2kAnalisis";\nexport { deform } from "${R}/hekatan-fem/src/index";\n`, "an");
-const DL = "C:/Users/j-b-j/Downloads/";
+const DL = (process.env.USERPROFILE ?? "") + "/Downloads/";
 for (const f of process.argv.slice(2)) {
   const logs = []; const ol = console.log, ow = console.warn, oe = console.error;
   console.log = (...a) => logs.push("L " + a.join(" ")); console.warn = (...a) => logs.push("W " + a.join(" ")); console.error = (...a) => logs.push("E " + a.join(" "));

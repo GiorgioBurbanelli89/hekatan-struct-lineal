@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { parseE2k, e2kSummary } from "./e2kImporter.ts";
 
-const path = "C:\\Users\\j-b-j\\Documents\\HekatanSapTest\\tablero_puente_etabs.e2k";
+const path = (process.env.USERPROFILE ?? "") + "\\Documents\\HekatanSapTest\\tablero_puente_etabs.e2k";
 const text = readFileSync(path, "utf8");
 const m = parseE2k(text);
 console.log(`Parseado: ${path}`);

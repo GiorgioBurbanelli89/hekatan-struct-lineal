@@ -1,6 +1,6 @@
 // Diagnóstico v2: formato SAP2000 key=value (no CSV). Cuentas por tabla.
 import { readFileSync } from "fs";
-const f = process.argv[2] ?? "C:\\Users\\j-b-j\\Downloads\\Cancha Parque v24.s2k";
+const f = process.argv[2] ?? (process.env.USERPROFILE ?? "") + "\\Downloads\\Cancha Parque v24.s2k";
 const txt = readFileSync(f, "utf8");
 const lineas = txt.split(/\r?\n/);
 

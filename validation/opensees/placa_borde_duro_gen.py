@@ -12,7 +12,7 @@ que es lo que hace que el apoyo sea SIMPLE (M_nn = 0) y no empotrado.
 """
 import sys, os, re
 SRC = os.path.dirname(os.path.abspath(__file__))
-D = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
+D = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
 TOL = 1e-9
 for t in ["0.001", "0.01", "0.05", "0.1", "0.2"]:
     f = os.path.join(D, "pl_%s.heks" % t)

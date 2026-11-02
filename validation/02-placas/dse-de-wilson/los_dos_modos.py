@@ -17,7 +17,7 @@ from dse_wilson import K_DSE
 from quien_es_el_quinto import candidatos, _pack
 from quinto_modo import mac
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 H = np.array([1., -1., 1., -1.])
 
 

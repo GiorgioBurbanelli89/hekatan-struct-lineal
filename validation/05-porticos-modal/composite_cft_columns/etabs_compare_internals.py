@@ -28,9 +28,9 @@ import time
 import math
 import comtypes.client
 
-EDB_PATH = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.EDB"
+EDB_PATH = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.EDB"
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
-OUTPUT_JSON = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_internals_forensic.json"
+OUTPUT_JSON = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_internals_forensic.json"
 
 # Hekatan reference values (computed in run_matrix_cft.mjs)
 HEKATAN = {

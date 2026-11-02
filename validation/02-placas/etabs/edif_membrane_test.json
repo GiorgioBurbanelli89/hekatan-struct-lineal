@@ -1,5 +1,5 @@
 ﻿{
-    "source_edb":  "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\validation\\python-etabs-verificado\\edif_membrane.EDB",
+    "source_edb":  "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\validation\\python-etabs-verificado\\edif_membrane.EDB",
     "extracted_at":  "2026-05-07 19:22:58",
     "units":  "kN, m, C",
     "program":  "ETABS via OAPI",

@@ -41,7 +41,7 @@ mkdirSync(OUT, { recursive: true });
 for (const f of readdirSync(OUT)) if (/\.(png|json)$/.test(f)) unlinkSync(join(OUT, f));
 
 const FFMPEG = process.env.FFMPEG ||
-  "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+  (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const ANCHO = 1280, ALTO = 720;          // la ventana, en CSS
 // Se graba la ventana SIN la banda de órdenes de abajo (640 de 720): esos 80 px de CSS
 // se convierten en la franja negra donde va el subtítulo. Así el subtítulo no se come

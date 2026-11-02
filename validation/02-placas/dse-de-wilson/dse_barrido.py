@@ -4,7 +4,7 @@ y del factor de la correccion del patch test."""
 import json, os, sys
 import numpy as np
 SP=os.path.dirname(os.path.abspath(__file__))
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 src=open(os.path.join(SP,"dse_wilson.py"),encoding="utf-8").read()
 kd=json.load(open(os.path.join(GAL,"k_directa.json"),encoding="utf-8"))
 def espectro(f23, fpt):

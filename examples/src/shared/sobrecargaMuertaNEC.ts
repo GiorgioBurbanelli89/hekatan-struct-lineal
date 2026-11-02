@@ -22,8 +22,8 @@
  * de construcción", páginas IMPRESAS 21-24 (páginas de PDF 25-28). Cada valor de abajo lleva su
  * fila y su página.
  *
- * NEC-22 (borrador, NO oficial): buscado en disco (`C:\Users\j-b-j\Documents`,
- * `C:\Users\j-b-j\Downloads\Nec`) y en la web (habitatyvivienda.gob.ec, mit.gob.ec) el
+ * NEC-22 (borrador, NO oficial): buscado en disco (carpetas Documentos y
+ * Descargas\Nec del autor) y en la web (habitatyvivienda.gob.ec, mit.gob.ec) el
  * 19-sep-2026. Lo único que existe publicado es el borrador de la NEC-SE-DS (peligro sísmico,
  * "Borrador NEC-SE-DS-12-09-23.pdf", ya en `Downloads/Nec/Borrador/`) — NO hay un borrador
  * publicado de la NEC-SE-CG (cargas no sísmicas) con una Tabla 8 distinta. Por eso

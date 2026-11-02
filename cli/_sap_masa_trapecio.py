@@ -4,7 +4,7 @@ Trapecio (0,0) (4,0) (3,2) (1,2), t = 0.2 m, ρ = 2.4 t/m³, sin apoyos que quit
 Lee la tabla «Assembled Joint Masses» después de analizar.
     python cli/_sap_masa_trapecio.py"""
 import sys, os, json
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 sys.stdout.reconfigure(encoding="utf-8")
 _, S, _ = c.start_engine("sap", 6, True)

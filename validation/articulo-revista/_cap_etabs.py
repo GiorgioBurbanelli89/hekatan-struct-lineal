@@ -12,7 +12,7 @@ import os, sys, time, subprocess
 sys.stdout.reconfigure(encoding="utf-8")
 CAP = sys.argv[1]; os.makedirs(CAP, exist_ok=True)
 ESPERA = int(sys.argv[2]) if len(sys.argv) > 2 else 150
-RAIZ = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0"
+RAIZ = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0"
 EDB = os.path.join(RAIZ, "hekatan-etabs-bridge", "Csi", "modelo_comparacion", "TestM_Dual.EDB")
 EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 t0 = time.time()

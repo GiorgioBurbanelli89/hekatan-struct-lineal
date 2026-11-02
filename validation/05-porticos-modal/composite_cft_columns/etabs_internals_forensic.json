@@ -1,7 +1,7 @@
 {
   "extracted_at": "2026-05-08 00:22:25",
   "etabs_version": "22",
-  "edb_path": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\Benchmark_Placa\\composite_cft_columns\\etabs\\composite_cft_cftDeckSlab.EDB",
+  "edb_path": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\Benchmark_Placa\\composite_cft_columns\\etabs\\composite_cft_cftDeckSlab.EDB",
   "frame_sections": {
     "CFT_HSS250x10": {
       "name": "CFT_HSS250x10",

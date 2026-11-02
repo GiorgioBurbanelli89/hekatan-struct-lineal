@@ -2,7 +2,7 @@
 """ETABS abierto: abre EDIF_etabs.EDB, marca «Calculate Diaphragm Centers of Rigidity» (no está en la OAPI: por la
 interfaz, con el cursor), corre y vuelca «Centers of Mass and Rigidity» a etabs_cr.json."""
 import json, os, sys, time
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-school\serie_curso_csi")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-school\serie_curso_csi")
 import comtypes.client, comtypes.gen.ETABSv1 as E
 import csi_ui as U
 AQUI = os.path.dirname(os.path.abspath(__file__))

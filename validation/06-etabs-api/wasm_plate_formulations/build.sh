@@ -6,7 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-EMCC="/c/Users/j-b-j/emsdk/upstream/emscripten/emcc.bat"
+EMCC="$HOME/emsdk/upstream/emscripten/emcc.bat"
 
 if [ ! -f "$EMCC" ]; then
     echo "ERROR: emcc not found at $EMCC"

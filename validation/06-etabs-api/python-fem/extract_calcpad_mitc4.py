@@ -10,8 +10,8 @@ import base64
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-HTML = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\Calcpad-Lab\Examples\Mechanics\Finite Elements\rectangular slab fea - mitc4.html"
-OUT  = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\python-fem\figs"
+HTML = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\Calcpad-Lab\Examples\Mechanics\Finite Elements\rectangular slab fea - mitc4.html"
+OUT  = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\python-fem\figs"
 os.makedirs(OUT, exist_ok=True)
 
 with open(HTML, "r", encoding="utf-8", errors="ignore") as f:

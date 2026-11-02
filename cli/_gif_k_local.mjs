@@ -129,7 +129,7 @@ for (let i = 0; i < 10; i++) await foto("k_pano");
 
 console.log("pageerror:", err.length, err.slice(0, 2), "· fotogramas:", n);
 await nav.close(); srv.close();
-const FF = "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const FF = (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const lista = fs.readdirSync(out).filter((f) => f.endsWith(".png")).sort();
 const linea = (f) => "file " + String.fromCharCode(39) + f + String.fromCharCode(39);
 fs.writeFileSync(`${out}/lista.txt`,

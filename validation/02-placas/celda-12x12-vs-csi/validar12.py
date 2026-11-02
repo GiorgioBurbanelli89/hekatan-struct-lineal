@@ -7,7 +7,7 @@ Si esto no cumple, la medida esta mal y comparar contra ella no significa nada.
 """
 import json, os, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 
 def reconstruir(v):
     pts = v["pts"]

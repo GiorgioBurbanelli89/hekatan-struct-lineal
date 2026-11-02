@@ -1,6 +1,6 @@
 /**
  * Genera F2K, TCL y OpenSeesPy para la zapata 1.5×1.5 P=20 tonf.
- * Output: 3 archivos en C:\Users\j-b-j\Documents\
+ * Output: 3 archivos en C:\Users\USUARIO\Documents\
  */
 import { writeFileSync } from "fs";
 import { exportZapataF2k } from "./f2kExporter.ts";
@@ -17,7 +17,7 @@ const params = {
   nx: 12, ny: 12,
 };
 
-const docs = "C:\\Users\\j-b-j\\Documents\\";
+const docs = (process.env.USERPROFILE ?? "") + "\\Documents\\";
 
 writeFileSync(docs + "Zapata_Hekatan_1.5x1.5_P20tonf.f2k", exportZapataF2k(params), "utf8");
 writeFileSync(docs + "Zapata_Hekatan_1.5x1.5_P20tonf.tcl", exportZapataTcl(params), "utf8");

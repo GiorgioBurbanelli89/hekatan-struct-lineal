@@ -5,7 +5,7 @@ import { createServer } from "http"; import { readFileSync, existsSync, statSync
 import { fileURLToPath } from "url"; import { dirname, join, extname } from "path"; import puppeteer from "puppeteer";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE = "/hekatan-struct-lineal/"; const raiz = join(__dirname, "..", "website", "src", "examples");
-const IFC = "C:/Users/j-b-j/AppData/Local/Temp/claude/C--Users-j-b-j-Documents-Hekatan-Calc-1-0-0/e516dcfc-010a-4ffa-88ae-abcdf213b18c/scratchpad/ifc_church.json";
+const IFC = (process.env.USERPROFILE ?? "") + "/AppData/Local/Temp/claude/C--Users-USUARIO-Documents-Hekatan-Calc-1-0-0/e516dcfc-010a-4ffa-88ae-abcdf213b18c/scratchpad/ifc_church.json";
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".wasm": "application/wasm", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
 const srv = createServer((q, s) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p.startsWith(BASE)) p = p.slice(BASE.length - 1); if (p === "/ifc_church.json") { s.writeHead(200, { "content-type": "application/json" }); return s.end(readFileSync(IFC)); } let f = join(raiz, p); if (existsSync(f) && statSync(f).isDirectory()) f = join(f, "index.html"); if (!existsSync(f)) { s.writeHead(404); return s.end("404"); } s.writeHead(200, { "content-type": MIME[extname(f)] || "application/octet-stream" }); s.end(readFileSync(f)); });
 const PORT = 4824; await new Promise((r) => srv.listen(PORT, r));

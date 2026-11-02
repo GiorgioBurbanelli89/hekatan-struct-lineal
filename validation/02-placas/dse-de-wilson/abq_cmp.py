@@ -12,8 +12,8 @@ GDL de Abaqus: 1=u 2=v 3=w 4=theta_x 5=theta_y 6=theta_z  (igual que ETABS)
 import json, os, subprocess, sys
 import numpy as np
 SP=os.path.join(os.path.dirname(os.path.abspath(__file__)),"abq")
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
-RAIZ= r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+RAIZ= os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct"
 KEL = os.path.join(RAIZ,"cli","native","kelem_native.exe")
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 def leer_mtx(p):

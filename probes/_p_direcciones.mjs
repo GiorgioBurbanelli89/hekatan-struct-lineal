@@ -1,6 +1,6 @@
 // ¿Qué DIRECCIONES traen las cargas del s2k? (Dir, CoordSys, Proj, componentes anguladas)
 import { readFileSync } from "fs";
-const f = process.argv[2] ?? "C:\\Users\\j-b-j\\Downloads\\Cancha Parque v24.s2k";
+const f = process.argv[2] ?? (process.env.USERPROFILE ?? "") + "\\Downloads\\Cancha Parque v24.s2k";
 const lineas = readFileSync(f, "utf8").split(/\r?\n/);
 const parse = (l) => Object.fromEntries([...l.matchAll(/(\w+)=("[^"]*"|\S+)/g)]
   .map((m) => [m[1], m[2].replace(/^"|"$/g, "")]));

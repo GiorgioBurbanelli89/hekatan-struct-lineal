@@ -805,7 +805,7 @@ g++ -O2 -std=c++17 -static-libgcc -static-libstdc++ \
   -o cli_modal_native.exe
 
 # WASM (requiere emsdk)
-source /c/Users/j-b-j/emsdk/emsdk_env.sh
+source $HOME/emsdk/emsdk_env.sh
 # Script de build en hekatan-fem/ — deform.cpp + utils/* → built/deform.{wasm,js}
 ```
 

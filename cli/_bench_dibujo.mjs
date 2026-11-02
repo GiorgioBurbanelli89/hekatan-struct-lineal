@@ -13,7 +13,7 @@ import { fileURLToPath } from "url";
 import { dirname, join, extname } from "path";
 import { execFileSync } from "child_process";
 
-const __dirname = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli";
+const __dirname = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct/cli";
 const OUT = join(__dirname, "shots_bench");
 const FR = join(OUT, "bench");
 rmSync(FR, { recursive: true, force: true });
@@ -111,7 +111,7 @@ const out = {};
 {
   const pag = await nav.newPage(); await pag.setViewport({ width: 1500, height: 1000 });
   const errores = []; pag.on("pageerror", (e) => errores.push(e.message));
-  const js = readFileSync("C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-lisp/LispCad.js", "utf8");
+  const js = readFileSync((process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-lisp/LispCad.js", "utf8");
   await pag.setContent(`<!doctype html><html><body style="margin:0;background:#fff"><script type="application/json" id="t-cad">${JSON.stringify({ nombre: "prueba", ud: "m", ents: [], capas: [{ n: "0", c: 7 }], rejilla: 1 })}</script></body></html>`);
   await pag.addScriptTag({ content: js });
   await pag.evaluate(INSTR);

@@ -6,7 +6,7 @@
     (por defecto: cupula_niveles cupula_pisos; p. ej. galpon_curvo galpon_curvo)
 """
 import sys, os, json, math
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 
 motor = sys.argv[1] if len(sys.argv) > 1 else "etabs"

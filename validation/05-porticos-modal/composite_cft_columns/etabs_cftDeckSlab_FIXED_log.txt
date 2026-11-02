@@ -13,7 +13,7 @@
       29 |    -1.9680    -1.9679    20.0000 |     2.5965    -2.5967     0.0000
      SUM |    -0.0000     0.0000    80.0000 |     0.0000     0.0000     0.0000
 
-[OK] C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cftDeckSlab_FIXED.json
+[OK] C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cftDeckSlab_FIXED.json
 Cannot open file
 BufferFileIn::BufferFileIn(): 
-fileName = C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\cantilever.Y_
+fileName = C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\cantilever.Y_

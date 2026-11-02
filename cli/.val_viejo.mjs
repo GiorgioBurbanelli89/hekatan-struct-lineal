@@ -15,8 +15,8 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const jsPath = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct\\cli\\hekatan-fem\\src\\cpp\\built\\deform_viejo.js";
-const wasmPath = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct\\cli\\hekatan-fem\\src\\cpp\\built\\deform_viejo.wasm";
+const jsPath = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct\\cli\\hekatan-fem\\src\\cpp\\built\\deform_viejo.js";
+const wasmPath = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct\\cli\\hekatan-fem\\src\\cpp\\built\\deform_viejo.wasm";
 const createModule = (await import(pathToFileURL(jsPath).href)).default;
 const mod = await createModule({ wasmBinary: readFileSync(wasmPath) });
 

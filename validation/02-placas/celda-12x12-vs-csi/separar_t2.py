@@ -7,7 +7,7 @@ dos. Si la ley de Reissner-Mindlin es la suya, predice; si no, no.
 """
 import json, os, itertools
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 
 def reconstruir(v):
     pts=v["pts"]; libres=[tuple(x) for x in v["libres"]]; suj=[tuple(x) for x in v["sujetos"]]

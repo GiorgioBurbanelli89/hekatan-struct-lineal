@@ -1,3 +1,4 @@
+import os
 """
 Guerra Ej.6 ZAPATA UNIDA CON VIGA DE AMARRE — modelado correcto:
 DOS mallas Mindlin Q4 (ShellThick) COMPLETAMENTE SEPARADAS, cada una
@@ -229,7 +230,7 @@ ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=3, fontsize=9)
 ax.grid(True, alpha=0.2)
 
 plt.tight_layout()
-out = r'C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\guerra_ej6_python_fem.png'
+out = os.path.expanduser("~") + r'\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api\guerra_ej6_python_fem.png'
 plt.savefig(out, dpi=120, bbox_inches='tight')
 print(f"\nPNG: {out}")
 plt.close()

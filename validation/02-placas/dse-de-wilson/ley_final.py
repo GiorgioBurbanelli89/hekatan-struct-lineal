@@ -24,7 +24,7 @@ import json, os
 import numpy as np
 from dse_wilson import K_DSE
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 NAT = np.array([(-1., -1.), (1., -1.), (1., 1.), (-1., 1.)])
 A0, B0, KAPPA = 4500.90, 1202.64, 5.0/6.0
 

@@ -16,7 +16,7 @@ import { execFileSync } from "node:child_process";
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 
 const EXE = process.argv[2] ??
-  "C:/Users/j-b-j/AppData/Local/Temp/claude/C--Users-j-b-j-Documents-Hekatan-Calc-1-0-0/0b066724-4b75-4ae2-81b1-6fb8f3dc4300/scratchpad/kelem/kelem_head.exe";
+  (process.env.USERPROFILE ?? "") + "/AppData/Local/Temp/claude/C--Users-USUARIO-Documents-Hekatan-Calc-1-0-0/0b066724-4b75-4ae2-81b1-6fb8f3dc4300/scratchpad/kelem/kelem_head.exe";
 
 const mod = await empaquetar(
   `export { kPanoQ4 } from "${R}/hekatan-fem/src/utils/shellElementK";

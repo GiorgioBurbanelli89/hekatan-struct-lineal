@@ -6,4 +6,4 @@ Anterior (24-sep, registros/2026-09-24_mesatorsion_viewer_exe.md): recovery DKQ 
 - ❌ Primer intento: etiquetas tapadas por la superficie (matplotlib ordena por profundidad) → `computed_zorder=False` + zorder (columnas 0, superficie 1, texto 10).
 - ✅ Probado headless (PNG w y Mxy): se ven los 4 valores por celda.
 - ⏳ Exe: compilado en scratchpad (pyi_dist); falta abrirlo y mirar la captura.
-- ✅ Exe compilado (70 MB; sin pyvista/cv2/pandas), abierto y capturado: se ven los Gauss. Carpeta entregada: C:\Users\j-b-j\OneDrive\Escritorio\ShellThin_Frame3D (exe + .py + hekatan_fem + EJECUTAR.bat + COMPILAR_EXE.bat).
+- ✅ Exe compilado (70 MB; sin pyvista/cv2/pandas), abierto y capturado: se ven los Gauss. Carpeta entregada: C:\Users\USUARIO\OneDrive\Escritorio\ShellThin_Frame3D (exe + .py + hekatan_fem + EJECUTAR.bat + COMPILAR_EXE.bat).

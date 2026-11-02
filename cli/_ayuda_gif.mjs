@@ -87,7 +87,7 @@ for (const [filtro, nombre] of [["Rect", "rect"], ["Columna", "columna"],
 }
 console.log("pageerror:", err.length, err.slice(0, 2), "· fotogramas:", n);
 await nav.close(); srv.close();
-const FF = "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const FF = (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const lista = fs.readdirSync(out).filter((f) => f.endsWith(".png")).sort();
 fs.writeFileSync(`${out}/lista.txt`, lista.map((f) => `file '${f}'\nduration 0.33`).join("\n") + `\nfile '${lista.at(-1)}'\n`);
 execFileSync(FF, ["-y", "-f", "concat", "-safe", "0", "-i", `${out}/lista.txt`,

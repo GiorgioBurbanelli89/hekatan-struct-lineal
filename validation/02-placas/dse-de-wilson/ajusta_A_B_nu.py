@@ -23,7 +23,7 @@ import numpy as np
 from dse_wilson import K_DSE
 from escala_rot import corrige   # el .K_0 puede venir con los giros x1000
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 NAT = np.array([(-1., -1.), (1., -1.), (1., 1.), (-1., 1.)])
 KAPPA = 5.0/6.0
 

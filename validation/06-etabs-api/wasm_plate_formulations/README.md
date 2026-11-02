@@ -58,7 +58,7 @@ python -m http.server 8080
 ### Opción 2: Compilar desde el código fuente
 ```bash
 cd validacion/wasm_plate_formulations
-bash build.sh           # requiere emscripten en /c/Users/j-b-j/emsdk/
+bash build.sh           # requiere emscripten en $HOME/emsdk/
 ```
 
 ### Opción 3: Test nativo (sin browser, sin WASM)

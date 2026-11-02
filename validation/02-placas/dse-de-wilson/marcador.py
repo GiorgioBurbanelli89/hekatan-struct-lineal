@@ -3,7 +3,7 @@
 Objetivo: menos del 1 % modo a modo. Se le pasa un .exe que saque la matriz."""
 import json, os, subprocess, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 EXE = sys.argv[1]; FORM = sys.argv[2] if len(sys.argv)>2 else "0"
 def K12(E,nu,t,pts,mod=(1,1,1,1,1)):

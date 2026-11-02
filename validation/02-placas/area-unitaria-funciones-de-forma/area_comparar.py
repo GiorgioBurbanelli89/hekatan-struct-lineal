@@ -7,7 +7,7 @@ es la funcion de forma integrada, medida directamente.
 """
 import json, os
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 G=1/np.sqrt(3); GP=[(-G,-G),(G,-G),(G,G),(-G,G)]
 def Nf(xi,et): return np.array([0.25*(1-xi)*(1-et),0.25*(1+xi)*(1-et),
                                 0.25*(1+xi)*(1+et),0.25*(1-xi)*(1+et)])

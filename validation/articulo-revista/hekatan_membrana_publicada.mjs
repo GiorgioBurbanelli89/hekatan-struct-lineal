@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const HS = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-struct-limpio";
+const HS = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/hekatan-struct-limpio";
 const S = (process.env.HK_TMP || (process.env.TEMP || "/tmp") + "/hk_art_dual").replace(/\\/g, "/");
 (await import("node:fs")).mkdirSync(S, { recursive: true });
 

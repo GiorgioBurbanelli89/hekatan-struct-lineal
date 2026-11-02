@@ -2,7 +2,7 @@
 """Barrido de J (y resto) del ÁNGULO y DOBLE ÁNGULO paramétricos de SAP2000: se cambia UNA cota cada vez
 para ver qué entra en la torsión.  python cli/_csi_2l_barrido.py CARPETA"""
 import sys, os, json
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 sys.stdout.reconfigure(encoding="utf-8")
 carp = os.path.abspath(sys.argv[1]); os.makedirs(carp, exist_ok=True)

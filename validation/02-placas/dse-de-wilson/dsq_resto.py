@@ -11,7 +11,7 @@ import numpy as np
 from dsq_batoz import K_DSQ
 from dse_wilson import K_DSE
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 kd = json.load(open(os.path.join(GAL, "k_directa.json"), encoding="utf-8"))
 
 print("  caso            elem   ||dK||/||K||     rango  negativo/max      autovalores del resto / D")

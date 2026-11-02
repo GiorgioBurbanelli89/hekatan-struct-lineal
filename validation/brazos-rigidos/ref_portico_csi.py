@@ -22,7 +22,7 @@ import os, sys, json, functools, atexit, subprocess
 print = functools.partial(print, flush=True)
 AQUI = os.path.dirname(os.path.abspath(__file__))
 for cand in (os.path.join(AQUI, "..", "..", "..", "galpon-bodega-electoral"),
-             r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"):
+             os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"):
     if os.path.isdir(cand):
         sys.path.insert(0, os.path.abspath(cand)); break
 import comtypes.client

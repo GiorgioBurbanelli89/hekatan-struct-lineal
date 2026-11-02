@@ -9,4 +9,4 @@ tipo                 nudos  elem    GDL   SFz[kN]  SRz[kN]   Uz[mm]    T1[s]    
 6 dual                1048  1484   6288   -6480.0   6480.0    -2.853   0.6803   0.2151   0.1790     176     200
 7 arriostrado          464   560   2784   -6480.0   6480.0    -2.274   0.4268   0.2853   0.2603      42      92
 
--> C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\hekatan.json
+-> C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\hekatan.json

@@ -12,8 +12,8 @@ en cinco cortes, cada uno aislando una cosa:
 """
 import json, os, subprocess, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
-KEL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\cli\native\kelem_native.exe"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+KEL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\cli\native\kelem_native.exe"
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 IDX=[6*n+2+k for n in range(4) for k in range(3)]
 def hek(pts,E,nu,t,tp):

@@ -3,8 +3,8 @@
 ======================================================================
 CASE: steelOnly
 ======================================================================
-  e2k: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly.e2k
-  edb: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly.EDB
+  e2k: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly.e2k
+  edb: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly.EDB
   [..] OpenFile e2k ->ret=0
   [..] Save .EDB ->ret=0
   [..] Re-open .EDB ->ret=0
@@ -17,8 +17,8 @@ CASE: steelOnly
 ======================================================================
 CASE: filled
 ======================================================================
-  e2k: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled.e2k
-  edb: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled.EDB
+  e2k: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled.e2k
+  edb: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled.EDB
   [..] OpenFile e2k ->ret=0
   [..] Save .EDB ->ret=0
   [..] Re-open .EDB ->ret=0
@@ -31,8 +31,8 @@ CASE: filled
 ======================================================================
 CASE: concreteOnly
 ======================================================================
-  e2k: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly.e2k
-  edb: C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly.EDB
+  e2k: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly.e2k
+  edb: C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly.EDB
   [..] OpenFile e2k ->ret=0
   [..] Save .EDB ->ret=0
   [..] Re-open .EDB ->ret=0
@@ -51,4 +51,4 @@ steelOnly      |         13 |        -2.9651 |  9.6000e-03 |  9.2320e-05
 filled         |         13 |        -2.9031 |  1.6213e-02 |  1.2147e-04
 concreteOnly   |         13 |        -1.3622 |  6.2500e-02 |  3.2552e-04
 
-[OK] C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases_results.json
+[OK] C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases_results.json

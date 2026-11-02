@@ -3,7 +3,7 @@
 Juez = SAP2000 (PlateThick). % = (Hekatan - SAP)/|SAP| * 100. Positivo = mas flexible.
 """
 import json, os
-V = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
+V = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\opensees"
 TS = ["0.001", "0.01", "0.05", "0.1", "0.2"]
 def hek(t, v): return json.load(open(os.path.join(V, "pl_%s%s_dump.json" % (t, v))))["deformations"]["40"][2]
 def sap(t, suf):

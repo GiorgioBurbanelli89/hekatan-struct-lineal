@@ -62,4 +62,4 @@
 61/62  zapata-aislada             ok                  100 areas    11.2 s
 62/62  zapata-viga-amarre         ok                  128 areas    11.2 s
 
--> C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\roundtrip
+-> C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\roundtrip

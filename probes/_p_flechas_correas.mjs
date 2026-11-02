@@ -3,7 +3,7 @@
 import { readFileSync } from "fs";
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 
-const f = process.argv[2] ?? "C:\\Users\\j-b-j\\Downloads\\Cancha Parque v24.s2k";
+const f = process.argv[2] ?? (process.env.USERPROFILE ?? "") + "\\Downloads\\Cancha Parque v24.s2k";
 const text = readFileSync(f, "utf8");
 const mod = await empaquetar(
   `import { parseS2k } from "${R}/examples/src/shared/s2kParser"; export { parseS2k };`);

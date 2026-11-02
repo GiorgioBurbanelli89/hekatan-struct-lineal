@@ -7,7 +7,7 @@ y los 13.671172— y se leen como campo de desplazamientos en los 4 nudos.
 """
 import json, os, subprocess, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 SP  = sys.argv[1]
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 def reconstruir(v):

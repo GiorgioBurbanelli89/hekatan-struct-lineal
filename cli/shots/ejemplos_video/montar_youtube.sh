@@ -6,8 +6,8 @@
 # - borra frames_youtube al terminar cada uno: 700 MB de PNG por vídeo llenaron el disco (14-sep-2026)
 # - el PUENTE no va: se rehace con cargas móviles HL-93 (Jorge: «ojo, el puente son cargas móviles»)
 cd "$(dirname "$0")"
-V="/c/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-school/VIDEOS"
-M="/c/Users/j-b-j/Documents/Hekatan Calc 1.0.0/hekatan-school/montar_tutorial.py"
+V="$HOME/Documents/Hekatan Calc 1.0.0/hekatan-school/VIDEOS"
+M="$HOME/Documents/Hekatan Calc 1.0.0/hekatan-school/montar_tutorial.py"
 export HK_SIN_SUBTITULOS=1 HK_FPS_MAX=45 PYTHONIOENCODING=utf-8
 while read carpeta frames destino nombre; do
   salida="$V/$destino/${nombre}_youtube.mp4"

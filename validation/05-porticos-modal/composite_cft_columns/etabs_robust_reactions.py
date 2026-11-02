@@ -8,7 +8,7 @@ import comtypes.client
 import ctypes
 from ctypes import wintypes
 
-EDB_DIR = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
+EDB_DIR = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
 E2K_DIR = EDB_DIR
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 CASES = ["steelOnly", "filled", "concreteOnly"]
@@ -153,7 +153,7 @@ def main():
         max_fxy = max((abs(rd['Fx']) + abs(rd['Fy']))/2.0 for rd in r['reactions'].values()) if r['reactions'] else 0
         print(f"{r['case']:<14s} | {r['sumF'][0]:>10.4f} | {r['sumF'][1]:>10.4f} | {r['sumF'][2]:>10.4f} | {max_fxy:>10.4f}", flush=True)
 
-    out = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_reactions_3cases.json"
+    out = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_reactions_3cases.json"
     with open(out, "w") as f:
         json.dump(res, f, indent=2, default=str)
     print(f"\n[OK] {out}", flush=True)

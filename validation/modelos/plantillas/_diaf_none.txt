@@ -9,4 +9,4 @@
  8/8  P7_arriostrado                 ok                      23.3 s  T1=0.4335
 
 8 ok, 0 con problema, 239.5 s
--> C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\etabs-diaf-none
+-> C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\modelos\plantillas\etabs-diaf-none

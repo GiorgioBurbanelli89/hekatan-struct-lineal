@@ -10,12 +10,12 @@
 
 [FATAL] COMError: (-2146233077, None, ('No se pudo instalar un puerto IPC: El sistema no puede encontrar el archivo especificado.\r\n ', 'mscorlib', None, 0, None))
 Traceback (most recent call last):
-  File "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 191, in <module>
+  File "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 191, in <module>
     main()
-  File "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 181, in main
+  File "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 181, in main
     pt_o, pt_e = construir_barra_axial(sap)
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 49, in construir_barra_axial
+  File "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\run_via_api.py", line 49, in construir_barra_axial
     sap.InitializeNewModel(6)  # 6 = kN_m_C
     ^^^^^^^^^^^^^^^^^^^^^^^^^
 _ctypes.COMError: (-2146233077, None, ('No se pudo instalar un puerto IPC: El sistema no puede encontrar el archivo especificado.\r\n ', 'mscorlib', None, 0, None))

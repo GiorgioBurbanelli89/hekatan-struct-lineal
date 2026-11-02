@@ -3,7 +3,7 @@
  * Caso: 1.50 × 1.50 m × 0.30 m, P_dead = 20 tonf, ks típico arena media.
  *
  * Uso: npx tsx test_export_f2k.mjs
- * Output: C:\Users\j-b-j\Documents\Zapata_Hekatan_1.5x1.5.f2k
+ * Output: C:\Users\USUARIO\Documents\Zapata_Hekatan_1.5x1.5.f2k
  */
 import { writeFileSync } from "fs";
 import { exportZapataF2k } from "./f2kExporter.ts";
@@ -25,7 +25,7 @@ const params = {
 };
 
 const f2k = exportZapataF2k(params);
-const path = "C:\\Users\\j-b-j\\Documents\\Zapata_Hekatan_1.5x1.5_P20tonf.f2k";
+const path = (process.env.USERPROFILE ?? "") + "\\Documents\\Zapata_Hekatan_1.5x1.5_P20tonf.f2k";
 writeFileSync(path, f2k, "utf8");
 console.log(`✅ F2K exportado: ${path}`);
 console.log(`   ${f2k.length} bytes, ${f2k.split("\n").length} líneas`);

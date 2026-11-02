@@ -14,7 +14,7 @@ import comtypes.client
 sys.stdout.reconfigure(encoding="utf-8")
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RAIZ = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0"
+RAIZ = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0"
 EDB = os.path.join(RAIZ, "hekatan-etabs-bridge", "Csi", "modelo_comparacion", "TestM_Dual.EDB")
 EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 OUT = os.path.join(AQUI, "_v4_etabs_modal.json")

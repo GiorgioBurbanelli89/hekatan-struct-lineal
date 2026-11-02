@@ -8,8 +8,8 @@ vista y guardando fotogramas de cada paso.
 - **La cercha curva sí se dibujó**, tecleando coordenadas: 22 nudos, 29 barras,
   luz 20.000 m, flecha 2.500 m, los 9 montantes a 90.00° y los tramos de cordón
   de −24.23° a +24.23°, simétricos. Fotogramas en
-  `C:\Users\j-b-j\AppData\Local\Temp\claude-chrome-screenshots-rCa5RH\` y los 47
-  PNG del primer intento en `C:\Users\j-b-j\Downloads\cercha_curva_frames\`.
+  `C:\Users\USUARIO\AppData\Local\Temp\claude-chrome-screenshots-rCa5RH\` y los 47
+  PNG del primer intento en `C:\Users\USUARIO\Downloads\cercha_curva_frames\`.
 - **El cursor auxiliar**: existe por `?cursor=1`, `__hkCursor` / `__hkClic` son
   función, el halo del clic se anima (r 3 → 8.93 → 17) y sigue al ratón de verdad.
 - **ARCO por medidas** (nuevo): `ARCO 0,0,6.5 20,0,6.5 F 2.5 N 10` →

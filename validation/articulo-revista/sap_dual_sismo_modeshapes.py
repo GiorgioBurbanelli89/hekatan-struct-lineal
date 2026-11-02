@@ -9,7 +9,7 @@ import json, os, sys, time
 sys.stdout.reconfigure(encoding="utf-8")
 import comtypes.client
 
-AQUI = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\articulo-revista"
+AQUI = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\articulo-revista"
 SDB = os.path.join(AQUI, "sap_dual_sismo.sdb")
 OUT = sys.argv[1]
 t0 = time.time()

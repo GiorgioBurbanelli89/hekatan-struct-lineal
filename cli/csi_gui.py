@@ -14,7 +14,7 @@ que PrintWindow deja en blanco).
 """
 import os, sys, time, subprocess, warnings
 warnings.filterwarnings("ignore")
-FF = r"C:\Users\j-b-j\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+FF = os.path.expanduser("~") + r"\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
 
 
 def foto(salida):

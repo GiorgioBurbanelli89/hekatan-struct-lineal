@@ -10,8 +10,8 @@ divididos por D: numeros puros, sin convenciones de signo ni de ejes.
 import json, os, subprocess
 import numpy as np
 SP=os.path.dirname(os.path.abspath(__file__))
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
-KEL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\cli\native\kelem_native.exe"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+KEL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\cli\native\kelem_native.exe"
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 E,nu,t=2.2e7,0.0,0.20; D=E*t**3/(12*(1-nu*nu))
 IDX=[6*n+2+k for n in range(4) for k in range(3)]

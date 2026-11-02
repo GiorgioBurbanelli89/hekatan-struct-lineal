@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { empaquetar, R } from "./tests/lib/bundle.mjs";
 
-const H = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/galpon-bodega-electoral/galpon_bodega.heks";
+const H = (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/galpon-bodega-electoral/galpon_bodega.heks";
 const { cliModeler, exportE2k } = await empaquetar(
   `export { cliModeler } from "${R}/examples/src/cli-modeler/cliModeler";\n` +
   `export { exportE2k } from "${R}/examples/src/shared/e2kExporter";\n`, "e2kExp");
@@ -22,7 +22,7 @@ const txt = exportE2k({
   title: "Galpon desde Hekatan Struct", weightMode: "manual",
 });
 writeFileSync(
-  "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/galpon-bodega-electoral/galpon_desde_struct.e2k",
+  (process.env.USERPROFILE ?? "") + "/Documents/Hekatan Calc 1.0.0/galpon-bodega-electoral/galpon_desde_struct.e2k",
   txt, "latin1");
 
 const L = txt.split(/\r?\n/);

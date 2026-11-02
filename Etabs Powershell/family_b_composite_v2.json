@@ -1,5 +1,5 @@
 ﻿{
-    "source_edb":  "C:\\Users\\j-b-j\\Downloads\\family_b_shell_walls_rigid_opensees_model\\family_b_stell_composite_shell_walls_rigid_modal.EDB",
+    "source_edb":  "C:\\Users\\USUARIO\\Downloads\\family_b_shell_walls_rigid_opensees_model\\family_b_stell_composite_shell_walls_rigid_modal.EDB",
     "extracted_at":  "2026-05-07 18:12:56",
     "units":  "kN, m, C",
     "program":  "ETABS via OAPI",

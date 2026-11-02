@@ -26,7 +26,7 @@ from dse_wilson import K_DSE
 from ajuste_2x2 import vectores
 from quinto_modo import residuo, mac
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 H = np.array([1.0, -1.0, 1.0, -1.0])
 NAT = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
 

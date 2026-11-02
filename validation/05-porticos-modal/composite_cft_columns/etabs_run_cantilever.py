@@ -3,9 +3,9 @@
 import os, time, json
 import comtypes.client
 
-E2K = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\Columna CFT Cantilivier.e2k"
-EDB = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\cantilever.EDB"
-OUT = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever_results.json"
+E2K = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\Columna CFT Cantilivier.e2k"
+EDB = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever\cantilever.EDB"
+OUT = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cantilever_results.json"
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 
 def connect():

@@ -1,4 +1,4 @@
-import puppeteer from "file:///C:/Users/j-b-j/Documents/Hekatan%20Calc%201.0.0/hekatan-struct/node_modules/puppeteer/lib/esm/puppeteer/puppeteer.js";
+import puppeteer from "file:///C:/Users/USUARIO/Documents/Hekatan%20Calc%201.0.0/hekatan-struct/node_modules/puppeteer/lib/esm/puppeteer/puppeteer.js";
 const OUT = "cli/shots/_tutvid/"; const FPS = 8, DT = 1000 / FPS;
 const nav = await puppeteer.launch({ headless: "new", executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--autoplay-policy=no-user-gesture-required"] });
 const pag = await nav.newPage(); await pag.setViewport({ width: 1280, height: 720 });

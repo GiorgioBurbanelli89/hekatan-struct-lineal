@@ -15,7 +15,7 @@ from pywinauto import Application, mouse
 from pywinauto.keyboard import send_keys
 
 QUIEN = sys.argv[1]
-TMP = r"C:\Users\j-b-j\AppData\Local\Temp\claude"
+TMP = os.path.expanduser("~") + r"\AppData\Local\Temp\claude"
 PREF = "SAP2000" if QUIEN == "sap" else "ETABS"
 
 r = []

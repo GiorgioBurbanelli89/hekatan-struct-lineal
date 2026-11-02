@@ -1,6 +1,6 @@
 /** Importar S2K con el botón y comprobar que las CARGAS llegan (ΣFz en states.nodeInputs). */
 import puppeteer from "puppeteer";
-const ARCH = process.argv[2] || "C:/Users/j-b-j/Downloads/Cancha Parque.s2k";
+const ARCH = process.argv[2] || (process.env.USERPROFILE ?? "") + "/Downloads/Cancha Parque.s2k";
 const PNG = process.argv[3] || "importar_s2k.png";
 const URL_ = "http://localhost:4600/workspace/?t=new-blank";
 const nav = await puppeteer.launch({ headless: "new",

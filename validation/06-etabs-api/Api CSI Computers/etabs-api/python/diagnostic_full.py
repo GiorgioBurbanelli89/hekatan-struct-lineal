@@ -171,7 +171,7 @@ else:
     log("\n[9] (saltado: ya hay modelo abierto en la instancia adjuntada)")
 
 # ── 10) Importar .e2k de prueba ─────────────────────────────────────────────
-DEFAULT_E2K = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial.e2k"
+DEFAULT_E2K = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial.e2k"
 pos_args = [a for a in sys.argv[1:] if not a.startswith("--")]
 e2k_path = pos_args[0] if pos_args else DEFAULT_E2K
 

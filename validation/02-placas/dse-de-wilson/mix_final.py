@@ -81,7 +81,7 @@ def K(pts,E,nu,t,modo="lado",pt=True,alpha=0.0):
     K11=KK[:12,:12]; K12=KK[:12,12:]; K22=KK[12:,12:]
     if abs(np.linalg.det(K22))<1e-25: return K11
     return K11-K12@np.linalg.inv(K22)@K12.T
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 kd=json.load(open(os.path.join(GAL,"k_directa.json"),encoding="utf-8"))
 v=kd["k_thick_nu00"]; E,nu,t,pts=v["E"],v["nu"],v["t"],v["pts"]
 D=E*t**3/(12*(1-nu*nu)); Ke=np.array(v["K"]); Ke=(Ke+Ke.T)/2

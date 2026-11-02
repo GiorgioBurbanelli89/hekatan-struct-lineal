@@ -1,7 +1,7 @@
 // Diagnóstico: ¿las cargas de CORREAS están repartidas en todas las barras del .s2k?
 // Una sola pasada por el archivo (Get-Content -Raw es lento con archivos grandes).
 import { readFileSync } from "fs";
-const f = process.argv[2] ?? "C:\\Users\\j-b-j\\Downloads\\Cancha Parque v24.s2k";
+const f = process.argv[2] ?? (process.env.USERPROFILE ?? "") + "\\Downloads\\Cancha Parque v24.s2k";
 const txt = readFileSync(f, "utf8");
 const lineas = txt.split(/\r?\n/);
 

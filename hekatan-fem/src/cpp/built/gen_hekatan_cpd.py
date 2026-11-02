@@ -692,6 +692,6 @@ cpd = (
 '#show\n'
 )
 
-OUT = "C:/Users/j-b-j/Documents/Hekatan Calc 1.0.0/calcpad-draw/hekatan_lib.cpd"
+OUT = os.path.expanduser("~") + "/Documents/Hekatan Calc 1.0.0/calcpad-draw/hekatan_lib.cpd"
 open(OUT, "w", encoding="utf-8").write(cpd)
 print("OK ->", OUT, " tam:", os.path.getsize(OUT), "bytes")

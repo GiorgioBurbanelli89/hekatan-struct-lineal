@@ -1,6 +1,7 @@
 # Patch test 2-001 de SAP2000 contra el motor de PYTHON.
+import os
 import sys, numpy as np
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\hekatan-struct-py\src")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\hekatan-struct-py\src")
 from hekatan_struct.elements.shell_q4_motor import _k_flexion
 
 X = [0, 0, 0.04, 0.08, 0.18, 0.16, 0.24, 0.24]

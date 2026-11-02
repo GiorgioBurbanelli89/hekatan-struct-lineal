@@ -2,7 +2,7 @@
 import puppeteer from "puppeteer";
 import { writeFileSync, mkdirSync } from "node:fs";
 const OUT = process.argv[2] || "cli/shots/franjas"; mkdirSync(OUT, { recursive: true });
-const SF = "C:/Users/j-b-j/Desktop/ENTREGA RADIER MOD_002/diseno_franjas/MOD_002_CORREGIDO_diseno.$sf";
+const SF = (process.env.USERPROFILE ?? "") + "/Desktop/ENTREGA RADIER MOD_002/diseno_franjas/MOD_002_CORREGIDO_diseno.$sf";
 const nav = await puppeteer.launch({ headless: "new", executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--no-sandbox", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const p = await nav.newPage(); await p.setViewport({ width: 1600, height: 950 });
 const errs = []; p.on("dialog", async d => { errs.push("dialog " + d.message()); await d.dismiss(); }); p.on("pageerror", e => errs.push(e.message)); p.on("console", m => { if (m.type() === "error") errs.push("console: " + m.text()); });

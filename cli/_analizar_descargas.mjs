@@ -1,7 +1,7 @@
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, basename } from "node:path";
-const DL = "C:/Users/j-b-j/Downloads";
+const DL = (process.env.USERPROFILE ?? "") + "/Downloads";
 const files = [];
 const walk = (d, depth) => { for (const f of readdirSync(d)) { const p = join(d, f); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory() && depth < 1) walk(p, depth + 1); else if (/\.e2k$/i.test(f)) files.push(p); } };
 walk(DL, 0);

@@ -4,7 +4,7 @@ import puppeteer from "puppeteer";
 import { mkdirSync } from "fs";
 import { join } from "path";
 
-const OUT = "C:/Users/j-b-j/Desktop/ENTREGA RADIER MOD_002/evidencia_paletas";
+const OUT = (process.env.USERPROFILE ?? "") + "/Desktop/ENTREGA RADIER MOD_002/evidencia_paletas";
 mkdirSync(OUT, { recursive: true });
 
 const URL = "http://localhost:4600/workspace/index.html?heks=/_local/radier_corregido.heks";

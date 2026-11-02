@@ -1,7 +1,7 @@
 import { empaquetar, R } from "../tests/lib/bundle.mjs";
 import { readFileSync } from "node:fs";
 const m = await empaquetar(`export * from "${R}/examples/src/shared/e2kParser";\n`, "c");
-const DL = "C:/Users/j-b-j/Downloads/";
+const DL = (process.env.USERPROFILE ?? "") + "/Downloads/";
 for (const f of ["Telegram Desktop/CIMENTACION_MDP-P3P4-EME-MDL-24-101.e2k", "Telegram Desktop/EXPORTADO_PEDESTAL_MDP-P3P4-EME-MDL-24-101-REVB.e2k", "Telegram Desktop/IFC_DORIS_V02.PEDESTAL_MDP-P3P4-EME-MDL-24-104-C.e2k", "Telegram Desktop/Analisis modal 1 piso concreto.e2k", "slab_plate6x4.e2k", "benchmark-cft-cantilever_1778266884989.e2k"]) {
   const ol = console.log, ow = console.warn; console.log = () => {}; console.warn = () => {};
   const r = m.parseE2k(readFileSync(DL + f, "utf-8"));

@@ -4,7 +4,7 @@ Animar; la animación sigue al pasar de modo). SAP2000, ETABS, tabla y QR se reu
 Las tomas de Hekatan salen de frames_tut_comprob_modelo_v2/ (grabador con cursor, pasos.json)."""
 import os, json, shutil, subprocess, glob
 from PIL import Image
-FF = r"C:\Users\j-b-j\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+FF = os.path.expanduser("~") + r"\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
 OUT = "frames_montaje_v2"; shutil.rmtree(OUT, ignore_errors=True); os.makedirs(OUT)
 FPS = 10
 W, H, HU = 1920, 1080, 960

@@ -4,7 +4,7 @@ Dos geometrías de cada uno (con una sola no se separa la fórmula de J ni de As
 y se guarda el modelo para mirar cómo lo escribe en su fichero de texto.
     python cli/_csi_secciones_c2l.py sap|etabs CARPETA"""
 import sys, os, json, time
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 sys.stdout.reconfigure(encoding="utf-8")
 motor, carp = sys.argv[1], os.path.abspath(sys.argv[2]); os.makedirs(carp, exist_ok=True)

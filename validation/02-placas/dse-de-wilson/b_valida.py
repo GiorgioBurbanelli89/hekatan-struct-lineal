@@ -7,7 +7,7 @@ Si coincide, el canal sirve y lo que diga del THICK vale.
 import json, os, numpy as np
 import dse_wilson as W
 
-GAL=r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL=os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 d=json.load(open(os.path.join(GAL,"b_directa.json"),encoding="utf-8"))
 
 def B_nuestro(pts,E,nu,t,rs,thin):

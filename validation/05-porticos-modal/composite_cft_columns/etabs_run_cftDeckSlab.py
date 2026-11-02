@@ -3,10 +3,10 @@
 import os, time, json
 import comtypes.client
 
-E2K = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.e2k"
-EDB = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.EDB"
+E2K = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.e2k"
+EDB = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs\composite_cft_cftDeckSlab.EDB"
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
-OUT = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cftDeckSlab_FIXED.json"
+OUT = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_cftDeckSlab_FIXED.json"
 
 def connect():
     helper = comtypes.client.CreateObject('ETABSv1.Helper')

@@ -230,7 +230,7 @@ const dump = {
   },
 };
 
-const out = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\validacion\\safe-api\\ej6_hekatan_truth_n8.json";
+const out = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\validacion\\safe-api\\ej6_hekatan_truth_n8.json";
 writeFileSync(out, JSON.stringify(dump, null, 1), "utf8");
 console.log("Hekatan Ej.6 dump ->", out);
 console.log("  nodos totales:", N.length, " nodos-con-spring:", zapataSpringNodes.length);

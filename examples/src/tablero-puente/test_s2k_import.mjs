@@ -2,7 +2,7 @@
 import { readFileSync } from "fs";
 import { parseS2k, s2kSummary } from "./s2kImporter.ts";
 
-const path = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\s2k\\tablero_puente_sap.s2k";
+const path = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\s2k\\tablero_puente_sap.s2k";
 const text = readFileSync(path, "utf8");
 
 console.log("Parseando:", path);

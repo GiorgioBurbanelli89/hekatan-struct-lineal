@@ -14,7 +14,7 @@
 set -e
 cd "$(dirname "$0")"
 
-EMCC="C:\\Users\\j-b-j\\emsdk\\upstream\\emscripten\\emcc.bat"
+EMCC="C:\\Users\\USUARIO\\emsdk\\upstream\\emscripten\\emcc.bat"
 
 SRCS="./src/cpp/deform.cpp ./src/cpp/modal.cpp ./src/cpp/modal_paz.cpp ./src/cpp/didactic.cpp \
 ./src/cpp/plate_q4_wasm.cpp ./src/cpp/plate_q4/kirchhoff_q4.cpp ./src/cpp/slope.cpp \

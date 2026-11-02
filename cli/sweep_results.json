@@ -529,7 +529,7 @@
   "nF": 8,
   "msDisplay": 0.5,
   "FAIL": "EXIT 1",
-  "err": "    at file:///C:/Users/j-b-j/Documents/Hekatan%20Calc%201.0.0/hekatan-struct/cli/sweep_case.mjs:258:14\r | \r | Node.js v22.15.0\r",
+  "err": "    at file:///C:/Users/USUARIO/Documents/Hekatan%20Calc%201.0.0/hekatan-struct/cli/sweep_case.mjs:258:14\r | \r | Node.js v22.15.0\r",
   "wall": 3831
  }
 ]

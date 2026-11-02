@@ -1,11 +1,12 @@
 # rev6 -> rev7 del artículo de la revista
+import os
 import copy, re
 from docx import Document
 from docx.oxml.ns import qn
 from lxml import etree
 
-SRC = r"C:/Users/j-b-j/Downloads/Articulo_Revista_Politecnica_Hekatan_rev6_SAP.docx"
-DST = r"C:/Users/j-b-j/Downloads/Articulo_Revista_Politecnica_Hekatan_rev7.docx"
+SRC = os.path.expanduser("~") + r"/Downloads/Articulo_Revista_Politecnica_Hekatan_rev6_SAP.docx"
+DST = os.path.expanduser("~") + r"/Downloads/Articulo_Revista_Politecnica_Hekatan_rev7.docx"
 XSL = etree.XSLT(etree.parse(r"C:/Program Files/Microsoft Office/root/Office16/MML2OMML.XSL"))
 
 d = Document(SRC)

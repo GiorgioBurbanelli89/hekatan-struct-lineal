@@ -23,7 +23,7 @@ import json, os
 import numpy as np
 from ley_espesor import lams
 
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 
 d = json.load(open(os.path.join(GAL, "celda_sap_espesor.json"), encoding="utf-8"))
 T, Y = [], []

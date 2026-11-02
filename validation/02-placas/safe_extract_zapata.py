@@ -2,7 +2,7 @@
 """SAFE extraction via Python OAPI: abre Zapata_Hekatan F2K, corre, exporta JSON."""
 import comtypes.client, json, time, os, sys
 
-f2k_path = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\j-b-j\Downloads\Zapata_Hekatan_1777645102733.f2k"
+f2k_path = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~") + r"\Downloads\Zapata_Hekatan_1777645102733.f2k"
 out_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), "zapata_safe_results.json")
 
 print("=" * 70)

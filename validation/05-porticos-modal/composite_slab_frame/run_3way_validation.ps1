@@ -13,7 +13,7 @@
 
 $ErrorActionPreference = "Continue"
 
-$root         = "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0"
+$root         = "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0"
 $hklWeb       = Join-Path $root "hekatanlab-web"
 $struct       = Join-Path $root "hekatan-struct-lineal"
 $benchPlaca   = Join-Path $struct "Benchmark_Placa"

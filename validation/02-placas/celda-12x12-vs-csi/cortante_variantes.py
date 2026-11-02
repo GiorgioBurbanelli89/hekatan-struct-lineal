@@ -4,7 +4,7 @@ El modo que no cuadra (455.454364*D) tiene w=0 y curvatura CERO: es cortante
 PURO. Asi que se prueban las ataduras posibles y se mira cual da ese numero."""
 import json, os, subprocess, sys
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 SP  = sys.argv[1]
 os.environ["PATH"] = r"C:\Program Files\GNU Octave\Octave-10.1.0\mingw64\bin" + os.pathsep + os.environ["PATH"]
 def reconstruir(v):

@@ -95,7 +95,7 @@ console.log("DOM final:", JSON.stringify(d2), "· tramos esperados", esperado.tr
 console.log("pageerror:", errores.length, errores.slice(0, 3), "· fotogramas:", n);
 await nota("");
 // GIF (ffmpeg, paleta propia) con todos los fotogramas en orden
-const FF = "C:/Users/j-b-j/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
+const FF = (process.env.USERPROFILE ?? "") + "/AppData/Roaming/Python/Python312/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe";
 const lista = fs.readdirSync(out).filter((f) => f.endsWith(".png")).sort();
 fs.writeFileSync(`${out}/lista.txt`, lista.map((f) => `file '${f}'\nduration 0.55`).join("\n") + `\nfile '${lista[lista.length - 1]}'\n`);
 execFileSync(FF, ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", `${out}/lista.txt`,

@@ -8,7 +8,7 @@ steelOnly
   [..] Loading e2k: case_steelOnly.e2k
 Cannot open file
 BufferFileIn::BufferFileIn(): 
-fileName = C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly_fresh.Y_
+fileName = C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_steelOnly_fresh.Y_
   [..] RunAnalysis
   [OK] Analysis done
   Total joints: 30
@@ -26,7 +26,7 @@ filled
   [..] Loading e2k: case_filled.e2k
 Cannot open file
 BufferFileIn::BufferFileIn(): 
-fileName = C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled_fresh.Y_
+fileName = C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_filled_fresh.Y_
   [..] RunAnalysis
   [OK] Analysis done
   Total joints: 30
@@ -44,4 +44,4 @@ concreteOnly
   [..] Loading e2k: case_concreteOnly.e2k
 Cannot open file
 BufferFileIn::BufferFileIn(): 
-fileName = C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly_fresh.Y_
+fileName = C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases\case_concreteOnly_fresh.Y_

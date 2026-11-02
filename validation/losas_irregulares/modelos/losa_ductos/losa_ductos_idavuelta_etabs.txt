@@ -2,7 +2,7 @@
  ETABS CLI (OAPI headless)  ::  resultados
 ========================================================================
 motor    : ETABS  (CSI.ETABS.API.ETABSObject)
-modelo   : C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\losas_irregulares\modelos\losa_ductos\losa_ductos.e2k
+modelo   : C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validation\losas_irregulares\modelos\losa_ductos\losa_ductos.e2k
 unidades : 6 (OAPI)
 CHECK t_seg 59.98 (tic/toc arranque+build+analisis+lectura)
 ========================================================================

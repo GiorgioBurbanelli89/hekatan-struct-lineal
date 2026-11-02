@@ -104,7 +104,7 @@ const model = {
 };
 
 const s2kText = exportS2k(model);
-const outPath = "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\s2k\\tablero_puente_HEKATAN_export.s2k";
+const outPath = (process.env.USERPROFILE ?? "") + "\\Documents\\Hekatan Calc 1.0.0\\s2k\\tablero_puente_HEKATAN_export.s2k";
 writeFileSync(outPath, s2kText, "utf8");
 
 console.log(`Exportado: ${outPath}`);

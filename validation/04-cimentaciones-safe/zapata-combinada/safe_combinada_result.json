@@ -1,7 +1,7 @@
 {
   "solver": "SAFE 20 via API (construido desde cero, mesh 16\u00d78 + SubModulus override)",
   "case": "Zapata Combinada 4\u00d72\u00d70.40m, 2 columnas",
-  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\zapata-combinada\\Zapata_Combinada_via_API.fdb",
+  "saved_at": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\zapata-combinada\\Zapata_Combinada_via_API.fdb",
   "params": {
     "Lz": 4.0,
     "Bz": 2.0,

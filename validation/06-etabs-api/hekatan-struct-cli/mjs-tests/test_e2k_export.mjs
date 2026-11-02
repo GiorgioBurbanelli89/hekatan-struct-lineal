@@ -175,7 +175,7 @@ lines.push(`  END`);
 lines.push(`$ END OF MODEL FILE`);
 
 const result = lines.join("\r\n");
-writeFileSync("C:/Users/j-b-j/Downloads/test_edificio.e2k", result);
+writeFileSync((process.env.USERPROFILE ?? "") + "/Downloads/test_edificio.e2k", result);
 console.log(`\nExported ${result.length} chars to test_edificio.e2k`);
 console.log(`Points: ${xyToPoint.size}, Columns: ${colNum}, Beams: ${beamNum}`);
 console.log(`\nFirst 40 lines:`);

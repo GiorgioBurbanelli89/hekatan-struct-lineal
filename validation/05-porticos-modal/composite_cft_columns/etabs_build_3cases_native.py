@@ -15,7 +15,7 @@ import time
 import comtypes.client
 
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
-OUTPUT_JSON = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases_results.json"
+OUTPUT_JSON = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases_results.json"
 
 # Geometría
 LX = 4.0; LY = 4.0; H = 4.0

@@ -25,7 +25,7 @@ import comtypes.client as cc
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-DEFAULT_E2K = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial.e2k"
+DEFAULT_E2K = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Etabs\barra_axial\barra_axial.e2k"
 
 # ── 1) Adjuntar a instancia ETABS abierta ──────────────────────────────────
 print("=" * 72)

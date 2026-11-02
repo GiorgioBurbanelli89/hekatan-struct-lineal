@@ -3,7 +3,7 @@ import json, os, sys
 import numpy as np
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 from dse_wilson import K_DSE
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 kd=json.load(open(os.path.join(GAL,"k_directa.json"),encoding="utf-8"))
 ok=0; tot=0
 for k,v in kd.items():

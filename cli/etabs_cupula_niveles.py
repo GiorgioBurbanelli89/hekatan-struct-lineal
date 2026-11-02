@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ETABS abre la cúpula de 8 niveles que escribió Hekatan: ¿la corta? Cuenta objetos y modelo de análisis."""
 import sys, os, json, math
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 D = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shots", "cupula_niveles")
 _, S, _ = c.start_engine("etabs", 6, True)

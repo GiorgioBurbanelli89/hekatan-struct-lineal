@@ -3,7 +3,7 @@
 Tablero de puente — 3 modos vinculacion viga-losa via SAP2000 Bridge.
 
 Usa el bridge cliente/server que ya existe en:
-  C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\python api sap 2000 claude\\
+  C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\python api sap 2000 claude\\
 
 REQUISITOS PREVIOS:
   1. SAP2000 v24 abierto (sin elevar idealmente, sino bridge_server elevado)
@@ -17,7 +17,7 @@ import sys
 import argparse
 
 # Importar el bridge client del usuario
-BRIDGE_PATH = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\python api sap 2000 claude"
+BRIDGE_PATH = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\python api sap 2000 claude"
 sys.path.insert(0, BRIDGE_PATH)
 from sap2000_bridge_client import SAP2000Bridge
 

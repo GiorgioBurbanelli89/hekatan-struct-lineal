@@ -5,7 +5,7 @@ COPIA de MOD_002_CORREGIDO_diseno.FDB, 18-sep-2026). Unidades del fichero: kgf y
 exacta de SAFE en mm: con metros los empates en bordes caen distinto)."""
 import csv, json, os, re
 D = os.path.join(os.path.dirname(__file__), "..", "..", "validation", "04-cimentaciones-safe", "radier-mod002", "franjas_safe")
-SF = r"C:\Users\j-b-j\Desktop\ENTREGA RADIER MOD_002\diseno_franjas\MOD_002_CORREGIDO_diseno.$sf"
+SF = os.path.expanduser("~") + r"\Desktop\ENTREGA RADIER MOD_002\diseno_franjas\MOD_002_CORREGIDO_diseno.$sf"
 m = json.load(open(os.path.join(D, "malla.json"))); C = json.load(open(os.path.join(D, "coords_mm.json")))
 H = {"LCIM 40cm": 400.0, "LCIM 60cm": 600.0, "PEDESTAL": 200.0}
 F = {}

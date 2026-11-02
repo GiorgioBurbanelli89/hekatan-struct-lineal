@@ -129,7 +129,7 @@ matrix_3way/
    144-184 (cambio de B matrices, ver `BUG_ANALYSIS_*.md`).
 2. **Recompilar WASM**:
    ```bash
-   source /c/Users/j-b-j/emsdk/emsdk_env.sh
+   source $HOME/emsdk/emsdk_env.sh
    cd hekatan-fem && bash build_wasm.sh   # o equivalente
    ```
 3. **Re-correr esta matriz** y verificar que `shellThin / perimFrames`

@@ -4,7 +4,7 @@ GEOMETRIA y en nu? Eso dice si es una constante del elemento o depende de la
 forma, que es lo que hay que reproducir."""
 import json, os
 import numpy as np
-GAL = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
+GAL = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\galpon-bodega-electoral"
 def reconstruir(v):
     pts=v["pts"]; lib=[tuple(x) for x in v["libres"]]; suj=[tuple(x) for x in v["sujetos"]]
     Kff=np.linalg.inv(np.array(v["F"])); R=np.zeros((12,3))

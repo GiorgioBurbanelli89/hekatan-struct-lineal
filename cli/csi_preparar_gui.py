@@ -4,7 +4,7 @@ listo para grabar la toma con el mouse real (grabar_sap_toma.py / grabar_etabs_t
     python cli/csi_preparar_gui.py sap|etabs RUTA_MODELO(.sdb|.s2k|.EDB|.e2k)
 Al terminar NO cierra el programa (la toma se graba sobre esa ventana)."""
 import sys, os, time, ctypes
-sys.path.insert(0, r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
+sys.path.insert(0, os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\csi-cli\hekatan-csi-cli")
 import csi_cli as c
 
 motor, ruta = sys.argv[1], os.path.abspath(sys.argv[2])

@@ -6,7 +6,7 @@ Confirma que DOFs estan activos (axial vs flexion vs torsion).
 import os, time, json
 import comtypes.client
 
-EDB_DIR = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
+EDB_DIR = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_3cases"
 ETABS_EXE = r"C:\Program Files\Computers and Structures\ETABS 22\ETABS.exe"
 CASES = ["steelOnly", "filled", "concreteOnly"]
 
@@ -103,7 +103,7 @@ def main():
                     maxes[i] = v
         print(f"{r['case']:<14s} | {maxes[0]:>10.4f} | {maxes[1]:>10.4f} | {maxes[2]:>10.4f} | {maxes[3]:>10.4f} | {maxes[4]:>10.4f} | {maxes[5]:>10.4f}", flush=True)
 
-    out = r"C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_reactions_3cases.json"
+    out = os.path.expanduser("~") + r"\Documents\Hekatan Calc 1.0.0\hekatan-struct-lineal\Benchmark_Placa\composite_cft_columns\etabs_reactions_3cases.json"
     with open(out, "w") as f:
         json.dump(res, f, indent=2, default=str)
     print(f"\n[OK] {out}", flush=True)

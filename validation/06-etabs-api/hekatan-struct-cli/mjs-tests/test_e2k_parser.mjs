@@ -5,7 +5,7 @@
 import { readFileSync } from "fs";
 
 // Inline a minimal parser (same logic as e2kParser.ts) to test without build
-const text = readFileSync("C:\\Users\\j-b-j\\Downloads\\CIMENTAC_MODELO COMPLETO_GAD RIOCHICO.e2k", "utf-8");
+const text = readFileSync((process.env.USERPROFILE ?? "") + "\\Downloads\\CIMENTAC_MODELO COMPLETO_GAD RIOCHICO.e2k", "utf-8");
 const lines = text.split(/\r?\n/);
 
 const units = { force: "TONF", length: "M" };

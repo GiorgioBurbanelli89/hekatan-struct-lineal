@@ -92,8 +92,8 @@ Logs: `…/scratchpad/npmtest_antes_rev5.log` y `npmtest_despues_rev5.log`.
 
 ## TAREA 2 — Artículo rev5
 
-**Base:** `C:\Users\j-b-j\Downloads\Articulo_Revista_Politecnica_Hekatan_rev4_SAP.docx` (NO se tocó).
-**Entrega:** `C:\Users\j-b-j\Downloads\Articulo_Revista_Politecnica_Hekatan_rev5_SAP.docx`.
+**Base:** `C:\Users\USUARIO\Downloads\Articulo_Revista_Politecnica_Hekatan_rev4_SAP.docx` (NO se tocó).
+**Entrega:** `C:\Users\USUARIO\Downloads\Articulo_Revista_Politecnica_Hekatan_rev5_SAP.docx`.
 
 Método: se descomprime el `.docx` y se sustituye **sólo el trozo XML** de cada `<w:p>`/`<w:tbl>`
 afectado (`scratchpad/edit_rev5.py`, heredado del rev4 y ampliado para **insertar** párrafos

@@ -22,7 +22,7 @@ import { dirname, join, extname } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUB = process.argv[2] === "publico";
 const OUT = join(__dirname, "shots", "cargas_correas"); mkdirSync(OUT, { recursive: true });
-const ARCH = "C:/Users/j-b-j/Downloads/Cancha Parque v24.s2k";
+const ARCH = (process.env.USERPROFILE ?? "") + "/Downloads/Cancha Parque v24.s2k";
 const BASE = "/hekatan-struct-lineal/";
 const raiz = join(__dirname, "..", "website", "src", "examples");
 const PUERTO = 4787;

@@ -10,7 +10,7 @@ grabar_etabs_toma.py). Cada toma CSI se parte en sus 3 tramos: deformada Dead ·
 """
 import os, sys, json, shutil, subprocess, glob
 from PIL import Image
-FF = r"C:\Users\j-b-j\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
+FF = os.path.expanduser("~") + r"\AppData\Roaming\Python\Python312\site-packages\imageio_ffmpeg\binaries\ffmpeg-win-x86_64-v7.1.exe"
 CARP, TUT, TABLA, QR = sys.argv[1:5]
 OUT = os.path.join(CARP, "frames_montaje"); shutil.rmtree(OUT, ignore_errors=True); os.makedirs(OUT)
 FPS = 10

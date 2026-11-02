@@ -1,7 +1,7 @@
 {
   "solver": "SAFE 20 via API (mesh 20\u00d74 + 2 slab properties + SubModulus override)",
   "case": "Zapata Conectada 5\u00d71m, 2 zapatas (t=0.40) + viga (t=0.20)",
-  "saved_at": "C:\\Users\\j-b-j\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\zapata-conectada\\Zapata_Conectada_via_API.fdb",
+  "saved_at": "C:\\Users\\USUARIO\\Documents\\Hekatan Calc 1.0.0\\hekatan-struct-lineal\\benchmarks\\safe\\zapata-conectada\\Zapata_Conectada_via_API.fdb",
   "params": {
     "Lz": 5.0,
     "Bz": 1.0,

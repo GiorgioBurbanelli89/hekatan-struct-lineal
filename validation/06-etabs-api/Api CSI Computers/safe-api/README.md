@@ -35,7 +35,7 @@ safe-api/
 ## Uso
 
 ```powershell
-cd "C:\Users\j-b-j\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api"
+cd "C:\Users\USUARIO\Documents\Hekatan Calc 1.0.0\hekatan-struct\validacion\Api CSI Computers\safe-api"
 python ej1_zapata_cuadrada.py
 ```
 
