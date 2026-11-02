@@ -5480,6 +5480,19 @@ export function drawing({
         updateStatus("COPIAR — clic en el punto BASE y luego en el DESTINO (snap a nudos/grilla). Repite hasta Esc.");
         refreshPrompt();
       });
+      // ALINEAR: 1) designe nudos/barras  2) marque los ejes  3) pulse y haga clic en la referencia (snap a nudo o grilla)
+      const alinState = (window as any).__hekatanAlinearEjes as { x: boolean; y: boolean; z: boolean };
+      fEdit.addBinding(alinState, "x", { label: "Alinear X" });
+      fEdit.addBinding(alinState, "y", { label: "Alinear Y" });
+      fEdit.addBinding(alinState, "z", { label: "Alinear Z" });
+      fEdit.addButton({ title: "≡ Alinear selección a un punto (clic)" }).on("click", () => {
+        if (!selection.size) { updateStatus("⚠ Designe objetos (ventana) y vuelva a pulsar"); return; }
+        if (!alinState.x && !alinState.y && !alinState.z) { updateStatus("⚠ Marque al menos un eje (X, Y o Z) para alinear"); return; }
+        pendingClicks = [];
+        (window as any).__hekatanCadState?.setTool?.("align");
+        updateStatus("ALINEAR — clic en la REFERENCIA (nudo o punto de la grilla). Esc cancela.");
+        refreshPrompt();
+      });
       fEdit.addButton({ title: "⇗ Extruir: nudo → línea, línea → área" }).on("click", () => {
         const r = (window as any).__hekatanExtrudeSelection?.(editState.dx, editState.dy, editState.dz, editState.copias);
         updateStatus(r && (r.lineas || r.areas)
@@ -6684,6 +6697,7 @@ export function drawing({
       case "auxp": return P("PUNTO AUXILIAR Precise punto:");
       case "chaflan": return n ? P("LOSA CHAFLANES Precise otra esquina:") : P("LOSA CHAFLANES Precise primera esquina:");
       case "delete": return P("BORRAR Designe objetos (pase por encima y haga clic):");
+      case "align": return P("ALINEAR Precise la REFERENCIA (clic en un nudo o punto):");
       case "move": return !selection.size ? P("MOVER Designe objetos (S o ventana) y vuelva a M:")
                     : n ? P("MOVER Precise segundo punto (o teclee @dx,dy,dz):") : P("MOVER Precise punto base:");
       case "copy": return !selection.size ? P("COPIAR Designe objetos (S o ventana) y vuelva a CO:")
@@ -7029,6 +7043,32 @@ export function drawing({
     viewerRender();
     return nodeSet.size;
   };
+  // ── ALINEAR (AL de Revit / ALIGN de AutoCAD): lleva los nudos designados a una referencia ──
+  // Se da un punto de referencia y los ejes a alinear: cada nudo designado toma ESA coordenada en cada eje
+  // marcado y conserva las otras. Ej.: ejes = {y:true} y ref y=4 → todos los nudos quedan en y=4 (una fila).
+  // Devuelve cuántos nudos cambiaron de sitio. Los que ya estaban en la referencia no cuentan.
+  (window as any).__hekatanAlignSelection = (
+    ref: [number, number, number], ejes: { x?: boolean; y?: boolean; z?: boolean },
+  ): number => {
+    const nodeSet = nudosDeSeleccion();
+    if (!nodeSet.size) return 0;
+    const pts = drawingObj.points.rawVal;
+    let movidos = 0;
+    const nuevos = pts.map((p, i) => {
+      if (!nodeSet.has(i)) return p;
+      const q: [number, number, number] = [ejes.x ? ref[0] : p[0], ejes.y ? ref[1] : p[1], ejes.z ? ref[2] : p[2]];
+      if (Math.abs(q[0] - p[0]) > 1e-9 || Math.abs(q[1] - p[1]) > 1e-9 || Math.abs(q[2] - p[2]) > 1e-9) movidos++;
+      return q;
+    }) as [number, number, number][];
+    if (!movidos) return 0;
+    pushUndo();
+    drawingObj.points.val = nuevos;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    refreshSelectionGroup();
+    viewerRender();
+    return movidos;
+  };
+  (window as any).__hekatanAlinearEjes = { x: false, y: false, z: true };   // por defecto: la altura (como el «Align» de un alzado)
   (window as any).__hekatanMoveSelection = moveSelection;
   // Un paso de MOVER/COPIAR con un punto (clic o coordenada tecleada).
   const pasoMoverCopiar = (tool: string, pt: [number, number, number]): void => {
@@ -7852,7 +7892,7 @@ export function drawing({
     if (tool === "area" || tool === "line" || tool === "polyline") ultHerrDibujo = tool;
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
     const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
-                            tool === "medir" || tool === "move" || tool === "copy" ||
+                            tool === "medir" || tool === "move" || tool === "copy" || tool === "align" ||
                             tool === "delete" || tool === "trim" || tool === "extend" || tool === "divide");
     // ── AVISAR, NO BLOQUEAR ──────────────────────────────────────────────
     //
@@ -7952,6 +7992,17 @@ export function drawing({
 
     if (tool === "move" || tool === "copy") {
       pasoMoverCopiar(tool, [point.x, point.y, point.z]);
+      return;
+    }
+
+    if (tool === "align") {
+      const ej = (window as any).__hekatanAlinearEjes ?? { x: false, y: false, z: true };
+      const ref: [number, number, number] = [point.x, point.y, point.z];
+      const n = (window as any).__hekatanAlignSelection?.(ref, ej) ?? 0;
+      const lista = ["x", "y", "z"].filter((k) => ej[k]).map((k) => `${k.toUpperCase()}=${ref["xyz".indexOf(k)].toFixed(2)}`).join(" · ");
+      updateStatus(n ? `✓ Alineados ${n} nudo${n === 1 ? "" : "s"} a ${lista} — Ctrl+Z deshace.` : `⚠ Nada que alinear: ya estaban en ${lista} (o no hay nudos designados).`);
+      (window as any).__hekatanCadState?.setTool?.("select");
+      refreshPrompt();
       return;
     }
 

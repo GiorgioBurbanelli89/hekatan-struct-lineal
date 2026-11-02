@@ -8259,6 +8259,7 @@ try {
     move: "move", m: "move", mover: "move", desplazar: "move",
     copy: "copy", co: "copy", cp: "copy", copiar: "copy",
     erase: "delete", e: "delete", del: "delete", delete: "delete", borrar: "delete",
+    align: "align", al: "align", alinear: "align",
     select: "select", sel: "select", s: "select", seleccionar: "select",
     aux: "aux", xline: "aux", auxline: "aux", auxiliar: "aux", auxp: "auxp", auxpoint: "auxp",
     extend: "extend", ex: "extend", alargar: "extend", al: "extend", prolongar: "extend",
@@ -8281,7 +8282,7 @@ try {
     line: "line", node: "node", area: "losa", polyline: "polyline", rect: "rectangle",
     rectarea: "rectarea", polyarea: "polyarea", plane3: "plane3",
     circle: "circle", arc: "arc", arc2h: "arc2h", col: "column", wall: "wall", delete: "delete",
-    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset", divide: "divide",
+    select: "select", move: "move", copy: "copy", align: "align", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset", divide: "divide",
     axis: "axis", chaflan: "chamfer",
   };
   // Comandos que no son herramientas del motor: rejilla, apoyo, carga, deshacer…

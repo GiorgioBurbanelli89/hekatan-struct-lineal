@@ -690,7 +690,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   // «Temporary dimensions are created to the nearest perpendicular component and increment by the
   // increment value specified for snap increments». O sea: al dibujar o designar un eje o un nivel sale una
   // cota azul hasta el paralelo MÁS CERCANO; se pulsa el número, se escribe y el elemento se mueve.
-  type Cota = { a: V3; b: V3; valor: number; aplicar?: (v: number) => string | null };
+  type Cota = { a: V3; b: V3; valor: number; aplicar?: (v: number) => string | null; prov?: boolean };
   let cotas: Cota[] = [];
   const capa = document.createElement("div"); capa.className = "rv-cotas";
   capa.style.cssText = "position:absolute;inset:0;pointer-events:none";
@@ -855,7 +855,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   };
   // la cota EDITABLE del último elemento se queda puesta (como en Revit, hasta empezar el siguiente);
   // la provisional del que se está dibujando va al lado, solo para leer
-  const fijas = () => cotas.filter((c) => c.aplicar);
+  const fijas = () => cotas.filter((c) => c.aplicar && !c.prov);
   function previaEje(p: V3) {
     if (!pendiente) return;
     const q = finEje(p);
@@ -937,8 +937,26 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const N = niveles(); if (!N.length) return [];
     const n = N.reduce((m, l) => (Math.abs(l.z - z) < Math.abs(m - z) ? l.z : m), N[0].z);
     const fa = fachada(), um = uCota(fa);
-    return Math.abs(z - n) > 1e-9 ? [{ a: fa.punto(um, n), b: fa.punto(um, z), valor: Math.abs(z - n) }] : [];
+    // EDITABLE (como la cota temporal de Revit): pulsarla y teclear la distancia crea el nivel a esa altura
+    // del vecino, hacia el lado donde está el cursor
+    const lado = z >= n ? 1 : -1;
+    return Math.abs(z - n) > 1e-9 ? [{ a: fa.punto(um, n), b: fa.punto(um, z), valor: Math.abs(z - n), prov: true,
+      aplicar: (v: number) => {
+        if (!(v > 0)) return "La distancia tiene que ser mayor que cero.";
+        return crearNivel(+(n + lado * v).toFixed(4));
+      } }] : [];
   };
+  /** Crea un nivel a la cota z (usado por el clic y por la cota editable). Devuelve un error o null. */
+  function crearNivel(z: number): string | null {
+    if (niveles().some((l) => Math.abs(l.z - z) < 1e-6)) return "Ya hay un nivel a esa cota.";
+    asegurarNiveles();
+    (W().__hekatanLevels as { label: string; z: number }[]).push({ label: `N${z >= 0 ? "+" : "-"}${Math.abs(z).toFixed(2)}`, z });
+    (W().__hekatanLevels as { label: string; z: number }[]).sort((p, q) => p.z - q.z);
+    W().__hekatanRefreshLevels?.(); W().__hekatanAjustarRejilla?.(); pintarNav(); limpiarFantasma(); pintarDatos();
+    datoSel = { tipo: "nivel", id: String(z) }; ponerCotas(cotasDeNivel(z, true));
+    decir(`Nivel N${z >= 0 ? "+" : "-"}${Math.abs(z).toFixed(2)} creado. Pulsa su cota azul para ajustar la altura.`);
+    return null;
+  }
   function previaNivel(ev: MouseEvent) {
     limpiarFantasma();
     const z = zNivel(ev); if (z === null) return;
@@ -949,12 +967,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   }
   function clicNivel(ev: MouseEvent) {
     const z = zNivel(ev); if (z === null) return;
-    if (niveles().some((l) => Math.abs(l.z - z) < 1e-6)) { decir("Ya hay un nivel a esa cota."); return; }
-    asegurarNiveles();
-    (W().__hekatanLevels as { label: string; z: number }[]).push({ label: `N${z >= 0 ? "+" : ""}${z.toFixed(2)}`, z });
-    W().__hekatanRefreshLevels?.(); W().__hekatanAjustarRejilla?.(); pintarNav(); limpiarFantasma(); pintarDatos();
-    datoSel = { tipo: "nivel", id: String(z) }; ponerCotas(cotasDeNivel(z, true));
-    decir(`Nivel N${z >= 0 ? "+" : ""}${z.toFixed(2)} creado, con su planta en el navegador. Pulsa la cota azul para ajustar la altura.`);
+    const e = crearNivel(z); if (e) decir(e);
   }
   // Los clics del lienzo se interceptan en CAPTURA (antes que el CAD y la órbita) solo con una
   // herramienta de este modo activa, y solo el botón izquierdo: la rueda y el derecho siguen moviendo la vista.
@@ -984,6 +997,16 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   window.addEventListener("keydown", (ev) => {
     if (!encendido) return;
     const t = ev.target as HTMLElement | null;
+    // Herramienta NIVEL con la cota provisional a la vista: teclear una cifra la abre para escribir la distancia
+    if (herr === "nivel" && /^[0-9.,]$/.test(ev.key) && !ev.ctrlKey && !ev.altKey && !(t && t.classList.contains("rv-cota-in"))) {
+      const tc = capa.querySelector(".rv-cota-t") as HTMLElement | null;
+      if (tc && tc.style.cursor === "text") {
+        ev.preventDefault(); ev.stopPropagation();
+        tc.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+        setTimeout(() => { const i = capa.querySelector(".rv-cota-in") as HTMLInputElement | null; if (i) { i.value = ev.key === "," ? "." : ev.key; i.setSelectionRange(i.value.length, i.value.length); } }, 5);
+        return;
+      }
+    }
     if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
     if (ev.key === "Escape") { if (pendiente) { pendiente = null; limpiarFantasma(); quitarCotas(); } else if (cotas.length) quitarCotas(); else usar("modificar"); return; }
     if (!/^[a-z]$/i.test(ev.key) || ev.ctrlKey || ev.altKey) return;
