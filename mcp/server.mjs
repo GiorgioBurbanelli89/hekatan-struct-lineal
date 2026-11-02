@@ -17,6 +17,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import puppeteer from "puppeteer";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const BASE = process.env.HEKATAN_URL ||
   "https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/";
@@ -34,7 +38,7 @@ async function mover(x, y) {
     await pag.evaluate((x, y) => {
       let d = document.getElementById("mcp-punto");
       if (!d) { d = document.createElement("div"); d.id = "mcp-punto";
-        d.style.cssText = "position:fixed;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid #fbbf24;border-radius:50%;background:rgba(239,68,68,.75);box-shadow:0 0 10px #ef4444;pointer-events:none;z-index:2147483647;transition:left .35s,top .35s";
+        d.style.cssText = "position:fixed;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border:1px solid #fbbf24;border-radius:50%;background:rgba(239,68,68,.75);box-shadow:0 0 10px #ef4444;pointer-events:none;z-index:2147483647;transition:left .35s,top .35s";
         document.body.appendChild(d); }
       d.style.left = x + "px"; d.style.top = y + "px";
     }, x, y);
@@ -47,13 +51,33 @@ const srv = new McpServer({ name: "hekatan-struct", version: "0.1.0" });
 const texto = (t) => ({ content: [{ type: "text", text: typeof t === "string" ? t : JSON.stringify(t, null, 2) }] });
 const falla = (t) => ({ isError: true, content: [{ type: "text", text: t }] });
 
+let procChrome = null;   // el Chrome que abrimos nosotros (el único que se cierra al terminar)
 async function lanzar() {
-  const args = ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader",
-    "--use-angle=swiftshader", "--window-size=1500,1000"];
-  const headless = process.env.HEKATAN_VISIBLE ? false : "new";
-  try { return await puppeteer.launch({ headless, args, channel: "chrome" }); }
-  catch { return await puppeteer.launch({ headless, args }); }
+  if (!VISIBLE) {
+    const args = ["--no-sandbox", "--disable-setuid-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--window-size=1500,1000"];
+    try { return await puppeteer.launch({ headless: "new", args, channel: "chrome" }); }
+    catch { return await puppeteer.launch({ headless: "new", args }); }
+  }
+  // Ventana VISIBLE: se abre Chrome como lo abriría una persona (con las opciones de automatización
+  // de puppeteer la ventana se queda en blanco) y luego se conecta por el puerto de depuración.
+  const candidatos = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"].filter(Boolean);
+  const exe = candidatos.find((c) => existsSync(c));
+  if (!exe) throw new Error("No encuentro chrome.exe (define CHROME_PATH).");
+  const puerto = 9300 + Math.floor(Math.random() * 90);
+  const perfil = join(tmpdir(), "hekatan-mcp-chrome-" + puerto);
+  procChrome = spawn(exe, [`--remote-debugging-port=${puerto}`, `--user-data-dir=${perfil}`, "--no-first-run",
+    "--no-default-browser-check", "--window-size=1500,950", "--window-position=60,40", "about:blank"], { stdio: "ignore" });
+  const url = `http://127.0.0.1:${puerto}`;
+  for (let i = 0; i < 60; i++) { try { if ((await fetch(url + "/json/version")).ok) break; } catch {} await esperar(500); }
+  const b = await puppeteer.connect({ browserURL: url, defaultViewport: null });
+  return b;
 }
+const cerrarChrome = async () => {
+  try { if (nav) await nav.close(); } catch {}
+  try { if (procChrome) procChrome.kill(); } catch {}
+  procChrome = null;
+};
 const necesitaPagina = () => (pag && !pag.isClosed() ? null : falla("No hay CAD abierto. Llama primero a `abrir`."));
 
 /** Rectángulo del lienzo 3D en píxeles de la página. */
@@ -79,10 +103,10 @@ srv.tool("abrir",
   { ejemplo: z.string().regex(/^[\w.-]+$/).default("new-blank").describe("plantilla, p. ej. new-blank"),
     cerrar_paneles: z.boolean().default(true) },
   async ({ ejemplo, cerrar_paneles }) => {
-    if (nav) { try { await nav.close(); } catch {} }
+    await cerrarChrome();
     nav = await lanzar();
-    pag = await nav.newPage();
-    await pag.setViewport({ width: 1500, height: 1000 });
+    pag = VISIBLE ? ((await nav.pages())[0] || await nav.newPage()) : await nav.newPage();
+    if (!VISIBLE) await pag.setViewport({ width: 1500, height: 1000 });
     consola.length = 0;
     pag.on("pageerror", (e) => consola.push("[error] " + e.message));
     pag.on("console", (m) => { if (m.type() === "error") consola.push("[console.error] " + m.text()); });
@@ -125,7 +149,7 @@ srv.tool("panel",
   });
 
 srv.tool("cerrar", "Cierra el navegador del CAD.", {}, async () => {
-  if (nav) { try { await nav.close(); } catch {} }
+  await cerrarChrome();
   nav = pag = null;
   return texto("Cerrado.");
 });
@@ -208,6 +232,30 @@ srv.tool("carpeta", "Abre una carpeta del panel por su título (p. ej. 'Dibujar'
     if (ya === null) return falla(`No existe la carpeta «${titulo}».`);
     if (ya) return texto("Ya estaba abierta.");
     return (await botonPorTexto(titulo, "button.tp-fldv_b")) ? texto(`Abierta: ${titulo}`) : falla("No se pudo abrir.");
+  });
+
+// ── menús desplegables de la barra de arriba (Menú, Análisis, Diseño, Exportar…) ──
+srv.tool("menu",
+  "Abre un menú de la barra de arriba (Menú, Análisis, Diseño, Exportar, Fundamentos) y lista sus opciones. Con `elegir` pulsa esa opción (por parte de su texto).",
+  { nombre: z.string().min(1).max(30), elegir: z.string().max(80).optional() },
+  async ({ nombre, elegir }) => {
+    const e = necesitaPagina(); if (e) return e;
+    const ok = await pag.evaluate((n) => { const b = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(n) && x.getBoundingClientRect().top < 40 && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; }, nombre);
+    if (!ok) return falla(`No encuentro el menú «${nombre}» en la barra de arriba.`);
+    await esperar(500);
+    // el desplegable es el contenedor flotante que cuelga justo debajo del botón (no la barra de estado de abajo)
+    const buscar = (n) => {
+      const b = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(n) && x.getBoundingClientRect().top < 40 && x.getBoundingClientRect().width > 0);
+      if (!b) return null; const rb = b.getBoundingClientRect();
+      return [...document.querySelectorAll("*")].find((x) => { const q = x.getBoundingClientRect();
+        return q.width > 100 && x.children.length > 1 && (+getComputedStyle(x).zIndex >= 50 || getComputedStyle(x).position === "fixed") && q.top >= rb.bottom - 6 && q.top <= rb.bottom + 80 && q.left <= rb.right && q.right >= rb.left; }) || null;
+    };
+    const items = await pag.evaluate((n, src) => { const f = (0, eval)("(" + src + ")")(n); return f ? [...f.children].map((c) => (c.textContent || "").trim().replace(/\s+/g, " ").slice(0, 90)).filter(Boolean) : []; }, nombre, buscar.toString());
+    if (!elegir) { await pag.keyboard.press("Escape"); return texto(items); }
+    const p = await pag.evaluate((n, t, src) => { const f = (0, eval)("(" + src + ")")(n); const c = f && [...f.children].find((x) => (x.textContent || "").includes(t)); if (!c) return null; const q = c.getBoundingClientRect(); return { x: q.left + q.width / 2, y: q.top + q.height / 2 }; }, nombre, elegir, buscar.toString());
+    if (!p) { await pag.keyboard.press("Escape"); return falla(`El menú «${nombre}» no tiene «${elegir}». Opciones: ${items.join(" | ")}`); }
+    await mover(p.x, p.y); await pag.mouse.click(p.x, p.y); await esperar(900);
+    return texto(`Elegido: ${nombre} › ${elegir}`);
   });
 
 // ── campos del panel (Tweakpane) por su etiqueta ────────────────────────────
@@ -309,6 +357,18 @@ srv.tool("clic", "Un clic real sobre el lienzo. x,y son fracciones 0–1 del lie
     return texto(`Clic en (${x}, ${y})`);
   });
 
+srv.tool("clic_derecho", "Un clic DERECHO real sobre el lienzo (menú rápido / cancelar). x,y fracciones 0–1 del lienzo.",
+  { x: z.number().min(0).max(1), y: z.number().min(0).max(1) },
+  async ({ x, y }) => {
+    const e = necesitaPagina(); if (e) return e;
+    try {
+      const cv = await lienzo(); if (!cv) return falla("No encuentro el lienzo.");
+      const px = cv.x + cv.w * x, py = cv.y + cv.h * y;
+      await mover(px, py); await pag.mouse.click(px, py, { button: "right" }); await esperar(300);
+    } catch (err) { return falla(String(err.message || err)); }
+    return texto(`Clic derecho en (${x}, ${y})`);
+  });
+
 srv.tool("dibujar_linea",
   "Con la herramienta Línea ya elegida (botón 'Línea (frame)'), hace clic en cada punto y cierra con Escape. Puntos en fracciones 0–1 del lienzo. Devuelve cuántos tramos hay.",
   { puntos: z.array(z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)])).min(2).max(60) },
@@ -321,6 +381,28 @@ srv.tool("dibujar_linea",
     return texto({ clics: puntos.length, polilineas_nuevas: despues - antes });
   });
 
-const salir = async () => { try { if (nav) await nav.close(); } catch {} process.exit(0); };
+// ── como el MCP de AutoCAD: órdenes por la línea de comandos, sin ratón ──────
+srv.tool("comando",
+  "Escribe órdenes en la línea de comandos del CAD, como AutoCAD (una por elemento, Enter tras cada una). Ej.: [\"L\",\"0,0\",\"5,0\",\"5,4\",\"\"] dibuja una línea; [\"REC\",\"0,0\",\"6,4\"]; [\"C\",\"0,0\",\"2\"]; [\"?\"] ayuda. Un texto vacío = Enter solo. Devuelve las últimas líneas de la ventana de comandos.",
+  { lineas: z.array(z.string().max(200)).min(1).max(80) },
+  async ({ lineas }) => {
+    const e = necesitaPagina(); if (e) return e;
+    const antes = await pag.evaluate(() => (window.__hekatanDrawingPolylines?.val || []).length);
+    for (const l of lineas) {
+      const ok = await pag.evaluate(() => { const i = document.getElementById("hk3-cmd-input"); if (!i) return false; i.focus(); i.value = ""; return true; });
+      if (!ok) return falla("No encuentro la línea de comandos (#hk3-cmd-input). ¿Abriste el CAD con `abrir`?");
+      if (l) await pag.keyboard.type(l, { delay: 5 });
+      await pag.keyboard.press("Enter"); await esperar(150);
+    }
+    await esperar(200);
+    return texto(await pag.evaluate((antes) => {
+      const vis = (x) => { const q = x.getBoundingClientRect(); return q.width > 0 && q.height > 0; };
+      const l = [...document.querySelectorAll("div,span,pre")].filter((x) => vis(x) && x.children.length === 0 && (x.textContent || "").trim()).map((x) => x.textContent.trim().slice(0, 140));
+      const n = (window.__hekatanDrawingPolylines?.val || []).length;
+      return { polilineas_nuevas: n - antes, consola: [...new Set(l.filter((t) => /(✓|✕|⚠|Tool|Dibujo|Designe|Especifique|Indique|Punto|comando|Comando)/.test(t)))].slice(-8) };
+    }, antes));
+  });
+
+const salir = async () => { await cerrarChrome(); process.exit(0); };
 process.on("SIGINT", salir); process.on("SIGTERM", salir);
 await srv.connect(new StdioServerTransport());

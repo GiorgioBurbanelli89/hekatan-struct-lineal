@@ -103,6 +103,7 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
     aux:      "┊ Línea auxiliar — referencia visual (no genera FEM). Mismo input que línea.",
     auxp:     "✦ Punto auxiliar — 1 click crea un punto cyan (no genera nodo FEM, sirve para OSnap).",
     extend:   "↦ Alargar — clic en el contorno, luego en la línea a alargar (cerca del extremo).",
+    divide:   "⫶ Dividir — clic en la barra (el extremo más cercano al clic es el de referencia) y teclea 2,3,4 (longitudes de los tramos) · 4 (partes iguales) · «s» pegada al final (2,3s) = simétrico. Pone un nudo en cada corte.",
     chaflan:  "▱ Losa con chaflanes — click 2 esquinas. Radio en slider 'Chaflán r'.",
     "delete": "🗑 Borrar — hover sobre línea/área (se resalta en rojo) + click para eliminar.",
     ifcface: "▦ Área desde cara del IFC — pasá el cursor por una cara (se ilumina en cian; naranja = curva) y hacé clic. La malla va donde diga «Malla del área IFC».",
@@ -201,6 +202,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   const fMod = fCad.addFolder({ title: "✂ Modificar", expanded: false });
   fMod.addButton({ title: "🖱 Seleccionar" }).on("click", () => setActiveTool("select"));
   fMod.addButton({ title: "↦ Alargar hasta un contorno" }).on("click", () => setActiveTool("extend"));
+  fMod.addButton({ title: "⫶ Dividir (nodos: 2,3,4 · n · 2,3s)" }).on("click", () => setActiveTool("divide"));
+  fMod.addButton({ title: "📏 Cotas auto (activar / apagar)" }).on("click", () => { const w = window as any; w.__hekatanCotasAuto = w.__hekatanCotasAuto === false; w.__hekatanCotasRefrescar?.(); });
   fMod.addButton({ title: "🗑 Borrar (hover + click)" }).on("click", () => setActiveTool("delete"));
 
   // ── PRECISION: todo lo que decide DONDE cae el clic, en un solo sitio ──────
@@ -443,6 +446,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
       else hooks.setView("elevY");
     }
   };
+  // Acciones para el menú rápido del clic derecho (menuRapido.ts)
+  (window as any).__hekatanAcciones = { herramienta: setActiveTool, plano: (k: "xy" | "xz" | "yz") => setPlane(k) };
   fPlane.addButton({ title: "Plano XY (planta)" }).on("click", () => setPlane("xy"));
   fPlane.addButton({ title: "Plano XZ (elevación frontal)" }).on("click", () => setPlane("xz"));
   fPlane.addButton({ title: "Plano YZ (elevación lateral)" }).on("click", () => setPlane("yz"));

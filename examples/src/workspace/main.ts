@@ -4387,6 +4387,15 @@ const ACCIONES: Record<string, () => void> = {
     } catch (e) { console.warn("[menu] Frame Forces:", e); }
   },
   "Ver ▸ Sección transversal": () => { mostrarSeccionConAviso(); },
+  // Acceso rápido de dibujo (clic derecho en vacío): herramienta o plano con un clic.
+  ...Object.fromEntries(([
+    ["Dibujar ▸ Línea", "line"], ["Dibujar ▸ Polilínea", "polyline"], ["Dibujar ▸ Arco (3 ptos)", "arc"],
+    ["Dibujar ▸ Rectángulo", "rect"], ["Dibujar ▸ Círculo", "circle"], ["Dibujar ▸ Nodo", "node"],
+    ["Dibujar ▸ Parábola", "parabola"], ["Dibujar ▸ Cúbica", "cubica"],
+  ] as [string, string][]).map(([k, t]) => [k, () => (window as any).__hekatanAcciones?.herramienta?.(t)])),
+  ...Object.fromEntries(([
+    ["Plano ▸ XY (planta)", "xy"], ["Plano ▸ XZ (frontal)", "xz"], ["Plano ▸ YZ (lateral)", "yz"],
+  ] as [string, string][]).map(([k, p]) => [k, () => (window as any).__hekatanAcciones?.plano?.(p)])),
 };
 
 /** Que se puede hacer segun lo que se selecciono. Los nombres son los de
@@ -4409,6 +4418,10 @@ const MENU: Record<string, Array<[string, string]>> = {
     ["Assign ▸ Joint ▸ Loads", "Load Patterns"],
   ],
   nada: [
+    ["Dibujar ▸ Línea", ""], ["Dibujar ▸ Polilínea", ""], ["Dibujar ▸ Arco (3 ptos)", ""],
+    ["Dibujar ▸ Rectángulo", ""], ["Dibujar ▸ Círculo", ""], ["Dibujar ▸ Nodo", ""],
+    ["Dibujar ▸ Parábola", ""], ["Dibujar ▸ Cúbica", ""],
+    ["Plano ▸ XY (planta)", ""], ["Plano ▸ XZ (frontal)", ""], ["Plano ▸ YZ (lateral)", ""],
     ["Vista", "Vista"],
     ["Imagen y GIF", "Imagen"],
     ["Herramientas CAD", "CAD"],
@@ -4524,9 +4537,10 @@ function montarMenuContextual(pane: any) {
       };
       menu.appendChild(it);
     }
-    menu.style.left = Math.min(ev.clientX, window.innerWidth - 250) + "px";
-    menu.style.top = Math.min(ev.clientY, window.innerHeight - 340) + "px";
     menu.style.display = "block";
+    const alto = menu.getBoundingClientRect().height;
+    menu.style.left = Math.min(ev.clientX, window.innerWidth - 250) + "px";
+    menu.style.top = Math.max(4, Math.min(ev.clientY, window.innerHeight - alto - 8)) + "px";
   }, true);
   console.log("[menu] clic derecho sobre el modelo -> Assign estilo ETABS");
 }
@@ -8220,6 +8234,7 @@ try {
     extend: "extend", ex: "extend", alargar: "extend", al: "extend", prolongar: "extend",
     trim: "trim", tr: "trim", recortar: "trim", recorta: "trim",
     offset: "offset", o: "offset", desfase: "offset", df: "offset", desfasar: "offset", equidistancia: "offset",
+    divide: "divide", dividirbarra: "divide", db: "divide", nodos: "divide", partir: "divide",
     axis: "axis", eje: "axis", ax: "axis",
     chamfer: "chaflan", chaflan: "chaflan", chaf: "chaflan", slab: "chaflan",
   };
@@ -8229,14 +8244,14 @@ try {
     rect: "▭ Rectángulo", circle: "○ Círculo", arc: "⌒ Arco", col: "▌ Columna",
     wall: "▥ Muro", delete: "🗑 Borrar", select: "🖱 Seleccionar",
     move: "✥ Mover", copy: "⧉ Copiar",
-    aux: "┊ Línea auxiliar", auxp: "✦ Punto auxiliar", extend: "↦ Alargar", trim: "✂ Recortar", offset: "⇉ Desfase",
+    aux: "┊ Línea auxiliar", auxp: "✦ Punto auxiliar", extend: "↦ Alargar", trim: "✂ Recortar", offset: "⇉ Desfase", divide: "⫶ Dividir",
     axis: "📐 Eje", chaflan: "▱ Losa con chaflanes",
   };
   const TOOL_CANON: Record<string, string> = {
     line: "line", node: "node", area: "losa", polyline: "polyline", rect: "rectangle",
     rectarea: "rectarea", polyarea: "polyarea", plane3: "plane3",
     circle: "circle", arc: "arc", col: "column", wall: "wall", delete: "delete",
-    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset",
+    select: "select", move: "move", copy: "copy", aux: "auxline", auxp: "auxpoint", extend: "extend", trim: "trim", offset: "offset", divide: "divide",
     axis: "axis", chaflan: "chamfer",
   };
   // Comandos que no son herramientas del motor: rejilla, apoyo, carga, deshacer…
@@ -8385,6 +8400,7 @@ try {
   fila.append(bHist, label, ops, cmdWrap);
   bar.append(hist, fila);
   document.body.appendChild(bar);
+  (window as any).__hekatanDividirPide = () => { try { input.focus(); input.select(); } catch {} };
   // Las paletas acaban donde EMPIEZA esta ventana, midiéndola: desde que lleva
   // historial encima del prompt mide ~95 px, no los 40 del `bottom:66px` fijo, y en
   // 1280×720 tapaba la última carpeta del panel derecho («Cargas» del pórtico 2D no
@@ -8542,7 +8558,7 @@ try {
   // contestaba al desplazamiento en vez de salir «desconocido»).
   // ¿Hay un comando esperando respuesta? Lo consulta el ribbon para no robarle las
   // teclas 1-4 (sus vistas) al cuadro de comandos mientras se contesta.
-  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando;
+  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando || !!(window as any).__hekatanDividirEspera?.();
 
   (window as any).__hekatanEscapeCancel = () => {
     if (!repEsperando) return false;
@@ -8564,6 +8580,14 @@ try {
         if (cmd === "c" || cmd === "cerrar") activarTool("select");
         return;
       }
+    }
+    // 1 ter. DIVIDIR: con la barra ya designada, lo que se teclea son los tramos («2,3,4», «4», «2,3 s»)
+    if (tool === "divide" && (window as any).__hekatanDividirEspera?.()) {
+      if (cmd === "esc" || cmd === "cancelar") { (window as any).__hekatanDividirCancela?.(); (window as any).__hekatanCadRefreshPrompt?.(); return; }
+      const r = (window as any).__hekatanDividirBarra?.(raw) ?? { ok: false, msg: "✕ DIVIDIR no disponible" };
+      flash(r.msg, r.ok);
+      (window as any).__hekatanCadRefreshPrompt?.();
+      return;
     }
     // 1 bis. REPLICAR: o bien en una línea, o preguntando paso a paso
     if (repEsperando) {
@@ -8753,6 +8777,7 @@ try {
       const P = raw.trim().split(/\s+/);
       const c0 = (P[0] || "").toLowerCase();
       if (c0 === "div" || c0 === "dividir" || c0 === "divide") {
+        if (P.length === 1) { activarTool("divide"); return; }          // «DIV» solo: designar la barra con el ratón y teclear tramos (2,3,4 · 4 · 2,3 s)
         const n = Number((P[1] ?? "").replace(",", "."));
         if (!isFinite(n) || n < 2) { flash("✕ DIVIDIR: «DIV 4» parte cada tramo en 4.", false); return; }
         const r = (window as any).__hekatanDividir?.(n);

@@ -3706,7 +3706,7 @@ export function drawing({
         viewerRender();
         return;
       }
-      if (curTool === "delete" || curTool === "trim" || curTool === "extend" || curTool === "offset") {
+      if (curTool === "delete" || curTool === "trim" || curTool === "extend" || curTool === "offset" || curTool === "divide") {
         const tol = ((window as any).__hekatanSnap2D ?? 0.5) * 1.5;
         // Buscar lo más cerca entre polilínea y aux line — gana el de menor dist
         const foundPoly = findClosestPoly(p.x, p.y, p.z, tol);
@@ -6041,6 +6041,76 @@ export function drawing({
   };
   (window as any).__hekatanAPixeles = aPixeles;
 
+  // ── COTAS AUTOMÁTICAS PERSISTENTES ──
+  // Una cota por barra (su longitud) y, si la barra está inclinada en el plano de trabajo, sus
+  // proyecciones H/V y el ángulo; más un marcador en cada nudo. Se rehacen solas al dibujar,
+  // dividir, mover o girar la cámara (se comparan puntos+cámara cada cuadro, no se guarda nada).
+  // Botón «Cotas auto» (o __hekatanCotasAuto = false) las apaga.
+  const cotasCapa = document.createElement("div");
+  cotasCapa.id = "hk-cotas-auto";
+  cotasCapa.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;z-index:120;pointer-events:none";
+  document.body.appendChild(cotasCapa);
+  (window as any).__hekatanCotasAuto = true;
+  const COTA_CSS = "position:fixed;transform:translate(-50%,-50%);background:rgba(11,18,32,.88);color:#a8cdee;border:1px solid #4682b4;border-radius:3px;padding:0 4px;font:600 10px/14px monospace;white-space:nowrap";
+  const NODO_CSS = "position:fixed;transform:translate(-50%,-50%);width:9px;height:9px;border:2px solid #4682b4;border-radius:50%;background:#0b1220;box-sizing:border-box";
+  const MAX_COTAS = 60, MAX_PROYECCIONES = 8;
+  let cotasFirma = "";
+  const fmtM = (v: number) => (+v.toFixed(3)).toString() + " m";
+  const refrescarCotasAuto = () => {
+    const on = (window as any).__hekatanCotasAuto !== false;
+    const pts = drawingObj.points.rawVal as number[][], polys = (drawingObj.polylines?.rawVal ?? []) as number[][];
+    const cam = getActiveCamera();
+    const plane = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    const r = rendererElm.getBoundingClientRect();
+    const firma = on && cam
+      ? plane + "|" + r.left + "," + r.top + "," + r.width + "," + r.height + "|" + (cam as any).matrixWorldInverse.elements.map((e: number) => e.toFixed(4)).join(",") + "|" + (cam as any).projectionMatrix.elements.map((e: number) => e.toFixed(4)).join(",") + "|" + pts.map((p) => p.join(",")).join(";") + "|" + polys.map((q) => q.join(",")).join(";")
+      : "off";
+    if (firma === cotasFirma) return;
+    cotasFirma = firma;
+    cotasCapa.textContent = "";
+    if (!on || !cam) return;
+    const to2 = (q: number[]): [number, number] => plane === "xy" ? [q[0], q[1]] : plane === "xz" ? [q[0], q[2]] : [q[1], q[2]];
+    const from2 = (u: number, v: number, ref: number[]): number[] => plane === "xy" ? [u, v, ref[2]] : plane === "xz" ? [u, ref[1], v] : [ref[0], u, v];
+    const poner = (css: string, p: number[], texto: string, dx = 0, dy = 0) => {
+      const q = aPixeles(p[0], p[1], p[2]); if (!q) return;
+      const d = document.createElement("div"); d.style.cssText = css + `;left:${q.x + dx}px;top:${q.y + dy}px`; d.textContent = texto; cotasCapa.appendChild(d);
+    };
+    const usados = new Set<number>(); const segs: [number, number][] = [];
+    // CURVAS (arco, parábola, cúbica, círculo): son una polilínea de muchos tramos iguales.
+    // Una cota por tramo se pisaba entera (12 etiquetas sobre un arco). Una curva lleva UNA
+    // sola cota (su longitud total) y marcadores solo en los extremos.
+    const MIN_TRAMOS_CURVA = 4;
+    for (const poly of polys) {
+      const cadena: [number, number][] = [];
+      for (let i = 0; i + 1 < poly.length; i++) { const a = poly[i], b = poly[i + 1]; if (a === b || !pts[a] || !pts[b]) continue; cadena.push([a, b]); }
+      if (cadena.length >= MIN_TRAMOS_CURVA) {
+        let Ltot = 0; for (const [a, b] of cadena) Ltot += Math.hypot(pts[b][0] - pts[a][0], pts[b][1] - pts[a][1], pts[b][2] - pts[a][2]);
+        const ini = cadena[0][0], fin = cadena[cadena.length - 1][1];
+        poner(NODO_CSS, pts[ini], ""); poner(NODO_CSS, pts[fin], "");
+        const m = cadena[Math.floor(cadena.length / 2)][0];
+        poner(COTA_CSS, pts[m], "curva " + fmtM(Ltot), 0, -16);
+      } else for (const [a, b] of cadena) { segs.push([a, b]); usados.add(a); usados.add(b); }
+    }
+    for (const id of usados) poner(NODO_CSS, pts[id], "");
+    const conProy = segs.length <= MAX_PROYECCIONES;
+    segs.slice(0, MAX_COTAS).forEach(([ia, ib]) => {
+      const a = pts[ia], b = pts[ib]; const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+      const a2 = to2(a), b2 = to2(b); const du = b2[0] - a2[0], dv = b2[1] - a2[1];
+      const inclinada = Math.abs(du) > 1e-6 && Math.abs(dv) > 1e-6;
+      let t = fmtM(L);
+      if (inclinada) t += "  ∠" + (+(Math.atan2(Math.abs(dv), Math.abs(du)) * 180 / Math.PI).toFixed(2)) + "°";
+      poner(COTA_CSS, mid, t, 0, -14);
+      if (inclinada && conProy) {
+        poner(COTA_CSS, from2((a2[0] + b2[0]) / 2, a2[1], a), fmtM(Math.abs(du)), 0, 14);
+        poner(COTA_CSS, from2(b2[0], (a2[1] + b2[1]) / 2, a), fmtM(Math.abs(dv)), 28, 0);
+      }
+    });
+  };
+  (window as any).__hekatanCotasRefrescar = () => { cotasFirma = ""; refrescarCotasAuto(); };
+  const cotasBucle = () => { try { refrescarCotasAuto(); } catch {} requestAnimationFrame(cotasBucle); };
+  requestAnimationFrame(cotasBucle);
+
   const computeOsnap = (px: number, py: number, pz: number, tol: number,
                         cursorPx?: { x: number; y: number }): { type: string; x: number; y: number; z: number } | null => {
     // ⚠️ El botón OSNAP (F3) se conmutaba y NO LO MIRABA NADIE: encendido o apagado,
@@ -6072,18 +6142,21 @@ export function drawing({
     // Se pasa por PARÁMETRO, no por una global: quien pregunta por un punto suelto
     // (una prueba, un guion) no tiene cursor y se mide en el mundo, como antes.
     const curPx = cursorPx;
-    const consider = (type: string, x: number, y: number, z: number) => {
+    // `flojo`: referencia de SEGUNDA (la rejilla tenue de OTRO nivel): pierde contra cualquier otra
+    // y solo vale con el cursor casi encima (5 px). En isométrica esa rejilla se ve ENCIMA de la de
+    // trabajo y se llevaba el clic a otra cota (27-oct-2026: la barra dibujada a z = 0 acababa en z = 3).
+    const consider = (type: string, x: number, y: number, z: number, flojo = false) => {
       let d: number;
       if (curPx) {
         const q = aPixeles(x, y, z);
         if (!q) return;
         d = Math.hypot(q.x - curPx.x, q.y - curPx.y);
-        if (d > _aperturaPx) return;
+        if (d > (flojo ? Math.min(5, _aperturaPx) : _aperturaPx)) return;
       } else {
         d = Math.hypot(x - px, y - py, z - pz);
         if (d > tol) return;
       }
-      const r = RANGO[type] ?? 9;
+      const r = (RANGO[type] ?? 9) + (flojo ? 0.5 : 0);
       if (!best || r < best.r || (r === best.r && d < best.d)) best = { type, x, y, z, d, r };
     };
     // ── ORIGEN (0,0,0) ────────────────────────────────────────────────────
@@ -6146,7 +6219,7 @@ export function drawing({
             planoZ.set(new THREE.Vector3(0, 0, 1), -l.z);
             if (!rayo.intersectPlane(planoZ, corte)) continue;
             const ax = cae(corte.x), ay = cae(corte.y);
-            if (dentro(ax, ay)) consider("grid", ax, ay, l.z);
+            if (dentro(ax, ay)) consider("grid", ax, ay, l.z, true);
           }
         }
       }
@@ -6560,6 +6633,8 @@ export function drawing({
       case "offset": return !designado
         ? P(`DESFASE Designe la línea a desfasar${pendingDist > 0 ? ` (distancia ${pendingDist} m)` : " (teclee la distancia; sin ella, la copia pasa por el punto del lado)"}:`)
         : P("DESFASE Precise el lado hacia el que va la copia:");
+      case "divide": return !divObjetivo ? P("DIVIDIR Designe la barra (clic cerca del extremo de referencia):")
+                                         : P("DIVIDIR Teclee longitudes (2,3,4) · partes iguales (4) · «s» pegada al final (2,3s) = simétrico:");
       case "axis": return P("EJE Precise el primer punto del eje:");
       case "aux": return n ? P("AUXILIAR Precise el segundo punto:") : P("AUXILIAR Precise el primer punto:");
       case "auxp": return P("PUNTO AUXILIAR Precise punto:");
@@ -6613,6 +6688,7 @@ export function drawing({
     polyAreaPreview.visible = false;
     cerrarPolilinea();
     designado = null;
+    divObjetivo = null;
     viewerRender();
     updateStatus("🛠 Tool cambiado — clicks pendientes limpiados");
     refreshPrompt();
@@ -6821,6 +6897,7 @@ export function drawing({
   const finalizeDraw = () => {
     pendingClicks = [];
     designado = null;
+    divObjetivo = null;
     // Cierra la polilínea en curso Y descarta las que se quedaron en 0 ó 1
     // punto: eso no es ningún frame, es el hueco de haber cambiado de
     // herramienta a medio dibujar. Antes solo se añadía una vacía al final y
@@ -7108,6 +7185,73 @@ export function drawing({
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     refreshPrompt();
+  };
+
+  // ── DIVIDIR (nodos) ────────────────────────────────────────────────────────
+  // Parte UN tramo de una polilínea en varios y pone un nudo en cada corte (las dos mitades
+  // siguen siendo barras de la misma polilínea, así que el modelo no cambia de topología).
+  // Designar: clic en el tramo; el extremo más cercano al clic es el de REFERENCIA.
+  // Teclear:  «2,3,4»  longitudes de los tramos desde ese extremo (el último lleva el resto)
+  //           «4»      cuatro partes iguales            «2m» un solo tramo de 2 m
+  //           «… s»    simétrico: las mismas longitudes también desde el otro extremo
+  // Es lo que hace DIVIDIR en el CAD de Hekatan Math Studio (misma sintaxis).
+  let divObjetivo: { poly: number; seg: number; click: P3 } | null = null;
+  (window as any).__hekatanDividirEspera = () => !!divObjetivo;
+  (window as any).__hekatanDividirCancela = () => { divObjetivo = null; };
+  const dividirClic = (click: P3): void => {
+    if (!drawingObj.polylines) return;
+    if (hoveredPolyIndex < 0) { updateStatus("DIVIDIR: pase el cursor por una barra (se pone roja) y haga clic."); return; }
+    divObjetivo = { poly: hoveredPolyIndex, seg: Math.max(0, hoveredSegIndex), click };
+    updateStatus("✂ DIVIDIR tramo designado — teclee 2,3,4 (longitudes) · 4 (partes iguales) · «s» PEGADA al final (2,3s) = simétrico, y Enter.");
+    try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
+    try { (window as any).__hekatanDividirPide?.(); } catch {}
+  };
+  (window as any).__hekatanDividirBarra = (texto: string): { ok: boolean; msg: string } => {
+    if (!divObjetivo || !drawingObj.polylines) return { ok: false, msg: "✕ DIVIDIR: designe primero la barra (clic sobre ella)." };
+    const polys = drawingObj.polylines.rawVal;
+    const pts = drawingObj.points.rawVal as P3[];
+    const { poly: P, seg: S, click } = divObjetivo;
+    const poly = polys[P];
+    if (!poly || poly[S] == null || poly[S + 1] == null) { divObjetivo = null; return { ok: false, msg: "✕ DIVIDIR: no se pudo leer el tramo." }; }
+    const a = pts[poly[S]], b = pts[poly[S + 1]];
+    const L = d3(a, b);
+    if (L < 1e-9) { divObjetivo = null; return { ok: false, msg: "✕ DIVIDIR: el tramo mide cero." }; }
+    let q = texto.trim();
+    const sim = /(s|sim|simetrico|simétrico|\*)$/i.test(q);          // pegada al final («2,3s» o «2,3*»): en la caja de comandos el espacio ya es Enter
+    q = q.replace(/[\s,;]*(s|sim|simetrico|simétrico|\*)$/i, "").trim();
+    const largo = /m$/i.test(q);
+    q = q.replace(/m$/i, "");
+    const nums = q.split(/[\s,;]+/).filter(Boolean).map(Number);
+    if (!nums.length || nums.some((v) => !isFinite(v) || v <= 0)) return { ok: false, msg: `✕ DIVIDIR: no entiendo «${texto}». Ej.: 2,3,4 · 4 · 2,3 s` };
+    let cortes: number[] = [];
+    if (nums.length === 1 && !largo && Math.floor(nums[0]) === nums[0] && nums[0] >= 2) {
+      for (let i = 1; i < nums[0]; i++) cortes.push(L * i / nums[0]);
+    } else {
+      let t = 0;
+      for (const v of nums) {
+        t += v;
+        if (t > L + 1e-9) return { ok: false, msg: `✕ DIVIDIR: los tramos suman ${+t.toFixed(4)} m y la barra mide ${+L.toFixed(4)} m.` };
+        if (t < L - 1e-9) cortes.push(t);
+      }
+    }
+    if (sim) cortes = cortes.concat(cortes.map((c) => L - c));
+    const ref = d3(click, a) <= d3(click, b) ? 0 : 1;          // 0: se mide desde el extremo a
+    cortes = cortes.map((c) => (ref === 0 ? c : L - c)).sort((x, y) => x - y)
+      .filter((c, k, arr) => c > 1e-9 && c < L - 1e-9 && (k === 0 || c - arr[k - 1] > 1e-9));
+    if (!cortes.length) return { ok: false, msg: "✕ DIVIDIR: no hay cortes que hacer." };
+    const u: P3 = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, (b[2] - a[2]) / L];
+    pushUndo();
+    const base = pts.length;
+    drawingObj.points.val = [...pts, ...cortes.map((c): P3 => [a[0] + u[0] * c, a[1] + u[1] * c, a[2] + u[2] * c])];
+    const idx = cortes.map((_, i) => base + i);
+    const nuevo = [...poly.slice(0, S + 1), ...idx, ...poly.slice(S + 1)];
+    drawingObj.polylines.val = polys.map((pl, i) => (i === P ? nuevo : pl));
+    divObjetivo = null;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    refreshPrompt();
+    const tramos = [0, ...cortes, L].map((c, i, arr) => (i ? +(c - arr[i - 1]).toFixed(4) : 0)).slice(1);
+    return { ok: true, msg: `✓ DIVIDIR: ${cortes.length + 1} tramos (${tramos.join(" · ")} m) y ${cortes.length} nudo${cortes.length === 1 ? "" : "s"}. Designe otra barra o Esc.` };
   };
 
   // ── REPLICAR selección (estilo ETABS "Replicate Linear") ──
@@ -7587,7 +7731,7 @@ export function drawing({
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
     const creaGeometria = !(tool === "select" || tool === "none" || !tool ||
                             tool === "medir" || tool === "move" || tool === "copy" ||
-                            tool === "delete" || tool === "trim" || tool === "extend");
+                            tool === "delete" || tool === "trim" || tool === "extend" || tool === "divide");
     // ── AVISAR, NO BLOQUEAR ──────────────────────────────────────────────
     //
     // Este filtro nació para evitar los puntos a 100 m que deja un clic rasante,
@@ -8158,6 +8302,10 @@ export function drawing({
       const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
       updateStatus(`✓ Línea auxiliar creada — L=${len.toFixed(2)}m (cyan, no FEM)`);
       pendingClicks = [];
+      return;
+    }
+    if (tool === "divide") {
+      dividirClic([point.x, point.y, point.z]);
       return;
     }
     if (tool === "extend" || tool === "trim" || tool === "offset") {
