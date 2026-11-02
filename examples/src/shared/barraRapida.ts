@@ -42,15 +42,14 @@ const ITEMS: Item[] = [
 ];
 
 const CSS = `
-#hk-barra{position:fixed;left:36px;top:150px;bottom:60px;width:34px;z-index:95;display:flex;flex-direction:column;align-items:center;gap:1px;
- padding:4px 0;overflow-y:auto;overflow-x:hidden;background:rgba(18,22,30,.96);border-right:1px solid rgba(127,150,179,.35);scrollbar-width:none}
-#hk-barra::-webkit-scrollbar{display:none}
-#hk-barra button{width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;font:600 15px/1 system-ui,"Segoe UI Symbol",sans-serif;
+#hk-barra{position:fixed;left:560px;top:52px;max-width:calc(100vw - 560px - 200px);z-index:95;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:1px;
+ padding:2px 4px;background:rgba(18,22,30,.96);border:1px solid rgba(127,150,179,.35);border-radius:8px}
+#hk-barra button{width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center;font:600 13px/1 system-ui,"Segoe UI Symbol",sans-serif;
  color:#cbd5e1;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;padding:0}
-#hk-barra button.txt{font-size:10px;letter-spacing:-.5px}
+#hk-barra button.txt{font-size:9px;letter-spacing:-.5px}
 #hk-barra button:hover{background:rgba(127,150,179,.25);border-color:rgba(127,150,179,.5)}
 #hk-barra button.on{background:#1d4f91;border-color:#60a5fa;color:#fff}
-#hk-barra .sep{width:22px;height:1px;background:rgba(127,150,179,.35);margin:3px 0;flex:none}
+#hk-barra .sep{width:1px;height:16px;background:rgba(127,150,179,.4);margin:0 3px;flex:none}
 @media (max-width:600px){#hk-barra{display:none}}
 `;
 
@@ -90,7 +89,7 @@ export function montarBarraRapida(): void {
   const poner = (v: boolean) => {
     visible = v; barra.style.display = v ? "flex" : "none";
     try { localStorage.setItem("hk_barra_visible", v ? "1" : "0"); } catch { /* */ }
-    const a = document.getElementById("hk-acceso"); if (a) a.style.left = v ? "80px" : "30px";
+    const a = document.getElementById("hk-acceso"); if (a) a.style.left = "30px";
   };
   poner(visible);
   w.__hekatanBarraRapida = (v?: boolean) => poner(v ?? !visible);

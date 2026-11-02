@@ -119,12 +119,12 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   const css = document.createElement("style");
   css.textContent = `
   #hk-revit{position:absolute;inset:0;pointer-events:none;z-index:55;font:12px system-ui,-apple-system,Segoe UI,sans-serif;color:#dbeafe}
-  #hk-revit .rv-bar{pointer-events:auto;position:absolute;left:58px;top:8px;display:flex;gap:4px;align-items:stretch;
-    background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:10px;padding:5px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
-  #hk-revit .rv-b{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:50px;padding:4px 4px;border:1px solid transparent;
-    border-radius:7px;background:transparent;color:#dbeafe;cursor:pointer;font:600 11px inherit}
-  #hk-revit .rv-b .ic{font-size:20px;line-height:22px}
-  #hk-revit .rv-b .ta{font:10px Consolas,monospace;color:#64748b}
+  #hk-revit .rv-bar{pointer-events:auto;position:absolute;left:58px;top:8px;display:flex;gap:2px;align-items:stretch;
+    background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:8px;padding:3px;box-shadow:0 6px 20px rgba(0,0,0,.45)}
+  #hk-revit .rv-b{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:36px;padding:2px 3px;border:1px solid transparent;
+    border-radius:6px;background:transparent;color:#dbeafe;cursor:pointer;font:600 10px system-ui,sans-serif}
+  #hk-revit .rv-b .ic{font-size:14px;line-height:15px}
+  #hk-revit .rv-b .ta{display:none}
   #hk-revit .rv-b:hover{background:#12304a}
   #hk-revit .rv-b.on{background:#0e7490;border-color:#22d3ee;color:#fff}
   #hk-revit .rv-sep{width:1px;background:#1e3a4a;margin:2px 3px}
@@ -132,13 +132,13 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     background:rgba(8,47,73,.96);border:1px solid #0e7490;border-radius:8px;padding:5px 10px;white-space:nowrap}
   #hk-revit .rv-op button{height:24px;padding:0 10px;border-radius:6px;border:1px solid #22d3ee;background:#0e7490;color:#ecfeff;font:600 11px inherit;cursor:pointer}
   #hk-revit .rv-op input[type=text]{width:46px;height:22px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;text-align:center;font:12px Consolas,monospace}
-  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:170px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:10px;padding:6px}
-  #hk-revit .rv-nav h4{margin:2px 4px 6px;font:700 11px inherit;color:#7dd3fc;letter-spacing:.4px}
-  #hk-revit .rv-niv{display:flex;justify-content:space-between;padding:5px 8px;border-radius:6px;cursor:pointer;font:12px Consolas,monospace}
+  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:120px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:8px;padding:4px;font-size:10px}
+  #hk-revit .rv-nav h4{margin:1px 3px 3px;font:700 9px system-ui,sans-serif;color:#7dd3fc;letter-spacing:.4px}
+  #hk-revit .rv-niv{display:flex;justify-content:space-between;padding:2px 6px;border-radius:5px;cursor:pointer;font:10px Consolas,monospace}
   #hk-revit .rv-niv:hover{background:#12304a}
   #hk-revit .rv-niv.on{background:#0e7490;color:#fff}
   #hk-revit .rv-nav .rv-mini{display:flex;gap:4px;margin-top:6px}
-  #hk-revit .rv-nav .rv-mini button{flex:1;height:24px;border-radius:6px;border:1px solid #1e3a4a;background:#0a1622;color:#cdeefb;cursor:pointer;font:600 11px inherit}
+  #hk-revit .rv-nav .rv-mini button{flex:1;height:18px;border-radius:5px;border:1px solid #1e3a4a;background:#0a1622;color:#cdeefb;cursor:pointer;font:600 10px system-ui,sans-serif}
   #hk-revit .rv-msg{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;background:rgba(15,23,42,.92);border:1px solid #1e3a4a;
     border-radius:8px;padding:5px 12px;color:#cbd5e1;font:12px inherit;pointer-events:none;max-width:70%;text-align:center}
   body.hk-revit-on #hk-ribbon-abrir,body.hk-revit-on #hk-dyn,body.hk-revit-on #hk-ribbon-guia,body.hk-revit-on #hk-osnap-etiqueta{display:none!important}
