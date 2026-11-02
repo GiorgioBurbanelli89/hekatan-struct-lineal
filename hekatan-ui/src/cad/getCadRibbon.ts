@@ -148,7 +148,7 @@ export function addCadRibbon(host: HTMLElement, hooks: RibbonHooks): HTMLElement
     "border-radius:10px", "padding:4px 5px", "backdrop-filter:blur(6px)",
     "box-shadow:0 6px 20px rgba(0,0,0,.45)",
     "font-family:system-ui,-apple-system,Segoe UI,sans-serif",
-    "max-width:calc(100% - 24px)",
+    "max-width:calc((100% - 24px) / .78)", "zoom:.78",
   ].join(";") + ";";
   // Dos filas fijas (no `flex-wrap`, que partía donde le cabía y salían tres). La de
   // abajo lleva un filete arriba para leerse como segunda barra, no como desborde.

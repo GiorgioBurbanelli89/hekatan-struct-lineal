@@ -1013,7 +1013,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   // lo que tape, medido (si no, la fila de herramientas quedaba cortada por arriba).
   const ubicarToggle = () => {
     const cintaEl = document.getElementById("hk-ribbon");
-    if (!encendido && cintaEl) { if (tog.parentElement !== cintaEl) cintaEl.appendChild(tog); tog.classList.add("en-cinta"); }
+    if (!encendido && cintaEl) { const fila1 = (cintaEl.firstElementChild as HTMLElement) ?? cintaEl; if (tog.parentElement !== fila1) fila1.appendChild(tog); tog.classList.add("en-cinta"); }
     else if (tog.parentElement !== host) { host.append(tog); tog.classList.remove("en-cinta"); colocar(); }
   };
   const colocar = () => {
