@@ -132,11 +132,17 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     background:rgba(8,47,73,.96);border:1px solid #0e7490;border-radius:8px;padding:5px 10px;white-space:nowrap}
   #hk-revit .rv-op button{height:24px;padding:0 10px;border-radius:6px;border:1px solid #22d3ee;background:#0e7490;color:#ecfeff;font:600 11px inherit;cursor:pointer}
   #hk-revit .rv-op input[type=text]{width:46px;height:22px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;text-align:center;font:12px Consolas,monospace}
-  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:120px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:8px;padding:4px;font-size:10px}
+  #hk-revit .rv-nav{pointer-events:auto;position:absolute;right:8px;top:48px;width:128px;background:rgba(15,23,42,.96);border:1px solid #1e3a4a;border-radius:8px;padding:4px;font-size:10px}
   #hk-revit .rv-nav h4{margin:1px 3px 3px;font:700 9px system-ui,sans-serif;color:#7dd3fc;letter-spacing:.4px}
   #hk-revit .rv-niv{display:flex;justify-content:space-between;padding:2px 6px;border-radius:5px;cursor:pointer;font:10px Consolas,monospace}
   #hk-revit .rv-niv:hover{background:#12304a}
   #hk-revit .rv-niv.on{background:#0e7490;color:#fff}
+  #hk-revit .rv-niv .rv-x{margin-left:4px;opacity:.35;cursor:pointer;padding:0 3px;border-radius:3px}
+  #hk-revit .rv-niv:hover .rv-x{opacity:.9}
+  #hk-revit .rv-niv .rv-x:hover{background:#7f1d1d;color:#fff;opacity:1}
+  #hk-revit .rv-nav .rv-add{display:flex;gap:4px;margin-top:6px}
+  #hk-revit .rv-nav .rv-add input{width:46px;height:18px;background:#0a1622;border:1px solid #1e3a4a;border-radius:5px;color:#cdeefb;text-align:center;font:10px Consolas,monospace}
+  #hk-revit .rv-nav .rv-add button{flex:1;height:18px;border-radius:5px;border:1px solid #22d3ee;background:#0e7490;color:#ecfeff;cursor:pointer;font:600 10px system-ui,sans-serif}
   #hk-revit .rv-nav .rv-mini{display:flex;gap:4px;margin-top:6px}
   #hk-revit .rv-nav .rv-mini button{flex:1;height:18px;border-radius:5px;border:1px solid #1e3a4a;background:#0a1622;color:#cdeefb;cursor:pointer;font:600 10px system-ui,sans-serif}
   #hk-revit .rv-msg{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;background:rgba(15,23,42,.92);border:1px solid #1e3a4a;
@@ -245,17 +251,20 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     for (const l of N) {
       const d = document.createElement("div"); d.className = "rv-niv" + (Math.abs(l.z - zAct) < 1e-6 ? " on" : "");
       d.dataset.z = String(l.z);
-      d.innerHTML = `<span>${l.label}</span><span class="rv-cota" style="color:#94a3b8">${l.z.toFixed(2)}</span>`;
+      d.innerHTML = `<span>${l.label}</span><span style="display:flex;align-items:center"><span class="rv-cota" style="color:#94a3b8">${l.z.toFixed(2)}</span><span class="rv-x" title="Quitar este nivel (si no tiene elementos)">×</span></span>`;
       d.addEventListener("click", () => activarNivel(l.z));
+      (d.querySelector(".rv-x") as HTMLElement).addEventListener("click", (e) => { e.stopPropagation(); quitarNivel(l.z); });
       editable(d.querySelector(".rv-cota") as HTMLElement, l.z, (v) => moverNivel(l.z, v));
       nav.appendChild(d);
     }
-    const mini = document.createElement("div"); mini.className = "rv-mini";
-    const bMas = document.createElement("button"); bMas.textContent = "+ Nivel"; bMas.title = "Nivel nuevo encima del último (LL)";
-    bMas.onclick = () => nuevoNivel();
-    const bMenos = document.createElement("button"); bMenos.textContent = "− Nivel"; bMenos.title = "Quita el nivel de arriba (si no tiene nada)";
-    bMenos.onclick = () => quitarNivel();
-    mini.append(bMas, bMenos); nav.appendChild(mini);
+    // AÑADIR un nivel a la cota que se escriba (entre otros, debajo o encima); × en cada fila lo quita
+    const add = document.createElement("div"); add.className = "rv-add";
+    const inZ = document.createElement("input"); inZ.type = "text"; inZ.title = "Cota Z del nivel nuevo (m)";
+    inZ.value = String(+(Math.max(0, ...niveles().map((l) => l.z)) + (parseFloat(String(W().__hekatanAlturaPiso ?? 3)) || 3)).toFixed(2));
+    const bMas = document.createElement("button"); bMas.textContent = "+ Nivel"; bMas.title = "Añade un nivel a la cota escrita (Z, m)";
+    const poner1 = () => { const z = parseFloat(inZ.value.replace(",", ".")); if (isFinite(z)) nuevoNivel(undefined, z); };
+    bMas.onclick = poner1; inZ.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") poner1(); });
+    add.append(inZ, bMas); nav.appendChild(add);
     // ALZADOS: donde se dibujan los NIVELES (como en Revit: la herramienta Nivel vive en un alzado)
     { const h = document.createElement("h4"); h.textContent = "ALZADOS"; h.style.marginTop = "10px"; nav.appendChild(h);
       const caja = document.createElement("div"); caja.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:2px 6px";
@@ -286,22 +295,24 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     (lp.firstChild as HTMLInputElement).onchange = (e) => { pegado = (e.target as HTMLInputElement).checked; try { localStorage.setItem("hk_revit_pegado", pegado ? "1" : "0"); } catch {} };
     nav.appendChild(lp);
   };
-  const nuevoNivel = (h = parseFloat(String(W().__hekatanAlturaPiso ?? 3)) || 3) => {
+  const nuevoNivel = (h = parseFloat(String(W().__hekatanAlturaPiso ?? 3)) || 3, zAbs?: number) => {
     asegurarNiveles();
     const L = W().__hekatanLevels as { label: string; z: number }[];
     const top = Math.max(0, ...niveles().map((l) => l.z));
-    const z = +(top + h).toFixed(4);
-    L.push({ label: `N+${z.toFixed(2)}`, z });
+    const z = zAbs !== undefined ? +zAbs.toFixed(4) : +(top + h).toFixed(4);
+    if (niveles().some((l) => Math.abs(l.z - z) < 1e-6)) { decir(`Ya existe un nivel a ${z.toFixed(2)} m.`); return; }
+    L.push({ label: `N${z >= 0 ? "+" : "-"}${Math.abs(z).toFixed(2)}`, z });
+    L.sort((p, q) => p.z - q.z);
     W().__hekatanRefreshLevels?.(); pintarNav(); activarNivel(z);
   };
-  const quitarNivel = () => {
+  const quitarNivel = (zQuitar?: number) => {
     const L = W().__hekatanLevels as { label: string; z: number }[];
-    const N = niveles(); if (N.length <= 1) return;
-    const top = N[N.length - 1];
+    const N = niveles(); if (N.length <= 1) { decir("Tiene que quedar al menos un nivel."); return; }
+    const top = zQuitar === undefined ? N[N.length - 1] : (N.find((l) => Math.abs(l.z - zQuitar) < 1e-6) ?? N[N.length - 1]);
     const usado = ((W().__hekatanDrawingPoints?.rawVal ?? []) as number[][]).some((p) => Math.abs(p[2] - top.z) < 1e-6);
     if (usado) { decir(`${top.label} tiene elementos: bórralos antes de quitar el nivel.`); return; }
     L.splice(L.indexOf(top as any), 1); W().__hekatanRefreshLevels?.();
-    if (Math.abs(zAct - top.z) < 1e-6) activarNivel(N[N.length - 2].z); else pintarNav();
+    if (Math.abs(zAct - top.z) < 1e-6) activarNivel((N.filter((l) => l !== top).pop() ?? N[0]).z); else pintarNav();
   };
   let vista: "planta" | "alzado" | "3d" = "planta";
   let dirAlz: "S" | "N" | "O" | "E" = "S";
