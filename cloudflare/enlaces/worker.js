@@ -22,19 +22,28 @@ export default {
     const h = cors(req), url = new URL(req.url);
     if (req.method === "OPTIONS") return new Response(null, { headers: h });
     if (req.method === "POST" && url.pathname === "/") {
+      // Solo desde la app (el Origin lo falsifica un curl: por eso, ademas, el limite por IP).
+      if (!ORIGENES.includes(req.headers.get("Origin") || ""))
+        return new Response(JSON.stringify({ error: "origen no permitido" }), { status: 403, headers: { ...h, "Content-Type": "application/json" } });
+      if (env.LIMITE) {
+        const { success } = await env.LIMITE.limit({ key: req.headers.get("CF-Connecting-IP") || "sin-ip" });
+        if (!success)
+          return new Response(JSON.stringify({ error: "demasiados enlaces seguidos, espera un minuto" }), { status: 429, headers: { ...h, "Content-Type": "application/json" } });
+      }
       const txt = await req.text();
       if (!txt || txt.length > MAX || !/^[A-Za-z0-9_-]+$/.test(txt))
         return new Response(JSON.stringify({ error: "modelo vacío, demasiado grande o con formato inválido" }), { status: 400, headers: { ...h, "Content-Type": "application/json" } });
       let id = nuevoId();
       for (let i = 0; i < 3 && (await env.ENLACES.get(id)) !== null; i++) id = nuevoId();
-      await env.ENLACES.put(id, txt, { metadata: { t: Date.now(), n: txt.length } });
+      // Caduca al año: sin esto el almacen solo crece (los enlaces ya hechos no cambian).
+      await env.ENLACES.put(id, txt, { expirationTtl: 365 * 24 * 3600, metadata: { t: Date.now(), n: txt.length } });
       return new Response(JSON.stringify({ id }), { headers: { ...h, "Content-Type": "application/json" } });
     }
     const id = url.pathname.slice(1);
     if (req.method === "GET" && /^[A-Za-z0-9]{6,16}$/.test(id)) {
       const txt = await env.ENLACES.get(id);
       if (txt === null) return new Response("no existe", { status: 404, headers: h });
-      return new Response(txt, { headers: { ...h, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+      return new Response(txt, { headers: { ...h, "Content-Type": "text/plain; charset=utf-8", "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=3600" } });
     }
     return new Response("Hekatan Struct · enlaces", { status: 404, headers: h });
   },
