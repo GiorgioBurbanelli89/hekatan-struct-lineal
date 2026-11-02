@@ -153,8 +153,10 @@ export function formulacionPano(d: DatosPano): { placa: string; membrana: string
   const t = d.tipoPlaca;
   const placa =
     t === 1 ? (d.p.length === 4 ? "Shell-Thin: placa DKQ (Batoz y Tahar, 1982), sin deformación por cortante" : "Shell-Thin: placa DKT (triángulo)")
-    : t === 3 ? "placa DKMQ (Katili, 1993)"
-    : t === 4 ? "placa DSE (Wilson, cap. 8)"
+    // 3/4/5 solo existen en el Q4: un triángulo con ellas cae en el Thick de CSI (getLocalStiffnessMatrix.cpp)
+    : t === 3 && d.p.length === 4 ? "placa DKMQ (Katili, 1993)"
+    : t === 4 && d.p.length === 4 ? "placa DSE (Wilson, cap. 8)"
+    : t === 5 && d.p.length === 4 ? "placa de Auricchio y Taylor (1994), Mindlin mixto"
     : d.p.length === 4 ? "Shell-Thick: placa MITC4 (Bathe y Dvorkin, 1985) con modos incompatibles de Wilson"
     : "Shell-Thick en triángulo: placa de CSI (giros nodales y de lado, sin burbuja; cortante de lado de Wilson, constante en el triángulo; tres puntos medios y B-barra)";
   const membrana = d.tipoDrill === 13

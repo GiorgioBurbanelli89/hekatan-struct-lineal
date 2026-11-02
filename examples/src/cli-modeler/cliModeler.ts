@@ -56,6 +56,7 @@ import { recta, arcoPor3Puntos, polilinea, longitudCurva, transfinita, type Curv
 import { pavimentar } from "./pavimentador";
 import { placaAT } from "hekatan-fem";
 import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
+import { FORMULACIONES_PLACA, formulacionPorPalabra } from "../shared/formulacionesPlaca";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
 import { cargasDelCaso } from "../shared/cargasPorCaso";
@@ -936,20 +937,21 @@ export function parseCliCommands(text: string): ParsedModel {
           const hasta = rango ? parseInt(rango[2], 10) : id;
           const q = (tokens[2] ?? "").toLowerCase();
           if (!isFinite(id)) break;
-          let v: number | undefined;
-          if (q === "thin" || q === "delgada" || q === "kirchhoff" || q === "1") v = 1;
-          else if (q === "thick" || q === "gruesa" || q === "mindlin" || q === "0") v = 0;
-          // 3 = DKMQ de Katili; 4 = placa DSE de Wilson (cap. 8). El 2 NO se ofrece: es la
-          // «Membrane» de los exportadores y en el solver es el MITC4 (data-model.ts).
-          else if (q === "dkmq" || q === "3") v = 3;
-          else if (q === "wilson" || q === "dse" || q === "4") v = 4;
-          // 5 = Auricchio & Taylor (1994), CMAME 118: w ligado a los giros, burbujas, cortante mixto
-          // (transcrita de FEAPpv, plate2d.f). Su carga de área consistente lleva momentos (ver abajo).
-          else if (q === "auricchio" || q === "at" || q === "auricchio-taylor" || q === "5") v = 5;
-          if (v === undefined) {
-            m.errors.push(`shelltype ${id}: se esperaba thin, thick, dkmq, wilson o auricchio`);
+          // Las palabras salen de la tabla única `FORMULACIONES_PLACA` (shared/formulacionesPlaca.ts,
+          // 2-nov-2026): thick/mitc4 0 · thin/dkq/dke 1 · dkmq 3 · dse/wilson 4 · auricchio 5 · csi 8.
+          // El 2 NO se ofrece: es la «Membrane» de los exportadores y en el solver es el MITC4.
+          // 5 = Auricchio & Taylor: su carga de área consistente lleva momentos (ver abajo).
+          const fp = formulacionPorPalabra(q);
+          if (!fp) {
+            m.errors.push(`shelltype ${id}: se esperaba ${FORMULACIONES_PLACA.map((f) => f.clave).join(", ")}`);
             break;
           }
+          if (!fp.enWasm) {
+            // con el WASM viejo caería en el MITC4 callando: mejor decirlo que dar otro número
+            m.errors.push(`shelltype ${id} ${q}: «${fp.nombre}» aún no está en el WASM (falta build_wasm.sh)`);
+            break;
+          }
+          const v = fp.pf;
           for (let k = id; k <= hasta; k++) m.shellTypes.set(k, v);
           break;
         }

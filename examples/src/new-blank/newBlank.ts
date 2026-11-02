@@ -25,6 +25,7 @@ import * as THREE from "three";
 import { deform, analyze, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 import { mallasIfc, cajaIfc } from "../ifc-viewer/ifcViewer";
+import { FORMULACIONES_PLACA, formulacionPorPf } from "../shared/formulacionesPlaca";
 
 const Ec = 25e6, nu_c = 0.2, Gc = Ec / (2 * (1 + nu_c)), rho_c = 24;
 const Es = 200e6, nu_s = 0.3, Gs = Es / (2 * (1 + nu_s)), rho_s = 78;
@@ -44,6 +45,22 @@ function quadArea(nodes: number[][], q: number[]): number {
 
 const PE = (folder: string, label: string, def: number, options: Record<string, number>) =>
   ({ default: def, label, folder, options });
+
+// ── Formulación de placa elegible (2-nov-2026): menú = tabla única de shared/formulacionesPlaca ──
+// Valor del menú: 0 Thick (MITC4) · 1 Thin (DKQ) · 2 Membrana · 3 Deck (los de siempre) y
+// 10 + pf para las demás. `pfDeForma` devuelve el plateFormulations del solver (o null = membrana/deck).
+const OPCIONES_FORMA_PLACA: Record<string, number> = (() => {
+  const o: Record<string, number> = {};
+  for (const f of FORMULACIONES_PLACA) {
+    if (!f.enWasm) continue;   // la del WASM viejo caería en MITC4 sin avisar
+    o[`${f.nombre} — ${f.fuente.split(/[;(]/)[0].trim()}`] = f.pf <= 1 ? f.pf : 10 + f.pf;
+  }
+  o["Membrana (sin flexión)"] = 2;
+  o["Deck (losa colaborante, como ETABS)"] = 3;
+  return o;
+})();
+const pfDeForma = (forma: number): number | null =>
+  forma === 0 || forma === 1 ? forma : forma >= 10 ? forma - 10 : null;
 
 /** Mallas del IFC de fondo (marcadas para la mirilla), o [] si no toca. Con el
  *  IFC puesto, los deslizadores de ✂ Cortes se rehacen a la caja del IFC (iban
@@ -98,7 +115,9 @@ export const newBlank: ExampleDef = {
     // Formulación del elemento de placa (como en ETABS/SAP): Shell-Thick (Mindlin,
     // con cortante — apto para zapatas gruesas), Shell-Thin (Kirchhoff, losas delgadas),
     // o Membrana (solo en su plano).
-    formaPlaca: PE("Sección shells", "Formulación placa", 0, { "Shell-Thick (Mindlin)": 0, "Shell-Thin (Kirchhoff)": 1, "Membrana": 2, "Deck (losa colaborante, como ETABS)": 3 }),
+    // 0-3 son los de siempre (los .heks/enlaces viejos no cambian); 10+pf = el resto de la tabla
+    // única FORMULACIONES_PLACA (DKMQ, DSE de Wilson, Auricchio-Taylor…), solo las que el WASM tiene.
+    formaPlaca: PE("Sección shells", "Formulación placa", 0, OPCIONES_FORMA_PLACA),
     // ── DECK (la «Deck Section» de ETABS 22, cotas por defecto de su diálogo): Filled Deck ──
     // Membrana de espesor tc (sin nervio) y peso γc·(tc + hr·(wrt+wrb)/2/sr) + lámina — MEDIDO
     // en ETABS (13-sep-2026). Solo se usa con «Formulación placa = Deck».
@@ -364,8 +383,9 @@ export const newBlank: ExampleDef = {
         } else {
           thicknesses.set(i, (p.tShell ?? 0.20) as number);
           const f = Math.round(p.formaPlaca ?? 0);
+          const pf = pfDeForma(f);
           if (f === 2) { membraneModifiers.set(i, 1); bendingModifiers.set(i, 0); }   // Membrana
-          else plateFormulations.set(i, f);                                          // 0 Thick · 1 Thin
+          else if (pf !== null) plateFormulations.set(i, pf);                        // pf del solver
         }
       } else {
         // Frame 1D — propiedades de sección rectangular
@@ -626,7 +646,8 @@ export const newBlank: ExampleDef = {
         if (shellIdx.has(i)) L.push(`shell ${i + 1} ${ns} ${g6(thicknesses.get(i))} ${g6(elasticities.get(i))} 0 ${rhoT(i)}`);
         else L.push(`frame ${i + 1} ${ns} ${g6(elasticities.get(i))} ${g6(areas.get(i))} ${g6(Iz.get(i))} ${g6(Iy.get(i))} ${g6(J.get(i))} ${g6(poissons.get(i))} ${rhoT(i)}`);
       });
-      for (const [i, f] of plateFormulations) if (f === 1) L.push(`shelltype ${i + 1} thin`);
+      // la palabra de la tabla única (thin, dkmq, dse, auricchio…); thick es el defecto y no se escribe
+      for (const [i, f] of plateFormulations) { const fp = formulacionPorPf(f); if (fp && f !== 0) L.push(`shelltype ${i + 1} ${fp.clave}`); }
       // membrana = sin flexión (el .heks no tenía cómo decirlo: la membrana se perdía al guardar)
       for (const [i, b] of bendingModifiers) if (b === 0) L.push(`shellmod ${i + 1} ${g6(membraneModifiers.get(i) ?? 1)} 0`);
       if (deckSections.size) {
@@ -743,6 +764,10 @@ export const newBlank: ExampleDef = {
       else frames++;
     }
     out["Stats"] = `${ns} nodos · ${frames} frames · ${shells} shells`;
+    // la línea de «qué es y de dónde viene» de la formulación elegida
+    const pfSel = pfDeForma(Math.round(p.formaPlaca ?? 0));
+    const fSel = pfSel !== null ? formulacionPorPf(pfSel) : undefined;
+    if (fSel) out["Placa"] = `${fSel.nombre}: ${fSel.que}. Fuente: ${fSel.fuente}`;
     if (ns === 0) {
       out["💡 Tip"] = "Línea = 2 clicks · Polilínea = N clicks + click derecho · Área = 4 clicks";
     }

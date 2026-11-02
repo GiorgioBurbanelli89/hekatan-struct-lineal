@@ -20,6 +20,7 @@
 import { parseE2k, type E2kModel } from "./e2kParser";
 import { coserModelo, type InformeCosido } from "./e2kCoser";
 import { cargaBarraConsistente } from "./cargaBarraConsistente";
+import { formulacionPorPf } from "./formulacionesPlaca";
 
 export interface ResultadoE2kHeks {
   heks: string;
@@ -256,7 +257,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     const cerrar = () => { if (ini >= 0) L.push(`shelltype ${ini === ant ? ini : `${ini}-${ant}`} ${tipoAnt}`); };
     for (const e of cascaras) {
       const f = g(ei.plateFormulations, e);
-      const tp = f === undefined ? "" : f === 1 ? "thin" : "thick";
+      const tp = f === undefined ? "" : (formulacionPorPf(f)?.clave ?? "thick");   // tabla única (formulacionesPlaca.ts)
       if (tp && tp === tipoAnt && e + 1 === ant + 1) { ant = e + 1; continue; }
       cerrar(); ini = tp ? e + 1 : -1; ant = e + 1; tipoAnt = tp;
     }
