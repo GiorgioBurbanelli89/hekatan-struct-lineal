@@ -38,7 +38,7 @@ async function mover(x, y) {
     await pag.evaluate((x, y) => {
       let d = document.getElementById("mcp-punto");
       if (!d) { d = document.createElement("div"); d.id = "mcp-punto";
-        d.style.cssText = "position:fixed;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border:1px solid #fbbf24;border-radius:50%;background:rgba(239,68,68,.75);box-shadow:0 0 10px #ef4444;pointer-events:none;z-index:2147483647;transition:left .35s,top .35s";
+        d.style.cssText = "position:fixed;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border:0;border-radius:50%;background:rgba(239,68,68,.85);box-shadow:0 0 2px #ef4444;pointer-events:none;z-index:2147483647;transition:left .35s,top .35s";
         document.body.appendChild(d); }
       d.style.left = x + "px"; d.style.top = y + "px";
     }, x, y);
