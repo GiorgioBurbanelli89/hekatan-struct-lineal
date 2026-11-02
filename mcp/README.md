@@ -3,17 +3,24 @@
 Conecta Claude con el CAD publicado: **ver** (captura), **elegir herramientas** (botones del panel y del ribbon) y **dibujar** (clics reales).
 
 ## Herramientas
+Maneja la interfaz **gráfica real** (clics de ratón en un Chrome de verdad), como un usuario.
+
 | herramienta | qué hace |
 |---|---|
 | `abrir` | abre el CAD (`ejemplo` = plantilla `?t=`, p. ej. `new-blank`) |
 | `captura` | PNG de la pantalla (para ver qué hay y qué falta) |
-| `botones` | lista los botones/carpetas visibles |
-| `boton` / `carpeta` | aprieta un botón o abre una carpeta por su texto |
-| `tecla` | Escape, Enter, `Control+z`… |
+| `botones` | lista botones, carpetas y la barra de arriba (Modificar, Rejilla, Eje, Nivel, Columna, Viga, Losa, Muro) |
+| `boton` / `carpeta` | aprieta un botón o abre una carpeta por su texto (solo entre los visibles; hace scroll antes) |
+| `panel` | abre/cierra el panel izquierdo o derecho (con el panel cerrado sus botones no se ven) |
+| `campos` / `campo` | lista / cambia los campos del panel por su etiqueta («Vanos X (m)» = «5,5») |
+| `clic_mundo` | clic en un punto (x, y, z) en metros, proyectado con la cámara |
 | `clic` / `dibujar_linea` | clics en el lienzo (fracciones 0–1) |
+| `tecla` | Escape, Enter, `Control+z`… |
+| `estado` | nº de nudos/frames y mensajes de la barra de estado |
 | `modelo` | nudos, polilíneas, áreas dibujadas |
-| `errores` | errores de consola |
-| `cerrar` | cierra el navegador |
+| `errores`, `cerrar` | utilidades |
+
+**Ver lo que hace:** `HEKATAN_VISIBLE=1` abre la ventana (con un punto rojo que sigue al ratón y movimiento lento).
 
 ## Instalar
 ```bash
