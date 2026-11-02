@@ -1,0 +1,23 @@
+// COPIAR con cota auxiliar editable: base, mover (ortogonal), teclear la distancia.
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless: "new", channel: "chrome", args: ["--no-sandbox"] });
+const p = await b.newPage(); await p.setViewport({ width: 1500, height: 1000 });
+const err = []; p.on("pageerror", (e) => err.push(e.message));
+await p.goto("http://localhost:4600/workspace/?t=new-blank", { waitUntil: "networkidle2" });
+const w = (ms) => new Promise((r) => setTimeout(r, ms)); await w(5000);
+let ok = 0, mal = 0; const check = (n, c, d = "") => { c ? ok++ : mal++; console.log((c ? "  ✓ " : "  ✗ ") + n + (d ? "  " + d : "")); };
+const pts = () => p.evaluate(() => (window.__hekatanDrawingPoints?.val || []).map((q) => q.map((v) => +v.toFixed(3))));
+await p.evaluate(() => { window.__hekatanDrawingPoints.val = [[0,0,0],[4,0,0]]; window.__hekatanDrawingPolylines.val = [[0,1],[]]; window.__hekatanRebuild?.(); window.__hekatanSelectAll(); window.__hekatanOrthoMode = true; window.__hekatanCadState.setTool("copy"); });
+await w(500);
+const pix = (x,y,z)=>p.evaluate((x,y,z)=>{const el=[...document.querySelectorAll("*")].find(e=>e.__ctx);const cam=el.__ctx.camera;const v=new (cam.position.constructor)(x,y,z).project(cam);const c=document.querySelector("canvas").getBoundingClientRect();return [c.left+(v.x*.5+.5)*c.width,c.top+(-v.y*.5+.5)*c.height]},x,y,z);
+const [bx,by]=await pix(0,0,0); const [tx,ty]=await pix(0,6,0);
+await p.mouse.move(bx,by); await w(200); await p.mouse.click(bx,by); await w(300);
+await p.mouse.move((bx+tx)/2,(by+ty)/2); await w(300); await p.mouse.move(tx,ty); await w(400);
+const lab = await p.evaluate(() => { const i = document.getElementById("hk-rubber-label"); return i && getComputedStyle(i).display !== "none" ? i.value : null; });
+check("hay cota auxiliar editable al copiar", lab !== null, String(lab));
+await p.keyboard.type("6"); await w(200); await p.keyboard.press("Enter"); await w(700);
+const P = await pts();
+check("copia a 6 m en la dirección ortogonal (Y)", P.some((q) => Math.abs(q[1]-6)<1e-6 && Math.abs(q[0])<1e-6), JSON.stringify(P));
+check("4 nudos (2 originales + 2 copia)", P.length === 4);
+console.log(`\n${ok} ok · ${mal} fallan · errores ${err.length}`); if (err.length) console.log(err);
+await b.close(); process.exit(mal ? 1 : 0);

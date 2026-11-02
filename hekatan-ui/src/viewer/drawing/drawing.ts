@@ -788,6 +788,16 @@ export function drawing({
       try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}
       return;
     }
+    if ((curTool === "copy" || curTool === "move") && pendingClicks.length === 1 && rubberDir) {
+      const b0 = pendingClicks[0];
+      let ux = rubberDir[0], uy = rubberDir[1], uz = rubberDir[2];
+      if (axisLock === "x") { ux = Math.sign(ux) || 1; uy = 0; uz = 0; }
+      else if (axisLock === "y") { ux = 0; uy = Math.sign(uy) || 1; uz = 0; }
+      else if (axisLock === "z") { ux = 0; uy = 0; uz = Math.sign(uz) || 1; }
+      rubberLabelInput.blur();
+      pasoMoverCopiar(curTool, [b0[0] + ux * lengthM, b0[1] + uy * lengthM, b0[2] + uz * lengthM]);
+      return;
+    }
     if (curTool === "arc2h" && pendingClicks.length === 2) {
       const hint = rubberDir ? [rubberDir[0], rubberDir[1], rubberDir[2]] : null;
       rubberStart = null;
@@ -3809,6 +3819,28 @@ export function drawing({
       coordReadout.style.left = event.clientX + "px";
       coordReadout.style.top = event.clientY + "px";
       coordReadout.style.display = "block";
+      // ── COPIAR / MOVER: línea auxiliar de referencia + COTA EDITABLE del desplazamiento ──
+      // Tras el punto base, la goma sale de ahí al cursor, ORTOGONAL (el eje dominante) y con su cota en un campo:
+      // se teclea la distancia + Enter y la selección se replica/mueve exactamente esa cantidad. Sin teclear Δ aparte.
+      {
+        const tN = ((window as any).__hekatanCadState?.get?.() as any)?.tool;
+        if ((tN === "copy" || tN === "move") && selection.size && pendingClicks.length === 1) {
+          const base = pendingClicks[0];
+          let dx = p.x - base[0], dy = p.y - base[1], dz = p.z - base[2];
+          if ((window as any).__hekatanOrthoMode !== false) {          // ortogonal por defecto: solo el eje dominante
+            const ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+            if (ax >= ay && ax >= az) { dy = 0; dz = 0; } else if (ay >= az) { dx = 0; dz = 0; } else { dx = 0; dy = 0; }
+          }
+          const q = new THREE.Vector3(base[0] + dx, base[1] + dy, base[2] + dz);
+          rubberBand.geometry.setFromPoints([new THREE.Vector3(base[0], base[1], base[2]), q]);
+          (rubberBand as any).computeLineDistances?.();
+          rubberBand.visible = true;
+          updateRubberLabel(base[0], base[1], base[2], q.x, q.y, q.z);
+          snapMarker.position.copy(q);
+          viewerRender();
+          return;
+        }
+      }
       // ── RUBBER BAND: línea desde el último punto de la polilínea actual
       // hasta el cursor. Solo visible si hay al menos 1 punto previo en la
       // polilínea activa. Da feedback constante "voy a dibujar desde aquí".
