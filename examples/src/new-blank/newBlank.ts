@@ -59,6 +59,9 @@ const OPCIONES_FORMA_PLACA: Record<string, number> = (() => {
   o["Deck (losa colaborante, como ETABS)"] = 3;
   return o;
 })();
+// DEFECTO = Shell-Thin (DKQ = DKE de Wilson): las losas de entrepiso son delgadas (h/L << 1/10) y es lo que
+// ETABS/SAP2000 recomiendan para ellas. Zapatas gruesas: elegir Shell-Thick (MITC4) en el menú (Jorge, 2-nov-2026).
+const FORMA_PLACA_DEFECTO = 1;
 const pfDeForma = (forma: number): number | null =>
   forma === 0 || forma === 1 ? forma : forma >= 10 ? forma - 10 : null;
 
@@ -117,7 +120,7 @@ export const newBlank: ExampleDef = {
     // o Membrana (solo en su plano).
     // 0-3 son los de siempre (los .heks/enlaces viejos no cambian); 10+pf = el resto de la tabla
     // única FORMULACIONES_PLACA (DKMQ, DSE de Wilson, Auricchio-Taylor…), solo las que el WASM tiene.
-    formaPlaca: PE("Sección shells", "Formulación placa", 0, OPCIONES_FORMA_PLACA),
+    formaPlaca: PE("Sección shells", "Formulación placa", FORMA_PLACA_DEFECTO, OPCIONES_FORMA_PLACA),
     // ── DECK (la «Deck Section» de ETABS 22, cotas por defecto de su diálogo): Filled Deck ──
     // Membrana de espesor tc (sin nervio) y peso γc·(tc + hr·(wrt+wrb)/2/sr) + lámina — MEDIDO
     // en ETABS (13-sep-2026). Solo se usa con «Formulación placa = Deck».
@@ -362,7 +365,7 @@ export const newBlank: ExampleDef = {
     const membraneModifiers = new Map<number, number>();
     const bendingModifiers = new Map<number, number>();
     const deckSections = new Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>();
-    const esDeck = Math.round(p.formaPlaca ?? 0) === 3;
+    const esDeck = Math.round(p.formaPlaca ?? FORMA_PLACA_DEFECTO) === 3;
     const deck = { tc: p.deckTc ?? 0.065, hr: p.deckHr ?? 0.055, wrt: p.deckWrt ?? 0.15, wrb: p.deckWrb ?? 0.10, sr: p.deckSr ?? 0.20, w: p.deckW ?? 0.11 };
     // peso equivalente repartido en la membrana de espesor tc (kN/m³, como rho_c)
     const rhoDeck = (rho_c * (deck.tc + (deck.sr > 0 ? deck.hr * (deck.wrt + deck.wrb) / 2 / deck.sr : 0)) + deck.w) / deck.tc;
@@ -382,7 +385,7 @@ export const newBlank: ExampleDef = {
           deckSections.set(i, { ...deck });
         } else {
           thicknesses.set(i, (p.tShell ?? 0.20) as number);
-          const f = Math.round(p.formaPlaca ?? 0);
+          const f = Math.round(p.formaPlaca ?? FORMA_PLACA_DEFECTO);
           const pf = pfDeForma(f);
           if (f === 2) { membraneModifiers.set(i, 1); bendingModifiers.set(i, 0); }   // Membrana
           else if (pf !== null) plateFormulations.set(i, pf);                        // pf del solver
@@ -765,7 +768,7 @@ export const newBlank: ExampleDef = {
     }
     out["Stats"] = `${ns} nodos · ${frames} frames · ${shells} shells`;
     // la línea de «qué es y de dónde viene» de la formulación elegida
-    const pfSel = pfDeForma(Math.round(p.formaPlaca ?? 0));
+    const pfSel = pfDeForma(Math.round(p.formaPlaca ?? FORMA_PLACA_DEFECTO));
     const fSel = pfSel !== null ? formulacionPorPf(pfSel) : undefined;
     if (fSel) out["Placa"] = `${fSel.nombre}: ${fSel.que}. Fuente: ${fSel.fuente}`;
     if (ns === 0) {
