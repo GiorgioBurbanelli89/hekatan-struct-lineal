@@ -4400,6 +4400,13 @@ const ACCIONES: Record<string, () => void> = {
 
 /** Que se puede hacer segun lo que se selecciono. Los nombres son los de
  *  ETABS a proposito: quien lo usa ahi lo encuentra sin buscar. */
+/** Submenús (lista que se abre al lado): cada entrada llama a su acción de ACCIONES. */
+const SUBMENUS: Record<string, string[]> = {
+  dibujar: ["Dibujar ▸ Línea", "Dibujar ▸ Polilínea", "Dibujar ▸ Arco (3 ptos)", "Dibujar ▸ Rectángulo",
+            "Dibujar ▸ Círculo", "Dibujar ▸ Nodo", "Dibujar ▸ Parábola", "Dibujar ▸ Cúbica"],
+  plano: ["Plano ▸ XY (planta)", "Plano ▸ XZ (frontal)", "Plano ▸ YZ (lateral)"],
+};
+
 const MENU: Record<string, Array<[string, string]>> = {
   frame: [
     ["Ver ▸ Sección transversal", ""],
@@ -4418,10 +4425,7 @@ const MENU: Record<string, Array<[string, string]>> = {
     ["Assign ▸ Joint ▸ Loads", "Load Patterns"],
   ],
   nada: [
-    ["Dibujar ▸ Línea", ""], ["Dibujar ▸ Polilínea", ""], ["Dibujar ▸ Arco (3 ptos)", ""],
-    ["Dibujar ▸ Rectángulo", ""], ["Dibujar ▸ Círculo", ""], ["Dibujar ▸ Nodo", ""],
-    ["Dibujar ▸ Parábola", ""], ["Dibujar ▸ Cúbica", ""],
-    ["Plano ▸ XY (planta)", ""], ["Plano ▸ XZ (frontal)", ""], ["Plano ▸ YZ (lateral)", ""],
+    ["Dibujar", "__grupo:dibujar"], ["Plano de trabajo", "__grupo:plano"],
     ["Vista", "Vista"],
     ["Imagen y GIF", "Imagen"],
     ["Herramientas CAD", "CAD"],
@@ -4513,6 +4517,28 @@ function montarMenuContextual(pane: any) {
         const hr = document.createElement("div");
         hr.style.cssText = "height:1px;background:#3a3f47;margin:4px 0";
         menu.appendChild(hr);
+        continue;
+      }
+      if (destino.startsWith("__grupo:")) {
+        const hijos = SUBMENUS[destino.slice(8)] ?? [];
+        const g = document.createElement("div");
+        g.textContent = texto + "  ▸";
+        g.style.cssText = "padding:5px 12px;cursor:pointer;white-space:nowrap;position:relative";
+        const sub = document.createElement("div");
+        sub.style.cssText = "display:none;position:absolute;left:100%;top:-4px;background:#22252a;border:1px solid #3a3f47;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.5);padding:4px 0;min-width:190px;z-index:100000";
+        for (const h of hijos) {
+          const hi = document.createElement("div");
+          hi.textContent = h.split(" ▸ ")[1] ?? h;
+          hi.style.cssText = "padding:5px 12px;cursor:pointer;white-space:nowrap";
+          hi.onmouseenter = () => { hi.style.background = "#2f3742"; };
+          hi.onmouseleave = () => { hi.style.background = "transparent"; };
+          hi.onclick = (e) => { e.stopPropagation(); cerrar(); ACCIONES[h]?.(); };
+          sub.appendChild(hi);
+        }
+        g.appendChild(sub);
+        g.onmouseenter = () => { g.style.background = "#2f3742"; sub.style.display = "block"; };
+        g.onmouseleave = () => { g.style.background = "transparent"; sub.style.display = "none"; };
+        menu.appendChild(g);
         continue;
       }
       const it = document.createElement("div");
