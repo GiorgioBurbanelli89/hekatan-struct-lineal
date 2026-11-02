@@ -23,6 +23,12 @@ from __future__ import annotations
 
 import numpy as np
 
+# ERRATA del libro (comprobada, 2-nov-2026): la (8.9) impresa (p. 8-6) es la TRASPUESTA de la inversa de (8.8).
+# En rectángulos coinciden (por eso las tablas 8.1-8.2 no lo detectan); en un trapecio con cortante constante
+# impuesto da 0.893 en vez de 1.000. Por defecto se usa la inversa CORRECTA (= `getBendingK_DSE_FULL` del C++, 3e-15).
+# LITERAL_8_9 = True reproduce la ecuación impresa tal cual (= formulación 7 del C++).
+LITERAL_8_9 = False
+
 G2 = 1.0 / np.sqrt(3.0)
 GAUSS4 = ((-G2, -G2), (G2, -G2), (G2, G2), (-G2, G2))
 
@@ -78,7 +84,10 @@ def _cortantes_16(N, lados):
         ij, ki = i, (i - 1) % 4                            # lado que sale de i y lado que llega a i
         _, sij, cij = lados[ij]; _, ski, cki = lados[ki]
         det = cij * ski - cki * sij
-        Tinv = np.array([[ski, -cki], [-sij, cij]]) / det   # (8.9)
+        if LITERAL_8_9:                                       # (8.9) tal como está IMPRESA: es la TRASPUESTA de la inversa
+            Tinv = np.array([[ski, -cki], [-sij, cij]]) / det
+        else:                                                 # inversa de (8.8): A = [[cij, sij], [cki, ski]]
+            Tinv = np.array([[ski, -sij], [-cki, cij]]) / det
         gn = Tinv @ np.vstack([G[ij], G[ki]])                # (γxz, γyz) del nudo i
         b += N[i] * gn
     return b

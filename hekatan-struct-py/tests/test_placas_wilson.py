@@ -68,3 +68,23 @@ def test_tabla_8_1_viga_un_elemento(tipo, libro):
 # tabla 8.4 (9.807 no es la placa de 10 × 10 con q = 1), tabla 8.5 (triángulos: no implementados) y tabla 8.6
 # (torsión: el libro no define la condición «Y-rotation fixed»; con «free» DKE 9 × 9 da 0.0234 frente a 0.0233 y
 # DSE 1 × 6 / 9 × 9 0.2449 / 0.1262 frente a 0.2368 / 0.1249).
+
+
+def test_errata_89_trapecio_cortante_constante():
+    """La (8.9) impresa es la traspuesta de la inversa de (8.8): con w lineal y giros nulos el cortante es
+    (gx, gy) constante; solo la inversa correcta lo devuelve exacto en un trapecio (en rectángulos coinciden)."""
+    import numpy as np
+    from hekatan_struct import placas_wilson as W
+    P = np.array([[0.0, 0.0], [4.0, 0.0], [3.0, 3.0], [0.5, 2.0]])
+    lados = W._lados(P); gx, gy = 0.7, -0.4
+    u = np.zeros(16)
+    for k in range(4): u[3 * k] = gx * P[k, 0] + gy * P[k, 1]
+    r, s = 0.2, -0.3
+    N = 0.25 * np.array([(1 - r) * (1 - s), (1 + r) * (1 - s), (1 + r) * (1 + s), (1 - r) * (1 + s)])
+    try:
+        W.LITERAL_8_9 = False; g_ok = W._cortantes_16(N, lados) @ u
+        W.LITERAL_8_9 = True; g_lit = W._cortantes_16(N, lados) @ u
+    finally:
+        W.LITERAL_8_9 = False
+    assert np.allclose(g_ok, [gx, gy], atol=1e-12)
+    assert np.abs(g_lit - [gx, gy]).max() > 1e-2
