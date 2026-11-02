@@ -4502,12 +4502,15 @@ function montarMenuContextual(pane: any) {
     const tieneAreas = (states.elements.rawVal ?? []).some((e: any) => e.length >= 3);
     const tipo = fh?.type === "node" ? "joint" : fh?.type === "shell" ? "area"
       : tieneAreas ? "area" : "frame";
-    const items = [...MENU[tipo], ["", ""] as [string, string], ...MENU.nada];
+    // Modelo vacío (sin barras ni áreas ni nada bajo el cursor): solo el menú general,
+    // sin la cabecera «FRAME» ni sus entradas (no hay ningún frame).
+    const vacio = !fh && (states.elements.rawVal ?? []).length === 0;
+    const items = vacio ? [...MENU.nada] : [...MENU[tipo], ["", ""] as [string, string], ...MENU.nada];
 
     menu.innerHTML = "";
     const cab = document.createElement("div");
     cab.textContent = fh?.type === "node" ? "JOINT" : fh?.type === "shell" ? "SHELL"
-      : tieneAreas ? "AREA / SHELL" : "FRAME";
+      : tieneAreas ? "AREA / SHELL" : vacio ? "DIBUJO" : "FRAME";
     cab.style.cssText = "padding:5px 12px;color:#8a94a6;font-size:11px;" +
                         "border-bottom:1px solid #3a3f47;margin-bottom:3px";
     menu.appendChild(cab);
