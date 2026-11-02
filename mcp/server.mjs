@@ -65,7 +65,9 @@ async function lanzar() {
   const exe = candidatos.find((c) => existsSync(c));
   if (!exe) throw new Error("No encuentro chrome.exe (define CHROME_PATH).");
   const puerto = 9300 + Math.floor(Math.random() * 90);
-  const perfil = join(tmpdir(), "hekatan-mcp-chrome-" + puerto);
+  // perfil UNICO por lanzamiento: con solo el puerto (90 valores) se reusaba un perfil viejo y el CAD "nuevo"
+  // abria con el dibujo de otra sesion (localStorage: se vieron los arcos del galpon curvo en new-blank)
+  const perfil = join(tmpdir(), `hekatan-mcp-chrome-${process.pid}-${Date.now()}`);
   procChrome = spawn(exe, [`--remote-debugging-port=${puerto}`, `--user-data-dir=${perfil}`, "--no-first-run",
     "--no-default-browser-check", "--window-size=1500,950", "--window-position=60,40", "about:blank"], { stdio: "ignore" });
   const url = `http://127.0.0.1:${puerto}`;
@@ -101,8 +103,9 @@ async function clicEn(fx, fy) {
 srv.tool("abrir",
   "Abre el CAD web de Hekatan Struct. `ejemplo` es el plantilla (?t=): new-blank, plane, etc. Cierra los paneles laterales para que no tapen el lienzo.",
   { ejemplo: z.string().regex(/^[\w.-]+$/).default("new-blank").describe("plantilla, p. ej. new-blank"),
-    cerrar_paneles: z.boolean().default(true) },
-  async ({ ejemplo, cerrar_paneles }) => {
+    cerrar_paneles: z.boolean().default(true),
+    limpio: z.boolean().default(true).describe("borra el dibujo guardado de sesiones anteriores (def. true)") },
+  async ({ ejemplo, cerrar_paneles, limpio }) => {
     await cerrarChrome();
     nav = await lanzar();
     pag = VISIBLE ? ((await nav.pages())[0] || await nav.newPage()) : await nav.newPage();
@@ -110,6 +113,9 @@ srv.tool("abrir",
     consola.length = 0;
     pag.on("pageerror", (e) => consola.push("[error] " + e.message));
     pag.on("console", (m) => { if (m.type() === "error") consola.push("[console.error] " + m.text()); });
+    if (limpio) await pag.evaluateOnNewDocument(() => {   // dibujo/niveles/ejes guardados de antes: fuera
+      try { for (const k of ["hk_drawingPoints", "hk_drawingPolylines", "hk_drawingAreas", "hk_levels", "hk_axisGrids"]) localStorage.removeItem(k); } catch {}
+    });
     const url = `${BASE}?t=${encodeURIComponent(ejemplo)}`;
     if (new URL(url).origin !== ORIGEN) return falla("URL fuera de HEKATAN_URL.");
     await pag.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
@@ -383,24 +389,25 @@ srv.tool("dibujar_linea",
 
 // ── como el MCP de AutoCAD: órdenes por la línea de comandos, sin ratón ──────
 srv.tool("comando",
-  "Escribe órdenes en la línea de comandos del CAD, como AutoCAD (una por elemento, Enter tras cada una). Ej.: [\"L\",\"0,0\",\"5,0\",\"5,4\",\"\"] dibuja una línea; [\"REC\",\"0,0\",\"6,4\"]; [\"C\",\"0,0\",\"2\"]; [\"?\"] ayuda. Un texto vacío = Enter solo. Devuelve las últimas líneas de la ventana de comandos.",
+  "Escribe órdenes en la línea de comandos del CAD, como el MCP de AutoCAD. Un elemento por cada Enter. OJO: el Espacio también ejecuta, así que cada dato va en su propio elemento. Ej.: [\"l\",\"0,0,0\",\"0,0,3\",\"4,0,3\",\"\"] dibuja un pórtico en 3D; [\"all\",\"rep\",\"0,0,3\",\"2\"] replica 2 pisos; [\"all\",\"mi\",\"x=6\"] simetría en x=6 (también y=0, z=3 o x1,y1,x2,y2); [\"?\"] ayuda. Devuelve las últimas líneas de la ventana de comandos y el nº de nudos/barras.",
   { lineas: z.array(z.string().max(200)).min(1).max(80) },
   async ({ lineas }) => {
     const e = necesitaPagina(); if (e) return e;
-    const antes = await pag.evaluate(() => (window.__hekatanDrawingPolylines?.val || []).length);
+    const salida = [];
     for (const l of lineas) {
       const ok = await pag.evaluate(() => { const i = document.getElementById("hk3-cmd-input"); if (!i) return false; i.focus(); i.value = ""; return true; });
       if (!ok) return falla("No encuentro la línea de comandos (#hk3-cmd-input). ¿Abriste el CAD con `abrir`?");
       if (l) await pag.keyboard.type(l, { delay: 5 });
-      await pag.keyboard.press("Enter"); await esperar(150);
+      await pag.keyboard.press("Enter"); await esperar(250);
     }
     await esperar(200);
-    return texto(await pag.evaluate((antes) => {
-      const vis = (x) => { const q = x.getBoundingClientRect(); return q.width > 0 && q.height > 0; };
-      const l = [...document.querySelectorAll("div,span,pre")].filter((x) => vis(x) && x.children.length === 0 && (x.textContent || "").trim()).map((x) => x.textContent.trim().slice(0, 140));
-      const n = (window.__hekatanDrawingPolylines?.val || []).length;
-      return { polilineas_nuevas: n - antes, consola: [...new Set(l.filter((t) => /(✓|✕|⚠|Tool|Dibujo|Designe|Especifique|Indique|Punto|comando|Comando)/.test(t)))].slice(-8) };
-    }, antes));
+    return texto(await pag.evaluate(() => {
+      const H = innerHeight;
+      const lin = [...document.querySelectorAll("div,span")].filter((x) => { const r = x.getBoundingClientRect(); return x.children.length === 0 && (x.textContent || "").trim() && r.top > H - 125 && r.top < H - 60; }).map((x) => x.textContent.trim().slice(0, 160));
+      const pts = (window.__hekatanDrawingPoints?.val || []).length;
+      const barras = (window.__hekatanDrawingPolylines?.val || []).filter((q) => q.length).length;
+      return { ventana_de_comandos: [...new Set(lin)].slice(-3), nudos: pts, polilineas: barras };
+    }));
   });
 
 const salir = async () => { await cerrarChrome(); process.exit(0); };

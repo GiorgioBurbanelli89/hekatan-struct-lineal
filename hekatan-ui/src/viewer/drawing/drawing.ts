@@ -7380,6 +7380,83 @@ export function drawing({
     return count;
   };
 
+  // ── SIMETRÍA (MIRROR de AutoCAD) de la selección ──
+  // Refleja los nudos designados respecto de un PLANO (punto + normal) y crea la copia
+  // simétrica: barras con los mismos extremos reflejados y paños con el orden de nudos
+  // INVERTIDO (la reflexión da vuelta el sentido, y con él la normal del Q4).
+  // Los nudos que caen sobre el plano (o en un sitio ya ocupado) se reutilizan, así la
+  // copia queda COSIDA al original y no hay nudos duplicados. Devuelve cuántos objetos copió.
+  (window as any).__hekatanMirrorSelection = (
+    px: number, py: number, pz: number, nx: number, ny: number, nz: number,
+  ): number => {
+    const L = Math.hypot(nx, ny, nz);
+    if (!(L > 1e-12)) return 0;
+    nx /= L; ny /= L; nz /= L;
+    const ids = [...selection];
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const areaSet = new Set(drawingObj.areas?.rawVal ?? []);
+    const nodeSet = new Set<number>();
+    const polyIdxSet = new Set<number>();
+    const segPairs: [number, number][] = [];
+    ids.forEach((id) => {
+      if (id.startsWith("pt:")) { const n = +id.slice(3); if (pts[n]) nodeSet.add(n); }
+      else if (id.startsWith("poly:")) {
+        const p = +id.slice(5);
+        if (!polys[p] || polys[p].length < 2) return;
+        polyIdxSet.add(p);
+        polys[p].forEach((n) => nodeSet.add(n));
+      } else if (id.startsWith("seg:")) {
+        const parts = id.split(":"); const P = +parts[1], S = +parts[2];
+        const poly = polys[P] || []; const a = poly[S], b = poly[S + 1];
+        if (a != null && b != null) { segPairs.push([a, b]); nodeSet.add(a); nodeSet.add(b); }
+      }
+    });
+    if (!nodeSet.size) return 0;
+    pushUndo();
+    const newPts = [...pts];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    const clave = (q: number[]) => q.map((v) => Math.round(v * 1e6)).join(",");
+    const nudoEn = new Map<string, number>();
+    newPts.forEach((q, k) => { if (q && !nudoEn.has(clave(q))) nudoEn.set(clave(q), k); });
+    const firma = (pl: number[], area: boolean) => (area ? "A" : "L") + [...pl].sort((u, v) => u - v).join(",");
+    const hay = new Set<string>();
+    newPolys.forEach((pl, k) => { if (pl.length >= 2) hay.add(firma(pl, areaSet.has(k))); });
+    let copiados = 0;
+    const poner = (pl: number[], area: boolean): number => {
+      const f = firma(pl, area);
+      if (hay.has(f)) return -1;                 // ya existe (p. ej. una barra sobre el plano): no se duplica
+      hay.add(f); newPolys.push(pl); copiados++; return newPolys.length - 1;
+    };
+    const map = new Map<number, number>();
+    [...nodeSet].forEach((n) => {
+      const q = pts[n];
+      const d = (q[0] - px) * nx + (q[1] - py) * ny + (q[2] - pz) * nz;
+      const r = [q[0] - 2 * d * nx, q[1] - 2 * d * ny, q[2] - 2 * d * nz];
+      const ya = nudoEn.get(clave(r));
+      if (ya != null) { map.set(n, ya); return; }
+      map.set(n, newPts.length); nudoEn.set(clave(r), newPts.length);
+      newPts.push(r as [number, number, number]);
+    });
+    polyIdxSet.forEach((p) => {
+      const esArea = areaSet.has(p);
+      let cl = polys[p].map((n) => map.get(n)!);
+      if (esArea) cl = cl.slice().reverse();       // la reflexión invierte el sentido: la normal del paño no se da vuelta
+      const at = poner(cl, esArea);
+      if (at >= 0 && esArea) newAreas.push(at);
+    });
+    segPairs.forEach(([a, b]) => { poner([map.get(a)!, map.get(b)!], false); });
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return copiados;
+  };
+
   /**
    * EXTRUIR la designación (Edit › Extrude de ETABS): cada NUDO designado se
    * alarga a una cadena de barras (nudo → línea) y cada BARRA designada barre

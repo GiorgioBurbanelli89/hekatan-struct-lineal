@@ -8200,7 +8200,6 @@ try {
   // de AutoCAD teclea los suyos, y responder «desconocido» no ayuda a nadie: se
   // dice QUÉ es y con qué se hace hoy lo mismo.
   const ACAD_FALTA: Record<string, [string, string]> = {
-    mi: ["MIRROR (simetría)", "todavía no; copie y mueva, o dibuje el otro lado"],
     ro: ["ROTATE (girar)", "todavía no; vuelva a dibujar con las coordenadas giradas"],
 
     sc: ["SCALE (escalar)", "todavía no; vuelva a dibujar con las medidas nuevas"],
@@ -8554,6 +8553,7 @@ try {
   // Y con dos puntos (desde–hasta) sigue estando COPIAR (CO), como el COPY de AutoCAD.
   const REP_NOMBRES = new Set(["replicar", "rep", "ar", "array", "matriz"]);
   let repEsperando: null | "delta" | "copias" | "p1" | "p2" = null;
+  let miEsperando = false;
   let repDelta: [number, number, number] = [0, 0, 0];
   let repUltimo: { d: [number, number, number]; n: number } | null = null;
   let repP1: [number, number, number] = [0, 0, 0];
@@ -8584,9 +8584,10 @@ try {
   // contestaba al desplazamiento en vez de salir «desconocido»).
   // ¿Hay un comando esperando respuesta? Lo consulta el ribbon para no robarle las
   // teclas 1-4 (sus vistas) al cuadro de comandos mientras se contesta.
-  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando || !!(window as any).__hekatanDividirEspera?.();
+  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando || miEsperando || !!(window as any).__hekatanDividirEspera?.();
 
   (window as any).__hekatanEscapeCancel = () => {
+    if (miEsperando) { miEsperando = false; flash("MIRROR cancelado", false); (window as any).__hekatanCadRefreshPrompt?.(); return true; }
     if (!repEsperando) return false;
     repEsperando = null;
     flash("REPLICAR cancelado", false);
@@ -8653,6 +8654,43 @@ try {
       repHacer(repDelta, n);
       (window as any).__hekatanCadRefreshPrompt?.();
       return;
+    }
+    // ── MI / MIRROR (simetría) ──
+    // Como REPLICAR: «mi» pregunta el plano (el Espacio ejecuta, así que no cabe todo en una línea).
+    //   x=5 · y=0 · z=3  → plano x=5, y=0, z=3     x1,y1,x2,y2 → plano VERTICAL por esa recta en planta
+    {
+      const leerPlano = (txt: string): [number, number, number, number, number, number] | null => {
+        const a = txt.trim().toLowerCase().replace(/\s+/g, "");
+        let q: RegExpMatchArray | null;
+        if ((q = a.match(/^([xyz])=(-?[\d.]+)$/))) {
+          const v = +q[2];
+          return q[1] === "x" ? [v, 0, 0, 1, 0, 0] : q[1] === "y" ? [0, v, 0, 0, 1, 0] : [0, 0, v, 0, 0, 1];
+        }
+        if ((q = a.match(/^(-?[\d.]+)[,;](-?[\d.]+)[,;](-?[\d.]+)[,;](-?[\d.]+)$/))) {
+          const x1 = +q[1], y1 = +q[2], x2 = +q[3], y2 = +q[4];
+          if (Math.hypot(x2 - x1, y2 - y1) < 1e-9) return null;
+          return [x1, y1, 0, -(y2 - y1), x2 - x1, 0];
+        }
+        return null;
+      };
+      const aplicar = (plano: [number, number, number, number, number, number]) => {
+        if (repSeleccion() <= 0) { flash("✕ MIRROR: no hay nada designado. Designe objetos (S, ventana o «all») y repita.", false); return; }
+        const n = (window as any).__hekatanMirrorSelection?.(...plano) ?? 0;
+        flash(n ? `✓ Simetría: ${n} objeto${n === 1 ? "" : "s"} nuevo${n === 1 ? "" : "s"} (los nudos sobre el plano se comparten).` : "✕ MIRROR: la copia ya existía (todo está sobre el plano).", !!n);
+      };
+      if (miEsperando) {
+        if (cmd === "esc" || cmd === "cancelar") { miEsperando = false; flash("MIRROR cancelado", false); return; }
+        const pl = leerPlano(raw);
+        if (!pl) { flash("✕ MIRROR: escriba x=5, y=0, z=3 o x1,y1,x2,y2 (recta en planta).", false); return; }
+        miEsperando = false; aplicar(pl); (window as any).__hekatanCadRefreshPrompt?.();
+        return;
+      }
+      if (/^(?:mi|mirror|simetria|simetría)$/.test(cmd)) {
+        if (repSeleccion() <= 0) { flash("✕ MIRROR: no hay nada designado. Designe objetos (S, ventana o «all») y repita.", false); return; }
+        miEsperando = true;
+        setPrompt("MIRROR — plano de simetría: x=5 · y=0 · z=3 · o x1,y1,x2,y2 (recta en planta):");
+        return;
+      }
     }
     // ── «x5» y «/5» sobre lo último replicado (idea del cuaderno Napkin) ────
     // Puesta una copia a una distancia, «x5» la repite cinco veces más y «/5»
