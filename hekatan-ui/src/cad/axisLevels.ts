@@ -337,7 +337,7 @@ export function buildLevelMesh(
   anclarHaciaFuera(sprite, new THREE.Vector3(xm0, 0, lvl.z), new THREE.Vector3(x0, 0, lvl.z), true);
   // ~80x20 px. Con 0.16 (160 px de ancho) las cinco etiquetas de un edificio
   // de 4 pisos se apilaban una encima de otra y tapaban el centro del modelo.
-  sprite.scale.set(0.08, 0.02, 1);
+  sprite.scale.set(0.05, 0.0125, 1);   // 2-nov-2026: 0.08×0.02 se veia enorme (Jorge); 37 % mas chica
   sprite.userData.isLevelLabel = true;
   g.add(sprite);
   return g;
