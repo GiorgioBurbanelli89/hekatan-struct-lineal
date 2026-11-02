@@ -306,20 +306,19 @@ export function buildLevelMesh(
   g.add(line);
   // Sprite con label "N+0.00" en el extremo derecho
   const canvas = document.createElement("canvas");
-  canvas.width = 256; canvas.height = 64;
+  // La caja se ajusta al TEXTO (antes 256×64 con mucho aire a los lados): mismo texto, menos recuadro.
+  canvas.width = 150; canvas.height = 44;
   const ctx = canvas.getContext("2d")!;
-  // Mismo criterio que la burbuja de eje: fondo oscuro, borde y texto del
-  // color del nivel. El rectangulo azul relleno tapaba lo que hubiera detras.
   ctx.fillStyle = LEVEL_LABEL_BG;
-  ctx.fillRect(0, 0, 256, 64);
+  ctx.fillRect(0, 0, 150, 44);
   ctx.strokeStyle = LEVEL_LABEL_FG;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(2, 2, 252, 60);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 148, 42);
   ctx.fillStyle = LEVEL_LABEL_FG;
-  ctx.font = "bold 36px Consolas, monospace";
+  ctx.font = "bold 28px Consolas, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(lvl.label, 128, 36);
+  ctx.fillText(lvl.label, 75, 24);
   const tex = new THREE.CanvasTexture(canvas);
   tex.minFilter = THREE.LinearFilter;
   // Igual que la burbuja: tamano en pantalla, no en metros. La etiqueta es
@@ -337,7 +336,7 @@ export function buildLevelMesh(
   anclarHaciaFuera(sprite, new THREE.Vector3(xm0, 0, lvl.z), new THREE.Vector3(x0, 0, lvl.z), true);
   // ~80x20 px. Con 0.16 (160 px de ancho) las cinco etiquetas de un edificio
   // de 4 pisos se apilaban una encima de otra y tapaban el centro del modelo.
-  sprite.scale.set(0.05, 0.0125, 1);   // 2-nov-2026: 0.08×0.02 se veia enorme (Jorge); 37 % mas chica
+  sprite.scale.set(0.0375, 0.011, 1);   // 2-nov-2026: antes 0.08×0.02 (enorme, Jorge); caja ajustada al texto
   sprite.userData.isLevelLabel = true;
   g.add(sprite);
   return g;
