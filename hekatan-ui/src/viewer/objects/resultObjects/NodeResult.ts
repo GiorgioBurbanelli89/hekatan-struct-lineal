@@ -24,6 +24,10 @@ export class NodeResult extends THREE.Group implements IResultObject {
     super();
     // init
     const isR = resultType === ResultType.reactions;
+    // ruido numérico (2.9e-15 tonf) NO se dibuja: ni texto ni flecha (antes tapaba todo el alzado)
+    const refF = Math.max(Math.abs(result[0]), Math.abs(result[1]), Math.abs(result[2]));
+    const refM = Math.max(Math.abs(result[3]), Math.abs(result[4]), Math.abs(result[5]));
+    result = result.map((v, i) => (Math.abs(v) > Math.max(1e-9 * (i < 3 ? refF : refM), 1e-12) ? v : 0)) as typeof result;
     // fuerza / momento (F·L) o desplazamiento / giro, en el sistema elegido (antes SI crudo, 4 decimales, sin unidad)
     const U = unidades();
     const tr = (v: number) => isR ? `${num(U.fuerza(v))} ${U.uF}` : `${num(U.desp(v))} ${U.uD}`;
