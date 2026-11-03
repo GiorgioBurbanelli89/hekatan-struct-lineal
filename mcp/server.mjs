@@ -208,13 +208,20 @@ srv.tool("errores", "Errores de consola/página desde que se abrió.", {}, async
 async function botonPorTexto(txt, selector) {
   const r = await pag.evaluate((t, sel) => {
     const vis = (x) => { const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-    const b = [...document.querySelectorAll(sel)].filter(vis).find((x) => (x.textContent || "").includes(t));
+    const todos = [...document.querySelectorAll(sel)];
+    const b = todos.filter(vis).find((x) => (x.textContent || "").includes(t))
+      || todos.filter(vis).find((x) => ((x.title || "") + (x.getAttribute("aria-label") || "")).includes(t));
     if (!b) return null;
     b.scrollIntoView({ block: "center" });   // si está al borde, la barra de comandos de abajo tapa el clic
     const q = b.getBoundingClientRect();
-    return { x: q.left + q.width / 2, y: q.top + q.height / 2 };
+    const x = q.left + q.width / 2, y = q.top + q.height / 2;
+    const el = document.elementFromPoint(x, y);
+    // si otro elemento tapa el botón (panel cerrado, cinta encima), el clic caería en otro lado: se activa directo
+    if (!el || !(b === el || b.contains(el) || el.contains(b))) { b.click(); return { directo: true }; }
+    return { x, y };
   }, txt, selector);
   if (!r) return false;
+  if (r.directo) { await esperar(VISIBLE ? 900 : 500); return true; }
   await mover(r.x, r.y);
   await pag.mouse.click(r.x, r.y); await esperar(VISIBLE ? 900 : 500);
   return true;
@@ -323,7 +330,8 @@ srv.tool("clic_mundo",
   async ({ x, y, z: zz }) => {
     const e = necesitaPagina(); if (e) return e;
     const p = await pag.evaluate((x, y, zz) => {
-      const ctx = window.__hekatanViewerCtx || (window.__hekatanViewerElm && window.__hekatanViewerElm.__ctx);
+      const f = window.__hekatanViewerCtx;
+      const ctx = (typeof f === "function" ? f() : f) || document.querySelector("#viewer")?.__ctx;
       const cam = ctx && ctx.camera; if (!cam) return null;
       cam.updateMatrixWorld && cam.updateMatrixWorld(true);
       const V = cam.matrixWorldInverse.elements, P = cam.projectionMatrix.elements;
