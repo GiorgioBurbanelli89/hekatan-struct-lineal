@@ -926,6 +926,76 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // acciones acá: discretización de líneas, apoyos en nodos, etc.
   // La selección está en window.__hekatanSelection (Set<string>) con IDs
   // tipo "pt:N" / "seg:P:S" / "poly:P" / "aux:N".
+  // ── CERCHAS PARAMÉTRICAS Y EDITABLES: el tipo se elige de una lista y su DEFINICIÓN (texto con fórmulas) se edita aquí mismo
+  // para derivar otro tipo; «Generar» la dibuja en el CAD con su tubo, articulaciones, apoyos y cargas. Los tipos propios
+  // se guardan en este navegador. Gramática: ver examples/src/shared/cerchas.ts.
+  {
+    const W: any = window;
+    const presets: Record<string, { nombre: string; categoria: string; spec: string }> = W.__hekatanCerchaPresets ?? {};
+    const LS = "hk_cerchas_propias";
+    const propias = (): Record<string, { nombre: string; spec: string }> => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
+    const guardarPropias = (o: any) => { try { localStorage.setItem(LS, JSON.stringify(o)); } catch { /* sin almacenamiento */ } };
+    const opts: any = W.__hekatanCerchaOpts ?? (W.__hekatanCerchaOpts = {});
+    const cs = { tipo: opts.tipo ?? "pratt", nombre: "", L: 0, H: 0, n: 0 };
+    const listaTipos = () => {
+      const o: Record<string, string> = {};
+      for (const [k, v] of Object.entries(presets)) o[`${v.categoria} · ${v.nombre}`] = k;
+      for (const [k, v] of Object.entries(propias())) o[`★ ${v.nombre}`] = "propia:" + k;
+      return o;
+    };
+    const specDe = (k: string): string => k.startsWith("propia:") ? (propias()[k.slice(7)]?.spec ?? "") : (presets[k]?.spec ?? "");
+    const fCer = fCad.addFolder({ title: "🔺 Cerchas (editables)", expanded: false });
+    const ta = document.createElement("textarea");
+    ta.id = "hk-cercha-spec"; ta.spellcheck = false; ta.rows = 13;
+    ta.style.cssText = "width:100%;box-sizing:border-box;margin:4px 0;padding:5px;font:11px/1.35 Consolas,monospace;color:#e5e7eb;background:#0b1220;border:1px solid #334155;border-radius:5px;resize:vertical;white-space:pre;overflow:auto";
+    const poner = (k: string) => { ta.value = specDe(k); ta.style.borderColor = "#334155"; ta.title = ""; opts.tipo = k; };
+    let bindTipo: any = null;
+    const construirLista = () => { try { bindTipo?.dispose(); } catch { /* ya liberado */ } bindTipo = fCer.addBinding(cs, "tipo", { label: "tipo de cercha", options: listaTipos() });
+      bindTipo.on("change", () => poner(cs.tipo));
+      try {
+        const c = fCer.element.querySelector(":scope > .tp-fldv_c") as HTMLElement;
+        c.insertBefore(bindTipo.element, c.firstChild);                                      // la lista de tipos, la primera
+        if (ta.parentElement === c) c.insertBefore(ta, bindTipo.element.nextSibling);        // y el texto debajo
+      } catch { /* orden del DOM */ }
+    };
+    construirLista();
+    poner(cs.tipo);
+    for (const [k, l] of [["L", "luz L (0 = la del texto)"], ["H", "altura H (0 = la del texto)"], ["n", "paneles n (0 = el del texto)"]] as const)
+      fCer.addBinding(cs, k, { label: l, min: 0, max: 60, step: k === "n" ? 1 : 0.25 });
+    fCer.addBinding(opts, "nCerchas", { label: "n.º de cerchas", min: 1, max: 20, step: 1 });
+    fCer.addBinding(opts, "sep", { label: "separación (m)", min: 1, max: 20, step: 0.25 });
+    fCer.addBinding(opts, "correas", { label: "correas entre cerchas" });
+    fCer.addBinding(opts, "articulada", { label: "barras articuladas (celosía)" });
+    fCer.addBinding(opts, "arriostrada", { label: "arriostrada fuera del plano (Uy=0)" });
+    fCer.addBinding(opts, "carga", { label: "carga por nudo superior (kN)", min: -100, max: 100, step: 0.5 });
+    const fTub = fCer.addFolder({ title: "Tubos circulares (mm)", expanded: false });
+    for (const g of ["inf", "sup", "mont", "diag", "correa"]) {
+      const t = opts.tubos?.[g]; if (!t) continue;
+      fTub.addBinding(t, "D", { label: `${g} D`, min: 20, max: 600, step: 0.1 });
+      fTub.addBinding(t, "t", { label: `${g} t`, min: 1.5, max: 40, step: 0.1 });
+    }
+    fCer.addButton({ title: "▶ Generar la cercha (reemplaza el dibujo)" }).on("click", () => {
+      const sobre: Record<string, number> = {}; if (cs.L > 0) sobre.L = cs.L; if (cs.H > 0) sobre.H = cs.H; if (cs.n > 0) sobre.n = cs.n;
+      const r = W.__hekatanCercha?.({ ...opts, spec: ta.value, sobre });
+      if (r && !r.ok) { ta.style.borderColor = "#ef4444"; ta.title = r.error; W.__hekatanCadStatus?.("⚠ Cercha: " + r.error); return; }
+      ta.style.borderColor = "#22c55e"; ta.title = "";
+      W.__hekatanCadStatus?.(r ? `🔺 Cercha: ${r.cerchas} cercha(s), ${r.nudos} nudos, ${r.barras} barras (${Object.entries(r.params).map(([k, v]) => k + "=" + +(+v).toFixed(3)).join(", ")})` : "⚠ El generador no está disponible");
+    });
+    fCer.addButton({ title: "↩ Volver a la definición del tipo" }).on("click", () => poner(cs.tipo));
+    fCer.addBinding(cs, "nombre", { label: "nombre del tipo propio" });
+    fCer.addButton({ title: "★ Guardar como tipo propio" }).on("click", () => {
+      const nom = cs.nombre.trim(); if (!nom) { W.__hekatanCadStatus?.("⚠ Escriba un nombre para el tipo propio."); return; }
+      const p = propias(); const clave = nom.toLowerCase().replace(/[^a-z0-9áéíóúñ]+/g, "_"); p[clave] = { nombre: nom, spec: ta.value }; guardarPropias(p);
+      cs.tipo = "propia:" + clave; construirLista(); bindTipo.refresh?.(); W.__hekatanCadStatus?.(`★ Tipo «${nom}» guardado en este navegador.`);
+    });
+    fCer.addButton({ title: "🗑 Borrar el tipo propio elegido" }).on("click", () => {
+      if (!cs.tipo.startsWith("propia:")) { W.__hekatanCadStatus?.("⚠ Solo se borran los tipos propios (★)."); return; }
+      const p = propias(); delete p[cs.tipo.slice(7)]; guardarPropias(p); cs.tipo = "pratt"; construirLista(); poner(cs.tipo); W.__hekatanCadStatus?.("🗑 Tipo propio borrado.");
+    });
+    // el texto editable va justo debajo de la lista de tipos (en el contenedor de los controles de ESTA carpeta)
+    const cont = fCer.element.querySelector(":scope > .tp-fldv_c") as HTMLElement | null;
+    if (cont) { cont.insertBefore(ta, cont.firstChild?.nextSibling ?? null); } else fCer.element.appendChild(ta);
+  }
   // ── GALPÓN CURVO PARAMÉTRICO: la cercha de pórticos en arco como función de unos números ──
   // «Generar» REEMPLAZA el dibujo por el galpón (luz, flecha, pórticos, tubos D×t, correas, diagonales, cubierta,
   // zapatas, suelo y carga); después se edita con las herramientas de siempre o se cambia un número y se regenera.

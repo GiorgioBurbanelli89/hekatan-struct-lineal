@@ -444,6 +444,18 @@ export const newBlank: ExampleDef = {
         if (sec.J != null) J.set(eIdx, sec.J);
       }
     }
+    // ── Articulaciones de extremo (kind:"segs" prop:"releases"): el panel las guardaba y NADIE las pasaba al solver ──
+    // Orden del solver (forma corta): [TI, M2I, M3I, TJ, M2J, M3J] = [Mx My Mz del extremo I, Mx My Mz del J].
+    const momentReleases = new Map<number, boolean[]>();
+    const manualRel = (window as any).__hekatanManualReleases as Map<string, { i: boolean[]; j: boolean[] }> | undefined;
+    if (manualRel && manualRel.size > 0) {
+      for (const [segKey, r] of manualRel.entries()) {
+        const eIdx = segIdToElemIdx.get(segKey);
+        if (eIdx === undefined || shellIdx.has(eIdx)) continue;
+        const f = [!!r.i[0], !!r.i[1], !!r.i[2], !!r.j[0], !!r.j[1], !!r.j[2]];
+        if (f.some(Boolean)) momentReleases.set(eIdx, f);
+      }
+    }
     // ── Material override por segmento (prop:"material") ──
     // El nombre se busca en window.__hekatanMaterialDB. Override E, G, ν, ρ.
     const matDB: Record<string, { E: number; nu: number; rho: number }> | undefined =
@@ -651,6 +663,7 @@ export const newBlank: ExampleDef = {
       thicknesses, plateFormulations, membraneModifiers, bendingModifiers,
       deckSections,                // cotas del deck (m, kN/m²) → e2k «Deck Section» de ETABS
       frameLoads: frameLoadsElem,   // cargas distribuidas por elemento (kN/m, globales) → e2k FRAMELOAD
+      ...(momentReleases.size ? { momentReleases } : {}),
     } as any;
     // las flechas de las cargas distribuidas las dibuja el visor (objects/loads.ts) sobre la geometría deformada
     states.objects3D.val = [...referenciaIfc(p)];

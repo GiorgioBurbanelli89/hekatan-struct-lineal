@@ -130,6 +130,11 @@ import {
 // import { attachInspect } from "../shared/attachInspect";  // DEPRECATED: ahora en hekatan-ui/femTools
 import { exportarPng, exportarOrbitaGif, pngBlob } from "../shared/gifExport";
 import { generarGalponCurvo, GALPON_CURVO_DEFECTO } from "../shared/galponCurvo";
+import { generarCercha, evaluarCercha, CERCHAS_PRESETS, CERCHA_OPTS_DEFECTO } from "../shared/cerchas";
+(window as any).__hekatanCercha = generarCercha;                   // «Cerchas (editables)» del panel CAD
+(window as any).__hekatanCerchaEvaluar = evaluarCercha;
+(window as any).__hekatanCerchaPresets = CERCHAS_PRESETS;
+(window as any).__hekatanCerchaOpts = (window as any).__hekatanCerchaOpts ?? JSON.parse(JSON.stringify(CERCHA_OPTS_DEFECTO));
 (window as any).__hekatanGalponCurvo = generarGalponCurvo;          // «Galpón curvo (paramétrico)» del panel CAD
 (window as any).__hekatanGalponParams = (window as any).__hekatanGalponParams ?? { ...GALPON_CURVO_DEFECTO };
 import { createModalPanel } from "../shared/renderModalTable";
