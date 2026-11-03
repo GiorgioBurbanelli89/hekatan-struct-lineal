@@ -19,6 +19,7 @@
  */
 import { parseE2k, type E2kModel } from "./e2kParser";
 import { coserModelo, type InformeCosido } from "./e2kCoser";
+import { coartarGdlSueltos } from "./e2kMecanismos";
 import { cargaBarraConsistente } from "./cargaBarraConsistente";
 import { formulacionPorPf } from "./formulacionesPlaca";
 
@@ -91,6 +92,9 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     return { w: pb.q * (pb.s1 - pb.s0), a: [...N0[el[0]]], b: [...N0[el[1]]] };
   });
   const cosido = coserModelo(m);
+  // un extremo articulado donde no llega nada más deja GDL sin rigidez (el nudo colgante de una correa): se coartan,
+  // como hace ETABS; sin esto LDLT falla por un residuo ~1e-9 que getZerosIndices (abs 1e-12) no quita
+  coartarGdlSueltos(m);
   // las cargas de los patrones SIN el peso propio de barras (para la masa, ver arriba)
   const sinPP = new Map([...(m.cargasPatron ?? new Map())].map(([p, mp]) => [p, new Map([...mp].map(([n, v]) => [n, [...v]]))]));
   // el peso propio de las barras, YA partidas: cada trozo su tramo, vector consistente (fuerzas y momentos)

@@ -937,10 +937,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const lineConnMap = new Map<string, typeof lineConns[0]>();
   for (const lc of lineConns) lineConnMap.set(lc.name, lc);
 
+  // índice nombre de línea → sus asignaciones (antes: recorrer TODAS por cada línea, 13846×14745 en el mercado = 4 min)
+  const asignDeLinea = new Map<string, Array<typeof lineAssigns extends Map<string, infer V> ? V : never>>();
+  for (const [key, la] of lineAssigns) { const n = key.slice(0, key.lastIndexOf("@")); (asignDeLinea.get(n) ?? asignDeLinea.set(n, []).get(n)!).push(la); }
   // Collect all unique (point, story) pairs needed
   for (const lc of lineConns) {
-    for (const [key, la] of lineAssigns) {
-      if (!key.startsWith(lc.name + "@")) continue;
+    for (const la of asignDeLinea.get(lc.name) ?? []) {
       const story = la.story;
       const storyIdx = stories.findIndex(s => s.name === story);
       if (storyIdx < 0) continue;
@@ -971,11 +973,13 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         // «todas las plantas todo lo que suba»: un arco o una cascara curva
         // atraviesan cotas de planta sin que eso sea una union, y cortarlos ahi
         // estropea el modelo en vez de arreglarlo. ETABS tampoco lo hace.
-        for (let k = storyIdx + 1; k < bottomIdx; k++)
-          allNodeKeys.add(nodeKey(lc.pt1, stories[k].name));
+        // Medido en ETABS 22 (mercado.e2k): el objeto sigue ENTERO (14745 frames = 14745 LINEASSIGN) y solo hay joint en la planta
+        // intermedia si OTRO objeto lo usa: aquí NO se crean; la cadena de abajo usa solo las claves que otro objeto ya creó.
       } else {
-        // BEAM: both nodes at this story's elevation
-        allNodeKeys.add(nodeKey(lc.pt1, story));
+        // BEAM: pt2 en esta planta; pt1 `nStories` plantas MAS ABAJO (igual que las columnas). Medido contra ETABS 22
+        // (mercado.e2k): `LINE "B134" BEAM "13" "203" 1` en N6 va de Z=11940 (N5) a 12640-1476.7, no a la misma cota.
+        const bi = Math.min(storyIdx + lc.nStories, stories.length - 1);
+        allNodeKeys.add(nodeKey(lc.pt1, stories[bi].name));
         allNodeKeys.add(nodeKey(lc.pt2, story));
       }
     }
@@ -1099,8 +1103,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const endOffsets = new Map<number, [number, number, number]>();
 
   for (const lc of lineConns) {
-    for (const [key, la] of lineAssigns) {
-      if (!key.startsWith(lc.name + "@")) continue;
+    for (const la of asignDeLinea.get(lc.name) ?? []) {
       const story = la.story;
       const storyIdx = stories.findIndex(s => s.name === story);
       if (storyIdx < 0) continue;
@@ -1130,7 +1133,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (bottomIdx === storyIdx) cadenaKeys.push(nodeKey(lc.pt1, story));
         cadenaKeys.push(nodeKey(lc.pt2, story));            // el de arriba
       } else {
-        cadenaKeys.push(nodeKey(lc.pt1, story), nodeKey(lc.pt2, story));
+        const bi = Math.min(storyIdx + lc.nStories, stories.length - 1);   // ver arriba: pt1 `nStories` plantas debajo
+        cadenaKeys.push(nodeKey(lc.pt1, stories[bi].name), nodeKey(lc.pt2, story));
       }
       // Los nudos que no existan (no todas las plantas tienen ese punto) se
       // saltan: la cadena se cierra por los que si estan.
@@ -1311,6 +1315,18 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const c = tubeSectionCsi(B, D, tf || tw, tw || tf);
         A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         shapeType = "HSS";
+        break;
+      }
+      case "Steel Pipe": {
+        // Tubo redondo de acero SIN relleno (D = diámetro exterior, T = espesor). Faltaba: caía en el `default`
+        // (exige B > 0) y dejaba A = I = J = 0 → en el mercado 11 683 de 16 125 barras sin rigidez (K singular).
+        const t = sec.T || tw || tf || 0;
+        const d = Math.max(D - 2 * t, 0);
+        A = Math.PI / 4 * (D * D - d * d);
+        Iz = Iy = Math.PI / 64 * (D ** 4 - d ** 4);
+        J = 2 * Iz;                       // pared de revolución: J = Ip = 2·I
+        AsY = AsZ = A / 2;                // cortante de tubo delgado ≈ A/2
+        shapeType = "pipe";
         break;
       }
       case "Filled Steel Pipe": {
