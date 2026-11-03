@@ -927,6 +927,15 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // La selección está en window.__hekatanSelection (Set<string>) con IDs
   // tipo "pt:N" / "seg:P:S" / "poly:P" / "aux:N".
   const fSel = fCad.addFolder({ title: "🎯 Acciones de selección", expanded: false });
+  // Designar barras por TIPO (galpón: columnas, arcos/pórticos, correas, diagonales) para dar a cada familia su sección y carga
+  const fTipo = fSel.addFolder({ title: "◎ Designar barras por tipo", expanded: true });
+  for (const [t, rot] of [["columnas", "▮ Columnas (verticales)"], ["porticos", "⌒ Arcos / vigas de pórtico (plano XZ)"],
+    ["correas", "≣ Correas (paralelas a Y)"], ["diagonales", "✕ Diagonales (cruz)"]] as const) {
+    fTipo.addButton({ title: rot }).on("click", () => {
+      const n = (window as any).__hekatanSelectByDir?.(t) ?? 0;
+      (window as any).__hekatanCadStatus?.(n ? `◎ ${n} barra(s) designadas: ${t}` : `⚠ No hay barras de tipo «${t}»`);
+    });
+  }
   // Discretización de segmentos seleccionados
   const proxyMesh = { divisions: 4 };
   fSel.addBinding(proxyMesh, "divisions", { min: 2, max: 50, step: 1, label: "Divisiones" });

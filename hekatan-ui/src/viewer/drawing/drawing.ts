@@ -5447,6 +5447,8 @@ export function drawing({
     diaphragm: "Ninguno",  // "Ninguno", "D1 (rigid)", "D2", "D3"...
     // ── Frames (segs) ──
     section: "W14x84", material_frame: "A572 Gr 50",
+    // Tubo circular (CHS) de cotas editables: diámetro exterior D y espesor t en mm (se usa con Sección = «Tubo circular D×t»)
+    tuboD: 168.3, tuboT: 5,
     // Property Modifiers (multipliers sobre A, Iz, Iy, J)
     A_mod: 1.0, Iz_mod: 1.0, Iy_mod: 1.0, J_mod: 1.0,
     // Insertion Point (cardinal point — 1..11 estilo ETABS)
@@ -5733,9 +5735,14 @@ export function drawing({
         options: {
           "W14x84": "W14x84", "W18x86": "W18x86", "W24x146": "W24x146",
           "HEB300": "HEB300", "IPN300": "IPN300", "IPE400": "IPE400",
+          "⭕ Tubo circular D×t (cotas abajo)": "CHS",
+          "⭕ CHS 219.1×6": "CHS 219.1x6", "⭕ CHS 168.3×5": "CHS 168.3x5", "⭕ CHS 114.3×4": "CHS 114.3x4",
+          "⭕ CHS 88.9×3.2": "CHS 88.9x3.2", "⭕ CHS 60.3×3": "CHS 60.3x3",
           "Custom...": "Custom...",
         },
       });
+      fSec.addBinding(propsState, "tuboD", { label: "Tubo D (mm)", min: 20, max: 1000, step: 0.1 });
+      fSec.addBinding(propsState, "tuboT", { label: "Tubo t (mm)", min: 1, max: 60, step: 0.1 });
       fSec.addBinding(propsState, "material_frame", {
         label: "Material",
         options: {
@@ -5817,7 +5824,7 @@ export function drawing({
       fMassPerM.addBinding(propsState, "massPerM", { label: "m/L", min: 0, step: 1 });
 
       propsPaneInstance.addButton({ title: "✓ Aplicar a segmentos seleccionados" }).on("click", () => {
-        fireProp("segs", segIds, "section", propsState.section);
+        fireProp("segs", segIds, "section", propsState.section === "CHS" ? `CHS ${+propsState.tuboD}x${+propsState.tuboT}` : propsState.section);
         fireProp("segs", segIds, "material", propsState.material_frame);
 
         // Property modifiers (sólo emit si alguno != 1.0)
@@ -7786,6 +7793,33 @@ export function drawing({
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     return { barras: nuevas.length };
+  };
+
+  /**
+   * DESIGNAR BARRAS POR TIPO (para asignar secciones/cargas distintas a cada familia de un galpón):
+   *   columnas   → verticales puras
+   *   correas    → paralelas a Y (la dirección en que se repiten los pórticos)
+   *   porticos   → en un plano XZ (dy = 0) y no verticales: arcos y vigas de pórtico
+   *   diagonales → inclinadas respecto a Y y fuera de los planos de pórtico (la cruz entre pórticos)
+   * Devuelve cuántas barras quedaron designadas.
+   */
+  (window as any).__hekatanSelectByDir = (tipo: "columnas" | "correas" | "porticos" | "diagonales"): number => {
+    const pts = drawingObj.points.rawVal, polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
+    const e = 1e-3, ids: string[] = [];
+    polys.forEach((pl, pi) => {
+      if (areasYa.has(pi)) return;
+      for (let s = 0; s + 1 < pl.length; s++) {
+        const a = pts[pl[s]], b = pts[pl[s + 1]]; if (!a || !b) continue;
+        const dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]), dz = Math.abs(b[2] - a[2]);
+        if (dx + dy + dz < e) continue;
+        const col = dx < e && dy < e, cor = dx < e && dz < e, por = dy < e && !col;
+        const ok = tipo === "columnas" ? col : tipo === "correas" ? cor : tipo === "porticos" ? por : (!col && !cor && !por);
+        if (ok) ids.push(`seg:${pi}:${s}`);
+      }
+    });
+    (window as any).__hekatanSelectIds?.(ids);
+    return ids.length;
   };
 
   /**

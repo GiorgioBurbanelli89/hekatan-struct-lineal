@@ -3057,6 +3057,16 @@ const SECTION_DB: Record<string, SectionProps> = {
   "IPE400":   { A: 0.00845, Iz: 2.313e-4, Iy: 1.318e-5, J: 5.180e-7, name: "IPE400"   },
 };
 (window as any).__hekatanSectionDB = SECTION_DB;
+/** Tubo circular «CHS D×t» (mm) → A, I (=Iz=Iy) y J = 2I del anillo; null si el nombre no es CHS. */
+const chsProps = (nombre: string): SectionProps | null => {
+  const m = /^CHS\s*([\d.]+)\s*[x×]\s*([\d.]+)$/i.exec(String(nombre).trim());
+  if (!m) return null;
+  const D = +m[1] / 1000, t = +m[2] / 1000;
+  if (!(D > 0) || !(t > 0) || 2 * t >= D) return null;
+  const d = D - 2 * t, A = Math.PI * (D * D - d * d) / 4, I = Math.PI * (D ** 4 - d ** 4) / 64;
+  return { A, Iz: I, Iy: I, J: 2 * I, name: `CHS ${m[1]}x${m[2]}` };
+};
+(window as any).__hekatanChsProps = chsProps;
 window.addEventListener("hk:property-applied", (ev: any) => {
   const { kind, ids, prop, value } = ev.detail || {};
   // ⚠️ Sin `value` esto hacía `[...undefined]` y reventaba con «a is not iterable»,
@@ -3093,7 +3103,7 @@ window.addEventListener("hk:property-applied", (ev: any) => {
     const segKeys = (ids as string[]).filter(id => id.startsWith("seg:")).map(id => id.slice(4));
     if (prop === "section") {
       const m = (window as any).__hekatanManualSections as Map<string, SectionProps>;
-      const secProps = SECTION_DB[value as string];
+      const secProps = SECTION_DB[value as string] ?? chsProps(value as string);
       if (secProps) {
         for (const k of segKeys) m.set(k, { ...secProps });
       }
