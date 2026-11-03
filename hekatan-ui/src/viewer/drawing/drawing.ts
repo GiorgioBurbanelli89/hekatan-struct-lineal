@@ -5588,6 +5588,19 @@ export function drawing({
           ? `⇗ Extruido: ${r.lineas} barra(s), ${r.areas} paño(s) (Δ ${editState.dx},${editState.dy},${editState.dz} m × ${editState.copias})`
           : "⚠ Nada que extruir — designá nudos (→ líneas) o barras (→ áreas)");
       });
+      // ── Correas y diagonales entre pórticos (galpones, cerchas): designe un pórtico y pulse ──
+      const unirState = { cadaN: 1, sinBase: true };
+      const fUnir = fEdit.addFolder({ title: "≣ Unir pórticos (correas / diagonales)", expanded: true });
+      fUnir.addBinding(unirState, "cadaN", { label: "cada N vanos", min: 1, max: 6, step: 1 });
+      fUnir.addBinding(unirState, "sinBase", { label: "sin amarre en la base" });
+      const unir = (modo: "correas" | "diagonales") => {
+        if (!selection.size) { updateStatus("⚠ Designe un pórtico (ventana en una elevación XZ) y vuelva a pulsar"); return; }
+        const r = (window as any).__hekatanUnirPorticos?.(modo, unirState) ?? { barras: 0 };
+        updateStatus(r.barras ? `✓ ${modo === "correas" ? "Correas" : "Diagonales en cruz"}: ${r.barras} barra(s) entre pórticos — Ctrl+Z deshace.`
+          : "⚠ Nada que unir: no hay pórticos homólogos (mismo x,z, otro y) o ya están unidos.");
+      };
+      fUnir.addButton({ title: "≣ Correas entre pórticos" }).on("click", () => unir("correas"));
+      fUnir.addButton({ title: "✕ Diagonales en cruz entre pórticos" }).on("click", () => unir("diagonales"));
       // ── Volado sobre la viga designada ──
       // Una viga de 5 m + «vuelo 1.5» = un voladizo de 1.5 m de vuelo por 5 m de ancho.
       // No alarga la viga: la replica en perpendicular y cose las dos.
@@ -7705,6 +7718,74 @@ export function drawing({
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
     return { lineas, areas };
+  };
+
+  /**
+   * UNIR PÓRTICOS: correas y diagonales en cruz entre pórticos paralelos (galpones, cerchas).
+   * Los nudos HOMÓLOGOS son los que comparten (x, z) y difieren en y: forman una «cadena» ordenada por y.
+   *   correas    → une cada nudo designado (o extremo de barra designada) con el siguiente de su cadena.
+   *   diagonales → por cada barra designada a–b, en cada vano entre pórticos: a_k–b_{k+1} y b_k–a_{k+1} (cruz).
+   * Basta designar UN pórtico: las cadenas recorren todos los pórticos del modelo. `cadaN` salta vanos
+   * (2 = un vano sí y uno no, típico del arriostre de cubierta). No duplica barras que ya existen.
+   */
+  (window as any).__hekatanUnirPorticos = (
+    modo: "correas" | "diagonales", opts: { cadaN?: number; sinBase?: boolean } = {},
+  ): { barras: number } => {
+    const pts = drawingObj.points.rawVal;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
+    const cadaN = Math.max(1, Math.round(opts.cadaN || 1));
+    const nodosSel = new Set<number>(); const segs: [number, number][] = [];
+    [...selection].forEach((id) => {
+      if (id.startsWith("pt:")) nodosSel.add(+id.slice(3));
+      else if (id.startsWith("seg:")) {
+        const [, P, S] = id.split(":"); const poly = polys[+P] || [];
+        if (poly[+S] != null && poly[+S + 1] != null && !areasYa.has(+P)) segs.push([poly[+S], poly[+S + 1]]);
+      } else if (id.startsWith("poly:")) {
+        const p = +id.slice(5); if (areasYa.has(p)) return; const poly = polys[p] || [];
+        for (let s = 0; s + 1 < poly.length; s++) segs.push([poly[s], poly[s + 1]]);
+      }
+    });
+    const tol = 1e-3;
+    const cadena = (n: number): number[] => {
+      const out: number[] = [];
+      pts.forEach((q, i) => { if (Math.abs(q[0] - pts[n][0]) < tol && Math.abs(q[2] - pts[n][2]) < tol) out.push(i); });
+      return out.sort((a, b) => pts[a][1] - pts[b][1]);
+    };
+    const yaExiste = new Set<string>();
+    polys.forEach((pl, pi) => { if (areasYa.has(pi)) return; for (let s = 0; s + 1 < pl.length; s++) yaExiste.add(Math.min(pl[s], pl[s + 1]) + ":" + Math.max(pl[s], pl[s + 1])); });
+    const nuevas: [number, number][] = [];
+    const poner = (a: number, b: number) => {
+      if (a === b) return; const k = Math.min(a, b) + ":" + Math.max(a, b);
+      if (yaExiste.has(k)) return; yaExiste.add(k); nuevas.push([a, b]);
+    };
+    if (modo === "correas") {
+      const base = Math.min(...pts.map((q) => q[2]));
+      const nodos = new Set<number>(nodosSel); segs.forEach(([a, b]) => { nodos.add(a); nodos.add(b); });
+      const vistos = new Set<number>();
+      nodos.forEach((n) => {
+        if (opts.sinBase && Math.abs(pts[n][2] - base) < tol) return;
+        const ch = cadena(n); if (vistos.has(ch[0])) return; vistos.add(ch[0]);
+        for (let k = 0; k + 1 < ch.length; k++) if (k % cadaN === 0) poner(ch[k], ch[k + 1]);
+      });
+    } else {
+      const hechos = new Set<string>();
+      segs.forEach(([a, b]) => {
+        const ca = cadena(a), cb = cadena(b); const n = Math.min(ca.length, cb.length);
+        const key = Math.min(ca[0], cb[0]) + ":" + Math.max(ca[0], cb[0]); if (hechos.has(key)) return; hechos.add(key);
+        for (let k = 0; k + 1 < n; k++) if (k % cadaN === 0) { poner(ca[k], cb[k + 1]); poner(cb[k], ca[k + 1]); }
+      });
+    }
+    if (!nuevas.length) return { barras: 0 };
+    pushUndo();
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    nuevas.forEach((p) => newPolys.push([p[0], p[1]]));
+    newPolys.push([]);
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return { barras: nuevas.length };
   };
 
   /**
