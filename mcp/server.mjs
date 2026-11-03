@@ -121,7 +121,8 @@ srv.tool("abrir",
     await pag.goto(url, { waitUntil: "networkidle2", timeout: 120000 });
     await esperar(6000);
     await pag.evaluate(() => {   // apagar imanes que deforman los clics
-      window.__hekatanAxisSnap = false; window.__hekatanOrthoMode = false;
+      // El enganche a ejes (rojo/verde/azul) se queda ENCENDIDO: es lo que deja dibujar en 3D en la isométrica.
+      window.__hekatanOrthoMode = false;
     });
     if (cerrar_paneles) {
       // Las lengüetas están en los bordes cuando el panel está CERRADO: solo se pulsa si está abierto.

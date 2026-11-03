@@ -1648,6 +1648,30 @@ export function drawing({
     "display:none",
   ].join(";") + ";";
   document.body.appendChild(axisLockBadge);
+  // Punto del EJE (X/Y/Z por `p0`) más cercano al rayo de la cámara. Es lo que hace
+  // SketchUp con su eje azul: el ratón no «cae» en un plano, se proyecta a la recta.
+  // Antes se tomaba el punto del PLANO de trabajo y se le fijaban dos coordenadas:
+  // con el plano XY la z salía siempre 0 y en la isométrica no se podía subir.
+  // Si el rayo es paralelo al eje (vista de punta) no hay punto: se usa el del plano.
+  function puntoEnEje(eje: "x" | "y" | "z", p0: ArrayLike<number>, ray: THREE.Ray,
+                      delPlano: THREE.Vector3): THREE.Vector3 {
+    const u = new THREE.Vector3(eje === "x" ? 1 : 0, eje === "y" ? 1 : 0, eje === "z" ? 1 : 0);
+    const P0 = new THREE.Vector3(p0[0], p0[1], p0[2]);
+    const w0 = P0.clone().sub(ray.origin);
+    const b = u.dot(ray.direction), d = u.dot(w0), e = ray.direction.dot(w0);
+    const den = 1 - b * b;
+    if (Math.abs(den) > 1e-4) {
+      let s = (b * e - d) / den;
+      // SNAP de rejilla a lo largo del eje (si está encendido): 6.09 m → 6.00 m.
+      const w = window as any;
+      const paso = w.__hekatanGridConfig?.minorStep || w.__hekatanSnap2D || 0;
+      if (w.__hekatanSnapEnabled !== false && paso > 0) s = Math.round(s / paso) * paso;
+      return P0.addScaledVector(u, s);
+    }
+    if (eje === "x") return new THREE.Vector3(delPlano.x, p0[1], p0[2]);
+    if (eje === "y") return new THREE.Vector3(p0[0], delPlano.y, p0[2]);
+    return new THREE.Vector3(p0[0], p0[1], delPlano.z);
+  }
   const updateAxisLockBadge = () => {
     if (!axisLock) { axisLockBadge.style.display = "none"; return; }
     const colors = { x: "#ff3344", y: "#34d399", z: "#60a5fa" };
@@ -1664,6 +1688,28 @@ export function drawing({
     // input distinto al rubber label (Tweakpane, etc.). El rubber label SÍ
     // permite procesar X/Y/Z aunque tenga focus.
     const ae = document.activeElement;
+    // ── Flechas al estilo SketchUp: bloquean el eje SIN cambiar de vista ──
+    //   → rojo X · ← verde Y · ↑ azul Z · ↓ libera. Sirven en la isométrica: se dibuja
+    //   en 3D (columnas, diagonales, cerchas) sin pasar a planta ni alzado.
+    // Valen aunque el foco esté en la ventana de comandos, mientras esté VACÍA (si
+    // hay texto, las flechas son para mover el cursor del texto).
+    if (ev.key.startsWith("Arrow") && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+      const esTexto = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")
+        && ae !== rubberLabelInput && ((ae as HTMLInputElement).value ?? "") !== "";
+      const ptsA = drawingObj.points.rawVal ?? [];
+      const polysA = drawingObj.polylines?.rawVal ?? [];
+      const dibujando = (polysA[polysA.length - 1]?.length ?? 0) > 0 && ptsA.length > 0;
+      if (!esTexto && dibujando) {
+        const m: Record<string, "x" | "y" | "z" | null> =
+          { ArrowRight: "x", ArrowLeft: "y", ArrowUp: "z", ArrowDown: null };
+        const nuevo = m[ev.key];
+        axisLock = nuevo === undefined ? axisLock : (nuevo !== null && axisLock === nuevo ? null : nuevo);
+        updateAxisLockBadge();
+        ev.preventDefault();
+        ev.stopPropagation();
+        return;
+      }
+    }
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")
         && ae !== rubberLabelInput) return;
     const k = ev.key.toLowerCase();
@@ -3914,7 +3960,10 @@ export function drawing({
         // prioridad sobre el rastreo polar). Sin esto, una cumbrera con 0.6° de
         // pendiente que acaba en un nudo existente salía horizontal: el polar
         // (±6°) la aplanaba DESPUÉS de que el osnap hubiera dado el nudo exacto.
-        const enganchadoAObjeto = !!osnap || refEnganchado;
+        // La REJILLA («grid») no es un objeto: no debe tapar el enganche a los ejes rojo /
+        // verde / azul (si no, en la isométrica el cursor siempre «cae» en la rejilla del
+        // suelo y nunca se puede subir en Z).
+        const enganchadoAObjeto = (!!osnap && (osnap as any).type !== "grid") || refEnganchado;
         // ── SNAP a EJES auxiliares en 3D (X/Y/Z desde el último punto) ──
         // Si el mouse pasa CERCA (en pantalla) de la LÍNEA de un eje, engancha
         // el punto al punto de ESE eje 3D más cercano al rayo de cámara. Permite
@@ -3923,7 +3972,11 @@ export function drawing({
         if (!effectiveLock && !enganchadoAObjeto && (window as any).__hekatanAxisSnap !== false) {
           const rectAx = rendererElm.getBoundingClientRect();
           const mx = event.clientX, my = event.clientY;
-          const Lax = (settings.gridSize?.rawVal ?? 10);
+          // Los ejes auxiliares son RECTAS infinitas (como en SketchUp), no un tramo de
+          // ±½ rejilla: con tramo corto, subir 6 m en la isométrica quedaba fuera y el
+          // clic caía en el plano. Largo = la distancia de la cámara al objetivo.
+          const Lax = Math.max((settings.gridSize?.rawVal ?? 10) * 0.5,
+                               _camForRay.position.distanceTo(controls.target) * 2);
           const P0 = new THREE.Vector3(lastPt[0], lastPt[1], lastPt[2]);
           const axDirs: Array<["x" | "y" | "z", THREE.Vector3]> = [
             ["x", new THREE.Vector3(1, 0, 0)],
@@ -3945,12 +3998,7 @@ export function drawing({
             const dpx = Math.hypot(mx - (aS.x + t * vx), my - (aS.y + t * vy));
             if (bestAx === null || dpx < bestAx.dpx) {
               // punto del eje más cercano al rayo de cámara (line-line closest)
-              const ray = raycaster.ray;
-              const w0 = P0.clone().sub(ray.origin);
-              const b = u.dot(ray.direction), d_ = u.dot(w0), e = ray.direction.dot(w0);
-              const denom = 1 - b * b;
-              const s = Math.abs(denom) < 1e-6 ? -d_ : (b * e - d_) / denom;
-              bestAx = { axis, dpx, pt: P0.clone().addScaledVector(u, s) };
+              bestAx = { axis, dpx, pt: puntoEnEje(axis, lastPt, raycaster.ray, p) };
             }
           }
           if (bestAx && bestAx.dpx <= 12) {   // ≤12 px del eje → engancha
@@ -4094,10 +4142,7 @@ export function drawing({
         if (effectiveLock) {
           // Proyección manual al eje (sin tocar axisLock global, así no
           // interfiere con direct distance entry que usa axisLock para signo).
-          const ax = lastPt[0], ay = lastPt[1], az = lastPt[2];
-          if (effectiveLock === "x") p.set(p.x, ay, az);
-          else if (effectiveLock === "y") p.set(ax, p.y, az);
-          else p.set(ax, ay, p.z);
+          p.copy(puntoEnEje(effectiveLock, lastPt, raycaster.ray, p));
           // ── Badge dinámico "⊥ ORTO X/Y/Z" o "🔒 LOCK X/Y/Z" ──
           // Confirmación visual junto al cursor de que está alineado al eje.
           // Diferencia manual (axisLock por tecla) vs auto (ORTO mode por F8).
@@ -4183,7 +4228,11 @@ export function drawing({
         // coordenada queda detrás. (Jorge, 13-sep-2026: «al ir trazando se debe
         // ver el valor de medida en el hover, al lado de la línea, igual que AutoCAD».)
         const angN = ((ang % 360) + 360) % 360;
-        coordReadout.textContent = `L = ${dL.toFixed(3)} m   ∠ ${angN.toFixed(1)}°   ·   ${coordsRb}`;
+        // Coordenadas AUXILIARES en 3D (X, Y, Z del punto enganchado y lo que avanza en cada
+        // eje): en la isométrica el ratón no dice «a qué altura» va, así que se escribe.
+        (window as any).__hekatanCursorXYZ = [p.x, p.y, p.z];
+        const dd = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(2);
+        coordReadout.textContent = `L = ${dL.toFixed(3)} m   ∠ ${angN.toFixed(1)}°   ·   ${coordsRb}   ·   ΔX ${dd(p.x - lastPt[0])}  ΔY ${dd(p.y - lastPt[1])}  ΔZ ${dd(p.z - lastPt[2])}`;
         const fr = document.getElementById("hk-coord-fixed");
         if (fr) fr.textContent = coordsRb;
         rubberBand.geometry.setFromPoints([
@@ -8060,15 +8109,32 @@ export function drawing({
         if (lp) {
           const orthoOn = !!(window as any).__hekatanOrthoMode;
           let effectiveLock: "x" | "y" | "z" | null = axisLock;
+          // ── En 3D (isométrica) el punto sale del PLANO de trabajo: su z vale 0 y el
+          // eje Z no podía ganar NUNCA ni dar altura (como SketchUp: el eje se elige
+          // por la PANTALLA y el punto es el de ese eje más cercano al rayo). ──
+          const P0c = new THREE.Vector3(lp[0], lp[1], lp[2]);
+          const aPant = (v: THREE.Vector3) => {
+            const c = v.clone().project(_camForRay);
+            const r = rendererElm.getBoundingClientRect();
+            return { x: (c.x * 0.5 + 0.5) * r.width + r.left, y: (-c.y * 0.5 + 0.5) * r.height + r.top };
+          };
+          const ejesU: Record<"x" | "y" | "z", THREE.Vector3> = {
+            x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1),
+          };
           if (!effectiveLock && orthoOn) {
-            const dx = Math.abs(point.x - lp[0]);
-            const dy = Math.abs(point.y - lp[1]);
-            const dz = Math.abs(point.z - lp[2]);
-            effectiveLock = dx >= dy && dx >= dz ? "x" : (dy >= dz ? "y" : "z");
+            const o = aPant(P0c);
+            const mvx = event.clientX - o.x, mvy = event.clientY - o.y;
+            const lm = Math.hypot(mvx, mvy) || 1;
+            let mejor = -1;
+            for (const k of ["x", "y", "z"] as const) {
+              const e = aPant(P0c.clone().addScaledVector(ejesU[k], 1));
+              const ex = e.x - o.x, ey = e.y - o.y, le = Math.hypot(ex, ey);
+              if (le < 1e-3) continue; // eje de punta a la cámara: no se distingue
+              const cosA = Math.abs((mvx * ex + mvy * ey) / (lm * le));
+              if (cosA > mejor) { mejor = cosA; effectiveLock = k; }
+            }
           }
-          if (effectiveLock === "x") point = new THREE.Vector3(point.x, lp[1], lp[2]);
-          else if (effectiveLock === "y") point = new THREE.Vector3(lp[0], point.y, lp[2]);
-          else if (effectiveLock === "z") point = new THREE.Vector3(lp[0], lp[1], point.z);
+          if (effectiveLock) point = puntoEnEje(effectiveLock, lp, raycaster.ray, point);
         }
       }
     }
@@ -8984,9 +9050,7 @@ export function drawing({
               const dz = Math.abs(point.z - lp[2]);
               effectiveLock = dx >= dy && dx >= dz ? "x" : (dy >= dz ? "y" : "z");
             }
-            if (effectiveLock === "x") point.set(point.x, lp[1], lp[2]);
-            else if (effectiveLock === "y") point.set(lp[0], point.y, lp[2]);
-            else if (effectiveLock === "z") point.set(lp[0], lp[1], point.z);
+            if (effectiveLock) point.copy(puntoEnEje(effectiveLock, lp, raycaster.ray, point));
           }
         }
       }
