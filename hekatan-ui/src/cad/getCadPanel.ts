@@ -979,6 +979,8 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
       const r = W.__hekatanCercha?.({ ...opts, spec: ta.value, sobre });
       if (r && !r.ok) { ta.style.borderColor = "#ef4444"; ta.title = r.error; W.__hekatanCadStatus?.("⚠ Cercha: " + r.error); return; }
       ta.style.borderColor = "#22c55e"; ta.title = "";
+      // la cercha es un plano XZ: mostrarla de frente y encuadrada (antes quedaba de canto en la isométrica, minúscula)
+      try { W.__hekatanSetView?.("elevX"); } catch {}
       W.__hekatanCadStatus?.(r ? `🔺 Cercha: ${r.cerchas} cercha(s), ${r.nudos} nudos, ${r.barras} barras (${Object.entries(r.params).map(([k, v]) => k + "=" + +(+v).toFixed(3)).join(", ")})` : "⚠ El generador no está disponible");
     });
     fCer.addButton({ title: "↩ Volver a la definición del tipo" }).on("click", () => poner(cs.tipo));
