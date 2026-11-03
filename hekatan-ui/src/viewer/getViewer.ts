@@ -764,8 +764,11 @@ export function getViewer({
     {
       const ley = document.createElement("div");
       ley.id = "hk-leyenda-tipos";
-      ley.style.cssText = "position:absolute;left:70px;top:44px;z-index:5;padding:5px 9px;border-radius:6px;"
-        + "background:rgba(10,14,24,.78);color:#e8ecf4;font:12px/1.5 system-ui,sans-serif;pointer-events:none;display:none";
+      // DEBAJO de las barras superiores, centrada (2-nov-2026, Jorge: «no puede haber colisión de botón con texto»): a left:70px, top:44px
+        // quedaba debajo de la barra de acceso rápido y de la cinta de iconos; abajo choca con la línea de comandos y la barra de estado
+        // (el visor ocupa toda la ventana). Esta franja está libre: los paneles flotantes empiezan más abajo y a los lados.
+        ley.style.cssText = "position:absolute;left:50%;transform:translateX(-50%);top:122px;max-width:56vw;z-index:5;padding:5px 9px;border-radius:6px;"
+        + "background:rgba(10,14,24,.78);color:#e8ecf4;font:12px/1.5 system-ui,sans-serif;pointer-events:none;display:none;text-align:center";
       const fila = (c: string, t: string, punto = false) =>
         `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:10px">` +
         (punto ? `<span style="width:8px;height:8px;border-radius:50%;background:${c}"></span>`
