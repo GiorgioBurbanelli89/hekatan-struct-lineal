@@ -129,6 +129,9 @@ import {
 } from "hekatan-ui";
 // import { attachInspect } from "../shared/attachInspect";  // DEPRECATED: ahora en hekatan-ui/femTools
 import { exportarPng, exportarOrbitaGif, pngBlob } from "../shared/gifExport";
+import { generarGalponCurvo, GALPON_CURVO_DEFECTO } from "../shared/galponCurvo";
+(window as any).__hekatanGalponCurvo = generarGalponCurvo;          // «Galpón curvo (paramétrico)» del panel CAD
+(window as any).__hekatanGalponParams = (window as any).__hekatanGalponParams ?? { ...GALPON_CURVO_DEFECTO };
 import { createModalPanel } from "../shared/renderModalTable";
 import { createModalAnimator, type ModalAnimator } from "../shared/animateMode";
 // createModalAnimator también se llama en buildParamsPane() para re-wirear el
@@ -3141,6 +3144,7 @@ window.addEventListener("hk:property-applied", (ev: any) => {
       const m = (window as any).__hekatanManualDistLoads as Map<string, [number, number, number]>;
       const v = value as number[];
       for (const k of segKeys) { if (v.some((x) => x !== 0)) m.set(k, [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0]); else m.delete(k); }
+      try { const st = (viewerElm as any).__settings; if (st?.loads) st.loads.val = true; } catch {}   // que las flechas se vean
     }
   } else if (kind === "areas") {
     // Propiedades POR ÁREA (cubierta de lámina y zapata de hormigón en el mismo modelo): newBlank las lee por

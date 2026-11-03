@@ -926,6 +926,34 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // acciones acá: discretización de líneas, apoyos en nodos, etc.
   // La selección está en window.__hekatanSelection (Set<string>) con IDs
   // tipo "pt:N" / "seg:P:S" / "poly:P" / "aux:N".
+  // ── GALPÓN CURVO PARAMÉTRICO: la cercha de pórticos en arco como función de unos números ──
+  // «Generar» REEMPLAZA el dibujo por el galpón (luz, flecha, pórticos, tubos D×t, correas, diagonales, cubierta,
+  // zapatas, suelo y carga); después se edita con las herramientas de siempre o se cambia un número y se regenera.
+  const gp: any = (window as any).__hekatanGalponParams ?? ((window as any).__hekatanGalponParams = {});
+  const fGal = fCad.addFolder({ title: "🏛 Galpón curvo (paramétrico)", expanded: false });
+  const gb = (k: string, label: string, min: number, max: number, step: number) => fGal.addBinding(gp, k, { label, min, max, step });
+  const fG = fGal.addFolder({ title: "Geometría (m)", expanded: true });
+  for (const [k, l, mn, mx, st] of [["luz", "luz entre columnas", 4, 80, 0.5], ["flecha", "flecha del arco", 0, 40, 0.25], ["hCol", "altura de columna", 0.5, 20, 0.25],
+    ["nSeg", "tramos del arco", 2, 40, 1], ["nPorticos", "n.º de pórticos", 1, 20, 1], ["sep", "separación (m)", 1, 20, 0.25]] as const)
+    fG.addBinding(gp, k, { label: l, min: mn, max: mx, step: st });
+  const fT = fGal.addFolder({ title: "Tubos circulares (mm)", expanded: false });
+  for (const [k, l, mn, mx, st] of [["Dcol", "columna D", 30, 600, 0.1], ["tcol", "columna t", 1.5, 40, 0.1], ["Darco", "arco D", 30, 600, 0.1], ["tarco", "arco t", 1.5, 40, 0.1],
+    ["Dcorr", "correa D", 30, 300, 0.1], ["tcorr", "correa t", 1.5, 20, 0.1], ["Ddiag", "diagonal D", 20, 300, 0.1], ["tdiag", "diagonal t", 1.5, 20, 0.1]] as const)
+    fT.addBinding(gp, k, { label: l, min: mn, max: mx, step: st });
+  const fO = fGal.addFolder({ title: "Elementos", expanded: false });
+  fO.addBinding(gp, "correas", { label: "correas" });
+  fO.addBinding(gp, "diagCadaN", { label: "diagonales cada N vanos (0 = no)", min: 0, max: 6, step: 1 });
+  fO.addBinding(gp, "cubierta", { label: "cubierta" });
+  fO.addBinding(gp, "tLamina", { label: "espesor lámina (m)", min: 0.0002, max: 0.02, step: 0.0001 });
+  fO.addBinding(gp, "zapataLado", { label: "zapata lado (m, 0 = no)", min: 0, max: 8, step: 0.1 });
+  fO.addBinding(gp, "zapataEsp", { label: "zapata espesor (m)", min: 0.2, max: 2, step: 0.05 });
+  fO.addBinding(gp, "ksSuelo", { label: "suelo ks (tonf/m³)", min: 0, max: 8000, step: 50 });
+  fO.addBinding(gp, "empotrado", { label: "base empotrada (sin zapata)" });
+  fO.addBinding(gp, "qArco", { label: "carga en arcos (kN/m)", min: -50, max: 50, step: 0.5 });
+  fGal.addButton({ title: "▶ Generar / regenerar el galpón (reemplaza el dibujo)" }).on("click", () => {
+    const r = (window as any).__hekatanGalponCurvo?.({ ...gp });
+    (window as any).__hekatanCadStatus?.(r ? `🏛 Galpón: ${r.porticos} pórticos, ${r.nudos} nudos, ${r.barras} barras, ${r.paños} paños (${r.zapatas} zapatas)` : "⚠ El generador no está disponible");
+  });
   const fSel = fCad.addFolder({ title: "🎯 Acciones de selección", expanded: false });
   // Designar barras por TIPO (galpón: columnas, arcos/pórticos, correas, diagonales) para dar a cada familia su sección y carga
   const fTipo = fSel.addFolder({ title: "◎ Designar barras por tipo", expanded: true });

@@ -652,7 +652,8 @@ export const newBlank: ExampleDef = {
       deckSections,                // cotas del deck (m, kN/m²) → e2k «Deck Section» de ETABS
       frameLoads: frameLoadsElem,   // cargas distribuidas por elemento (kN/m, globales) → e2k FRAMELOAD
     } as any;
-    states.objects3D.val = [...referenciaIfc(p), ...flechasDist];
+    // las flechas de las cargas distribuidas las dibuja el visor (objects/loads.ts) sobre la geometría deformada
+    states.objects3D.val = [...referenciaIfc(p)];
 
     // ── El modelo dibujado, en texto .heks (lo que «💾 Guardar .heks» descarga cuando el cuadro
     //    CLI está vacío). Nudos, barras (E A I22 I33 J ν ρ), cáscaras, apoyos, cargas nodales

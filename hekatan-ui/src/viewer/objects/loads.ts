@@ -33,13 +33,16 @@ export function loads(
   // on settings.loads & deformedShape, and model clear and create visuals
   van.derive(() => {
     settings.deformedShape.val; // trigger update
+    const sobreDeformada = settings.loadsOnDeformed?.val ?? true;   // la casilla «Cargas sobre la deformada»
 
     if (!settings.loads.val) return;
 
     group.children.forEach((o: any) => o.dispose?.());
     group.clear();
 
-    const nodes = derivedNodes.val;
+    // derivedNodes = coordenadas deformadas (si «Deformada» está activa); con la casilla apagada, las flechas se quedan
+    // en la geometría original aunque la estructura se vea deformada.
+    const nodes = sobreDeformada ? derivedNodes.val : ((structure.nodes?.val as Node[] | undefined) ?? derivedNodes.val);
     const size = getArrowSize(nodes);
 
     // ── Cuántas flechas dibujar, y por qué NO una por nudo ──────────────────
@@ -152,6 +155,36 @@ export function loads(
           t.userData = { nudo: position, dir, rel, texto: true };
           group.add(t);
         }
+      }
+    }
+    // ── CARGAS DISTRIBUIDAS por barra (kN/m, globales): una flecha cada ~0.5 m y una línea que une las colas, sobre
+    //    las MISMAS coordenadas que las flechas puntuales: si la barra se deforma, su carga viaja con ella. ──
+    const fl = (structure.elementInputs?.val as any)?.frameLoads as Map<number, [number, number, number]> | undefined;
+    const els = ((structure.elements?.val as any) ?? []) as number[][];
+    if (fl && fl.size) {
+      for (const [ei, w] of fl) {
+        const e = els[ei]; if (!e || e.length !== 2) continue;
+        const a = nodes[e[0]], b = nodes[e[1]]; if (!a || !b) continue;
+        const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const L = Math.hypot(d[0], d[1], d[2]); const q = Math.hypot(w[0], w[1], w[2]);
+        if (L < 1e-9 || q < 1e-9) continue;
+        const t = [d[0] / L, d[1] / L, d[2] / L], u = [w[0] / q, w[1] / q, w[2] / q];
+        const hFl = Math.min(1.2, Math.max(0.25, 0.08 * q));
+        const nFl = Math.max(2, Math.round(L / 0.5)) + 1;
+        const mat = new THREE.LineBasicMaterial({ color: 0xf97316, depthTest: false, transparent: true, opacity: 0.95 });
+        const pts: THREE.Vector3[] = [], colas: THREE.Vector3[] = [];
+        const lat = new THREE.Vector3(t[0], t[1], t[2]).multiplyScalar(hFl * 0.18);
+        const back = new THREE.Vector3(u[0], u[1], u[2]).multiplyScalar(-hFl * 0.3);
+        for (let k = 0; k < nFl; k++) {
+          const s0 = k / (nFl - 1);
+          const P = new THREE.Vector3(a[0] + d[0] * s0, a[1] + d[1] * s0, a[2] + d[2] * s0);       // punta, en la barra
+          const C = new THREE.Vector3(P.x - u[0] * hFl, P.y - u[1] * hFl, P.z - u[2] * hFl);       // cola
+          pts.push(C, P, P.clone(), P.clone().add(back).add(lat), P.clone(), P.clone().add(back).sub(lat));
+          colas.push(C);
+        }
+        const flechas = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat);
+        const linea = new THREE.Line(new THREE.BufferGeometry().setFromPoints(colas), mat);
+        for (const o of [flechas, linea]) { o.renderOrder = 998; o.frustumCulled = false; (o as any).dispose = () => { o.geometry.dispose(); }; group.add(o); }
       }
     }
     colocar(size * derivedDisplayScale.rawVal);

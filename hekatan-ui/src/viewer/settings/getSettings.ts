@@ -83,6 +83,8 @@ export type Settings = {
   secFloor: State<number>;  // -1=all, 0=piso1, 1=piso2...
   supports: State<boolean>;
   loads: State<boolean>;
+  /** Las flechas de carga (puntuales y distribuidas) se dibujan sobre la geometría DEFORMADA (true) o sobre la original (false). */
+  loadsOnDeformed: State<boolean>;
   deformedShape: State<boolean>;
   nodeResults: State<string>;
   frameResults: State<string>;
@@ -143,6 +145,7 @@ export type SettingsObj = {
   secFloor?: number;
   supports?: boolean;
   loads?: boolean;
+  loadsOnDeformed?: boolean;
   deformedShape?: boolean;
   nodeResults?: string;
   frameResults?: string;
@@ -356,6 +359,7 @@ export function getSettings(
 
     inputs.addBinding(settings.supports, "val", { label: "Apoyos" });
     inputs.addBinding(settings.loads, "val", { label: "Cargas" });
+    inputs.addBinding(settings.loadsOnDeformed, "val", { label: "Cargas sobre la deformada" });
     inputs.addBinding(settings.custom3D, "val", { label: "Resortes (Winkler)" });
     inputs.addBinding(settings.showCotas, "val", { label: "Cotas" });
   }
@@ -614,6 +618,7 @@ export function getDefaultSettings(settingsObj: SettingsObj): Settings {
     secFloor: van.state(settingsObj?.secFloor ?? -1),
     supports: van.state(settingsObj?.supports ?? true),
     loads: van.state(settingsObj?.loads ?? false),
+    loadsOnDeformed: van.state(settingsObj?.loadsOnDeformed ?? true),
     deformedShape: van.state(settingsObj?.deformedShape ?? false),
     nodeResults: van.state(settingsObj?.nodeResults ?? "none"),
     frameResults: van.state(settingsObj?.frameResults ?? "none"),
