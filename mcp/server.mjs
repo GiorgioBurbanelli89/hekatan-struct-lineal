@@ -329,6 +329,14 @@ srv.tool("clic_mundo",
   { x: z.number(), y: z.number(), z: z.number().default(0) },
   async ({ x, y, z: zz }) => {
     const e = necesitaPagina(); if (e) return e;
+    // la cámara se anima (reencuadra) al cerrar un trazo: se espera a que quede quieta, o el píxel proyectado queda viejo
+    await pag.evaluate(async () => {
+      const f = window.__hekatanViewerCtx;
+      const cam = ((typeof f === "function" ? f() : f) || document.querySelector("#viewer")?.__ctx)?.camera; if (!cam) return;
+      const firma = () => { cam.updateMatrixWorld && cam.updateMatrixWorld(true); return [...cam.matrixWorld.elements, ...cam.projectionMatrix.elements].map((v) => v.toFixed(5)).join(","); };
+      let ant = firma(), quieto = 0;
+      for (let i = 0; i < 60 && quieto < 4; i++) { await new Promise((r) => setTimeout(r, 100)); const s = firma(); quieto = s === ant ? quieto + 1 : 0; ant = s; }
+    });
     const p = await pag.evaluate((x, y, zz) => {
       const f = window.__hekatanViewerCtx;
       const ctx = (typeof f === "function" ? f() : f) || document.querySelector("#viewer")?.__ctx;
