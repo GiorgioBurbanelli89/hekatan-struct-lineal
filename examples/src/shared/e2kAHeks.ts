@@ -218,6 +218,10 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
       const nu = g(ei.poissonsRatios, e) ?? (G ? E / (2 * G) - 1 : 0.3);
       L.push(`frame ${e + 1} ${el[0] + 1} ${el[1] + 1} ${N(E)} ${N(g(ei.areas, e))} ${N(g(ei.momentsOfInertiaY, e))} ` +
              `${N(g(ei.momentsOfInertiaZ, e))} ${N(g(ei.torsionalConstants, e))} ${N(nu)} ${N(g(ei.densities, e) ?? 0)}` +
+             // canto y ancho (tokens 11-12): el PUNTO DE INSERCION (CARDINALPT) desplaza el eje d2 = ∓D/2 y el lector
+             // del .heks los toma de aqui; sin ellos las barras CARDINALPT 7-9 / 1-3 quedaban sin desfase
+             (() => { const sh = ei.sectionShapes?.get?.(e); const D = sh?.h ?? sh?.d, B = sh?.b ?? sh?.d;
+                      return D > 0 ? ` ${N(D)} ${N(B > 0 ? B : D)}` : ""; })() +
              (m.elementSections?.get?.(e) ? `   # ${m.elementSections.get(e)}` : ""));
     }
     for (const e of barras) {

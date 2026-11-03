@@ -2402,6 +2402,21 @@ export const cliModeler: ExampleDef = {
       membraneModifiers, bendingModifiers, shellModifiers,
       shellSurfaceLoads, shellAngles, cargaDeArea, cantos, anchos, sectionShapes, localAngles,
       shearAreasY, shearAreasZ, momentReleases, endOffsets, plateFormulations,
+      // PUNTO DE INSERCION del e2k (`e2klinea … CARDINALPT n`): el motor ya lo modela (insertionPoint.ts, medido contra
+      // SAP2000 en el .s2k) pero el e2k solo lo guardaba como texto. Vertical: 1-3 abajo, 4-6 medio, 7-9 arriba; el
+      // centroide queda D/2 por debajo del nudo (d2 = -D/2). Lateral y 11 aun no. Mismo criterio que s2kParser.
+      insertionOffsets: (() => {
+        const ins = new Map<number, [number, number]>();
+        asignaLinea.forEach((txt, e) => {
+          const cp = parseInt(txt.match(/CARDINALPT\s+(\d+)/)?.[1] ?? "0", 10);
+          if (!cp || cp === 10) return;
+          const D = cantos.get(e) ?? 0;
+          const fila = cp <= 3 ? -1 : cp >= 7 && cp <= 9 ? 1 : 0;
+          const d2 = fila === 0 ? 0 : -fila * D / 2;
+          if (d2) ins.set(e, [d2, 0]);
+        });
+        return ins.size ? ins : undefined;
+      })(),
       deckSections,
       frameLoads: frameLoadsElem,
       // por patron y por indice de elemento, para exportar cada patron (s2k/f2k)
