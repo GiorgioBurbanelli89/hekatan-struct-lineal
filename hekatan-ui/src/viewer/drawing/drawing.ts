@@ -3963,13 +3963,16 @@ export function drawing({
         // La REJILLA («grid») no es un objeto: no debe tapar el enganche a los ejes rojo /
         // verde / azul (si no, en la isométrica el cursor siempre «cae» en la rejilla del
         // suelo y nunca se puede subir en Z).
-        const enganchadoAObjeto = (!!osnap && (osnap as any).type !== "grid") || refEnganchado;
+        const enganchadoAObjeto = !!osnap || refEnganchado;
+        // Solo para el enganche a ejes: la rejilla no cuenta. El resto (ORTO, polar,
+        // rastreo) sigue como antes: con «grid» contado como objeto quedaban apagados.
+        const objetoRealEnganchado = (!!osnap && (osnap as any).type !== "grid") || refEnganchado;
         // ── SNAP a EJES auxiliares en 3D (X/Y/Z desde el último punto) ──
         // Si el mouse pasa CERCA (en pantalla) de la LÍNEA de un eje, engancha
         // el punto al punto de ESE eje 3D más cercano al rayo de cámara. Permite
         // alinear al eje Z (vertical) aunque el plano de trabajo sea XY, y a X/Y
         // en cualquier vista. Tiene prioridad sobre ORTO/polar.
-        if (!effectiveLock && !enganchadoAObjeto && (window as any).__hekatanAxisSnap !== false) {
+        if (!effectiveLock && !objetoRealEnganchado && (window as any).__hekatanAxisSnap !== false) {
           const rectAx = rendererElm.getBoundingClientRect();
           const mx = event.clientX, my = event.clientY;
           // Los ejes auxiliares son RECTAS infinitas (como en SketchUp), no un tramo de
@@ -3990,12 +3993,15 @@ export function drawing({
           };
           let bestAx: { axis: "x" | "y" | "z"; dpx: number; pt: THREE.Vector3 } | null = null;
           for (const [axis, u] of axDirs) {
-            const aS = toScreenAx(P0.clone().addScaledVector(u, -Lax));
-            const bS = toScreenAx(P0.clone().addScaledVector(u, Lax));
-            const vx = bS.x - aS.x, vy = bS.y - aS.y, wx = mx - aS.x, wy = my - aS.y;
-            const len2 = vx * vx + vy * vy || 1;
-            let t = (wx * vx + wy * vy) / len2; t = Math.max(0, Math.min(1, t));
-            const dpx = Math.hypot(mx - (aS.x + t * vx), my - (aS.y + t * vy));
+            // Recta del eje en PANTALLA: por el punto P0 y con la dirección de u a 1 m.
+            // (Con extremos lejanos, en perspectiva, uno cae DETRÁS de la cámara y la
+            // proyección sale invertida: el enganche fallaba según el ángulo.)
+            const oS = toScreenAx(P0);
+            const dS = toScreenAx(P0.clone().addScaledVector(u, 1));
+            const vx = dS.x - oS.x, vy = dS.y - oS.y, wx = mx - oS.x, wy = my - oS.y;
+            const lenv = Math.hypot(vx, vy);
+            // eje de punta a la cámara (casi un punto): solo cuenta si el cursor está encima
+            const dpx = lenv < 1e-3 ? Math.hypot(wx, wy) : Math.abs(wx * vy - wy * vx) / lenv;
             if (bestAx === null || dpx < bestAx.dpx) {
               // punto del eje más cercano al rayo de cámara (line-line closest)
               bestAx = { axis, dpx, pt: puntoEnEje(axis, lastPt, raycaster.ray, p) };

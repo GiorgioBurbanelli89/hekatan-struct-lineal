@@ -9,9 +9,10 @@ const esp = m => new Promise(r => setTimeout(r, m));
 await pag.goto("http://localhost:4600/workspace/?t=new-blank", { waitUntil: "networkidle2", timeout: 180000 });
 await pag.waitForFunction(() => !!document.querySelector("#viewer")?.__ctx, { timeout: 120000 }); await esp(5000);
 await pag.evaluate(() => { localStorage.clear(); });
-const mover = async (x, y) => { await pag.mouse.move(x, y, { steps: 6 }); await esp(120); };
+const mover = async (x, y) => { await pag.mouse.move(x, y, { steps: 6 }); await esp(150); await pag.mouse.move(x + 0.3, y, {}); await esp(150); await pag.mouse.move(x, y, {}); await esp(150); };
 const clic = async (x, y) => { await mover(x, y); await pag.mouse.click(x, y); await esp(250); };
 const nodos = () => pag.evaluate(() => JSON.stringify((window.__hekatanDrawingPoints?.val ?? []).map(p => p.map(v => +v.toFixed(2)))));
+if (process.argv[3] === "xz") { await pag.evaluate(() => window.__hekatanSetView?.("elevX")); await esp(1500); }
 await pag.evaluate(() => window.__hekatanCadState?.setTool?.("line")); await esp(400);
 // pasos: [x,y,z] del MUNDO (se proyectan a pantalla) o "esc" para cortar la cadena
 const aPx = ([x, y, z]) => pag.evaluate(([x, y, z]) => {
@@ -29,5 +30,6 @@ for (const p of pasos) {
   const [x, y] = await aPx(p); await clic(x, y); i++; console.log(i, JSON.stringify(p), "->", await nodos());
 }
 await pag.screenshot({ path: join(OUT, "iso3d.png") });
+console.log("flags:", await pag.evaluate(() => JSON.stringify({ortho: window.__hekatanOrthoMode, polar: window.__hekatanPolarOn, polarInc: window.__hekatanPolarInc, osnap: window.__hekatanOsnapOn, track: window.__hekatanTrackOn})));
 console.log("errores:", err.length, err.join(" | "));
 await nav.close();
