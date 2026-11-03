@@ -235,6 +235,35 @@ srv.tool("boton", "Aprieta un botón del panel por su texto (p. ej. 'Línea (fra
     return ok ? texto(`Apretado: ${t}`) : falla(`No encuentro un botón visible con «${t}». Abre la carpeta o mira \`botones\`.`);
   });
 
+srv.tool("subir_archivo",
+  "Pulsa un botón que pide un archivo (p. ej. '📥 Importar E2K', '📂 Abrir .heks') y le entrega el archivo de `ruta` (ruta corta, sin espacios). Atrapa el selector de archivos del navegador, que el MCP no puede manejar a mano.",
+  { boton: z.string().min(1).max(60), ruta: z.string().min(3).max(300) },
+  async ({ boton: t, ruta }) => {
+    const e = necesitaPagina(); if (e) return e;
+    if (!existsSync(ruta)) return falla(`No existe el archivo: ${ruta}`);
+    await pag.evaluate(() => {
+      if (window.__hkParcheArchivo) { window.__hkUltimoInputArchivo = null; return; }
+      window.__hkParcheArchivo = true;
+      const orig = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function () {
+        if (this.type === "file") { window.__hkUltimoInputArchivo = this; return; }   // no abre el selector: lo atrapamos
+        return orig.call(this);
+      };
+    });
+    const ok = await pag.evaluate((t) => {   // clic directo en el DOM: sirve aunque el panel esté cerrado
+      const b = [...document.querySelectorAll("button")].find((x) => (x.textContent || "").includes(t));
+      if (b) b.click(); return !!b;
+    }, t);
+    if (!ok) return falla(`No encuentro el botón «${t}».`);
+    await esperar(400);
+    const h = await pag.evaluateHandle(() => window.__hkUltimoInputArchivo);
+    const el = h.asElement();
+    if (!el) return falla(`«${t}» no pidió ningún archivo.`);
+    await el.uploadFile(ruta);
+    await esperar(3000);
+    return texto(`Archivo entregado a «${t}»: ${ruta}`);
+  });
+
 srv.tool("carpeta", "Abre una carpeta del panel por su título (p. ej. 'Dibujar').",
   { titulo: z.string().min(1).max(60) },
   async ({ titulo }) => {
