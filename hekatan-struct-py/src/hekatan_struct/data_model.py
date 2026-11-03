@@ -99,7 +99,15 @@ class ElementInputs:
     end_offsets:               dict[int, tuple[float, float, float]] = field(default_factory=dict)
     moment_releases:           dict[int, list[bool]] = field(default_factory=dict)
     partial_fixity_springs:    dict[int, list[float]] = field(default_factory=dict)
+    # LEGADO (fork original): mismo significado que `insertion_offsets`. Se conserva por compatibilidad.
     insertion_points:          dict[int, tuple[float, float]] = field(default_factory=dict)
+    # PUNTO DE INSERCION (cardinal point de CSI): (d2, d3) en metros y ejes LOCALES de la barra = posicion del
+    # CENTROIDE respecto al NUDO. Espejo de `insertionOffsets` del motor TS/C++. Ver `insercion.py`.
+    insertion_offsets:         dict[int, tuple[float, float]] = field(default_factory=dict)
+    # Por barra: True (defecto, ETABS «Transform frame stiffness for offsets from centroid» = Si, e2k
+    # `TRANSFORMSTIFF "Yes"`) -> K = R^T K R y esfuerzos del centroide; False -> la barra solo se DESPLAZA
+    # geometricamente y su rigidez NO se transforma (casilla desmarcada; es lo que hace ETABS si el e2k no dice nada).
+    insertion_transform:       dict[int, bool] = field(default_factory=dict)
     section_shapes:            dict[int, SectionShape] = field(default_factory=dict)
     # Modificadores de propiedad del shell (CSI Manual §10.7). El par escalar
     # (`shellmod ID mem bend`) y los OCHO direccionales

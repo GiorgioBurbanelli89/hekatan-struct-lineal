@@ -323,7 +323,7 @@ class View:
     ):
         if not HAS_PYVISTA:
             raise ImportError(
-                "pyvista no instalado. pip install hekatan-struct-py[viewer]"
+                "pyvista no instalado. pip install hekatan-struct[viewer]"
             )
         self.nodes = list(nodes)
         self.elements = list(elements)

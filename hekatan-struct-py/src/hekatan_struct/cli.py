@@ -20,6 +20,7 @@ Subcomandos
     placa    la K 12x12 de flexión (DKQ)
     banco    los tests del paper ITW 1990, en una tabla
     modos    los modos de energía nula de un elemento
+    convertir  entre .e2k (ETABS), .s2k (SAP2000) y .f2k (SAFE)
 
 Ejemplos
 --------
@@ -135,6 +136,14 @@ def cmd_banco(a):
           % (c, REF["cook"], (c / REF["cook"] - 1) * 100))
 
 
+def cmd_convertir(a):
+    from .archivos_csi import convertir
+    r = convertir(a.entrada, a.salida, comportamiento=a.comportamiento)
+    print("%s -> %s (%s)" % (a.entrada, a.salida, r.formato))
+    for av in r.avisos:
+        print("AVISO:", av)
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(
         prog="hekatan_struct.cli",
@@ -183,6 +192,12 @@ def main(argv=None):
     q.add_argument("--mallas", type=int, nargs="+", default=[4, 8],
                    help="tamanos de malla n x n")
     q.set_defaults(fn=cmd_hemisferio)
+
+    q = sub.add_parser("convertir", help="convierte entre .e2k (ETABS), .s2k (SAP2000) y .f2k (SAFE)")
+    q.add_argument("entrada")
+    q.add_argument("salida")
+    q.add_argument("--comportamiento", choices=("etabs", "sap2000", "safe"), default=None)
+    q.set_defaults(fn=cmd_convertir)
 
     a = p.parse_args(argv)
     return a.fn(a) or 0

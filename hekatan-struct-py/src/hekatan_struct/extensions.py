@@ -162,11 +162,13 @@ def apply_cardinal_point_8(
     element_idx: int,
     h_beam: float,
 ) -> None:
-    """Sets insertion_points[idx] = (0, -h_beam/2) → CardinalPoint 8 (Top Center).
+    """CardinalPoint 8 (Top Center): el centroide queda h/2 por DEBAJO del nudo, d2 = -h/2.
 
-    El frame solver applies r_local = (0, -h/2, 0) como rigid arm en cada extremo.
+    Atajo de `insercion.asignar_punto_insercion(ei, idx, 8, D=h_beam)`; con la rigidez transformada
+    (barra rigida nudo-centroide). Antes ponia (0, -h/2) en el eje 3 y con el signo contrario.
     """
-    element_inputs.insertion_points[element_idx] = (0.0, -h_beam / 2)
+    element_inputs.insertion_offsets[element_idx] = (-h_beam / 2, 0.0)
+    element_inputs.insertion_transform[element_idx] = True
 
 
 # ═══════════════════════════════════════════════════════════════════════════

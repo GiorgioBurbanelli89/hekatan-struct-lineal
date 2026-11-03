@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hekatan-struct-py"
-version = "0.1.0"
-description = "Hekatan Struct — Python engine: Winkler springs, rigid diaphragm, edificios paramétricos, zapatas, validación ETABS"
+name = "hekatan-struct"
+version = "0.2.0"
+description = "Hekatan Struct: elementos finitos de placa DKE y DSE (Wilson), membrana y grado de libertad de giro en el plano (drilling DOF)"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-  { name = "GiorgioBurbanelli89", email = "jbjazzjuventus1989@gmail.com" },
+  { name = "GiorgioBurbanelli89" },
 ]
-keywords = ["fem", "structural", "engineering", "hekatan", "etabs", "ecuador"]
+keywords = ["fem", "plate", "dke", "dse", "membrane", "drilling-dof", "shell", "structural", "hekatan"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
@@ -24,6 +24,13 @@ dependencies = [
   "numpy>=1.20",
   "scipy>=1.7",
 ]
+
+[project.scripts]
+hekatan-csi = "hekatan_struct.csi.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal"
+Issues = "https://github.com/GiorgioBurbanelli89/hekatan-struct-lineal/issues"
 
 [project.optional-dependencies]
 viewer = ["pyvista>=0.42", "matplotlib>=3.5"]

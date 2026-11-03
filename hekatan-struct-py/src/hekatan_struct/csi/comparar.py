@@ -3,7 +3,7 @@
 
     python -m hekatan_struct.csi.comparar [ruta/medidas_csi.json.gz]
 
-Datos: `tests/datos_csi/medidas_csi.json.gz` (K 12x12 medidas por OAPI, flexibilidades de membrana y
+Datos: `csi/datos/medidas_csi.json.gz` (van dentro del paquete) (K 12x12 medidas por OAPI, flexibilidades de membrana y
 desplazamientos de las mallas ITW 1990 en SAP2000). Solo números: nudos, E, ν, t, K/F/u.
 """
 from __future__ import annotations
@@ -20,8 +20,7 @@ from .shell_thick import k_shell_thick_cuad
 from .inventario import INVENTARIO, PENDIENTES
 from ..placas import k_dkq
 
-DATOS = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "tests", "datos_csi",
-                                      "medidas_csi.json.gz"))
+DATOS = os.path.join(os.path.dirname(__file__), "datos", "medidas_csi.json.gz")   # viaja dentro del paquete
 ARTEFACTOS = {"solo_m11", "solo_m22"}       # un solo modificador de flexión: pivote de redondeo de CSI
 JUEZ_THICK = {"k_directa": "ETABS"}         # el resto de conjuntos son de SAP2000
 
@@ -164,7 +163,7 @@ def main(argv=None):
     except Exception:  # noqa: BLE001
         pass
     datos = cargar(argv[0] if argv else None)
-    print("== Medido ahora (datos de tests/datos_csi) ==")
+    print("== Medido ahora (datos del paquete: csi/datos) ==")
     pl = celdas_placa(datos)
     for tipo, juez in (("thick", "SAP2000"), ("thick", "ETABS"), ("thin", "ETABS")):
         f = [r for r in pl if r[3] == tipo and r[2] == juez and r[1] not in ARTEFACTOS]

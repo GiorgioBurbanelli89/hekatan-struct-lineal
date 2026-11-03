@@ -3,7 +3,7 @@
 
     python examples/comparar_con_sap_etabs.py            (desde hekatan-struct-py)
 
-Recalcula los errores con los datos YA medidos (tests/datos_csi/medidas_csi.json.gz); no abre SAP2000 ni ETABS.
+Recalcula los errores con los datos YA medidos (src/hekatan_struct/csi/datos/medidas_csi.json.gz); no abre SAP2000 ni ETABS.
 """
 import os
 import sys

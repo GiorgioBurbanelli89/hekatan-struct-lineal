@@ -32,9 +32,13 @@ from .extensions import (
 from .placa_modelo import Placa
 from . import placas_wilson               # DKE y DSE de Wilson (libro 2005, cap. 8)
 from .placas_wilson import k_dke, k_dse
+from . import insercion, brazos, cubierta     # punto de inserción (cardinal points), brazos automáticos de ETABS, cubierta de membrana
+from .insercion import asignar_punto_insercion, offsets_punto_cardinal
+from .brazos import aplicar_brazos_automaticos
+from .cubierta import membrana_deck_etabs, cubierta_de_e2k
 from . import csi                         # elementos de área de SAP2000/ETABS con firmas k_<elem>(xy, E, nu, t)
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     # core re-exported
     "Node", "Element",
@@ -46,5 +50,11 @@ __all__ = [
     "apply_selfweight", "apply_rigid_diaphragm",
     "apply_cardinal_point_8", "apply_stiffness_modifiers",
     "compute_picks", "compare_picks",
+    "asignar_punto_insercion", "offsets_punto_cardinal", "aplicar_brazos_automaticos",
+    "membrana_deck_etabs", "cubierta_de_e2k",
     "Placa", "placas_wilson", "k_dke", "k_dse", "csi",
 ]
+
+# Abrir/guardar .e2k (ETABS), .s2k (SAP2000) y .f2k (SAFE)
+from .archivos_csi import abrir, guardar, convertir
+__all__ += ["abrir", "guardar", "convertir"]

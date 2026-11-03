@@ -362,6 +362,27 @@ def frame_T(e1: np.ndarray, e2: np.ndarray, e3: np.ndarray) -> np.ndarray:
     return T
 
 
+def frame_insertion_matrix(d2: float, d3: float) -> np.ndarray:
+    """PUNTO DE INSERCION (cardinal point de CSI): u_centroide = R · u_nudo (12x12, LOCAL).
+
+    El centroide queda a r = (0, d2, d3) del nudo, en ejes locales, y se mueve con el como cuerpo rigido:
+    u_centroide = u_nudo + theta x r  (r1 = 0):
+
+        u1 += d3*th2 - d2*th3      u2 += -d3*th1      u3 += d2*th1
+
+    igual en los dos extremos. Espejo EXACTO de `Ri` en `getGlobalStiffnessMatrix.cpp` y de
+    `aCentroide` en `hekatan-fem/src/utils/insertionPoint.ts`. La K de la barra es R^T K R y los
+    esfuerzos son k·(R u): los del centroide, como los da CSI.
+    """
+    R = np.eye(12)
+    for o in (0, 6):
+        R[o + 0, o + 4] = d3
+        R[o + 0, o + 5] = -d2
+        R[o + 1, o + 3] = -d3
+        R[o + 2, o + 3] = d2
+    return R
+
+
 def rigid_arm_transform(r_local_I: np.ndarray, r_local_J: np.ndarray) -> np.ndarray:
     """CSI Cardinal Point offsets (rigid arms en local frame).
 
@@ -369,7 +390,8 @@ def rigid_arm_transform(r_local_I: np.ndarray, r_local_J: np.ndarray) -> np.ndar
       u_centroid = u_joint + r × ω_joint
       ω_centroid = ω_joint
 
-    Útil para Cardinal Point 8 (beams): r = (0, -h_beam/2, 0) en local.
+    ⚠️ LEGADO, con el signo CONTRARIO al motor TS (que usa θ × r con r = centroide − nudo).
+    El solver ya no la usa: el punto de inserción va por `frame_insertion_matrix`.
     """
     def Rx(r):
         rx, ry, rz = r

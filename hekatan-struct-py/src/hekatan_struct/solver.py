@@ -15,7 +15,7 @@ from .data_model import (
     DeformOutputs, AnalyzeOutputs, ModalOutputs,
 )
 from .elements.frame import (
-    frame_local_axes_csi, frame_stiffness_local, frame_T, rigid_arm_transform,
+    frame_local_axes_csi, frame_stiffness_local, frame_T, frame_insertion_matrix,
     frame_releases_condense, frame_fixed_end_loads,
     frame_partial_fixity, frame_rigid_offset_matrix,
     frame_stiffness_end_offsets, frame_end_offset_matrix,
@@ -66,18 +66,47 @@ def _solid_k_dofs(nodes, conn, element_inputs, idx):
     return K, d
 
 
+def _insercion_R(element_inputs: ElementInputs, idx: int):
+    """R (12x12) del punto de insercion de la barra, o None si no hay o si la casilla
+    «transformar la rigidez» esta desmarcada (barra solo geometrica: K sin tocar)."""
+    d = element_inputs.insertion_offsets.get(idx)
+    if d is None:
+        d = element_inputs.insertion_points.get(idx)        # legado
+    if d is None or not element_inputs.insertion_transform.get(idx, True):
+        return None
+    if abs(d[0]) <= 1e-12 and abs(d[1]) <= 1e-12:
+        return None
+    return frame_insertion_matrix(float(d[0]), float(d[1]))
+
+
 def _frame_k_local_T(
     nodes: Sequence[Node],
     conn: Element,
     element_inputs: ElementInputs,
     idx: int,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """K local (12×12) y T (local→global) de UNA barra. Fuente única.
+    """K local (12×12) y T (local→global) de UNA barra, con el punto de insercion ya aplicado
+    (K = R^T K R). Para los esfuerzos usar `_frame_k_pre_T`.
 
     Antes esto estaba duplicado en _assemble_K y en analyze(), y las dos copias
     se fueron separando. Los esfuerzos hay que recuperarlos con la MISMA matriz
     con la que se armó el sistema, o se leen fuerzas de otro modelo.
     """
+    k_pre, T = _frame_k_pre_T(nodes, conn, element_inputs, idx)
+    R = _insercion_R(element_inputs, idx)
+    if R is not None:
+        k_pre = R.T @ k_pre @ R
+    return k_pre, T
+
+
+def _frame_k_pre_T(
+    nodes: Sequence[Node],
+    conn: Element,
+    element_inputs: ElementInputs,
+    idx: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """K local de la barra ANTES del punto de insercion (la del tramo flexible, con brazos,
+    releases y fijacion parcial) y T. Los esfuerzos del centroide son k_pre · (R · u)."""
     i, j = conn
     p_i = np.asarray(nodes[i], dtype=float)
     p_j = np.asarray(nodes[j], dtype=float)
@@ -120,13 +149,6 @@ def _frame_k_local_T(
     if off and (off[0] > 0 or off[1] > 0):
         R = frame_rigid_offset_matrix(off[0] * L, off[1] * L)
         k_loc = R.T @ k_loc @ R
-    # Rigid arm vía insertion_points (cardinal points). Si está, aplica.
-    ins = element_inputs.insertion_points.get(idx)
-    if ins is not None:
-        dy, dz = ins
-        r_loc = np.array([0.0, dy, dz])
-        T_arm = rigid_arm_transform(r_loc, r_loc)
-        k_loc = T_arm.T @ k_loc @ T_arm
     return k_loc, frame_T(e1, e2, e3)
 
 
@@ -758,9 +780,12 @@ def analyze(
     for idx, conn in enumerate(elements):
         if _is_frame(conn):
             i, j = conn
-            k_loc, T = _frame_k_local_T(nodes, conn, element_inputs, idx)
+            k_loc, T = _frame_k_pre_T(nodes, conn, element_inputs, idx)
             u_global_12 = np.concatenate([U[6*i:6*i+6], U[6*j:6*j+6]])
             u_local = T.T @ u_global_12
+            R_ins = _insercion_R(element_inputs, idx)
+            if R_ins is not None:
+                u_local = R_ins @ u_local        # esfuerzos del CENTROIDE, como CSI (analyze.ts: aCentroide)
             f_local = k_loc @ u_local
             # Carga de vano: f = k·u da solo la parte NODAL. El diagrama real
             # lleva además las fuerzas de empotramiento de la propia barra.

@@ -41,6 +41,7 @@ por `errores`. Un modelo que no se lee entero da flecha 0 y báscula perfecta
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 
 from .data_model import ElementInputs, NodeInputs
@@ -126,6 +127,10 @@ def leer_heks(ruta: str) -> ModeloHeks:
     rels: dict[int, list[bool]] = {}
     endoffs: dict[int, tuple[float, float, float]] = {}   # (offI, offJ, rz)
     rigidzone: list = [None]                               # `rigidzone`: factor global u "off"
+    rigid_auto: list = [None]                              # `rigidzone auto [f]`: brazos AUTOMATICOS de ETABS (f = RZ)
+    comport: list = [None]                                 # `comportamiento etabs|sap2000|safe`
+    e2klin: dict[int, str] = {}                            # `e2klinea ID CARDINALPT n [TRANSFORMSTIFF "Yes"] ...`
+    insercion: dict[int, tuple] = {}                       # `insercion ID cp [transform 0|1]`
     sw_mult = [0.0]                        # multiplicador de peso propio
     ej_flag = [True]                       # etabsjoint: por DEFECTO como ETABS; `etabsjoint 0` la apaga (modo SAP2000)
     de_flag = [False]                      # `deck etabs`: panos membrana como los pisos de ETABS (ver deck_etabs.py)
@@ -202,6 +207,7 @@ def leer_heks(ruta: str) -> ModeloHeks:
                         J=J if J is not None else 0.14 * (math.sqrt(A) ** 4),
                         nu=opt(9) if opt(9) is not None else 0.2,
                         rho=opt(10) if opt(10) is not None else 2.45,
+                        D=opt(11), B=opt(12),             # canto y ancho (tokens 11-12): brazos automaticos y punto de insercion
                         sec=sec,
                     ))
                 elif cmd in ("support", "fix"):
@@ -266,7 +272,19 @@ def leer_heks(ruta: str) -> ModeloHeks:
                     # rigidzone <f> | rigidzone off — el factor de zona rígida de TODO el
                     # modelo (manda sobre el rz de cada `endoffset`); off = sin brazos (SAP2000)
                     v = t[1].lower() if len(t) > 1 else ""
+                    if v == "auto":
+                        # rigidzone auto [f]: brazos automaticos de ETABS en las barras sin `endoffset`
+                        rigid_auto[0] = float(t[2]) if len(t) > 2 else 0.0
+                        continue
                     rigidzone[0] = "off" if v in ("off", "no", "none", "ninguno", "sap", "sap2000") else float(v)
+                elif cmd == "comportamiento":
+                    comport[0] = (t[1] if len(t) > 1 else "etabs").lower()
+                elif cmd == "e2klinea":
+                    # e2klinea ID <tokens del LINEASSIGN>: CARDINALPT n, TRANSFORMSTIFF "Yes"|"No", MIRROR…
+                    e2klin[int(t[1])] = " ".join(t[2:])
+                elif cmd in ("insercion", "inserción", "insertion"):
+                    # insercion ID cp [transform 0|1]: punto cardinal 1-11 (D y B salen de los tokens 11-12 de `frame`)
+                    insercion[int(t[1])] = (int(t[2]), (t[3].lower() not in ("0", "no", "off", "false")) if len(t) > 3 else True)
                 elif cmd in ("endoffset", "offset", "lengthoff"):
                     # endoffset ID offI offJ [rz]   — el END LENGTH OFFSET de CSI.
                     # `rz` es el rigid-zone factor (0-1); ETABS trae 0 por
@@ -376,6 +394,22 @@ def leer_heks(ruta: str) -> ModeloHeks:
             except (IndexError, ValueError) as e:
                 errores.append(f"{linea.strip()!r}: {e}")
 
+    # `comportamiento` (aplicarComportamiento de cliModeler.ts): manda sobre las directivas sueltas
+    if comport[0] == "etabs":
+        ej_flag[0] = True
+        de_flag[0] = True
+        if rigidzone[0] == "off":
+            rigidzone[0] = None
+        if not endoffs and rigid_auto[0] is None:
+            rigid_auto[0] = 0.0
+    elif comport[0] in ("sap2000", "sap"):
+        ej_flag[0] = False
+        de_flag[0] = False
+        ow_flag[0] = False
+        rigidzone[0] = "off"
+        rigid_auto[0] = None
+    elif comport[0] == "safe":
+        tf[0] = 0.1
     # `deck etabs`: partir los panos membrana en sus nudos de borde y llevar su peso/areaload
     # a las barras de borde por area tributaria (lo que hace ETABS). Antes de montar nada.
     tribut: set[int] = set()
@@ -515,6 +549,62 @@ def leer_heks(ruta: str) -> ModeloHeks:
             ei.end_offsets[k] = endoffs[f["id"]]
         if f["id"] in fl:
             ei.frame_loads[k] = fl[f["id"]]
+
+    idx_fr = {fid: kk for kk, fid in enumerate(m.frame_id)}
+    # `rigidzone auto [f]`: brazos AUTOMATICOS de ETABS en las barras sin `endoffset` (brazos.py)
+    if rigid_auto[0] is not None and rigidzone[0] != "off":
+        from .brazos import aplicar_brazos_automaticos
+        rz_a = float(rigidzone[0]) if isinstance(rigidzone[0], (int, float)) else float(rigid_auto[0])
+        cantos: dict[int, float] = {}
+        anchos: dict[int, float] = {}
+        for k_f, f in enumerate(frames):
+            kk = idx_fr.get(f["id"])
+            if kk is None:
+                continue
+            fid = f["id"]
+            if f.get("D") is not None:
+                cantos[kk] = f["D"]
+            if f.get("B") is not None:
+                anchos[kk] = f["B"]
+            if fid in isec_de:
+                cantos[kk] = isec_de[fid][0]; anchos[kk] = max(isec_de[fid][1], isec_de[fid][4])
+            elif fid in tubo_de:
+                cantos[kk] = tubo_de[fid][1]; anchos[kk] = tubo_de[fid][0]
+            elif fid in canal_de:
+                cantos[kk] = canal_de[fid][0]; anchos[kk] = canal_de[fid][1]
+            elif fid in dosl_de:
+                cantos[kk] = dosl_de[fid][0]; anchos[kk] = dosl_de[fid][1]
+            elif fid in cftc_de:
+                cantos[kk] = cftc_de[fid][0]; anchos[kk] = cftc_de[fid][0]
+            elif fid in cft_de:
+                cantos[kk] = cft_de[fid][1]; anchos[kk] = cft_de[fid][0]
+        aplicar_brazos_automaticos(m.nodes, m.elements, ei, rz_a, cantos=cantos, anchos=anchos)
+    # PUNTO DE INSERCION (`e2klinea … CARDINALPT n`, `insercion ID cp`): d2/d3 desde el punto cardinal y D, B
+    if e2klin or insercion:
+        from .insercion import asignar_punto_insercion
+        for f in frames:
+            kk = idx_fr.get(f["id"])
+            if kk is None:
+                continue
+            cp, tr = None, True
+            if f["id"] in insercion:
+                cp, tr = insercion[f["id"]]
+            elif f["id"] in e2klin:
+                mm = re.search(r"CARDINALPT\s+(\d+)", e2klin[f["id"]], re.I)
+                if mm:
+                    cp = int(mm.group(1))
+                # sin TRANSFORMSTIFF el motor TS lo trata como "Yes" (ETABS dejaria la barra solo geometrica)
+                mt = re.search(r'TRANSFORMSTIFF\s+"?(\w+)"?', e2klin[f["id"]], re.I)
+                if mt:
+                    tr = mt.group(1).lower() in ("yes", "si", "true", "1")
+            if not cp or cp == 10:
+                continue
+            D = f.get("D") or 0.0
+            B = f.get("B") or D
+            try:
+                asignar_punto_insercion(ei, kk, cp, D=D, B=B, transform=tr)
+            except ValueError as e:
+                m.errores.append(f"insercion frame {f['id']}: {e}")
 
     # ── CÁSCARAS ────────────────────────────────────────────────────────
     # Van DESPUÉS de las barras, como en `cliModeler.ts`: el índice interno de

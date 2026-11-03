@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""hekatan_struct.csi contra lo YA MEDIDO en SAP2000 24 / ETABS 22 (tests/datos_csi/medidas_csi.json.gz).
+"""hekatan_struct.csi contra lo YA MEDIDO en SAP2000 24 / ETABS 22 (src/hekatan_struct/csi/datos/medidas_csi.json.gz).
 
 Umbrales: Shell-Thin 1e-9 %, Shell-Thick cuadrilátero 1e-10 % en 140/142 celdas, membrana ETABS 1e-12 (relativo),
 membrana SAP2000 1e-8 % del desplazamiento máximo. Nada se compara contra una cuenta a mano.
