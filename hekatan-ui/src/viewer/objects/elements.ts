@@ -485,6 +485,16 @@ export function elements(
       new THREE.Float32BufferAttribute(wireVerts, 3)
     );
     barrasGruesas.visible = fatVerts.length > 0;
+    // GROSOR SEGUN DENSIDAD: 3 px fijos van bien con 100-1500 barras, pero con un modelo de ETABS (14 000 barras:
+    // viguetas cada 0.4 m) las lineas de 3 px y los puntos de articulacion de 8 px se solapan y la losa se ve como
+    // un area maciza (mercado.e2k, 4-nov-2026: 3 px sobre separacion de ~8 px). Se afina con la raiz del numero de
+    // barras, nunca por debajo de 1 px; hasta 1500 barras queda igual que antes.
+    {
+      let nBarras = 0; for (const e of elems) if (e.length === 2) nBarras++;
+      const f = Math.min(1, Math.max(1 / 3, Math.sqrt(1500 / Math.max(1, nBarras))));
+      matGruesa.linewidth = 3 * f;
+      (puntosRel.material as THREE.PointsMaterial).size = Math.max(3, 8 * f);
+    }
     if (fatVerts.length) {
       const gg = new LineSegmentsGeometry(); gg.setPositions(fatVerts);
       if (fatCols.length === fatVerts.length) gg.setColors(fatCols);
