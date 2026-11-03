@@ -20,7 +20,7 @@
 import { parseE2k, type E2kModel } from "./e2kParser";
 import { coserModelo, type InformeCosido } from "./e2kCoser";
 import { coartarGdlSueltos } from "./e2kMecanismos";
-import { cargaBarraConsistente } from "./cargaBarraConsistente";
+import { cargaBarraConsistente, condensarCargaPorLiberaciones } from "./cargaBarraConsistente";
 import { formulacionPorPf } from "./formulacionesPlaca";
 
 export interface ResultadoE2kHeks {
@@ -82,7 +82,7 @@ const N = (v: number | undefined, def = 0): string => {
 };
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks {
-  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true });
+  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true, metodoDirecto: true });
   const inventario = inventarioDe(m, nombre);
   // El peso propio de cada barra ENTERA (antes de partirla), por coordenadas de sus extremos: es lo que ETABS
   // convierte en MASA (la mitad a cada nudo del objeto). Medido en el modelo sintético: repartiéndola por los
@@ -104,7 +104,9 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
     const N0 = m.nodes as unknown as number[][];
     for (const [e, pb] of m.pesoBarras) {
       const [i, j] = (m.elements as unknown as number[][])[e];
-      const eq = cargaBarraConsistente(N0[i], N0[j], pb.s0, pb.s1, pb.q, pb.q, [0, 0, -1]);
+      // barra articulada (RELEASE M2/M3): no transmite el momento de empotramiento al nudo (ver condensarCargaPorLiberaciones)
+      const eq = condensarCargaPorLiberaciones(cargaBarraConsistente(N0[i], N0[j], pb.s0, pb.s1, pb.q, pb.q, [0, 0, -1]),
+        N0[i], N0[j], (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
       for (const p of pats) {
         const mp = m.cargasPatron!.get(p.nombre) ?? m.cargasPatron!.set(p.nombre, new Map()).get(p.nombre)!;
         for (const [n, o] of [[i, 0], [j, 6]] as const) {
@@ -129,11 +131,15 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
         const xi = Math.min(1, Math.max(0, q.s / L)), dP = -q.P;
         const F1 = 1 - 3 * xi * xi + 2 * xi ** 3, M1 = L * (xi - 2 * xi * xi + xi ** 3);
         const F3 = 3 * xi * xi - 2 * xi ** 3, M4 = L * (-xi * xi + xi ** 3);
+        // vector de empotramiento de esta carga puntual y, si la correa está articulada, condensado por sus giros liberados
+        const eqP = condensarCargaPorLiberaciones(
+          [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1, 0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4],
+          pi, pj, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
         for (const mp of [m.cargasPatron!.get(q.lc) ?? m.cargasPatron!.set(q.lc, new Map()).get(q.lc)!,
                           sinPP.get(q.lc) ?? sinPP.set(q.lc, new Map()).get(q.lc)!])
-          for (const [n, F, M] of [[i, F1, M1], [j, F3, M4]] as const) {
+          for (const [n, o] of [[i, 0], [j, 6]] as const) {
             const v = mp.get(n) ?? [0, 0, 0, 0, 0, 0];
-            v[2] += dP * F; v[3] += txw[0] * dP * M; v[4] += txw[1] * dP * M; v[5] += txw[2] * dP * M;
+            for (let k = 0; k < 6; k++) v[k] += eqP[o + k];
             mp.set(n, v);
           }
       }

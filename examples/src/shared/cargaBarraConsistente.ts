@@ -70,3 +70,74 @@ export function acumularCargaBarra(
   for (let k = 0; k < 12; k++) fe[k] -= eq[k];
   frameFixedEnd.set(elem, fe);
 }
+
+/**
+ * Condensa el vector de empotramiento `eq` (12, globales) por los GIROS liberados de la barra (M2/M3 en I y J).
+ *
+ * POR QUÉ. El peso propio y las cargas de vano se hornean en los nudos como vector CONSISTENTE de barra EMPOTRADA
+ * (F = wL/2, M = ±wL²/12). Si la barra está articulada (correas, tubos de arriostre con `RELEASE "… M2I M2J M3I M3J"`)
+ * ese momento de empotramiento NO existe: la barra no lo transmite al nudo. Dejarlo ponía un par espurio en cada
+ * nudo de la correa. Medido en un galpón recortado del «mercado» (ETABS 22, Dead, sin cubierta ni punto de inserción):
+ * con los momentos puestos a cero Uz pasaba de 11 % a 5 %, Ux de 42 % a 6 % (del máximo, 0.27 mm).
+ *
+ * Es la condensación estática de siempre, por plano de flexión (EI se cancela, vale cualquier EI):
+ *   f' = f − K[:,R]·K[R,R]⁻¹·f[R]        (R = giros liberados; f'[R] = 0)
+ * con la K de viga Euler–Bernoulli 4×4 de cada plano: 1-2 (v2, θ3) y 1-3 (v3, θ2, con θ2 = −dw/dx).
+ * Ejes locales de CSI: e1 = i→j; e2 en el plano vertical hacia arriba (barra vertical: +X); e3 = e1×e2; `angDeg` gira e2/e3 sobre e1.
+ * `rel` lleva 12 banderas [P V2 V3 T M2 M3] de I y de J.
+ */
+export function condensarCargaPorLiberaciones(eq: number[], a: number[], b: number[], rel: boolean[] | undefined, angDeg = 0): number[] {
+  if (!rel || !(rel[4] || rel[5] || rel[10] || rel[11])) return eq;
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const L = Math.hypot(d[0], d[1], d[2]);
+  if (!(L > 1e-12)) return eq;
+  const e1 = d.map((v) => v / L);
+  let e2: number[];
+  const hz = [e1[0], e1[1], 0], nh = Math.hypot(hz[0], hz[1]);
+  if (nh < 1e-9) e2 = [1, 0, 0];
+  else { const k = e1[2]; const u = [-e1[0] * k, -e1[1] * k, 1 - e1[2] * e1[2]]; const nu = Math.hypot(u[0], u[1], u[2]); e2 = u.map((v) => v / nu); }
+  let e3 = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+  if (angDeg) {
+    const c = Math.cos(angDeg * Math.PI / 180), s = Math.sin(angDeg * Math.PI / 180);
+    const n2 = e2.map((v, k) => c * v + s * e3[k]), n3 = e3.map((v, k) => -s * e2[k] + c * v);
+    e2 = n2; e3 = n3;
+  }
+  const loc = (v: number[], o: number) => [0, 1, 2].map((r) => [e1, e2, e3][r][0] * v[o] + [e1, e2, e3][r][1] * v[o + 1] + [e1, e2, e3][r][2] * v[o + 2]);
+  const FI = loc(eq, 0), MI = loc(eq, 3), FJ = loc(eq, 6), MJ = loc(eq, 9);
+  const L2 = L * L, L3 = L2 * L;
+  // plano 1-2: [v2_i, θ3_i, v2_j, θ3_j]; plano 1-3: [v3_i, θ2_i, v3_j, θ2_j] (θ2 = −dw/dx → signo cruzado en los términos v·θ)
+  const kBase = (sg: number) => [
+    [12 / L3, sg * 6 / L2, -12 / L3, sg * 6 / L2],
+    [sg * 6 / L2, 4 / L, -sg * 6 / L2, 2 / L],
+    [-12 / L3, -sg * 6 / L2, 12 / L3, -sg * 6 / L2],
+    [sg * 6 / L2, 2 / L, -sg * 6 / L2, 4 / L],
+  ];
+  const cond = (f: number[], K: number[][], R: number[]): number[] => {
+    if (!R.length) return f;
+    const n = R.length;
+    const Krr = R.map((i) => R.map((j) => K[i][j])), fr = R.map((i) => f[i]);
+    // resolver Krr·x = fr (n = 1 o 2 o 3 o 4 pero pequeño): eliminación gaussiana
+    const M = Krr.map((row, i) => [...row, fr[i]]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = c + 1; r < n; r++) { const q = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= q * M[c][k]; }
+    }
+    const x = new Array(n).fill(0);
+    for (let r = n - 1; r >= 0; r--) { let s = M[r][n]; for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k]; x[r] = s / M[r][r]; }
+    const out = f.slice();
+    for (let i = 0; i < 4; i++) { let s = 0; R.forEach((j, q) => { s += K[i][j] * x[q]; }); out[i] -= s; }
+    R.forEach((j) => { out[j] = 0; });
+    return out;
+  };
+  // plano 1-2
+  const R12 = [rel[5] ? 1 : -1, rel[11] ? 3 : -1].filter((v) => v >= 0);
+  const f12 = cond([FI[1], MI[2], FJ[1], MJ[2]], kBase(1), R12);
+  // plano 1-3
+  const R13 = [rel[4] ? 1 : -1, rel[10] ? 3 : -1].filter((v) => v >= 0);
+  const f13 = cond([FI[2], MI[1], FJ[2], MJ[1]], kBase(-1), R13);
+  const FIn = [FI[0], f12[0], f13[0]], MIn = [MI[0], f13[1], f12[1]];
+  const FJn = [FJ[0], f12[2], f13[2]], MJn = [MJ[0], f13[3], f12[3]];
+  const glob = (v: number[]) => [0, 1, 2].map((k) => v[0] * e1[k] + v[1] * e2[k] + v[2] * e3[k]);
+  return [...glob(FIn), ...glob(MIn), ...glob(FJn), ...glob(MJn)];
+}

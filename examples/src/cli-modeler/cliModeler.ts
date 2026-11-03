@@ -2410,6 +2410,11 @@ export const cliModeler: ExampleDef = {
         asignaLinea.forEach((txt, e) => {
           const cp = parseInt(txt.match(/CARDINALPT\s+(\d+)/)?.[1] ?? "0", 10);
           if (!cp || cp === 10) return;
+          // Sin `TRANSFORMSTIFF "Yes"` ETABS NO transforma la rigidez al punto de insercion («Don't transform frame stiffness
+          // for offsets from centroid»): el CARDINALPT es solo geometria y el analisis es el del centroide. Medido en el mercado
+          // (14745 barras, 2714 con CARDINALPT 8, todas NoTransform = Yes): quitar el CARDINALPT no cambia ni un desplazamiento
+          // de ETABS (2.8e-15 mm). El e2k escribe TRANSFORMSTIFF "Yes" solo cuando esta activado.
+          if (!/TRANSFORMSTIFF\s+"Yes"/i.test(txt)) return;
           const D = cantos.get(e) ?? 0;
           const fila = cp <= 3 ? -1 : cp >= 7 && cp <= 9 ? 1 : 0;
           const d2 = fila === 0 ? 0 : -fila * D / 2;

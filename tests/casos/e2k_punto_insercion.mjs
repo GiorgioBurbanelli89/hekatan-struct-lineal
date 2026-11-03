@@ -13,7 +13,7 @@ import { resolverHeks } from "../lib/heks.mjs";
 export const nombre = "e2k-punto-insercion";
 export const descripcion = "e2k: viga CARDINALPT 8 sobre dos columnas -> insertionOffsets d2 = -D/2 y la respuesta cambia respecto a CARDINALPT 10";
 
-const e2k = (cp) => `$ CONTROLS
+const e2k = (cp, transf = true) => `$ CONTROLS
   UNITS  "N"  "MM"  "C"
 
 $ STORIES - IN SEQUENCE FROM TOP
@@ -45,7 +45,7 @@ $ POINT ASSIGNS
 $ LINE ASSIGNS
   LINEASSIGN  "C1"  "Level_1"  SECTION "COL"
   LINEASSIGN  "C2"  "Level_1"  SECTION "COL"
-  LINEASSIGN  "B1"  "Level_1"  SECTION "VIGA"  CARDINALPT ${cp}
+  LINEASSIGN  "B1"  "Level_1"  SECTION "VIGA"  CARDINALPT ${cp}${transf ? '  TRANSFORMSTIFF "Yes"' : ""}
 
 $ POINT OBJECT LOADS
   POINTLOAD  "1"  "Level_1"  TYPE "FORCE"  LC "Dead"  FX 50000  FY 0  FZ 0  MX 0  MY 0  MZ 0
@@ -67,13 +67,13 @@ export async function correr() {
   const { e2kAHeks } = await empaquetar(`export { e2kAHeks } from "${R}/examples/src/shared/e2kAHeks";\n`, "e2k-ins");
   const dir = mkdtempSync(join(tmpdir(), "e2kins-"));
   const warn = console.warn; console.warn = () => {};
-  const resolver = async (cp) => {
-    const r = e2kAHeks(e2k(cp), `ins${cp}.e2k`);
-    const f = join(dir, `ins${cp}.heks`); writeFileSync(f, r.heks);
+  const resolver = async (cp, transf = true) => {
+    const r = e2kAHeks(e2k(cp, transf), `ins${cp}${transf ? "" : "n"}.e2k`);
+    const f = join(dir, `ins${cp}${transf ? "" : "n"}.heks`); writeFileSync(f, r.heks);
     return { r, s: await resolverHeks(f) };
   };
-  let a, b;
-  try { a = await resolver(8); b = await resolver(10); } finally { console.warn = warn; }
+  let a, b, c;
+  try { a = await resolver(8); b = await resolver(10); c = await resolver(8, false); } finally { console.warn = warn; }
 
   const ei = a.s.elementInputs, vigas = [];
   a.s.elements.forEach((el, e) => { const p = a.s.nodes[el[0]], q = a.s.nodes[el[1]];
@@ -83,6 +83,10 @@ export async function correr() {
   const sway8 = uMax(a.s, 0) * 1000, sway10 = uMax(b.s, 0) * 1000;
   const sinIns10 = !b.s.elementInputs.insertionOffsets || b.s.elementInputs.insertionOffsets.size === 0;
   const dif = Math.abs(sway8 - sway10) / sway10;
+  // SIN `TRANSFORMSTIFF "Yes"` ETABS no transforma la rigidez (Frame Assignments - Insertion Point: NoTransform = Yes): el CARDINALPT es
+  // solo geometria. Medido en el mercado: quitar el CARDINALPT de las 2714 barras no cambia ni un desplazamiento de ETABS (2.8e-15 mm).
+  const sinTransf = !c.s.elementInputs.insertionOffsets || c.s.elementInputs.insertionOffsets.size === 0;
+  const swayN = uMax(c.s, 0) * 1000;
   return [
     { que: "viga CARDINALPT 8: tiene insertionOffsets", crudo: true, medido: d2.length, limite: ">= 1 con d2",
       ok: vigas.length > 0 && d2.every((v) => v !== undefined), detalle: `${vigas.length} tramos de viga` },
@@ -91,5 +95,7 @@ export async function correr() {
     { que: "CARDINALPT 10 (centroide): sin insertionOffsets", crudo: true, medido: sinIns10 ? "vacio" : "con desfase", limite: "vacio", ok: sinIns10, detalle: "" },
     { que: "el desplazamiento horizontal cambia 8 vs 10 (mm)", crudo: true, medido: `${sway8.toFixed(4)} vs ${sway10.toFixed(4)} (${(dif * 100).toFixed(2)} %)`,
       limite: "> 0.5 %", ok: dif > 0.005, detalle: "mismo modelo, solo cambia el punto de insercion" },
+    { que: "CARDINALPT 8 SIN TRANSFORMSTIFF: sin insertionOffsets (ETABS no transforma la rigidez)", crudo: true, medido: sinTransf ? "vacio" : "con desfase", limite: "vacio", ok: sinTransf, detalle: "" },
+    { que: "CARDINALPT 8 SIN TRANSFORMSTIFF: igual que el centroide (mm)", crudo: true, medido: `${swayN.toFixed(4)} vs ${sway10.toFixed(4)}`, limite: "iguales", ok: Math.abs(swayN - sway10) < 1e-6 * Math.max(1, sway10), detalle: "" },
   ];
 }

@@ -116,6 +116,8 @@ export interface AnalisisE2k {
   /** LOADCASE … "Response Spectrum": dirección, función, factor de escala (a m/s² ya convertido) y excentricidad. */
   casosRS: Array<{ nombre: string; dir: "U1" | "U2" | "U3"; func: string; sf: number; amort: number; ecc: number; combModal?: string }>;
   nModos?: number;
+  /** Análisis directo AISC: barras con EA y EI × 0.8 (el G no se toca) y el método de reducción que dice el e2k. */
+  metodoDirecto?: { barras: number; acero?: string; compuesto?: string };
   /** Orificios (`AREAASSIGN … OPENING "Yes"`): cuántos se leyeron y cuántos recortaron una losa. */
   orificios: { leidos: number; recortes: number; /** m² que los orificios quitaron, por propiedad de la losa */ areaPorSeccion: Record<string, number> };
   /** Cada sección de barra, clasificada SOLO con lo que dice el fichero: clase del material (`MATERIAL … TYPE`),
@@ -128,6 +130,8 @@ export interface OpcionesE2k {
    *  con el RIGIDZONE de cada barra. Lo que hace ETABS por defecto; el lector solo lo aplica cuando se
    *  le pide (los `.e2k` que escribe Hekatan ya traen sus brazos). */
   brazosAuto?: boolean;
+  /** `true` = aplicar el ANALYSISMETHOD "DIRECT ANALYSIS" del e2k (E × 0.8 en acero y CFT con diseño). Por defecto no; e2kAHeks lo enciende. */
+  metodoDirecto?: boolean;
   /** El peso propio de las BARRAS no va a las cargas nodales: se devuelve en `pesoBarras` (carga por metro y el
    *  tramo que pesa) para repartirlo DESPUÉS de partir las barras por la malla (`coserModelo`). Si se reparte
    *  antes, una viga partida en 12 trozos recibe el peso de la viga entera en sus dos extremos y la flecha a
@@ -600,7 +604,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         // transforma la rigidez al punto de insercion por defecto, asi que cambian el analisis.
         // Se guardan tal cual para devolverlos al exportar (el motor aun no los modela).
         const extra = [line.match(/CARDINALPT\s+\d+/)?.[0], line.match(/MIRROR2\s+"Yes"/i)?.[0],
-                       line.match(/MIRROR3\s+"Yes"/i)?.[0]].filter(Boolean).join("  ");
+                       line.match(/MIRROR3\s+"Yes"/i)?.[0], line.match(/TRANSFORMSTIFF\s+"Yes"/i)?.[0]].filter(Boolean).join("  ");
         if (extra) (entry as any).extraE2k = extra;
         // LENGTHOFFI/J: las longitudes del brazo (unidades del fichero). Van a
         // `endOffsets` [offI, offJ, rz]: con rz = 0 no rigidizan, pero la viga
@@ -1967,6 +1971,41 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   // Cada magnitud lleva su potencia: una inercia va en L^4 y un modulo en
   // F/L^2. Convertir solo las coordenadas seria peor que no convertir nada —
   // quedaria un modelo con la geometria en metros y las secciones en mm.
+  // ── Reducción de rigidez de ETABS en el acero con DISEÑO asignado (EA y EI × 0.8) ──────────────────────────
+  // Medido en un galpón recortado del «mercado» (ETABS 22, Dead, solo barras, sin releases ni punto de inserción):
+  // sin tocar E, los desplazamientos de Struct salían 0.817 × los de ETABS en los TRES ejes, con correlación 0.9999
+  // — un factor de rigidez global, no un error local. Con E × 0.8 en las barras de acero y los CFT (G SIN reducir:
+  // es EA y EI, no GA ni GJ) el peor nudo baja de 18 % a 1–2.5 % del máximo. Los tubos de arriostre dan en ETABS
+  // ΔL = 1.2–1.25 · PL/EA (EA efectivo 0.8).
+  // ⚠️ CAUSA EN ETABS SIN AISLAR. El e2k dice `STEELPREFERENCE … ANALYSISMETHOD "DIRECT ANALYSIS" … TAU-B FIXED`, pero
+  // pasar el método a «Effective Length» por OAPI NO cambia ni un desplazamiento de ETABS, ni el tipo de rigidez del
+  // caso, ni la voladiza de prueba en un modelo en blanco (0.4 % de cortante, sin 0.8). Lo que SÍ lo cambia: vaciar la
+  // tabla «Steel Frame Design Overwrites» (188 filas `STEELDATA`) mueve todo × 1.23. Y el sintético de orificios
+  // (e2k de ETABS con DA pero SIN `STEELDATA`) tiene los periodos de ETABS SIN reducir (0.5 %). Por eso la regla es
+  // EMPÍRICA y estrecha: se reduce solo si el e2k trae `DIRECT ANALYSIS` Y líneas `STEELDATA` (acero con diseño asignado).
+  // OPT-IN: `opciones.metodoDirecto = true` la enciende (la importación de la app, e2kAHeks, la pasa). Por defecto NO: el .e2k que exporta
+  // Hekatan ya lleva el E reducido y el viaje de ida y vuelta (e2k-propmodifiers, riochico) dejaría de ser idempotente (As de CFT 16 %).
+  {
+    const lee = (sec: string, clave: string) => (rawSections.get(sec) ?? []).filter((l) => l.trim().startsWith(clave)).join(" ");
+    const dir = (l: string) => /ANALYSISMETHOD\s+"DIRECT ANALYSIS"/i.test(l);
+    const lAcero = lee("STEEL DESIGN PREFERENCES", "STEELPREFERENCE");
+    const lComp = lee("COMPOSITE COLUMN DESIGN PREFERENCES", "COMPOSITECOLUMNPREFERENCE");
+    const dAcero = dir(lAcero), dComp = dir(lComp);
+    const conDiseno = (rawSections.get("STEEL DESIGN OVERWRITES") ?? []).some((l) => /^\s*STEELDATA\s/.test(l));
+    if ((dAcero || dComp) && conDiseno && opciones.metodoDirecto === true) {
+      const tau = (l: string) => (l.match(/STIFFNESSREDUCTIONMETHOD\s+"([^"]+)"/i)?.[1] ?? "");
+      let n = 0;
+      for (const [elemIdx, secName] of elementSections) {
+        const sec = frameSections.get(secName); if (!sec) continue;
+        const mat = materials.get(sec.material);
+        const compuesta = !!sec.fillMaterial;
+        const reduce = compuesta ? dComp : (dAcero && /steel/i.test(mat?.type ?? ""));
+        const E = elasticities.get(elemIdx);
+        if (reduce && E) { elasticities.set(elemIdx, E * 0.8); n++; }
+      }
+      analisis.metodoDirecto = { barras: n, acero: dAcero ? tau(lAcero) : undefined, compuesto: dComp ? tau(lComp) : undefined };
+    }
+  }
   const FL: Record<string, number> = { MM: 1e-3, CM: 1e-2, M: 1, IN: 0.0254, FT: 0.3048 };
   const FF: Record<string, number> = { N: 1e-3, KN: 1, KGF: 9.80665e-3, TONF: 9.80665,
                                        LB: 4.44822e-3, KIP: 4.44822 };
