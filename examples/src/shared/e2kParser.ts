@@ -177,6 +177,34 @@ function leerMods(line: string, tokens: string[]): (number | undefined)[] | unde
   return v.some(x => x !== undefined) ? v : undefined;
 }
 
+/** C de chapa plegada (linea media, esquinas de radio t/2, labios de longitud LIP−t desde la esquina).
+ *  Devuelve A, Iz (eje fuerte, alma vertical = I33), Iy (debil = I22) y J = t³·L/3. Con cache por medidas. */
+const _coldCCache = new Map<string, { A: number; Iz: number; Iy: number; J: number }>();
+function coldCProps(D: number, B: number, t: number, lip: number) {
+  const key = `${D}|${B}|${t}|${lip}`;
+  const hit = _coldCCache.get(key); if (hit) return hit;
+  const r = t / 2, hw = D / 2 - t / 2, bw = B - t / 2, ll = Math.max(lip - t, 0), n = 48;
+  const P: Array<[number, number]> = [];
+  const line = (p: [number, number], q: [number, number]) => { for (let i = 0; i < n; i++) P.push([p[0] + (q[0] - p[0]) * i / n, p[1] + (q[1] - p[1]) * i / n]); };
+  const arc = (cx: number, cy: number, a0: number, a1: number) => { for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * i / n; P.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } };
+  const H = Math.PI / 2;
+  if (ll > r) line([bw, hw - ll], [bw, hw - r]);
+  arc(bw - r, hw - r, 0, H); line([bw - r, hw], [r, hw]); arc(r, hw - r, H, 2 * H);
+  line([0, hw - r], [0, -hw + r]);
+  arc(r, -hw + r, 2 * H, 3 * H); line([r, -hw], [bw - r, -hw]); arc(bw - r, -hw + r, 3 * H, 4 * H);
+  if (ll > r) line([bw, -hw + r], [bw, -hw + ll]); P.push([bw, -hw + Math.max(ll, r)]);
+  let L = 0, sx = 0;
+  const seg: Array<[number, number, number, number, number]> = [];
+  for (let i = 0; i + 1 < P.length; i++) {
+    const dx = P[i + 1][0] - P[i][0], dy = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dy);
+    seg.push([l, (P[i][0] + P[i + 1][0]) / 2, (P[i][1] + P[i + 1][1]) / 2, dx, dy]); L += l; sx += l * (P[i][0] + P[i + 1][0]) / 2;
+  }
+  const cx = sx / L; let Ix = 0, Iy = 0;
+  for (const [l, x, y, dx, dy] of seg) { Ix += t * l * (y * y + dy * dy / 12); Iy += t * l * ((x - cx) ** 2 + dx * dx / 12); }
+  const out = { A: L * t, Iz: Ix, Iy, J: t ** 3 * L / 3 };
+  _coldCCache.set(key, out); return out;
+}
+
 export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const lines = text.split(/\r?\n/);
 
@@ -1216,6 +1244,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   let sdCompuestas = 0;
   /** Para el tooltip del cursor (hover.ts): nombre de sección + material por elemento. */
   const sectionInfo = new Map<number, any>();
+  /** CFT: peso por volumen EFECTIVO sobre el area transformada = (As·γs + Ac·γc)/A. El area que
+   *  lleva el solver es la del acero + n·hormigon; con γ del acero solo, el relleno no pesaba
+   *  (mercado: −4110 kN en CA1/CB1, Dead 20267 vs 24872 de ETABS). */
+  const cftPesoEf = new Map<number, number>();
+  const cftRhos = new Map<number, { steelRho: number; fillRho: number }>();   // masa t/m³ (convencion de sectionShapes, la usa el exportador)
 
   for (const [elemIdx, secName] of elementSections) {
     const sec = frameSections.get(secName);
@@ -1339,6 +1372,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const c = cftPipeSectionEc(D, t, Es || 1, mat?.nu ?? 0.3, Ef || 0.125, fill?.nu ?? 0.2);
         A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         fillE = Ef; esPipeRelleno = true;
+        if (mat?.density && fill?.density && c.A > 0) cftPesoEf.set(elemIdx, (c.A_steel * mat.density + c.A_conc * fill.density) / c.A);
+        if (mat?.density && fill?.density) cftRhos.set(elemIdx, { steelRho: mat.density / 9.80665, fillRho: fill.density / 9.80665 });
         shapeType = "CFT";
         break;
       }
@@ -1355,6 +1390,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const c = cftSectionEc(B, D, t, Es || 1, mat?.nu ?? 0.3, Ef || 0.125, fill?.nu ?? 0.2);
         A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         fillE = Ef;
+        if (mat?.density && fill?.density && c.A > 0) cftPesoEf.set(elemIdx, (c.A_steel * mat.density + c.A_conc * fill.density) / c.A);
+        if (mat?.density && fill?.density) cftRhos.set(elemIdx, { steelRho: mat.density / 9.80665, fillRho: fill.density / 9.80665 });
         shapeType = "CFT";
         break;
       }
@@ -1405,15 +1442,17 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         shapeType = "2L";
         break;
       }
-      case "Cold Formed C":
-        A = 2 * B * tf + (D - 2 * tf) * tw;
-        Iz = (tw * D ** 3 + 2 * B * tf * (D - tf) ** 2) / 12;
-        Iy = (2 * tf * B ** 3 + (D - 2 * tf) * tw ** 3) / 12;
-        J = (2 * B * tf ** 3 + (D - 2 * tf) * tw ** 3) / 3;
-        AsY = (D - 2 * tf) * tw; // web
-        AsZ = 2 * B * tf * 5/6; // flanges
+      case "Cold Formed C": {
+        // C de chapa plegada CON labios (LIP) y esquinas de radio medio t/2, como ETABS. Antes: C sin labios y
+        // con (D−tf)²/12 en vez de /4 → mercado: A −7 %, I33 −49 %, I22 −73 % contra GetSectProps de ETABS 22.
+        // Medido (160x60x15x3): A 886.274 y J 2658.823 exactos; I33 +0.5 %, I22 +2.3 % (ETABS no da su geometria).
+        const c = coldCProps(D, B, tf || tw, (sec as any).LIP || 0);
+        A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J;
+        AsY = (D - 2 * tf) * tw;        // alma  (ETABS As2 = (D−2t)·t)
+        AsZ = 2 * (B - 2 * tf) * tf;    // alas  (ETABS As3 = 2·(B−2t)·t)
         shapeType = sec.shape === "Cold Formed C" ? "coldC" : "C";
         break;
+      }
       case "Steel Double Channel":
         A = 2 * (2 * B * tf + (D - 2 * tf) * tw);
         Iz = 2 * (tw * D ** 3 + 2 * B * tf * (D - tf) ** 2) / 12;
@@ -1464,6 +1503,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     sectionShapes.set(elemIdx, {
       type: shapeType,
       ...(fillE > 0 ? { fillE } : {}),
+      ...(cftRhos.get(elemIdx) ?? {}),
       b: esPipeRelleno ? undefined : (B || undefined),
       h: esPipeRelleno ? undefined : (D || undefined),
       d: (shapeType === "circ" || shapeType === "pipe" || esPipeRelleno) ? D : undefined,   // el tubo redondo relleno va por d
@@ -1575,14 +1615,15 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     const sec = frameSections.get(secName);
     if (!sec) continue;
     const mat = materials.get(sec.material);
-    if (mat?.density) {
+    const dens = cftPesoEf.get(elemIdx) ?? mat?.density;
+    if (dens) {
       // Masa y peso: Struct tiene UNA densidad (masa y peso propio). Si los
       // factores difieren se toma el de MASA (manda en el modal) y se avisa.
       // El modificador de AREA no toca masa ni peso en CSI (solo rigidez axial),
       // pero Struct calcula masa = rho·A·L con la A ya modificada: se compensa.
       const f = propertyModifiers.get(elemIdx) ?? [1, 1, 1, 1, 1, 1, 1, 1];
       if (Math.abs(f[6] - f[7]) > 1e-9) avisoMasaPeso++;
-      densities.set(elemIdx, mat.density * f[6] / (f[0] > 0 ? f[0] : 1));
+      densities.set(elemIdx, dens * f[6] / (f[0] > 0 ? f[0] : 1));
     }
   }
   if (avisoMasaPeso) console.warn(`[e2k] ${avisoMasaPeso} barras con modificador de masa distinto del de peso: se usa el de masa`);
@@ -2004,6 +2045,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         if (typeof o[k] === "number") o[k] *= L;
       }
       if (typeof sh.fillE === "number") sh.fillE *= F / (L * L);   // el E del relleno del CFT
+      for (const k of ["steelRho", "fillRho"]) { const o = sh as any; if (typeof o[k] === "number") o[k] *= F / (L ** 3); }   // masa t/m³ del CFT
       const cl = (sh as any).concretoL;
       if (cl && typeof cl.twb === "number") cl.twb *= L;
       if (cl?.diseno) { cl.diseno.ct *= L; cl.diseno.cb *= L; }
