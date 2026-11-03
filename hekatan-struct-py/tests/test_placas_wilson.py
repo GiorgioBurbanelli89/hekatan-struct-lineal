@@ -88,3 +88,31 @@ def test_errata_89_trapecio_cortante_constante():
         W.LITERAL_8_9 = False
     assert np.allclose(g_ok, [gx, gy], atol=1e-12)
     assert np.abs(g_lit - [gx, gy]).max() > 1e-2
+
+
+# ---------------------------------------------------------------- ERRATA de la Ec. (8.9) (p. 8-6)
+def _gamma_patch_trapecio(literal):
+    """Cortante en los 4 puntos de Gauss de un trapecio con w = 0.3x + 0.7y, θ = 0 (γ = ∇w constante)."""
+    from hekatan_struct import placas_wilson as pw
+    P = np.array([(0, 0), (2, 0), (1.5, 1), (0.25, 1)], float)
+    lados = pw._lados(P)
+    u = np.zeros(16)
+    for i, (x, y) in enumerate(P):
+        u[3 * i] = 0.3 * x + 0.7 * y
+    viejo = pw.LITERAL_8_9
+    pw.LITERAL_8_9 = literal
+    try:
+        return np.array([pw._cortantes_16(pw._curvaturas_16(r, s, P, lados)[1], lados) @ u for r, s in pw.GAUSS4])
+    finally:
+        pw.LITERAL_8_9 = viejo
+
+
+def test_errata_8_9_inversa_correcta_cumple_patch_de_cortante_en_trapecio():
+    g = _gamma_patch_trapecio(False)
+    assert np.allclose(g, [0.3, 0.7], atol=1e-12)
+
+
+def test_errata_8_9_impresa_NO_cumple_el_patch_en_trapecio():
+    """Vigila que la ecuación literal siga siendo la traspuesta (si esto pasa a cumplir, el libro/ la errata cambió)."""
+    g = _gamma_patch_trapecio(True)
+    assert np.abs(g - [0.3, 0.7]).max() > 0.05

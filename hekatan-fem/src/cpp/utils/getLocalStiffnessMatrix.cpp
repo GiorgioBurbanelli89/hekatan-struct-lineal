@@ -156,8 +156,12 @@ Eigen::MatrixXd getLocalStiffnessMatrix(
         if (itT != elementInputs.thicknesses.end() && itT->second > 1e-12)
         {
             // Dispatch de la formulacion de placa, segun plateFormulations[idx]:
-            //   0 = Mindlin con MITC4   (Shell-Thick, defecto de hoy)
-            //   1 = Kirchhoff MZC       (Shell-Thin)
+            //   0 = Mindlin con MITC4 + modos incompatibles (Shell-Thick, defecto de hoy)
+            //   1 = Kirchhoff DKQ de Batoz-Tahar (Shell-Thin; = DKE de Wilson a 3e-16, NO el MZC)
+            //   5 = Auricchio-Taylor; 6/7 = DKE/DSE de Wilson literales del libro; 8 = Shell-Thick
+            //       de CSI (plateWilsonCSI.h). 4..8 los atiende getLocalStiffnessMatrixShellQ4.
+            //   ⚠️ el 4 = DSE de Wilson con la inversa CORRECTA de la Ec. (8.8) (medido 3e-15,
+            //       plate_q4/test_wilson_csi.cpp); el 7 usa la (8.9) impresa, que es su traspuesta.
             //   2 = «Membrane» para los EXPORTADORES (.e2k/.s2k, ver data-model.ts).
             //       En el solver NO quita la flexion: cae en el MITC4 igual que
             //       el 0 (medido con el WASM de 6be372b75: mismo w que el 0). La

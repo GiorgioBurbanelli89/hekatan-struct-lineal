@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import numpy as np
 
-# ERRATA del libro (comprobada, 2-nov-2026): la (8.9) impresa (p. 8-6) es la TRASPUESTA de la inversa de (8.8).
+# ERRATA del libro (comprobada, 2-nov-2026): la (8.9) impresa (ed. 2005 p. 8-6; PDF paginado «3D Static and Dynamic Analysis», p. 8-7) es la TRASPUESTA de la inversa de (8.8):
+# verificada en AMBAS ediciones inglesas (mismo texto). Inversa correcta = 1/det [[sin αki, −sin αij], [−cos αki, cos αij]]; la impresa
+# trae [[sin αki, −cos αki], [−sin αij, cos αij]].
 # En rectángulos coinciden (por eso las tablas 8.1-8.2 no lo detectan); en un trapecio con cortante constante
 # impuesto da 0.893 en vez de 1.000. Por defecto se usa la inversa CORRECTA (= `getBendingK_DSE_FULL` del C++, 3e-15).
 # LITERAL_8_9 = True reproduce la ecuación impresa tal cual (= formulación 7 del C++).

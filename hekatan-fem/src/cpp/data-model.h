@@ -65,11 +65,24 @@ struct ElementInputs
     // multiplica todo o nada, y poniendo 0 la matriz sale singular.
     // Si un elemento no esta en este mapa se usan los escalares de arriba.
     std::map<int, std::vector<double>> shellModifiers;
-    // Plate formulation switch (per shell element):
-    //   0 = Mindlin-Reissner (Shell-Thick, DSE Wilson Ch10)        [default]
-    //   1 = MZC Kirchhoff    (Shell-Thin,  DKE Wilson Ch10 / ETABS Shell-Thin)
-    // Para Mesa Torsión (t/L=0.017, t=0.10m sobre slab 6m) el Mindlin
-    // sufre shear locking severo; el MZC Kirchhoff matchea ETABS Shell-Thin <1.5%.
+    // Plate formulation switch (per shell element) — lo que el codigo hace DE VERDAD
+    // (medido en plate_q4/test_wilson_csi.cpp, 2-nov-2026):
+    //   0 = Shell-Thick por defecto: MITC4 (Bathe-Dvorkin) + modos incompatibles
+    //       de Wilson (getBendingK, shellQ4.cpp). NO es el DSE de Wilson.   [default]
+    //   1 = Shell-Thin: DKQ de Batoz-Tahar 1982 (plateDKQ.h, via shellThin.cpp).
+    //       Numericamente = DKE de Wilson cap. 8 (3e-16). NO es el MZC.
+    //   2 = «Membrane» de los exportadores; en el solver cae en el 0.
+    //   3 = DKMQ de Katili (shellQ4_DKMQ.cpp).
+    //   4 = DSE de Wilson cap. 8 con la inversa CORRECTA de la Ec. (8.8)
+    //       (getBendingK_DSE_FULL; = hkplaca::kWilsonDSE(..., inversa88) a 3e-15).
+    //   5 = Auricchio-Taylor 1994 (FEAPpv).
+    //   6 = DKE de Wilson, port literal de placas_wilson.k_dke (plateWilsonCSI.h).
+    //   7 = DSE de Wilson, port de placas_wilson.k_dse con la inversa CORRECTA de la Ec. (8.8)
+    //       (la (8.9) impresa es su traspuesta: errata; en rectangulos coinciden). = pf 4.
+    //   8 = Shell-Thick cuadrilatero de CSI (SAP2000/ETABS), port de k_grueso_cuad
+    //       (142 celdas de SAP2000/ETABS <= 6e-11 %).
+    // 6/7/8 solo en cuadrilateros (los triangulos los ignoran) y solo en el C++:
+    // la recuperacion de momentos de analyze() (TS) aun no los conoce.
     std::map<int, int> plateFormulations;
     // Solidos H8 (elementos de 8 nudos): modos incompatibles de Wilson-Taylor,
     // como SAP2000 por defecto (`incompatible 0` en el .heks los quita).

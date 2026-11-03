@@ -94,7 +94,7 @@ Igual que el DKE pero con $\mathbf D_s$ y los 4 $\Delta\theta$ (una componente, 
 1. **K12 de membrana en SAP2000.** Correr `sap_celda_membrana12.py` (repo privado de ingeniería inversa,
    carpeta `csi_drilling`): áreas Membrane (5), Shell-Thin (1) y Shell-Thick (2) en las 10 celdas de
    `memb12`, w, θx, θy sujetos, carga unidad en los 9 GDL libres → F 9×9 → `memb12_sap.json`. Luego
-   `python verificar.py` la compara; añadirla a `tests/datos_csi/medidas_csi.json.gz` como
+   `python verificar.py` la compara; añadirla a `src/hekatan_struct/csi/datos/medidas_csi.json.gz` como
    `membrana_sap` y extender `test_membrana_vs_etabs` a ese conjunto (umbral 1e-12).
 2. **Membrana del triángulo de SAP2000** (resto 4e-6…5e-5 de |K| en θθ). Datos ya medidos:
    `hekatan-struct/validation/pandeo_cascara/sap_tri_flex.json` (5 geometrías, K 9×9 por flexibilidad);
