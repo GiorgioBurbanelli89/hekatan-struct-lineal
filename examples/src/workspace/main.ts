@@ -9050,17 +9050,17 @@ try {
     "position:fixed", "left:0", "top:0", "z-index:99997", "display:none",
     "flex-direction:column", "align-items:flex-start", "gap:2px",
     "background:rgba(15,23,42,0.92)",
-    "border:1px solid #22d3ee", "border-radius:6px", "padding:2px 6px",
+    "border:1px solid #22d3ee", "border-radius:5px", "padding:1px 4px",
     "box-shadow:0 3px 10px rgba(0,0,0,0.5)", "pointer-events:none",
   ].join(";") + ";";
   const dynFila = document.createElement("div");
   dynFila.style.cssText = "display:flex;align-items:center;gap:6px;";
   const dynPrompt = document.createElement("span");
   dynPrompt.id = "hk-dyn-prompt";
-  dynPrompt.style.cssText = "color:#22d3ee;font:11px Consolas,monospace;white-space:nowrap;";
-  const dynBase = "padding:0 4px;font-family:Consolas,monospace;font-size:12px;line-height:18px;white-space:pre;box-sizing:border-box;";
+  dynPrompt.style.cssText = "color:#22d3ee;font:10px Consolas,monospace;white-space:nowrap;";
+  const dynBase = "padding:0 3px;font-family:Consolas,monospace;font-size:11px;line-height:15px;white-space:pre;box-sizing:border-box;";
   const dynWrap = document.createElement("div");
-  dynWrap.style.cssText = "position:relative;display:inline-block;width:165px;height:18px;";
+  dynWrap.style.cssText = "position:relative;display:inline-block;width:120px;height:15px;";
   const dynInput = document.createElement("input");
   dynInput.type = "text"; dynInput.id = "hk-dyn-input"; dynInput.autocomplete = "off"; dynInput.spellcheck = false;
   dynInput.style.cssText = dynBase + "background:transparent;border:none;color:#cdeefb;width:100%;height:100%;outline:none;position:relative;z-index:2;pointer-events:none;";
@@ -9085,6 +9085,8 @@ try {
   dynOps.style.cssText = "display:none;gap:6px;pointer-events:none;font:11px Consolas,monospace;padding-top:1px;";
   dyn.append(dynFila, dynOps);
   document.body.appendChild(dyn);
+  // Esc termina el dibujo: el recuadro de entrada dinámica NO puede quedarse pegado en pantalla (quedaba un «2.00» flotando)
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") { try { dynInput.value = ""; dynGhost.textContent = ""; dyn.style.display = "none"; } catch {} } }, true);
 
   let _sync = false;
   // última posición del ratón sobre el lienzo: al teclear en reposo, lo tecleado aparece ahí

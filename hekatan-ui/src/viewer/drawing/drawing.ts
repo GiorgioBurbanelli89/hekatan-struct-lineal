@@ -664,11 +664,11 @@ export function drawing({
     "  @5<45<30  → esférica 3D: 5m, azimuth 45°, elevación 30°";
   rubberLabelInput.style.cssText = [
     "position:fixed", "z-index:99996",
-    "padding:3px 8px", "background:rgba(15,23,42,0.92)",
-    "color:#22d3ee", "border:1.5px solid #22d3ee", "border-radius:4px",
-    "font-family:Consolas,monospace", "font-size:13px", "font-weight:bold",
-    "transform:translate(-50%,-50%)", "white-space:nowrap",
-    "outline:none", "width:80px", "text-align:center",
+    "padding:0 3px", "background:rgba(15,23,42,0.85)",
+    "color:#22d3ee", "border:1px solid #22d3ee", "border-radius:3px",
+    "font-family:Consolas,monospace", "font-size:10px", "font-weight:bold", "line-height:14px", "height:16px", "box-sizing:border-box",
+    "transform:translate(-50%,-135%)", "white-space:nowrap",
+    "outline:none", "width:56px", "text-align:center",
     "display:none",
     // CLAVE: el click pasa al lienzo (está justo en el punto donde clickeás).
     // El input se enfoca por código, así que no necesita recibir el click.
@@ -680,9 +680,9 @@ export function drawing({
   rubberAngle.id = "hk-rubber-angle";
   rubberAngle.style.cssText = [
     "position:fixed", "z-index:99996", "pointer-events:none",
-    "padding:2px 6px", "background:rgba(15,23,42,0.92)",
+    "padding:0 4px", "background:rgba(15,23,42,0.85)",
     "color:#22d3ee", "border:1px solid #22d3ee", "border-radius:3px",
-    "font-family:Consolas,monospace", "font-size:12px",
+    "font-family:Consolas,monospace", "font-size:10px", "line-height:14px",
     "transform:translate(-50%,0)", "white-space:nowrap", "display:none",
   ].join(";") + ";";
   document.body.appendChild(rubberAngle);
@@ -777,7 +777,7 @@ export function drawing({
     if (ang < 0) ang += 360;
     rubberAngle.textContent = `${Math.round(ang) % 360}°`;
     rubberAngle.style.left = bx2 + "px";
-    rubberAngle.style.top = (by2 + 34) + "px";
+    rubberAngle.style.top = (by2 + 16) + "px";
     rubberAngle.style.display = "block";
     // Live update del value mientras el usuario NO esté editando manualmente.
     if (!rubberUserEditing) {
@@ -5376,7 +5376,9 @@ export function drawing({
     savedPos ? `top:${savedPos.top}px` : "top:200px",
     "transform:none",
     "width:min(300px, calc(100vw - 32px))",
-    "max-height:calc(100vh - 260px)",
+    // compacto: el panel de edición ocupaba un cuarto de la pantalla y tapaba el modelo (Jorge, 3-nov-2026)
+    "zoom:0.78",
+    "max-height:calc((100vh - 300px) / 0.78)",
     "overflow-y:auto",
     "z-index:201",
     "box-shadow:0 6px 24px rgba(0,0,0,0.45)",
@@ -8141,6 +8143,9 @@ export function drawing({
     //
     // Se pide 1.5° entre el rayo y el plano. Por debajo de eso, un píxel de
     // pantalla vale más de 38 veces la distancia al plano: no es dibujar.
+    // En vista ortogonal (planta/alzado) el píxel vale lo mismo en todas partes: no hay «rayo rasante» que temer
+    // (el aviso saltaba en alzado XZ con clics perfectos: falso positivo).
+    try { if ((getActiveCamera() as any)?.isOrthographicCamera) return true; } catch {}
     const gt = drawingObj.gridTarget?.rawVal;
     if (!gt) return true;
     const n = new THREE.Vector3(0, 0, 1).applyEuler(new THREE.Euler(...gt.rotation)).normalize();
@@ -8172,6 +8177,8 @@ export function drawing({
   };
 
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
+    // el clic llega con ruido de coma flotante (-1.1e-13 en vez de 0): redondear a 1e-9 m para que el modelo quede limpio
+    point.set(Math.round(point.x * 1e9) / 1e9 + 0, Math.round(point.y * 1e9) / 1e9 + 0, Math.round(point.z * 1e9) / 1e9 + 0);
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
     if (tool === "area" || tool === "line" || tool === "polyline") ultHerrDibujo = tool;
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
