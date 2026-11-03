@@ -5446,7 +5446,7 @@ export function drawing({
     // Diaphragms
     diaphragm: "Ninguno",  // "Ninguno", "D1 (rigid)", "D2", "D3"...
     // ── Frames (segs) ──
-    section: "W14x84", material_frame: "A572 Gr 50",
+    section: "W14x84", material_frame: "Del modelo",
     // Tubo circular (CHS) de cotas editables: diámetro exterior D y espesor t en mm (se usa con Sección = «Tubo circular D×t»)
     tuboD: 168.3, tuboT: 5,
     // Property Modifiers (multipliers sobre A, Iz, Iy, J)
@@ -5468,7 +5468,7 @@ export function drawing({
     massPerM: 0,
     // ── Áreas / shells ──
     shellType: "Mindlin (FSDT)", thickness: 0.20,
-    material_shell: "Concreto C25", surfLoad: 0,
+    material_shell: "C25/30", surfLoad: 0,
   };
   // Estado de la categoría EDITAR (replicar / mover la selección).
   const editState = { dx: 0, dy: 0, dz: 3, copias: 1 };
@@ -5595,14 +5595,22 @@ export function drawing({
       const fUnir = fEdit.addFolder({ title: "≣ Unir pórticos (correas / diagonales)", expanded: true });
       fUnir.addBinding(unirState, "cadaN", { label: "cada N vanos", min: 1, max: 6, step: 1 });
       fUnir.addBinding(unirState, "sinBase", { label: "sin amarre en la base" });
-      const unir = (modo: "correas" | "diagonales") => {
+      const unir = (modo: "correas" | "diagonales" | "cubierta") => {
         if (!selection.size) { updateStatus("⚠ Designe un pórtico (ventana en una elevación XZ) y vuelva a pulsar"); return; }
         const r = (window as any).__hekatanUnirPorticos?.(modo, unirState) ?? { barras: 0 };
-        updateStatus(r.barras ? `✓ ${modo === "correas" ? "Correas" : "Diagonales en cruz"}: ${r.barras} barra(s) entre pórticos — Ctrl+Z deshace.`
+        updateStatus(r.barras ? `✓ ${modo === "correas" ? "Correas" : modo === "cubierta" ? "Cubierta" : "Diagonales en cruz"}: ${r.barras} ${modo === "cubierta" ? "paño(s)" : "barra(s)"} entre pórticos — Ctrl+Z deshace.`
           : "⚠ Nada que unir: no hay pórticos homólogos (mismo x,z, otro y) o ya están unidos.");
       };
       fUnir.addButton({ title: "≣ Correas entre pórticos" }).on("click", () => unir("correas"));
       fUnir.addButton({ title: "✕ Diagonales en cruz entre pórticos" }).on("click", () => unir("diagonales"));
+      fUnir.addButton({ title: "▭ Cubierta: paños entre pórticos (barras designadas)" }).on("click", () => unir("cubierta"));
+      const zapState = { lado: 2 };
+      fUnir.addBinding(zapState, "lado", { label: "zapata lado (m)", min: 0.5, max: 8, step: 0.1 });
+      fUnir.addButton({ title: "▣ Zapatas bajo las columnas designadas" }).on("click", () => {
+        const n = (window as any).__hekatanZapatasBajoColumnas?.(zapState.lado) ?? 0;
+        updateStatus(n ? `✓ ${n} zapata(s) de ${zapState.lado} m bajo las columnas — ponga su espesor/material en «Shell / Área» y el suelo en Zapata / Suelo.`
+          : "⚠ Designe columnas (Designar barras por tipo › Columnas) y vuelva a pulsar.");
+      });
       // ── Volado sobre la viga designada ──
       // Una viga de 5 m + «vuelo 1.5» = un voladizo de 1.5 m de vuelo por 5 m de ancho.
       // No alarga la viga: la replica en perpendicular y cose las dos.
@@ -5745,9 +5753,11 @@ export function drawing({
       fSec.addBinding(propsState, "tuboT", { label: "Tubo t (mm)", min: 1, max: 60, step: 0.1 });
       fSec.addBinding(propsState, "material_frame", {
         label: "Material",
+        // los valores son las CLAVES de la base de materiales (antes «A572 Gr 50» no existía y no se aplicaba nada)
         options: {
-          "A572 Gr 50": "A572 Gr 50", "A36": "A36",
-          "A992": "A992", "Concreto C25": "Concreto C25",
+          "Del modelo (el de Sección frames)": "Del modelo",
+          "Acero A53 Gr.B (tubo)": "A53Gr.B", "Acero A572 Gr 50": "A572Gr50", "Acero A36": "A36",
+          "Acero A992 Fy50": "A992Fy50", "Concreto C25/30": "C25/30", "Concreto C30/37": "C30/37",
         },
       });
 
@@ -5825,7 +5835,7 @@ export function drawing({
 
       propsPaneInstance.addButton({ title: "✓ Aplicar a segmentos seleccionados" }).on("click", () => {
         fireProp("segs", segIds, "section", propsState.section === "CHS" ? `CHS ${+propsState.tuboD}x${+propsState.tuboT}` : propsState.section);
-        fireProp("segs", segIds, "material", propsState.material_frame);
+        if (propsState.material_frame !== "Del modelo") fireProp("segs", segIds, "material", propsState.material_frame);
 
         // Property modifiers (sólo emit si alguno != 1.0)
         const mods = { A: propsState.A_mod, Iz: propsState.Iz_mod, Iy: propsState.Iy_mod, J: propsState.J_mod };
@@ -5869,13 +5879,14 @@ export function drawing({
         },
       });
       fShell.addBinding(propsState, "thickness", {
-        label: "Espesor (m)", min: 0.01, step: 0.01,
+        label: "Espesor (m)", min: 0.0002, step: 0.0001,   // desde una lámina de 0.2 mm hasta una zapata
       });
       fShell.addBinding(propsState, "material_shell", {
         label: "Material",
+        // valores = claves de la base de materiales
         options: {
-          "Concreto C20": "Concreto C20", "Concreto C25": "Concreto C25",
-          "Concreto C30": "Concreto C30", "Acero A36": "Acero A36",
+          "Concreto C25/30": "C25/30", "Concreto C30/37": "C30/37",
+          "Acero A36 (lámina)": "A36", "Acero A572 Gr 50": "A572Gr50",
         },
       });
 
@@ -7736,7 +7747,7 @@ export function drawing({
    * (2 = un vano sí y uno no, típico del arriostre de cubierta). No duplica barras que ya existen.
    */
   (window as any).__hekatanUnirPorticos = (
-    modo: "correas" | "diagonales", opts: { cadaN?: number; sinBase?: boolean } = {},
+    modo: "correas" | "diagonales" | "cubierta", opts: { cadaN?: number; sinBase?: boolean } = {},
   ): { barras: number } => {
     const pts = drawingObj.points.rawVal;
     const polys = drawingObj.polylines?.rawVal ?? [];
@@ -7762,6 +7773,7 @@ export function drawing({
     const yaExiste = new Set<string>();
     polys.forEach((pl, pi) => { if (areasYa.has(pi)) return; for (let s = 0; s + 1 < pl.length; s++) yaExiste.add(Math.min(pl[s], pl[s + 1]) + ":" + Math.max(pl[s], pl[s + 1])); });
     const nuevas: [number, number][] = [];
+    const paños: number[][] = [];                      // modo «cubierta»: cada paño = 4 nudos [a_k, b_k, b_k+1, a_k+1]
     const poner = (a: number, b: number) => {
       if (a === b) return; const k = Math.min(a, b) + ":" + Math.max(a, b);
       if (yaExiste.has(k)) return; yaExiste.add(k); nuevas.push([a, b]);
@@ -7775,6 +7787,19 @@ export function drawing({
         const ch = cadena(n); if (vistos.has(ch[0])) return; vistos.add(ch[0]);
         for (let k = 0; k + 1 < ch.length; k++) if (k % cadaN === 0) poner(ch[k], ch[k + 1]);
       });
+    } else if (modo === "cubierta") {
+      // paños entre pórticos: por cada barra designada a–b y cada vano, el cuadrilátero a_k, b_k, b_k+1, a_k+1
+      const ya = new Set<string>();
+      polys.forEach((pl, pi) => { if (areasYa.has(pi)) ya.add([...new Set(pl)].sort((x, y) => x - y).join(",")); });
+      const hechos = new Set<string>();
+      segs.forEach(([a, b]) => {
+        const ca = cadena(a), cb = cadena(b); const n = Math.min(ca.length, cb.length);
+        const key = Math.min(ca[0], cb[0]) + ":" + Math.max(ca[0], cb[0]); if (hechos.has(key)) return; hechos.add(key);
+        for (let k = 0; k + 1 < n; k++) if (k % cadaN === 0) {
+          const q = [ca[k], cb[k], cb[k + 1], ca[k + 1]]; const kq = [...q].sort((x, y) => x - y).join(",");
+          if (!ya.has(kq)) { ya.add(kq); paños.push(q); }
+        }
+      });
     } else {
       const hechos = new Set<string>();
       segs.forEach(([a, b]) => {
@@ -7783,16 +7808,60 @@ export function drawing({
         for (let k = 0; k + 1 < n; k++) if (k % cadaN === 0) { poner(ca[k], cb[k + 1]); poner(cb[k], ca[k + 1]); }
       });
     }
-    if (!nuevas.length) return { barras: 0 };
+    if (!nuevas.length && !paños.length) return { barras: 0 };
     pushUndo();
     let newPolys = polys.slice();
     if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
     nuevas.forEach((p) => newPolys.push([p[0], p[1]]));
+    if (paños.length) {
+      const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+      paños.forEach((q) => { newAreas.push(newPolys.length); newPolys.push([...q, q[0]]); });
+      if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    }
     newPolys.push([]);
     if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
-    return { barras: nuevas.length };
+    return { barras: nuevas.length + paños.length };
+  };
+
+  /**
+   * ZAPATAS bajo las columnas designadas: un paño cuadrado de `lado` m centrado en el nudo de BASE de cada columna
+   * (al mallarlo con «Malla del área» par, el nudo central es la propia base y queda soldado). Se ponen a la cota
+   * de la base: la plataforma Z=0 de la cimentación. Devuelve cuántas zapatas creó.
+   */
+  (window as any).__hekatanZapatasBajoColumnas = (lado: number): number => {
+    const pts = drawingObj.points.rawVal, polys = drawingObj.polylines?.rawVal ?? [];
+    const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
+    const bases = new Set<number>();
+    [...selection].forEach((id) => {
+      if (id.startsWith("seg:")) {
+        const [, P, S] = id.split(":"); const pl = polys[+P] || []; const a = pl[+S], b = pl[+S + 1];
+        if (a == null || b == null || areasYa.has(+P)) return;
+        const A = pts[a], B = pts[b]; if (!A || !B) return;
+        if (Math.abs(A[0] - B[0]) < 1e-3 && Math.abs(A[1] - B[1]) < 1e-3 && Math.abs(A[2] - B[2]) > 1e-3) bases.add(A[2] < B[2] ? a : b);
+      } else if (id.startsWith("pt:")) bases.add(+id.slice(3));
+    });
+    if (!bases.size || !(lado > 0)) return 0;
+    pushUndo();
+    const newPts = [...pts] as [number, number, number][];
+    let newPolys = polys.slice();
+    if (newPolys.length && newPolys[newPolys.length - 1].length === 0) newPolys = newPolys.slice(0, -1);
+    const newAreas = [...(drawingObj.areas?.rawVal ?? [])];
+    const h = lado / 2; let n = 0;
+    bases.forEach((i) => {
+      const [x, y, z] = pts[i];
+      const q = ([[x - h, y - h, z], [x + h, y - h, z], [x + h, y + h, z], [x - h, y + h, z]] as [number, number, number][])
+        .map((c) => { newPts.push(c); return newPts.length - 1; });
+      newAreas.push(newPolys.length); newPolys.push([...q, q[0]]); n++;
+    });
+    newPolys.push([]);
+    drawingObj.points.val = newPts;
+    if (drawingObj.polylines) drawingObj.polylines.val = newPolys;
+    if (drawingObj.areas) drawingObj.areas.val = newAreas;
+    try { (window as any).__hekatanRebuild?.(); } catch {}
+    viewerRender();
+    return n;
   };
 
   /**
@@ -7803,10 +7872,21 @@ export function drawing({
    *   diagonales → inclinadas respecto a Y y fuera de los planos de pórtico (la cruz entre pórticos)
    * Devuelve cuántas barras quedaron designadas.
    */
-  (window as any).__hekatanSelectByDir = (tipo: "columnas" | "correas" | "porticos" | "diagonales"): number => {
+  (window as any).__hekatanSelectByDir = (tipo: "columnas" | "correas" | "porticos" | "diagonales" | "zapatas" | "cubierta"): number => {
     const pts = drawingObj.points.rawVal, polys = drawingObj.polylines?.rawVal ?? [];
     const areasYa = new Set(drawingObj.areas?.rawVal ?? []);
     const e = 1e-3, ids: string[] = [];
+    if (tipo === "zapatas" || tipo === "cubierta") {
+      // ÁREAS: zapata = todos sus nudos en el nivel más bajo del modelo; cubierta = las demás
+      const zMin = Math.min(...pts.map((q) => q[2]));
+      areasYa.forEach((pi) => {
+        const pl = polys[pi] || []; if (!pl.length) return;
+        const abajo = pl.every((i) => pts[i] && Math.abs(pts[i][2] - zMin) < e);
+        if ((tipo === "zapatas") === abajo) ids.push(`poly:${pi}`);
+      });
+      (window as any).__hekatanSelectIds?.(ids);
+      return ids.length;
+    }
     polys.forEach((pl, pi) => {
       if (areasYa.has(pi)) return;
       for (let s = 0; s + 1 < pl.length; s++) {

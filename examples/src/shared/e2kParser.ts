@@ -118,6 +118,9 @@ export interface AnalisisE2k {
   nModos?: number;
   /** Orificios (`AREAASSIGN … OPENING "Yes"`): cuántos se leyeron y cuántos recortaron una losa. */
   orificios: { leidos: number; recortes: number; /** m² que los orificios quitaron, por propiedad de la losa */ areaPorSeccion: Record<string, number> };
+  /** Cada sección de barra, clasificada SOLO con lo que dice el fichero: clase del material (`MATERIAL … TYPE`),
+   *  para qué se usa (`LINE … BEAM|COLUMN|BRACE`) y su tipo de diseño (`CONCRETESECTION … TYPE`). */
+  secciones?: Array<{ nombre: string; material: string; clase: string; forma: string; usos: string[]; diseno?: string; aviso?: string }>;
 }
 
 export interface OpcionesE2k {
@@ -155,6 +158,17 @@ export const LINE_ASSIGN_MODS = ["PROPMODA", "PROPMODA2", "PROPMODA3", "PROPMODT
 export const AREA_ASSIGN_MODS = ["PROPMODF11", "PROPMODF22", "PROPMODF12", "PROPMODM11", "PROPMODM22",
                                  "PROPMODM12", "PROPMODV13", "PROPMODV23", "PROPMODM", "PROPMODW"];
 /** Lee los tokens `k valor` de una linea; undefined si no hay ninguno. Acepta coma decimal. */
+/** «Concrete Tee» (D canto total, B ancho del ala, TF espesor del ala, TW ancho del alma; ala arriba). */
+function propsTee(D: number, B: number, TF: number, TW: number) {
+  const hw = Math.max(D - TF, 0), Af = B * TF, Aw = TW * hw, A = Af + Aw;
+  const yc = A > 0 ? (Af * TF / 2 + Aw * (TF + hw / 2)) / A : 0;                 // desde la cara superior
+  const Iz = B * TF ** 3 / 12 + Af * (yc - TF / 2) ** 2 + TW * hw ** 3 / 12 + Aw * (TF + hw / 2 - yc) ** 2;
+  const Iy = TF * B ** 3 / 12 + hw * TW ** 3 / 12;
+  const roark = (a0: number, b0: number) => { const a = Math.min(a0, b0), b = Math.max(a0, b0); return b * a ** 3 * (1 / 3 - 0.21 * (a / b) * (1 - a ** 4 / (12 * b ** 4))); };
+  const J = roark(B, TF) + (hw > 0 ? roark(hw, TW) : 0);
+  return { A, Iz, Iy, J, AsY: 5 / 6 * Af, AsZ: TW * D * 5 / 6 };
+}
+
 function leerMods(line: string, tokens: string[]): (number | undefined)[] | undefined {
   const v = tokens.map(k => {
     const m = line.match(new RegExp(`(?:^|\\s)${k}\\s+([-\\d.,eE+]+)`));
@@ -171,6 +185,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   const stories: E2kModel["stories"] = [];
   const materials: E2kModel["materials"] = new Map();
   const frameSections: E2kModel["frameSections"] = new Map();
+  const noPrismaticas = new Map<string, { ini: string; fin: string; vari3: string; vari2: string }>();
   /**
    * name → [x, y, dz] en planta. El TERCER numero de un `POINT` es la CAIDA de
    * ese punto por debajo de la cota de su planta, y hasta el 2026-08-28 se
@@ -401,7 +416,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     // ── CONCRETE SECTIONS: tipo de diseno (Beam/Column) y recubrimientos ──
     // Cambia el ANALISIS: una «Concrete L/Tee» con IGNOREFLANGEAREA solo pierde el ala si es
     // TYPE "Beam" (medido en ETABS 22: la L 1.0×1.4 del TACNA, A 0.40 como Beam, 0.80 sin el bloque).
-    if (currentSection === "CONCRETE SECTIONS") {
+    if (currentSection === "CONCRETE SECTIONS" || currentSection === "FRAME SECTIONS") {   // ETABS la escribe en su bloque; otros generadores, junto a FRAMESECTION
       const cs = line.match(/CONCRETESECTION\s+"([^"]+)".*TYPE\s+"([^"]+)"/);
       if (cs) {
         const ct = line.match(/COVERTOP\s+([\d.eE+-]+)/), cb = line.match(/COVERBOTTOM\s+([\d.eE+-]+)/);
@@ -410,6 +425,14 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     }
 
     // ── FRAME SECTIONS ──
+    if (currentSection === "NONPRISMATIC SECTIONS" || currentSection === "FRAME SECTIONS") {
+      // «Nonprismatic»: la barra va de STARTSEC a ENDSEC; A, As, J varían lineal y EI33/EI22 con el exponente de VARI3/VARI2.
+      const npm = line.match(/NONPRISMATICSECTION\s+"([^"]+)"\s+STARTSEC\s+"([^"]+)"\s+ENDSEC\s+"([^"]+)"/);
+      if (npm) {
+        const v3 = line.match(/VARI3\s+"([^"]+)"/), v2 = line.match(/VARI2\s+"([^"]+)"/);
+        noPrismaticas.set(npm[1], { ini: npm[2], fin: npm[3], vari3: v3 ? v3[1] : "LINEAR", vari2: v2 ? v2[1] : "LINEAR" });
+      }
+    }
     if (currentSection === "FRAME SECTIONS") {
       const fsm = line.match(/FRAMESECTION\s+"([^"]+)"/);
       if (fsm) {
@@ -1013,6 +1036,29 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     if (ps) nodeSprings.set(nodes.length - 1, ps);
   }
 
+  /** Propiedades (A, I33, I22, J, As2, As3) de un rectángulo o una T de hormigón, en las unidades del fichero. */
+  const propsPrismatica = (sec: { shape: string; D: number; B: number; TF: number; TW: number }) => {
+    const { D, B, TF, TW } = sec;
+    const roark = (a0: number, b0: number) => { const a = Math.min(a0, b0), b = Math.max(a0, b0); return b * a ** 3 * (1 / 3 - 0.21 * (a / b) * (1 - a ** 4 / (12 * b ** 4))); };
+    if (sec.shape === "Concrete Tee") return propsTee(D, B, TF, TW);
+    const A = D * B;
+    return { A, Iz: B * D ** 3 / 12, Iy: D * B ** 3 / 12, J: roark(D, B), AsY: 5 / 6 * A, AsZ: 5 / 6 * A };
+  };
+  /** Tramo `t` de `N` de una barra Nonprismatic: sección «General» nueva con A, As, J lineales y EI33/EI22 con el exponente de VARI3/VARI2. */
+  const seccionNoPrismatica = (nombre: string, np: { ini: string; fin: string; vari3: string; vari2: string }, t: number, N: number) => {
+    const clave = `${nombre}#${t + 1}/${N}`;
+    if (frameSections.has(clave)) return clave;
+    const s0 = frameSections.get(np.ini), s1 = frameSections.get(np.fin);
+    if (!s0 || !s1) { console.warn(`[e2k] ${nombre}: STARTSEC/ENDSEC "${np.ini}"/"${np.fin}" no existe`); return np.ini; }
+    const a = propsPrismatica(s0), b = propsPrismatica(s1);
+    const xi = (t + 0.5) / N, ex = (v: string) => (/PARAB/i.test(v) ? 2 : /CUBIC/i.test(v) ? 3 : 1);
+    const lin = (u: number, v: number) => u + (v - u) * xi;
+    const pot = (u: number, v: number, n: number) => u + (v - u) * xi ** n;
+    frameSections.set(clave, { material: s0.material, shape: "General", D: 0, B: 0, TF: 0, TW: 0, mods: s0.mods,
+      AREA: lin(a.A, b.A), AS2: lin(a.AsZ, b.AsZ), AS3: lin(a.AsY, b.AsY), I33: pot(a.Iz, b.Iz, ex(np.vari3)), I22: pot(a.Iy, b.Iy, ex(np.vari2)), TORSION: lin(a.J, b.J) } as any);
+    return clave;
+  };
+
   // ── Build elements ──
   const elements: Element[] = [];
   const elementNames: string[] = [];
@@ -1088,9 +1134,26 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       }
       // Los nudos que no existan (no todas las plantas tienen ese punto) se
       // saltan: la cadena se cierra por los que si estan.
-      const cadena = cadenaKeys.map((k) => nodeNameToIdx.get(k))
+      let cadena = cadenaKeys.map((k) => nodeNameToIdx.get(k))
                                .filter((v): v is number => v !== undefined);
       if (cadena.length < 2) continue;
+      // Barra NONPRISMATIC: se parte en N tramos prismáticos con las propiedades interpoladas (nudos interiores nuevos).
+      const np = noPrismaticas.get(la.section);
+      let seccionTramo = (_t: number) => la.section;
+      if (np && cadena.length === 2 && cadena[0] !== cadena[1]) {
+        const N = 8, P = nodes[cadena[0]] as unknown as number[], Q = nodes[cadena[1]] as unknown as number[];
+        const nueva = [cadena[0]];
+        for (let k = 1; k < N; k++) {
+          const f = k / N;
+          nodes.push([P[0] + f * (Q[0] - P[0]), P[1] + f * (Q[1] - P[1]), P[2] + f * (Q[2] - P[2])] as unknown as Node);
+          const nm = `np@${lc.name}@${story}@${k}`;
+          nodeNames.push(nm); nodeNameToIdx.set(nm, nodes.length - 1);
+          nueva.push(nodes.length - 1);
+        }
+        nueva.push(cadena[1]);
+        cadena = nueva;
+        seccionTramo = (t: number) => seccionNoPrismatica(la.section, np, t, N);
+      }
 
       const releaseMap: Record<string, number> = {
         "PI": 0,  "V2I": 1,  "V3I": 2,  "TI": 3,  "M2I": 4,  "M3I": 5,
@@ -1104,7 +1167,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         elementNames.push(cadena.length > 2 ? `${lc.name}-${t + 1}` : lc.name);
         elementTypes.push(lc.type);
         elementStoriesArr.push(story);
-        elementSections.set(elemIdx, la.section);
+        elementSections.set(elemIdx, seccionTramo(t));
         if (la.spring) springAssigns.set(elemIdx, la.spring);
         if (la.mallaEnCruces) mallaEnCruces.set(elemIdx, true);
         if (la.mods && la.mods.some(v => Math.abs(v - 1) > 1e-12)) modsObjeto.set(elemIdx, la.mods);
@@ -1220,6 +1283,12 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         AsY = AsZ = 5 / 6 * A; // rectangular shear area factor
         shapeType = "rect";
         break;
+      case "Concrete Tee": {
+        const r = propsTee(D, B, tf, tw);
+        A = r.A; Iz = r.Iz; Iy = r.Iy; J = r.J; AsY = r.AsY; AsZ = r.AsZ;
+        shapeType = "rect";
+        break;
+      }
       case "Concrete Circle":
         A = Math.PI * D ** 2 / 4;
         Iz = Iy = Math.PI * D ** 4 / 64;
@@ -1386,6 +1455,8 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
       tf: tf || undefined,
       r: sec.R,
       name: secName,
+      clase: (mat?.type ?? "").toLowerCase(),
+      ...(tipoHormigon.get(secName) ? { diseno: tipoHormigon.get(secName)!.tipo } : {}),
       ...(sec.shape === "Concrete L" ? { concretoL: { twb: (sec as any).TWB ?? tw, sinAla: !!(sec as any).sinAla,
            mirror2: !!(sec as any).mirror2, mirror3: !!(sec as any).mirror3,
            diseno: tipoHormigon.get(secName) ? { ...tipoHormigon.get(secName)! } : undefined } } : {}),
@@ -2063,6 +2134,25 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     const fms = [...fuentesMasa.values()];
     const fm = fms.find((q) => q.defecto) ?? fms[0];
     if (fm) analisis.fuenteMasa = { elementos: fm.elementos, cargas: fm.cargas, lateral: fm.lateral, lump: fm.lump, patrones: fm.patrones };
+  }
+  {
+    const usos = new Map<string, Set<string>>();
+    for (const [e, inf] of sectionInfo) { if (!usos.has(inf.name)) usos.set(inf.name, new Set()); usos.get(inf.name)!.add(elementTypes[e] ?? "?"); }
+    analisis.secciones = [];
+    for (const [nombre, sec] of frameSections) {
+      const clase = (materials.get(sec.material)?.type ?? "?").toLowerCase();
+      const u = [...(usos.get(nombre) ?? [])].sort();
+      const diseno = tipoHormigon.get(nombre)?.tipo;
+      let aviso: string | undefined;
+      if (clase === "concrete") {
+        if (!diseno) aviso = "hormigón sin CONCRETESECTION: ETABS no sabe si se diseña como viga o columna";
+        else if (u.length === 1 && u[0] === "BEAM" && diseno !== "Beam") aviso = `se usa como VIGA pero su diseño es ${diseno}`;
+        else if (u.length === 1 && u[0] === "COLUMN" && diseno !== "Column") aviso = `se usa como COLUMNA pero su diseño es ${diseno}`;
+        else if (u.includes("BEAM") && u.includes("COLUMN")) aviso = "la misma sección se usa como viga y como columna";
+      } else if (diseno) aviso = `${clase} con CONCRETESECTION (se ignora)`;
+      analisis.secciones.push({ nombre, material: sec.material, clase, forma: sec.shape, usos: u, ...(diseno ? { diseno } : {}), ...(aviso ? { aviso } : {}) });
+      if (aviso) console.warn(`[e2kParser] sección «${nombre}»: ${aviso}`);
+    }
   }
   if (analisis.orificios.leidos)
     console.info(`[e2kParser] orificios: ${analisis.orificios.leidos} leídos (por planta) · ${analisis.orificios.recortes} recortados en las losas`);

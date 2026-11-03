@@ -249,6 +249,8 @@ export const newBlank: ExampleDef = {
     // Malla de la zapata dibujada + qué shells/nudos forman zapata (para Winkler).
     const nMalla = Math.max(1, Math.round(p.mallaZapata ?? 1));
     const zapataShells = new Set<number>();
+    const shellPolyOf = new Map<number, number>();      // elemento shell → índice de su polilínea (propiedades por área)
+    const zMinDraw = nodes.length ? Math.min(...nodes.map((n) => n[2])) : 0;   // nivel más bajo dibujado = el de las zapatas
     const zapataNodes = new Set<number>();
     // Mapa posición→índice para SOLDAR los nudos de malla que caen sobre un nudo
     // ya dibujado (p. ej. el nudo central donde va la carga de la columna).
@@ -263,6 +265,7 @@ export const newBlank: ExampleDef = {
     for (let pi = 0; pi < drawPolylines.length; pi++) {
       const poly = drawPolylines[pi];
       if (drawAreas.has(pi)) {
+        const e0 = elements.length;                       // los shells que salgan de ESTA polilínea (para sus propiedades propias)
         // ─ ÁREA → shell Q4 ─
         // El click handler cierra la polilínea agregando poly[0] al final,
         // así que poly = [v0, v1, v2, v3, v0]. Tomamos los 4 vértices únicos.
@@ -276,7 +279,9 @@ export const newBlank: ExampleDef = {
           elements.push(verts as unknown as Element);
           shellIdx.add(eIdx); zapataShells.add(eIdx);
           for (const v of verts) zapataNodes.add(v);
-        } else if (nMalla <= 1) {
+        } else if (nMalla <= 1 || !verts.every((v) => Math.abs(nodes[v][2] - zMinDraw) < 1e-6)) {
+          // la malla del área es para las ZAPATAS (nivel más bajo): una cubierta mallada tendría nudos sueltos, sin barras
+          // que los sostengan, y una membrana no tiene rigidez fuera de su plano → mecanismo (LDLT falla).
           const eIdx = elements.length;
           elements.push(verts as unknown as Element);
           shellIdx.add(eIdx); zapataShells.add(eIdx);
@@ -317,6 +322,7 @@ export const newBlank: ExampleDef = {
             for (const v of q) zapataNodes.add(v);
           }
         }
+        for (let e = e0; e < elements.length; e++) shellPolyOf.set(e, pi);
       } else {
         // ─ POLILÍNEA o LÍNEA → cadena de frames ─
         for (let i = 0; i < poly.length - 1; i++) {
@@ -407,6 +413,21 @@ export const newBlank: ExampleDef = {
         J.set(i, J_);
         densities.set(i, rho_frm);
         poissons.set(i, nu_frm);
+      }
+    }
+    // ── Propiedades POR ÁREA (kind:"areas"): espesor, material y tipo de cada paño ──
+    // Así la cubierta de lámina (0.5 mm, acero, membrana) y la zapata de hormigón (0.4 m) conviven en un modelo.
+    const manualArea = (window as any).__hekatanManualArea as Map<number, { thickness?: number; material?: string; shellType?: string }> | undefined;
+    if (manualArea && manualArea.size > 0 && !esDeck) {
+      const db = (window as any).__hekatanMaterialDB as Record<string, { E: number; nu: number; rho: number; G?: number }> | undefined;
+      for (const [e, pi] of shellPolyOf) {
+        const a = manualArea.get(pi); if (!a) continue;
+        if (a.thickness && a.thickness > 0) thicknesses.set(e, a.thickness);
+        const m = a.material ? db?.[a.material] : undefined;
+        if (m) { elasticities.set(e, m.E); shearModuli.set(e, m.G ?? m.E / (2 * (1 + m.nu))); poissons.set(e, m.nu); densities.set(e, m.rho); }
+        if (a.shellType === "Plane stress") { membraneModifiers.set(e, 1); bendingModifiers.set(e, 0); plateFormulations.delete(e); }
+        else if (a.shellType === "Kirchhoff (CPT)") { membraneModifiers.delete(e); bendingModifiers.delete(e); plateFormulations.set(e, 1); }
+        else if (a.shellType === "Mindlin (FSDT)") { membraneModifiers.delete(e); bendingModifiers.delete(e); plateFormulations.set(e, 0); }
       }
     }
     // ── Secciones manuales (kind:"segs" prop:"section") ──
@@ -685,9 +706,13 @@ export const newBlank: ExampleDef = {
     }
     // ── Suelo Winkler bajo la zapata dibujada: k = ks·A_trib por nudo (dof Uz) ──
     const ks_kNm3 = (p.ksSuelo ?? 0) * 9.80665;   // tonf/m³ → kN/m³
-    if (ks_kNm3 > 0 && zapataNodes.size > 0) {
+    // El suelo solo toca los paños que descansan en el nivel MÁS BAJO del modelo (las zapatas): una cubierta o una
+    // losa en altura dibujadas en el mismo modelo NO llevan resortes de suelo.
+    const zMinModel = nodes.length ? Math.min(...nodes.map((n) => n[2])) : 0;
+    const zapSoil = new Set<number>([...zapataShells].filter((e) => (elements[e] as number[]).every((n) => Math.abs(nodes[n][2] - zMinModel) < 1e-6)));
+    if (ks_kNm3 > 0 && zapSoil.size > 0) {
       const aTrib = new Map<number, number>();
-      for (const eIdx of zapataShells) {
+      for (const eIdx of zapSoil) {
         const e = elements[eIdx] as number[];
         const A = quadArea(nodes, e);
         for (const n of e) aTrib.set(n, (aTrib.get(n) ?? 0) + A / 4);
@@ -720,13 +745,13 @@ export const newBlank: ExampleDef = {
           nodes, elements, states.elementInputs.val, states.deformOutputs.rawVal,
         );
         // ── Presión de contacto del suelo (Winkler): σ = ks·Uz por nudo ──
-        if (ks_kNm3 > 0 && zapataShells.size > 0) {
+        if (ks_kNm3 > 0 && zapSoil.size > 0) {
           try {
             const U = states.deformOutputs.rawVal.deformations;
             const ao: any = states.analyzeOutputs.rawVal ?? {};
             const pressure = new Map<number, number[]>();
             let pmin = 0, pmax = 0;
-            for (const eIdx of zapataShells) {
+            for (const eIdx of zapSoil) {
               const e = elements[eIdx] as number[];
               const vals = e.map((n) => {
                 const uz = U.get(n)?.[2] ?? 0;

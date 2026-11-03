@@ -2458,9 +2458,11 @@ for (const [k, v] of Object.entries(MATERIALS_INITIAL)) _matMap.set(k, { ...v })
 const refreshMaterialDB = () => {
   const db: Record<string, { E: number; nu: number; rho: number; G?: number; Fy?: number; Fu?: number; fc?: number }> = {};
   for (const [name, m] of _matMap.entries()) {
+    // Unidades del lienzo (newBlank): kN y m → E y G en kN/m² (la base los guarda en Pa) y ρ como PESO en kN/m³
+    // (la base trae también la masa en kg/m³: usarla daba un peso propio 100 veces mayor).
     db[name] = {
-      E: m.E, nu: m.nu, rho: m.massDensity,
-      G: m.G ?? m.E / (2 * (1 + m.nu)),
+      E: m.E / 1000, nu: m.nu, rho: m.weightDensity ?? (m.massDensity * 9.80665) / 1000,
+      G: (m.G ?? m.E / (2 * (1 + m.nu))) / 1000,
       Fy: m.Fy, Fu: m.Fu, fc: m.fc,
     };
   }
@@ -3139,6 +3141,19 @@ window.addEventListener("hk:property-applied", (ev: any) => {
       const m = (window as any).__hekatanManualDistLoads as Map<string, [number, number, number]>;
       const v = value as number[];
       for (const k of segKeys) { if (v.some((x) => x !== 0)) m.set(k, [v[0] ?? 0, v[1] ?? 0, v[2] ?? 0]); else m.delete(k); }
+    }
+  } else if (kind === "areas") {
+    // Propiedades POR ÁREA (cubierta de lámina y zapata de hormigón en el mismo modelo): newBlank las lee por
+    // índice de polilínea. Antes el evento se disparaba y nadie lo escuchaba: valía el espesor global.
+    const W = window as any;
+    const m: Map<number, { thickness?: number; material?: string; shellType?: string }> = (W.__hekatanManualArea ??= new Map());
+    for (const id of ids as string[]) {
+      if (!id.startsWith("poly:")) continue;
+      const pi = +id.slice(5), a = m.get(pi) ?? {};
+      if (prop === "thickness") a.thickness = +value;
+      else if (prop === "material") a.material = String(value);
+      else if (prop === "shellType") a.shellType = String(value);
+      m.set(pi, a);
     }
   }
   // ── Cartel de confirmación visible (muchas props NO cambian el dibujo:

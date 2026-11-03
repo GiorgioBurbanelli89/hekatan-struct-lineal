@@ -21,6 +21,7 @@
  */
 
 import * as gifenc from "gifenc";
+import { flujoParaGrabar } from "./grabar";
 
 /* 30-sep-2026 — Jorge: «deben tener la misma calidad tanto la grabación en GIF como en MP4». Antes: 640 px (la pantalla
  * de 2560 encogida al 25 %, texto ilegible) y una paleta NUEVA por cuadro (parpadeo). Ahora: el ancho del MP4 (hasta
@@ -76,21 +77,9 @@ function pinta(b: HTMLButtonElement, n: number) {
 }
 
 async function grabar(b: HTMLButtonElement) {
-  if (!navigator.mediaDevices?.getDisplayMedia) {
-    aviso("Este navegador no sabe grabar la pantalla. En Chrome o Edge sí.", true);
-    return;
-  }
-  const lib: any = gifenc;
-
-  let flujo: MediaStream;
-  try {
-    flujo = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: FPS, width: { ideal: 2560 }, height: { ideal: 1600 } }, audio: false });
-  } catch (e: any) {
-    if (e?.name === "NotAllowedError") aviso("Grabación cancelada.");
-    else aviso("No se pudo empezar: " + (e?.message ?? e), true);
-    return;
-  }
-
+  // la pantalla (con diálogo) o, si el navegador no puede compartirla, el lienzo 3D (ver flujoParaGrabar)
+  const flujo = await flujoParaGrabar(FPS);
+  if (!flujo) return;
   await grabarFlujo(flujo, b);
 }
 

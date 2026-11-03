@@ -194,23 +194,60 @@ function pintarBoton(b: HTMLButtonElement) {
   }
 }
 
+/**
+ * RESPALDO sin diálogo: el flujo del LIENZO 3D (el mayor canvas de la página), con un fotograma pedido cada 1/fps s.
+ * Sirve cuando el navegador no puede compartir la pantalla («Could not start video source», sin getDisplayMedia,
+ * sesión remota o automatizada). Graba solo el visor, sin los paneles, pero graba siempre.
+ */
+export function flujoLienzo(fps = 30): MediaStream | null {
+  const cs = [...document.querySelectorAll("canvas")] as HTMLCanvasElement[];
+  const cv = cs.filter((c) => c.width > 0 && c.height > 0).sort((a, b) => b.width * b.height - a.width * a.height)[0];
+  if (!cv || !(cv as any).captureStream) return null;
+  // Un canvas 2D ESPEJO que se repinta a cada tic: un WebGL quieto no emite fotogramas y el <video> del GIF
+  // se quedaría esperando el primero. drawImage marca el espejo como cambiado aunque la imagen sea la misma.
+  const esp = document.createElement("canvas");
+  esp.width = cv.width; esp.height = cv.height;
+  const g = esp.getContext("2d")!;
+  // un WebGL sin preserveDrawingBuffer se VACÍA al componer la página: hay que renderizar y copiar en el mismo tic
+  const visor: any = [...document.querySelectorAll("*")].find((e: any) => e.__ctx?.render);
+  const pinta = () => {
+    if (esp.width !== cv.width || esp.height !== cv.height) { esp.width = cv.width; esp.height = cv.height; }
+    try { visor?.__ctx.render(); } catch { /* si falla, se copia lo que haya */ }
+    g.drawImage(cv, 0, 0);
+  };
+  pinta();
+  const fl: MediaStream = (esp as any).captureStream(fps);
+  const tic = window.setInterval(pinta, 1000 / fps);
+  const pista = fl.getVideoTracks()[0];
+  const parar0 = pista.stop.bind(pista);
+  pista.stop = () => { clearInterval(tic); parar0(); };          // stop() no dispara «ended»: sin esto el tic quedaría vivo
+  pista.addEventListener("ended", () => clearInterval(tic));
+  return fl;
+}
+
+/** La pantalla (con diálogo) o, si el navegador no puede, el lienzo. `null` = el usuario canceló. */
+export async function flujoParaGrabar(fps: number): Promise<MediaStream | null> {
+  if (navigator.mediaDevices?.getDisplayMedia) {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: fps, width: { ideal: 2560 }, height: { ideal: 1600 } },
+        audio: false,                     // solo imagen: el micro se pide aparte y casi nunca hace falta
+      });
+    } catch (e: any) {
+      // cancelar el diálogo NO es un error que haya que gritar
+      if (e?.name === "NotAllowedError") { aviso("Grabación cancelada."); return null; }
+      console.warn("[grabar] pantalla no disponible, se graba el lienzo:", e?.message ?? e);
+    }
+  }
+  const fl = flujoLienzo(fps);
+  if (!fl) { aviso("No se pudo empezar a grabar: ni la pantalla ni el lienzo están disponibles.", true); return null; }
+  aviso("La pantalla no se puede compartir aquí: se graba el lienzo 3D (sin paneles).");
+  return fl;
+}
+
 async function arrancar(b: HTMLButtonElement) {
-  if (!navigator.mediaDevices?.getDisplayMedia) {
-    aviso("Este navegador no sabe grabar la pantalla. En Chrome o Edge sí funciona.", true);
-    return;
-  }
-  let flujo: MediaStream;
-  try {
-    flujo = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: 30, width: { ideal: 2560 }, height: { ideal: 1600 } },
-      audio: false,                       // solo imagen: el micro se pide aparte y casi nunca hace falta
-    });
-  } catch (e: any) {
-    // cancelar el diálogo NO es un error que haya que gritar
-    if (e?.name === "NotAllowedError") aviso("Grabación cancelada.");
-    else aviso("No se pudo empezar a grabar: " + (e?.message ?? e), true);
-    return;
-  }
+  const flujo = await flujoParaGrabar(30);
+  if (!flujo) return;
 
   // primero el MP4 listo para redes (WebCodecs); si el navegador no lo trae, el grabador de siempre
   try { if (await arrancarWebCodecs(flujo, b)) return; } catch (e) { console.warn("[grabar] WebCodecs no disponible:", e); }

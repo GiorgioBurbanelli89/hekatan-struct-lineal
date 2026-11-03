@@ -40,7 +40,7 @@ export function entradasElemento(S: EspecEdificio, B: Edificio, punto: number) {
   return ei;
 }
 
-export interface ResultadoTu { Tu: number; T: number; combo: string; nVigas: number; sobreUmbral: number; Tth: number; Tcr: number; }
+export interface ResultadoTu { Tu: number; T: number; combo: string; nVigas: number; sobreUmbral: number; Tth: number; Tcr: number; porViga: Map<number, number>; }
 
 /** Tu envolvente de las vigas: resuelve D, L, Ex y Ey por separado y combina (el análisis es lineal). */
 export function calcularTu(S: EspecEdificio, B: Edificio, punto: number): ResultadoTu {
@@ -53,7 +53,7 @@ export function calcularTu(S: EspecEdificio, B: Edificio, punto: number): Result
   }
   const Acp = S.bb * S.bh, pcp = 2 * (S.bb + S.bh);
   const Tth = 0.75 * 0.083 * Math.sqrt(FC) * (Acp * 1e6) ** 2 / (pcp * 1e3) / 1e6, Tcr = 0.75 * 0.33 * Math.sqrt(FC) * (Acp * 1e6) ** 2 / (pcp * 1e3) / 1e6;
-  let Tu = 0, T = 0, combo = "", nVigas = 0, sobre = 0;
+  let Tu = 0, T = 0, combo = "", nVigas = 0, sobre = 0; const porViga = new Map<number, number>();
   B.elements.forEach((_, i) => {
     if (B.tipo[i] !== "viga") return;
     nVigas++;
@@ -65,9 +65,9 @@ export function calcularTu(S: EspecEdificio, B: Edificio, punto: number): Result
       }
     }
     for (const c of SERVICIO) for (let k = 0; k < 2; k++) T = Math.max(T, Math.abs(c.D * por.D.get(i)![k] + c.L * por.L.get(i)![k] + c.X * por.X.get(i)![k] + c.Y * por.Y.get(i)![k]));
-    if (m > Tth) sobre++;
+    porViga.set(i, m); if (m > Tth) sobre++;
   });
-  return { Tu, T, combo, nVigas, sobreUmbral: sobre, Tth, Tcr };
+  return { Tu, T, combo, nVigas, sobreUmbral: sobre, Tth, Tcr, porViga };
 }
 
 let ultimo: { a?: ResultadoTu; b?: ResultadoTu; punto: number; id: string } | null = null;
@@ -121,6 +121,14 @@ export const edificiosTorsion: ExampleDef = {
       "T de servicio (sin mayorar) · Centroid → elegido": `${a.T.toFixed(3)} → ${b.T.toFixed(3)} kN·m`,
       "Tu / T (factor de mayoración efectivo)": `${(a.Tu / a.T).toFixed(2)} → ${(b.Tu / b.T).toFixed(2)}`,
       "Combinación que manda": `${b.combo}`,
+      ...(punto === 2 ? (() => {
+        // Tu de CADA viga, Centroid → elegido: el máximo del edificio baja, pero alguna viga puede subir
+        let baja = 0, sube = 0, mayor = 0, base = 0;
+        for (const [i, ta] of a.porViga) { const tb = b.porViga.get(i) ?? ta;
+          if (tb > ta * 1.001) { sube++; if (tb - ta > mayor) { mayor = tb - ta; base = ta; } } else if (tb < ta * 0.999) baja++; }
+        return { "Vigas cuyo Tu BAJA / SUBE": `${baja} / ${sube} de ${a.nVigas}`,
+          "Mayor subida de una viga": sube ? `+${mayor.toFixed(2)} kN·m (de ${base.toFixed(2)}) = ${(100 * mayor / a.Tu).toFixed(1)} % del Tu máx` : "ninguna" };
+      })() : {}),
       "Vigas con Tu > φ·Tth (umbral de torsión)": `${a.sobreUmbral} → ${b.sobreUmbral} de ${a.nVigas}`,
       "φ·Tcr de la viga": `${a.Tcr.toFixed(2)} kN·m  (f'c = ${FC} MPa)`,
     };
