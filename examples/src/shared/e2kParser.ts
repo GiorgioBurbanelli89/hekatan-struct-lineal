@@ -9,6 +9,7 @@
  *   FRAME OBJECT LOADS
  */
 import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hekatan-fem";
+import { getTransformationMatrix, desfaseDeInsercionE2k, trasladarCargaAlNudo } from "hekatan-fem";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "./cadSections";
 import { propiedadesSD, formaDesdeE2k, type PiezaSD } from "./sectionDesigner";
 import { cargaBarraConsistente, acumularCargaBarra } from "./cargaBarraConsistente";
@@ -1604,8 +1605,19 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     const eq = fl.type === "TRAPF"
       ? cargaBarraConsistente(p1, p2, (fl.rs ?? 0) * L, (fl.re ?? 1) * L, fl.fs ?? 0, fl.fe ?? 0, dir)
       : cargaBarraConsistente(p1, p2, 0, L, fl.val, fl.val, dir);
+    // PUNTO DE INSERCION (CARDINALPT + TRANSFORMSTIFF "Yes"): la carga actua en el centroide, d2 bajo el nudo; al nudo llega F + r x F
+    // (mismo criterio que el peso propio y la losa en e2kAHeks). El empotramiento `frameFixedEnd` queda el del centroide.
+    let eqN = eq;
+    const dIns = desfaseDeInsercionE2k(asignaLineaE2k.get(elemIdx), sectionShapes.get(elemIdx)?.h ?? 0);
+    if (dIns) {
+      const T = getTransformationMatrix([p1, p2] as any, localAngles.get(elemIdx) ?? 0) as number[][];
+      eqN = trasladarCargaAlNudo(eq, T[1].slice(0, 3), T[2].slice(0, 3), dIns[0], dIns[1]);
+    }
     acumularCargaBarra(loads as unknown as Map<number, number[]>, frameFixedEnd, elemIdx, n1, n2, eq);
-    acumularCargaBarra(mapaPatron(fl.lc), fefDescarte, elemIdx, n1, n2, eq);
+    if (eqN !== eq) for (const [n, o] of [[n1, 0], [n2, 6]] as const) {
+      const a = loads.get(n)!; for (let k = 3; k < 6; k++) a[k] += eqN[o + k] - eq[o + k];
+    }
+    acumularCargaBarra(mapaPatron(fl.lc), fefDescarte, elemIdx, n1, n2, eqN);
     porPatron.barras.push({ elem: elemIdx, lc: fl.lc, dir: fl.dir, type: fl.type === "TRAPF" ? "TRAPF" : "UNIFF",
       val: fl.val, fs: fl.fs, fe: fl.fe, rs: fl.rs, re: fl.re });
   }
