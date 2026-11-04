@@ -91,3 +91,12 @@ Geometria real (topo del heks): sobrecubierta x 30..36 = paños de 1x4 m (y 86.4
 - Implementado: `e2kAHeks(..., { membranaEnNudos })`, DEFECTO true (false = antes). Test: filas de `e2k_galpon_recorte` (rms <= 12 %, peor nudo <= 5 %, cordones/Fx +-3 %). Suites: e2k 208/208, e2k_prop 10/10, punto_insercion 6/6, membrana 36/36, galpon_simple 18/18 (sin nudos colgados: igual).
 - ❌ Quedan: Ux/Uy 6-9 % rms concentrado en x = 30 (capas superpuestas: el edge constraint real ata solo traslaciones, aqui se parte la malla); Fy de reacciones en (36,86.4/90.4,13.46): ETABS 0.42/0.44 vs Hek 1.59/-0.76 (Fy rms 85 %, valores ~1 kN). Haria falta un `edge` de solo traslaciones en el C++ (WASM, no recompilado aqui).
 - Corridas ETABS nuevas: 0.
+
+## 4-nov (3): modelo de UN VANO (6x6 m) vs ETABS, 5 corridas (sin colgarse)
+Modelo: 4 columnas CC 1 200x6 empotradas, VP I530 en y=0/6 (CARDINALPT 8), correas 1G articuladas (TI M2I M2J M3I M3J), membrana A36 4 mm ONEWAYLOADDIST, pendiente 3 %, Dead 0.392/Live 0.686, LAT 1 kN en y=6. Datos `tests/datos/e2k_vano_simple_{A,A1m,B,Baddr}.e2k` (+`_ref.json`), generador `..._genera_etabs.py`, test `tests/casos/e2k_vano_simple.mjs` (75 filas), lib `tests/lib/vano_cmp.mjs`. Scripts ETABS: `C:\ETABS\mercado\galpon\vano.py`, `ext.py`.
+- A = correas enteras (sin colgados) · A1m = correas cada 1 m (colgados en los lados de los panos 1x6) · B = x 3..6 panos 1x4 + Tubo 50 en y=1,5 (colgados en x=3, el caso x=30) · Baddr = B con ADDRESTRAINT Yes.
+- ✅ Hek = ETABS en las 4 variantes: Uz peor nudo 0.044-0.049 mm de 17-20 mm (0.25 %); Fz total 41.598 vs 41.610; LATX 17.01 mm, peor 0.019 mm; Fx total -7.000.
+- ✅ ETABS: ADDRESTRAINT Yes/No da el MISMO resultado (dU max 2e-10 m) en este vano. Hek: 1 Q4 / membranaEnNudos / tamMembrana 1.25 dan el mismo Uz (0.0440 mm) -> el vano NO solicita la membrana (el techo se traslada rigido, sin cortante).
+- ❌ Limitacion: este vano no discrimina la membrana ni el edge constraint (la causa de x=30 se ve solo con cortante en el plano: cubierta unida a apoyos de corte). Sin cambios en el motor.
+- Residuos chicos: axil de los 6 cordones Tubo 50 con LATX Hek 0.10-0.13 vs ETABS 0.03-0.10 kN (<=0.07 kN, 1 % de la carga de 7 kN); Fy de columnas ~1.3-1.8 % rms (valores 0.03 kN); axil de columna Hek = ETABS - mitad de su peso (el peso va a los nudos).
+- ⏳ Variante con cortante en el plano (quitar columna de una esquina o apoyar solo y=0 como "corte") para ver ADDRESTRAINT; no se hizo: tope de 5 corridas ETABS. RAM libre ~0 MB, ETABS aguanto (50-70 s cada corrida).
