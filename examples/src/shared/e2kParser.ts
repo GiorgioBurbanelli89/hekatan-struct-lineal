@@ -1356,6 +1356,10 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         // 5/6·2·B·tf en AsY — antes estaban CRUZADAS respecto al resto del lector (AsZ = AS2).
         const c = iSectionCsi(D, B, tf, tw);
         A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
+        // (4-nov-2026) ETABS 22 NO usa la corrección 0.63 de SAP2000: su J de «I/Wide Flange» es la de pared delgada
+        // (2·B·TF³ + (D−TF)·TW³)/3, medida por OAPI en el mercado (VP I530x15+I150x6: 374 580 mm⁴, VS: 144 896, exactos).
+        // Con la 0.63 la J de VP/VS salía 6 % corta y el Uy de la cubierta (torsión de la cercha) 7 % sobre ETABS.
+        J = (2 * B * tf ** 3 + (D - tf) * tw ** 3) / 3;
         shapeType = "I";
         break;
       }
