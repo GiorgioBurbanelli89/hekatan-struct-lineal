@@ -10,11 +10,12 @@ export const key = (p) => p.map((v) => Math.round(v * 1000)).join("|");
 export async function cargarMod() { return await empaquetar(`export { e2kAHeks } from "${R}/examples/src/shared/e2kAHeks";\n`, "e2k-vano"); }
 const silencio = async (f) => { const l = console.log, w = console.warn, e = console.error, i = console.info; console.log = () => {}; console.warn = () => {}; console.error = () => {}; console.info = () => {};
   try { return await f(); } finally { console.log = l; console.warn = w; console.error = e; console.info = i; } };
-export async function medir(mod, nom, opc, pats = ["Dead", "Live", "LATX", "LATY"]) {
+export async function medir(mod, nom, opc, pats = ["Dead", "Live", "LATX", "LATY"], pref = "e2k_vano_simple_") {
   const dir = mkdtempSync(join(tmpdir(), "vano-"));
-  const ref = JSON.parse(readFileSync(join(AQUI, "..", "datos", `e2k_vano_simple_${nom}_ref.json`), "utf-8"));
-  const res = await silencio(() => mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", `e2k_vano_simple_${nom}.e2k`), "latin1"), `${nom}.e2k`, opc));
-  const fh = join(dir, `${nom}.heks`); writeFileSync(fh, res.heks);
+  const ref = JSON.parse(readFileSync(join(AQUI, "..", "datos", `${pref}${nom}_ref.json`), "utf-8"));
+  const { extraHeks = "", ...opcE2k } = opc;   // extraHeks: lineas que se anaden al .heks (p.ej. "shelldrill todos 0")
+  const res = await silencio(() => mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", `${pref}${nom}.e2k`), "latin1"), `${nom}.e2k`, opcE2k));
+  const fh = join(dir, `${nom}.heks`); writeFileSync(fh, extraHeks ? res.heks + "\n" + extraHeks + "\n" : res.heks);
   const out = { nElem: res.modelo.elements.length, nNodes: res.modelo.nodes.length, pat: {} };
   for (const pat of pats) {
     globalThis.__hekatanFactoresPatron = { [pat]: 1 };
