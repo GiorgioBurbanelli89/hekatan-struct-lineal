@@ -2497,7 +2497,17 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
         g.s = (g.s * g.w + c.s * w) / (g.w + w); g.w += w; nMuestras += w;
       }
     }
-    const A = Math.abs(P.reduce((acc, q, i) => { const w = P[(i + 1) % P.length]; return acc + q[0] * w[1] - w[0] * q[1]; }, 0)) / 2;
+    // AREA EFECTIVA del paño. Medido en ETABS 22 (vano 6x6, Live): con la pendiente PERPENDICULAR al vano de la losa en una direccion
+    // (3 % en y, vano en x) la carga GRAV pesa la superficie inclinada (24.724 = q·A3D); con la pendiente a lo LARGO del vano (3 % en x)
+    // pesa la proyeccion en planta (24.713). O sea A = A_planta · √(1 + s_perp²), s_perp = pendiente medida perpendicular al vano.
+    const A = (() => {
+      const Ap = Math.abs(P.reduce((acc, q, i) => { const w = P[(i + 1) % P.length]; return acc + q[0] * w[1] - w[0] * q[1]; }, 0)) / 2;
+      let nx = 0, ny = 0, nz = 0;
+      for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; nx += a[1] * b[2] - a[2] * b[1]; ny += a[2] * b[0] - a[0] * b[2]; nz += a[0] * b[1] - a[1] * b[0]; }
+      if (Math.abs(nz) < 1e-12) return Ap;
+      const sPerp = (-nx / nz) * (-u[1]) + (-ny / nz) * u[0];   // gradiente de la cubierta · eje perpendicular al vano
+      return Ap * Math.sqrt(1 + sPerp * sPerp);
+    })();
     const r = { grupos: [...agr.values()], nulas, nMuestras, esquinas: el, A };
     cache.set(ei, r); return r;
   };
