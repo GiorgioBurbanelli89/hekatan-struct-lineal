@@ -10,6 +10,7 @@ import type { Node, Element, NodeInputs, ElementInputs, SectionShape } from "hek
 import type { E2kModel, E2kCargasPorPatron } from "./e2kParser";
 import { muellesParaExportar } from "./muellesParaExportar";
 import { gdlDisponibles } from "./gdlDisponibles";
+import { parchearSecciones, inyectarPreservado } from "./e2kParche";
 
 export interface ExportE2kInput {
   nodes: Node[];
@@ -19,6 +20,8 @@ export interface ExportE2kInput {
   title?: string;
   units?: { force: string; length: string };
   e2kModel?: E2kModel;
+  /** Salida: avisos de ediciones que no se pudieron aplicar al crudo (ver e2kParche.ts). */
+  avisos?: string[];
   /**
    * Modo de manejo de peso propio en el pattern Dead:
    *  - "auto" (default): SELFWEIGHT=1 → ETABS computa γ·V de cada material
@@ -181,7 +184,17 @@ export const PROPMOD_TOKENS = ["PROPMODA", "PROPMODA2", "PROPMODA3", "PROPMODT",
 export function exportE2k(input: ExportE2kInput): string {
   const raw = input.e2kModel?.rawSections;
   // Raw round-trip (preserva ETABS) o reconstrucción sintética.
-  let e2k = (raw && raw.size > 0) ? exportFromRaw(raw, input.e2kModel!) : exportFromScratch(input);
+  let e2k: string;
+  if (raw && raw.size > 0) {
+    // Modelo importado: si no cambio sale el crudo; si se edito, las diferencias se aplican SOBRE el crudo.
+    const p = input.e2kModel!.base ? parchearSecciones(input as any, input.e2kModel!) : null;
+    e2k = exportFromRaw(p ? p.raw : raw, input.e2kModel!);
+  } else {
+    e2k = exportFromScratch(input);
+    // Camino reconstruido: recupera casos, combos, espectros, materiales con nombre, secciones, DIAPHRAGM TYPE...
+    const pres = (input.elementInputs as any)?.e2kPreservado as Record<string, string[]> | undefined;
+    if (pres && !(input.elementInputs as any).e2kPaso) e2k = inyectarPreservado(e2k, pres);
+  }
   // Inyectar el sísmico NEC (función USER + caso RS) si se pidió. Sirve para
   // ambos modos: post-procesa la salida insertando en FUNCTIONS y LOAD CASES.
   if (input.seismicNEC) e2k = injectNecSeismic(e2k, input.seismicNEC);

@@ -39,7 +39,24 @@ Camino 1: multiconjunto de lineas identico salvo 5 comentarios (`$ File...`, 3 c
 - ✅ `hekatan-struct-py/src/hekatan_struct/e2k.py` linea 231: `exportar_e2k` escribia `J` (ETABS lo ignora, queda J=0); ahora `TORSION`. Test `test_exportar_e2k_basico_escribe_TORSION_y_no_duplica_area`; `pytest tests/test_archivos_csi.py` 44 pasan.
 - ✅ "Duplica la carga de area": NO reproducible en `e2k.py` actual (solo `AREALOAD`, sin `POINTLOAD` repartido).
 
-## Falta
-- ⏳ Camino 2: llevar combos, materiales con nombre, casos espectro y DIAPHRAGM TYPE desde `E2kModel` al reconstruir (cambio grande, no hecho).
-- ⏳ Camino 1: mezclar ediciones del modelo con el texto crudo.
-- ⏳ `node tests/run.mjs e2k` no corrido (no se toco TS).
+## Camino 2 conserva datos + camino 1 respeta ediciones (4-nov-2026)
+Codigo: `examples/src/shared/e2kParche.ts` (nuevo), `e2kParser.ts` (foto `model.base` + `elementInputs.e2kPreservado`), `e2kExporter.ts`.
+Test: `tests/casos/e2k_roundtrip_edicion.mjs` (20 filas, galpon_simple_plana). Demo: `cli/e2k_edicion_demo.mjs`.
+
+- Camino 1 (importado): se compara el modelo actual con la foto tomada al importar. Sin cambios = crudo identico (0 lineas de diferencia). Con cambios, la diferencia se APLICA SOBRE EL TEXTO CRUDO seccion a seccion; lo no tocado sale igual.
+- Camino 2 (sin `e2kModel`): `e2kPreservado` (casos, combos, funciones, materiales, secciones, props de area, DIAPHRAGM, MASS SOURCE, AUTOMESHOPTIONS) se inyecta al texto reconstruido.
+
+| Capa (galpon simple, camino 2) | antes | despues |
+|---|---|---|
+| COMBOS | 0/23 | 23/23 |
+| LOADCASE | 8/10 | 10/10 (espectros y modal) |
+| MATERIAL | 1/6 | 6/6 (+1 generico sobrante) |
+| FUNCTION | 0/4 | 4/4 |
+| DIAPHRAGM SEMIRIGID | RIGID | SEMIRIGID |
+| AUTOMESHOPTIONS | no | si |
+
+- ✅ Ediciones parcheadas: barra/area borrada, barra nueva (nudos viejos o nuevos), nudo movido, nudo nuevo/borrado, seccion de barra cambiada (FRAMESECTION General nueva), delta de carga nodal (patron Dead o el primero), apoyos. Ida y vuelta: solo cambian ~12 lineas, re-importar da el modelo editado y re-exportar eso da el mismo texto.
+- ✅ `node tests/run.mjs e2k` 208/208, `e2k_prop` 10/10, `punto_insercion` 6/6.
+- ❌ Limites (salen en `input.avisos`, no se aplican): areas nuevas, espesor de area, tramos partidos (`C1-2`), nudos de malla/`np@`, mover un punto compartido por varias plantas, cargas en nudos tocados por otra edicion (peso propio/AREALOAD los recalcula ETABS), barras nuevas sin liberaciones/modificadores/offsets, cambio de material. La deteccion de nudo movido asume que el array no se compacto (sin nudos borrados). La carga editada va al patron Dead.
+- ❌ Camino 2 sigue sin MAXSTASPC/FLOORMESH por barra, RELEASE/MINNUMSTA ni clasificacion BRACE/COLUMN/BEAM identica (eso es reconstruccion geometrica). Si el fichero no estaba en N/mm solo se inyectan DIAPHRAGM y MASS SOURCE (el resto va en otras unidades).
+- ⏳ El mercado completo con la edicion no se corrio (RAM). `e2kPreservado` y `base` no viajan en un .heks guardado: tras recargar solo queda el camino 2 sin datos.

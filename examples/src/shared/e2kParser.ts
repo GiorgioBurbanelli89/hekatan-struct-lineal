@@ -53,6 +53,8 @@ export interface E2kCargasPorPatron {
   puntuales: { node: number; lc: string; v: number[] }[];
 }
 
+import { tomarBase, resumenPreservado, type BaseE2k } from "./e2kParche";
+
 export interface E2kModel {
   units: { force: string; length: string };
   stories: { name: string; height: number; elev: number }[];
@@ -85,6 +87,8 @@ export interface E2kModel {
           title: string };
   /** Raw text blocks from original e2k for round-trip export */
   rawSections?: Map<string, string[]>;
+  /** Foto del modelo recien importado (para detectar ediciones y parchear el crudo al exportar, ver e2kParche.ts). */
+  base?: BaseE2k;
   /** Cargas nodales POR PATRÓN (kN y kN·m), con el peso propio dentro de su patrón y las cargas
    *  NOCIONALES ya calculadas. `nodeInputs.loads` sigue siendo la SUMA de todos (carga de servicio). */
   cargasPatron?: Map<string, Map<number, number[]>>;
@@ -2277,7 +2281,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
   }
   if (analisis.orificios.leidos)
     console.info(`[e2kParser] orificios: ${analisis.orificios.leidos} leídos (por planta) · ${analisis.orificios.recortes} recortados en las losas`);
-  return {
+  const resultado: E2kModel = {
     ...(opciones.pesoBarrasAparte ? { pesoBarras } : {}),
     ...(opciones.losaUnaDireccion ? { cargasLosa } : {}),
     cargasPatron,
@@ -2363,6 +2367,11 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     },
     rawSections,
   };
+  // Foto para detectar ediciones al exportar + secciones preservadas para el camino reconstruido (e2kParche.ts).
+  resultado.base = tomarBase(resultado);
+  const pres = resumenPreservado(rawSections, units);
+  if (pres) (resultado.elementInputs as any).e2kPreservado = pres;
+  return resultado;
 }
 
 
