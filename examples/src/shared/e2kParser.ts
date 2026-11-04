@@ -2398,10 +2398,25 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
     const PP = info.pano.map((n) => nodes[n]);
     const a = (info.ang * Math.PI) / 180, u = [Math.cos(a), Math.sin(a)];
     const vigas: Array<{ f: number; a: number[]; b: number[] }> = [];
+    // PLANO del paño: una cubierta INCLINADA (el galpón: 3 cm por metro) tiene vigas a otra cota que la de su primer
+    // nudo; comparar con z0 descartaba las vigas del lado alto y toda la carga caía en la del lado bajo.
+    let zPlano = (_x: number, _y: number) => z0;
+    {
+      const Pn = PP.length >= 3 ? PP : P;
+      let nx = 0, ny = 0, nz = 0;
+      for (let i = 0; i < Pn.length; i++) {            // normal de Newell
+        const p = Pn[i], q = Pn[(i + 1) % Pn.length];
+        nx += (p[1] - q[1]) * (p[2] + q[2]); ny += (p[2] - q[2]) * (p[0] + q[0]); nz += (p[0] - q[0]) * (p[1] + q[1]);
+      }
+      if (Math.abs(nz) > 1e-9 && Math.abs(nz) > 1e-3 * Math.hypot(nx, ny, nz)) {
+        const c = [0, 1, 2].map((k) => Pn.reduce((s, q) => s + q[k], 0) / Pn.length);
+        zPlano = (x, y) => c[2] - (nx * (x - c[0]) + ny * (y - c[1])) / nz;
+      }
+    }
     elements.forEach((e, f) => {
       if (e.length !== 2) return;
       const A = nodes[e[0]], B = nodes[e[1]];
-      if (Math.abs(A[2] - z0) > TOL || Math.abs(B[2] - z0) > TOL) return;
+      if (Math.abs(A[2] - zPlano(A[0], A[1])) > TOL || Math.abs(B[2] - zPlano(B[0], B[1])) > TOL) return;
       const dx = B[0] - A[0], dy = B[1] - A[1], Lb = Math.hypot(dx, dy);
       const M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
       if (!enPano(PP, M) && !(enPano(PP, A) && enPano(PP, B))) return;

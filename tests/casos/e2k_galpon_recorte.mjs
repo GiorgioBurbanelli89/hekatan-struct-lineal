@@ -54,7 +54,14 @@ export async function correr() {
     // Ux/Uy: del orden de 0.1-0.25 mm (cubierta membrana + correas articuladas); cota provisional, ≤ 20 % del desplazamiento maximo
     for (const k of [0, 1]) {
       const p = 100 * pk[k] / umax;
-      filas.push({ que: `${pat}: U${"xy"[k]} peor nudo / desplazamiento maximo`, crudo: true, medido: `${p.toFixed(1)} % (${(pk[k] * 1000).toFixed(3)} mm)`, limite: "<= 20 %", ok: p <= 20, detalle: "ABIERTO: reparto horizontal de la membrana de cubierta en x = 30 m" });
+      filas.push({ que: `${pat}: U${"xy"[k]} peor nudo / desplazamiento maximo`, crudo: true, medido: `${p.toFixed(1)} % (${(pk[k] * 1000).toFixed(3)} mm)`, limite: "<= 20 %", ok: p <= 20, detalle: "ABIERTO: ~0.1 mm en la linea x = 30 m (no es la membrana ni los brazos: ver bitacora)" });
+    }
+    // 4. CUBIERTA INCLINADA: las vigas de un paño se buscaban a la cota de su primer nudo; en un tejado con pendiente
+    //    se descartaban las del lado alto y toda la carga caía en la del lado bajo (esquinas x = 24: 8.06 y 2.46 kN contra 7.02 y 1.42 de ETABS).
+    for (const [c, eFz] of Object.entries(ref.esquinasFz?.[pat] ?? {})) {
+      const i = idx.get(key(c.split(",").map(Number))), h = Rn?.get(i)?.[2] ?? NaN, d = 100 * (h - eFz) / eFz;
+      filas.push({ que: `${pat}: reaccion Fz del apoyo de cubierta (${c})`, crudo: true, medido: `${h.toFixed(3)} kN (${d >= 0 ? "+" : ""}${d.toFixed(2)} %)`, limite: `ETABS ${eFz.toFixed(3)} ±3 %`,
+        ok: Math.abs(d) <= 3, detalle: "reparto de la losa en una dirección sobre vigas a distinta cota (plano del paño)" });
     }
     let fz = 0; for (const [, v] of Rn ?? []) fz += v[2];
     const e = ref.base[pat].Fz, dif = 100 * (fz - e) / e, tol = pat === "Dead" ? 0.8 : 0.05;
