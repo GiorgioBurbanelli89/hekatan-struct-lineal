@@ -68,6 +68,16 @@ export async function correr() {
     fila(`rot90 ${pat}: Fz de las columnas rms rel`, `${r.reac(2).toFixed(4)} %`, "<= 0.05 %", r.reac(2) <= 0.05);
   }
 
+  // card8: VP y correas con CARDINALPT 8 + TRANSFORMSTIFF "Yes" (como el mercado), cubierta con pendiente 3 %. ETABS desplaza TODO el techo +0.11 mm en Y:
+  // la carga de la correa inclinada actua en su CENTROIDE (0.08 m bajo el nudo, en el eje local 2 inclinado 1.7°) y llega al nudo con el momento r x F
+  // (49.4 kN x 2.4 mm = 0.12 kN·m; el centro de la carga de ETABS esta en y = 3.0024 m). Sin ese momento: Uy rms 90 %.
+  for (const pat of ["Dead", "Live"]) {
+    const r = await resolver("card8", {}, pat);
+    fila(`card8 ${pat}: Uy rms rel (punto de insercion 8 en VP y correas, pendiente 3 %)`, `${r.desp(1).toFixed(2)} %`, "<= 3 %", r.desp(1) <= 3, "antes 90 %: la carga de la correa inclinada no llevaba el momento r x F al nudo");
+    fila(`card8 ${pat}: Uz rms rel`, `${r.desp(2).toFixed(3)} %`, "<= 0.2 %", r.desp(2) <= 0.2);
+    fila(`card8 ${pat}: reaccion Fz rms rel`, `${r.reac(2).toFixed(3)} %`, "<= 0.5 %", r.reac(2) <= 0.5);
+  }
+
   // corte: nudos empotrados en y=6; un solo Q4 por paño casa con ETABS, subdividir a 1.25 m EMPEORA (no converge a ETABS)
   const c0 = await resolver("corte", {}, "Live"), c1 = await resolver("corte", { tamMembrana: 1.25 }, "Live");
   fila("corte Live: reaccion Fy de los nudos de corte (1 Q4 por paño)", `${c0.reac(1).toFixed(2)} %`, "<= 5 %", c0.reac(1) <= 5, "ETABS 0.0185 kN en (6,6): 1 Q4 da 0.0181");

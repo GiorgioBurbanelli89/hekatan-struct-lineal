@@ -79,6 +79,7 @@ export type {
 export { getLocalStiffnessMatrix } from "./utils/getLocalStiffnessMatrix";
 export { cargaUniformeBarra } from "./utils/cargaUniformeBarra";
 export { getTransformationMatrix } from "./utils/getTransformationMatrix";
+export { desfaseDeInsercionE2k, trasladarCargaAlNudo } from "./utils/insertionPoint";
 
 export { kPano, kPanoQ4, kLocalMotor, dkqBendingK, ejesLocalesQ4 } from "./utils/shellElementK";
 export type { KPano } from "./utils/shellElementK";

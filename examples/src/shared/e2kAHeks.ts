@@ -22,6 +22,7 @@ import { coserModelo, type InformeCosido } from "./e2kCoser";
 import { coartarGdlSueltos } from "./e2kMecanismos";
 import { cargaBarraConsistente, condensarCargaPorLiberaciones } from "./cargaBarraConsistente";
 import { formulacionPorPf } from "./formulacionesPlaca";
+import { getTransformationMatrix, desfaseDeInsercionE2k, trasladarCargaAlNudo } from "hekatan-fem";
 
 export interface ResultadoE2kHeks {
   heks: string;
@@ -156,6 +157,16 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
     const out = [...eq]; for (let k = 0; k < 3; k++) { out[3 + k] += mI[k]; out[9 + k] += mJ[k]; }
     return out;
   };
+  // PUNTO DE INSERCION (CARDINALPT + TRANSFORMSTIFF "Yes"): la carga actua en el CENTROIDE de la barra, que queda d2 por debajo del nudo en el
+  // eje local 2; al nudo llega la misma fuerza mas el momento r x F. En una correa inclinada el eje 2 se inclina y r tiene componente horizontal.
+  const conInsercion = (e: number, pi: number[], pj: number[], eq: number[]): number[] => {
+    const ei0 = m.elementInputs as any;
+    const sh = ei0.sectionShapes?.get?.(e), D = sh?.h ?? sh?.d ?? 0;
+    const d = desfaseDeInsercionE2k(ei0.asignaLineaE2k?.get?.(e), D);
+    if (!d) return eq;
+    const T = getTransformationMatrix([pi, pj] as any, ei0.localAngles?.get?.(e) ?? 0) as number[][];
+    return trasladarCargaAlNudo(eq, T[1].slice(0, 3), T[2].slice(0, 3), d[0], d[1]);
+  };
   // el peso propio de las barras, YA partidas: cada trozo su tramo, vector consistente (fuerzas y momentos)
   if (m.pesoBarras?.size) {
     const pats = (m.analisis?.patrones ?? []).filter((p) => p.pesoPropio > 0);
@@ -164,8 +175,8 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
     for (const [e, pb] of m.pesoBarras) {
       const [i, j] = (m.elements as unknown as number[][])[e];
       // barra articulada (RELEASE M2/M3): no transmite el momento de empotramiento al nudo (ver condensarCargaPorLiberaciones)
-      const eq = conBrazo(e, N0[i], N0[j], (pa, pc, ds) => condensarCargaPorLiberaciones(cargaBarraConsistente(pa, pc, pb.s0 - ds, pb.s1 - ds, pb.q, pb.q, [0, 0, -1]),
-        pa, pc, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0));
+      const eq = conInsercion(e, N0[i], N0[j], conBrazo(e, N0[i], N0[j], (pa, pc, ds) => condensarCargaPorLiberaciones(cargaBarraConsistente(pa, pc, pb.s0 - ds, pb.s1 - ds, pb.q, pb.q, [0, 0, -1]),
+        pa, pc, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0)));
       for (const p of pats) {
         const mp = m.cargasPatron!.get(p.nombre) ?? m.cargasPatron!.set(p.nombre, new Map()).get(p.nombre)!;
         for (const [n, o] of [[i, 0], [j, 6]] as const) {
@@ -188,7 +199,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
       for (const q of lista) {
         const dP = -q.P;
         // vector de empotramiento de esta carga puntual y, si la correa está articulada, condensado por sus giros liberados
-        const eqP = conBrazo(e, pi, pj, (pa, pc, ds) => {
+        const eqP0 = conBrazo(e, pi, pj, (pa, pc, ds) => {
           const Lc = Math.hypot(pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]);
           const tv = [0, 1, 2].map((k) => (pc[k] - pa[k]) / Lc), txw = [tv[1], -tv[0], 0];   // t × ẑ
           const xi = Math.min(1, Math.max(0, (q.s - ds) / Lc));
@@ -198,6 +209,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
             [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1, 0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4],
             pa, pc, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
         });
+        const eqP = conInsercion(e, pi, pj, eqP0);
         for (const mp of [m.cargasPatron!.get(q.lc) ?? m.cargasPatron!.set(q.lc, new Map()).get(q.lc)!,
                           sinPP.get(q.lc) ?? sinPP.set(q.lc, new Map()).get(q.lc)!])
           for (const [n, o] of [[i, 0], [j, 6]] as const) {

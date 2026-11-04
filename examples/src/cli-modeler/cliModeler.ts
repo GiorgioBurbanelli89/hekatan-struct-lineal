@@ -62,7 +62,7 @@ import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSec
 import { cargasDelCaso } from "../shared/cargasPorCaso";
 import { resolverSoloCompresion, pesosAreaNudos } from "../shared/muellesSoloCompresion";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
-import { deform, analyze, modalAnalysis, jointMass, cargaUniformeBarra, type Node, type Element } from "hekatan-fem";
+import { deform, analyze, modalAnalysis, jointMass, cargaUniformeBarra, desfaseDeInsercionE2k, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
 
 interface ParsedModel {
@@ -2428,17 +2428,12 @@ export const cliModeler: ExampleDef = {
       insertionOffsets: (() => {
         const ins = new Map<number, [number, number]>();
         asignaLinea.forEach((txt, e) => {
-          const cp = parseInt(txt.match(/CARDINALPT\s+(\d+)/)?.[1] ?? "0", 10);
-          if (!cp || cp === 10) return;
           // Sin `TRANSFORMSTIFF "Yes"` ETABS NO transforma la rigidez al punto de insercion («Don't transform frame stiffness
           // for offsets from centroid»): el CARDINALPT es solo geometria y el analisis es el del centroide. Medido en el mercado
           // (14745 barras, 2714 con CARDINALPT 8, todas NoTransform = Yes): quitar el CARDINALPT no cambia ni un desplazamiento
           // de ETABS (2.8e-15 mm). El e2k escribe TRANSFORMSTIFF "Yes" solo cuando esta activado.
-          if (!/TRANSFORMSTIFF\s+"Yes"/i.test(txt)) return;
-          const D = cantos.get(e) ?? 0;
-          const fila = cp <= 3 ? -1 : cp >= 7 && cp <= 9 ? 1 : 0;
-          const d2 = fila === 0 ? 0 : -fila * D / 2;
-          if (d2) ins.set(e, [d2, 0]);
+          const d = desfaseDeInsercionE2k(txt, cantos.get(e) ?? 0);
+          if (d) ins.set(e, d);
         });
         return ins.size ? ins : undefined;
       })(),
