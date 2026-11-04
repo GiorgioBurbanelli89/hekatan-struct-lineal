@@ -122,7 +122,7 @@ export interface AnalisisE2k {
   casosRS: Array<{ nombre: string; dir: "U1" | "U2" | "U3"; func: string; sf: number; amort: number; ecc: number; combModal?: string }>;
   nModos?: number;
   /** Análisis directo AISC: barras con EA y EI × 0.8 (el G no se toca) y el método de reducción que dice el e2k. */
-  metodoDirecto?: { barras: number; acero?: string; compuesto?: string };
+  metodoDirecto?: { barras: number; acero?: string; compuesto?: string; /** a que se aplico el 0.8 */ sobre?: "ambos" | "EI" | "EA" };
   /** Orificios (`AREAASSIGN … OPENING "Yes"`): cuántos se leyeron y cuántos recortaron una losa. */
   orificios: { leidos: number; recortes: number; /** m² que los orificios quitaron, por propiedad de la losa */ areaPorSeccion: Record<string, number> };
   /** Cada sección de barra, clasificada SOLO con lo que dice el fichero: clase del material (`MATERIAL … TYPE`),
@@ -136,7 +136,9 @@ export interface OpcionesE2k {
    *  le pide (los `.e2k` que escribe Hekatan ya traen sus brazos). */
   brazosAuto?: boolean;
   /** `true` = aplicar el ANALYSISMETHOD "DIRECT ANALYSIS" del e2k (E × 0.8 en acero y CFT con diseño). Por defecto no; e2kAHeks lo enciende. */
-  metodoDirecto?: boolean;
+  metodoDirecto?: boolean | "ambos" | "EI" | "EA";
+  /** Con `metodoDirecto`: a que grupo se aplica. "todo" (defecto) | "acero" (solo barras de acero, no CFT) | "compuesto" (solo CFT). Diagnostico. */
+  metodoDirectoGrupo?: "todo" | "acero" | "compuesto";
   /** El peso propio de las BARRAS no va a las cargas nodales: se devuelve en `pesoBarras` (carga por metro y el
    *  tramo que pesa) para repartirlo DESPUÉS de partir las barras por la malla (`coserModelo`). Si se reparte
    *  antes, una viga partida en 12 trozos recibe el peso de la viga entera en sus dos extremos y la flecha a
@@ -2014,18 +2016,32 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
     const lComp = lee("COMPOSITE COLUMN DESIGN PREFERENCES", "COMPOSITECOLUMNPREFERENCE");
     const dAcero = dir(lAcero), dComp = dir(lComp);
     const conDiseno = (rawSections.get("STEEL DESIGN OVERWRITES") ?? []).some((l) => /^\s*STEELDATA\s/.test(l));
-    if ((dAcero || dComp) && conDiseno && opciones.metodoDirecto === true) {
+    // `true`/"ambos" = E × 0.8 (EA y EI, lo medido). "EI" = solo inercias × 0.8 (E, A igual). "EA" = solo EA × 0.8 (E × 0.8 y I ÷ 0.8 para
+    // que EI quede igual; la masa y As no se tocan). Variantes de diagnostico contra ETABS (registros/2026-11-04_e2k_etabs_vs_hekatan_mercado.md).
+    const modoDA: "ambos" | "EI" | "EA" | undefined = opciones.metodoDirecto === true || opciones.metodoDirecto === "ambos" ? "ambos"
+      : opciones.metodoDirecto === "EI" || opciones.metodoDirecto === "EA" ? opciones.metodoDirecto : undefined;
+    if ((dAcero || dComp) && conDiseno && modoDA) {
       const tau = (l: string) => (l.match(/STIFFNESSREDUCTIONMETHOD\s+"([^"]+)"/i)?.[1] ?? "");
       let n = 0;
       for (const [elemIdx, secName] of elementSections) {
         const sec = frameSections.get(secName); if (!sec) continue;
         const mat = materials.get(sec.material);
         const compuesta = !!sec.fillMaterial;
-        const reduce = compuesta ? dComp : (dAcero && /steel/i.test(mat?.type ?? ""));
+        const grupo = opciones.metodoDirectoGrupo ?? "todo";
+        const reduce = (compuesta ? dComp : (dAcero && /steel/i.test(mat?.type ?? "")))
+          && (grupo === "todo" || (grupo === "compuesto") === compuesta);
         const E = elasticities.get(elemIdx);
-        if (reduce && E) { elasticities.set(elemIdx, E * 0.8); n++; }
+        if (reduce && E) {
+          if (modoDA !== "EI") elasticities.set(elemIdx, E * 0.8);
+          if (modoDA === "EI") {
+            for (const mi of [momentsOfInertiaY, momentsOfInertiaZ]) { const v = mi.get(elemIdx); if (v !== undefined) mi.set(elemIdx, v * 0.8); }
+          } else if (modoDA === "EA") {
+            for (const mi of [momentsOfInertiaY, momentsOfInertiaZ]) { const v = mi.get(elemIdx); if (v !== undefined) mi.set(elemIdx, v / 0.8); }
+          }
+          n++;
+        }
       }
-      analisis.metodoDirecto = { barras: n, acero: dAcero ? tau(lAcero) : undefined, compuesto: dComp ? tau(lComp) : undefined };
+      analisis.metodoDirecto = { barras: n, acero: dAcero ? tau(lAcero) : undefined, compuesto: dComp ? tau(lComp) : undefined, sobre: modoDA };
     }
   }
   const FL: Record<string, number> = { MM: 1e-3, CM: 1e-2, M: 1, IN: 0.0254, FT: 0.3048 };

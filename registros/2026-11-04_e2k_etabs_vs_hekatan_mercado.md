@@ -60,3 +60,22 @@ Test: `tests/casos/e2k_roundtrip_edicion.mjs` (20 filas, galpon_simple_plana). D
 - ❌ Limites (salen en `input.avisos`, no se aplican): areas nuevas, espesor de area, tramos partidos (`C1-2`), nudos de malla/`np@`, mover un punto compartido por varias plantas, cargas en nudos tocados por otra edicion (peso propio/AREALOAD los recalcula ETABS), barras nuevas sin liberaciones/modificadores/offsets, cambio de material. La deteccion de nudo movido asume que el array no se compacto (sin nudos borrados). La carga editada va al patron Dead.
 - ❌ Camino 2 sigue sin MAXSTASPC/FLOORMESH por barra, RELEASE/MINNUMSTA ni clasificacion BRACE/COLUMN/BEAM identica (eso es reconstruccion geometrica). Si el fichero no estaba en N/mm solo se inyectan DIAPHRAGM y MASS SOURCE (el resto va en otras unidades).
 - ⏳ El mercado completo con la edicion no se corrio (RAM). `e2kPreservado` y `base` no viajan en un .heks guardado: tras recargar solo queda el camino 2 sin datos.
+
+## Brecha lateral del mercado: donde va el 0.8 del analisis directo (4-nov-2026)
+Opciones (opt-in, defecto sin cambio = E x 0.8 en todo): `OpcionesE2kHeks.metodoDirecto` = `true|"ambos"` | `"EI"` (I x 0.8, E y A igual) | `"EA"` (E x 0.8 e I / 0.8, EI igual; masa y As no se tocan) | `false`; y `metodoDirectoGrupo` = `"todo"` | `"acero"` (barras de acero, SIN CFT) | `"compuesto"` (solo CFT).
+Corrida: `C:\ETABS\mercado\exp\runv.sh <nombre> '<json opciones>'` (conv.mjs + cmp_full2.mjs, mercado completo, ~70 s, 1 corrida a la vez, sin ETABS/navegador). Referencias: `diag/etabs_u2.json`. Pendiente = pendiente Hek/ETABS de minimos cuadrados (1 = igual rigidez; >1 = Hekatan mas flexible); rms = error rms relativo.
+
+| Variante | Dead rms Ux/Uy/Uz % | Dead pendiente Ux/Uy/Uz | Live rms Ux/Uy/Uz % |
+|---|---|---|---|
+| sin 0.8 | 5.65 / 11.98 / 16.67 | 0.944 / 0.901 / 0.835 | 5.19 / 12.85 / 17.41 |
+| ambos (defecto actual) | 16.98 / 13.01 / 4.36 | 1.170 / 1.101 / 1.032 | 18.09 / 11.91 / 3.43 |
+| solo EI (todo) | 17.36 / 14.05 / 11.34 | 1.173 / 1.089 / 0.909 | 19.60 / 13.28 / 12.93 |
+| solo EA (todo) | 5.89 / 10.63 / 7.63 | 0.942 / 0.909 / 0.954 | 6.14 / 12.74 / 7.18 |
+| **ambos, solo acero (sin CFT)** | **1.09 / 4.07 / 1.72** | 0.993 / 1.005 / 1.001 | **2.28 / 7.11 / 1.99** |
+| ambos, solo CFT | 12.10 / 13.33 / 14.47 | 1.120 / 0.994 / 0.864 | 14.59 / 14.11 / 15.70 |
+
+- ❌ Hipotesis EI vs EA: NO era eso. Lo lateral lo manda EI (solo EA no mueve Ux: 0.942 = sin 0.8; solo EI = 1.173 = ambos), pero ni EI ni EA por separado cierran: el 0.8 en EI hace Hekatan 17 % mas flexible lateral y el EA solo no basta en Uz.
+- ✅ La causa: **ETABS NO aplica el 0.8 a las columnas CFT (Filled Steel Pipe)**, aunque `COMPOSITECOLUMNPREFERENCE` diga DIRECT ANALYSIS (AISC I2 ya da su propio EIeff). 0.8 solo en las barras de acero: pendiente 0.993/1.005/1.001, Dead rms 1.1/4.1/1.7 %, Live 2.3/7.1/2.0 %; reacciones por apoyo rms 0.3/1.8/0.3 % (antes 0.6/13.9/0.4).
+- ⚠️ Live Uy 7.1 % queda sobre 5 % (Dead 4.1 %): residuo pequeno aparte, sin investigar.
+- Defecto NO cambiado (la importacion de la app sigue con 0.8 en CFT; `grupo: "acero"` es la opcion). `node tests/run.mjs e2k` 599/599.
+- ⏳ Decidir si `e2kAHeks` pasa a `metodoDirectoGrupo: "acero"` por defecto (cambia el e2k exportado de ida y vuelta: Hekatan exporta CFT con E reducido) y validar contra otro e2k con CFT (riochico).

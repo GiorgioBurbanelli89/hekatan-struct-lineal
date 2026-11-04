@@ -107,10 +107,14 @@ export interface OpcionesE2kHeks {
    *  en los nudos de esquina del paño; partido (atado) Hekatan daba 5.2 -> 0.1 kN. Por defecto (undefined) se lee del e2k: suelto solo si TODOS los AREAASSIGN
    *  traen `LINECONSTRAINT "No"`. true/false lo fuerzan. */
   colgadosSueltos?: boolean;
+  /** Análisis directo AISC: true/"ambos" (defecto) = E × 0.8; "EI" = solo inercias × 0.8; "EA" = solo axil × 0.8 (EI igual); false = sin reducir. */
+  metodoDirecto?: boolean | "ambos" | "EI" | "EA";
+  /** Con metodoDirecto: "todo" (defecto) | "acero" (sin CFT) | "compuesto" (solo CFT). */
+  metodoDirectoGrupo?: "todo" | "acero" | "compuesto";
 }
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kHeks = {}): ResultadoE2kHeks {
-  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true, metodoDirecto: true });
+  const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true, metodoDirecto: opc.metodoDirecto === undefined ? true : opc.metodoDirecto, metodoDirectoGrupo: opc.metodoDirectoGrupo });
   // sub-paños de membrana: se crean los nudos ANTES de coser (así parten las barras que pasan por el borde)
   const nSub = Math.max(1, Math.floor(opc.mallaMembrana ?? 1));
   const subMalla = new Map<number, number[][][]>();   // elemento → rejilla (n+1)×(n+1) de coordenadas
