@@ -449,3 +449,12 @@ def test_cli_convertir(portico, tmp_path):
     r2 = subprocess.run([sys.executable, "-m", "hekatan_struct", "modos", "0", "0", "1", "0", "1", "1", "0", "1"],
                         capture_output=True, text=True, env=env, cwd=str(tmp_path))
     assert r2.returncode == 0 and r2.stdout.strip() == "3"
+
+
+def test_exportar_e2k_basico_escribe_TORSION_y_no_duplica_area(portico, tmp_path):
+    """`e2k.exportar_e2k` escribia `J` (ETABS lo ignora -> J=0) en vez de `TORSION`."""
+    from hekatan_struct.e2k import exportar_e2k
+    t = exportar_e2k(portico)
+    t = t if isinstance(t, str) else str(t)
+    secs = [l for l in t.splitlines() if "FRAMESECTION" in l and 'SHAPE "General"' in l]
+    assert secs and all(" TORSION " in l and " J " not in l for l in secs)

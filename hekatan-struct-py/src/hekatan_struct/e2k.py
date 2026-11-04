@@ -228,7 +228,7 @@ def exportar_e2k(m: ModeloHeks, ruta: str | None = None, *,
             as2 = ei.shear_areas_z.get(k, 5 / 6 * a)
             as3 = ei.shear_areas_y.get(k, 5 / 6 * a)
             ad('  FRAMESECTION  "%s"  MATERIAL "%s"  SHAPE "General"  D %s B %s'
-               '  AREA %s  J %s  I33 %s  I22 %s  AS2 %s  AS3 %s'
+               '  AREA %s  TORSION %s  I33 %s  I22 %s  AS2 %s  AS3 %s'
                '  S33 %s S22 %s Z33 %s Z22 %s R33 %s R22 %s'
                % (nom, mat, _n(lado * L), _n(lado * L), _n(a * A),
                   _n(ei.torsional_constants.get(k, 0.0) * I),
