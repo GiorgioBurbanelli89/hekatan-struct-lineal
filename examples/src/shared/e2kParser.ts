@@ -2123,10 +2123,22 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
           const sc = secDe(k); if (!sc) return 0;
           const giro = Math.round(((localAngles.get(k) ?? 0) % 180 + 180) % 180);
           const enD = (giro === 90) !== enX;          // ang 0: el canto D va según el eje 2 = X global
-          return (enD ? sc.D : sc.B) * L;
+          // sección REDONDA (tubo, tubo relleno, círculo): ETABS la define solo por D, B queda en 0; el lado es D en las dos direcciones
+          // (sin esto, las vigas que llegan a una columna redonda en el sentido Y no recibían brazo: el reparto de la correa al pilar
+          //  perdía el momento R·r y el pilar no flectaba, columna del galpón: Fy 0.000 contra ±0.025 kN de ETABS)
+          const redonda = /pipe|circle|round/i.test(sc.shape ?? "");
+          return ((enD || redonda) ? sc.D : sc.B) * L;
         },
         (k) => (secDe(k)?.D ?? 0) * L, 0);
-      for (const [e, v] of brazos) endOffsets.set(e, [v[0], v[1], zonaRigida.get(e) ?? 0]);
+      // Barra ARTICULADA en todos los extremos que tienen brazo (correa que llega a un pilar): ETABS pone la rótula en la CARA del brazo
+      // (luz libre y reacción a r del eje del pilar → momento R·r en el pilar), también con RIGIDZONE 0. Medido: pilar redondo de 200 mm,
+      // correa 1G con RELEASE "TI M2I M2J M3I M3J": M2 del pilar = R·0.1. Se toma factor 1; las barras continuas (vigas) siguen con 0.
+      const relB = (e: number) => momentReleases.get(e) as boolean[] | undefined;
+      const articulado = (e: number, v: number[]) => {
+        const r = relB(e); if (!r) return false;
+        return (!(v[0] > 0) || r[4] || r[5]) && (!(v[1] > 0) || r[10] || r[11]) && (v[0] > 0 || v[1] > 0);
+      };
+      for (const [e, v] of brazos) endOffsets.set(e, [v[0], v[1], zonaRigida.get(e) ?? (articulado(e, v) ? 1 : 0)]);
     }
     if (!(selfWeightMult > 0)) return loads;
     let total = 0;
@@ -2390,7 +2402,7 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
   });
   const enPano = (P: number[][], q: number[]) => dentro(P, q) || enBorde(P, q);
   // la muestra de cada paño se calcula una vez y vale para todos sus patrones
-  const cache = new Map<number, { muestras: Array<{ f: number; s: number } | null>; esquinas: number[]; A: number }>();
+  const cache = new Map<number, { muestras: Array<{ f: number; s: number; w: number } | null>; esquinas: number[]; A: number }>();
   const preparar = (ei: number) => {
     // las vigas se buscan en el PAÑO de ETABS entero (`pano`); se muestrea solo el trozo `ei` (un polígono de más de
     // 4 lados llega triangulado, y un triángulo solo no contiene las viguetas que lo sostienen)
@@ -2428,11 +2440,11 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
     const xs = P.map((q) => q[0]), ys = P.map((q) => q[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const h = Math.max(x1 - x0, y1 - y0) / 400, nx = Math.max(1, Math.ceil((x1 - x0) / h)), ny = Math.max(1, Math.ceil((y1 - y0) / h));
-    const hx = (x1 - x0) / nx, hy = (y1 - y0) / ny, muestras: Array<{ f: number; s: number } | null> = [];
+    const hx = (x1 - x0) / nx, hy = (y1 - y0) / ny, muestras: Array<{ f: number; s: number; w: number } | null> = [];
     for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
       const q = [x0 + (i + 0.5) * hx, y0 + (j + 0.5) * hy];
       if (!dentro(P, q)) continue;
-      let mejor: { f: number; s: number; t: number } | null = null;
+      const cand: Array<{ f: number; s: number; t: number }> = [];
       for (const v of vigas) {
         // q + t·u = a + r·(b − a)
         const ex = v.b[0] - v.a[0], ey = v.b[1] - v.a[1], det = -u[0] * ey + u[1] * ex;
@@ -2440,9 +2452,15 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
         const rx = v.a[0] - q[0], ry = v.a[1] - q[1];
         const t = (-rx * ey + ry * ex) / det, r = (u[0] * ry - u[1] * rx) / det;
         if (r < -1e-9 || r > 1 + 1e-9) continue;
-        if (!mejor || Math.abs(t) < Math.abs(mejor.t)) mejor = { f: v.f, s: r * Math.hypot(ex, ey), t };
+        cand.push({ f: v.f, s: r * Math.hypot(ex, ey), t });
       }
-      muestras.push(mejor ? { f: mejor.f, s: mejor.s } : null);
+      // la viga MÁS CERCANA; si dos equidistan (la muestra cae sobre la bisectriz: con un número impar de muestras por
+      // paño el de en medio, p.ej. dos correas a 1 m) la carga se parte por mitades. Antes ganaba la primera, y la
+      // correa de un borde recibía 1.5 % más que la del otro (columnas simétricas: 4.893 / 4.862 kN contra 4.878 de ETABS).
+      const dmin = cand.reduce((mn, c) => Math.min(mn, Math.abs(c.t)), Infinity);
+      const empate = cand.filter((c) => Math.abs(c.t) - dmin < 1e-7 * Math.max(1, dmin));
+      if (!empate.length) muestras.push(null);
+      else for (const c of empate) muestras.push({ f: c.f, s: c.s, w: 1 / empate.length });
     }
     const A = Math.abs(P.reduce((acc, q, i) => { const w = P[(i + 1) % P.length]; return acc + q[0] * w[1] - w[0] * q[1]; }, 0)) / 2;
     const r = { muestras, esquinas: el, A };
@@ -2452,10 +2470,12 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
   for (const o of pend) {
     const c = cache.get(o.ei) ?? preparar(o.ei);
     // la carga EXACTA del paño (q·A) repartida en sus muestras
-    const dP = (o.q * c.A) / Math.max(1, c.muestras.length);
+    const nMuestras = c.muestras.reduce((t, m) => t + (m ? m.w : 1), 0);   // un empate cuenta 1 en total (dos mitades)
+    const dP0 = (o.q * c.A) / Math.max(1, nMuestras);
     const acum = new Map<string, { f: number; s: number; P: number }>();
     for (const m of c.muestras) {
-      if (!m) { sinViga++; for (const n of c.esquinas) sumarPatron(o.lc, n, [0, 0, -dP / c.esquinas.length, 0, 0, 0]); continue; }
+      if (!m) { sinViga++; for (const n of c.esquinas) sumarPatron(o.lc, n, [0, 0, -dP0 / c.esquinas.length, 0, 0, 0]); continue; }
+      const dP = dP0 * m.w;
       const k = `${m.f}|${Math.round(m.s / 0.01)}`;
       const g = acum.get(k) ?? acum.set(k, { f: m.f, s: 0, P: 0 }).get(k)!;
       g.s = (g.s * g.P + m.s * dP) / (g.P + dP); g.P += dP;

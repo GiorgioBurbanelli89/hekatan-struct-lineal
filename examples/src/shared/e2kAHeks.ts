@@ -140,6 +140,22 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   coartarGdlSueltos(m);
   // las cargas de los patrones SIN el peso propio de barras (para la masa, ver arriba)
   const sinPP = new Map([...(m.cargasPatron ?? new Map())].map(([p, mp]) => [p, new Map([...mp].map(([n, v]) => [n, [...v]]))]));
+  // BRAZO RÍGIDO + articulación (ETABS): la rótula queda en la CARA del brazo (p.ej. la correa articulada que llega a una columna redonda
+  // de 200 mm: luz libre 5.8 m, y su reacción R actúa a 0.1 m del eje del pilar, o sea que le mete el momento R·0.1). El vector de empotramiento
+  // se calcula sobre la barra entre caras (con s medido desde la cara) y las fuerzas de cada cara se trasladan al nudo (M += r × F).
+  // Solo si la barra tiene brazos con factor de zona rígida > 0 (el lector lo pone a 1 en barras articuladas en todos los extremos con brazo).
+  const conBrazo = (e: number, pi: number[], pj: number[], f: (pa: number[], pb: number[], ds: number) => number[]): number[] => {
+    const o = (m.elementInputs as any).endOffsets?.get(e) as number[] | undefined;
+    const L = Math.hypot(pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]);
+    if (!o || !(o[2] > 0) || !(L > 1e-9)) return f(pi, pj, 0);
+    const oi = o[0] * o[2], oj = o[1] * o[2], t = [0, 1, 2].map((k) => (pj[k] - pi[k]) / L);
+    if (oi + oj >= 0.95 * L) return f(pi, pj, 0);
+    const pa = [0, 1, 2].map((k) => pi[k] + t[k] * oi), pb = [0, 1, 2].map((k) => pj[k] - t[k] * oj);
+    const eq = f(pa, pb, oi), cr = (r: number[], F: number[]) => [r[1] * F[2] - r[2] * F[1], r[2] * F[0] - r[0] * F[2], r[0] * F[1] - r[1] * F[0]];
+    const mI = cr([0, 1, 2].map((k) => pa[k] - pi[k]), eq.slice(0, 3)), mJ = cr([0, 1, 2].map((k) => pb[k] - pj[k]), eq.slice(6, 9));
+    const out = [...eq]; for (let k = 0; k < 3; k++) { out[3 + k] += mI[k]; out[9 + k] += mJ[k]; }
+    return out;
+  };
   // el peso propio de las barras, YA partidas: cada trozo su tramo, vector consistente (fuerzas y momentos)
   if (m.pesoBarras?.size) {
     const pats = (m.analisis?.patrones ?? []).filter((p) => p.pesoPropio > 0);
@@ -148,8 +164,8 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
     for (const [e, pb] of m.pesoBarras) {
       const [i, j] = (m.elements as unknown as number[][])[e];
       // barra articulada (RELEASE M2/M3): no transmite el momento de empotramiento al nudo (ver condensarCargaPorLiberaciones)
-      const eq = condensarCargaPorLiberaciones(cargaBarraConsistente(N0[i], N0[j], pb.s0, pb.s1, pb.q, pb.q, [0, 0, -1]),
-        N0[i], N0[j], (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
+      const eq = conBrazo(e, N0[i], N0[j], (pa, pc, ds) => condensarCargaPorLiberaciones(cargaBarraConsistente(pa, pc, pb.s0 - ds, pb.s1 - ds, pb.q, pb.q, [0, 0, -1]),
+        pa, pc, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0));
       for (const p of pats) {
         const mp = m.cargasPatron!.get(p.nombre) ?? m.cargasPatron!.set(p.nombre, new Map()).get(p.nombre)!;
         for (const [n, o] of [[i, 0], [j, 6]] as const) {
@@ -169,15 +185,19 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
       const [i, j] = (m.elements as unknown as number[][])[e];
       const pi = N0[i], pj = N0[j], L = Math.hypot(pj[0] - pi[0], pj[1] - pi[1], pj[2] - pi[2]);
       if (!(L > 1e-9)) continue;
-      const tv = [0, 1, 2].map((k) => (pj[k] - pi[k]) / L), txw = [tv[1], -tv[0], 0];   // t × ẑ
       for (const q of lista) {
-        const xi = Math.min(1, Math.max(0, q.s / L)), dP = -q.P;
-        const F1 = 1 - 3 * xi * xi + 2 * xi ** 3, M1 = L * (xi - 2 * xi * xi + xi ** 3);
-        const F3 = 3 * xi * xi - 2 * xi ** 3, M4 = L * (-xi * xi + xi ** 3);
+        const dP = -q.P;
         // vector de empotramiento de esta carga puntual y, si la correa está articulada, condensado por sus giros liberados
-        const eqP = condensarCargaPorLiberaciones(
-          [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1, 0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4],
-          pi, pj, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
+        const eqP = conBrazo(e, pi, pj, (pa, pc, ds) => {
+          const Lc = Math.hypot(pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]);
+          const tv = [0, 1, 2].map((k) => (pc[k] - pa[k]) / Lc), txw = [tv[1], -tv[0], 0];   // t × ẑ
+          const xi = Math.min(1, Math.max(0, (q.s - ds) / Lc));
+          const F1 = 1 - 3 * xi * xi + 2 * xi ** 3, M1 = Lc * (xi - 2 * xi * xi + xi ** 3);
+          const F3 = 3 * xi * xi - 2 * xi ** 3, M4 = Lc * (-xi * xi + xi ** 3);
+          return condensarCargaPorLiberaciones(
+            [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1, 0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4],
+            pa, pc, (m.elementInputs as any).momentReleases?.get(e), (m.elementInputs as any).localAngles?.get(e) ?? 0);
+        });
         for (const mp of [m.cargasPatron!.get(q.lc) ?? m.cargasPatron!.set(q.lc, new Map()).get(q.lc)!,
                           sinPP.get(q.lc) ?? sinPP.set(q.lc, new Map()).get(q.lc)!])
           for (const [n, o] of [[i, 0], [j, 6]] as const) {

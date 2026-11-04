@@ -87,6 +87,9 @@ interface ParsedModel {
    *  1 = Kirchhoff (Shell-Thin). Es el ShellType de ETABS. Sin declararlo,
    *  Hekatan usa su defecto (Mindlin). */
   shellTypes: Map<number, number>;
+  /** `shelldrill`: tipo de drilling (y escala) por shell; `todos` = todos los que no tengan el suyo */
+  shellDrill: Map<number, { tipo: number; escala?: number }>;
+  shellDrillTodos?: { tipo: number; escala?: number };
   shellMods: Map<number, [number, number]>;
   /** Modificadores DIRECCIONALES por shell, 8 valores en el orden del e2k
    *  de ETABS: F11 F22 F12 M11 M22 M12 V13 V23. Es lo que define un DECK:
@@ -319,6 +322,7 @@ export function parseCliCommands(text: string): ParsedModel {
     shells: [],
     shellLoads: new Map(),
     shellTypes: new Map(),
+    shellDrill: new Map(),
     shellMods: new Map(),
     shellModsDir: new Map(),
     shellAngles: new Map(),
@@ -953,6 +957,19 @@ export function parseCliCommands(text: string): ParsedModel {
           }
           const v = fp.pf;
           for (let k = id; k <= hasta; k++) m.shellTypes.set(k, v);
+          break;
+        }
+        case "shelldrill": {
+          // `shelldrill 12 13 [escala]` · rango `12-480` · `todos`: tipo de drilling/membrana del solver (drillingTypes):
+          // 0 penalización 1e-6 · 1 resorte débil · 2 Hughes-Brezzi · 3..11 ITW (varias recetas) · 13 defecto (ITW 2×2 + proyección) · 14 ITW 1990 publicado.
+          // `escala` = γ/μ (ITW) o α (Hughes-Brezzi). Sin esta palabra todo shell usa el 13.
+          const rango = (tokens[1] ?? "").match(/^(\d+)-(\d+)$/);
+          const todos = /^(todos|all)$/i.test(tokens[1] ?? "");
+          const id = parseInt(tokens[1], 10), hasta = rango ? parseInt(rango[2], 10) : id;
+          const tipo = parseInt(tokens[2], 10), esc = tokens[3] !== undefined ? parseFloat(tokens[3]) : undefined;
+          if ((!todos && !isFinite(id)) || !isFinite(tipo) || tipo < 0 || tipo > 14) { m.errors.push(`shelldrill: se esperaba "shelldrill ID|a-b|todos tipo(0-14) [escala]"`); break; }
+          const v = { tipo, escala: esc !== undefined && isFinite(esc) ? esc : undefined };
+          if (todos) m.shellDrillTodos = v; else for (let k = id; k <= hasta; k++) m.shellDrill.set(k, v);
           break;
         }
         case "shellmod": {
@@ -1713,6 +1730,7 @@ export const cliModeler: ExampleDef = {
     const endOffsets = new Map<number, [number, number, number]>();
     // 0 = Mindlin (defecto del C++), 1 = Kirchhoff Shell-Thin
     const plateFormulations = new Map<number, number>();
+    const drillingTypes = new Map<number, number>(), drillingPenaltyScales = new Map<number, number>();
     const deckSections = new Map<number, { tc: number; hr: number; wrt: number; wrb: number; sr: number; w: number }>();
     // Carga de vano por ELEMENTO (globales). No la usa el solver —esa carga
     // entra como fuerzas nodales equivalentes— sino `analyze()`, para poder
@@ -1947,6 +1965,8 @@ export const cliModeler: ExampleDef = {
       if (nuS !== 0.2) shearModuli.set(eIdx, s.E / (2 * (1 + nuS)));
       const tipo = m.shellTypes.get(s.id);
       if (tipo !== undefined) plateFormulations.set(eIdx, tipo);
+      const dr = m.shellDrill.get(s.id) ?? m.shellDrillTodos;
+      if (dr) { drillingTypes.set(eIdx, dr.tipo); if (dr.escala !== undefined) drillingPenaltyScales.set(eIdx, dr.escala); }
       const dk = m.deckSecs.get(s.id);
       if (dk) {
         // DECK: membrana de espesor tc; ρ equivalente con nervios y lámina (w en kN/m² → masa /g)
@@ -2401,7 +2421,7 @@ export const cliModeler: ExampleDef = {
       densities, poissonsRatios: poissons, thicknesses,
       membraneModifiers, bendingModifiers, shellModifiers,
       shellSurfaceLoads, shellAngles, cargaDeArea, cantos, anchos, sectionShapes, localAngles,
-      shearAreasY, shearAreasZ, momentReleases, endOffsets, plateFormulations,
+      shearAreasY, shearAreasZ, momentReleases, endOffsets, plateFormulations, drillingTypes, drillingPenaltyScales,
       // PUNTO DE INSERCION del e2k (`e2klinea … CARDINALPT n`): el motor ya lo modela (insertionPoint.ts, medido contra
       // SAP2000 en el .s2k) pero el e2k solo lo guardaba como texto. Vertical: 1-3 abajo, 4-6 medio, 7-9 arriba; el
       // centroide queda D/2 por debajo del nudo (d2 = -D/2). Lateral y 11 aun no. Mismo criterio que s2kParser.
