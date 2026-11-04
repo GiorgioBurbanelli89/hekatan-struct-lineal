@@ -7,7 +7,11 @@
  *   E: 6 panos 1x6 (sin nudos colgados con panos de otra longitud) · F: x 3..6 sobrecubierta 1x4 (y 1..5) + Tubo 50 (nudos colgados en x=3, borde y=1/5)
  *   G: F con ADDRESTRAINT "Yes" · H: F con CARDINALPOINT "TOP" en las areas.
  * HALLAZGOS: ETABS no cambia NADA con ADDRESTRAINT ni CARDINALPOINT aqui (F = G = H a 1e-9 m); Hekatan con 1 Q4 por pano, membranaEnNudos o tamMembrana 1.25
- * da los desplazamientos a 1-2 %; el axil de las correas de borde en LATX NO casa (ETABS constante 4.5 kN en toda la correa, Hek 5.2 -> 0.1 kN: abierto).
+ * da los desplazamientos a 1-2 %.
+ *   Eent: E con las correas ENTERAS (sin nudos intermedios; 7 barras de 6 m). ETABS da el MISMO axil de correa que E (4.53 kN) => ETABS no ata los nudos
+ *   intermedios de la correa al borde del paño cuando el area trae LINECONSTRAINT "No" (edge constraint apagado). CAUSA del axil distinto: Hekatan partia
+ *   el paño en esos nudos (los ataba) y repartia el cortante de la membrana a todos; ETABS solo en las esquinas del paño. Arreglo: `colgadosSueltos`
+ *   (defecto: se lee del e2k, suelto si todos los AREAASSIGN traen LINECONSTRAINT "No"; galpon1.e2k no lo trae = defecto de ETABS = atado, y ahi si ata).
  */
 import { cargarMod, medir } from "../lib/vano_cmp.mjs";
 import { readFileSync } from "node:fs";
@@ -24,7 +28,7 @@ export async function correr() {
   const fila = (que, medido, limite, ok, detalle = "") => filas.push({ que, crudo: true, medido, limite, ok, detalle });
   const f = (x, n = 4) => x.toFixed(n);
   const refs = {};
-  for (const v of ["E", "F", "G", "H"]) refs[v] = JSON.parse(readFileSync(join(AQUI, "..", "datos", `${PREF}${v}_ref.json`), "utf-8"));
+  for (const v of ["E", "F", "G", "H", "Eent"]) refs[v] = JSON.parse(readFileSync(join(AQUI, "..", "datos", `${PREF}${v}_ref.json`), "utf-8"));
   // 1) ETABS no esta en mecanismo: ningun desplazamiento > 1 m
   for (const v of ["E", "F", "G", "H"]) {
     let mx = 0; for (const pat of Object.values(refs[v].JointDispl)) for (const u of Object.values(pat)) for (let k = 0; k < 3; k++) mx = Math.max(mx, Math.abs(u[k]));
@@ -36,9 +40,9 @@ export async function correr() {
       for (const pat of ["Dead", "Live", "LATX", "LATY"]) for (const [n, u] of Object.entries(refs.F.JointDispl[pat])) { const q = refs[o].JointDispl[pat][pa.get(k3(refs.F.pts[n]))]; for (let i = 0; i < 3; i++) w = Math.max(w, Math.abs(u[i] - q[i])); }
       fila(`ETABS: ${o} vs F, peor |dU| de todos los nudos y patrones`, `${w.toExponential(1)} m`, "<= 1e-7 m", w <= 1e-7, o === "G" ? "ADDRESTRAINT Yes = No" : "CARDINALPOINT TOP = MIDDLE (membrana)"); } }
   // 3) Hekatan vs ETABS, E y F con 3 mallas (G y H: iguales a F, se miden tambien con 1 Q4)
-  const mallas = [["1 Q4 por pano", { membranaEnNudos: false }], ["membranaEnNudos (defecto)", {}], ["tamMembrana 1.25", { tamMembrana: 1.25 }]];
+  const mallas = [["1 Q4 por pano", { membranaEnNudos: false }], ["membranaEnNudos (defecto)", {}], ["tamMembrana 1.25", { tamMembrana: 1.25 }], ["atado a los colgados (colgadosSueltos:false)", { colgadosSueltos: false }]];
   const M = {};
-  for (const v of ["E", "F", "G", "H"]) for (const [mn, opc] of (v === "E" || v === "F" ? mallas : mallas.slice(0, 1))) {
+  for (const v of ["E", "F", "G", "H", "Eent"]) for (const [mn, opc] of (v === "E" || v === "F" ? mallas : mallas.slice(0, 1))) {
     const m = await medir(mod, v, opc, ["Dead", "Live", "LATX", "LATY"], PREF); M[`${v}|${mn}`] = m;
     for (const pat of ["Dead", "Live", "LATX", "LATY"]) {
       const d = m.pat[pat], lat = pat.startsWith("LAT"), nom = `${v} ${mn} ${pat}`;
@@ -50,16 +54,27 @@ export async function correr() {
     }
     if (lat0(v)) { const d = m.pat.LATX; fila(`${v} ${mn} LATX: rms Ux/Uy relativo (%)`, `${f(d.U[0], 2)} / ${f(d.U[1], 2)}`, "<= 3 %", d.U[0] <= 3 && d.U[1] <= 3); }
   }
-  function lat0(v) { return v === "E" || v === "F"; }
+  function lat0(v) { return v === "E" || v === "F" || v === "Eent"; }
   // 4) G y H en Hekatan = F (el importador no usa ADDRESTRAINT ni CARDINALPOINT de la membrana)
   for (const o of ["G", "H"]) { const a = M["F|1 Q4 por pano"].pat.LATX, b = M[`${o}|1 Q4 por pano`].pat.LATX;
     fila(`Hek: ${o} igual a F (LATX peor Ux)`, `${f(a.peor[0], 5)} / ${f(b.peor[0], 5)} mm`, "dif <= 1e-6 mm", Math.abs(a.peor[0] - b.peor[0]) <= 1e-6); }
-  // 5) axil de la correa de borde x=0 en LATX: ABIERTO. ETABS constante (la membrana no le reparte carga en sus nudos intermedios), Hek decrece 5.2 -> 0.1
-  for (const v of ["E", "F"]) { const a = M[`${v}|1 Q4 por pano`].pat.LATX.axil.filter((q) => q.p1[0] === 0 && q.p2[0] === 0 && q.sec.startsWith("1G"));
-    const e = a.map((q) => q.etabs), h = a.map((q) => q.hek), prim = Math.abs(h[h.findIndex((_, i) => Math.abs(a[i].p1[1]) < 1e-6 && true)] ?? 0);
-    const cte = Math.max(...e) - Math.min(...e);
-    fila(`${v} LATX: correa x=0, axil ETABS constante en sus ${a.length} tramos`, `variacion ${f(cte, 3)} kN (${f(e[0], 2)} kN)`, "<= 0.01 kN", cte <= 0.01, "ETABS no reparte cortante a los nudos colgados de la correa");
-    const mayor = Math.max(...h);
-    fila(`${v} LATX: correa x=0, mayor axil Hek vs ETABS`, `${f(mayor, 2)} vs ${f(e[0], 2)} kN`, "dentro de 20 %", Math.abs(mayor - e[0]) <= 0.2 * e[0], "el perfil a lo largo de la correa NO casa (Hek 5.2 -> 0.1): abierto"); }
+  // 5) AXIL de las barras en LATX contra ETABS. Defecto (colgados sueltos, LINECONSTRAINT "No") casa; atado (lo de antes) no.
+  const on = (q, x) => Math.abs(q.p1[0] - x) < 1e-6 && Math.abs(q.p2[0] - x) < 1e-6, oy = (q, y) => Math.abs(q.p1[1] - y) < 1e-6 && Math.abs(q.p2[1] - y) < 1e-6;
+  for (const [v, mn, eti] of [["E", "1 Q4 por pano", "defecto"], ["F", "1 Q4 por pano", "defecto"], ["Eent", "1 Q4 por pano", "correas enteras"]]) {
+    const ax = M[`${v}|${mn}`].pat.LATX.axil, a = ax.filter((q) => on(q, 0) && q.sec.startsWith("1G"));
+    const e = a.map((q) => q.etabs), h = a.map((q) => q.hek), cte = Math.max(...h) - Math.min(...h);
+    fila(`${v} (${eti}) LATX: correa x=0, axil Hek constante en sus ${a.length} tramos`, `variacion ${f(cte, 3)} kN (${f(h[0], 2)} vs ETABS ${f(e[0], 2)} kN)`, "variacion <= 0.05 kN y dentro de 3 % de ETABS", cte <= 0.05 && Math.abs(h[0] - e[0]) <= 0.03 * e[0]);
+    const vp = ax.filter((q) => oy(q, 0) && q.sec.startsWith("VP")), dv = Math.max(...vp.map((q) => Math.abs(q.hek - q.etabs)));
+    fila(`${v} (${eti}) LATX: VP de y=0, peor |dP| de ${vp.length} tramos`, `${f(dv, 2)} kN (max ETABS ${f(Math.max(...vp.map((q) => q.etabs)), 2)})`, "<= 0.6 kN (antes 4.3)", dv <= 0.6);
+    const tb = ax.filter((q) => q.sec.startsWith("Tubo"));
+    if (tb.length) { const dt = Math.max(...tb.map((q) => Math.abs(q.hek - q.etabs))); fila(`${v} LATX: Tubo 50, peor |dP| de ${tb.length} tubos y correa x=3`, `${f(dt, 3)} kN`, "<= 0.1 kN (antes 1.1)", dt <= 0.1); }
+  }
+  // ETABS: correas enteras = correas partidas (no ata los nudos intermedios)
+  { const g = (r) => r.barras && Object.values(r.barras).filter((b) => b.sec.startsWith("1G") && b.p1[0] === 0 && b.p2[0] === 0 && b.LATX).map((b) => Math.max(...b.LATX.P.map(Math.abs)));
+    const a = g(refs.E), b = g(refs.Eent);
+    fila("ETABS: axil de la correa x=0 en LATX, E (6 tramos) vs Eent (1 barra entera)", `${f(a[0], 3)} vs ${f(b[0], 3)} kN`, "dif <= 0.01 kN", Math.abs(a[0] - b[0]) <= 0.01, "ETABS no reparte cortante a los nudos intermedios de la correa"); }
+  // atado a los colgados (lo de antes): documenta que NO casaba
+  for (const v of ["E", "F"]) { const a = M[`${v}|atado a los colgados (colgadosSueltos:false)`].pat.LATX.axil.filter((q) => on(q, 0) && q.sec.startsWith("1G")).map((q) => q.hek);
+    fila(`${v} atado a los colgados: axil de la correa x=0 decrece (informativo)`, `${f(Math.max(...a), 2)} -> ${f(Math.min(...a), 2)} kN`, "variacion > 1 kN (no casa con ETABS; ya no es el defecto)", Math.max(...a) - Math.min(...a) > 1); }
   return filas;
 }

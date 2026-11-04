@@ -27,7 +27,7 @@ export async function correr() {
     `export { cargaBarraConsistente, condensarCargaPorLiberaciones } from "${R}/examples/src/shared/cargaBarraConsistente";\n`, "e2k-galpon-recorte");
   const ref = JSON.parse(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1_ref.json"), "utf-8"));
   const log = console.log, warn = console.warn; console.log = () => {}; console.warn = () => {};
-  let res; try { res = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k"); }
+  let res; try { res = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", JSON.parse(process.env.E2KOPC || "{}")); }
   finally { console.log = log; console.warn = warn; }
   const dir = mkdtempSync(join(tmpdir(), "galpon1-")), fh = join(dir, "g.heks"); writeFileSync(fh, res.heks);
   const key = (p) => p.map((v) => Math.round(v * 1000)).join("|");

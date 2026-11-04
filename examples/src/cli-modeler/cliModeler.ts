@@ -164,6 +164,10 @@ interface ParsedModel {
    *  Hermite, no a las 4 esquinas. SAP2000 no hace ninguna de las dos cosas (4-sep-2026:
    *  galpon 4.5 % y mezanine Dead 75 % explicados con esto). */
   deckEtabs: boolean;
+  /** `deck sinpartir` (4-nov-2026): NO partir los paños membrana en los nudos que cuelgan de sus bordes (la correa con nudos
+   *  cada 1 m bajo un paño de 6 m). ETABS (OAPI, vano 6x6 con cortante) no ata esos nudos al paño (ADDRESTRAINT "No"): el cortante de la
+   *  membrana pasa a las barras SOLO en los nudos de esquina del paño y el axil de la correa de borde es constante. Solo vale con `deck etabs`. */
+  deckSinPartir: boolean;
   deckOneWay: boolean;                   // `deck etabs oneway`: reparto en un sentido (eje local 1 del pano)
   /** `decksec ID tc hr wrt wrb sr [w]` (m, kN/m²): la «Deck Section» Filled de ETABS en la cáscara ID.
    *  Membrana de espesor tc y peso γ·(tc + hr·(wrt+wrb)/2/sr) + w — MEDIDO en ETABS 22 (13-sep-2026). */
@@ -343,6 +347,7 @@ export function parseCliCommands(text: string): ParsedModel {
     casosRS: [],
     deckEtabs: false,
     deckOneWay: false,
+    deckSinPartir: false,
     deckSecs: new Map(),
     torsionFactor: 1,
     deckTributario: new Set(),
@@ -680,6 +685,8 @@ export function parseCliCommands(text: string): ParsedModel {
         case "deck":
         case "deckmode": {
           const v = (tokens[1] ?? "etabs").toLowerCase();
+          if (/^(sinpartir|nosplit|suelto)$/.test(v)) { m.deckSinPartir = true; break; }   // solo una opcion; no enciende ni apaga el deck
+          if (tokens.slice(2).some(t => /^(sinpartir|nosplit|suelto)$/i.test(t))) m.deckSinPartir = true;
           m.deckEtabs = v === "etabs" || v === "1" || v === "on" || v === "si";
           m.deckOneWay = tokens.slice(2).some(t => /^(oneway|1way|unidireccional)$/i.test(t));
           break;
@@ -1464,7 +1471,7 @@ function aplicarDeckEtabs(m: ParsedModel) {
     const an = m.shellAngles.get(de); if (an !== undefined) m.shellAngles.set(a, an);
   };
   for (const s of m.shells) {
-    if (!esMembranaDeck(m, s.id) || s.pts.length !== 4 || s.pts.some(id => !m.nodes.has(id))) { nuevos.push(s); continue; }
+    if (m.deckSinPartir || !esMembranaDeck(m, s.id) || s.pts.length !== 4 || s.pts.some(id => !m.nodes.has(id))) { nuevos.push(s); continue; }
     const p = s.pts.map(P);
     const s0 = sobreBorde(p[0], p[1], s.pts), s2 = sobreBorde(p[2], p[3], s.pts).map(v => 1 - v);
     const t1 = sobreBorde(p[1], p[2], s.pts), t3 = sobreBorde(p[3], p[0], s.pts).map(v => 1 - v);

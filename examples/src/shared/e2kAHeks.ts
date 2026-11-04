@@ -101,6 +101,12 @@ export interface OpcionesE2kHeks {
    *  combinar con `tamMembrana`. Por defecto SI (false lo apaga). Medido en el galpon del mercado (nudos de la linea x = 30 m que cuelgan del borde de
    *  los paños de 6 m): Ux/Uy rms 68 %/48 % → 9 %/6 %, cordones Tubo 50 y Fx de los apoyos de corte a 1 % de ETABS. */
   membranaEnNudos?: boolean;
+  /** Los nudos que cuelgan del borde de un paño de membrana NO se atan a el (ni se parte el paño): `deck sinpartir` + sin `membranaEnNudos`.
+   *  Es lo que hace ETABS con `LINECONSTRAINT "No"` (edge constraint apagado; sin la palabra el defecto de ETABS es SI: galpon1.e2k). Medido por OAPI en el vano 6x6
+   *  con cortante (4-nov-2026): con el constraint apagado el axil de la correa de borde es constante (4.53 kN) y el cortante de la membrana pasa a las barras solo
+   *  en los nudos de esquina del paño; partido (atado) Hekatan daba 5.2 -> 0.1 kN. Por defecto (undefined) se lee del e2k: suelto solo si TODOS los AREAASSIGN
+   *  traen `LINECONSTRAINT "No"`. true/false lo fuerzan. */
+  colgadosSueltos?: boolean;
 }
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kHeks = {}): ResultadoE2kHeks {
@@ -109,7 +115,10 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   const nSub = Math.max(1, Math.floor(opc.mallaMembrana ?? 1));
   const subMalla = new Map<number, number[][][]>();   // elemento → rejilla (n+1)×(n+1) de coordenadas
   const tamSub = opc.tamMembrana ?? 0;
-  if (nSub > 1 || tamSub > 0 || (opc.membranaEnNudos ?? true)) {   // tamMembrana: 0 lo apaga
+  const asig = texto.match(/^[ \t]*AREAASSIGN[^\r\n]*/gm) ?? [];
+  const colgadosSueltos = opc.colgadosSueltos ?? (asig.length > 0 && asig.every((l) => /LINECONSTRAINT\s+"No"/i.test(l)));
+  const partirEnNudos = (opc.membranaEnNudos ?? true) && !colgadosSueltos;
+  if (nSub > 1 || tamSub > 0 || partirEnNudos) {   // tamMembrana: 0 lo apaga
     const N0 = m.nodes as unknown as number[][], E0 = m.elements as unknown as number[][];
     E0.forEach((el, e) => {
       if (el.length !== 4) return;
@@ -134,7 +143,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
       const baseU: number[] = [], baseV: number[] = [];
       for (let i = 1; i < nu0; i++) baseU.push(i / nu0);
       for (let j = 1; j < nv0; j++) baseV.push(j / nv0);
-      if (opc.membranaEnNudos ?? true) { baseU.push(...sobre(P[0], P[1]), ...sobre(P[3], P[2])); baseV.push(...sobre(P[0], P[3]), ...sobre(P[1], P[2])); }
+      if (partirEnNudos) { baseU.push(...sobre(P[0], P[1]), ...sobre(P[3], P[2])); baseV.push(...sobre(P[0], P[3]), ...sobre(P[1], P[2])); }
       us = unico(baseU); vs = unico(baseV);
       const nu = us.length - 1, nv = vs.length - 1;
       if (nu === 1 && nv === 1) return;
@@ -434,6 +443,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   // el edificio salía 10 % más flexible por piso (16-oct-2026).
   L.push("# nudos sobre aristas de muros: atados (Auto Edge Constraint de ETABS)", "edge muros", "");
   // el modelo viene de ETABS: sin otra elección, se resuelve y se exporta con SUS reglas (brazos, aristas, cruces)
+  if (colgadosSueltos) L.push("# nudos colgados del borde de un paño: sueltos (ETABS sin edge constraint)", "deck sinpartir", "");
   L.push("# viene de ETABS: se exporta tal cual (lista Comportamiento para cambiarlo)", "origen etabs", "");
 
   if (masas.size) {
