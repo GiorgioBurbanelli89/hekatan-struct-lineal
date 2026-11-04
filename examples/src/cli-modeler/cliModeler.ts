@@ -59,7 +59,7 @@ import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
 import { FORMULACIONES_PLACA, formulacionPorPalabra } from "../shared/formulacionesPlaca";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
-import { cargasDelCaso } from "../shared/cargasPorCaso";
+import { cargasDelCaso, factoresDelCaso } from "../shared/cargasPorCaso";
 import { resolverSoloCompresion, pesosAreaNudos } from "../shared/muellesSoloCompresion";
 import { hex8Solve, hex8Stress } from "../solid-cube-fem/h8";
 import { deform, analyze, modalAnalysis, jointMass, cargaUniformeBarra, desfaseDeInsercionE2k, type Node, type Element } from "hekatan-fem";
@@ -244,6 +244,9 @@ interface ParsedModel {
    *  (Jorge, 14-sep-2026: «case usa dead y combo usa combinaciones»). */
   loadsPat: Map<string, Map<number, [number, number, number, number, number, number]>>;
   frameLoadsPat: Map<string, Map<number, [number, number, number]>>;
+  /** `fixedend frameID patron f1..f12`: empotramiento perfecto (globales, kN, kN·m) de la carga de VANO de la barra
+   *  (peso propio, losa en una dirección) para que analyze() devuelva los esfuerzos de barra con el vano. Por patrón. */
+  fixedEndPat: Map<string, Map<number, number[]>>;
   /** `spring <nudo> <gdl> <k> [compresion|traccion]`: con `compresion` el muelle solo empuja (ley Gap de CSI);
    *  con `traccion` solo tira (perno de anclaje, el Hook de CSI). */
   springs: Array<{ node: number; dof: number; k: number; comp?: boolean; trac?: boolean }>;
@@ -371,6 +374,7 @@ export function parseCliCommands(text: string): ParsedModel {
     frameLoads: new Map(),
     loadsPat: new Map(),
     frameLoadsPat: new Map(),
+    fixedEndPat: new Map(),
     springs: [],
     shellNu: new Map(),
     masses: new Map(),
@@ -1076,6 +1080,16 @@ export function parseCliCommands(text: string): ParsedModel {
           destinoFL.set(fid, [ant[0] + wx, ant[1] + wy, ant[2] + wz]);
           break;
         }
+        case "fixedend": {
+          // fixedend frameID patron f1..f12  (12 valores globales: Fi(3) Mi(3) Fj(3) Mj(3); se SUMAN)
+          const fid = parseInt(tokens[1], 10), pat = tokens[2] ?? "Dead";
+          const v = tokens.slice(3, 15).map((t) => parseFloat(t));
+          if (!isFinite(fid) || v.length < 12 || v.some((x) => !isFinite(x))) { m.errors.push(`fixedend: se esperan frameID patron y 12 valores`); break; }
+          const mp = m.fixedEndPat.get(pat) ?? m.fixedEndPat.set(pat, new Map()).get(pat)!;
+          const a = mp.get(fid) ?? new Array(12).fill(0);
+          mp.set(fid, a.map((x, k) => x + v[k]));
+          break;
+        }
         case "spring": {
           const nodeId = parseInt(tokens[1], 10);
           const dofName = (tokens[2] ?? "uz").toLowerCase();
@@ -1743,6 +1757,7 @@ export const cliModeler: ExampleDef = {
     // entra como fuerzas nodales equivalentes— sino `analyze()`, para poder
     // sumar las fuerzas de empotramiento al recuperar los esfuerzos.
     const frameLoadsElem = new Map<number, [number, number, number]>();
+    const frameFixedEnd = new Map<number, number[]>();
     // AsY va con Iy (plano 1-3) = As3 de CSI; AsZ va con Iz (plano 1-2) = As2.
     const shearAreasY = new Map<number, number>();
     const shearAreasZ = new Map<number, number>();
@@ -1784,6 +1799,16 @@ export const cliModeler: ExampleDef = {
       if (eoF) endOffsets.set(eIdx, eoF);
       const wF = m.frameLoads.get(f.id);
       if (wF) frameLoadsElem.set(eIdx, wF);
+      // empotramiento de la carga de vano del CASO activo (patrones con su factor, como cargasDelCaso)
+      if (m.fixedEndPat.size) {
+        const fct = factoresDelCaso();
+        for (const [pat, mp] of m.fixedEndPat) {
+          const k = fct ? (fct[pat] ?? 0) : 1, v = mp.get(f.id);
+          if (!k || !v) continue;
+          const a = frameFixedEnd.get(eIdx) ?? new Array(12).fill(0);
+          frameFixedEnd.set(eIdx, a.map((x, q) => x + k * v[q]));
+        }
+      }
       const asF = m.frameShearAreas.get(f.id);
       if (asF) {
         shearAreasZ.set(eIdx, asF[0]);   // As2 -> V2, plano 1-2 (I33)
@@ -2446,6 +2471,7 @@ export const cliModeler: ExampleDef = {
       })(),
       deckSections,
       frameLoads: frameLoadsElem,
+      ...(frameFixedEnd.size ? { frameFixedEnd } : {}),
       // por patron y por indice de elemento, para exportar cada patron (s2k/f2k)
       frameLoadsPorPatron: (() => {
         const out: Record<string, Map<number, [number, number, number]>> = { Dead: frameLoadsElem };

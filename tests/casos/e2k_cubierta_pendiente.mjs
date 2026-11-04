@@ -9,8 +9,8 @@
  *  - La pendiente de 3 % NO introduce error en Ux/Uy/Uz, reacciones, empuje Fx/Fy de apoyos ni cortante de membrana: plana y p3 dan el mismo error.
  *  - La pendiente en X destapo un error ajeno a ella: la membrana partida en los nudos colgados ataba la fila de la correa al plano (Ux 154 % rms,
  *    el nudo se movia NORMAL al plano: Ux/Uz = 0.03). Con `colgadosSueltos` (ETABS LINECONSTRAINT "No") desaparece (0.17 %).
- *  - Axil de la correa inclinada: ETABS = ±Q/2·sen(theta) (carga repartida sobre la barra), Hekatan 0: las cargas de losa entran como puntuales en los
- *    nudos y analyze() no resta el empotramiento (shearsZ = 0 en vez de 2.3 kN). Es recuperacion de esfuerzos, no la solucion (u y R casan).
+ *  - Axil de la correa inclinada: ETABS = ±Q/2·sen(theta). Antes Hekatan daba 0 (analyze() no restaba el empotramiento de la carga de losa); ahora el
+ *    .heks lleva `fixedend` (e2kAHeks) y casa a 0.0006 kN. Detalle de M3/V2/M2/P: tests/casos/e2k_momentos_barras.mjs.
  */
 import { cargarMod, medirModelo, resumenAxil } from "../lib/pendiente_cmp.mjs";
 import { readFileSync } from "node:fs";
@@ -45,8 +45,8 @@ export async function correr() {
     fila(`galpon ${pat}: peor nudo U${"xy"[k]} (mm) plana / 3 %, cortante de membrana`, `${f(a.peor[k], 4)} / ${f(b.peor[k], 4)}`, "ambos <= 0.05, dif <= 0.01", a.peor[k] <= 0.05 && b.peor[k] <= 0.05 && Math.abs(a.peor[k] - b.peor[k]) <= 0.01);
   }
   { const a = resumenAxil(g.plana.pat.Dead.axil).correa, b = resumenAxil(g.p3.pat.Dead.axil).correa;
-    fila("galpon Dead: axil de correa, error Hek-ETABS plana / 3 % (la pendiente aparece SOLO aqui)", `${f(a.errMax, 4)} / ${f(b.errMax, 4)} kN (ETABS ${f(b.etMax, 3)} = Q/2 sen θ)`, "plana <= 0.005, 3 % <= 0.1 kN",
-      a.errMax <= 0.005 && b.errMax <= 0.1 && b.errMax > 5 * a.errMax, "carga de losa en nudos sin empotramiento: shearsZ 0 vs 2.3 kN en ETABS; u y R casan"); }
+    fila("galpon Dead: axil de correa, error Hek-ETABS plana / 3 % (antes 0.0002 contra ±Q/2·sen θ: ahora con `fixedend`)", `${f(a.errMax, 4)} / ${f(b.errMax, 4)} kN (ETABS ${f(b.etMax, 3)} = Q/2 sen θ)`, "ambos <= 0.005 kN",
+      a.errMax <= 0.005 && b.errMax <= 0.005, "empotramiento de la carga de vano (e2kAHeks `fixedend`): shearsZ de la correa = ETABS; ver e2k_momentos_barras"); }
 
   // ---- 2) vano con cortante: Epl / Ep3 / Epx y Fpl / Fp3 ----
   const M = {};
