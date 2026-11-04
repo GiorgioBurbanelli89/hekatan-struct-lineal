@@ -1162,8 +1162,14 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         // `nStories 0` = las dos caras en la misma planta (ver arriba).
         const bottomIdx = Math.min(storyIdx + lc.nStories, stories.length - 1);
         // `stories` va de arriba abajo: del indice grande (abajo) al pequeño.
-        for (let k = bottomIdx; k > storyIdx; k--)
+        // Las plantas de en medio solo son joints de una LINEA VERTICAL (pt1 = pt2). Una diagonal `BRACE pt1 pt2 2`
+        // va recta de (pt1, planta de abajo) a (pt2, planta de arriba): el punto pt1 de la planta de en medio NO está
+        // sobre ella. Partirla ahí la convertía en una vertical + un tramo roto (mercado: la diagonal 1511 de las
+        // cerchas, Uz de la cercha 4-5 veces más blanda que ETABS).
+        for (let k = bottomIdx; k > storyIdx; k--) {
+          if (lc.pt1 !== lc.pt2 && k !== bottomIdx) continue;
           cadenaKeys.push(nodeKey(lc.pt1, stories[k].name));
+        }
         // Salto 0: el de abajo cuelga de la MISMA planta (la cota la da su caida). El bucle de
         // arriba no lo mete y la barra se quedaba con un nudo: el TACNA perdia 16 columnas de
         // 2.2 m (`LINE "C2" COLUMN "27" "18" 0`, POINT "27" 0 0 2.2), 16-oct-2026.
@@ -2423,7 +2429,9 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
   });
   const enPano = (P: number[][], q: number[]) => dentro(P, q) || enBorde(P, q);
   // la muestra de cada paño se calcula una vez y vale para todos sus patrones
-  const cache = new Map<number, { muestras: Array<{ f: number; s: number; w: number } | null>; esquinas: number[]; A: number }>();
+  // Se guarda el AGREGADO por viga (no las ~160 mil muestras del paño): con el mercado (1844 paños) las muestras sueltas
+  // pasaban de 3 GB de heap. El resultado es el mismo: P = dP0·Σw y s = media de s ponderada por w.
+  const cache = new Map<number, { grupos: Array<{ f: number; s: number; w: number }>; nulas: number; nMuestras: number; esquinas: number[]; A: number }>();
   const preparar = (ei: number) => {
     // las vigas se buscan en el PAÑO de ETABS entero (`pano`); se muestrea solo el trozo `ei` (un polígono de más de
     // 4 lados llega triangulado, y un triángulo solo no contiene las viguetas que lo sostienen)
@@ -2461,7 +2469,9 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
     const xs = P.map((q) => q[0]), ys = P.map((q) => q[1]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const h = Math.max(x1 - x0, y1 - y0) / 400, nx = Math.max(1, Math.ceil((x1 - x0) / h)), ny = Math.max(1, Math.ceil((y1 - y0) / h));
-    const hx = (x1 - x0) / nx, hy = (y1 - y0) / ny, muestras: Array<{ f: number; s: number; w: number } | null> = [];
+    const hx = (x1 - x0) / nx, hy = (y1 - y0) / ny;
+    const agr = new Map<string, { f: number; s: number; w: number }>();
+    let nulas = 0, nMuestras = 0;
     for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
       const q = [x0 + (i + 0.5) * hx, y0 + (j + 0.5) * hy];
       if (!dentro(P, q)) continue;
@@ -2480,28 +2490,25 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
       // correa de un borde recibía 1.5 % más que la del otro (columnas simétricas: 4.893 / 4.862 kN contra 4.878 de ETABS).
       const dmin = cand.reduce((mn, c) => Math.min(mn, Math.abs(c.t)), Infinity);
       const empate = cand.filter((c) => Math.abs(c.t) - dmin < 1e-7 * Math.max(1, dmin));
-      if (!empate.length) muestras.push(null);
-      else for (const c of empate) muestras.push({ f: c.f, s: c.s, w: 1 / empate.length });
+      if (!empate.length) { nulas++; nMuestras += 1; }
+      else for (const c of empate) {
+        const w = 1 / empate.length, k = `${c.f}|${Math.round(c.s / 0.01)}`;
+        const g = agr.get(k) ?? agr.set(k, { f: c.f, s: 0, w: 0 }).get(k)!;
+        g.s = (g.s * g.w + c.s * w) / (g.w + w); g.w += w; nMuestras += w;
+      }
     }
     const A = Math.abs(P.reduce((acc, q, i) => { const w = P[(i + 1) % P.length]; return acc + q[0] * w[1] - w[0] * q[1]; }, 0)) / 2;
-    const r = { muestras, esquinas: el, A };
+    const r = { grupos: [...agr.values()], nulas, nMuestras, esquinas: el, A };
     cache.set(ei, r); return r;
   };
   let sinViga = 0;
   for (const o of pend) {
     const c = cache.get(o.ei) ?? preparar(o.ei);
-    // la carga EXACTA del paño (q·A) repartida en sus muestras
-    const nMuestras = c.muestras.reduce((t, m) => t + (m ? m.w : 1), 0);   // un empate cuenta 1 en total (dos mitades)
-    const dP0 = (o.q * c.A) / Math.max(1, nMuestras);
-    const acum = new Map<string, { f: number; s: number; P: number }>();
-    for (const m of c.muestras) {
-      if (!m) { sinViga++; for (const n of c.esquinas) sumarPatron(o.lc, n, [0, 0, -dP0 / c.esquinas.length, 0, 0, 0]); continue; }
-      const dP = dP0 * m.w;
-      const k = `${m.f}|${Math.round(m.s / 0.01)}`;
-      const g = acum.get(k) ?? acum.set(k, { f: m.f, s: 0, P: 0 }).get(k)!;
-      g.s = (g.s * g.P + m.s * dP) / (g.P + dP); g.P += dP;
-    }
-    for (const g of acum.values()) (out.get(g.f) ?? out.set(g.f, []).get(g.f)!).push({ s: g.s, P: g.P, lc: o.lc });
+    // la carga EXACTA del paño (q·A) repartida en sus muestras (un empate cuenta 1 en total: dos mitades)
+    const dP0 = (o.q * c.A) / Math.max(1, c.nMuestras);
+    if (c.nulas) { sinViga += c.nulas; for (const n of c.esquinas) sumarPatron(o.lc, n, [0, 0, -(dP0 * c.nulas) / c.esquinas.length, 0, 0, 0]); }
+    const acum = c.grupos.map((g) => ({ f: g.f, s: g.s, P: dP0 * g.w }));
+    for (const g of acum) (out.get(g.f) ?? out.set(g.f, []).get(g.f)!).push({ s: g.s, P: g.P, lc: o.lc });
   }
   console.info(`[e2kParser] losas en una dirección: ${unaDir.size} paños → ${out.size} vigas` + (sinViga ? ` · ${sinViga} muestras sin viga (a las esquinas)` : ""));
   return out;
