@@ -79,3 +79,11 @@ Corrida: `C:\ETABS\mercado\exp\runv.sh <nombre> '<json opciones>'` (conv.mjs + c
 - ⚠️ Live Uy 7.1 % queda sobre 5 % (Dead 4.1 %): residuo pequeno aparte, sin investigar.
 - Defecto NO cambiado (la importacion de la app sigue con 0.8 en CFT; `grupo: "acero"` es la opcion). `node tests/run.mjs e2k` 599/599.
 - ⏳ Decidir si `e2kAHeks` pasa a `metodoDirectoGrupo: "acero"` por defecto (cambia el e2k exportado de ida y vuelta: Hekatan exporta CFT con E reducido) y validar contra otro e2k con CFT (riochico).
+
+## Defecto `metodoDirectoGrupo` = "acero" (4-nov-2026)
+- ✅ `e2kParser.ts`: `opciones.metodoDirectoGrupo ?? "acero"` (antes "todo"); e2kAHeks lo hereda. `todo`/`compuesto` siguen disponibles. metodoDirecto sigue siendo opt-in en el parser y `true` en e2kAHeks.
+- ✅ Mercado con el defecto nuevo (`runv.sh defacero '{}'`): Dead rms 1.09/4.07/1.72 %, Live 2.28/7.11/1.99 % (igual que `grupo:"acero"` explicito).
+- ✅ Round-trip e2k: `exportE2k` va por `parseE2k` SIN metodoDirecto (opt-in) -> E exportado del CFT no cambia; tests e2k_roundtrip_* y cli/e2k_roundtrip_mercado.mjs sin tocar.
+- ✅ `node tests/run.mjs e2k` 599/599 tras ajustar 2 tests: `e2k_galpon_recorte` (barras con 0.8: 200 -> 188, sin los 12 CFT) y `e2k_momentos_barras` galpon1 tubos M3 limite 2.5 -> 3 %.
+- ❌ Empeora un poco: galpon1 (recorte con CFT CA1/CB1) tubos M3 Dead 2.17 -> 2.77 % ext (Live 1.83 -> 2.29); pico 0.21 kN·m, ruido absoluto. Se acepta porque el mercado (global, 7529 nudos) mejora 17/13/4 -> 1/4/2 %. Si se prefiere, `metodoDirectoGrupo:"todo"` recupera lo anterior.
+- ⏳ Otro e2k con CFT + referencia de desplazamientos ETABS no existe en el repo (ref_riochico solo valida cotas/E/cargas, que siguen OK); solo mercado y galpon1 validan el efecto.

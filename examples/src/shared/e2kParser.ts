@@ -2027,7 +2027,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const sec = frameSections.get(secName); if (!sec) continue;
         const mat = materials.get(sec.material);
         const compuesta = !!sec.fillMaterial;
-        const grupo = opciones.metodoDirectoGrupo ?? "todo";
+        const grupo = opciones.metodoDirectoGrupo ?? "acero";   // defecto "acero" (4-nov-2026): ETABS no aplica el 0.8 a CFT (mercado Dead rms 1.1/4.1/1.7 %)
         const reduce = (compuesta ? dComp : (dAcero && /steel/i.test(mat?.type ?? "")))
           && (grupo === "todo" || (grupo === "compuesto") === compuesta);
         const E = elasticities.get(elemIdx);

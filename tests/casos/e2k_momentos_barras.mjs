@@ -70,7 +70,7 @@ export async function correr() {
       const rs = resumenFuerzas(int, ["M3", "V2"]);
       fila(`galpon1 ${pat}: correas 1G de la ventana (sin la x=24) M3 (pico ${f(rs.correa.M3.pico, 3)})`, pct(rs.correa.M3), "<= 0.3 %", rs.correa.M3.pctExt <= 0.3 && rs.correa.M3.pctMid <= 0.3);
       fila(`galpon1 ${pat}: correas 1G V2 (pico ${f(rs.correa.V2.pico, 3)})`, pct(rs.correa.V2), "<= 0.3 %", rs.correa.V2.pctExt <= 0.3 && rs.correa.V2.pctMid <= 0.3);
-      fila(`galpon1 ${pat}: tubos M3 (pico ${f(rs.tubo.M3.pico, 3)})`, pct(rs.tubo.M3), "<= 2.5 %", rs.tubo.M3.pctExt <= 2.5 && rs.tubo.M3.pctMid <= 2.5);
+      fila(`galpon1 ${pat}: tubos M3 (pico ${f(rs.tubo.M3.pico, 3)})`, pct(rs.tubo.M3), "<= 3 % (CFT sin 0.8, 4-nov-2026: era 2.2 con 0.8 en CFT; pico 0.2 kN·m)", rs.tubo.M3.pctExt <= 3 && rs.tubo.M3.pctMid <= 3);
     }
     // documenta: la correa x=24 (borde de la ventana, ambos extremos apoyados de «corte») ETABS no la carga; Hek le da la franja de 0.5 m
     const b = M.Live.find((q) => q.cls === "correa" && Math.abs(q.p1[0] - 24) < 1e-3);

@@ -109,7 +109,7 @@ export interface OpcionesE2kHeks {
   colgadosSueltos?: boolean;
   /** Análisis directo AISC: true/"ambos" (defecto) = E × 0.8; "EI" = solo inercias × 0.8; "EA" = solo axil × 0.8 (EI igual); false = sin reducir. */
   metodoDirecto?: boolean | "ambos" | "EI" | "EA";
-  /** Con metodoDirecto: "todo" (defecto) | "acero" (sin CFT) | "compuesto" (solo CFT). */
+  /** Con metodoDirecto: "acero" (defecto, sin CFT) | "todo" | "compuesto" (solo CFT). */
   metodoDirectoGrupo?: "todo" | "acero" | "compuesto";
 }
 

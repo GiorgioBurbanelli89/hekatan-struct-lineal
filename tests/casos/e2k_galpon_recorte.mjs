@@ -33,7 +33,7 @@ export async function correr() {
   const key = (p) => p.map((v) => Math.round(v * 1000)).join("|");
   const filas = [];
   const md = res.modelo.analisis.metodoDirecto;
-  filas.push({ que: "analisis directo: barras con E × 0.8 (acero + CFT; el hormigon no)", crudo: true, medido: md?.barras ?? 0, limite: "200 de 212", ok: md?.barras === 200, detalle: `acero ${md?.acero}, compuestas ${md?.compuesto}` });
+  filas.push({ que: "analisis directo: barras con E × 0.8 (solo acero; CFT y hormigon no: defecto grupo acero)", crudo: true, medido: md?.barras ?? 0, limite: "188 de 212", ok: md?.barras === 188, detalle: `acero ${md?.acero}, compuestas ${md?.compuesto}` });
   const resolver = async (pat) => {
     globalThis.__hekatanFactoresPatron = { [pat]: 1 };
     const l = console.log, w = console.warn, e = console.error; console.log = () => {}; console.warn = () => {}; console.error = () => {};
