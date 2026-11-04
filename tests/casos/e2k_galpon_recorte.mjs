@@ -22,6 +22,8 @@ export const descripcion = "e2k: galpon recortado del mercado vs ETABS 22 (Dead/
 export async function correr() {
   const mod = await empaquetar(
     `export { e2kAHeks } from "${R}/examples/src/shared/e2kAHeks";\n` +
+    `export { TAM_MEMBRANA_ETABS } from "${R}/examples/src/shared/e2kAHeks";
+` +
     `export { cargaBarraConsistente, condensarCargaPorLiberaciones } from "${R}/examples/src/shared/cargaBarraConsistente";\n`, "e2k-galpon-recorte");
   const ref = JSON.parse(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1_ref.json"), "utf-8"));
   const log = console.log, warn = console.warn; console.log = () => {}; console.warn = () => {};
@@ -67,6 +69,46 @@ export async function correr() {
     const e = ref.base[pat].Fz, dif = 100 * (fz - e) / e, tol = pat === "Dead" ? 0.8 : 0.05;
     filas.push({ que: `${pat}: reaccion vertical total`, crudo: true, medido: `${fz.toFixed(3)} kN (${dif >= 0 ? "+" : ""}${dif.toFixed(2)} %)`, limite: `ETABS ${e.toFixed(3)} ±${tol} %`,
       ok: Math.abs(dif) <= tol, detalle: pat === "Dead" ? "+0.5 % = peso: ETABS descuenta mas longitud de brazos automaticos en vigas y el area poligonal de los CFT" : "" });
+  }
+  // 5. MEMBRANA DE CUBIERTA (opt-in `tamMembrana`): cada paño de 1×6 m es UN Q4 de relacion 6:1, demasiado rigido en el plano.
+  //    Subdividido a 1.25 m (= FLOORMESHMAXSIZE por defecto) el empuje horizontal casa con ETABS (cordones inferiores y Fx de
+  //    los apoyos) y Ux/Uy rms bajan de 69 %/50 % a 13 %/11 %. Sin la opcion, el comportamiento anterior no cambia (filas de arriba).
+  {
+    const log2 = console.log, warn2 = console.warn, info2 = console.info; console.log = () => {}; console.warn = () => {}; console.info = () => {};
+    let r2; try { r2 = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", { tamMembrana: mod.TAM_MEMBRANA_ETABS }); }
+    finally { console.log = log2; console.warn = warn2; console.info = info2; }
+    const f2 = join(dir, "g_mem.heks"); writeFileSync(f2, r2.heks);
+    const resolver2 = async (pat) => {
+      globalThis.__hekatanFactoresPatron = { [pat]: 1 };
+      const l = console.log, w = console.warn, e = console.error; console.log = () => {}; console.warn = () => {}; console.error = () => {};
+      try { return await resolverHeks(f2); } finally { console.log = l; console.warn = w; console.error = e; }
+    };
+    for (const pat of ["Dead", "Live"]) {
+      const s = await resolver2(pat), idx = new Map(s.nodes.map((p, i) => [key(p), i]));
+      const U = s.deformOutputs.deformations;
+      const sq = [0, 0, 0], sr = [0, 0, 0];
+      for (const [nm, d] of Object.entries(ref[pat])) {
+        const i = idx.get(key(ref.pts[nm])); if (i === undefined) continue;
+        const u = U.get(i) ?? [0, 0, 0];
+        for (let k = 0; k < 3; k++) { sq[k] += (u[k] - d[k]) ** 2; sr[k] += d[k] ** 2; }
+      }
+      for (const k of [0, 1]) {
+        const rel = 100 * Math.sqrt(sq[k] / (sr[k] || 1));
+        filas.push({ que: `${pat}: U${"xy"[k]} rms relativo con membrana a 1.25 m`, crudo: true, medido: `${rel.toFixed(1)} %`, limite: "<= 20 % (1 elemento por paño: 50-70 %)", ok: rel <= 20, detalle: "tamMembrana: 1.25" });
+      }
+      if (pat === "Live") {
+        const A = s.analyzeOutputs, el = new Map();
+        s.elements.forEach((e, i) => { if (e.length === 2) el.set(key(s.nodes[e[0]]) + ">" + key(s.nodes[e[1]]), i); });
+        // cordon inferior Tubo 50 (y=90.4, x=30..34), P de ETABS Live (OAPI)
+        const cord = [[30, 12.53, 31, 12.56, 2.2413], [31, 12.56, 32, 12.59, 4.3103], [32, 12.59, 33, 12.62, 4.5263], [33, 12.62, 34, 12.65, 2.9239]];
+        for (const [x1, z1, x2, z2, pe] of cord) {
+          const i = el.get(key([x1, 90.4, z1]) + ">" + key([x2, 90.4, z2])), P = Math.abs(A.normals.get(i)?.[1] ?? NaN), d = 100 * (P - pe) / pe;
+          filas.push({ que: `Live: axil del cordon Tubo 50 x=${x1}..${x2}, y=90.4`, crudo: true, medido: `${P.toFixed(3)} kN (${d >= 0 ? "+" : ""}${d.toFixed(1)} %)`, limite: `ETABS ${pe.toFixed(3)} ±3 %`, ok: Math.abs(d) <= 3, detalle: "1 elemento por paño: +10..+40 %" });
+        }
+        const ni = s.nodes.findIndex((p) => key(p) === key([36, 90.4, 13.46])), fx = s.deformOutputs.reactions.get(ni)?.[0] ?? NaN, dfx = 100 * (fx - 5.6592) / 5.6592;
+        filas.push({ que: "Live: Fx del apoyo de corte (36,90.4,13.46)", crudo: true, medido: `${fx.toFixed(3)} kN (${dfx >= 0 ? "+" : ""}${dfx.toFixed(1)} %)`, limite: "ETABS 5.659 ±3 %", ok: Math.abs(dfx) <= 3, detalle: "1 elemento por paño: 6.64 (+17 %)" });
+      }
+    }
   }
   // condensacion del vector de empotramiento por los giros liberados (viga horizontal L = 6, w = 2 kN/m hacia abajo)
   const Lb = 6, w = 2, a = [0, 0, 0], b = [Lb, 0, 0];

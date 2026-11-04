@@ -81,8 +81,51 @@ const N = (v: number | undefined, def = 0): string => {
   return String(Number(x.toPrecision(7)));
 };
 
-export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks {
+/** Lado máximo (m) del sub-paño de membrana para `tamMembrana` (OPT-IN, por defecto 0 = un elemento por paño). Medido contra ETABS 22.6 en el galpón del mercado (cubierta metálica,
+ *  paños de 1×6 m, `OBJMESHTYPE "DEFAULT"`): con 1.25 m (= FLOORMESHMAXSIZE por defecto) los cordones inferiores dan
+ *  P 2.21/4.29/4.52/2.93 kN contra 2.24/4.31/4.53/2.92 de ETABS (con 1 elemento por paño: 3.15/5.01/5.02/3.21), y
+ *  Ux/Uy rms pasan de 69 %/50 % a 13 %/11 % (galpón 2: 74 %/27 % → 7 %/8 %). Un solo Q4 de relación 6:1 es demasiado
+ *  rígido en el plano. ⚠️ No es por defecto porque las reacciones de los nudos de CORTE del borde libre (y = 91.4) empeoran
+ *  (Fx rms 12 % → 27 %, Fy 59 % → 111 %); ver registros/2026-11-03_galpon_recortado_vs_etabs.md. */
+export const TAM_MEMBRANA_ETABS = 1.25;
+
+export interface OpcionesE2kHeks {
+  /** Subdivide cada paño de MEMBRANA (cuadrilátero, p.ej. la cubierta metálica) en n×n sub-paños (opt-in). Los nudos nuevos del
+   *  borde parten las barras que pasan por él (como el cosido). 0/1 = un elemento por paño. */
+  mallaMembrana?: number;
+  /** Alternativa en metros: lado máximo del sub-paño (cada dirección se divide en ceil(L/tam)). Tiene prioridad. Usa `TAM_MEMBRANA_ETABS`. */
+  tamMembrana?: number;
+}
+
+export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kHeks = {}): ResultadoE2kHeks {
   const m = parseE2k(texto, { brazosAuto: true, pesoBarrasAparte: true, losaUnaDireccion: true, metodoDirecto: true });
+  // sub-paños de membrana: se crean los nudos ANTES de coser (así parten las barras que pasan por el borde)
+  const nSub = Math.max(1, Math.floor(opc.mallaMembrana ?? 1));
+  const subMalla = new Map<number, number[][][]>();   // elemento → rejilla (n+1)×(n+1) de coordenadas
+  const tamSub = opc.tamMembrana ?? 0;
+  if (nSub > 1 || tamSub > 0) {   // tamMembrana: 0 lo apaga
+    const N0 = m.nodes as unknown as number[][], E0 = m.elements as unknown as number[][];
+    E0.forEach((el, e) => {
+      if (el.length !== 4) return;
+      const md = (m.elementInputs as any).shellModifiers?.get?.(e) as number[] | undefined;
+      if (!md || md[3] !== 0 || md[4] !== 0 || md[5] !== 0) return;   // solo membranas (flexión y cortante transversal anulados)
+      const P = el.map((n) => N0[n]), rej: number[][][] = [];
+      const dl = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      const nu = tamSub > 0 ? Math.max(1, Math.ceil(dl(P[0], P[1]) / tamSub - 1e-6)) : nSub;
+      const nv = tamSub > 0 ? Math.max(1, Math.ceil(dl(P[0], P[3]) / tamSub - 1e-6)) : nSub;
+      if (nu === 1 && nv === 1) return;
+      for (let i = 0; i <= nu; i++) { rej.push([]); for (let j = 0; j <= nv; j++) {
+        const u = i / nu, v = j / nv;
+        rej[i].push([0, 1, 2].map((k) => (1 - u) * (1 - v) * P[0][k] + u * (1 - v) * P[1][k] + u * v * P[2][k] + (1 - u) * v * P[3][k]));
+      } }
+      subMalla.set(e, rej);
+      for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
+        if ((i === 0 || i === nu) && (j === 0 || j === nv)) continue;
+        (m.nodes as unknown as number[][]).push([...rej[i][j]]);
+        if (m.nodeNames) m.nodeNames.push(`${m.elementNames?.[e] ?? "A"}~${i}_${j}`);
+      }
+    });
+  }
   const inventario = inventarioDe(m, nombre);
   // El peso propio de cada barra ENTERA (antes de partirla), por coordenadas de sus extremos: es lo que ETABS
   // convierte en MASA (la mitad a cada nudo del objeto). Medido en el modelo sintético: repartiéndola por los
@@ -259,9 +302,24 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
   // ── Cáscaras (las celdas de la malla de cada losa) ──
   if (cascaras.length) {
     L.push("# cáscaras: shell id n1 n2 n3 n4 t E 0 rho   (las cargas de área ya van en los nudos)");
+    const kn = (p: number[]) => p.map((v) => Math.round(v * 1e4)).join("|");
+    const idxN = subMalla.size ? new Map(nodes.map((p, i) => [kn(p), i] as const)) : null;
+    const subIds: { id: number; e: number }[] = [];
+    let sigId = elements.length + 1;
     for (const e of cascaras) {
       const el = elements[e];
       const t = g(ei.thicknesses, e) ?? 0.1, E = g(ei.elasticities, e) ?? 2.5e7, rho = g(ei.densities, e) ?? 0;
+      const rej = subMalla.get(e);
+      if (rej && idxN) {
+        for (let i = 0; i < rej.length - 1; i++) for (let j = 0; j < rej[0].length - 1; j++) {
+          const c = [rej[i][j], rej[i + 1][j], rej[i + 1][j + 1], rej[i][j + 1]].map((p) => idxN.get(kn(p)));
+          if (c.some((v) => v === undefined)) continue;
+          const id = i === 0 && j === 0 ? e + 1 : sigId++;
+          if (id !== e + 1) subIds.push({ id, e });
+          L.push(`shell ${id} ${c.map((n) => n! + 1).join(" ")} ${N(t)} ${N(E)} 0 ${N(rho)}`);
+        }
+        continue;
+      }
       L.push(el.length === 3
         ? `tri ${e + 1} ${el[0] + 1} ${el[1] + 1} ${el[2] + 1} ${N(t)} ${N(E)} 0 ${N(rho)}`
         : `shell ${e + 1} ${el.map((n) => n + 1).join(" ")} ${N(t)} ${N(E)} 0 ${N(rho)}`);
@@ -276,9 +334,17 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k"): ResultadoE2kHeks
       cerrar(); ini = tp ? e + 1 : -1; ant = e + 1; tipoAnt = tp;
     }
     cerrar();
+    for (const { id, e } of subIds) {
+      const f = g(ei.plateFormulations, e);
+      const tp = f === undefined ? "" : (formulacionPorPf(f)?.clave ?? "thick");
+      if (tp) L.push(`shelltype ${id} ${tp}`);
+    }
     for (const e of cascaras) {
       const md = g(ei.shellModifiers, e) as number[] | undefined;
-      if (md && md.some((v) => v !== 1)) L.push(`shellmod ${e + 1} ${md.slice(0, 8).map((v) => N(v)).join(" ")}`);
+      if (md && md.some((v) => v !== 1)) {
+        L.push(`shellmod ${e + 1} ${md.slice(0, 8).map((v) => N(v)).join(" ")}`);
+        for (const { id, e: e0 } of subIds) if (e0 === e) L.push(`shellmod ${id} ${md.slice(0, 8).map((v) => N(v)).join(" ")}`);
+      }
     }
     // Tipo de OBJETO del e2k (PANEL/FLOOR) cuando no es el que da la geometría (17-oct-2026): los tramos de escalera
     // del TACNA son PANEL. Escritos como FLOOR, ETABS los conecta de otra forma: UY del techo +5.8 % (con PANEL −0.15 %).
