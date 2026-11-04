@@ -56,7 +56,7 @@ export async function correr() {
     // Ux/Uy: del orden de 0.1-0.25 mm (cubierta membrana + correas articuladas); cota provisional, ≤ 20 % del desplazamiento maximo
     for (const k of [0, 1]) {
       const p = 100 * pk[k] / umax;
-      filas.push({ que: `${pat}: U${"xy"[k]} peor nudo / desplazamiento maximo`, crudo: true, medido: `${p.toFixed(1)} % (${(pk[k] * 1000).toFixed(3)} mm)`, limite: "<= 20 %", ok: p <= 20, detalle: "ABIERTO: ~0.1 mm en la linea x = 30 m (no es la membrana ni los brazos: ver bitacora)" });
+      filas.push({ que: `${pat}: U${"xy"[k]} peor nudo / desplazamiento maximo`, crudo: true, medido: `${p.toFixed(1)} % (${(pk[k] * 1000).toFixed(3)} mm)`, limite: "<= 5 %", ok: p <= 5, detalle: "antes 15 %: la membrana ignoraba los nudos que cuelgan de su borde (edge constraint de ETABS), ver bitacora" });
     }
     // 4. CUBIERTA INCLINADA: las vigas de un paño se buscaban a la cota de su primer nudo; en un tejado con pendiente
     //    se descartaban las del lado alto y toda la carga caía en la del lado bajo (esquinas x = 24: 8.06 y 2.46 kN contra 7.02 y 1.42 de ETABS).
@@ -70,12 +70,12 @@ export async function correr() {
     filas.push({ que: `${pat}: reaccion vertical total`, crudo: true, medido: `${fz.toFixed(3)} kN (${dif >= 0 ? "+" : ""}${dif.toFixed(2)} %)`, limite: `ETABS ${e.toFixed(3)} ±${tol} %`,
       ok: Math.abs(dif) <= tol, detalle: pat === "Dead" ? "+0.5 % = peso: ETABS descuenta mas longitud de brazos automaticos en vigas y el area poligonal de los CFT" : "" });
   }
-  // 5. MEMBRANA DE CUBIERTA (opt-in `tamMembrana`): cada paño de 1×6 m es UN Q4 de relacion 6:1, demasiado rigido en el plano.
+  // 5. MEMBRANA DE CUBIERTA partida en los nudos de su borde (`membranaEnNudos`, defecto; ya no hace falta `tamMembrana`): cada paño de 1×6 m es UN Q4 de relacion 6:1, demasiado rigido en el plano.
   //    Subdividido a 1.25 m (= FLOORMESHMAXSIZE por defecto) el empuje horizontal casa con ETABS (cordones inferiores y Fx de
   //    los apoyos) y Ux/Uy rms bajan de 69 %/50 % a 13 %/11 %. Sin la opcion, el comportamiento anterior no cambia (filas de arriba).
   {
     const log2 = console.log, warn2 = console.warn, info2 = console.info; console.log = () => {}; console.warn = () => {}; console.info = () => {};
-    let r2; try { r2 = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", { tamMembrana: mod.TAM_MEMBRANA_ETABS }); }
+    let r2; try { r2 = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", {}); }
     finally { console.log = log2; console.warn = warn2; console.info = info2; }
     const f2 = join(dir, "g_mem.heks"); writeFileSync(f2, r2.heks);
     const resolver2 = async (pat) => {
@@ -94,7 +94,7 @@ export async function correr() {
       }
       for (const k of [0, 1]) {
         const rel = 100 * Math.sqrt(sq[k] / (sr[k] || 1));
-        filas.push({ que: `${pat}: U${"xy"[k]} rms relativo con membrana a 1.25 m`, crudo: true, medido: `${rel.toFixed(1)} %`, limite: "<= 20 % (1 elemento por paño: 50-70 %)", ok: rel <= 20, detalle: "tamMembrana: 1.25" });
+        filas.push({ que: `${pat}: U${"xy"[k]} rms relativo con la membrana partida en los nudos del borde`, crudo: true, medido: `${rel.toFixed(1)} %`, limite: "<= 12 % (sin partir: 48-70 %)", ok: rel <= 12, detalle: "membranaEnNudos (defecto): edge constraint de ETABS" });
       }
       if (pat === "Live") {
         const A = s.analyzeOutputs, el = new Map();

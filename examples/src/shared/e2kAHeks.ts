@@ -96,6 +96,11 @@ export interface OpcionesE2kHeks {
   mallaMembrana?: number;
   /** Alternativa en metros: lado máximo del sub-paño (cada dirección se divide en ceil(L/tam)). Tiene prioridad. Usa `TAM_MEMBRANA_ETABS`. */
   tamMembrana?: number;
+  /** Parte cada paño de MEMBRANA en las posiciones de los nudos que ya tocan sus bordes (extremos de barras que llegan a la mitad del
+   *  borde, p.ej. el tubo que cruza la correa). Es lo que hace el «edge constraint» de ETABS (ADDRESTRAINT): sin nudos inventados. Se puede
+   *  combinar con `tamMembrana`. Por defecto SI (false lo apaga). Medido en el galpon del mercado (nudos de la linea x = 30 m que cuelgan del borde de
+   *  los paños de 6 m): Ux/Uy rms 68 %/48 % → 9 %/6 %, cordones Tubo 50 y Fx de los apoyos de corte a 1 % de ETABS. */
+  membranaEnNudos?: boolean;
 }
 
 export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kHeks = {}): ResultadoE2kHeks {
@@ -104,7 +109,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   const nSub = Math.max(1, Math.floor(opc.mallaMembrana ?? 1));
   const subMalla = new Map<number, number[][][]>();   // elemento → rejilla (n+1)×(n+1) de coordenadas
   const tamSub = opc.tamMembrana ?? 0;
-  if (nSub > 1 || tamSub > 0) {   // tamMembrana: 0 lo apaga
+  if (nSub > 1 || tamSub > 0 || (opc.membranaEnNudos ?? true)) {   // tamMembrana: 0 lo apaga
     const N0 = m.nodes as unknown as number[][], E0 = m.elements as unknown as number[][];
     E0.forEach((el, e) => {
       if (el.length !== 4) return;
@@ -112,11 +117,29 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
       if (!md || md[3] !== 0 || md[4] !== 0 || md[5] !== 0) return;   // solo membranas (flexión y cortante transversal anulados)
       const P = el.map((n) => N0[n]), rej: number[][][] = [];
       const dl = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-      const nu = tamSub > 0 ? Math.max(1, Math.ceil(dl(P[0], P[1]) / tamSub - 1e-6)) : nSub;
-      const nv = tamSub > 0 ? Math.max(1, Math.ceil(dl(P[0], P[3]) / tamSub - 1e-6)) : nSub;
+      // posiciones (fracción del lado) de los nudos existentes sobre los bordes: u = P0P1 y P3P2, v = P0P3 y P1P2
+      const sobre = (a: number[], b: number[]): number[] => {
+        const L2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 + (b[2] - a[2]) ** 2, r: number[] = [];
+        for (const q of N0) {
+          const t = ((q[0] - a[0]) * (b[0] - a[0]) + (q[1] - a[1]) * (b[1] - a[1]) + (q[2] - a[2]) * (b[2] - a[2])) / L2;
+          if (t <= 1e-4 || t >= 1 - 1e-4) continue;
+          if (Math.hypot(a[0] + t * (b[0] - a[0]) - q[0], a[1] + t * (b[1] - a[1]) - q[1], a[2] + t * (b[2] - a[2]) - q[2]) < 1e-3) r.push(t);
+        }
+        return r;
+      };
+      const unico = (xs: number[]): number[] => { const o: number[] = [0]; for (const x of xs.sort((a, b) => a - b)) if (x - o[o.length - 1] > 1e-3) o.push(x); if (1 - o[o.length - 1] > 1e-3) o.push(1); else o[o.length - 1] = 1; return o; };
+      let us = [0, 1], vs = [0, 1];
+      const lu = dl(P[0], P[1]), lv = dl(P[0], P[3]);
+      const nu0 = tamSub > 0 ? Math.max(1, Math.ceil(lu / tamSub - 1e-6)) : nSub, nv0 = tamSub > 0 ? Math.max(1, Math.ceil(lv / tamSub - 1e-6)) : nSub;
+      const baseU: number[] = [], baseV: number[] = [];
+      for (let i = 1; i < nu0; i++) baseU.push(i / nu0);
+      for (let j = 1; j < nv0; j++) baseV.push(j / nv0);
+      if (opc.membranaEnNudos ?? true) { baseU.push(...sobre(P[0], P[1]), ...sobre(P[3], P[2])); baseV.push(...sobre(P[0], P[3]), ...sobre(P[1], P[2])); }
+      us = unico(baseU); vs = unico(baseV);
+      const nu = us.length - 1, nv = vs.length - 1;
       if (nu === 1 && nv === 1) return;
       for (let i = 0; i <= nu; i++) { rej.push([]); for (let j = 0; j <= nv; j++) {
-        const u = i / nu, v = j / nv;
+        const u = us[i], v = vs[j];
         rej[i].push([0, 1, 2].map((k) => (1 - u) * (1 - v) * P[0][k] + u * (1 - v) * P[1][k] + u * v * P[2][k] + (1 - u) * v * P[3][k]));
       } }
       subMalla.set(e, rej);
