@@ -138,3 +138,4 @@ validation/04-cimentaciones-safe/radier-mod002/
 # Modelos de clientes: PRIVADOS (nunca al repo ni al deploy)
 validation/modelos/privado/
 registros/*quispe*
+cli/sap2000_trab/
