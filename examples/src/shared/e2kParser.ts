@@ -1849,8 +1849,19 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         densities.set(ei, ((mat?.density ?? 0) * hormigon + d.w) / d.tc);
         deckSections.set(ei, { ...d });
       }
-      if (sp.unaDir && opciones.losaUnaDireccion)
-        unaDirArea.set(ei, { ang: aa.ang ?? 0, diaph: aa.diaph ? idDiafragma(aa.diaph, aa.story) : undefined, pano: unicos });
+      if (sp.unaDir && opciones.losaUnaDireccion) {
+        // ETABS (medido por OAPI, 6-nov-2026): el reparto en un sentido sigue el eje local solo con pendiente <= 20 grados; por encima va por la linea de
+        // maxima pendiente (a los bordes de arriba y de abajo) y las correas horizontales no reciben nada, con cualquier ANG.
+        let angU = aa.ang ?? 0;
+        const P3 = unicos.map((n) => nodes[n] as unknown as number[]);
+        if (P3.length >= 3 && P3.every((q) => q && q.length >= 3)) {
+          let nx = 0, ny = 0, nz = 0;
+          for (let k = 0; k < P3.length; k++) { const u = P3[k], v = P3[(k + 1) % P3.length]; nx += u[1] * v[2] - u[2] * v[1]; ny += u[2] * v[0] - u[0] * v[2]; nz += u[0] * v[1] - u[1] * v[0]; }
+          const nn = Math.hypot(nx, ny, nz);
+          if (nn > 1e-12 && Math.acos(Math.min(1, Math.abs(nz) / nn)) * 180 / Math.PI > 20 + 1e-6) angU = Math.atan2(-ny * Math.sign(nz || 1), -nx * Math.sign(nz || 1)) * 180 / Math.PI;
+        }
+        unaDirArea.set(ei, { ang: angU, diaph: aa.diaph ? idDiafragma(aa.diaph, aa.story) : undefined, pano: unicos });
+      }
       const esMembrana = /membrane/i.test(sp.modeling);
       plateFormulations.set(ei, /thick/i.test(sp.modeling) || esMembrana ? 0 : 1);
       const m = sp.mods ? sp.mods.slice(0, 8) : [1, 1, 1, 1, 1, 1, 1, 1];

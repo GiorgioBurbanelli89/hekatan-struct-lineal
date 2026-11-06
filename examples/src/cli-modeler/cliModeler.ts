@@ -56,6 +56,7 @@ import { recta, arcoPor3Puntos, polilinea, longitudCurva, transfinita, type Curv
 import { pavimentar } from "./pavimentador";
 import { placaAT } from "hekatan-fem";
 import { brazosAutomaticosETABS } from "../shared/brazosAutomaticos";
+import { condensarCargaPorLiberaciones } from "../shared/cargaBarraConsistente";
 import { FORMULACIONES_PLACA, formulacionPorPalabra } from "../shared/formulacionesPlaca";
 import * as THREE from "three";
 import { cftSectionEc, cftPipeSectionEc, iSectionCsi, tubeSectionCsi, channelSectionCsi, dblAngleSectionCsi } from "../shared/cadSections";
@@ -1553,6 +1554,13 @@ function aplicarDeckEtabs(m: ParsedModel) {
       nrm = v3scale(nrm, 1 / v3norm(nrm)); const u1 = v3scale(e1, 1 / v3norm(e1)); const u2 = v3cross(nrm, u1);
       const ang = ((m.shellAngles.get(s.id) ?? 0) * Math.PI) / 180;
       spanDir = [0, 1, 2].map(k => Math.cos(ang) * u1[k] + Math.sin(ang) * u2[k]) as V3;
+      // ETABS (medido por OAPI, 6-nov-2026): el reparto en un sentido solo sigue el eje local con pendiente <= 20 grados; por encima, la carga va por la
+      // linea de maxima pendiente (a los bordes de arriba y de abajo) y las correas horizontales no reciben nada, con cualquier eje local.
+      const inclin = Math.acos(Math.min(1, Math.abs(nrm[2]))) * 180 / Math.PI;
+      if (inclin > 20 + 1e-6) {
+        const g: V3 = [-nrm[0] * nrm[2], -nrm[1] * nrm[2], 1 - nrm[2] * nrm[2]];   // proyeccion de la vertical al plano = linea de maxima pendiente
+        const gn = v3norm(g); if (gn > 1e-9) spanDir = v3scale(g, 1 / gn);
+      }
     }
     const regiones = muestrasTributarias(p, 200, spanDir);
     for (let k = 0; k < 4; k++) {
@@ -1582,8 +1590,18 @@ function aplicarDeckEtabs(m: ParsedModel) {
           F3 += 3*xi*xi - 2*xi*xi*xi;      M4 += L * (-xi*xi + xi*xi*xi);
         }
         const dP = qz * dA;
-        acum(f.nI, [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1]);
-        acum(f.nJ, [0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4]);
+        // vector consistente de la barra (globales), condensado por sus releases (una correa articulada no transmite el momento de empotramiento al nudo)
+        const w = condensarCargaPorLiberaciones(
+          [0, 0, dP * F1, txw[0] * dP * M1, txw[1] * dP * M1, txw[2] * dP * M1, 0, 0, dP * F3, txw[0] * dP * M4, txw[1] * dP * M4, txw[2] * dP * M4],
+          pi, pj, m.frameReleases.get(f.id));
+        acum(f.nI, w.slice(0, 6)); acum(f.nJ, w.slice(6, 12));
+        // (6-nov-2026) la carga es de la BARRA: ademas del equivalente nodal, su opuesto como empotramiento (`fixedend`), igual que e2kAHeks.
+        // Sin esto, una correa articulada en sus extremos no recibia la carga (V = M = 0 en la barra, todo a las principales).
+        {
+          const mp = m.fixedEndPat.get("Dead") ?? m.fixedEndPat.set("Dead", new Map()).get("Dead")!;
+          const v = mp.get(f.id) ?? new Array(12).fill(0);
+          mp.set(f.id, v.map((x, q) => x - w[q]));
+        }
       }
     }
     m.deckTributario.add(s.id);
