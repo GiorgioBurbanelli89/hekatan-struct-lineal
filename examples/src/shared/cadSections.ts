@@ -290,16 +290,21 @@ export function cftSectionEc(
  *  escalado por n); J EXACTO: en circulos concentricos no hay alabeo, asi que
  *  J = Js + (Gc/Gs)·Jc — lo mismo que da Saint-Venant. */
 export function cftPipeSectionEc(
-  D: number, t: number, Es: number, nuS: number, Ec: number, nuC: number,
+  D: number, t: number, Es: number, nuS: number, Ec: number, nuC: number, lados = 0,
 ): SectionProps & { Es: number; Gs: number; A_steel: number; A_conc: number; As2: number; As3: number; n: number; Ec: number } {
   const n = Ec / Es, d = D - 2 * t, R = D / 2, r = d / 2;
-  const A_steel = Math.PI * (D * D - d * d) / 4, A_conc = Math.PI * d * d / 4;
-  const Is = Math.PI * (D ** 4 - d ** 4) / 64, Ic = Math.PI * d ** 4 / 64;
-  const A = A_steel + n * A_conc, I = Is + n * Ic;
+  // `lados` > 2: el circulo se sustituye por un poligono regular inscrito (ETABS: 32 lados; SAP2000 SD: 48).
+  // A = N/2·R²·sen(2π/N); I = A·R²/12·(1 + 2cos²(π/N)) (cualquier eje); 0 = circulo exacto.
+  const pol = (Rr: number) => { const N = lados, A = N / 2 * Rr * Rr * Math.sin(2 * Math.PI / N); return { A, I: A * Rr * Rr / 12 * (1 + 2 * Math.cos(Math.PI / N) ** 2) }; };
+  const ext = lados > 2 ? pol(R) : { A: Math.PI * R * R, I: Math.PI * R ** 4 / 4 };
+  const int = lados > 2 ? pol(r) : { A: Math.PI * r * r, I: Math.PI * r ** 4 / 4 };
+  const A_steel = Math.PI * (D * D - d * d) / 4, A_conc = Math.PI * d * d / 4;   // PESO: ETABS pesa con el area EXACTA del circulo
+  const Aps = ext.A - int.A, Is = ext.I - int.I, Ic = int.I;                       // rigidez: poligono
+  const A = Aps + n * int.A, I = Is + n * Ic;
   const Gs = Es / (2 * (1 + nuS)), Gc = Ec / (2 * (1 + nuC));
   const w = (y: number) => 2 * Math.sqrt(Math.max(0, R * R - y * y)) - (Math.abs(y) < r ? (1 - n) * 2 * Math.sqrt(Math.max(0, r * r - y * y)) : 0);
   const As = areaCortanteTimoshenkoW(w, -R, R, 8000);
-  const J = Math.PI * (D ** 4 - d ** 4) / 32 + (Gc / Gs) * Math.PI * d ** 4 / 32;
+  const J = 2 * Is + (Gc / Gs) * 2 * Ic;     // polar = 2·I (exacto en circulo; en el poligono, aproximado: el J de ETABS no esta medido)
   return { A, Iz: I, Iy: I, J, Es, Gs, A_steel, A_conc, As2: As, As3: As, n, Ec };
 }
 

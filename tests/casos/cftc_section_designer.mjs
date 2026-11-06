@@ -54,8 +54,8 @@ export async function correr() {
   writeFileSync(join(dirE, "hekatan_cftc.e2k"), e2k, "utf-8");
   const fsp = /SHAPE\s+"Filled Steel Pipe"\s+D\s+300\s+T\s+10\s+FILLMATERIAL\s+"ConcFill_1"/.test(e2k);
   filas.push({ que: "el e2k lleva la CFT redonda como Filled Steel Pipe D 300 T 10", crudo: true, medido: fsp ? "Filled Steel Pipe" : "no esta", limite: "Filled Steel Pipe", ok: fsp, detalle: "la parametrica de ETABS; N y mm" });
-  const q2 = mod.parseE2k(e2k); const i = [...q2.sectionShapes.entries()].find(([, s]) => s.type === "CFT")?.[0]; const s2 = i !== undefined ? q2.sectionShapes.get(i) : null;
-  const okE = !!s2 && Math.abs(s2.d - 0.3) < 1e-9 && Math.abs(s2.tw - 0.01) < 1e-9 && pct(q2.elementInputs.areas.get(i), c.A) < 1e-6 && pct(q2.elementInputs.torsionalConstants.get(i), c.J) < 1e-6;
-  filas.push({ que: "parseE2k devuelve CFT redonda con A/As/J exactos", crudo: true, medido: s2 ? `d=${s2.d} tw=${s2.tw} A=${q2.elementInputs.areas.get(i).toPrecision(6)}` : "sin CFT", limite: `d=0.3 tw=0.01 A=${c.A.toPrecision(6)}`, ok: okE, detalle: "antes no existia el caso Filled Steel Pipe" });
+  const c32 = mod.cftPipeSectionEc(0.3, 0.01, 2e8, 0.3, 2.5e7, 0.2, 32); const q2 = mod.parseE2k(e2k); const i = [...q2.sectionShapes.entries()].find(([, s]) => s.type === "CFT")?.[0]; const s2 = i !== undefined ? q2.sectionShapes.get(i) : null;
+  const okE = !!s2 && Math.abs(s2.d - 0.3) < 1e-9 && Math.abs(s2.tw - 0.01) < 1e-9 && pct(q2.elementInputs.areas.get(i), c32.A) < 1e-6 && pct(q2.elementInputs.torsionalConstants.get(i), c32.J) < 1e-6;   // e2k = ETABS: poligono de 32 lados
+  filas.push({ que: "parseE2k devuelve CFT redonda con A/J del poligono de 32 lados (ETABS)", crudo: true, medido: s2 ? `d=${s2.d} tw=${s2.tw} A=${q2.elementInputs.areas.get(i).toPrecision(6)}` : "sin CFT", limite: `d=0.3 tw=0.01 A=${c32.A.toPrecision(6)}`, ok: okE, detalle: "antes no existia el caso Filled Steel Pipe" });
   return filas;
 }

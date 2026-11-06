@@ -301,7 +301,7 @@ def desde_texto_e2k(texto: str, *, origen: str = "", comportamiento: str | None 
                     Ec = f["E"] or m["E"] * 0.125
                     if sh == "Filled Steel Pipe":
                         t_ = T or TW or TF
-                        c = cftc_props(D, t_, m["E"], m["nu"], Ec, f["nu"])
+                        c = cftc_props(D, t_, m["E"], m["nu"], Ec, f["nu"], 32)
                         di = D - 2 * t_
                         Ac = math.pi * di * di / 4
                         As_ = math.pi * D * D / 4 - Ac

@@ -124,7 +124,7 @@ def area_cortante_timoshenko_w(w_de, y_min: float, y_max: float, n_div: int = 80
     return I * I / den if den > 0 else 0.0
 
 
-def cftc_props(D: float, t: float, Es: float, nuS: float, Ec: float, nuC: float) -> dict:
+def cftc_props(D: float, t: float, Es: float, nuS: float, Ec: float, nuC: float, lados: int = 0) -> dict:
     """CFT CIRCULAR (tubo redondo relleno). A e I transformadas exactas; As Timoshenko
     sobre la sección transformada; J = Js + (Gc/Gs)·Jc, exacto en círculos concéntricos.
     OJO: SAP2000 (SD) y ETABS (Filled Steel Pipe) POLIGONIZAN el círculo (48 y 32
@@ -132,10 +132,20 @@ def cftc_props(D: float, t: float, Es: float, nuS: float, Ec: float, nuC: float)
     n = Ec / Es
     d = D - 2 * t
     R, r = D / 2, d / 2
-    A_s = math.pi * (D * D - d * d) / 4
+    def pol(Rr):
+        # lados > 2: poligono regular inscrito (ETABS 32, SAP2000 SD 48); 0 = circulo exacto
+        if lados > 2:
+            N = lados
+            Ap = N / 2 * Rr * Rr * math.sin(2 * math.pi / N)
+            return Ap, Ap * Rr * Rr / 12 * (1 + 2 * math.cos(math.pi / N) ** 2)
+        return math.pi * Rr * Rr, math.pi * Rr ** 4 / 4
+    Ae, Ie = pol(R)
+    Ai, Ii = pol(r)
+    A_s = math.pi * (D * D - d * d) / 4     # peso: area exacta (ETABS pesa con el circulo)
     A_c = math.pi * d * d / 4
-    Is = math.pi * (D ** 4 - d ** 4) / 64
-    Ic = math.pi * d ** 4 / 64
+    Aps = Ae - Ai
+    Is = Ie - Ii
+    Ic = Ii
     Gs, Gc = Es / (2 * (1 + nuS)), Ec / (2 * (1 + nuC))
 
     def w(y):
@@ -144,6 +154,6 @@ def cftc_props(D: float, t: float, Es: float, nuS: float, Ec: float, nuC: float)
         return ext - nuc
 
     As = area_cortante_timoshenko_w(w, -R, R)
-    J = math.pi * (D ** 4 - d ** 4) / 32 + (Gc / Gs) * math.pi * d ** 4 / 32
-    return {"A": A_s + n * A_c, "I33": Is + n * Ic, "I22": Is + n * Ic, "J": J, "As2": As, "As3": As,
+    J = 2 * Is + (Gc / Gs) * 2 * Ic
+    return {"A": Aps + n * Ai, "I33": Is + n * Ic, "I22": Is + n * Ic, "J": J, "As2": As, "As3": As,
             "n": n, "A_s": A_s, "A_c": A_c}

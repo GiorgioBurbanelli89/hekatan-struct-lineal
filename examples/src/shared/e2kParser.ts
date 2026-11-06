@@ -1390,7 +1390,7 @@ export function parseE2k(text: string, opciones: OpcionesE2k = {}): E2kModel {
         const fill = sec.fillMaterial ? materials.get(sec.fillMaterial) : undefined;
         const Ef = fill?.E || Es * 0.125;
         const t = sec.T || tw || tf;
-        const c = cftPipeSectionEc(D, t, Es || 1, mat?.nu ?? 0.3, Ef || 0.125, fill?.nu ?? 0.2);
+        const c = cftPipeSectionEc(D, t, Es || 1, mat?.nu ?? 0.3, Ef || 0.125, fill?.nu ?? 0.2, 32);   // ETABS poligoniza a 32 lados
         A = c.A; Iz = c.Iz; Iy = c.Iy; J = c.J; AsZ = c.As2; AsY = c.As3;
         fillE = Ef; esPipeRelleno = true;
         if (mat?.density && fill?.density && c.A > 0) cftPesoEf.set(elemIdx, (c.A_steel * mat.density + c.A_conc * fill.density) / c.A);
