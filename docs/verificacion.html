@@ -8,19 +8,19 @@
 :root{
   --bg:#f7f8fa; --panel:#ffffff; --ink:#1b2430; --mute:#5b6675; --line:#d9dee6;
   --ok:#1a7f4b; --ok-bg:#dff3e8; --mid:#9a6700; --mid-bg:#fbefc9; --bad:#b42318; --bad-bg:#fadcd9;
-  --hek:#2457c5; --sap:#1b2430; --grid:#e3e7ee; --code:#eef1f6;
+  --hek:#2457c5; --sap:#1b2430; --sap2:#b3541e; --grid:#e3e7ee; --code:#eef1f6;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#10141a; --panel:#181e27; --ink:#e6eaf0; --mute:#97a3b3; --line:#2b3441;
     --ok:#4cc38a; --ok-bg:#16382a; --mid:#e0b04a; --mid-bg:#3a2f12; --bad:#ff7b6e; --bad-bg:#46211d;
-    --hek:#7aa2ff; --sap:#e6eaf0; --grid:#252d39; --code:#1f2733;
+    --hek:#7aa2ff; --sap:#e6eaf0; --sap2:#f0a060; --grid:#252d39; --code:#1f2733;
   }
 }
 :root[data-theme="dark"]{
   --bg:#10141a; --panel:#181e27; --ink:#e6eaf0; --mute:#97a3b3; --line:#2b3441;
   --ok:#4cc38a; --ok-bg:#16382a; --mid:#e0b04a; --mid-bg:#3a2f12; --bad:#ff7b6e; --bad-bg:#46211d;
-  --hek:#7aa2ff; --sap:#e6eaf0; --grid:#252d39; --code:#1f2733;
+  --hek:#7aa2ff; --sap:#e6eaf0; --sap2:#f0a060; --grid:#252d39; --code:#1f2733;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
@@ -64,7 +64,7 @@ a{color:var(--hek)}
   <span class="tag t-ok">coincide &lt; 1 %</span>
   <span class="tag t-mid">aceptable &lt; 5 %</span>
   <span class="tag t-bad">abierto ≥ 5 %</span>
-  <p class="sub" style="margin-bottom:0">ETABS 22 se usa como referencia (corrido por OAPI, no es un oráculo perfecto). SAP IV (Berkeley 1973) es un tercer programa, de otro código y otra época, que sirve para saber si una diferencia viene del elemento o del modelo.</p>
+  <p class="sub" style="margin-bottom:0">ETABS 22 se usa como referencia (corrido por OAPI, no es un oráculo perfecto). SAP IV (Berkeley 1973) es un tercer programa, de otro código y otra época, que sirve para saber si una diferencia viene del elemento o del modelo. SAP2000 24 es de la misma casa que ETABS y sirve para ver si ETABS se parece a su hermano.</p>
 </div>
 
 <h2>1. Tabla de coincidencia</h2>
@@ -72,22 +72,23 @@ a{color:var(--hek)}
 <table>
 <thead><tr><th>Caso</th><th>Hekatan vs ETABS</th><th>SAP IV vs ETABS</th><th>SAP2000</th><th>Estado</th></tr></thead>
 <tbody>
-<tr><td>Membrana Q4, 17 geometrías (cuadrado, 1:2, 1:4, 1:6, paralelogramo, trapecio, inclinada 3D)</td><td class="n">≤ 6e-7 %</td><td class="n">no aplica</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Viga voladizo (solución analítica)</td><td class="n">—</td><td class="n">Uz 1.5e-5 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Pórtico 1 vano plano, Dead / Live (Uz)</td><td class="n">0.20 % / 0.20 %</td><td class="n">0.20 % / 0.20 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Pórtico 1 vano plano, lateral LATX (Ux / Uy / Uz)</td><td class="n">0.96 / 1.13 / 1.17 %</td><td class="n">0.96 / 1.13 / 1.22 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Pórtico 1 vano plana / 3 % / 10 % (test, 93 comprobaciones)</td><td class="n">93/93 dentro del límite</td><td class="n">solo la plana</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Galpón simple plano, Dead (Uz)</td><td class="n">0.012 %</td><td class="n">0.013 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Galpón simple plano, LATX (Ux / Uy / Uz)</td><td class="n">0.14 / 0.31 / 0.14 %</td><td class="n">0.19 / 0.42 / 0.19 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Galpón simple pendiente 3 %, Dead (Uz)</td><td class="n">0.078 %</td><td class="n">0.075 %</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Membrana Q4, 17 geometrías (cuadrado, 1:2, 1:4, 1:6, paralelogramo, trapecio, inclinada 3D)</td><td class="n">≤ 6e-7 %</td><td class="n">no aplica</td><td class="n">no corrido</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Viga voladizo (solución analítica)</td><td class="n">—</td><td class="n">Uz 1.5e-5 %</td><td class="n">no corrido</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Pórtico 1 vano plano, Dead / Live (Uz)</td><td class="n">0.20 % / 0.20 %</td><td class="n">0.20 % / 0.20 %</td><td class="n">no corrido</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Pórtico 1 vano plano, lateral LATX (Ux / Uy / Uz)</td><td class="n">0.96 / 1.13 / 1.17 %</td><td class="n">0.96 / 1.13 / 1.22 %</td><td class="n">no corrido</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Pórtico 1 vano plana / 3 % / 10 % (test, 93 comprobaciones)</td><td class="n">93/93 dentro del límite</td><td class="n">solo la plana</td><td class="n">no corrido</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Galpón simple plano, Dead (Uz)</td><td class="n">0.012 %</td><td class="n">0.013 %</td><td class="n">0.16 %</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Galpón simple plano, LATX (Ux / Uy / Uz)</td><td class="n">0.14 / 0.31 / 0.14 %</td><td class="n">0.19 / 0.42 / 0.19 %</td><td class="n">0.09 % (Ux)</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Galpón simple pendiente 3 %, Dead (Uz)</td><td class="n">0.078 %</td><td class="n">0.075 %</td><td class="n">0.22 %</td><td><span class="tag t-ok">coincide</span></td></tr>
+<tr><td>Galpón simple, variantes SAP2000 vs ETABS: plana / pendiente / corte / rot90</td><td class="n">—</td><td class="n">—</td><td class="n">Dead Uz 0.16 / 0.22 / 0.08 / 0.30 %<br>Live Uz 0.01 / 0.05 / 0.05 / 0.59 %<br>LATX Ux 0.09 / 0.07 / 0.00 / 0.10 %</td><td><span class="tag t-ok">coincide</span></td></tr>
 <tr><td>Ejemplos propios de SAP IV (8 de SAP-32-64, 9 PCDOS, 7 FUJITSU) contra su salida original</td><td class="n">no aplica</td><td class="n">dif. 0 a 1e-5 (último dígito impreso)</td><td><span class="tag t-na">no aplica</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Mercado completo (7529 nudos), Dead: Ux / Uy / Uz</td><td class="n">1.09 / 4.07 / 1.72 %</td><td class="n">no corrido</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-mid">aceptable</span></td></tr>
-<tr><td>Mercado completo, Live: Ux / Uy / Uz</td><td class="n">2.28 / 7.11 / 1.99 %</td><td class="n">no corrido</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-bad">Uy abierto</span></td></tr>
-<tr><td>Mercado, reacciones por apoyo (366 apoyos) rms Fx / Fy / Fz</td><td class="n">0.3 / 1.8 / 0.3 %</td><td class="n">SAP IV no imprime reacciones</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-ok">coincide</span> <span class="tag t-mid">Fy aceptable</span></td></tr>
-<tr><td>Recorte de cercha (Dead): Ux / Uy / Uz</td><td class="n">11.4 / 8.6 / 1.3 %</td><td class="n">11.6 / 12.1 / 1.05 % (con tiras)</td><td><span class="tag t-na">en curso</span></td><td><span class="tag t-bad">abierto</span></td></tr>
+<tr><td>Mercado completo (7529 nudos), Dead: Ux / Uy / Uz</td><td class="n">1.09 / 4.07 / 1.72 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-mid">aceptable</span></td></tr>
+<tr><td>Mercado completo, Live: Ux / Uy / Uz</td><td class="n">2.28 / 7.11 / 1.99 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-bad">Uy abierto</span></td></tr>
+<tr><td>Mercado, reacciones por apoyo (366 apoyos) rms Fx / Fy / Fz</td><td class="n">0.3 / 1.8 / 0.3 %</td><td class="n">SAP IV no imprime reacciones</td><td class="n">sin probar</td><td><span class="tag t-ok">coincide</span> <span class="tag t-mid">Fy aceptable</span></td></tr>
+<tr><td>Recorte de cercha (Dead): Ux / Uy / Uz</td><td class="n">11.4 / 8.6 / 1.3 %</td><td class="n">11.6 / 12.1 / 1.05 % (con tiras)</td><td class="n">7 / 21 / 9 % (por coordenadas, 206 nudos)</td><td><span class="tag t-bad">abierto</span></td></tr>
 </tbody>
 </table>
-<p class="sub" style="margin:8px 0 0">Los Ux/Uy del galpón simple plano y de la pendiente son de micras (ruido), por eso la tabla usa Uz o el caso lateral. «SAP2000: en curso» = otro trabajo lo está corriendo; aquí no se inventa ninguna cifra.</p>
+<p class="sub" style="margin:8px 0 0">Los Ux/Uy del galpón simple plano y de la pendiente son de micras (ruido), por eso la tabla usa Uz o el caso lateral. SAP2000 24.1 (corrido por OAPI, como ETABS) contra ETABS; «no corrido / sin probar» = no se hizo, no se inventa ninguna cifra. La suma de Fz Dead de SAP2000 es +0.6 % sobre ETABS (SAP pesa los brazos automáticos, ETABS no).</p>
 </div>
 
 <h2>2. Gráfica: error contra ETABS (escala logarítmica)</h2>
@@ -97,9 +98,10 @@ a{color:var(--hek)}
     <span><i class="sw" style="background:var(--mid)"></i>aceptable &lt; 5 %</span>
     <span><i class="sw" style="background:var(--bad)"></i>abierto ≥ 5 %</span>
     <span><svg width="14" height="14" viewBox="-7 -7 14 14" style="display:inline-block;width:14px"><path d="M0-6 6 0 0 6-6 0Z" fill="none" stroke="var(--sap)" stroke-width="2"/></svg>SAP IV (si se corrió)</span>
+    <span><svg width="14" height="14" viewBox="-7 -7 14 14" style="display:inline-block;width:14px"><rect x="-5" y="-5" width="10" height="10" fill="none" stroke="var(--sap2)" stroke-width="2"/></svg>SAP2000 (si se corrió)</span>
   </div>
-  <svg id="grafica" viewBox="0 0 900 520" role="img" aria-label="Error de Hekatan y SAP IV contra ETABS por caso"></svg>
-  <p class="sub" style="margin:4px 0 0">Barra = Hekatan vs ETABS. Rombo = SAP IV vs ETABS. Valores por debajo de 0.001 % se dibujan en el borde izquierdo. El rombo casi siempre cae sobre la barra: dos programas distintos dan lo mismo.</p>
+  <svg id="grafica" viewBox="0 0 980 520" role="img" aria-label="Error de Hekatan, SAP IV y SAP2000 contra ETABS por caso"></svg>
+  <p class="sub" style="margin:4px 0 0">Barra = Hekatan vs ETABS. Rombo = SAP IV vs ETABS. Cuadrado = SAP2000 vs ETABS (el recorte de cercha se compara por coordenadas). Valores por debajo de 0.001 % se dibujan en el borde izquierdo. El rombo casi siempre cae sobre la barra: dos programas distintos dan lo mismo.</p>
 </div>
 
 <h2>3. Qué está abierto, y por qué</h2>
@@ -108,8 +110,12 @@ a{color:var(--hek)}
   <li><b>Mercado, Uy:</b> Dead 4.1 % y Live 7.1 %. No es global: el 67-72 % del error está en el plano z≈11 (cubierta metálica), donde el cordón inferior de las cerchas se arquea fuera de su plano ~1 mm y Hekatan lo arquea 12-20 % más. La torsión J de los tubos coincide con ETABS (se probó moviéndola), así que no es un dato de entrada.</li>
   <li><b>Cordón superior de la cercha (Dead, tramo x 81.7-82.7):</b> ETABS −0.41 kN, Hekatan −1.59 kN, SAP IV con tiras −1.37 kN. Que SAP IV (membrana de otra formulación, 1973) reproduzca a Hekatan indica que la diferencia <i>no está en el elemento</i>, sino en cómo ETABS une el panel 1×4 con los nudos de barra de sus aristas (edge constraint). Sin tiras SAP IV da −0.38, pero deja el cordón inferior 1.4 kN por encima: ETABS no es «todo unido» ni «nada unido».
     <div class="legend" style="margin-top:6px"><span>Axil cordón superior, kN:</span><span>ETABS −0.41</span><span>Hekatan −1.59</span><span>SAP IV con tiras −1.37</span><span>SAP IV sin tiras −0.38</span></div></li>
+  <li><b>SAP2000 24 (5-nov-2026):</b> mismo tramo, Dead: ETABS −0.41, <b>SAP2000 −0.51</b>, Hekatan −1.59, SAP IV con tiras −1.37 kN. En las 4 barras vecinas (x 79.7 a 83.7) SAP2000 sigue a ETABS, no a Hekatan. En 377 barras casadas, rms 0.55 kN = 2.9 % del pico (19 kN). Sin edge constraint SAP2000 da −0.47 y con la carga de área repartida a barras en un sentido −0.51: ninguna variante se acerca a −1.4 / −1.6.
+    <div class="legend" style="margin-top:6px"><span>Axil cordón superior, kN:</span><span>ETABS −0.41</span><span>SAP2000 −0.51</span><span>Hekatan −1.59</span><span>SAP IV con tiras −1.37</span></div>
+    <p class="sub" style="margin:6px 0 0"><b>Conclusión:</b> ETABS y SAP2000 coinciden en la unión panel–arista. Hekatan y SAP IV (otra formulación) coinciden entre sí y difieren de los dos. El punto abierto está en la unión panel–arista de Hekatan, no en el elemento.</p></li>
+  <li><b>Lo que SAP2000 no explica:</b> el recorte nodal SAP2000 vs ETABS da Ux 7 % / Uy 21 % / Uz 9 % (Dead), o sea que tampoco ellos coinciden del todo ahí; el tubo relleno CA1/CB1 se modeló como tubo de acero sin relleno y el offset de área −2 mm no se aplicó; el Dead de SAP2000 es +0.6 % por los brazos automáticos; SAP2000 19 y las reacciones no se probaron.</li>
   <li><b>Columnas CFT:</b> las propiedades de ETABS (A / I / J) difieren de las de Hekatan en 0.65 % / 1.3 % / 3.2 %. Con las de ETABS exactas el Live Ux del mercado baja de 2.28 a 1.93 %. Falta la fórmula (AISC I2) para no copiar el número.</li>
-  <li><b>Pendiente de cerrar:</b> emular el edge constraint de ETABS en SAP IV; reacciones de SAP IV (no las imprime); columna SAP2000.</li>
+  <li><b>Pendiente de cerrar:</b> emular el edge constraint de ETABS en SAP IV; reacciones de SAP IV (no las imprime); reacciones y fuerzas de barra del galpón en SAP2000; SAP2000 19.</li>
   <li><b>Límites de método:</b> ETABS es la referencia, no la verdad absoluta; SAP IV usa una membrana CST y para la cubierta se escala (tipo 6, espesor t/s); los cortes de recorte empotran el resto del edificio.</li>
 </ul>
 <p class="sub">Descartado con medida: reparto de carga de área, malla de la membrana (0.5 a 2 m), modificadores, ejes locales, offsets, liberaciones y J de los tubos.</p>
@@ -131,34 +137,35 @@ python cli/sap4_correr.py --sap4 ... --trab ... e2k tests/datos/e2k_cercha.e2k D
 <ul>
   <li><code>tests/datos/membrana_q4_etabs.json</code>, <code>tests/datos/e2k_*.e2k</code> y <code>e2k_*_ref.json</code> (ETABS 22 por OAPI)</li>
   <li><code>tests/datos/sap4_resultados.json</code> (SAP IV y Hekatan contra ETABS)</li>
+  <li><code>tests/datos/sap2000_*.json</code>, <code>cli/sap2000_e2k.py</code>, <code>cli/sap2000_vs_etabs.py</code>, <code>cli/sap2000_cercha_cmp.py</code> (SAP2000 contra ETABS; requiere licencia propia)</li>
   <li><code>tests/casos/*.mjs</code> (qué comprueba cada test)</li>
-  <li><code>registros/2026-11-03_membrana_q4_vs_etabs.md</code>, <code>2026-11-03_galpon_recortado_vs_etabs.md</code>, <code>2026-11-04_e2k_etabs_vs_hekatan_mercado.md</code>, <code>2026-11-05_sap4_oraculo.md</code></li>
+  <li><code>registros/2026-11-03_membrana_q4_vs_etabs.md</code>, <code>2026-11-03_galpon_recortado_vs_etabs.md</code>, <code>2026-11-04_e2k_etabs_vs_hekatan_mercado.md</code>, <code>2026-11-05_sap4_oraculo.md</code>, <code>2026-11-05_sap2000_galpon.md</code></li>
 </ul>
-<p><b>SAP IV</b> (Berkeley 1973, dominio público) no se incluye en este repo: ni binarios ni código. Origen: <a href="https://nisee.berkeley.edu/elibrary" rel="noopener">nisee.berkeley.edu/elibrary</a>. Los modelos de ETABS usados como referencia (mercado, riochico) son de terceros y tampoco se distribuyen.</p>
+<p><b>SAP IV</b> (Berkeley 1973, dominio público) no se incluye en este repo: ni binarios ni código. Origen: <a href="https://nisee.berkeley.edu/elibrary" rel="noopener">nisee.berkeley.edu/elibrary</a>. SAP2000 y ETABS son software comercial: no se incluyen binarios ni código de CSI. Los modelos de ETABS usados como referencia (mercado, riochico) son de terceros y tampoco se distribuyen.</p>
 </div>
 </main>
 
 <script>
 (function(){
-  // [etiqueta, Hekatan %, SAP IV % o null]. Valores de tests/datos/sap4_resultados.json y registros.
+  // [etiqueta, Hekatan %, SAP IV % o null, SAP2000 % o null]. Valores de tests/datos/sap4_resultados.json y registros.
   var datos = [
-    ["Viga voladizo (analítica) Uz",            null,   0.000015],
-    ["Pórtico plano Dead Uz",                   0.196,  0.199],
-    ["Pórtico plano Live Uz",                   0.198,  0.200],
-    ["Pórtico plano LATX Ux",                   0.959,  0.959],
-    ["Galpón simple Dead Uz",                   0.0117, 0.0126],
-    ["Galpón simple LATX Ux",                   0.143,  0.192],
-    ["Galpón simple LATY Uy",                   0.0003, 0.0014],
-    ["Galpón pendiente 3 % Dead Uz",            0.078,  0.075],
-    ["Mercado Dead Ux",                         1.09,   null],
-    ["Mercado Dead Uz",                         1.72,   null],
-    ["Mercado Dead Uy",                         4.07,   null],
-    ["Mercado Live Uy",                         7.11,   null],
-    ["Cercha Dead Uz",                          1.268,  1.053],
-    ["Cercha Dead Uy",                          8.632,  12.143],
-    ["Cercha Dead Ux",                          11.425, 11.618]
+    ["Viga voladizo (analítica) Uz",            null,   0.000015, null],
+    ["Pórtico plano Dead Uz",                   0.196,  0.199, null],
+    ["Pórtico plano Live Uz",                   0.198,  0.200, null],
+    ["Pórtico plano LATX Ux",                   0.959,  0.959, null],
+    ["Galpón simple Dead Uz",                   0.0117, 0.0126, 0.16],
+    ["Galpón simple LATX Ux",                   0.143,  0.192, 0.09],
+    ["Galpón simple LATY Uy",                   0.0003, 0.0014, null],
+    ["Galpón pendiente 3 % Dead Uz",            0.078,  0.075, 0.22],
+    ["Mercado Dead Ux",                         1.09,   null, null],
+    ["Mercado Dead Uz",                         1.72,   null, null],
+    ["Mercado Dead Uy",                         4.07,   null, null],
+    ["Mercado Live Uy",                         7.11,   null, null],
+    ["Cercha Dead Uz",                          1.268,  1.053, 9],
+    ["Cercha Dead Uy",                          8.632,  12.143, 21],
+    ["Cercha Dead Ux",                          11.425, 11.618, 7]
   ];
-  var W=900, H=520, L=215, R=175, T=34, B=44;
+  var W=980, H=520, L=215, R=255, T=34, B=44;
   var MIN=-3, MAX=2;                       // log10 del eje: 0.001 % .. 100 %
   var NS="http://www.w3.org/2000/svg";
   var svg=document.getElementById("grafica");
@@ -177,7 +184,7 @@ python cli/sap4_correr.py --sap4 ... --trab ... e2k tests/datos/e2k_cercha.e2k D
   e("line",{x1:px(5),x2:px(5),y1:T,y2:H-B,stroke:"var(--bad)","stroke-width":1.5,"stroke-dasharray":"4 3"});
   e("text",{x:px(1),y:T-10,"text-anchor":"middle",class:"m"},"1 %");
   e("text",{x:px(5),y:T-10,"text-anchor":"middle",class:"m"},"5 %");
-  e("text",{x:W-R+14,y:T-10,"text-anchor":"start",class:"m"},"Hekatan · SAP IV");
+  e("text",{x:W-R+14,y:T-10,"text-anchor":"start",class:"m"},"Hekatan · SAP IV · SAP2000");
   e("text",{x:(L+W-R)/2,y:H-8,"text-anchor":"middle",class:"m"},"error rms de desplazamientos contra ETABS (% del máximo del caso)");
   datos.forEach(function(r,i){
     var y=T+i*rowH, cy=y+rowH/2, bh=Math.min(16,rowH*0.55);
@@ -193,8 +200,15 @@ python cli/sap4_correr.py --sap4 ... --trab ... e2k tests/datos/e2k_cercha.e2k D
       e("path",{d:"M"+xs+" "+(cy-s)+" L"+(xs+s)+" "+cy+" L"+xs+" "+(cy+s)+" L"+(xs-s)+" "+cy+"Z",
         fill:"var(--panel)",stroke:"var(--sap)","stroke-width":2});
     }
-    var lab = (vref!=null?fmt(vref):"") + (r[2]!=null ? (vref!=null?" · SAP IV ":"SAP IV ")+fmt(r[2]) : "");
-    if(vref!=null && r[2]==null) lab = fmt(vref)+" %"; else lab += " %";
+    if(r[3]!=null){
+      var x2=px(r[3]), q=6;
+      e("rect",{x:x2-q,y:cy-q,width:2*q,height:2*q,fill:"none",stroke:"var(--sap2)","stroke-width":2});
+    }
+    var parts=[];
+    if(vref!=null) parts.push(fmt(vref));
+    if(r[2]!=null) parts.push("IV "+fmt(r[2]));
+    if(r[3]!=null) parts.push("S2K "+fmt(r[3]));
+    var lab=parts.join(" · ")+" %";
     e("text",{x:W-R+14,y:cy+4,"text-anchor":"start",class:"m"},lab);
   });
 })();
