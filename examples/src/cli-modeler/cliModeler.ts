@@ -215,6 +215,12 @@ interface ParsedModel {
   /** `edge muros`: como `edge etabs` pero solo con cáscaras CON flexión de anfitrionas (muros); las membranas
    *  (losas, deck) no atan: así lo hace ETABS (TACNA, 16-oct-2026: atar también a losas = el doble de rígido). */
   edgeSoloFlexion: boolean;
+  /** `bordeinterpolado` (5-nov-2026): UNION POR INTERPOLACION de los paños MEMBRANA (cubierta/deck) con los nudos que cuelgan de sus aristas.
+   *  Es el edge constraint real de ETABS y SAP2000 (LINECONSTRAINT "Yes"): el paño NO se parte en tiras, queda UN Q4, y cada nudo colgado
+   *  (extremo de una barra apoyada en la arista) sigue la interpolacion LINEAL de las dos esquinas de su arista. Partir el paño en tiras
+   *  (antes) lo ablanda: cordon superior de la cercha -1.4..-1.6 kN contra -0.41 de ETABS/SAP2000 (registros/2026-11-05_union_panel_arista.md).
+   *  Implica `deck sinpartir`; los paños con flexion (muros) siguen con `edge muros` (Hermite). */
+  bordeInterp: boolean;
   /** `hex ID n1..n8 [E nu rho]`: hexaedros H8 (solidos). Se resuelven con hex8Solve
    *  (Wilson–Taylor por defecto; `incompatible 0` lo quita). */
   solids: Array<{ id: number; pts: number[]; E: number; nu: number; rho: number }>;
@@ -364,6 +370,7 @@ export function parseCliCommands(text: string): ParsedModel {
     edgeEtabs: false,
     edgeLineal: false,
     edgeSoloFlexion: false,
+    bordeInterp: false,
     solids: [],
     solidIncompatible: true,
     etabsWallJoint: true,     // por DEFECTO como ETABS (decision de Jorge, 3-sep-2026); `etabsjoint 0` = modo SAP2000
@@ -721,6 +728,13 @@ export function parseCliCommands(text: string): ParsedModel {
           if (m.edgeLineal) m.edgeEtabs = true;
           m.edgeSoloFlexion = v === "muros" || v === "muro" || v === "walls";
           if (m.edgeSoloFlexion) m.edgeEtabs = true;
+          break;
+        }
+        // bordeinterpolado [off] : union panel-arista por interpolacion lineal (edge constraint de ETABS/SAP2000), sin partir el paño
+        case "bordeinterpolado":
+        case "interpolado": {
+          const v = (tokens[1] ?? "on").toLowerCase();
+          m.bordeInterp = !["off", "no", "0", "false", "none"].includes(v);
           break;
         }
         // automesh [tam_m | off]   — 1.25 m es el defecto de ETABS
@@ -1485,7 +1499,7 @@ function aplicarDeckEtabs(m: ParsedModel) {
     const an = m.shellAngles.get(de); if (an !== undefined) m.shellAngles.set(a, an);
   };
   for (const s of m.shells) {
-    if (m.deckSinPartir || !esMembranaDeck(m, s.id) || s.pts.length !== 4 || s.pts.some(id => !m.nodes.has(id))) { nuevos.push(s); continue; }
+    if (m.deckSinPartir || m.bordeInterp || !esMembranaDeck(m, s.id) || s.pts.length !== 4 || s.pts.some(id => !m.nodes.has(id))) { nuevos.push(s); continue; }
     const p = s.pts.map(P);
     const s0 = sobreBorde(p[0], p[1], s.pts), s2 = sobreBorde(p[2], p[3], s.pts).map(v => 1 - v);
     const t1 = sobreBorde(p[1], p[2], s.pts), t3 = sobreBorde(p[3], p[0], s.pts).map(v => 1 - v);
@@ -2285,20 +2299,28 @@ export const cliModeler: ExampleDef = {
       (window as any).__hekatanCliMuellesNodales = [...porNudo].map(([node, o]) => ({ node, k: o.k, comp: o.comp }));
     }
     // `edge etabs`: nudos colgados sobre aristas de cascara -> registro gdl -2, k = indice del nudo
-    if (m.edgeEtabs) {
-      const lin = m.edgeLineal, tolE = lin ? 1e-4 : 1e-6;
+    if (m.edgeEtabs || m.bordeInterp) {
+      const lin = m.edgeLineal;
       const enShell = new Set<number>();
       const shellsIdx: number[] = [];
+      const linDe = new Set<number>();   // cáscaras que atan sus colgados por interpolación lineal (membranas con `bordeinterpolado`)
       elements.forEach((el, e) => { if (el.length === 3 || el.length === 4) { shellsIdx.push(e); for (const n of el) enShell.add(n); } });
-      if (m.edgeSoloFlexion) {
-        // fuera las membranas: flexión M11 M22 M12 = 0 en `shellmod`
+      if (m.edgeSoloFlexion || m.bordeInterp) {
+        // las membranas (flexión M11 M22 M12 = 0 en `shellmod`): fuera de `edge muros`; con `bordeinterpolado` atan por interpolación lineal
         const idDe = new Map<number, number>(); for (const [id, ix] of shellIdxOf) idDe.set(ix, id);
         for (let q = shellsIdx.length - 1; q >= 0; q--) {
           const d = m.shellModsDir.get(idDe.get(shellsIdx[q]) ?? -1);
-          if (d && Math.abs(d[3] ?? 1) + Math.abs(d[4] ?? 1) + Math.abs(d[5] ?? 1) < 1e-9) shellsIdx.splice(q, 1);
+          if (d && Math.abs(d[3] ?? 1) + Math.abs(d[4] ?? 1) + Math.abs(d[5] ?? 1) < 1e-9) {
+            if (m.bordeInterp) linDe.add(shellsIdx[q]);
+            if (m.edgeSoloFlexion || !m.edgeEtabs) shellsIdx.splice(q, 1);
+          }
         }
+        for (const e of linDe) if (!shellsIdx.includes(e)) shellsIdx.push(e);   // las membranas vuelven, ahora por interpolación lineal
       }
       let nColgados = 0;
+      // un nudo colgado de DOS paños (arista compartida): el 2.º solo ata a lo largo de la arista (-9); las dos «perpendiculares» (casi paralelas si
+      // la arista es un pliegue) atarian tambien la traslacion normal
+      const atadoInterp = new Set<number>();
       for (const e of shellsIdx) {
         const el = elements[e] as number[];
         const P = el.map(n => nodes[n]);
@@ -2307,7 +2329,9 @@ export const cliModeler: ExampleDef = {
           if (el.includes(h)) continue;
           const X = nodes[h];
           // caja con holgura: 1e-6 m (edge etabs) o tolE * tamano del elemento (edge lineal: SAFE deja ~1e-6 m de ruido)
-          const hb = lin ? tolE * Math.max(bb[0][1] - bb[0][0], bb[1][1] - bb[1][0], bb[2][1] - bb[2][0]) : 1e-6;
+          const linE = lin || linDe.has(e);
+          const tolE = linE ? 1e-4 : 1e-6;
+          const hb = linE ? tolE * Math.max(bb[0][1] - bb[0][0], bb[1][1] - bb[1][0], bb[2][1] - bb[2][0]) : 1e-6;
           if (X[0] < bb[0][0] - hb || X[0] > bb[0][1] + hb || X[1] < bb[1][0] - hb || X[1] > bb[1][1] + hb || X[2] < bb[2][0] - hb || X[2] > bb[2][1] + hb) continue;
           // sobre alguna arista (i, j), estrictamente dentro
           let colgado = false;
@@ -2324,7 +2348,8 @@ export const cliModeler: ExampleDef = {
           // atarlo). `edge lineal` ata todos, como SAFE (un punto cargado sobre una arista va al @LC).
           const usado = lin || elements.some((el2, e2) => e2 !== e && (el2 as number[]).includes(h));
           if (!usado) continue;
-          springsList.push({ node: -(e + 1), dof: lin ? -4 : -2, k: h }); nColgados++;
+          springsList.push({ node: -(e + 1), dof: linDe.has(e) ? (atadoInterp.has(h) ? -9 : -7) : lin ? -4 : -2, k: h }); nColgados++;
+          if (linDe.has(e)) atadoInterp.add(h);
         }
       }
       if (nColgados) console.log(`[CLI Modeler] edge ${lin ? "lineal" : "etabs"}: ${nColgados} nudo(s) colgado(s) atado(s) a su arista (${lin ? "lineal" : "Hermite"})`);

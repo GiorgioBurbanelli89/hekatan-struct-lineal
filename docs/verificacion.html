@@ -82,10 +82,10 @@ a{color:var(--hek)}
 <tr><td>Galpón simple pendiente 3 %, Dead (Uz)</td><td class="n">0.078 %</td><td class="n">0.075 %</td><td class="n">0.22 %</td><td><span class="tag t-ok">coincide</span></td></tr>
 <tr><td>Galpón simple, variantes SAP2000 vs ETABS: plana / pendiente / corte / rot90</td><td class="n">—</td><td class="n">—</td><td class="n">Dead Uz 0.16 / 0.22 / 0.08 / 0.30 %<br>Live Uz 0.01 / 0.05 / 0.05 / 0.59 %<br>LATX Ux 0.09 / 0.07 / 0.00 / 0.10 %</td><td><span class="tag t-ok">coincide</span></td></tr>
 <tr><td>Ejemplos propios de SAP IV (8 de SAP-32-64, 9 PCDOS, 7 FUJITSU) contra su salida original</td><td class="n">no aplica</td><td class="n">dif. 0 a 1e-5 (último dígito impreso)</td><td><span class="tag t-na">no aplica</span></td><td><span class="tag t-ok">coincide</span></td></tr>
-<tr><td>Mercado completo (7529 nudos), Dead: Ux / Uy / Uz</td><td class="n">1.09 / 4.07 / 1.72 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-mid">aceptable</span></td></tr>
-<tr><td>Mercado completo, Live: Ux / Uy / Uz</td><td class="n">2.28 / 7.11 / 1.99 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-bad">Uy abierto</span></td></tr>
+<tr><td>Mercado completo (7529 nudos), Dead: Ux / Uy / Uz</td><td class="n">0.71 / 3.98 / 1.55 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-mid">aceptable</span></td></tr>
+<tr><td>Mercado completo, Live: Ux / Uy / Uz</td><td class="n">1.19 / 6.92 / 1.79 %</td><td class="n">no corrido</td><td class="n">sin probar</td><td><span class="tag t-bad">Uy abierto</span></td></tr>
 <tr><td>Mercado, reacciones por apoyo (366 apoyos) rms Fx / Fy / Fz</td><td class="n">0.3 / 1.8 / 0.3 %</td><td class="n">SAP IV no imprime reacciones</td><td class="n">sin probar</td><td><span class="tag t-ok">coincide</span> <span class="tag t-mid">Fy aceptable</span></td></tr>
-<tr><td>Recorte de cercha (Dead): Ux / Uy / Uz</td><td class="n">11.4 / 8.6 / 1.3 %</td><td class="n">11.6 / 12.1 / 1.05 % (con tiras)</td><td class="n">7 / 21 / 9 % (por coordenadas, 206 nudos)</td><td><span class="tag t-bad">abierto</span></td></tr>
+<tr><td>Recorte de cercha (Dead): Ux / Uy / Uz</td><td class="n">7.7 / 9.0 / 0.5 %</td><td class="n">11.6 / 12.1 / 1.05 % (con tiras)</td><td class="n">7 / 21 / 9 % (por coordenadas, 206 nudos)</td><td><span class="tag t-mid">mejora</span></td></tr>
 </tbody>
 </table>
 <p class="sub" style="margin:8px 0 0">Los Ux/Uy del galpón simple plano y de la pendiente son de micras (ruido), por eso la tabla usa Uz o el caso lateral. SAP2000 24.1 (corrido por OAPI, como ETABS) contra ETABS; «no corrido / sin probar» = no se hizo, no se inventa ninguna cifra. La suma de Fz Dead de SAP2000 es +0.6 % sobre ETABS (SAP pesa los brazos automáticos, ETABS no).</p>
@@ -108,7 +108,7 @@ a{color:var(--hek)}
 <div class="card">
 <ul>
   <li><b>Mercado, Uy:</b> Dead 4.1 % y Live 7.1 %. No es global: el 67-72 % del error está en el plano z≈11 (cubierta metálica), donde el cordón inferior de las cerchas se arquea fuera de su plano ~1 mm y Hekatan lo arquea 12-20 % más. La torsión J de los tubos coincide con ETABS (se probó moviéndola), así que no es un dato de entrada.</li>
-  <li><b>Cordón superior de la cercha (Dead, tramo x 81.7-82.7):</b> ETABS −0.41 kN, Hekatan −1.59 kN, SAP IV con tiras −1.37 kN. Que SAP IV (membrana de otra formulación, 1973) reproduzca a Hekatan indica que la diferencia <i>no está en el elemento</i>, sino en cómo ETABS une el panel 1×4 con los nudos de barra de sus aristas (edge constraint). Sin tiras SAP IV da −0.38, pero deja el cordón inferior 1.4 kN por encima: ETABS no es «todo unido» ni «nada unido».
+  <li><b>Cordón superior de la cercha (Dead, tramo x 81.7-82.7) — RESUELTO (5-nov-2026):</b> ETABS y SAP2000 dejan UN Q4 por paño y atan cada nudo colgado a la interpolación lineal de las esquinas (en el plano; normal y giros libres). Hekatan lo hace con la directiva <code>bordeinterpolado</code> (defecto si el e2k trae ADDRESTRAINT «Yes»): −0.42 kN contra −0.412 de ETABS; la pieza A da 0.054 kN como SAP2000. Antes, con tiras: ETABS −0.41 kN, Hekatan −1.59 kN, SAP IV con tiras −1.37 kN. Que SAP IV (membrana de otra formulación, 1973) reproduzca a Hekatan indica que la diferencia <i>no está en el elemento</i>, sino en cómo ETABS une el panel 1×4 con los nudos de barra de sus aristas (edge constraint). Sin tiras SAP IV da −0.38, pero deja el cordón inferior 1.4 kN por encima: ETABS no es «todo unido» ni «nada unido».
     <div class="legend" style="margin-top:6px"><span>Axil cordón superior, kN:</span><span>ETABS −0.41</span><span>Hekatan −1.59</span><span>SAP IV con tiras −1.37</span><span>SAP IV sin tiras −0.38</span></div></li>
   <li><b>SAP2000 24 (5-nov-2026):</b> mismo tramo, Dead: ETABS −0.41, <b>SAP2000 −0.51</b>, Hekatan −1.59, SAP IV con tiras −1.37 kN. En las 4 barras vecinas (x 79.7 a 83.7) SAP2000 sigue a ETABS, no a Hekatan. En 377 barras casadas, rms 0.55 kN = 2.9 % del pico (19 kN). Sin edge constraint SAP2000 da −0.47 y con la carga de área repartida a barras en un sentido −0.51: ninguna variante se acerca a −1.4 / −1.6.
     <div class="legend" style="margin-top:6px"><span>Axil cordón superior, kN:</span><span>ETABS −0.41</span><span>SAP2000 −0.51</span><span>Hekatan −1.59</span><span>SAP IV con tiras −1.37</span></div>
@@ -124,7 +124,7 @@ a{color:var(--hek)}
 <h2>4. Cómo repetirlo</h2>
 <div class="card">
 <p>Desde la raíz del repo <code>hekatan-struct</code>:</p>
-<pre>node tests/run.mjs e2k                 # 615/615 comprobaciones, ~75 s (ETABS vs Hekatan, sin ETABS instalado)
+<pre>node tests/run.mjs e2k                 # 630/630 comprobaciones, ~75 s (ETABS vs Hekatan, sin ETABS instalado)
 node tests/run.mjs membrana_q4_etabs   # 17/17
 node tests/run.mjs e2k_portico1vano    # 93/93
 node tests/run.mjs e2k_galpon_simple   # 24/24
@@ -157,13 +157,13 @@ python cli/sap4_correr.py --sap4 ... --trab ... e2k tests/datos/e2k_cercha.e2k D
     ["Galpón simple LATX Ux",                   0.143,  0.192, 0.09],
     ["Galpón simple LATY Uy",                   0.0003, 0.0014, null],
     ["Galpón pendiente 3 % Dead Uz",            0.078,  0.075, 0.22],
-    ["Mercado Dead Ux",                         1.09,   null, null],
-    ["Mercado Dead Uz",                         1.72,   null, null],
-    ["Mercado Dead Uy",                         4.07,   null, null],
-    ["Mercado Live Uy",                         7.11,   null, null],
-    ["Cercha Dead Uz",                          1.268,  1.053, 9],
-    ["Cercha Dead Uy",                          8.632,  12.143, 21],
-    ["Cercha Dead Ux",                          11.425, 11.618, 7]
+    ["Mercado Dead Ux",                         0.71,   null, null],
+    ["Mercado Dead Uz",                         1.55,   null, null],
+    ["Mercado Dead Uy",                         3.98,   null, null],
+    ["Mercado Live Uy",                         6.92,   null, null],
+    ["Cercha Dead Uz",                          0.47,  1.053, 9],
+    ["Cercha Dead Uy",                          9.03,  12.143, 21],
+    ["Cercha Dead Ux",                          7.66, 11.618, 7]
   ];
   var W=980, H=520, L=215, R=255, T=34, B=44;
   var MIN=-3, MAX=2;                       // log10 del eje: 0.001 % .. 100 %

@@ -39,6 +39,7 @@ export function muellesParaExportar(nodes: number[][], elements: number[][], spr
     }
     const e = -sp.node - 1, el = elements[e];
     if (!el) continue;
+    if (sp.dof === -7 || sp.dof === -8) continue;   // bordeinterpolado: union panel-arista de la membrana, no es un muelle (se reproduce con su directiva)
     if (sp.dof === -2 || sp.dof === -4) { colgados.push([e, Math.round(sp.k), sp.dof === -4]); continue; }
     if ((sp.dof !== -1 && sp.dof !== -3) || !(sp.k > 0) || (el.length !== 3 && el.length !== 4)) continue;
     if (opt.sinArea) continue;   // el exportador escribe el muelle de AREA como tal (s2k/f2k con `patrones`)

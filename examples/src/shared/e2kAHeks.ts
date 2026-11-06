@@ -107,6 +107,12 @@ export interface OpcionesE2kHeks {
    *  en los nudos de esquina del paño; partido (atado) Hekatan daba 5.2 -> 0.1 kN. Por defecto (undefined) se lee del e2k: suelto solo si TODOS los AREAASSIGN
    *  traen `LINECONSTRAINT "No"`. true/false lo fuerzan. */
   colgadosSueltos?: boolean;
+  /** UNION POR INTERPOLACION panel-arista (5-nov-2026): el paño de MEMBRANA queda en UN Q4 (no se parte en tiras) y cada nudo colgado de una
+   *  arista sigue la interpolacion lineal de las dos esquinas (`bordeinterpolado` en el .heks). Es el edge constraint real de ETABS y SAP2000
+   *  (ADDRESTRAINT/LINECONSTRAINT "Yes"); partir en tiras (`membranaEnNudos`) ablanda la cubierta: cordon superior de la cercha -1.4..-1.6 kN
+   *  contra -0.41 de ETABS. Por defecto (undefined) se enciende si TODOS los AREAASSIGN traen ADDRESTRAINT "Yes" o LINECONSTRAINT "Yes".
+   *  true/false lo fuerzan (false = tiras como antes). */
+  bordeInterpolado?: boolean;
   /** Análisis directo AISC: true/"ambos" (defecto) = E × 0.8; "EI" = solo inercias × 0.8; "EA" = solo axil × 0.8 (EI igual); false = sin reducir. */
   metodoDirecto?: boolean | "ambos" | "EI" | "EA";
   /** Con metodoDirecto: "acero" (defecto, sin CFT) | "todo" | "compuesto" (solo CFT). */
@@ -121,7 +127,8 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   const tamSub = opc.tamMembrana ?? 0;
   const asig = texto.match(/^[ \t]*AREAASSIGN[^\r\n]*/gm) ?? [];
   const colgadosSueltos = opc.colgadosSueltos ?? (asig.length > 0 && asig.every((l) => /LINECONSTRAINT\s+"No"/i.test(l)));
-  const partirEnNudos = (opc.membranaEnNudos ?? true) && !colgadosSueltos;
+  const bordeInterp = !colgadosSueltos && (opc.bordeInterpolado ?? (asig.length > 0 && asig.every((l) => /(ADDRESTRAINT|LINECONSTRAINT)\s+"Yes"/i.test(l))));
+  const partirEnNudos = (opc.membranaEnNudos ?? !bordeInterp) && !colgadosSueltos;
   if (nSub > 1 || tamSub > 0 || partirEnNudos) {   // tamMembrana: 0 lo apaga
     const N0 = m.nodes as unknown as number[][], E0 = m.elements as unknown as number[][];
     E0.forEach((el, e) => {
@@ -464,6 +471,7 @@ export function e2kAHeks(texto: string, nombre = "modelo.e2k", opc: OpcionesE2kH
   L.push("# nudos sobre aristas de muros: atados (Auto Edge Constraint de ETABS)", "edge muros", "");
   // el modelo viene de ETABS: sin otra elección, se resuelve y se exporta con SUS reglas (brazos, aristas, cruces)
   if (colgadosSueltos) L.push("# nudos colgados del borde de un paño: sueltos (ETABS sin edge constraint)", "deck sinpartir", "");
+  if (bordeInterp) L.push("# union panel-arista por interpolacion lineal (edge constraint de ETABS/SAP2000): un Q4 por paño", "bordeinterpolado", "");
   L.push("# viene de ETABS: se exporta tal cual (lista Comportamiento para cambiarlo)", "origen etabs", "");
 
   if (masas.size) {

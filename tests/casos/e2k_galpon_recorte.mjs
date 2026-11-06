@@ -73,9 +73,11 @@ export async function correr() {
   // 5. MEMBRANA DE CUBIERTA partida en los nudos de su borde (`membranaEnNudos`, defecto; ya no hace falta `tamMembrana`): cada paño de 1×6 m es UN Q4 de relacion 6:1, demasiado rigido en el plano.
   //    Subdividido a 1.25 m (= FLOORMESHMAXSIZE por defecto) el empuje horizontal casa con ETABS (cordones inferiores y Fx de
   //    los apoyos) y Ux/Uy rms bajan de 69 %/50 % a 13 %/11 %. Sin la opcion, el comportamiento anterior no cambia (filas de arriba).
-  {
+  // dos modos: tiras (membranaEnNudos, bordeInterpolado:false) y la union por interpolacion (defecto con ADDRESTRAINT "Yes"). En este recorte (paños 1x6 m, nudos de
+  // corte empotrados) las tiras casan algo mejor en Uy (6-7 % contra 12-15 %); en el mercado completo y en la cercha gana la interpolacion (ver registros/2026-11-05_union_panel_arista.md).
+  for (const M of [{ id: "tiras", opc: { bordeInterpolado: false }, tolUy: 12, tolC: 3 }, { id: "interpolado", opc: {}, tolUy: 16, tolC: 4 }]) {
     const log2 = console.log, warn2 = console.warn, info2 = console.info; console.log = () => {}; console.warn = () => {}; console.info = () => {};
-    let r2; try { r2 = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", {}); }
+    let r2; try { r2 = mod.e2kAHeks(readFileSync(join(AQUI, "..", "datos", "e2k_galpon1.e2k"), "latin1"), "galpon1.e2k", M.opc); }
     finally { console.log = log2; console.warn = warn2; console.info = info2; }
     const f2 = join(dir, "g_mem.heks"); writeFileSync(f2, r2.heks);
     const resolver2 = async (pat) => {
@@ -94,7 +96,7 @@ export async function correr() {
       }
       for (const k of [0, 1]) {
         const rel = 100 * Math.sqrt(sq[k] / (sr[k] || 1));
-        filas.push({ que: `${pat}: U${"xy"[k]} rms relativo con la membrana partida en los nudos del borde`, crudo: true, medido: `${rel.toFixed(1)} %`, limite: "<= 12 % (sin partir: 48-70 %)", ok: rel <= 12, detalle: "membranaEnNudos (defecto): edge constraint de ETABS" });
+        filas.push({ que: `${pat}: U${"xy"[k]} rms relativo, membrana ${M.id}`, crudo: true, medido: `${rel.toFixed(1)} %`, limite: `<= ${k ? M.tolUy : 12} % (sin atar: 48-70 %)`, ok: rel <= (k ? M.tolUy : 12), detalle: M.id === "tiras" ? "membranaEnNudos: edge constraint de ETABS" : "bordeinterpolado" });
       }
       if (pat === "Live") {
         const A = s.analyzeOutputs, el = new Map();
@@ -103,10 +105,10 @@ export async function correr() {
         const cord = [[30, 12.53, 31, 12.56, 2.2413], [31, 12.56, 32, 12.59, 4.3103], [32, 12.59, 33, 12.62, 4.5263], [33, 12.62, 34, 12.65, 2.9239]];
         for (const [x1, z1, x2, z2, pe] of cord) {
           const i = el.get(key([x1, 90.4, z1]) + ">" + key([x2, 90.4, z2])), P = Math.abs(A.normals.get(i)?.[1] ?? NaN), d = 100 * (P - pe) / pe;
-          filas.push({ que: `Live: axil del cordon Tubo 50 x=${x1}..${x2}, y=90.4`, crudo: true, medido: `${P.toFixed(3)} kN (${d >= 0 ? "+" : ""}${d.toFixed(1)} %)`, limite: `ETABS ${pe.toFixed(3)} ±3 %`, ok: Math.abs(d) <= 3, detalle: "1 elemento por paño: +10..+40 %" });
+          filas.push({ que: `Live: axil del cordon Tubo 50 x=${x1}..${x2}, y=90.4 (${M.id})`, crudo: true, medido: `${P.toFixed(3)} kN (${d >= 0 ? "+" : ""}${d.toFixed(1)} %)`, limite: `ETABS ${pe.toFixed(3)} ±${M.tolC} %`, ok: Math.abs(d) <= M.tolC, detalle: "1 elemento por paño: +10..+40 %" });
         }
         const ni = s.nodes.findIndex((p) => key(p) === key([36, 90.4, 13.46])), fx = s.deformOutputs.reactions.get(ni)?.[0] ?? NaN, dfx = 100 * (fx - 5.6592) / 5.6592;
-        filas.push({ que: "Live: Fx del apoyo de corte (36,90.4,13.46)", crudo: true, medido: `${fx.toFixed(3)} kN (${dfx >= 0 ? "+" : ""}${dfx.toFixed(1)} %)`, limite: "ETABS 5.659 ±3 %", ok: Math.abs(dfx) <= 3, detalle: "1 elemento por paño: 6.64 (+17 %)" });
+        filas.push({ que: `Live: Fx del apoyo de corte (36,90.4,13.46) (${M.id})`, crudo: true, medido: `${fx.toFixed(3)} kN (${dfx >= 0 ? "+" : ""}${dfx.toFixed(1)} %)`, limite: "ETABS 5.659 ±3 %", ok: Math.abs(dfx) <= 3, detalle: "1 elemento por paño: 6.64 (+17 %)" });
       }
     }
   }

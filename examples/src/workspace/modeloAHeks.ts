@@ -90,6 +90,7 @@ export function modeloAHeks(states: any, opts: OpcionesHeks = {}): string {
   // El nudo colgado del `edge etabs` llega como muelle de elemento (gdl −2/−4): no es un
   // muelle que se pueda escribir nudo a nudo, se reproduce con su directiva.
   if (springs.some((s) => s.node < 0 && (s.dof === -2 || s.dof === -4))) directivas.push("edge etabs");
+  if (springs.some((s) => s.node < 0 && (s.dof === -7 || s.dof === -8))) directivas.push("bordeinterpolado");
   for (const d of directivas) if (d?.trim()) L.push(d.trim());
   if (directivas.length) L.push("");
 

@@ -19,6 +19,13 @@
 //              MOD_002 (SAFE 22.6): la carga de un punto a t = 0.189 de su arista llega 0.8108/0.1892
 //              a los extremos (lineal; Hermite daria 0.906). Tolerancia de "esta en la arista" 1e-4*L:
 //              SAFE escribe los nudos de su malla con ~1e-6 m de ruido fuera de la recta.
+//   gdl = -7 : NUDO COLGADO por INTERPOLACION lineal SOLO EN EL PLANO del panel (`bordeinterpolado`): el edge
+//              constraint de ETABS/SAP2000 sobre un paño de MEMBRANA (un Q4, sin partir). ux,uy en el plano = (1-t) A + t B;
+//              la normal y los giros quedan libres.
+//   gdl = -9 : como -7 pero SOLO a lo largo de la arista (s). Se usa para el 2.o paño que comparte el nudo colgado: dos paños con la
+//              normal apenas distinta (arista en pliegue 1-3 %) darian dos «perpendiculares» casi paralelas que juntas atan tambien la
+//              traslacion normal (mercado: nudo del vuelo con Uz -0.17 mm contra -6.55 de ETABS).
+//   gdl = -8 : igual pero tambien la traslacion normal lineal (ux,uy,uz); giros libres.
 #include <Eigen/Sparse>
 #include <array>
 #include <cmath>
@@ -142,8 +149,9 @@ inline void addAreaSpringLumped(Eigen::SparseMatrix<double> &K, const std::vecto
  * Devuelve false si h no esta sobre ninguna arista de en (con tolerancia).
  */
 inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::vector<Node> &nodes,
-                                     const std::vector<int> &en, int h, int numNodes, bool lineal = false,
+                                     const std::vector<int> &en, int h, int numNodes, int modo = 0,
                                      double escala = 0.0) {
+    const bool lineal = modo >= 1;
     const int nn = (int)en.size();
     if ((nn != 3 && nn != 4) || h < 0 || h >= numNodes) return false;
     const std::array<double, 3> n = normalDe(nodes, en);
@@ -188,13 +196,26 @@ inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::
         C.clear();
     };
     // traslacion a lo largo de s y de m: lineal
+    int idir = 0;
     for (const std::array<double, 3> &dir : { s, m }) {
+        if (modo == 4 && idir++ == 1) break;   // -9: solo s
         for (int p = 0; p < 3; ++p) if (dir[p] != 0.0) {
             C.push_back({ 6 * h + p, dir[p] });
             C.push_back({ 6 * ia + p, -(1 - t) * dir[p] });
             C.push_back({ 6 * ib + p, -t * dir[p] });
         }
         aplicar(aT);
+    }
+    if (modo >= 2) {   // bordeinterpolado: solo traslaciones (en el plano; con modo 3 tambien la normal), giros libres
+        if (modo == 3) {
+            for (int p = 0; p < 3; ++p) if (n[p] != 0.0) {
+                C.push_back({ 6 * h + p, n[p] });
+                C.push_back({ 6 * ia + p, -(1 - t) * n[p] });
+                C.push_back({ 6 * ib + p, -t * n[p] });
+            }
+            aplicar(aT);
+        }
+        return true;
     }
     // w normal: Hermite con el giro sobre m
     for (int p = 0; p < 3; ++p) if (n[p] != 0.0) {
@@ -218,7 +239,7 @@ inline bool addHangingNodeConstraint(Eigen::SparseMatrix<double> &K, const std::
 }
 
 /** Registros de nudo colgado (-2/-4) que se aplican AL FINAL, con una sola escala de penalizacion. */
-struct Colgado { int elem; int h; bool lineal; };
+struct Colgado { int elem; int h; int modo; };
 
 /** Despacha un registro de la lista de muelles. Devuelve true si lo consumio (nudo negativo).
  *  Con `pendientes`, los nudos colgados no se aplican aqui: se guardan para aplicarColgados(). */
@@ -227,14 +248,17 @@ inline bool despacharMuelleExtra(Eigen::SparseMatrix<double> &K, const std::vect
                                  int nodo, int d, double k, std::vector<Colgado> *pendientes = nullptr) {
     if (nodo >= 0) return false;
     if (d == -5 || d == -6) return true;   // punto de insercion: ya leido por leerInsercion(), aqui no suma rigidez
-    if (pendientes && (d == -2 || d == -4)) { pendientes->push_back({ -nodo - 1, (int)std::llround(k), d == -4 }); return true; }
+    if (pendientes && (d == -2 || d == -4 || d == -7 || d == -8 || d == -9)) { pendientes->push_back({ -nodo - 1, (int)std::llround(k), d == -2 ? 0 : d == -4 ? 1 : d == -7 ? 2 : d == -8 ? 3 : 4 }); return true; }
     std::vector<int> en;
     nodosDeElemento(idx, sizes, -nodo - 1, en);
     if (en.empty()) return true;
     if (d == -1) addAreaSpringConsistent(K, nodes, en, k);
     else if (d == -3) addAreaSpringLumped(K, nodes, en, k);
     else if (d == -2) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size());
-    else if (d == -4) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), true);
+    else if (d == -4) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), 1);
+    else if (d == -7) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), 2);
+    else if (d == -8) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), 3);
+    else if (d == -9) addHangingNodeConstraint(K, nodes, en, (int)std::llround(k), (int)nodes.size(), 4);
     return true;
 }
 
@@ -250,7 +274,7 @@ inline void aplicarColgados(Eigen::SparseMatrix<double> &K, const std::vector<No
     std::vector<int> en;
     for (const Colgado &c : pendientes) {
         nodosDeElemento(idx, sizes, c.elem, en);
-        if (!en.empty()) addHangingNodeConstraint(K, nodes, en, c.h, (int)nodes.size(), c.lineal, escala);
+        if (!en.empty()) addHangingNodeConstraint(K, nodes, en, c.h, (int)nodes.size(), c.modo, escala);
     }
 }
 
