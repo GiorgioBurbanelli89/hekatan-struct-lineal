@@ -36,11 +36,11 @@ const lsGet = (k: string, d: string) => { try { return localStorage.getItem(LS +
 const lsSet = (k: string, v: string) => { try { localStorage.setItem(LS + k, v); } catch { /* sin almacenamiento */ } };
 const txt = (e: Element | null) => (e?.textContent || "").replace(/\s+/g, " ").trim();
 
-const RE_CARGA_CARPETA = /carga|momento|axial|s[ií]sm|masa|empuje|viento|presi/i;
+const RE_CARGA_CARPETA = /carga|^loads?$|momento|axial|s[ií]sm|masa|empuje|viento|presi/i;
 const RE_DIM_CARPETA = /geometr|secci|column|viga|piso|rejilla|muro|hueco|cimiento|losa|posici|cubierta|amarre|zapata|planta|dimens/i;
 const RE_FUERA = /material|malla|mesh|solver|avanzad|export|modifier|ver por tipo|time history|suelo avanzado|pernos|soldadura|apoyo|cimentaci/i;
 // ⚠ sin \bR\b ni \bZ\b: en JS «í» no es letra para \b y «rígidos» casaba con \bR\b (salían los brazos rígidos en CARGAS)
-const RE_CARGA = /carga|load|fuerza|kN(?!\/m³)|viva|muerta|sobrecarga|\bq\b|\bF[xyz]\b|presi|empuje|viento|kPa|sismo|factor z/i;
+const RE_CARGA = /carga|load|fuerza|kN(?!\/m³)|viva|muerta|sobrecarga|\bq\b|\bF[xyz]\b|presi|empuje|viento|kPa|sismo|factor z|axial|\(tonf\)|\(kN\)|tonf·m|kN·m|^M[xyz]\b/i;
 const RE_DIM = /luz|vano|piso|altura|entrepiso|eje|secci|column|viga|espesor|canto|ancho|longitud|largo|\bb\b|\bh\b|dimens|radio|di[aá]metro|\(m\)|\(cm\)|\(mm\)|n[º°] /i;
 
 function grupoDe(clave: string, d: Def): Grupo | null {
@@ -187,7 +187,8 @@ export function montarAccesoRapido(): void {
         const r = document.createElement("input"); r.type = "range"; r.min = String(d.min * fk); r.max = String(d.max * fk);
         r.step = String(d.step ? (fk === 1 ? d.step : pasoRedondo(d.step * fk)) : ((d.max - d.min) * fk) / 100);
         r.value = String(v); r.dataset.k = k; r.dataset.fk = String(fk);
-        r.oninput = () => { n.value = r.value; };
+        let pend = false;   // calcula MIENTRAS se arrastra (un cálculo por cuadro como máximo), no solo al soltar
+        r.oninput = () => { n.value = r.value; if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; aplicar(Number(r.value)); }); };
         r.onchange = () => aplicar(Number(r.value));
         f.append(r);
       }
