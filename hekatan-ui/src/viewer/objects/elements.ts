@@ -245,7 +245,7 @@ export function elements(
 
   // Con «Color por tipo» las BARRAS van GRUESAS (3 px): con la línea de 1 px de WebGL no se distinguía el cian de
   // una viga principal del verde de una secundaria sobre el azul de la losa (Jorge, 2-oct-2026).
-  const matGruesa = new LineMaterial({ linewidth: 3, vertexColors: true, depthTest: false, transparent: true });
+  const matGruesa = new LineMaterial({ linewidth: 2, vertexColors: true, depthTest: false, transparent: true });
   const barrasGruesas = new LineSegments2(new LineSegmentsGeometry(), matGruesa);
   barrasGruesas.frustumCulled = false;
   barrasGruesas.renderOrder = 3;
@@ -491,9 +491,9 @@ export function elements(
     // barras, nunca por debajo de 1 px; hasta 1500 barras queda igual que antes.
     {
       let nBarras = 0; for (const e of elems) if (e.length === 2) nBarras++;
-      const f = Math.min(1, Math.max(1 / 3, Math.sqrt(1500 / Math.max(1, nBarras))));
-      matGruesa.linewidth = 3 * f;
-      (puntosRel.material as THREE.PointsMaterial).size = Math.max(3, 8 * f);
+      const f = Math.min(1, Math.max(0.5, Math.sqrt(400 / Math.max(1, nBarras))));
+      matGruesa.linewidth = 2 * f;
+      (puntosRel.material as THREE.PointsMaterial).size = Math.max(3, 6 * f);
     }
     if (fatVerts.length) {
       const gg = new LineSegmentsGeometry(); gg.setPositions(fatVerts);
