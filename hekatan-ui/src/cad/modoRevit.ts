@@ -442,7 +442,9 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   const usar = (h: Herr) => {
     // cada herramienta en SU vista, como Revit: Nivel solo en alzado; Eje, columnas, vigas, losas y muros en planta
     if (h === "nivel" && vista !== "alzado") activarAlzado(dirAlz);
-    else if (h !== "nivel" && h !== "modificar" && vista !== "planta") activarNivel(zAct);
+    // …salvo en 3D: ahí se dibuja SIN salir de la isométrica, sobre el nivel activo (Jorge, 10-nov-2026:
+    // «yo quiero ISOMÉTRICO»). Antes pulsar Columna/Viga/Losa/Muro en la vista 3D te mandaba a la planta.
+    else if (h !== "nivel" && h !== "modificar" && vista === "alzado") activarNivel(zAct);
     herr = h; pendiente = null; limpiarFantasma(); quitarCotas();
     botones.forEach((b, id) => b.classList.toggle("on", id === h));
     // la herramienta CAD de debajo se apaga: los clics los lleva este modo
@@ -451,7 +453,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     const boton = (t: string, f: () => void, title = "") => { const b = document.createElement("button"); b.textContent = t; b.title = title; b.onclick = f; opc.appendChild(b); return b; };
     const texto = (t: string) => { const s = document.createElement("span"); s.textContent = t; opc.appendChild(s); };
     if (h === "columna") {
-      texto("Clic en un cruce de ejes · del nivel de abajo a este"); boton("En ejes", () => columnasEnEjes(false), "Una columna en cada cruce de ejes, en este nivel");
+      texto("Clic en un cruce de ejes, nudo o punto libre · del nivel de abajo a este"); boton("En ejes", () => columnasEnEjes(false), "Una columna en cada cruce de ejes, en este nivel");
       boton("En ejes · todos los niveles", () => columnasEnEjes(true));
     } else if (h === "viga") {
       const l = document.createElement("label"); l.innerHTML = `<input type="checkbox" ${cadena ? "checked" : ""}> Cadena`;
@@ -481,12 +483,15 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
       modificar: "Modificar: un clic en un eje (planta) o en un nivel (alzado) enseña sus cotas, y se cambian pulsándolas.",
       eje: "EJE: clic en el inicio y en el final; la burbuja sale sola con la letra o el número siguiente.",
       nivel: "NIVEL: clic a la altura; se crea con su planta. La cota azul cambia la distancia al nivel vecino.",
-      columna: "COLUMNA: clic en un cruce de ejes (o «En ejes» para todos). Esc termina.",
+      columna: "COLUMNA: clic en un cruce de ejes, en un nudo o en un punto libre (o «En ejes» para todos). Esc termina.",
       viga: "VIGA: clic en un cruce y en el siguiente; sigue en cadena. Esc termina.",
       losa: "LOSA: clic dentro del vano (entre ejes) o «Todas».",
       muro: "MURO: clic en el inicio y en el final.",
     };
-    decir(ayuda[h]);
+    cotaEn3D();
+    const enNivel = vista === "3d" && h !== "modificar" && h !== "nivel" && h !== "eje"
+      ? ` (en 3D: cota ${niveles().find((l) => Math.abs(l.z - zAct) < 1e-6)?.label ?? zAct}; para otra, la orden PT z=…)` : "";
+    decir(ayuda[h] + enNivel);
   };
 
   const columnasEnEjes = (todos: boolean) => {
@@ -577,7 +582,11 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
   const cara = (ps: V3[]) => { const g = new THREE.BufferGeometry(); const v = ps.map((p) => new THREE.Vector3(...p));
     g.setFromPoints([v[0], v[1], v[2], v[0], v[2], v[3]]); const m = new THREE.Mesh(g, matM); m.renderOrder = 998; fant.add(m); };
   const cruz = (p: V3, s: number) => { linea([[p[0] - s, p[1], p[2]], [p[0] + s, p[1], p[2]]]); linea([[p[0], p[1] - s, p[2]], [p[0], p[1] + s, p[2]]]); };
+  // En 3D la cota del nivel activo es la del PLANO DE TRABAJO del CAD (orden PT z=3, Plano de trabajo › Cota Z):
+  // así se pone una viga o una losa a 3 m sin salir de la isométrica.
+  const cotaEn3D = () => { if (vista !== "3d") return; const wz = Number(W().__hekatanCadState?.get?.()?.workZ); if (isFinite(wz)) zAct = wz; };
   const vistaPrevia = (ev: MouseEvent) => {
+    cotaEn3D();
     const c = ctx(); if (!c) return;
     if (!c.scene.children.includes(fant)) c.scene.add(fant);
     limpiarFantasma();
@@ -594,6 +603,7 @@ export function addModoRevit(viewerElm: HTMLElement, host: HTMLElement, hooks: M
     c.render();
   };
   const alClic = (ev: MouseEvent) => {
+    cotaEn3D();
     if (herr === "nivel") { clicNivel(ev); return; }
     const e = enganchar(ev); if (!e) return;
     if (herr === "eje") { clicEje(e.p); return; }

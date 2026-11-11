@@ -459,6 +459,27 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // (`__hekatanOcultarRef`, como ya hace el ribbon) y `Activar` pone la planta como plano de
   // trabajo al encender, a través de `__hekatanSetPlane`.
   (window as any).__hekatanSetPlane = setPlane;
+  // PLANO DE TRABAJO a una cota dada SIN mover la cámara (para dibujar en la isométrica, como el
+  // plano de trabajo de Revit/AutoCAD): xy a z = cota · xz a y = cota · yz a x = cota. El clic
+  // del ratón cae en ese plano; los ejes rojo/verde/azul y las flechas siguen sirviendo para salir de él.
+  (window as any).__hekatanPlanoTrabajo = (kind: "xy" | "xz" | "yz", cota: number) => {
+    const c = Number(cota) || 0;
+    const st = (window as any).__hekatanCadState?.get?.();
+    if (st) st.workPlane = kind;
+    if (kind === "xy") {
+      proxyPlane.workZ = c; if (st) st.workZ = c;
+      drawing.gridTarget.val = { position: [0, 0, c], rotation: [Math.PI / 2, 0, 0] };
+      marcarRef("xy", [0, 0, c]);
+    } else if (kind === "xz") {
+      drawing.gridTarget.val = { position: [0, c, 0], rotation: [0, 0, 0] };
+      marcarRef("xz", [0, c, 0]);
+    } else {
+      drawing.gridTarget.val = { position: [c, 0, 0], rotation: [0, 0, Math.PI / 2] };
+      marcarRef("yz", [c, 0, 0]);
+    }
+    try { (fPlane as any).refresh?.(); } catch { /* sin panel */ }
+    return `${kind.toUpperCase()} ${kind === "xy" ? "Z" : kind === "xz" ? "Y" : "X"} = ${c}`;
+  };
 
   // Planos de referencia horizontales (Z=0,3,6,9,12)
   // Interruptor CON LUZ: el botón dice en qué estado está. Antes el estado vivía

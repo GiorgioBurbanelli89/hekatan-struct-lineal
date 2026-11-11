@@ -14,7 +14,7 @@ const compElegido = (): number => (window as any).__hekatanGetComportamiento?.()
 const menus: Record<string, Entrada[]> = {
   analisis: [
     { id: "estatico", orden: 1, icono: "▶", titulo: "Analizar (estático)", detalle: "Resuelve el modelo con el caso o la combinación elegida en «Resultados».",
-      abrir: () => (window as any).__hekatanRebuild?.() },
+      abrir: () => { const W = window as any; if (W.__hekatanAnalizar) W.__hekatanAnalizar(); else W.__hekatanRebuild?.(); } },
     { id: "modal", orden: 2, icono: "〰", titulo: "Modal + animar", detalle: "Periodos, modos y participación de masa; anima el modo elegido.",
       abrir: () => (window as any).__hekatanRunModalAnimate?.() },
     { id: "parar", orden: 3, icono: "■", titulo: "Parar animación", detalle: "Detiene la animación del modo.",

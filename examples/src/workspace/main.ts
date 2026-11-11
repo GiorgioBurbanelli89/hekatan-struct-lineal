@@ -1597,6 +1597,9 @@ function autoScaleDeformedShape() {
 // recoloca la cámara después. Se vuelve a aplicar en el fotograma siguiente, con un
 // candado para que la segunda pasada no dispare una tercera.
 let _encuadrando = false;
+// Puntos EXTRA que el encuadre tiene que dejar a la vista (los pide el MCP / «Z» con caja): sin
+// esto, en isométrica un punto que aún no se ha dibujado caía fuera de pantalla y no se podía clicar.
+let _encExtra: number[][] | null = null;
 function autoFitCamera(): void {
   const primera = !_encuadrando;
   _encuadrando = true;
@@ -1626,7 +1629,7 @@ function encuadrarAhora() {
     const d = (window as any).__hekatanDrawingPoints;
     return (d?.rawVal ?? d?.val ?? []) as number[][];
   })();
-  const nodesArr = [...(states.nodes.rawVal || []), ...dibujados];
+  const nodesArr = [...(states.nodes.rawVal || []), ...dibujados, ...(_encExtra ?? [])];
   // Bounding box del modelo (si hay nodos)
   let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
   for (const n of nodesArr) {
@@ -2197,6 +2200,46 @@ const _rbCorrer = (a: any[]) => {
 /** Rehace YA lo que esté pendiente del limitador (para quien necesite el modelo al día en el acto). */
 (window as any).__hekatanRebuildAhora = () => { if (_rbTimer) { clearTimeout(_rbTimer); _rbTimer = null; } const p = _rbPend ?? []; _rbPend = null; return _rbCorrer(p); };
 (window as any).__hekatanAutoFit = autoFitCamera;
+// Encuadrar el modelo MÁS unos puntos dados (p. ej. la caja donde se va a dibujar), sin cambiar
+// la orientación de la vista. Lo usa el MCP (`encuadrar caja=…`) para trabajar en isométrica.
+(window as any).__hekatanEncuadrarCaja = (pts: number[][]) => {
+  const extra = (pts || []).filter((p) => Array.isArray(p) && p.length >= 3 && p.every((v) => isFinite(+v))).map((p) => [+p[0], +p[1], +p[2]]);
+  const pasada = () => { _encExtra = extra; try { encuadrarAhora(); } finally { _encExtra = null; } };
+  // DOS pasadas, como autoFitCamera: el encuadre cambia el tamaño de la rejilla y el visor, al
+  // rehacerla, recoloca la cámara sobre la rejilla (medido: quedaba en (4, −11.2, 4) mirando al origen).
+  pasada(); requestAnimationFrame(pasada);
+};
+// ¿Qué le falta al modelo para calcularse? «Analizar» sin apoyos no decía nada: el lienzo se quedaba
+// igual y parecía que el programa no hacía caso (sonda del 10-nov-2026 en la isométrica). Devuelve ""
+// si está todo, o el aviso a mostrar.
+(window as any).__hekatanAvisoAnalisis = (): string => {
+  const N = states.nodes.rawVal ?? [];
+  if (!N.length) return "⚠ No hay nada que analizar: dibuja primero barras, losas o muros.";
+  const ni: any = states.nodeInputs.rawVal ?? {};
+  const ei: any = states.elementInputs.rawVal ?? {};
+  const tam = (m: any) => (m ? (m.size ?? Object.keys(m).length) : 0);
+  const avisos: string[] = [];
+  if (!tam(ni.supports) && !tam(ni.springs)) {
+    avisos.push("faltan APOYOS: sin ellos la estructura no tiene solución (▲ Apoyo o la orden AP, y clic en los nudos de la base)");
+  } else {
+    const d = states.deformOutputs?.rawVal?.deformations as Map<number, number[]> | undefined;
+    let malo = !d || d.size === 0;
+    if (d) for (const v of d.values()) if (v.some((x) => !isFinite(x))) { malo = true; break; }
+    if (malo) avisos.push("el cálculo no dio resultado: hay un mecanismo o partes sueltas sin apoyo (mira los nudos y barras que no tocan nada)");
+  }
+  if (!tam(ni.loads) && !tam(ei.frameLoads)) avisos.push("no hay CARGAS puestas: solo actúa el peso propio (↓ Carga / CG en nudos, ⇊ Carga q / CQ en barras)");
+  return avisos.length ? "⚠ " + avisos.join(" · ") : "";
+};
+/** Analizar (estático) + avisar en la línea de órdenes si falta algo. Lo usan el menú y la orden AN. */
+(window as any).__hekatanAnalizar = () => {
+  try { (window as any).__hekatanRebuildAhora?.(); } catch (e) { console.warn("[Analizar]", e); }
+  setTimeout(() => {
+    const a = (window as any).__hekatanAvisoAnalisis?.() ?? "";
+    const f = (window as any).__hekatanCadFlash;
+    if (a) { f ? f(a, false) : console.warn(a); try { (window as any).__hekatanCadStatus?.(a); } catch {} }
+    else if (f) f("✓ Analizado (estático)", true);
+  }, 400);
+};
 // Vista de cámara por preset (iso / plan / elevX=frente XZ / elevY=lado YZ),
 // la MISMA lógica que los botones de Vista del menú. Útil para tutoriales.
 (window as any).__hekatanSetView = (p: "iso" | "plan" | "elevX" | "elevY") => { try { setView(p); } catch (e) {} };
@@ -8380,6 +8423,7 @@ try {
     const b = [...sel].reverse().find((s) => s.type === "frame");
     flash(b ? "✓ " + abrirHojaBarra(b.idx) : "✕ Designa primero una barra (clic encima) y repite KLOCAL", !!b);
   });
+  especial("analizar", ["an", "calc", "calcular", "run"], "ANALIZAR (estático) — avisa si faltan apoyos o cargas", () => (window as any).__hekatanAnalizar?.());
   especial("planta", ["top"], "VISTA planta", () => (window as any).__hekatanRibbon?.vista?.(0));
   especial("frente", ["front"], "VISTA frente", () => (window as any).__hekatanRibbon?.vista?.(1));
   especial("lado", ["side"], "VISTA lado", () => (window as any).__hekatanRibbon?.vista?.(2));
@@ -8445,7 +8489,7 @@ try {
     };
     ["input", "paste"].forEach((ev) => input.addEventListener(ev, () => setTimeout(revisar, 0)));
   }
-  input.placeholder = "L línea · PL · REC · C · COL · MU · LO · M mover · CO copiar · O desfase · TR recortar · EX alargar · E borrar · ? ayuda";
+  input.placeholder = "L línea · PL · REC · C · COL · MU · LO · M mover · CO copiar · O desfase · TR recortar · EX alargar · E borrar · PT plano · AN analizar · ? ayuda";
   input.autocomplete = "off";
   input.spellcheck = false;
   const cmdWrap = document.createElement("div");
@@ -8566,6 +8610,7 @@ try {
     label.style.color = ok ? "#34d399" : "#fb7185";
     setTimeout(() => { label.style.color = "#22d3ee"; }, 900);
   };
+  (window as any).__hekatanCadFlash = flash;
 
   // ── Ejecutar ─────────────────────────────────────────────────────────────
   const tecleados: string[] = [];
@@ -8594,6 +8639,7 @@ try {
   const REP_NOMBRES = new Set(["replicar", "rep", "ar", "array", "matriz"]);
   let repEsperando: null | "delta" | "copias" | "p1" | "p2" = null;
   let miEsperando = false;
+  let ptEsperando = false;
   let repDelta: [number, number, number] = [0, 0, 0];
   let repUltimo: { d: [number, number, number]; n: number } | null = null;
   let repP1: [number, number, number] = [0, 0, 0];
@@ -8624,10 +8670,11 @@ try {
   // contestaba al desplazamiento en vez de salir «desconocido»).
   // ¿Hay un comando esperando respuesta? Lo consulta el ribbon para no robarle las
   // teclas 1-4 (sus vistas) al cuadro de comandos mientras se contesta.
-  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando || miEsperando || !!(window as any).__hekatanDividirEspera?.();
+  (window as any).__hekatanCadEsperaRespuesta = () => !!repEsperando || miEsperando || ptEsperando || !!(window as any).__hekatanDividirEspera?.();
 
   (window as any).__hekatanEscapeCancel = () => {
     if (miEsperando) { miEsperando = false; flash("MIRROR cancelado", false); (window as any).__hekatanCadRefreshPrompt?.(); return true; }
+    if (ptEsperando) { ptEsperando = false; flash("PLANO cancelado", false); (window as any).__hekatanCadRefreshPrompt?.(); return true; }
     if (!repEsperando) return false;
     repEsperando = null;
     flash("REPLICAR cancelado", false);
@@ -8729,6 +8776,32 @@ try {
         if (repSeleccion() <= 0) { flash("✕ MIRROR: no hay nada designado. Designe objetos (S, ventana o «all») y repita.", false); return; }
         miEsperando = true;
         setPrompt("MIRROR — plano de simetría: x=5 · y=0 · z=3 · o x1,y1,x2,y2 (recta en planta):");
+        return;
+      }
+    }
+    // ── PT / PLANO de trabajo a una cota, SIN mover la cámara (para la isométrica) ──
+    //   z=3 → planta a cota 3 · y=0 → alzado XZ por y=0 · x=5 → alzado YZ por x=5
+    // Como el plano de trabajo de Revit / el SCP de AutoCAD: el ratón cae en ese plano.
+    // Va antes que la herramienta en curso, así se cambia de plano a mitad de una línea.
+    {
+      const leerPT = (txt: string): ["xy" | "xz" | "yz", number] | null => {
+        const q = txt.trim().toLowerCase().replace(/\s+/g, "").match(/^([xyz])=(-?\d*\.?\d+)$/);
+        if (!q) return null;
+        return [q[1] === "z" ? "xy" : q[1] === "y" ? "xz" : "yz", +q[2]];
+      };
+      if (ptEsperando) {
+        ptEsperando = false;
+        if (cmd === "esc" || cmd === "cancelar") { flash("PLANO cancelado", false); (window as any).__hekatanCadRefreshPrompt?.(); return; }
+        const r = leerPT(raw);
+        if (!r) { flash("✕ PLANO: escriba z=3 (planta a esa cota), y=0 (alzado XZ) o x=5 (alzado YZ).", false); (window as any).__hekatanCadRefreshPrompt?.(); return; }
+        const t = (window as any).__hekatanPlanoTrabajo?.(r[0], r[1]);
+        flash(t ? `✓ Plano de trabajo ${t} (la cámara no se mueve)` : "✕ PLANO no disponible en este modelo", !!t);
+        (window as any).__hekatanCadRefreshPrompt?.();
+        return;
+      }
+      if (/^(?:pt|plano|planotrabajo|workplane|wp)$/.test(cmd)) {
+        ptEsperando = true;
+        setPrompt("PLANO DE TRABAJO — z=3 (planta a esa cota) · y=0 (alzado XZ) · x=5 (alzado YZ):");
         return;
       }
     }
@@ -9115,6 +9188,13 @@ try {
     inp.addEventListener("input", () => { if (!_sync) setCmdText(inp.value); });
     inp.addEventListener("keydown", (ev) => {
       const passDel = (ev.key === "Delete" || ev.key === "Backspace") && inp.value.length === 0;
+      // Las FLECHAS bloquean el eje (→ X · ← Y · ↑ Z · ↓ libera) mientras hay un trazo en curso y la
+      // caja está vacía: es lo que deja subir en Z en la isométrica. El foco vive aquí, así que esta caja
+      // se las comía (historial) y el bloqueo de drawing.ts no llegaba nunca (sonda 10-nov-2026).
+      const trazo = (() => { const P = (window as any).__hekatanDrawingPolylines?.rawVal ?? []; return (P[P.length - 1]?.length ?? 0) > 0; })();
+      const flechaEje = ev.key.startsWith("Arrow") && inp.value.length === 0 && trazo
+        && !["select", "none"].includes(toolActual());
+      if (flechaEje) return;   // sube a window: drawing.ts pone el candado y su rótulo
       // F2 (historial), F3/F8/F9/F10 (conmutadores) y Escape suben al resto de la app
       const sube = passDel || /^F(2|3|8|9|10)$/.test(ev.key);
       if (!sube) ev.stopPropagation();

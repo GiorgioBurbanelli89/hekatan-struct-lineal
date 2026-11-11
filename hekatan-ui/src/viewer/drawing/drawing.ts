@@ -8708,6 +8708,16 @@ export function drawing({
       pendingClicks = [];
       return;
     }
+    // Índice del nudo que ya está en p (±1 mm) o uno nuevo. COLUMNA y MURO creaban SIEMPRE nudos
+    // nuevos: un muro dibujado entre dos columnas quedaba SUELTO (12 nudos en el FEM, 8 distintos;
+    // sonda del 10-nov-2026 en la isométrica) y una columna bajo una viga no la tocaba.
+    const nudoEn = (p: number[], nuevos: number[][]): number => {
+      const P = drawingObj.points.rawVal as number[][];
+      for (let i = 0; i < P.length; i++) if (Math.abs(P[i][0] - p[0]) < 1e-3 && Math.abs(P[i][1] - p[1]) < 1e-3 && Math.abs(P[i][2] - p[2]) < 1e-3) return i;
+      for (let j = 0; j < nuevos.length; j++) if (Math.abs(nuevos[j][0] - p[0]) < 1e-3 && Math.abs(nuevos[j][1] - p[1]) < 1e-3 && Math.abs(nuevos[j][2] - p[2]) < 1e-3) return P.length + j;
+      nuevos.push([p[0], p[1], p[2]]);
+      return P.length + nuevos.length - 1;
+    };
     if (tool === "col") {
       // 1 click + tipear altura + Enter → frame vertical (columna).
       // Si solo hace 1 click sin tipear, usa altura default 3m.
@@ -8715,17 +8725,14 @@ export function drawing({
       pushUndo();
       const baseZ = point.z;
       const h = pendingHeight && pendingHeight > 0 ? pendingHeight : 3;
-      drawingObj.points.val = [
-        ...drawingObj.points.rawVal,
-        [point.x, point.y, baseZ],
-        [point.x, point.y, baseZ + h],
-      ];
+      const nuevos: number[][] = [];
+      const iA = nudoEn([point.x, point.y, baseZ], nuevos), iB = nudoEn([point.x, point.y, baseZ + h], nuevos);
+      drawingObj.points.val = [...drawingObj.points.rawVal, ...nuevos];
       const polys = drawingObj.polylines!.rawVal;
-      const n = drawingObj.points.rawVal.length;
       drawingObj.polylines!.val = [
         ...polys.slice(0, -1),
         ...(polys[polys.length - 1].length > 0 ? [polys[polys.length - 1]] : []),
-        [n - 2, n - 1],
+        [iA, iB],
         [],
       ];
       pendingHeight = 0;
@@ -8744,20 +8751,16 @@ export function drawing({
       const [a, b] = pendingClicks;
       const h = pendingHeight && pendingHeight > 0 ? pendingHeight : 3;
       pushUndo();
-      const n0 = drawingObj.points.rawVal.length;
-      drawingObj.points.val = [
-        ...drawingObj.points.rawVal,
-        [a[0], a[1], a[2]],            // n0
-        [b[0], b[1], b[2]],            // n0+1
-        [b[0], b[1], b[2] + h],        // n0+2
-        [a[0], a[1], a[2] + h],        // n0+3
-      ];
+      // a, b (base), b+H·z, a+H·z — reutilizando los nudos que ya estén ahí (columnas, vigas)
+      const nuevos: number[][] = [];
+      const q = [nudoEn([a[0], a[1], a[2]], nuevos), nudoEn([b[0], b[1], b[2]], nuevos),
+                 nudoEn([b[0], b[1], b[2] + h], nuevos), nudoEn([a[0], a[1], a[2] + h], nuevos)];
+      drawingObj.points.val = [...drawingObj.points.rawVal, ...nuevos];
       const polys = drawingObj.polylines!.rawVal;
-      const newPolyIdx = polys.length - 1;  // será el último después del push
       drawingObj.polylines!.val = [
         ...polys.slice(0, -1),
         ...(polys[polys.length - 1].length > 0 ? [polys[polys.length - 1]] : []),
-        [n0, n0 + 1, n0 + 2, n0 + 3, n0],   // shell Q4 vertical (cerrado visual)
+        [q[0], q[1], q[2], q[3], q[0]],   // shell Q4 vertical (cerrado visual)
         [],
       ];
       // Marcar el shell Q4 como área
