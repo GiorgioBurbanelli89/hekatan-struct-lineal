@@ -55,8 +55,8 @@ export async function correr() {
     const Mmax = Math.max(...interiores.map((c) => c.Mext));
     fila(`${inc} gr: momento en extremos de correas articuladas (kN·m)`, f(Mmax, 4), "<= 0.01", correas.length === 5 && Mmax <= 0.01, "releases T/M2/M3: no transmiten momento al nudo");
     const q = 1 * 2 * 4 / Math.cos(inc * Math.PI / 180);   // 1 kN/m2 sobre la SUPERFICIE: 2 m x (4 m / cos)
-    fila(`${inc} gr: suma de reacciones Fz (kN)`, f(Rz, 3), alto ? `${f(q, 3)} ± 0.01 (= carga)` : `8 .. ${f(q, 3)}`, alto ? Math.abs(Rz - q) <= 0.01 : Rz >= 8 - 0.01 && Rz <= q + 0.01,
-      alto ? "" : "por la maxima pendiente la carga se toma sobre la proyeccion en planta (8.000); pendiente: unificar con la superficie");
+    // ETABS 22 (OAPI, DIR GRAV, pieza_b_pend): la suma de reacciones es q·A/cos a TODAS las pendientes, tambien a 20.1 y 25 (8.5189, 8.8271)
+    fila(`${inc} gr: suma de reacciones Fz (kN)`, f(Rz, 3), `${f(q, 3)} ± 0.01 (= carga sobre la superficie, como ETABS y SAP2000)`, Math.abs(Rz - q) <= 0.01, "");
     if (!alto) { const Vp = Math.max(...princ.map((p) => p.V)); fila(`${inc} gr: cortante maximo de las principales (kN)`, f(Vp, 3), "> 0.3 (recibe la carga)", Vp > 0.3, "ETABS 0.513"); }
   }
   return filas;

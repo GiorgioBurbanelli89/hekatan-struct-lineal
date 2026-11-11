@@ -2536,6 +2536,9 @@ function repartirLosasUnaDireccion(nodes: number[][], elements: number[][], unaD
       let nx = 0, ny = 0, nz = 0;
       for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length]; nx += a[1] * b[2] - a[2] * b[1]; ny += a[2] * b[0] - a[0] * b[2]; nz += a[0] * b[1] - a[1] * b[0]; }
       if (Math.abs(nz) < 1e-12) return Ap;
+      // Por encima de 20 grados el vano pasa a la linea de maxima pendiente, pero el PESO sigue siendo el de la superficie (ETABS 22, OAPI,
+      // DIR "GRAV", 3..25 grados: sumFz = q·A/cos en todos, incl. 20.1 y 25; `registros/2026-11-05_sap2000_galpon.md`). Solo cambia el reparto.
+      if (Math.acos(Math.min(1, Math.abs(nz) / Math.hypot(nx, ny, nz))) * 180 / Math.PI > 20 + 1e-6) return Ap * Math.hypot(nx, ny, nz) / Math.abs(nz);
       const sPerp = (-nx / nz) * (-u[1]) + (-ny / nz) * u[0];   // gradiente de la cubierta · eje perpendicular al vano
       return Ap * Math.sqrt(1 + sPerp * sPerp);
     })();
