@@ -61,3 +61,12 @@ conocido de localhost:11434 del panel de IA). `AN` en el edificio → «✓ Anal
 - Osnap perpendicular comprobado en 3D; rótulo «curva» en el borde de la losa; «Seleccionados 0» tras Apoyo.
 - Rectángulo vertical con el ratón sin `PT` (podría tomar el plano de los dos puntos + eje Z, como el muro).
 - Primer clic perdido al encadenar herramientas de curva (parábola → cúbica).
+
+## Publicado ✅
+- main `f9d2ffc96` (push a hekatan-struct). gh-pages `61e1da687` sobre `616cca13e` (último deploy conocido), con
+  `cli/preparar_deploy_ghpages.py` (m/, SEO, sitemap conservados; wasm igual). El cambio SIN commitear de otra
+  sesión en `examples/src/new-blank/newBlank.ts` se apartó con `git stash push -- <archivo>` y se devolvió con
+  `git stash apply <sha>` + drop (no entra en el build publicado).
+- `assets/workspace-ClviMnZv.js` público = local (cmp idéntico). MCP contra la URL pública: columnas, `AN` (avisa),
+  `PT z=3`, viga y muro cosido (4 nudos, 24 GDL), **sin errores de consola**, PNG revisado.
+- Lámina: `hekatan-school/frames_z10_struct_iso/f000.png`.
