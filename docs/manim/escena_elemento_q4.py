@@ -4,16 +4,16 @@ Render:  manim -pql escena_elemento_q4.py ElementoQ4      (rapido, 480p)
          manim -pqh escena_elemento_q4.py ElementoQ4      (1080p)
 
 Para otra explicacion: copia esta clase, cambia TITULO / PASOS y las ecuaciones.
-Solo Text/MathTex; MathTex necesita LaTeX (MiKTeX/TeX Live). Sin LaTeX, usa Text.
+Solo Text con simbolos Unicode (κ ∂ ∫): NO usa MathTex ni LaTeX, asi corre en cualquier PC.
 """
 from manim import *
 
 TITULO = "Shell-Thin (DKE, Batoz 1982): 4 nodos, 3 GDL de placa por nodo"
 PASOS = [
-    ("1. Nodos y GDL", r"w,\ \theta_x,\ \theta_y\ \text{por nodo}"),
-    ("2. Curvaturas", r"\kappa=\{\partial_x\beta_x,\ \partial_y\beta_y,\ \partial_y\beta_x+\partial_x\beta_y\}"),
-    ("3. Rigidez", r"K=\int_A B^T D_b B\,dA"),
-    ("4. Momentos", r"M=D_b\,\kappa"),
+    ("1. Nodos y GDL", "w, θx, θy por nodo"),
+    ("2. Curvaturas", "κ = {∂βx/∂x, ∂βy/∂y,\n       ∂βx/∂y + ∂βy/∂x}"),
+    ("3. Rigidez", "K = ∫ (B transpuesta) · Db · B dA"),
+    ("4. Momentos", "M = Db · κ"),
 ]
 
 
@@ -39,7 +39,7 @@ class ElementoQ4(Scene):
         y = 1.6
         for nombre, tex in PASOS:
             t = Text(nombre, font_size=22, color=ORANGE)
-            e = MathTex(tex, font_size=30)
+            e = Text(tex, font_size=24)
             bloque = VGroup(t, e).arrange(DOWN, aligned_edge=LEFT, buff=0.12)
             bloque.move_to(np.array([1.8, y, 0]), aligned_edge=LEFT)
             self.play(FadeIn(t, shift=RIGHT * 0.2), Write(e))
