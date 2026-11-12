@@ -15,6 +15,8 @@ formulación). Rutas relativas a la raíz del repo. Solo se citan formulaciones 
 | **DKMQ** | Katili (1993). |
 | **CSI** | CSI Analysis Reference Manual §10.1 (qué llama CSI «Shell-Thin / Shell-Thick»). |
 
+> **Regla de uso: las losas siempre van con Shell-Thin (DKE).** En `.heks`: `shelltype thin`. Shell-Thick (MITC4) queda para casos donde el cortante importa (placa gruesa) y se compara contra Thin como juez.
+
 ## Qué es cada sigla en el código
 
 | Nombre | Qué es | Archivo | Función |
