@@ -10,6 +10,8 @@ Hekatan Struct Lineal: modal analysis, Winkler springs, native Q4 plane-stress s
 program with the same model and the same mesh node by node — **SAP2000 first (the judge),
 then ETABS and SAFE**.
 
+> Where each shell/plate algorithm lives (DKE, DSE, MITC4, ITW 1990, Batoz & Tahar 1982, Wilson): [`docs/ALGORITMOS_SHELL.md`](docs/ALGORITMOS_SHELL.md).
+
 ## Formulations and sources
 
 | part | formulation | source |

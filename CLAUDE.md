@@ -4,6 +4,8 @@ Plataforma FEM en el navegador (C++/Eigen → WebAssembly) con análisis modal, 
 
 **Deploy público:** https://giorgioburbanelli89.github.io/hekatan-struct-lineal/workspace/
 
+> **Algoritmos de shell/placa (DKE, DSE, MITC4, ITW 1990, Batoz 1982, Wilson):** índice con archivo y función de cada uno en [`docs/ALGORITMOS_SHELL.md`](docs/ALGORITMOS_SHELL.md).
+
 ## Arquitectura del workspace
 
 **Un solo entorno: el workspace.** Cada ejemplo vive en su carpeta (`examples/src/<id>/<name>.ts`) y **exporta un `ExampleDef`** que el workspace registra en `exampleRegistry.ts`. No hay páginas por ejemplo: el build compila el workspace (y `fem-explained`, la única lección que aún trae su interfaz) y deja una redirección en cada dirección de antes (`PAGINAS_DE_ANTES` en `examples/vite.config.ts`).
