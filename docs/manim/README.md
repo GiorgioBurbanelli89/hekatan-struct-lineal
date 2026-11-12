@@ -3,7 +3,7 @@
 Cuando el usuario pida *«explícame … con Manim»* (o «en Manim») sobre un elemento, formulación o estructura de Hekatan Struct:
 
 1. Lee `docs/ALGORITMOS_SHELL.md` (qué es y dónde está) y esta carpeta.
-2. Copia `escena_elemento_q4.py` y cambia `TITULO`, `PASOS` (nombre + ecuación LaTeX) y el dibujo.
+2. Copia `escena_elemento_q4.py` y cambia `TITULO`, `PASOS` (nombre + ecuación en texto Unicode) y el dibujo.
 3. Entrega **el archivo `.py` completo** en un bloque de código + el comando de render.
 4. Explica corto, en español simple, el porqué de cada paso (estilo y = m·x + b).
 
