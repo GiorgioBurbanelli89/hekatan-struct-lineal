@@ -7,6 +7,9 @@ Instrucciones para un asistente (Claude móvil / web / Code) con este repo conec
 2. `CLAUDE.md` — convenciones (ejes locales CSI, brazos rígidos, comportamiento ETABS/SAP2000/SAFE).
 3. Un `.heks` de ejemplo parecido en `tests/datos/` (p. ej. `cimentacion_9zapatas.heks`, `mixto_solido_muro_columna.heks`, `cubierta_lroof.heks`) y copiar su estructura.
 
+## Explicaciones animadas
+Si piden «explícame con Manim»: seguir `docs/manim/README.md` (plantilla `docs/manim/escena_elemento_q4.py`).
+
 ## Reglas fijas de formulación
 - **Losas: siempre Shell-Thin (DKE, Batoz & Tahar)** → `shelltype <id> thin`.
 - Shell-Thick (MITC4 + modos de Wilson) solo si se pide expresamente; compararlo contra Thin.
@@ -34,5 +37,6 @@ Este proyecto contiene el repo hekatan-struct-lineal (Hekatan Struct, FEM de edi
 Cuando diga «usa Hekatan Struct» (o «con sus formulaciones») para una estructura:
 lee docs/USAR_HEKATAN_STRUCT.md y docs/ALGORITMOS_SHELL.md y sigue esas reglas.
 Losas SIEMPRE Shell-Thin (DKE). No inventes directivas .heks; copia ejemplos de tests/datos/.
+Si pido una explicación «en Manim»: lee docs/manim/README.md y entrégame el .py completo + comando de render.
 Responde corto, en español simple, explicando el porqué.
 ```
