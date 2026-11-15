@@ -13,8 +13,10 @@
  *   encendido 54.366 / 125.965 / 165.351  (= SAP2000 Plane por defecto)
  */
 import * as THREE from "three";
+import van from "vanjs-core";
 import { planeQ4Solve, type Node, type Element } from "hekatan-fem";
 import type { ExampleDef } from "../workspace/exampleRegistry";
+import { activeExampleVersion } from "../workspace/exampleVersion";
 
 const NL = 20, NH = 10, L = 4, H = 2;
 
@@ -79,23 +81,71 @@ export const deepBeamFea: ExampleDef = {
     });
     states.analyzeOutputs.val = { membraneXX: mXX, membraneYY: mYY, membraneXY: mXY, vonMises: vm };
 
-    // resortes: zigzag rojo bajo los seis nudos de la base
-    const objs: THREE.Object3D[] = [];
-    const mat = new THREE.LineBasicMaterial({ color: 0xe5484d });
-    for (const s of springs) {
-      const [x, , z] = nodes[s.node];
-      const pts: THREE.Vector3[] = [new THREE.Vector3(x, 0, z)];
-      const n = 6, hh = 0.3, a = 0.05;
-      for (let k = 0; k < n; k++) pts.push(new THREE.Vector3(x + (k % 2 === 0 ? a : -a), 0, z - hh * (k + 0.5) / n));
-      pts.push(new THREE.Vector3(x, 0, z - hh));
-      objs.push(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+    // Resortes (bobina helicoidal roja con tierra rayada) y eje de simetría. Siguen a la deformada visual: la punta de cada
+    // resorte va al nudo deformado (nodo + deformación × deformScale, el MISMO factor del visor) y la tierra queda fija.
+    // Se reconstruyen al mover «Deformada» / escala de deformación / escala de símbolos (como en la zapata aislada).
+    const tubo = (pts: THREE.Vector3[], radio: number, color: number): THREE.Mesh => {
+      const ruta = new THREE.CurvePath<THREE.Vector3>();
+      for (let k = 0; k + 1 < pts.length; k++) ruta.add(new THREE.LineCurve3(pts[k], pts[k + 1]));
+      return new THREE.Mesh(new THREE.TubeGeometry(ruta, pts.length * 4, radio, 6, false), new THREE.MeshBasicMaterial({ color }));
+    };
+    const ROJO = 0xe5484d;
+    const construir = (deformada: boolean, escala: number, simbolos: number): THREE.Object3D[] => {
+      const amp = deformada ? escala : 0;
+      const vis = Math.max(1, simbolos > 0 ? simbolos : (simbolos < 0 ? -1 / simbolos : 1));   // nunca menor que 1: con displayScale < 1 el resorte se vuelve un hilo
+      const arriba = (n: number): [number, number] => {            // posición X, Z del nudo tal como la dibuja el visor
+        const d = deformations.get(n)!;
+        return [nodes[n][0] + d[0] * amp, nodes[n][2] + d[2] * amp];
+      };
+      const objs: THREE.Object3D[] = [];
+      const LARGO = 0.34;                                          // cuerpo + dos terminales cuando no hay deformada
+      const zTierra = Math.min(...springs.map((s) => arriba(s.node)[1])) - LARGO;   // tierra común, por debajo del nudo más hundido
+      for (const s of springs) {
+        const [xt, zt] = arriba(s.node);
+        const x0 = xt;                                             // resorte VERTICAL bajo el nudo deformado (solo actúa en Z)
+        const fuerte = s.k > 7e5;
+        const a = (fuerte ? 0.075 : 0.052) * vis, rad = (fuerte ? 0.0095 : 0.0065) * vis;
+        const lead = 0.05, total = zt - zTierra, cuerpo = Math.max(0.05, total - 2 * lead);
+        const eje = (t: number): [number, number] => [x0 + (xt - x0) * t, zTierra + total * t];   // eje recto del pie a la punta
+        const vueltas = 3.5, pasos = 24, pts: THREE.Vector3[] = [];
+        const e0 = eje(0), e1 = eje(lead / total);
+        pts.push(new THREE.Vector3(e0[0], 0, e0[1]), new THREE.Vector3(e1[0], 0, e1[1]));
+        for (let k = 0; k <= vueltas * pasos; k++) {
+          const t = (lead + cuerpo * (1 - k / (vueltas * pasos))) / total;      // de abajo (tierra) a arriba (nudo)
+          const [cx, cz] = eje(t);
+          const th = (k / pasos) * 2 * Math.PI;
+          const ramp = Math.min(1, k / 6, (vueltas * pasos - k) / 6);
+          pts.push(new THREE.Vector3(cx + a * ramp * Math.sin(th), a * ramp * (1 - Math.cos(th)) * 0.5 - a * 0.25 * ramp, cz));
+        }
+        const e2 = eje((lead + cuerpo) / total);
+        pts.push(new THREE.Vector3(e2[0], 0, e2[1]), new THREE.Vector3(xt, 0, zt));
+        objs.push(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.5), pts.length * 3, rad, 8, false), new THREE.MeshBasicMaterial({ color: ROJO })));
+      }
+      // tierra: UNA barra por lado (los tres resortes comparten apoyo), rayas a 45° cada 0.1 m
+      for (const lado of [springs.filter((s) => nodes[s.node][0] < 0), springs.filter((s) => nodes[s.node][0] > 0)]) {
+        const xs = lado.map((s) => arriba(s.node)[0]);
+        const xa = Math.min(...xs) - 0.12 * vis, xb = Math.max(...xs) + 0.12 * vis;
+        objs.push(tubo([new THREE.Vector3(xa, 0, zTierra), new THREE.Vector3(xb, 0, zTierra)], 0.008 * vis, ROJO));
+        for (let xr = xa + 0.1 * vis; xr <= xb + 1e-9; xr += 0.1 * vis) objs.push(tubo([new THREE.Vector3(xr, 0, zTierra), new THREE.Vector3(xr - 0.06 * vis, 0, zTierra - 0.06 * vis)], 0.005 * vis, ROJO));
+      }
+      // eje de simetría (U1 = 0): línea punteada naranja, del nudo deformado de la base al de la cara superior
+      const zb = arriba(idx(NL / 2, 0))[1] - 0.1, zc = arriba(idx(NL / 2, NH))[1] + 0.1;
+      const sim = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, zb), new THREE.Vector3(0, 0, zc)]),
+        new THREE.LineDashedMaterial({ color: 0xf5a524, dashSize: 0.08, gapSize: 0.06 }));
+      sim.computeLineDistances();
+      objs.push(sim);
+      return objs;
+    };
+    const ajustes = (document.querySelector("#viewer") as any)?.__settings;
+    const version = activeExampleVersion.v;
+    if (ajustes) {
+      van.derive(() => {
+        if (activeExampleVersion.v !== version) return;            // otro ejemplo ya cargado: no pisar sus objetos
+        states.objects3D.val = construir(!!ajustes.deformedShape.val, Number(ajustes.deformScale.val) || 0, Number(ajustes.displayScale.val) || 1);
+      });
+    } else {
+      states.objects3D.val = construir(true, 1, 1);
     }
-    // eje de simetría (U1 = 0): línea punteada naranja
-    const sim = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -0.1), new THREE.Vector3(0, 0, H + 0.1)]),
-      new THREE.LineDashedMaterial({ color: 0xf5a524, dashSize: 0.08, gapSize: 0.06 }));
-    sim.computeLineDistances();
-    objs.push(sim);
-    states.objects3D.val = objs;
 
     const get = (i: number, j: number) => r.nodeResults[idx(i, j)];
     console.log(

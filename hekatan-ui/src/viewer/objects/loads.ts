@@ -192,11 +192,23 @@ export function loads(
 
   /** Tamaño y sitio de cada flecha y su valor: la punta en el nudo, la cola hacia fuera. */
   function colocar(escala: number) {
+    // Valores de cargas vecinas (nudos a menos de ~1.6 flechas): se escalonan en hasta 5 alturas (escalera) para que no se pisen
+    // (cinco cargas a 0.2 m en una viga de 4 m salían una encima de otra: «colisiona»).
+    const textos = group.children.filter((o: any) => o.userData?.texto) as any[];
+    textos.sort((a, b) => a.userData.nudo[0] - b.userData.nudo[0] || a.userData.nudo[1] - b.userData.nudo[1] || a.userData.nudo[2] - b.userData.nudo[2]);
+    let racha = 0;
+    textos.forEach((o, k) => {
+      const p = k ? textos[k - 1].userData : null;
+      const cerca = p && Math.hypot(o.userData.nudo[0] - p.nudo[0], o.userData.nudo[1] - p.nudo[1], o.userData.nudo[2] - p.nudo[2]) < escala * 1.6
+        && o.userData.dir.equals(p.dir);
+      racha = cerca ? racha + 1 : 0;
+      o.userData.carril = racha % 5;
+    });
     group.children.forEach((o: any) => {
       const u = o.userData;
       if (!u?.dir) return;
       const largo = escala * u.rel;
-      const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -largo * (u.texto ? 1.12 : 1));
+      const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -(largo * (u.texto ? 1.12 : 1) + (u.texto ? (u.carril ?? 0) * escala * 0.85 : 0)));
       o.position.copy(cola);
       if (u.texto) o.updateScale(escala * 0.38);
       else o.scale.set(largo, largo, largo);
