@@ -112,7 +112,17 @@ export async function correr() {
   const wThickV = flecha(m, 0, 1000);
   const dif = (a, b) => Math.abs(a / b - 1) * 100;
 
+  const extra = [];
+  const NOMBRES_PF = { 1: "Thin (DKE+ITW)", 6: "DKE libro (Wilson)", 0: "Thick (MITC4)", 4: "DSE (Wilson)", 8: "Thick CSI", 3: "DKMQ (Katili)", 5: "Auricchio-Taylor" };
+  if (process.env.PFS) for (const pf of process.env.PFS.split(",").map(Number)) {
+    const thin = pf === 1 || pf === 6, wA = flecha(m, pf), wB = flecha(m, pf, 1000);
+    extra.push({ que: `${NOMBRES_PF[pf]} · A (${thin ? "flexion" : "flexion + cortante"})`, medido: dif(wA, thin ? REF.flexion : REF.suma), limite: 100, ok: true,
+      detalle: `${wA.toExponential(6)} vs ${thin ? REF.flexion : REF.suma}` });
+    if (!thin) extra.push({ que: `${NOMBRES_PF[pf]} · B v13=v23=1000 (solo flexion) y cortante A-B`, medido: dif(wB, REF.flexion), limite: 100, ok: true,
+      detalle: `B ${wB.toExponential(6)} vs ${REF.flexion} · cortante ${(wA - wB).toExponential(4)} vs ${REF.cortante} (${dif(wA - wB, REF.cortante).toFixed(2)} %)` });
+  }
   return [
+    ...extra,
     { que: "A thin · solo flexion", medido: dif(wThin, REF.flexion), limite: 0.5,
       ok: dif(wThin, REF.flexion) <= 0.5,
       detalle: `${wThin.toExponential(6)} vs ${REF.flexion} (Roark & Young)` +

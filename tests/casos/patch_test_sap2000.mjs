@@ -118,7 +118,10 @@ export async function correr() {
     ["flexion",  [2, 3, 4], [0, 1]],
   ];
 
-  for (const [etiq, pf] of [["Thin (DKQ)", 1], ["Thick (MITC4)", 0]]) {
+  const NOMBRES_PF = { 1: "Thin (DKE+ITW)", 6: "DKE libro (Wilson)", 0: "Thick (MITC4)", 4: "DSE (Wilson)", 8: "Thick CSI", 3: "DKMQ (Katili)", 5: "Auricchio-Taylor" };
+  // PFS="1,6,0,4,8" corre más formulaciones; sin la variable, las dos de siempre
+  const LISTA = process.env.PFS ? process.env.PFS.split(",").map(Number) : [1, 0];
+  for (const [etiq, pf] of LISTA.map((q) => [q === 1 ? "Thin (DKQ)" : q === 0 ? "Thick (MITC4)" : NOMBRES_PF[q], q])) {
     for (const [caso, gdls, quietos] of CASOS) {
       const u = resolver(pf, gdls, quietos);
       // El error se mide contra el MAYOR valor del campo en ese GDL, no valor a

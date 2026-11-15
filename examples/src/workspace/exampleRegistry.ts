@@ -347,6 +347,7 @@ import { edificioConLosa } from "../edificio-con-losa/edificioConLosa";
 import { edificioConMuros } from "../edificio-con-muros/edificioConMuros";
 import { plane } from "../plane/plane";
 import { deepBeamFea } from "../deep-beam-fea/deepBeamFea";
+import { macnealHarderPlacaRect, roarkYoungAnular, macnealHarderPatch } from "../benchmark-sap-verif-shell/sapVerifShell";
 import { membranaCSI } from "../membrana-csi/membranaCSI";
 import { plateThin } from "../plate-thin/plateThin";
 import { plateWithBeams } from "../plate-with-beams/plateWithBeams";
@@ -575,6 +576,9 @@ export const examplesRegistry: ExampleDef[] = [
   membranaCSI,
   plane,
   deepBeamFea,
+  macnealHarderPatch,
+  macnealHarderPlacaRect,
+  roarkYoungAnular,
 
   // ════════════════════════════════════════════════════════════════════
   // 🏁 BENCHMARKS — Validación cruzada Hekatan vs ETABS / OpenSees / analítico
