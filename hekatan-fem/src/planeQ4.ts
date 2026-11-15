@@ -86,6 +86,8 @@ export interface PlaneQ4Input {
   bcs?: { node: number; dof: 0 | 1; value: number }[];
   /** Point loads {node, fx, fy} — fuerza concentrada */
   pointLoads?: { node: number; fx: number; fy: number }[];
+  /** Resortes en los nudos {node, dof (0=ux | 1=uy), k}: apoyos elásticos (suma k a la diagonal de K). */
+  springs?: { node: number; dof: 0 | 1; k: number }[];
   /**
    * Body force (peso propio, gravedad) por unidad de volumen.
    * Se integra como carga distribuida sobre cada elemento vía Gauss 2×2.
@@ -516,6 +518,11 @@ export function planeQ4Solve(input: PlaneQ4Input): PlaneQ4Output {
       F[2 * pl.node]     += pl.fx;
       F[2 * pl.node + 1] += pl.fy;
     }
+  }
+
+  // Resortes en los nudos (apoyos elásticos)
+  if (input.springs) {
+    for (const sp of input.springs) K[2 * sp.node + sp.dof][2 * sp.node + sp.dof] += sp.k;
   }
 
   // ── BCs ──

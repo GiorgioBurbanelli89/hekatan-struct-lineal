@@ -346,6 +346,7 @@ import { vigaCimGuerraEj7Tinv } from "../viga-cim-guerra-ej7-tinv/vigaCimGuerraT
 import { edificioConLosa } from "../edificio-con-losa/edificioConLosa";
 import { edificioConMuros } from "../edificio-con-muros/edificioConMuros";
 import { plane } from "../plane/plane";
+import { deepBeamFea } from "../deep-beam-fea/deepBeamFea";
 import { membranaCSI } from "../membrana-csi/membranaCSI";
 import { plateThin } from "../plate-thin/plateThin";
 import { plateWithBeams } from "../plate-with-beams/plateWithBeams";
@@ -573,6 +574,7 @@ export const examplesRegistry: ExampleDef[] = [
   triangularPlate,
   membranaCSI,
   plane,
+  deepBeamFea,
 
   // ════════════════════════════════════════════════════════════════════
   // 🏁 BENCHMARKS — Validación cruzada Hekatan vs ETABS / OpenSees / analítico
