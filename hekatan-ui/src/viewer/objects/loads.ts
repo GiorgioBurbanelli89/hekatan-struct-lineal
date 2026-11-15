@@ -134,6 +134,7 @@ export function loads(
       for (let c = 0; c < 3; c++) maxAbs = Math.max(maxAbs, Math.abs(load[c]));
     }
     const conValor = dibujar.length <= 60;
+    const etiquetas: { pos: any; dir: THREE.Vector3; rel: number; v: number; c: number }[] = [];
     // en el sistema elegido en «Unidades» y con la unidad escrita (antes kN sin unidad, eligiera lo que eligiera)
     const U = unidades();
     const fmt = (v: number) => `${num(U.fuerza(v))} ${U.uF}`;
@@ -150,11 +151,31 @@ export function loads(
           c === 2 ? 0xee9b00 : 0xe5382b, 0.3, 0.3);
         arrow.userData = { nudo: position, dir, rel };
         group.add(arrow);
-        if (conValor) {
-          const t = new Text(fmt(v), c === 2 ? "#f5b642" : "#ff6b5e");
-          t.userData = { nudo: position, dir, rel, texto: true };
-          group.add(t);
-        }
+        if (conValor) etiquetas.push({ pos: position, dir, rel, v, c });
+      }
+    }
+    // Valores de cargas vecinas (a menos de ~1.6 flechas y en la misma dirección): UNA sola etiqueta centrada sobre el grupo,
+    // con los valores en una línea (cinco cargas a 0.2 m en una viga de 4 m salían una encima de otra y, escalonadas, se veía feo).
+    {
+      const escala0 = size * derivedDisplayScale.rawVal;
+      const clave = (e: any) => `${e.c}${Math.sign(e.v)}`;
+      etiquetas.sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0) || a.pos[0] - b.pos[0] || a.pos[1] - b.pos[1] || a.pos[2] - b.pos[2]);
+      const grupos: any[][] = [];
+      for (const e of etiquetas) {
+        const g = grupos[grupos.length - 1], p = g?.[g.length - 1];
+        const cerca = p && clave(p) === clave(e) && Math.hypot(e.pos[0] - p.pos[0], e.pos[1] - p.pos[1], e.pos[2] - p.pos[2]) < escala0 * 1.6;
+        if (cerca) g.push(e); else grupos.push([e]);
+      }
+      for (const g of grupos) {
+        const n = g.length;
+        const iguales = g.every((e) => Math.abs(e.v - g[0].v) < 1e-9 * Math.max(1, Math.abs(g[0].v)));
+        const texto = n === 1 ? fmt(g[0].v)
+          : iguales ? `${n} × ${fmt(g[0].v)}`
+          : `${g.map((e) => num(U.fuerza(e.v))).join(" · ")} ${U.uF}`;
+        const centro = [0, 1, 2].map((k) => g.reduce((a, e) => a + e.pos[k], 0) / n) as [number, number, number];
+        const t = new Text(texto, g[0].c === 2 ? "#f5b642" : "#ff6b5e");
+        t.userData = { nudo: centro, dir: g[0].dir, rel: Math.max(...g.map((e) => e.rel)), texto: true };
+        group.add(t);
       }
     }
     // ── CARGAS DISTRIBUIDAS por barra (kN/m, globales): una flecha cada ~0.5 m y una línea que une las colas, sobre
@@ -192,23 +213,11 @@ export function loads(
 
   /** Tamaño y sitio de cada flecha y su valor: la punta en el nudo, la cola hacia fuera. */
   function colocar(escala: number) {
-    // Valores de cargas vecinas (nudos a menos de ~1.6 flechas): se escalonan en hasta 5 alturas (escalera) para que no se pisen
-    // (cinco cargas a 0.2 m en una viga de 4 m salían una encima de otra: «colisiona»).
-    const textos = group.children.filter((o: any) => o.userData?.texto) as any[];
-    textos.sort((a, b) => a.userData.nudo[0] - b.userData.nudo[0] || a.userData.nudo[1] - b.userData.nudo[1] || a.userData.nudo[2] - b.userData.nudo[2]);
-    let racha = 0;
-    textos.forEach((o, k) => {
-      const p = k ? textos[k - 1].userData : null;
-      const cerca = p && Math.hypot(o.userData.nudo[0] - p.nudo[0], o.userData.nudo[1] - p.nudo[1], o.userData.nudo[2] - p.nudo[2]) < escala * 1.6
-        && o.userData.dir.equals(p.dir);
-      racha = cerca ? racha + 1 : 0;
-      o.userData.carril = racha % 5;
-    });
     group.children.forEach((o: any) => {
       const u = o.userData;
       if (!u?.dir) return;
       const largo = escala * u.rel;
-      const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -(largo * (u.texto ? 1.12 : 1) + (u.texto ? (u.carril ?? 0) * escala * 0.85 : 0)));
+      const cola = new THREE.Vector3(...u.nudo).addScaledVector(u.dir, -largo * (u.texto ? 1.12 : 1));
       o.position.copy(cola);
       if (u.texto) o.updateScale(escala * 0.38);
       else o.scale.set(largo, largo, largo);
