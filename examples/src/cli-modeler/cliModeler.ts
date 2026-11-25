@@ -671,6 +671,101 @@ export function parseCliCommands(text: string): ParsedModel {
           m.solids.push({ id, pts, E: parseFloat(tokens[10] ?? "25e6"), nu: parseFloat(tokens[11] ?? "0.2"), rho: parseFloat(tokens[12] ?? "2.45") });
           break;
         }
+        // ── BLOQUE DE SÓLIDOS (como «Solid Models › Block» de SAP2000), 24-nov-2026 ──
+        // bloque ID x0 y0 z0 LX LY H nx ny nz [E] [nu] [rho] [base=fijo|libre] [lados=articulado|rodillo|libre]
+        //   (x0, y0, z0) = esquina de abajo; nudos nuevos a partir del mayor ID que ya haya.
+        //   base fija por defecto; lados: articulado = Ux Uy Uz (el libro de Serquén), rodillo = solo la normal.
+        // bloquecarga ID x1 y1 x2 y2 q [PATRON]   presión q (> 0 hacia abajo) en la cara de arriba, en los cubos
+        //   cuyo centro cae en [x1,x2]×[y1,y2]; q·A/4 a cada nudo (vector consistente del H8 con q uniforme).
+        // bloquepunto ID x y P [PATRON]          fuerza P (> 0 hacia abajo) en el nudo de arriba más cercano a (x, y).
+        case "bloque":
+        case "solidblock": {
+          const id = tokens[1];
+          const v = tokens.slice(2, 11).map(parseFloat);
+          if (!id || v.length < 9 || v.some(x => !isFinite(x)) || v.slice(6).some(x => x < 1)) { m.errors.push(`bloque: uso bloque ID x0 y0 z0 LX LY H nx ny nz [E nu rho] [base=fijo] [lados=articulado]`); break; }
+          const [x0, y0, z0, LX, LY, H] = v; const [nx, ny, nz] = v.slice(6, 9).map(x => Math.round(x));
+          const resto = tokens.slice(11);
+          const nums = resto.filter(t => !t.includes("=")).map(parseFloat).filter(isFinite);
+          const opt = Object.fromEntries(resto.filter(t => t.includes("=")).map(t => t.toLowerCase().split("=")));
+          const E = nums[0] ?? 25e6, nu = nums[1] ?? 0.2, rho = nums[2] ?? 0;
+          let base = 0; for (const k of m.nodes.keys()) if (k > base) base = k;
+          let sid = 0; for (const s of m.solids) if (s.id > sid) sid = s.id;
+          const nid = (i: number, j: number, k: number) => base + 1 + (k * (ny + 1) + j) * (nx + 1) + i;
+          for (let k = 0; k <= nz; k++) for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++)
+            m.nodes.set(nid(i, j, k), [x0 + LX * i / nx, y0 + LY * j / ny, z0 + H * k / nz]);
+          for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++)
+            m.solids.push({ id: ++sid, pts: [nid(i, j, k), nid(i + 1, j, k), nid(i + 1, j + 1, k), nid(i, j + 1, k),
+              nid(i, j, k + 1), nid(i + 1, j, k + 1), nid(i + 1, j + 1, k + 1), nid(i, j + 1, k + 1)], E, nu, rho });
+          const baseFija = (opt.base ?? "fijo") !== "libre";
+          const lados = opt.lados ?? "articulado";
+          for (let k = 0; k <= nz; k++) for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+            const n = nid(i, j, k), enX = i === 0 || i === nx, enY = j === 0 || j === ny;
+            if (k === 0 && baseFija) { m.supports.set(n, [true, true, true, false, false, false]); continue; }
+            if (!(enX || enY) || lados === "libre") continue;
+            if (lados === "rodillo") m.supports.set(n, [enX, enY, false, false, false, false]);
+            else m.supports.set(n, [true, true, true, false, false, false]);
+          }
+          ((m as any).__bloques ??= new Map()).set(id, { nid, x0, y0, z0, LX, LY, H, nx, ny, nz });
+          break;
+        }
+        // bloqueviga ID x1 y1 x2 y2 E A I22 I33 J nu [As2 As3] [w PATRON]
+        //   viga recta sobre la cara de ARRIBA del bloque, de (x1,y1) a (x2,y2) (paralela a x o a y), partida en
+        //   CADA nudo de la malla que toca (el «Auto Mesh at Intermediate Joints» de SAP2000); w (> 0 hacia abajo)
+        //   es carga repartida en ese patrón. Las inercias en el orden del `frame` del .heks (I22 y luego I33).
+        case "bloqueviga": {
+          const b = (m as any).__bloques?.get(tokens[1]);
+          if (!b) { m.errors.push(`bloqueviga ${tokens[1]}: no hay un bloque con ese ID`); break; }
+          const v = tokens.slice(2).filter(t => !isNaN(parseFloat(t))).map(parseFloat);
+          const pat = tokens.slice(2).find(t => isNaN(parseFloat(t)));
+          if (v.length < 10) { m.errors.push(`bloqueviga: uso bloqueviga ID x1 y1 x2 y2 E A I22 I33 J nu [As2 As3] [w PATRON]`); break; }
+          const [x1, y1, x2, y2, E, A, I22, I33, J, nu] = v;
+          const As2 = v[10], As3 = v[11], w = v.length >= 13 ? v[12] : 0;
+          const dx = b.LX / b.nx, dy = b.LY / b.ny;
+          const ii = (x: number) => Math.round((x - b.x0) / dx), jj = (y: number) => Math.round((y - b.y0) / dy);
+          const [i1, j1, i2, j2] = [ii(x1), jj(y1), ii(x2), jj(y2)];
+          if (i1 !== i2 && j1 !== j2) { m.errors.push(`bloqueviga: la viga va paralela a x o a y`); break; }
+          const n = Math.max(Math.abs(i2 - i1), Math.abs(j2 - j1)), si = Math.sign(i2 - i1), sj = Math.sign(j2 - j1);
+          let fid = 0; for (const f of m.frames) if (f.id > fid) fid = f.id;
+          for (let t = 0; t < n; t++) {
+            const id = ++fid;
+            m.frames.push({ id, nI: b.nid(i1 + si * t, j1 + sj * t, b.nz), nJ: b.nid(i1 + si * (t + 1), j1 + sj * (t + 1), b.nz),
+              E, A, I: I22, Iy: I33, J, nu, rho: 0, sec: "viga del bloque" } as any);
+            if (isFinite(As2) && isFinite(As3)) m.frameShearAreas.set(id, [As2, As3]);
+            if (w) {
+              const destinoFL = !pat || /^dead$/i.test(pat) ? m.frameLoads
+                : (m.frameLoadsPat.get(pat) ?? (m.frameLoadsPat.set(pat, new Map()), m.frameLoadsPat.get(pat)!));
+              destinoFL.set(id, [0, 0, -w]);
+            }
+          }
+          break;
+        }
+        case "bloquecarga":
+        case "bloquepunto": {
+          const b = (m as any).__bloques?.get(tokens[1]);
+          if (!b) { m.errors.push(`${cmd} ${tokens[1]}: no hay un bloque con ese ID (va DESPUÉS de «bloque»)`); break; }
+          const esCarga = cmd === "bloquecarga";
+          const v = tokens.slice(2, esCarga ? 7 : 5).map(parseFloat);
+          if (v.some(x => !isFinite(x))) { m.errors.push(`${cmd}: faltan números`); break; }
+          const pat = tokens[esCarga ? 7 : 5] ?? "Dead";
+          const destino = /^dead$/i.test(pat) ? m.loads : (m.loadsPat.get(pat) ?? (m.loadsPat.set(pat, new Map()), m.loadsPat.get(pat)!));
+          const sumar = (n: number, fz: number) => { const a = destino.get(n) ?? [0, 0, 0, 0, 0, 0]; a[2] += fz; destino.set(n, a as any); };
+          const dx = b.LX / b.nx, dy = b.LY / b.ny;
+          if (esCarga) {
+            const [x1, y1, x2, y2, q] = v; let caras = 0;
+            for (let j = 0; j < b.ny; j++) for (let i = 0; i < b.nx; i++) {
+              const cx = b.x0 + dx * (i + 0.5), cy = b.y0 + dy * (j + 0.5);
+              if (cx < Math.min(x1, x2) || cx > Math.max(x1, x2) || cy < Math.min(y1, y2) || cy > Math.max(y1, y2)) continue;
+              caras++;
+              for (const [ii, jj] of [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]]) sumar(b.nid(ii, jj, b.nz), -q * dx * dy / 4);
+            }
+            if (!caras) m.errors.push(`bloquecarga ${tokens[1]}: ningún cubo tiene el centro dentro del rectángulo`);
+          } else {
+            const [x, y, P] = v;
+            const i = Math.max(0, Math.min(b.nx, Math.round((x - b.x0) / dx))), j = Math.max(0, Math.min(b.ny, Math.round((y - b.y0) / dy)));
+            sumar(b.nid(i, j, b.nz), -P);
+          }
+          break;
+        }
         case "incompatible": {
           const v = (tokens[1] ?? "1").toLowerCase();
           m.solidIncompatible = !(v === "0" || v === "no" || v === "off" || v === "false");

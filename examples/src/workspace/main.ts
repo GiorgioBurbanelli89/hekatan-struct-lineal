@@ -1988,6 +1988,7 @@ function ponerFactoresDelCaso() {
  *  - Caso activo: `&case=` > `vista … <caso>` del .heks > primera combinacion del .heks > el que habia.
  *  - Campo de cascara: `&ver=` > `vista <campo>` > «pressure» si hay muelles de area > «displacementZ».
  */
+(window as any).__hekatanAbrirResultados = () => abrirConResultados();
 function abrirConResultados() {
   const ei: any = states.elementInputs.val ?? {};
   const ni: any = states.nodeInputs.val ?? {};
@@ -9078,6 +9079,29 @@ try {
       flash(`✕ «${raw.trim()}» no es una coordenada válida (1,1,1 · @5,3 · 5<45 · 5)`, false);
       return;
     }
+    // 2b. Una línea del .heks tecleada en la línea de órdenes (24-nov-2026, Jorge: «hazlo en la GUI»):
+    //   heks <línea>  ·  bloque … · bloquecarga … · bloquepunto … · bloqueviga …
+    //   Se AÑADE al guion del modelo y se reconstruye por cli-modeler (el mismo lector del .heks).
+    //   «heks solve» calcula; «heks nuevo» empieza un guion en blanco; «heks ver» lo muestra.
+    {
+      const mH = raw.trim().match(/^(heks|bloque|bloquecarga|bloquepunto|bloqueviga)\b\s*(.*)$/i);
+      if (mH) {
+        const w = window as any;
+        const esHeks = mH[1].toLowerCase() === "heks";
+        const linea = (esHeks ? mH[2] : raw.trim()).trim();
+        if (esHeks && /^(nuevo|new|limpiar)$/i.test(linea)) { w.__hekatanCliScript = ""; flash("✓ guion .heks en blanco", true); return; }
+        if (esHeks && /^(ver|show)$/i.test(linea)) { echo(String(w.__hekatanCliScript ?? "").split("\n").slice(-12).join(" ⏎ ")); return; }
+        if (!linea) { flash("✕ uso: heks <línea del .heks>  (p. ej. heks solve)", false); return; }
+        const previo = String(w.__hekatanCliScript ?? "").split("\n").filter((l) => !/^\s*solve\s*$/i.test(l)).join("\n").trimEnd();
+        w.__hekatanCliScript = (previo ? previo + "\n" : "") + linea + "\n";
+        if (w.__hekatanExample?.() === "cli-modeler") w.__hekatanRebuild?.();
+        else w.__hekatanLoadExampleById?.("cli-modeler");
+        // tras calcular: los patrones y combos del .heks pasan al selector de casos (si no, solo «Dead»)
+        if (/^solve\b/i.test(linea)) setTimeout(() => { try { abrirConResultados(); } catch { /* sin resultados */ } }, 400);
+        flash("✓ " + linea, true);
+        return;
+      }
+    }
     // 3. Comandos que no son herramientas
     const esp = ESPECIALES[cmd];
     if (esp) { ultimoComando = cmd; echo(esp.eco); try { esp.run(); } catch { flash("✕ error", false); } return; }
@@ -9212,6 +9236,8 @@ try {
         if (iHist >= tecleados.length) iHist = -1;
         return;
       }
+      // Una línea del .heks (heks …, bloque …) lleva espacios: ahí el Espacio escribe, solo Enter ejecuta.
+      if (ev.key === " " && /^\s*(heks|bloque|bloquecarga|bloquepunto|bloqueviga)\b/i.test(inp.value)) return;
       if (ev.key === "Enter" || ev.key === " ") {
         ev.preventDefault();
         const v = inp.value.trim();

@@ -200,6 +200,70 @@ export function addCadPanel(opts: CadPanelOptions): { fCad: any } {
   // Con los dos empezando por "Plano XY" se agarraba uno creyendo el otro.
   f3D.addButton({ title: "⬛ Enderezar plano a XY (sin mover camara)" }).on("click", () => (window as any).__hekatanResetPlaneXY?.());
 
+  // ── 🧊 BLOQUE DE SUELO (sólidos) — el «Solid Models › Block» de SAP2000, SOLO con botones y cotas
+  // editables (24-nov-2026, Jorge). Escribe las órdenes `bloque`/`bloquecarga`/`bloquepunto`/`bloqueviga`
+  // del .heks y las corre por cli-modeler. Cambiar una cota regenera el bloque; «Calcular» lo resuelve.
+  // Por defecto: el ejemplo del libro de Serquén («El SAP2000 aplicado al suelo»), tonf y m.
+  const B: any = ((window as any).__hekatanBloque ??= {
+    LX: 20, LY: 20, H: 10, nx: 40, ny: 40, nz: 20, E: 2000, nu: 0.42, incomp: true,
+    base: "fijo", lados: "articulado",
+    q: 10, qx: 5, qy: 3, P: 100, vigas: false, lv: 10, w: 1, xN: 3,
+  });
+  // el panel se rehace al pasar a cli-modeler: la carpeta recuerda si estaba abierta
+  const fBlk = fCad.addFolder({ title: "🧊 Bloque de suelo (sólidos, como SAP2000)", expanded: !!(window as any).__hekatanBloqueAbierto });
+  fBlk.on("fold", (ev: any) => { (window as any).__hekatanBloqueAbierto = ev.expanded; });
+  const guion = (calcular: boolean) => {
+    const x0 = -B.LX / 2, y0 = -B.LY / 2;
+    const L = [
+      "# Bloque de suelo (panel 🧊): el ejemplo de Serquén, «El SAP2000 aplicado al suelo»",
+      "comportamiento sap2000", `incompatible ${B.incomp ? 1 : 0}`,
+      `bloque S ${x0} ${y0} 0 ${B.LX} ${B.LY} ${B.H} ${B.nx} ${B.ny} ${B.nz} ${B.E} ${B.nu} 0 base=${B.base} lados=${B.lados}`,
+    ];
+    if (B.q) L.push(`bloquecarga S ${-B.qx / 2} ${-B.qy / 2} ${B.qx / 2} ${B.qy / 2} ${B.q} RECTANGULAR`);
+    if (B.P) L.push(`bloquepunto S 0 0 ${B.P} PUNTUAL`);
+    if (B.vigas && B.lv > 0) {
+      // perfil FSEC1 de SAP2000 (A992), en tonf y m: E A I22 I33 J nu As2 As3
+      const s = "20389019.158 0.0042645076 3.301257173e-06 6.57241747e-05 9.651176781e-08 0.3 0.00193548 0.00204300667";
+      const a = B.lv / 2;
+      for (const [x1, y1, x2, y2] of [[-a, -a, a, -a], [a, -a, a, a], [a, a, -a, a], [-a, a, -a, -a]])
+        L.push(`bloqueviga S ${x1} ${y1} ${x2} ${y2} ${s} ${B.w} LINEAL`);
+    }
+    const pats = [B.q ? "RECTANGULAR 1" : "", B.P ? "PUNTUAL 1" : "", B.vigas ? "LINEAL 1" : ""].filter(Boolean);
+    if (pats.length > 1) L.push(`combo COMB1 ${pats.map((p) => p.split(" ")[0] + " 1").join(" ")}`);
+    if (B.q && B.xN && B.xN !== 1) L.push(`combo RECT_x${B.xN} RECTANGULAR ${B.xN}`);
+    if (calcular) L.push("solve");
+    const w = window as any;
+    w.__hekatanCliScript = L.join("\n") + "\n";
+    if (w.__hekatanExample?.() === "cli-modeler") w.__hekatanRebuild?.();
+    else w.__hekatanLoadExampleById?.("cli-modeler");
+    if (calcular) setTimeout(() => w.__hekatanAbrirResultados?.(), 400);
+    const nGdl = 3 * (B.nx + 1) * (B.ny + 1) * (B.nz + 1);
+    avisarCad(`🧊 Bloque ${B.LX}×${B.LY}×${B.H} m, ${B.nx * B.ny * B.nz} sólidos, ${nGdl} GDL` + (calcular ? " — calculado" : " — pulsa ▶ Calcular"));
+  };
+  let blkTimer: any = null;
+  const regenerar = () => { clearTimeout(blkTimer); blkTimer = setTimeout(() => guion(false), 350); };
+  const fDim = fBlk.addFolder({ title: "Cotas (m) y divisiones", expanded: true });
+  const cotaDim = (k: string, label: string, o: any = {}) => fDim.addBinding(B, k, { label, ...o }).on("change", regenerar);
+  cotaDim("LX", "Largo X", { min: 0.5, step: 0.5 }); cotaDim("LY", "Ancho Y", { min: 0.5, step: 0.5 }); cotaDim("H", "Alto Z", { min: 0.5, step: 0.5 });
+  cotaDim("nx", "Divisiones X", { min: 1, step: 1 }); cotaDim("ny", "Divisiones Y", { min: 1, step: 1 }); cotaDim("nz", "Divisiones Z", { min: 1, step: 1 });
+  const fMat = fBlk.addFolder({ title: "Suelo y apoyos", expanded: false });
+  fMat.addBinding(B, "E", { label: "E (tonf/m²)", min: 1 }).on("change", regenerar);
+  fMat.addBinding(B, "nu", { label: "ν", min: 0, max: 0.499, step: 0.01 }).on("change", regenerar);
+  fMat.addBinding(B, "incomp", { label: "Modos incompatibles (SAP)" }).on("change", regenerar);
+  fMat.addBinding(B, "base", { label: "Base", options: { "Fija": "fijo", "Libre": "libre" } }).on("change", regenerar);
+  fMat.addBinding(B, "lados", { label: "Caras laterales", options: { "Articuladas (libro)": "articulado", "Rodillos (geotecnia)": "rodillo", "Libres": "libre" } }).on("change", regenerar);
+  const fCar = fBlk.addFolder({ title: "Cargas", expanded: false });
+  fCar.addBinding(B, "q", { label: "Presión q (tonf/m²)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "qx", { label: "Área cargada X (m)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "qy", { label: "Área cargada Y (m)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "P", { label: "Puntual P (tonf)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "vigas", { label: "Cuadrado de vigas (LINEAL)" }).on("change", regenerar);
+  fCar.addBinding(B, "lv", { label: "Lado del cuadrado (m)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "w", { label: "w lineal (tonf/m)", min: 0 }).on("change", regenerar);
+  fCar.addBinding(B, "xN", { label: "Combo q × (sobrecarga)", min: 1, step: 0.5 }).on("change", regenerar);
+  fBlk.addButton({ title: "🧊 Crear / actualizar bloque" }).on("click", () => guion(false));
+  fBlk.addButton({ title: "▶ Calcular bloque" }).on("click", () => guion(true));
+
   const fMod = fCad.addFolder({ title: "✂ Modificar", expanded: false });
   fMod.addButton({ title: "🖱 Seleccionar" }).on("click", () => setActiveTool("select"));
   fMod.addButton({ title: "↦ Alargar hasta un contorno" }).on("click", () => setActiveTool("extend"));
