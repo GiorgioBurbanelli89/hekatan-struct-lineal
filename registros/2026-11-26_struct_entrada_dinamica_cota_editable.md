@@ -29,3 +29,17 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
 - ✅ Test contra el DEPLOY PÚBLICO: 20/20, 0 errores.
 - ⏳ APK de Math Studio móvil: copia Struct de /c/hkpub_struct (gh-pages) en copia_web.sh → hay que reconstruirlo para que lleve la caja tocable.
 - ⏳ Disco C: estuvo en 0.14 GB (libere caché de Edge y perfiles viejos de puppeteer).
+
+## 27-nov · Jorge: tras la columna «6 m» el cursor quedaba suelto (solo coordenadas «-5.00,-3.»)
+- ❌ Causa: el atajo global que lleva la 1.ª cifra a la cota (foco FUERA de la cota) no marcaba «tecleado»: «6» + Enter
+  se leía como «Enter sin teclear» = TERMINAR (y herramienta → select). Con dos cifras sí iba (la 2.ª pasaba por la cota).
+  Clic y teclado con el foco en la cota ya encadenaban (comprobado en local y en el público).
+- ✅ Arreglo (drawing.ts, keydown global): `rubberUserEditing = true` al recoger la cifra.
+- ✅ LÍNEA ≠ POLILÍNEA (Jorge: «es diferente a polilínea», como AutoCAD): cada tramo de LÍNEA es una entidad suelta
+  ([a,b],[b,c]… nudos compartidos) y la cadena sigue con [c] abierto (`partirTramoLinea`, `cadenaLinea`). Cerrar une con
+  el 1.er nudo de la cadena; desHacer quita el último tramo; prompt [Cerrar/desHacer] también tras un tramo tecleado.
+  La cota de paralelas no mueve el nudo de una cadena ya hecha. POLILÍNEA sigue siendo una sola entidad.
+- ✅ Test: columna por clic → 3 posiciones del cursor sin clic (goma desde el tope, cota cambia) → «6» + Enter con el foco
+  fuera → viga de 6 m → 2 barras sueltas con el tope compartido → sigue la goma → Esc termina. U y C. 31/31.
+- ⚠️ Observación: en iso el cursor cae en el plano de trabajo (z = 0); desde el tope de una columna la goma baja en diagonal
+  hasta ahí (como el SCP de AutoCAD). Para la viga horizontal: ORTO/eje X-Y, o subir el plano al nivel (N+…).

@@ -725,6 +725,23 @@ export function drawing({
   let anguloFijoDesde: number[] | null = null;      // el punto desde el que se fijó: al pasar a otro, se suelta
   let anguloEditando = false;
   (window as any).__hekatanAnguloFijo = () => anguloFijo;
+  // ── LÍNEA ≠ POLILÍNEA (Jorge, 26-nov-2026, «es diferente a polilínea») ──
+  // Como el LINE de AutoCAD: la LÍNEA encadena (el tramo siguiente arranca en el último punto, con su goma
+  // y su cota viva) pero cada tramo es una entidad SUELTA —una barra por tramo, nudos compartidos—. La
+  // POLILÍNEA es la otra herramienta y sí es una sola entidad de varios tramos. En el dibujo: tras cada
+  // tramo de línea queda [a,b] cerrado y se abre [b], que es el arranque del siguiente.
+  let cadenaLinea: number[] = [];                  // los nudos de la cadena de LÍNEA en curso (para Cerrar / desHacer)
+  const partirTramoLinea = () => {
+    if (!drawingObj.polylines) return;
+    const polys = drawingObj.polylines.rawVal;
+    const last = polys.length ? polys[polys.length - 1] : [];
+    if (last.length < 2) return;
+    const fin = last[last.length - 1];
+    if (cadenaLinea.length === 0 || cadenaLinea[cadenaLinea.length - 1] !== last[last.length - 2]) cadenaLinea = [...last];
+    else cadenaLinea.push(fin);
+    drawingObj.polylines.val = [...polys, [fin]];
+  };
+  (window as any).__hekatanCadenaLinea = () => [...cadenaLinea];
   // El último puntero real sobre el lienzo (ratón / dedo / lápiz): decide si la cota del segundo punto
   // va como en AutoCAD (junto al cursor, se escribe sin tocarla) o como en el celular (caja tocable).
   let ultimoPuntero = "mouse";
@@ -959,6 +976,8 @@ export function drawing({
       [...last, drawingObj.points.rawVal.length - 1],
     ];
     rubberLabelInput.blur();
+    if (curTool === "line") partirTramoLinea();
+    try { (window as any).__hekatanCadRefreshPrompt?.(); } catch {}   // [Cerrar/desHacer] también tras un tramo TECLEADO
     // ENCADENAR: el tramo siguiente sale del punto recién puesto. Antes rubberStart se quedaba en el
     // punto VIEJO hasta mover el ratón, y «3.5 Enter 2 Enter» tecleado de corrido medía los dos
     // tramos desde el mismo origen. El ángulo fijado se suelta (como AutoCAD) y la goma se redibuja.
@@ -1249,6 +1268,10 @@ export function drawing({
     // Solo agarrar dígitos / punto / minus
     if (/^[0-9.\-]$/.test(ev.key)) {
       rubberLabelInput.value = ev.key;
+      // ⚠️ ES TECLEO: sin esto «6» + Enter (una cifra, con el foco fuera de la cota) se leía como
+      // «Enter sin teclear» = TERMINAR, y la línea se cortaba tras la columna (Jorge, 26-nov-2026:
+      // cota «6 m» y luego el cursor suelto, sin goma desde el tope).
+      rubberUserEditing = true;
       rubberLabelInput.focus();
       // Coloca el cursor al final del input (acabamos de escribir 1 char)
       rubberLabelInput.setSelectionRange(1, 1);
@@ -4532,7 +4555,7 @@ export function drawing({
         rubberBand.visible = true;
         // Dim label en midpoint del rubber band (referencial mientras se dibuja)
         updateRubberLabel(lastPt[0], lastPt[1], lastPt[2], p.x, p.y, p.z);
-        cotaParalela(lastIdx, lastPt, p, lastPoly.length);
+        cotaParalela(lastIdx, lastPt, p, lastPoly.length === 1 && cadenaLinea.length ? 2 : lastPoly.length);   // un tramo de LÍNEA ya encadenado no es «el arranque» (no se mueve)
         // ── Polar tracking — líneas X/Y/Z extendidas desde el último punto
         // hasta los bordes del modelo (longitud 5m por dirección, ajustable)
         // Tamaño configurable desde Tweakpane vía window.__hekatanOrthoExt.
@@ -7116,7 +7139,7 @@ export function drawing({
     const P = (txt: string, ops: string[] = []) => ({ txt, ops });
     switch (tool) {
       case "line":
-        return last.length >= 2 ? P("LÍNEA Precise punto siguiente o", ["Cerrar", "desHacer"])
+        return (last.length >= 2 || (last.length === 1 && cadenaLinea.length >= 3)) ? P("LÍNEA Precise punto siguiente o", ["Cerrar", "desHacer"])
              : last.length === 1 ? P("LÍNEA Precise punto siguiente o", ["desHacer"])
              : P("LÍNEA Precise primer punto:");
       case "polyline":
@@ -7344,6 +7367,37 @@ export function drawing({
       if (o === "u" || o === "deshacer" || o === "undo") { undo(); return true; }
       return false;
     }
+    // LÍNEA: los tramos son sueltos ([a,b], [b,c], … y [c] abierto): Cerrar une el último con el
+    // PRIMERO de la cadena; desHacer quita el último tramo entero.
+    if (tool === "line" && last.length === 1 && cadenaLinea.length >= 2 && cadenaLinea[cadenaLinea.length - 1] === last[0]) {
+      if (o === "c" || o === "cerrar" || o === "close") {
+        if (cadenaLinea.length < 3) { updateStatus("Cerrar necesita al menos tres puntos."); return true; }
+        pushUndo();
+        const n = cadenaLinea.length;
+        drawingObj.polylines.val = [...polys.slice(0, -1), [last[0], cadenaLinea[0]], []];
+        try { (window as any).__hekatanRebuild?.(); } catch {}
+        finalizeDraw();
+        updateStatus(`✓ Línea cerrada — ${n} tramos (cada uno una barra).`);
+        return true;
+      }
+      if (o === "u" || o === "deshacer" || o === "undo") {
+        const prev = polys[polys.length - 2];
+        if (!prev || prev.length !== 2 || prev[1] !== last[0]) { undo(); return true; }
+        pushUndo();
+        const quitado = last[0];
+        const nuevas = [...polys.slice(0, -2), [prev[0]]];
+        let pts = drawingObj.points.rawVal;
+        if (!nuevas.some((pl) => pl.includes(quitado)) && quitado === pts.length - 1) { pts = pts.slice(0, -1); drawingObj.points.val = pts; }
+        drawingObj.polylines.val = nuevas;
+        cadenaLinea.pop();
+        const q = pts[prev[0]]; if (q) rubberStart = [q[0], q[1], q[2]];
+        try { (window as any).__hekatanRebuild?.(); } catch {}
+        viewerRender();
+        updateStatus(`↶ Último tramo quitado — quedan ${Math.max(0, cadenaLinea.length - 1)}.`);
+        refreshPrompt();
+        return true;
+      }
+    }
     if (o === "c" || o === "cerrar" || o === "close") {
       if (last.length < 3) { updateStatus("Cerrar necesita al menos tres puntos."); return true; }
       pushUndo();
@@ -7414,6 +7468,7 @@ export function drawing({
   // siguiente click como inicio de algo nuevo".
   const finalizeDraw = () => {
     pendingClicks = [];
+    cadenaLinea = [];
     designado = null;
     divObjetivo = null;
     // Cierra la polilínea en curso Y descarta las que se quedaron en 0 ó 1
@@ -9238,7 +9293,9 @@ export function drawing({
       // texto. Para hacer tramos sueltos se pulsa Esc entre uno y otro, que es
       // lo que se hace en AutoCAD.
       if (tool === "line" && last.length >= 2) {
-        updateStatus(`／ Línea — ${last.length - 1} tramo${last.length === 2 ? "" : "s"}. ` +
+        partirTramoLinea();
+        const nt = Math.max(1, cadenaLinea.length - 1);
+        updateStatus(`／ Línea — ${nt} tramo${nt === 1 ? "" : "s"} (cada uno una barra). ` +
                      `Seguí marcando puntos; Esc o clic derecho para terminar.`);
         try { (window as any).__hekatanRebuild?.(); } catch {}
         return;

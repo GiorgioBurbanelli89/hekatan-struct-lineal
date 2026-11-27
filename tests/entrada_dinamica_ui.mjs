@@ -81,8 +81,17 @@ const choques = (p, sel) => p.evaluate((sel) => {
   P = await pts(p); const D = P[P.length - 1];
   const esp = [C[0] + 4 * Math.cos(Math.PI / 6), C[1] + 4 * Math.sin(Math.PI / 6), C[2]];
   check("4 m a 30° (Tab) exactos", distan(D, esp) < 1e-8, JSON.stringify(D) + " esperado " + JSON.stringify(esp.map((v) => +v.toFixed(6))));
-  const PL = await polys(p);
-  check("es UNA polilínea de barras encadenadas (4 nudos)", PL.some((q) => q.length >= 4), JSON.stringify(PL));
+  const PL = (await polys(p)).filter((q) => q.length >= 2);
+  // LÍNEA ≠ POLILÍNEA: 3 tramos = 3 entidades sueltas de 2 nudos, encadenadas por nudos compartidos
+  check("LÍNEA: 3 tramos = 3 barras sueltas", PL.length === 3 && PL.every((q) => q.length === 2), JSON.stringify(PL));
+  check("…con los nudos compartidos (b de un tramo = a del siguiente)", PL.length === 3 && PL[0][1] === PL[1][0] && PL[1][1] === PL[2][0], JSON.stringify(PL));
+  // desHacer quita el ÚLTIMO TRAMO entero; Cerrar une con el PRIMER nudo de la cadena
+  const tras = await p.evaluate(() => { const r = {}; window.__hekatanCadOption("u");
+    r.u = window.__hekatanDrawingPolylines.rawVal.map((q) => [...q]); window.__hekatanCadOption("c");
+    r.c = window.__hekatanDrawingPolylines.rawVal.map((q) => [...q]); return r; });
+  const segU = tras.u.filter((q) => q.length >= 2), segC = tras.c.filter((q) => q.length >= 2);
+  check("U (desHacer) quita el último tramo", segU.length === 2 && JSON.stringify(tras.u.at(-1)) === JSON.stringify([segU[1][1]]), JSON.stringify(tras.u));
+  check("C (Cerrar) une el último nudo con el primero: 3 barras", segC.length === 3 && segC[2][1] === segC[0][0], JSON.stringify(tras.c));
   check("cota sin choques con botones", (await choques(p, "#hk-rubber-label, #hk-rubber-angle")).length === 0, JSON.stringify(await choques(p, "#hk-rubber-label, #hk-rubber-angle")));
   // clic-clic sigue igual
   await p.keyboard.press("Escape"); await w(300); await linea(p);
@@ -111,6 +120,54 @@ const choques = (p, sel) => p.evaluate((sel) => {
   const A = P[P.length - 2], B = P[P.length - 1];
   check("barra de 4.25 m EXACTA en la iso", near(distan(A, B), 4.25, 1e-9), JSON.stringify([A, B]));
   check("en el plano de trabajo (Δz = 0)", near(B[2], A[2], 1e-9));
+  // ── COLUMNA POR CLIC y luego el cursor SUELTO: la goma y la cota siguen desde el tope ──
+  // (Jorge, 26-nov-2026: tras la columna de 6 m el cursor quedaba suelto, sin goma desde el tope)
+  await p.close();
+}
+// ═══ 2b. 3D ISO: COLUMNA POR CLIC y el cursor suelto (página nueva, vista iso de partida) ═══
+{
+  console.log("── PC · 3D iso · columna y cursor suelto");
+  const p = await abrir({ width: 1500, height: 1000 }, false);
+  await vista(p, "4");
+  await p.evaluate(() => { window.__hekatanAxisSnap = true; });   // como viene de fábrica: el eje Z se engancha
+  await linea(p);
+  const [c0x, c0y] = Object.values(await pix(p, 0, 0, 0)), [c1x, c1y] = Object.values(await pix(p, 0, 0, 6));
+  console.log('   columna en px:', [c0x, c0y, c1x, c1y].map(Math.round), await p.evaluate((x, y, a, b) => [document.elementFromPoint(x, y)?.tagName, document.elementFromPoint(a, b)?.tagName], c0x, c0y, c1x, c1y));
+  await p.mouse.move(c0x, c0y); await w(250); await p.mouse.click(c0x, c0y); await w(400);
+  await p.mouse.move(c0x, (c0y + c1y) / 2); await w(150); await p.mouse.move(c1x, c1y); await w(400);
+  await p.mouse.click(c1x, c1y); await w(500);
+  let Pc = await pts(p);
+  const tope = Pc[Pc.length - 1];
+  check("columna por clic: 6 m vertical", near(tope[2], 6, 1e-6) && near(tope[0], 0, 1e-6) && near(tope[1], 0, 1e-6), JSON.stringify(tope));
+  const lecturas = [];
+  for (const q of [[3, 0, 0], [0, 2.5, 0], [-2, -1.5, 0]]) {
+    const s = await pix(p, ...q); await p.mouse.move(s.x, s.y, { steps: 5 }); await w(350);
+    lecturas.push(await p.evaluate(() => {
+      const i = document.getElementById("hk-rubber-label"), g = window.__hekatanRubberBand;
+      const a = g.geometry.attributes.position.array;
+      return { L: getComputedStyle(i).display !== "none" ? i.value : null, goma: g.visible, desde: [a[0], a[1], a[2]].map((v) => +v.toFixed(4)) };
+    }));
+  }
+  console.log("   lecturas:", JSON.stringify(lecturas));
+  check("tras la columna, sin clic: la goma sale del TOPE en las 3 posiciones", lecturas.every((l) => l.goma && distan(l.desde, tope) < 1e-6));
+  check("la cota viva (L) se ve y CAMBIA con el cursor", lecturas.every((l) => l.L && /m$/.test(l.L)) && new Set(lecturas.map((l) => l.L)).size === 3);
+  // el foco FUERA de la cota (como tras pinchar otro mando): «6» lo recoge el atajo global → antes era «Enter sin teclear» = terminar
+  await p.evaluate(() => document.activeElement?.blur?.());
+  await p.keyboard.type("6"); await w(120); await p.keyboard.press("Enter"); await w(600);
+  Pc = await pts(p); const viga = Pc[Pc.length - 1];
+  check("«6» + Enter (una sola cifra): viga de 6 m desde el tope", near(distan(viga, tope), 6, 1e-9), JSON.stringify(viga));
+  const PLc = (await polys(p)).filter((q) => q.length >= 2);
+  const PLi = PLc.slice(-2);
+  check("columna y viga = 2 barras sueltas con el tope compartido", PLi.length === 2 && PLi[0][1] === PLi[1][0], JSON.stringify(PLi));
+  const prompt = await p.evaluate(() => (document.body.innerText.match(/LÍNEA Precise[\s\S]{0,60}/) || [""])[0]);
+  check("prompt con [Cerrar/desHacer] tras 2 tramos", /Cerrar/.test(prompt), prompt);
+  const goma1 = await p.evaluate(() => window.__hekatanRubberBand.visible);
+  const s2 = await pix(p, 1, 2, 0); await p.mouse.move(s2.x, s2.y, { steps: 3 }); await w(300);
+  check("sigue encadenando tras el Enter (goma viva)", await p.evaluate(() => window.__hekatanRubberBand.visible), String(goma1));
+  try { await p.screenshot({ path: `${OUT}/_ed_pc_iso_columna.png` }); } catch (e) { console.log('   (sin captura: ' + e.code + ')'); }
+  await p.keyboard.press("Escape"); await w(400);
+  const fin = await p.evaluate(() => ({ goma: window.__hekatanRubberBand.visible, last: (window.__hekatanDrawingPolylines.rawVal.at(-1) || []).length }));
+  check("Esc termina (sin goma, nada abierto)", !fin.goma && fin.last === 0, JSON.stringify(fin));
   await p.close();
 }
 
