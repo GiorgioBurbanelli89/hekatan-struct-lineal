@@ -1,6 +1,6 @@
 import { d as R, a as X, __tla as __tla_0 } from "./aiAgent-DeT1Sw-p.js";
-import { montarPanelPlanta as Z, __tla as __tla_1 } from "./cimentacionPlanta-n68fOLEC.js";
-import { __tla as __tla_2 } from "./workspace-DLQubkvA.js";
+import { montarPanelPlanta as Z, __tla as __tla_1 } from "./cimentacionPlanta-D3xq0amt.js";
+import { __tla as __tla_2 } from "./workspace-DLdPFrrl.js";
 import "./__vite-browser-external-D7Ct-6yo.js";
 let ro;
 let __tla = Promise.all([

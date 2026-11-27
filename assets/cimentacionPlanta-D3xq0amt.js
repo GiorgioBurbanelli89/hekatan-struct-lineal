@@ -1,4 +1,4 @@
-import { E as X, __tla as __tla_0 } from "./workspace-DLQubkvA.js";
+import { E as X, __tla as __tla_0 } from "./workspace-DLdPFrrl.js";
 import { __tla as __tla_1 } from "./aiAgent-DeT1Sw-p.js";
 import "./__vite-browser-external-D7Ct-6yo.js";
 let B;
