@@ -81,3 +81,14 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
 - ✅ APK reconstruido e instalado en el A15 (Success).
 - ✅ YouTube: fem_estructura_vs_suelo_EN (G2ZR3zSxv4o) con título, descripción, capítulos, lista «Geotecnia · Elementos
   finitos» y PÚBLICO. Calidad revisada en el canal: 42 videos y 11 Shorts todos servidos a 1080p.
+
+## 27-nov (4) · APK de Struct ajustado a la pantalla del celular (Jorge: «no me has arreglado Struct móvil»)
+- ❌ Emulado A15 (412×891 y 891×412, dpr 2.625): la medición «¿algo se sale?» daba 0 (las barras deslizan), pero las
+  CAPTURAS mostraban: (1) en vertical NO había barra de dibujo — main.ts solo montaba `#hk-barra` si innerWidth > 600;
+  (2) en horizontal la caja de la cruceta (#hk-nav-camara, left+right en línea) medía 551×100 px EN MEDIO del modelo y se
+  comía los toques (no dibujaba); (3) «Acceso rápido» pisaba la cruceta; (4) leyenda columna/viga en medio del modelo.
+- ✅ main.ts: barra de dibujo montada también ≤ 600 px (a353ff5de). struct_movil.css: tira deslizable de 44 px bajo la
+  barra de arriba, botones de 36 px, modelo desde 84 px, leyenda oculta. struct_movil.js: cruceta con ancho automático y
+  sin captar toques (sus botones sí), «Acceso rápido» encima de ella, encuadre al abrir y al girar.
+- ✅ Copia real del APK (127.0.0.1:4711): LÍNEA por toques con la barra en vertical y horizontal → [[0,1],[1,2]]. APK instalado (Success).
+- ✅ Disco 9,1 GB libres (bin Debug de Hekatan Lab 615 MB, temporales), RAM 4,4 GB; gradle parado.
