@@ -1,5 +1,5 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/cimentacionImportadaUI-_GJcCLM6.js","assets/aiAgent-C8HaLkgL.js","assets/aiAgent-BhY8c8nT.css","assets/cimentacionPlanta-C8BbaNun.js","assets/__vite-browser-external-D7Ct-6yo.js","assets/tutorFem-6wrXZoaa.js"])))=>i.map(i=>d[i]);
-import { d as Bt, a as Xt, g as y2, m as Nn, t as Zh, b as C2, s as Vp, p as cA, B as mn, F as _2, L as Xn, c as en, j as ud, v as Tn, G as $i, V as xt, e as Om, f as Cn, C as pd, h as U0, S as fd, i as hd, k as Ed, M as Kh, l as ci, n as Vb, o as dA, P as jb, q as lu, r as Qh, u as eE, H as qb, w as Jb, R as Rm, x as xa, D as Ys, y as j1, z as Sn, A as mA, _ as Jo, E as jp, I as Dn, J as Wb, K as tE, N as uA, O as so, Q as Zb, T as L2, U as pA, W as v2, X as bl, Y as vo, Z as Kb, $ as Ka, a0 as nE, a1 as Qb, a2 as eN, a3 as tN, a4 as O2, a5 as fA, a6 as hA, a7 as oE, a8 as qa, a9 as EA, aa as qp, ab as nN, ac as aE, ad as sE, ae as iE, af as cu, ag as oN, ah as aN, ai as sN, aj as iN, ak as rE, al as SA, am as rN, an as lN, ao as cN, ap as dN, aq as Sd, ar as mN, as as uN, at as pN, au as fN, __tla as __tla_0 } from "./aiAgent-C8HaLkgL.js";
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/cimentacionImportadaUI-yqB1QU9J.js","assets/aiAgent-JnaNIBn8.js","assets/aiAgent-BhY8c8nT.css","assets/cimentacionPlanta-DFZH2XcQ.js","assets/__vite-browser-external-D7Ct-6yo.js","assets/tutorFem-DNnuGJqy.js"])))=>i.map(i=>d[i]);
+import { d as Bt, a as Xt, g as y2, m as Nn, t as Zh, b as C2, s as Vp, p as cA, B as mn, F as _2, L as Xn, c as en, j as ud, v as Tn, G as $i, V as xt, e as Om, f as Cn, C as pd, h as U0, S as fd, i as hd, k as Ed, M as Kh, l as ci, n as Vb, o as dA, P as jb, q as lu, r as Qh, u as eE, H as qb, w as Jb, R as Rm, x as xa, D as Ys, y as j1, z as Sn, A as mA, _ as Jo, E as jp, I as Dn, J as Wb, K as tE, N as uA, O as so, Q as Zb, T as L2, U as pA, W as v2, X as bl, Y as vo, Z as Kb, $ as Ka, a0 as nE, a1 as Qb, a2 as eN, a3 as tN, a4 as O2, a5 as fA, a6 as hA, a7 as oE, a8 as qa, a9 as EA, aa as qp, ab as nN, ac as aE, ad as sE, ae as iE, af as cu, ag as oN, ah as aN, ai as sN, aj as iN, ak as rE, al as SA, am as rN, an as lN, ao as cN, ap as dN, aq as Sd, ar as mN, as as uN, at as pN, au as fN, __tla as __tla_0 } from "./aiAgent-JnaNIBn8.js";
 import { _ as hN } from "./__vite-browser-external-D7Ct-6yo.js";
 let Zn, PR, _S, vI, M6, $m, c9, A6;
 let __tla = Promise.all([
@@ -21998,7 +21998,7 @@ ${N.join(`
         ...((_b3 = n.springs) == null ? void 0 : _b3.length) ? {
           springs: n.springs
         } : {}
-      }, l.comportamiento ?? (l.comportamiento = n.fuente === "S2K" ? "sap2000" : n.fuente === "E2K" ? "etabs" : n.fuente === "F2K" ? "safe" : void 0), t.elementInputs.val = l, ((_c2 = n.springs) == null ? void 0 : _c2.length) && !e.cubierta && Jo(() => import("./cimentacionImportadaUI-_GJcCLM6.js").then(async (m9) => {
+      }, l.comportamiento ?? (l.comportamiento = n.fuente === "S2K" ? "sap2000" : n.fuente === "E2K" ? "etabs" : n.fuente === "F2K" ? "safe" : void 0), t.elementInputs.val = l, ((_c2 = n.springs) == null ? void 0 : _c2.length) && !e.cubierta && Jo(() => import("./cimentacionImportadaUI-yqB1QU9J.js").then(async (m9) => {
         await m9.__tla;
         return m9;
       }), __vite__mapDeps([0,1,2,3,4])).then((S) => S.montarEditorImportado(t, n.archivo ?? "modelo")).catch((S) => console.warn("[Zapatas]", S));
@@ -28777,7 +28777,7 @@ Ac = dec(0.5*(L1c + L2c)*Bd, 4)
 #: Hasta e/L = 1/6 el problema es lineal y todo coincide; m\xE1s all\xE1, el FEM sigue a la f\xF3rmula del tri\xE1ngulo con el borde levantado. Hekatan y SAP2000 quedan a menos de 0.06 % (lo que queda es la tolerancia de convergencia de SAP2000, 1e-4).
 `;
   yI = (...e) => {
-    Jo(() => import("./tutorFem-6wrXZoaa.js").then(async (m) => {
+    Jo(() => import("./tutorFem-DNnuGJqy.js").then(async (m) => {
       await m.__tla;
       return m;
     }), __vite__mapDeps([5,1,2,4])).then((t) => t.herramientasZapata(...e));
@@ -82027,7 +82027,7 @@ El an\xE1lisis va a tardar ~${Math.round(c)} s y la p\xE1gina queda sin responde
       vigas: g.map((se) => [
         ...se
       ])
-    }, typeof document < "u" && !e.__soloModelo && Jo(() => import("./cimentacionPlanta-C8BbaNun.js").then(async (m9) => {
+    }, typeof document < "u" && !e.__soloModelo && Jo(() => import("./cimentacionPlanta-DFZH2XcQ.js").then(async (m9) => {
       await m9.__tla;
       return m9;
     }), __vite__mapDeps([3,1,2,4])).then((se) => se.montarPanelPlanta(t)).catch(() => {
@@ -99780,7 +99780,7 @@ No hay datos para esta viga.`;
         };
         return {
           distancia: g(A) ? h(A.value) : null,
-          angulo: g(I) ? h(I.textContent) : null,
+          angulo: g(I) ? h(I.value ?? I.textContent) : null,
           referencia: g(M) ? (M.textContent ?? "").trim() : null
         };
       },
@@ -105432,7 +105432,7 @@ Los sliders del Tweakpane se actualizaron a estos valores.`);
               };
             }, void 0), Pe = Te(Ge, Be, De, _e, Fe);
             for (const it of Pe) it.t = Ye;
-            const Le = await Jo(() => import("./aiAgent-C8HaLkgL.js").then(async (m9) => {
+            const Le = await Jo(() => import("./aiAgent-JnaNIBn8.js").then(async (m9) => {
               await m9.__tla;
               return m9;
             }).then((it) => it.av), __vite__mapDeps([1,2])), Ve = Math.max(2, Math.round(Re.nSubZapata ?? 4)), Qe = new Le.MeshStandardMaterial({
@@ -105774,7 +105774,7 @@ Us\xE1 el bot\xF3n "\u{1F3E2} Volver a vista superestructura" para restaurar.`),
                 for (let $e = 0; $e < ve.length - 1; $e++) It(ve[$e], ve[$e + 1]);
               }
             }
-            const bt = await Jo(() => import("./aiAgent-C8HaLkgL.js").then(async (m9) => {
+            const bt = await Jo(() => import("./aiAgent-JnaNIBn8.js").then(async (m9) => {
               await m9.__tla;
               return m9;
             }).then((le) => le.av), __vite__mapDeps([1,2])), H = new bt.LineBasicMaterial({
