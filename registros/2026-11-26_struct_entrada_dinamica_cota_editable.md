@@ -68,3 +68,16 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
 - ✅ Test 52/52 local y 52/52 contra el PÚBLICO (gh-pages 055df20). newBlank.ts ajeno apartado en el build y restaurado (md5 igual).
 - ✅ APK hekatan-struct-android reconstruido (copia_web.sh desde /c/hkpub_struct 055df20) e instalado en el A15: Success.
 - ⏳ Edge abierto: ExtensionActivityEdge (527 MB) sin borrar. C: ~0,4 GB libres.
+
+## 27-nov (3) · POLILÍNEA sigue del último nudo + cota editable desde un nudo (Jorge)
+- ❌ Público (MCP): tras LÍNEA 0,0→4,0→4,3, «pl @2,0 @0,3» empezaba SUELTA en (6,3) → [3,4], despegada.
+- ✅ POLILÍNEA arranca en el último nudo (`sembrarPolilinea` en el cambio de herramienta): [2,3,4]. «N» / opción
+  [Nuevo inicio] la suelta (la «n» va antes del alias n = nudo en main.ts).
+- ✅ Cota provisional editable desde un nudo (Revit): [ d … m desde nudo k ] antes del primer punto, Tab → d, Enter
+  pone el punto a d exacta en la dirección del cursor (ORTO: eje del plano).
+- ❌ No salía en el test: (1) radio 160 px; (2) la rejilla llevaba el cursor a la altura del EXTREMO de la barra
+  y mandaba la cota «a la barra». Ahora la de barra solo en el tramo interior; en el extremo manda la del nudo.
+- ✅ tests/polilinea_y_cota_nudo_ui.mjs 18/18 (planta e iso) local y PÚBLICO; entrada_dinamica 52/52. Commit 40ff9466a.
+- ✅ APK reconstruido e instalado en el A15 (Success).
+- ✅ YouTube: fem_estructura_vs_suelo_EN (G2ZR3zSxv4o) con título, descripción, capítulos, lista «Geotecnia · Elementos
+  finitos» y PÚBLICO. Calidad revisada en el canal: 42 videos y 11 Shorts todos servidos a 1080p.
