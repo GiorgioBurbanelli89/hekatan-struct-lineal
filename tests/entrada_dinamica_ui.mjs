@@ -135,6 +135,13 @@ const choques = (p, sel) => p.evaluate((sel) => {
   console.log('   columna en px:', [c0x, c0y, c1x, c1y].map(Math.round), await p.evaluate((x, y, a, b) => [document.elementFromPoint(x, y)?.tagName, document.elementFromPoint(a, b)?.tagName], c0x, c0y, c1x, c1y));
   await p.mouse.move(c0x, c0y); await w(250); await p.mouse.click(c0x, c0y); await w(400);
   await p.mouse.move(c0x, (c0y + c1y) / 2); await w(150); await p.mouse.move(c1x, c1y); await w(400);
+  const angZ = await p.evaluate(() => ({ v: document.getElementById("hk-rubber-angle").value, bloq: document.getElementById("hk-rubber-angle").classList.contains("hk-bloq"), rot: document.getElementById("hk-dyn-rot-ang").textContent }));
+  const solapeBadge = await p.evaluate(() => { const b = document.getElementById("hk-axis-lock-badge"), g = document.getElementById("hk-dyn-grupo");
+    if (!b || getComputedStyle(b).display === "none") return false; const r = b.getBoundingClientRect(), q = g.getBoundingClientRect();
+    return r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top; });
+  check("el grupo no pisa el rótulo «⊥ ORTO Z»", !solapeBadge);
+  check("ORTO Z: ángulo 90 EXACTO y bloqueado (🔒), no el de pantalla", angZ.v === "90" && angZ.bloq && angZ.rot === "🔒", JSON.stringify(angZ));
+  try { await p.screenshot({ path: `${OUT}/_ed_iso_orto_z.png`, clip: { x: c1x - 260, y: c1y - 80, width: 520, height: 260 } }); } catch {}
   await p.mouse.click(c1x, c1y); await w(500);
   let Pc = await pts(p);
   const tope = Pc[Pc.length - 1];
@@ -149,8 +156,22 @@ const choques = (p, sel) => p.evaluate((sel) => {
     }));
   }
   console.log("   lecturas:", JSON.stringify(lecturas));
+  // el GRUPO de entrada: L y ∠ juntos, rotulados, sin pisarse ni pisar la goma
+  const grupo = await p.evaluate(() => {
+    const R = (id) => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, vis: getComputedStyle(e).display !== "none" }; };
+    const g = R("hk-dyn-grupo"), L = R("hk-rubber-label"), A = R("hk-rubber-angle");
+    const dentro = (q) => q.x >= g.x - 0.5 && q.y >= g.y - 0.5 && q.x + q.w <= g.x + g.w + 0.5 && q.y + q.h <= g.y + g.h + 0.5;
+    const pisa = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    const gm = window.__hekatanRubberBand.geometry.attributes.position.array;
+    const pa = window.__hekatanAPixeles(gm[0], gm[1], gm[2]), pb = window.__hekatanAPixeles(gm[3], gm[4], gm[5]);
+    let corta = false;                                   // ¿la goma (en pantalla) cruza el grupo?
+    for (let t = 0; t <= 1; t += 0.01) { const x = pa.x + (pb.x - pa.x) * t, y = pa.y + (pb.y - pa.y) * t; if (x > g.x && x < g.x + g.w && y > g.y && y < g.y + g.h) { corta = true; break; } }
+    return { g, L, A, dentro: dentro(L) && dentro(A), pisan: pisa(L, A), corta, rot: document.getElementById("hk-dyn-grupo").innerText.replace(/\s+/g, " ") };
+  });
+  check("un GRUPO: L y ∠ dentro, rotulados (L … m | ∠ … °)", grupo.g.vis && grupo.dentro && /L/.test(grupo.rot) && /m/.test(grupo.rot) && /°/.test(grupo.rot), JSON.stringify(grupo.rot));
+  check("L y ∠ no se pisan, y el grupo no pisa la goma", !grupo.pisan && !grupo.corta, JSON.stringify({ pisan: grupo.pisan, corta: grupo.corta }));
   check("tras la columna, sin clic: la goma sale del TOPE en las 3 posiciones", lecturas.every((l) => l.goma && distan(l.desde, tope) < 1e-6));
-  check("la cota viva (L) se ve y CAMBIA con el cursor", lecturas.every((l) => l.L && /m$/.test(l.L)) && new Set(lecturas.map((l) => l.L)).size === 3);
+  check("la cota viva (L) se ve y CAMBIA con el cursor", lecturas.every((l) => l.L && /^-?\d+\.\d\d$/.test(l.L)) && new Set(lecturas.map((l) => l.L)).size === 3);
   // el foco FUERA de la cota (como tras pinchar otro mando): «6» lo recoge el atajo global → antes era «Enter sin teclear» = terminar
   await p.evaluate(() => document.activeElement?.blur?.());
   await p.keyboard.type("6"); await w(120); await p.keyboard.press("Enter"); await w(600);
@@ -168,6 +189,54 @@ const choques = (p, sel) => p.evaluate((sel) => {
   await p.keyboard.press("Escape"); await w(400);
   const fin = await p.evaluate(() => ({ goma: window.__hekatanRubberBand.visible, last: (window.__hekatanDrawingPolylines.rawVal.at(-1) || []).length }));
   check("Esc termina (sin goma, nada abierto)", !fin.goma && fin.last === 0, JSON.stringify(fin));
+  await p.close();
+}
+
+// ═══ 2c. PLANTA y 3D: PRIMER PUNTO a d de una barra existente, @dx,dy desde el último nudo, DESDE ═══
+for (const [nom, tecla] of [["Planta", "1"], ["3D iso", "4"]]) {
+  console.log(`── PC · ${nom}: primer punto a d de la barra, @, DESDE`);
+  const p = await abrir({ width: 1500, height: 1000 }, false);
+  await vista(p, tecla);
+  await p.evaluate(() => { window.__hekatanDrawingPoints.val = [[0, 0, 0], [8, 0, 0]]; window.__hekatanDrawingPolylines.val = [[0, 1], []]; window.__hekatanRebuild?.(); });
+  await w(400); await linea(p);
+  const c = await pix(p, 3, 4.2, 0); await p.mouse.move(c.x - 30, c.y - 20); await w(150); await p.mouse.move(c.x, c.y); await w(400);
+  const db = await p.evaluate(() => ({ vis: getComputedStyle(document.getElementById("hk-dist-barra")).display, d: document.getElementById("hk-dist-d").value, a: document.getElementById("hk-dist-a").value, txt: document.getElementById("hk-dist-barra").innerText.replace(/\s+/g, " ") }));
+  check(`${nom}: junto a la barra sale [d … m | a … m] con nombre`, db.vis === "block" && /d/.test(db.txt) && /a/.test(db.txt) && parseFloat(db.d) > 3, JSON.stringify(db));
+  try { await p.screenshot({ path: `${OUT}/_ed_${tecla}_dist_barra.png`, clip: { x: Math.max(0, c.x - 330), y: Math.max(0, c.y - 120), width: 560, height: 260 } }); } catch {}
+  await p.keyboard.press("Tab"); await w(100);
+  check(`${nom}: Tab lleva a d`, (await p.evaluate(() => document.activeElement?.id)) === "hk-dist-d");
+  await p.keyboard.type("5"); await p.keyboard.press("Tab"); await p.keyboard.type("2"); await p.keyboard.press("Enter"); await w(500);
+  let P = await pts(p);
+  const ini = P[P.length - 1];
+  check(`${nom}: primer punto a d = 5.00 y a = 2.00 EXACTOS`, distan(ini, [2, 5, 0]) < 1e-9, JSON.stringify(ini));
+  // segundo punto: L tecleada (ORTO +X) → línea PARALELA a 5.00 m
+  const c2 = await pix(p, 6, 5, 0); await p.mouse.move(c2.x, c2.y, { steps: 4 }); await w(400);
+  await p.keyboard.type("4"); await p.keyboard.press("Enter"); await w(500);
+  P = await pts(p); const fin = P[P.length - 1];
+  check(`${nom}: la línea nueva es paralela a 5.00 m de la barra`, near(fin[1], 5, 1e-9) && near(ini[1], 5, 1e-9) && near(distan(ini, fin), 4, 1e-9), JSON.stringify([ini, fin]));
+  // @dx,dy para el PRIMER punto (relativo al último nudo)
+  await p.keyboard.press("Escape"); await w(300); await linea(p);
+  const c3 = await pix(p, 1, 2, 0); await p.mouse.move(c3.x, c3.y, { steps: 3 }); await w(300);
+  await p.evaluate(() => { const i = document.getElementById("hk-rubber-label"); i.focus(); i.select(); });
+  await p.keyboard.type("@0,2"); await p.keyboard.press("Enter"); await w(500);
+  P = await pts(p); const rel = P[P.length - 1];
+  check(`${nom}: primer punto @0,2 desde el último nudo`, distan(rel, [fin[0], fin[1] + 2, fin[2]]) < 1e-9, JSON.stringify(rel));
+  // DESDE: D, base = nudo (0,0,0), @1,1
+  await p.keyboard.press("Escape"); await w(300); await linea(p);
+  const c4 = await pix(p, 0.5, 1, 0); await p.mouse.move(c4.x, c4.y, { steps: 3 }); await w(300);
+  await p.evaluate(() => { const i = document.getElementById("hk-rubber-label"); i.focus(); i.select(); });
+  await p.keyboard.type("d"); await p.keyboard.press("Enter"); await w(200);
+  check(`${nom}: DESDE espera el punto base`, (await p.evaluate(() => window.__hekatanDesde())) === "base");
+  const o = await pix(p, 0, 0, 0); await p.mouse.move(o.x + 3, o.y + 2, { steps: 3 }); await w(250); await p.mouse.move(o.x, o.y); await w(300); await p.mouse.click(o.x, o.y); await w(400);
+  await p.keyboard.type("1,1"); await p.keyboard.press("Enter"); await w(500);
+  P = await pts(p); const ds = P[P.length - 1];
+  check(`${nom}: DESDE base (0,0,0) + @1,1 = (1,1,0)`, distan(ds, [1, 1, 0]) < 1e-9, JSON.stringify(ds));
+  // sin ORTO: el ángulo es libre (sin candado)
+  await p.evaluate(() => { window.__hekatanOrthoMode = false; window.__hekatanPolarTrack = false; });
+  const c5 = await pix(p, 3.3, 2.1, 0); await p.mouse.move(c5.x, c5.y, { steps: 4 }); await w(400);
+  const libre = await p.evaluate(() => ({ v: document.getElementById("hk-rubber-angle").value, bloq: document.getElementById("hk-rubber-angle").classList.contains("hk-bloq") }));
+  check(`${nom}: sin ORTO el ángulo es libre (sin 🔒)`, !libre.bloq && parseFloat(libre.v) > 5 && parseFloat(libre.v) < 85, JSON.stringify(libre));
+  try { await p.screenshot({ path: `${OUT}/_ed_${tecla}_sin_orto.png`, clip: { x: Math.max(0, Math.min(c5.x, c4.x) - 280), y: Math.max(0, Math.min(c5.y, c4.y) - 160), width: 600, height: 320 } }); } catch {}
   await p.close();
 }
 

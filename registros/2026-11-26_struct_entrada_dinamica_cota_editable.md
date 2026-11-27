@@ -43,3 +43,18 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
   fuera → viga de 6 m → 2 barras sueltas con el tope compartido → sigue la goma → Esc termina. U y C. 31/31.
 - ⚠️ Observación: en iso el cursor cae en el plano de trabajo (z = 0); desde el tope de una columna la goma baja en diagonal
   hasta ahí (como el SCP de AutoCAD). Para la viga horizontal: ORTO/eje X-Y, o subir el plano al nivel (N+…).
+
+## 27-nov (2) · Captura de Jorge en 3D con ⊥ ORTO Z: cuatro rótulos («13.00 m» editable, «93°», «14 m», «5.00»)
+- Qué era cada uno: «13.00 m» = cota de la goma; «93°» = ángulo de PANTALLA (el tramo vertical no tiene ángulo en el plano XY);
+  «14 m» = cota automática de la columna ya dibujada (pasiva); «5.00» = cota de PARALELAS (distancia a la columna paralela), sin nombre.
+- ✅ UN grupo pegado a la goma, apartado en perpendicular (no la pisa, ni al rótulo ⊥ ORTO): [ L 13.00 m | ∠ 90 ° ], cajas claras con
+  borde azul, la del foco en ámbar; Tab alterna. Unidad fuera de la caja (el valor es solo el número).
+- ✅ ORTO / rastreo polar / bloqueo: ∠ con 🔒 (caja ámbar) y valor exacto; tramo fuera del plano = ELEVACIÓN (90 / −90), no el de pantalla.
+- ✅ Cotas automáticas pasivas: sin caja ni borde, 9 px, tenues; mientras se dibuja, al 30 %.
+- ✅ Paralelas: [ d∥ 5.00 m ] con nombre y estilo editable, y SOLO cuando se puede escribir (arranque de una línea nueva).
+- ✅ PRIMER punto junto a una barra (pregunta de Jorge, líneas sueltas): antes del 1.er clic sale [ d … m | a … m ∥ barra i–j ] con la cota
+  perpendicular dibujada; Tab → d → a; Enter pone el primer punto a esa d (lado del cursor) y a (desde el nudo i). Luego L/∠.
+- ✅ Primer punto relativo: @dx,dy[,dz] desde el ÚLTIMO nudo (LASTPOINT). DESDE (D/desde/FROM): base por clic o coordenada → @dx,dy.
+- ✅ Test 51/51 en Planta y 3D iso (local): paralela a d = 5.00 exacta, @0,2, DESDE (1,1,0), con y sin ORTO, grupo sin solapes. Otros UI OK.
+- ❌ MCP struct-local / hekatan-struct: NO conectados en esta sesión (fallo de conexión al arrancar) → puppeteer en isométrico como respaldo.
+- ⏳ Celular: la caja tocable tiene el estilo nuevo, pero la «d a la barra» del PRIMER punto aún no tiene caja tocable (en el celular: @dx,dy en L).

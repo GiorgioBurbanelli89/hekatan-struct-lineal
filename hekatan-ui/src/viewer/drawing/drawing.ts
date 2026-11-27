@@ -696,6 +696,76 @@ export function drawing({
     "transform:translate(-50%,0)", "white-space:nowrap", "display:none",
   ].join(";") + ";";
   document.body.appendChild(rubberAngle);
+  // ── EL GRUPO DE ENTRADA ACTIVA (Jorge, 27-nov-2026, con captura en 3D: «salen uno editable y otro no») ──
+  // Había cuatro rótulos sueltos a la vez —«13.00 m» editable, «93°» en otra caja, «14 m» de la columna ya
+  // dibujada y un «5.00» sin nombre— y no se sabía cuál se escribe. Ahora lo que SE ESCRIBE va en UN grupo
+  // pegado a la goma, sin pisarla: [ L 13.00 m | ∠ 90° ], cajas claras con borde de color (la del foco en ámbar);
+  // Tab alterna. Lo que solo informa (cotas de lo ya dibujado) va tenue, sin borde, y se apaga mientras se dibuja.
+  const grupoDyn = document.createElement("div");
+  grupoDyn.id = "hk-dyn-grupo";
+  grupoDyn.style.cssText = "position:fixed;z-index:99995;pointer-events:none;display:none;height:32px;box-sizing:border-box;" +
+    "background:rgba(15,23,42,0.93);border:1px solid #334155;border-radius:7px;box-shadow:0 3px 10px rgba(0,0,0,.45);" +
+    "font:700 12px Consolas,monospace;color:#7dd3fc";
+  const GD = { pad: 6, lbl: 14, inL: 66, uni: 16, gap: 10, inA: 50, h: 32, hin: 22 };
+  const GD_W = GD.pad + GD.lbl + GD.inL + GD.uni + GD.gap + GD.lbl + 4 + GD.inA + GD.uni + GD.pad;
+  const rotGD = (txt: string, x: number, id = "") => {
+    const e = document.createElement("span"); if (id) e.id = id; e.textContent = txt;
+    e.style.cssText = `position:absolute;left:${x}px;top:0;line-height:${GD.h - 2}px;white-space:nowrap`;
+    grupoDyn.appendChild(e); return e;
+  };
+  const xInL = GD.pad + GD.lbl, xUniL = xInL + GD.inL + 3, xLblA = xUniL + GD.uni + GD.gap, xInA = xLblA + GD.lbl + 4, xUniA = xInA + GD.inA + 3;
+  rotGD("L", GD.pad + 2); rotGD("m", xUniL); const rotAng = rotGD("∠", xLblA, "hk-dyn-rot-ang"); rotGD("°", xUniA);
+  // separador entre los dos campos
+  { const sep = document.createElement("span"); sep.style.cssText = `position:absolute;left:${xLblA - GD.gap / 2 - 1}px;top:6px;width:1px;height:${GD.h - 14}px;background:#334155`; grupoDyn.appendChild(sep); }
+  document.body.appendChild(grupoDyn);
+  // estilo «se escribe aquí» (claro, borde de color) y el del foco (ámbar)
+  {
+    const st = document.createElement("style");
+    st.textContent = "#hk-rubber-label.hk-en-grupo,#hk-rubber-angle.hk-en-grupo{background:#f8fafc!important;color:#0f172a!important;" +
+      "border:1.5px solid #0ea5e9!important;border-radius:4px!important;font:700 12px Consolas,monospace!important;height:" + GD.hin + "px!important;" +
+      "line-height:" + (GD.hin - 3) + "px!important;text-align:right!important;padding:0 5px!important;transform:none!important;caret-color:#f59e0b}" +
+      "#hk-rubber-label.hk-en-grupo:focus,#hk-rubber-angle.hk-en-grupo:focus{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.45)}" +
+      "#hk-rubber-angle.hk-en-grupo.hk-bloq{background:#fef3c7!important;border-color:#d97706!important}";
+    document.head.appendChild(st);
+  }
+  /** Coloca el grupo junto al punto medio de la goma (mx,my en px), DESPLAZADO en perpendicular para no pisarla. */
+  const colocarGrupo = (ax: number, ay: number, bx: number, by: number) => {
+    const mx = (ax + bx) / 2, my = (ay + by) / 2;
+    let tx = bx - ax, ty = by - ay; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+    let nx = -ty, ny = tx;                                   // normal en pantalla
+    if (ny > 0 || (Math.abs(ny) < 1e-6 && nx < 0)) { nx = -nx; ny = -ny; }   // hacia arriba (o a la derecha si es vertical)
+    const d = Math.abs(nx) * GD_W / 2 + Math.abs(ny) * GD.h / 2 + 12;
+    let cx = mx + nx * d, cy = my + ny * d;
+    const r = rendererElm.getBoundingClientRect();
+    cx = Math.max(r.left + GD_W / 2 + 4, Math.min(r.right - GD_W / 2 - 4, cx));
+    cy = Math.max(r.top + GD.h / 2 + 4, Math.min(r.bottom - GD.h / 2 - 4, cy));
+    // ni encima del rótulo «⊥ ORTO Z» (va junto al cursor): si lo pisa, el grupo se aparta un poco más
+    const badge = document.getElementById("hk-axis-lock-badge");
+    if (badge && badge.style.display === "block") {
+      const b = badge.getBoundingClientRect();
+      const pisa = (x: number, y: number) => { const x0 = x - GD_W / 2, y0 = y - GD.h / 2;
+        return x0 < b.right + 4 && x0 + GD_W > b.left - 4 && y0 < b.bottom + 4 && y0 + GD.h > b.top - 4; };
+      // primero a lo largo de la goma, hacia su ARRANQUE (el rótulo va en la punta, junto al cursor); si no basta, de lado
+      let hecho = false;
+      for (let k = 1; k <= 30 && pisa(cx, cy); k++) { const x = cx - tx * 10 * k, y = cy - ty * 10 * k; if (!pisa(x, y)) { cx = x; cy = y; hecho = true; break; } }
+      for (let k = 1; k <= 30 && !hecho && pisa(cx, cy); k++) { const x = cx + nx * 10 * k, y = cy + ny * 10 * k; if (!pisa(x, y)) { cx = x; cy = y; break; } }
+    }
+    const gx = Math.round(cx - GD_W / 2), gy = Math.round(cy - GD.h / 2);
+    grupoDyn.style.left = gx + "px"; grupoDyn.style.top = gy + "px"; grupoDyn.style.width = GD_W + "px"; grupoDyn.style.display = "block";
+    const yIn = gy + (GD.h - GD.hin) / 2;
+    rubberLabelInput.classList.add("hk-en-grupo"); rubberAngle.classList.add("hk-en-grupo");
+    rubberLabelInput.style.left = (gx + xInL) + "px"; rubberLabelInput.style.top = yIn + "px"; rubberLabelInput.style.width = GD.inL + "px";
+    rubberAngle.style.left = (gx + xInA) + "px"; rubberAngle.style.top = yIn + "px"; rubberAngle.style.width = GD.inA + "px";
+    rubberLabelInput.style.zIndex = rubberAngle.style.zIndex = "99996";
+  };
+  /** La cota del PRIMER punto (x,y,z junto al cursor): sin grupo, con su ancho. */
+  const estiloCoordenada = () => {
+    grupoDyn.style.display = "none"; rubberAngle.style.display = "none";
+    rubberLabelInput.classList.remove("hk-en-grupo");
+    rubberLabelInput.style.width = "132px";
+  };
+  // Eje que el ORTO / rastreo polar / bloqueo X-Y-Z ha fijado para el tramo en curso (lo pone el pointermove).
+  let ejeBloqueado: "x" | "y" | "z" | null = null;
   // ── Ejes del PLANO DE TRABAJO y ángulos en él ──
   const ejesPlano = (): { wp: string; U: [number, number, number]; V: [number, number, number] } => {
     const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
@@ -772,8 +842,18 @@ export function drawing({
   paraInput.id = "hk-paralela"; paraInput.type = "text"; paraInput.title = "Distancia entre las dos paralelas: escriba el valor y Enter";
   paraInput.style.cssText = "position:fixed;display:none;z-index:99996;width:62px;padding:1px 4px;background:#0b1220;color:#7dd3fc;border:1px solid #38bdf8;border-radius:4px;font:600 12px Consolas,monospace;text-align:center;transform:translate(-50%,-50%);outline:none";
   document.body.appendChild(paraInput);
+  // con su NOMBRE: era un «5.00» suelto que no se sabía qué era (Jorge, 27-nov-2026). Ahora [ d∥ 5.00 m ] con el
+  // estilo de lo que se escribe, y solo cuando SE PUEDE escribir (arranque de una línea nueva): si no, sobra.
+  paraInput.className = "hk-en-grupo";
+  const paraGrupo = document.createElement("div");
+  paraGrupo.id = "hk-paralela-grupo";
+  paraGrupo.style.cssText = "position:fixed;z-index:99995;pointer-events:none;display:none;width:118px;height:32px;box-sizing:border-box;" +
+    "background:rgba(15,23,42,0.93);border:1px solid #334155;border-radius:7px;font:700 12px Consolas,monospace;color:#7dd3fc";
+  paraGrupo.innerHTML = '<span style="position:absolute;left:6px;line-height:30px">d∥</span><span style="position:absolute;left:98px;line-height:30px">m</span>';
+  paraGrupo.title = "Separación entre la línea nueva y la barra paralela";
+  document.body.appendChild(paraGrupo);
   let paraInfo: { idx: number; foot: THREE.Vector3; n: THREE.Vector3; editable: boolean } | null = null;
-  const ocultarPara = () => { if (document.activeElement === paraInput) return; paraLinea.visible = false; paraInput.style.display = "none"; paraInfo = null; };
+  const ocultarPara = () => { if (document.activeElement === paraInput) return; paraLinea.visible = false; paraInput.style.display = "none"; paraGrupo.style.display = "none"; paraInfo = null; };
   /** Busca la barra más cercana PARALELA al tramo en curso y pinta la cota entre ambas. */
   const cotaParalela = (lastIdx: number, lastPt: number[], p: THREE.Vector3, polyLen: number) => {
     if (document.activeElement === paraInput) return;
@@ -793,13 +873,16 @@ export function drawing({
       const dist = perp.length(); if (dist < 0.02 || dist > 60) continue;
       if (!mejor || dist < mejor.dist) mejor = { dist, foot: P0.clone().sub(perp), n: perp.clone().divideScalar(dist) };
     }
-    if (!mejor) { ocultarPara(); return; }
+    if (!mejor || polyLen !== 1) { ocultarPara(); return; }      // solo informativa = ruido: no se enseña
     paraInfo = { idx: lastIdx, foot: mejor.foot, n: mejor.n, editable: polyLen === 1 };
     paraLinea.geometry.setFromPoints([P0, mejor.foot]); (paraLinea as any).computeLineDistances?.(); paraLinea.visible = true;
     const mid = P0.clone().add(mejor.foot).multiplyScalar(0.5).project(getActiveCamera());
     const rect = rendererElm.getBoundingClientRect();
-    paraInput.style.left = (rect.left + (mid.x * 0.5 + 0.5) * rect.width) + "px";
-    paraInput.style.top = (rect.top + (-mid.y * 0.5 + 0.5) * rect.height + 16) + "px";
+    const pgx = Math.round(rect.left + (mid.x * 0.5 + 0.5) * rect.width - 59), pgy = Math.round(rect.top + (-mid.y * 0.5 + 0.5) * rect.height + 16 - 16);
+    paraGrupo.style.left = pgx + "px"; paraGrupo.style.top = pgy + "px"; paraGrupo.style.display = "block";
+    paraInput.style.transform = "none"; paraInput.style.width = "70px";
+    paraInput.style.left = (pgx + 26) + "px";
+    paraInput.style.top = (pgy + 5) + "px";
     paraInput.value = mejor.dist.toFixed(2);
     paraInput.readOnly = !paraInfo.editable; paraInput.style.cursor = paraInfo.editable ? "text" : "default";
     paraInput.style.display = "block";
@@ -831,29 +914,45 @@ export function drawing({
     const rect = rendererElm.getBoundingClientRect();
     const sx = rect.left + (_rubberMid.x * 0.5 + 0.5) * rect.width;
     const sy = rect.top + (-_rubberMid.y * 0.5 + 0.5) * rect.height;
-    rubberLabelInput.style.left = sx + "px";
-    rubberLabelInput.style.top = sy + "px";
+    void sx; void sy;
     rubberLabelInput.style.display = "block";
     // Ángulo en pantalla, antihorario desde la derecha (en planta y alzado = ángulo del plano)
     const _pa = new THREE.Vector3(ax, ay, az).project(getActiveCamera());
     const _pb = new THREE.Vector3(bx, by, bz).project(getActiveCamera());
     const ax2 = rect.left + (_pa.x * 0.5 + 0.5) * rect.width, ay2 = rect.top + (-_pa.y * 0.5 + 0.5) * rect.height;
     const bx2 = rect.left + (_pb.x * 0.5 + 0.5) * rect.width, by2 = rect.top + (-_pb.y * 0.5 + 0.5) * rect.height;
-    // el ángulo del PLANO de trabajo (si el tramo sale del plano —una columna en planta— el de pantalla)
-    let ang = anguloEnPlano(dx, dy, dz) ?? Math.atan2(-(by2 - ay2), bx2 - ax2) * 180 / Math.PI;
-    if (ang < 0) ang += 360;
-    if (!anguloEditando) {
-      rubberAngle.value = anguloFijo !== null ? `🔒${+anguloFijo.toFixed(2)}°` : `${Math.round(ang) % 360}°`;
+    // el ángulo del PLANO de trabajo. Si el tramo SALE del plano (una columna con el plano en planta) no hay
+    // ángulo en el plano: se da la ELEVACIÓN (90° / −90°), que con ORTO Z es exacta. Antes salía el de PANTALLA
+    // («93°» en la captura de Jorge con ⊥ ORTO Z), que no es nada que se pueda escribir.
+    const enPlano = anguloEnPlano(dx, dy, dz);
+    let ang: number, elev = false;
+    if (enPlano !== null) ang = enPlano;
+    else {
+      const { U, V } = ejesPlano();
+      const nrm = [U[1] * V[2] - U[2] * V[1], U[2] * V[0] - U[0] * V[2], U[0] * V[1] - U[1] * V[0]];
+      ang = Math.asin(Math.max(-1, Math.min(1, (dx * nrm[0] + dy * nrm[1] + dz * nrm[2]) / dL))) * 180 / Math.PI;
+      elev = true;
     }
-    rubberAngle.style.borderColor = anguloFijo !== null ? "#facc15" : "#22d3ee";
-    rubberAngle.style.left = bx2 + "px";
-    rubberAngle.style.top = (by2 + 16) + "px";
+    if (!elev && ang < 0) ang += 360;
+    const bloqueado = anguloFijo !== null || ejeBloqueado !== null;
+    if (!anguloEditando) {
+      const v = anguloFijo !== null ? anguloFijo : ang;
+      rubberAngle.value = `${+v.toFixed(ejeBloqueado || anguloFijo !== null ? 2 : 0)}`.replace(/^360$/, "0");
+    }
+    rotAng.textContent = bloqueado ? "🔒" : (elev ? "∠↑" : "∠");
+    rubberAngle.title = elev ? "Elevación sobre el plano de trabajo (°)" : "Ángulo en el plano de trabajo (°) · Tab: longitud ⇄ ángulo";
+    rubberAngle.classList.toggle("hk-bloq", bloqueado);
     rubberAngle.style.display = "block";
+    void bx2; void by2;
+    ocultarDistBarra();
+    colocarGrupo(ax2, ay2, bx2, by2);
+    // en el CELULAR la entrada es la caja tocable (L / ∠ / ✓ / ✕): el grupo del ratón no se enseña
+    if (ultimoPuntero !== "mouse") { grupoDyn.style.display = "none"; rubberLabelInput.style.display = "none"; rubberAngle.style.display = "none"; return; }
     // con el ángulo en edición el foco es suyo: no se lo quita la longitud
     if (document.activeElement === rubberAngle) return;
     // Live update del value mientras el usuario NO esté editando manualmente.
     if (!rubberUserEditing) {
-      rubberLabelInput.value = `${dL.toFixed(2)} m`;
+      rubberLabelInput.value = `${dL.toFixed(2)}`;          // la unidad va en el grupo («m»)
       // Mantener el input enfocado (cursor parpadeante visible) y todo el
       // texto seleccionado — así tipear cualquier dígito reemplaza el valor
       // automáticamente, estilo AutoCAD/Revit. El user no necesita clickear.
@@ -871,6 +970,8 @@ export function drawing({
   };
   const hideRubberLabel = () => {
     rubberLabelInput.style.display = "none";
+    grupoDyn.style.display = "none";
+    ocultarDistBarra();
     rubberAngle.style.display = "none";
     rubberStart = null;
     rubberDir = null;
@@ -1040,6 +1141,27 @@ export function drawing({
   };
   // Convierte cualquier ParsedInput en el punto FINAL (x,y,z) que se agrega
   // a la polilínea. Necesita rubberStart (último punto) para los modos rel.
+  // BASE de lo relativo (@dx,dy,dz · @d<a): el último punto del tramo en curso; sin tramo, el punto base de DESDE
+  // (FROM de AutoCAD) y, si no, el ÚLTIMO NUDO dibujado (LASTPOINT): así el PRIMER punto de una línea nueva también
+  // se puede dar relativo («@0,5» = 5 m al lado del último nudo).
+  type Pt3 = [number, number, number];
+  let desde: null | "base" | { base: Pt3 } = null;
+  const baseRelativa = (): Pt3 | null => {
+    if (rubberStart) return rubberStart;
+    if (desde && desde !== "base") return desde.base;
+    const P = drawingObj.points?.rawVal ?? [];
+    const q = P[P.length - 1];
+    return q ? [q[0], q[1], q[2]] : null;
+  };
+  /** DESDE (FROM): «D» + Enter → se precisa un punto BASE (clic o coordenada) → se teclea @dx,dy[,dz] desde él. */
+  const empezarDesde = (): boolean => {
+    const tool = (window as any).__hekatanCadState?.get?.()?.tool;
+    if (!["line", "polyline", "area", "node"].includes(tool)) return false;
+    desde = "base";
+    updateStatus("DESDE  Precise el punto BASE (clic o x,y,z); luego escriba el desplazamiento @dx,dy[,dz].");
+    return true;
+  };
+  (window as any).__hekatanDesde = () => desde;
   const resolveParsedInput = (p: ParsedInput): [number, number, number] | null => {
     if (!p) return null;
     // ── EL ORIGEN LOCAL (SCU) ────────────────────────────────────────────────
@@ -1054,28 +1176,28 @@ export function drawing({
     const O = ((window as any).__hekatanSCU ?? [0, 0, 0]) as [number, number, number];
     if (p.kind === "absCart") return [O[0] + p.x, O[1] + p.y, O[2] + p.z];
     if (p.kind === "relCart") {
-      if (!rubberStart) return null;
-      return [rubberStart[0] + p.dx, rubberStart[1] + p.dy, rubberStart[2] + p.dz];
+      const B = baseRelativa(); if (!B) return null;
+      return [B[0] + p.dx, B[1] + p.dy, B[2] + p.dz];
     }
     if (p.kind === "absPolar") {
       const a = p.ang * Math.PI / 180;
       return [O[0] + p.L * Math.cos(a), O[1] + p.L * Math.sin(a), O[2]];
     }
     if (p.kind === "relPolar") {
-      if (!rubberStart) return null;
+      const B = baseRelativa(); if (!B) return null;
       const a = p.ang * Math.PI / 180;
-      return [rubberStart[0] + p.L * Math.cos(a),
-              rubberStart[1] + p.L * Math.sin(a),
-              rubberStart[2]];
+      return [B[0] + p.L * Math.cos(a),
+              B[1] + p.L * Math.sin(a),
+              B[2]];
     }
     if (p.kind === "relSpherical") {
-      if (!rubberStart) return null;
+      const B = baseRelativa(); if (!B) return null;
       const az = p.az * Math.PI / 180;  // azimuth (XY plane angle)
       const el = p.el * Math.PI / 180;  // elevation (Z angle)
       const horiz = p.L * Math.cos(el);
-      return [rubberStart[0] + horiz * Math.cos(az),
-              rubberStart[1] + horiz * Math.sin(az),
-              rubberStart[2] + p.L * Math.sin(el)];
+      return [B[0] + horiz * Math.cos(az),
+              B[1] + horiz * Math.sin(az),
+              B[2] + p.L * Math.sin(el)];
     }
     return null;  // length → manejado aparte por commitTypedDistance
   };
@@ -1096,6 +1218,7 @@ export function drawing({
   // de abajo): un punto tecleado es un clic en esa coordenada, ni más ni menos.
   // De regalo reusa el nudo que ya exista a ≤ 1 mm en vez de crear otro encima.
   const commitAbsolutePoint = (pt: [number, number, number]) => {
+    desde = null;
     procesarClic(new THREE.Vector3(pt[0], pt[1], pt[2]), null);
     // El punto tecleado pasa a ser el origen del siguiente relativo: sin esto
     // «0,0,3» + «@6,0,0» por la caja de comandos daba «desconocido», porque
@@ -1117,6 +1240,7 @@ export function drawing({
   // COORDENADA tipeada: "1,1,1" (abs), "@5,3" (rel), "5<45" (polar), "5" (DDE).
   // Devuelve true si pudo ubicar el punto.
   (window as any).__hekatanTypeCoord = (raw: string): boolean => {
+    if (/^(d|desde|from|fr)$/i.test(raw.trim()) && empezarDesde()) return true;
     const parsed = parseAutoCadInput(raw);
     if (!parsed) return false;
     if (parsed.kind === "length") { commitTypedDistance(parsed.L); return true; }
@@ -1140,6 +1264,15 @@ export function drawing({
       ev.preventDefault(); ev.stopPropagation();
       irAlAngulo();
       return;
+    }
+    // sin tramo en curso (primer punto) y junto a una barra: Tab lleva a d (distancia a la barra)
+    if (ev.key === "Tab" && inD.style.display === "block") {
+      ev.preventDefault(); ev.stopPropagation();
+      try { inD.focus({ preventScroll: true }); inD.select(); } catch {}
+      return;
+    }
+    if (ev.key === "Enter" && /^(d|desde|from|fr)$/i.test(rubberLabelInput.value.trim()) && empezarDesde()) {
+      ev.preventDefault(); rubberLabelInput.value = ""; rubberUserEditing = false; return;
     }
     if (ev.key === "Enter") {
       ev.preventDefault();
@@ -1304,7 +1437,7 @@ export function drawing({
     i.setAttribute("inputmode", "decimal"); i.setAttribute("enterkeyhint", "done");
     // 16 px: con menos, el navegador del iPhone hace zoom al enfocar
     i.style.cssText = `width:${w}px;height:36px;box-sizing:border-box;padding:0 6px;font:600 16px Consolas,monospace;` +
-      "color:#fff;background:#0b1220;border:1px solid #22d3ee;border-radius:5px;outline:none;text-align:right";
+      "color:#0f172a;background:#f8fafc;border:1.5px solid #0ea5e9;border-radius:5px;outline:none;text-align:right;caret-color:#f59e0b";   // = cajas del grupo del ratón
     return i;
   };
   const rotT = (t: string) => { const l = document.createElement("span"); l.textContent = t; l.style.cssText = "pointer-events:none"; return l; };
@@ -1416,6 +1549,108 @@ export function drawing({
   };
   const bucleCotaTactil = () => { try { colocarCotaTactil(); } catch {} requestAnimationFrame(bucleCotaTactil); };
   requestAnimationFrame(bucleCotaTactil);
+
+  // ════════════════════════════════════════════════════════════════════
+  // EL PRIMER PUNTO JUNTO A UNA BARRA: d (a la barra) y a (a lo largo, desde su nudo i) — 27-nov-2026
+  // ════════════════════════════════════════════════════════════════════
+  // Jorge: «si dibujo líneas en vez de polilíneas, ¿cómo edito la distancia entre la línea ya dibujada y el
+  // inicio de la nueva?». Antes del primer clic, con el cursor cerca de una barra, sale [ d 5.00 m | a 2.00 m ]
+  // con la cota perpendicular dibujada. Tab desde la coordenada lleva a d (y a a); Enter pone el PRIMER punto
+  // a esa distancia exacta, sobre la perpendicular hacia el lado del cursor; luego sigue la goma L/∠.
+  const distGrupo = document.createElement("div");
+  distGrupo.id = "hk-dist-barra";
+  distGrupo.style.cssText = "position:fixed;z-index:99995;pointer-events:none;display:none;height:32px;box-sizing:border-box;" +
+    "background:rgba(15,23,42,0.93);border:1px solid #334155;border-radius:7px;box-shadow:0 3px 10px rgba(0,0,0,.45);" +
+    "font:700 12px Consolas,monospace;color:#7dd3fc;white-space:nowrap";
+  const DB = { pad: 6, lbl: 14, inp: 58, uni: 16, gap: 10 };
+  const DB_W = DB.pad + (DB.lbl + DB.inp + DB.uni) * 2 + DB.gap + 70 + DB.pad;
+  const rotDB = (t: string, x: number) => { const e = document.createElement("span"); e.textContent = t; e.style.cssText = `position:absolute;left:${x}px;top:0;line-height:30px`; distGrupo.appendChild(e); return e; };
+  const xD = DB.pad + DB.lbl, xA = xD + DB.inp + DB.uni + DB.gap + DB.lbl;
+  rotDB("d", DB.pad + 2); rotDB("m", xD + DB.inp + 3); rotDB("a", xA - DB.lbl + 2); rotDB("m", xA + DB.inp + 3);
+  const rotBarra = rotDB("", xA + DB.inp + DB.uni + 4); rotBarra.style.color = "#94a3b8"; rotBarra.style.fontWeight = "500";
+  document.body.appendChild(distGrupo);
+  const campoDB = (id: string, tit: string) => {
+    const i = document.createElement("input"); i.id = id; i.type = "text"; i.spellcheck = false; i.tabIndex = -1; i.title = tit;
+    i.className = "hk-en-grupo";
+    i.style.cssText = `position:fixed;z-index:99996;display:none;width:${DB.inp}px;pointer-events:none;outline:none`;
+    document.body.appendChild(i); return i;
+  };
+  {
+    const st = document.createElement("style");
+    st.textContent = "#hk-dist-d,#hk-dist-a,#hk-paralela.hk-en-grupo{background:#f8fafc!important;color:#0f172a!important;border:1.5px solid #0ea5e9!important;" +
+      "border-radius:4px!important;font:700 12px Consolas,monospace!important;height:22px!important;line-height:19px!important;text-align:right!important;padding:0 5px!important;box-sizing:border-box}" +
+      "#hk-dist-d:focus,#hk-dist-a:focus,#hk-paralela.hk-en-grupo:focus{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.45)}";
+    document.head.appendChild(st);
+  }
+  const inD = campoDB("hk-dist-d", "d: distancia a la barra (m) · Enter pone el primer punto · Tab: a");
+  const inA = campoDB("hk-dist-a", "a: posición a lo largo de la barra desde su nudo i (m) · Enter pone el primer punto");
+  const distLinea = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0x38bdf8, dashSize: 0.15, gapSize: 0.1, depthTest: false }));
+  distLinea.visible = false; distLinea.renderOrder = 999; scene.add(distLinea);
+  let distInfo: { A: number[]; u: number[]; n: number[]; d: number; a: number; i: number; j: number } | null = null;
+  let distEdit = { d: false, a: false };
+  const ocultarDistBarra = () => {
+    if (document.activeElement === inD || document.activeElement === inA) return;
+    distGrupo.style.display = "none"; inD.style.display = "none"; inA.style.display = "none";
+    if (distLinea.visible) { distLinea.visible = false; }
+    distInfo = null; distEdit = { d: false, a: false };
+  };
+  (window as any).__hekatanDistBarra = () => distInfo && { ...distInfo };
+  const actualizarDistBarra = (p: THREE.Vector3, cx: number, cy: number) => {
+    if (document.activeElement === inD || document.activeElement === inA) return;   // se está escribiendo: quieto
+    const pts = drawingObj.points.rawVal ?? [], polys = drawingObj.polylines?.rawVal ?? [];
+    let mejor: typeof distInfo = null, mejorPx = 140;
+    for (const pl of polys) for (let k = 0; k + 1 < (pl?.length ?? 0); k++) {
+      const A = pts[pl[k]], B = pts[pl[k + 1]]; if (!A || !B) continue;
+      const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], lu = Math.hypot(u[0], u[1], u[2]); if (lu < 1e-6) continue;
+      u[0] /= lu; u[1] /= lu; u[2] /= lu;
+      const w = [p.x - A[0], p.y - A[1], p.z - A[2]];
+      const t = w[0] * u[0] + w[1] * u[1] + w[2] * u[2];
+      if (t < -1e-9 || t > lu + 1e-9) continue;                         // solo frente a la barra
+      const f = [A[0] + u[0] * t, A[1] + u[1] * t, A[2] + u[2] * t];
+      const nv = [p.x - f[0], p.y - f[1], p.z - f[2]], d = Math.hypot(nv[0], nv[1], nv[2]);
+      if (d < 0.01) continue;
+      const sp = aPixeles(f[0], f[1], f[2]); if (!sp) continue;
+      const px = Math.hypot(sp.x - cx, sp.y - cy);
+      if (px < mejorPx) { mejorPx = px; mejor = { A: [...A], u, n: nv.map((v) => v / d), d, a: t, i: pl[k], j: pl[k + 1] }; }
+    }
+    if (!mejor) { ocultarDistBarra(); return; }
+    distInfo = mejor;
+    const f = [mejor.A[0] + mejor.u[0] * mejor.a, mejor.A[1] + mejor.u[1] * mejor.a, mejor.A[2] + mejor.u[2] * mejor.a];
+    distLinea.geometry.setFromPoints([new THREE.Vector3(f[0], f[1], f[2]), p.clone()]); (distLinea as any).computeLineDistances?.(); distLinea.visible = true;
+    if (!distEdit.d) inD.value = mejor.d.toFixed(2);
+    if (!distEdit.a) inA.value = mejor.a.toFixed(2);
+    rotBarra.textContent = `∥ barra ${mejor.i + 1}–${mejor.j + 1}`;
+    // el grupo debajo-izquierda del cursor (la coordenada va arriba-derecha)
+    const r = rendererElm.getBoundingClientRect();
+    const gx = Math.round(Math.max(r.left + 4, Math.min(r.right - DB_W - 4, cx - DB_W - 18)));
+    const gy = Math.round(Math.max(r.top + 4, Math.min(r.bottom - 36, cy + 22)));
+    distGrupo.style.left = gx + "px"; distGrupo.style.top = gy + "px"; distGrupo.style.width = DB_W + "px"; distGrupo.style.display = "block";
+    inD.style.left = (gx + xD) + "px"; inD.style.top = (gy + 5) + "px"; inD.style.display = "block";
+    inA.style.left = (gx + xA) + "px"; inA.style.top = (gy + 5) + "px"; inA.style.display = "block";
+  };
+  const ponerPrimerPuntoDesdeBarra = (): boolean => {
+    if (!distInfo) return false;
+    const d = leerNum(inD.value), a = leerNum(inA.value);
+    if (!(d >= 0) || !isFinite(a)) { updateStatus("⚠ d y a tienen que ser números (m)."); return false; }
+    const { A, u, n } = distInfo, r9 = (v: number) => Math.round(v * 1e9) / 1e9 + 0;
+    const pt: [number, number, number] = [0, 1, 2].map((k) => r9(A[k] + u[k] * a + n[k] * d)) as any;
+    const info = distInfo;
+    inD.blur(); inA.blur(); distEdit = { d: false, a: false }; ocultarDistBarra();
+    commitAbsolutePoint(pt);
+    updateStatus(`✓ Primer punto a d = ${+d.toFixed(4)} m de la barra ${info.i + 1}–${info.j + 1} (a = ${+a.toFixed(4)} m desde su nudo i). Ahora el segundo: L / ∠.`);
+    try { rubberLabelInput.focus({ preventScroll: true }); } catch {}
+    return true;
+  };
+  [inD, inA].forEach((inp) => inp.addEventListener("keydown", (ev: KeyboardEvent) => {
+    ev.stopPropagation();
+    if (ev.key === "Enter") { ev.preventDefault(); ponerPrimerPuntoDesdeBarra(); return; }
+    if (ev.key === "Escape") { ev.preventDefault(); distEdit = { d: false, a: false }; inp.blur(); try { rubberLabelInput.focus(); rubberLabelInput.select(); } catch {} return; }
+    if (ev.key === "Tab") { ev.preventDefault(); if (inp === inD) { inA.focus(); inA.select(); } else { inA.blur(); try { rubberLabelInput.focus(); rubberLabelInput.select(); } catch {} } return; }
+    if (/^[0-9.,\-+]$/.test(ev.key) || ev.key === "Backspace" || ev.key === "Delete") distEdit[inp === inD ? "d" : "a"] = true;
+  }));
+  [inD, inA].forEach((inp) => inp.addEventListener("blur", () => setTimeout(() => {
+    if (document.activeElement !== inD && document.activeElement !== inA) distEdit = { d: false, a: false };
+  }, 0)));
 
   // ── COORD READOUT — texto flotante con coord del cursor (X, Y, Z) ──
   const coordReadout = document.createElement("div");
@@ -4554,7 +4789,9 @@ export function drawing({
         (rubberBand as any).computeLineDistances?.();
         rubberBand.visible = true;
         // Dim label en midpoint del rubber band (referencial mientras se dibuja)
+        ejeBloqueado = effectiveLock ?? null;
         updateRubberLabel(lastPt[0], lastPt[1], lastPt[2], p.x, p.y, p.z);
+        ejeBloqueado = null;
         cotaParalela(lastIdx, lastPt, p, lastPoly.length === 1 && cadenaLinea.length ? 2 : lastPoly.length);   // un tramo de LÍNEA ya encadenado no es «el arranque» (no se mueve)
         // ── Polar tracking — líneas X/Y/Z extendidas desde el último punto
         // hasta los bordes del modelo (longitud 5m por dirección, ajustable)
@@ -4653,13 +4890,16 @@ export function drawing({
         if (drawingTools.has(curTool)) {
           rubberStart = null;  // primer punto: no hay rubber start aún
           rubberDir = null;
+          estiloCoordenada();
+          if (curTool === "line" || curTool === "polyline") actualizarDistBarra(p, event.clientX, event.clientY); else ocultarDistBarra();
           rubberLabelInput.style.left = (event.clientX + 20) + "px";
           rubberLabelInput.style.top = (event.clientY - 28) + "px";
           rubberLabelInput.style.display = "block";
           // Live update del placeholder con coords actuales (excepto si el
           // usuario está editando manualmente — preservamos su texto).
           if (!rubberUserEditing) {
-            rubberLabelInput.value = `${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`;
+            const f2 = (v: number) => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);   // sin «-0.00»
+            rubberLabelInput.value = `${f2(p.x)},${f2(p.y)},${f2(p.z)}`;
             // Auto-focus + select-all sólo si nadie más tiene focus
             const ae = document.activeElement;
             const isOtherInput = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")
@@ -6590,7 +6830,9 @@ export function drawing({
   cotasCapa.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;z-index:120;pointer-events:none";
   document.body.appendChild(cotasCapa);
   (window as any).__hekatanCotasAuto = true;
-  const COTA_CSS = "position:fixed;transform:translate(-50%,-50%);background:rgba(11,18,32,.88);color:#a8cdee;border:1px solid #4682b4;border-radius:3px;padding:0 4px;font:600 10px/14px monospace;white-space:nowrap";
+  // PASIVAS (solo informan): sin borde ni caja, más pequeñas y tenues — que no se confundan con las cajas que se
+  // escriben (Jorge, 27-nov-2026: el «14 m» de la columna parecía otra entrada). Mientras se dibuja se apagan más.
+  const COTA_CSS = "position:fixed;transform:translate(-50%,-50%);background:transparent;color:rgba(168,205,238,.8);border:none;padding:0 2px;font:500 9px/12px monospace;white-space:nowrap;text-shadow:0 0 3px #000,0 0 2px #000";
   const NODO_CSS = "position:fixed;transform:translate(-50%,-50%);width:9px;height:9px;border:2px solid #4682b4;border-radius:50%;background:#0b1220;box-sizing:border-box";
   const MAX_COTAS = 60, MAX_PROYECCIONES = 8;
   let cotasFirma = "";
@@ -6647,7 +6889,7 @@ export function drawing({
     });
   };
   (window as any).__hekatanCotasRefrescar = () => { cotasFirma = ""; refrescarCotasAuto(); };
-  const cotasBucle = () => { try { refrescarCotasAuto(); } catch {} requestAnimationFrame(cotasBucle); };
+  const cotasBucle = () => { try { refrescarCotasAuto(); cotasCapa.style.opacity = rubberBand.visible ? "0.3" : "1"; } catch {} requestAnimationFrame(cotasBucle); };
   requestAnimationFrame(cotasBucle);
 
   const computeOsnap = (px: number, py: number, pz: number, tol: number,
@@ -8589,6 +8831,13 @@ export function drawing({
   const procesarClic = (point: THREE.Vector3, event: PointerEvent | null) => {
     // el clic llega con ruido de coma flotante (-1.1e-13 en vez de 0): redondear a 1e-9 m para que el modelo quede limpio
     point.set(Math.round(point.x * 1e9) / 1e9 + 0, Math.round(point.y * 1e9) / 1e9 + 0, Math.round(point.z * 1e9) / 1e9 + 0);
+    // DESDE: este punto es la BASE, no un punto del dibujo
+    if (desde === "base") {
+      desde = { base: [point.x, point.y, point.z] };
+      updateStatus(`DESDE  base (${+point.x.toFixed(4)}, ${+point.y.toFixed(4)}, ${+point.z.toFixed(4)}). Escriba el desplazamiento @dx,dy[,dz] y Enter.`);
+      try { rubberLabelInput.value = "@"; rubberUserEditing = true; rubberLabelInput.focus(); rubberLabelInput.setSelectionRange(1, 1); } catch {}
+      return;
+    }
     const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool ?? "select";
     if (tool === "area" || tool === "line" || tool === "polyline") ultHerrDibujo = tool;
     // Designar, medir o mover no crea geometría: ahí un clic lejano no ensucia.
