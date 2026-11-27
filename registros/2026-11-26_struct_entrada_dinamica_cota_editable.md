@@ -58,3 +58,13 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
 - ✅ Test 51/51 en Planta y 3D iso (local): paralela a d = 5.00 exacta, @0,2, DESDE (1,1,0), con y sin ORTO, grupo sin solapes. Otros UI OK.
 - ❌ MCP struct-local / hekatan-struct: NO conectados en esta sesión (fallo de conexión al arrancar) → puppeteer en isométrico como respaldo.
 - ⏳ Celular: la caja tocable tiene el estilo nuevo, pero la «d a la barra» del PRIMER punto aún no tiene caja tocable (en el celular: @dx,dy en L).
+
+## 27-nov (otra sesión, en paralelo) · Plano que sigue al último punto, deploy y APK
+- ❌ Visto en iso con el MCP struct-local (sí conecta en esta sesión): tras la columna la goma bajaba en diagonal a z = 0.
+- ✅ Arreglo (commit 219a89ca4): con LÍNEA/POLILÍNEA en curso el cursor corta un plano PARALELO al de trabajo por el
+  último punto (`intersectWorkPlane`; normal de los vértices de la malla-plano, su geometría viene pre-girada).
+  MCP: columna @0,0,3 y clics de RATÓN en (5,0,3) y (5,4,3) → desvío 0. `__hekatanPlanoSigueCota = false` = antes.
+- ❌ 1.er check del test apuntaba a puntos de z = 0 → ORTO elegía Z (correcto). Ahora apunta a la altura del tope.
+- ✅ Test 52/52 local y 52/52 contra el PÚBLICO (gh-pages 055df20). newBlank.ts ajeno apartado en el build y restaurado (md5 igual).
+- ✅ APK hekatan-struct-android reconstruido (copia_web.sh desde /c/hkpub_struct 055df20) e instalado en el A15: Success.
+- ⏳ Edge abierto: ExtensionActivityEdge (527 MB) sin borrar. C: ~0,4 GB libres.
