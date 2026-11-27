@@ -147,12 +147,12 @@ const choques = (p, sel) => p.evaluate((sel) => {
   const tope = Pc[Pc.length - 1];
   check("columna por clic: 6 m vertical", near(tope[2], 6, 1e-6) && near(tope[0], 0, 1e-6) && near(tope[1], 0, 1e-6), JSON.stringify(tope));
   const lecturas = [];
-  for (const q of [[3, 0, 0], [0, 2.5, 0], [-2, -1.5, 0]]) {
+  for (const q of [[3, 0, 6], [0, 2.5, 6], [-2, -1.5, 6]]) {   // a la altura del tope: el plano sigue al último punto
     const s = await pix(p, ...q); await p.mouse.move(s.x, s.y, { steps: 5 }); await w(350);
     lecturas.push(await p.evaluate(() => {
       const i = document.getElementById("hk-rubber-label"), g = window.__hekatanRubberBand;
       const a = g.geometry.attributes.position.array;
-      return { L: getComputedStyle(i).display !== "none" ? i.value : null, goma: g.visible, desde: [a[0], a[1], a[2]].map((v) => +v.toFixed(4)) };
+      return { L: getComputedStyle(i).display !== "none" ? i.value : null, goma: g.visible, desde: [a[0], a[1], a[2]].map((v) => +v.toFixed(4)), hasta: [a[3], a[4], a[5]].map((v) => +v.toFixed(4)) };
     }));
   }
   console.log("   lecturas:", JSON.stringify(lecturas));
@@ -171,6 +171,7 @@ const choques = (p, sel) => p.evaluate((sel) => {
   check("un GRUPO: L y ∠ dentro, rotulados (L … m | ∠ … °)", grupo.g.vis && grupo.dentro && /L/.test(grupo.rot) && /m/.test(grupo.rot) && /°/.test(grupo.rot), JSON.stringify(grupo.rot));
   check("L y ∠ no se pisan, y el grupo no pisa la goma", !grupo.pisan && !grupo.corta, JSON.stringify({ pisan: grupo.pisan, corta: grupo.corta }));
   check("tras la columna, sin clic: la goma sale del TOPE en las 3 posiciones", lecturas.every((l) => l.goma && distan(l.desde, tope) < 1e-6));
+  check("…y va HORIZONTAL a la altura del tope (el plano sigue al último punto)", lecturas.every((l) => Math.abs(l.hasta[2] - tope[2]) < 1e-6), JSON.stringify(lecturas.map((l) => l.hasta)));
   check("la cota viva (L) se ve y CAMBIA con el cursor", lecturas.every((l) => l.L && /^-?\d+\.\d\d$/.test(l.L)) && new Set(lecturas.map((l) => l.L)).size === 3);
   // el foco FUERA de la cota (como tras pinchar otro mando): «6» lo recoge el atajo global → antes era «Enter sin teclear» = terminar
   await p.evaluate(() => document.activeElement?.blur?.());

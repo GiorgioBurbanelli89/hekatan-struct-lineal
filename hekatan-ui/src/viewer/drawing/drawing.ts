@@ -584,6 +584,35 @@ export function drawing({
     if (inclinedPlaneActive) {
       return raycaster.intersectObjects([plane], false);
     }
+    // EL PLANO SIGUE AL ÚLTIMO PUNTO (Jorge, 27-nov-2026: «tras una columna, ¿la siguiente barra sale a la altura
+    // del tope?»). Con LÍNEA/POLILÍNEA en curso, el cursor corta un plano PARALELO al de trabajo que pasa por el
+    // último punto: tras una columna de 4 m la goma sigue a z = 4 (la viga sale horizontal, como en ETABS se dibuja
+    // en la planta del piso). Antes caía al plano z = 0 y la goma bajaba en diagonal. Una diagonal al suelo se sigue
+    // haciendo enganchando un nudo o tecleando (@dx,dy,dz). `__hekatanPlanoSigueCota = false` vuelve a lo de antes.
+    if ((window as any).__hekatanPlanoSigueCota !== false) {
+      const tool = (window as any).__hekatanCadState?.get?.()?.tool;
+      if (tool === "line" || tool === "polyline") {
+        const polys = drawingObj.polylines?.rawVal ?? [], P = drawingObj.points?.rawVal ?? [];
+        const lp = polys[polys.length - 1] ?? [];
+        const q = lp.length ? P[lp[lp.length - 1]] : null;
+        if (q) {
+          // normal REAL de la malla-plano (su geometría viene pre-girada): de tres de sus vértices en el mundo
+          const pa = (plane.geometry as THREE.BufferGeometry).attributes.position;
+          const v0 = new THREE.Vector3().fromBufferAttribute(pa, 0).applyMatrix4(plane.matrixWorld);
+          const v1 = new THREE.Vector3().fromBufferAttribute(pa, 1).applyMatrix4(plane.matrixWorld);
+          const v2 = new THREE.Vector3().fromBufferAttribute(pa, 2).applyMatrix4(plane.matrixWorld);
+          const n = v1.sub(v0).cross(v2.sub(v0)).normalize();
+          const o = new THREE.Vector3(q[0], q[1], q[2]);
+          const off = n.dot(o) - n.dot(plane.position);
+          if (Math.abs(off) > 1e-9) {
+            const pl = new THREE.Plane().setFromNormalAndCoplanarPoint(n, o), corte = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(pl, corte)) {
+              return [{ point: corte, distance: raycaster.ray.origin.distanceTo(corte), object: plane } as unknown as THREE.Intersection];
+            }
+          }
+        }
+      }
+    }
     // Sincronizar visibilidad de planeXZ/YZ con flags globales
     planeXZ.visible = !!(window as any).__hekatanGridPlaneXZ;
     planeYZ.visible = !!(window as any).__hekatanGridPlaneYZ;
