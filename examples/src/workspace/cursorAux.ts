@@ -368,7 +368,7 @@ export function cursorAux(encender = true): void {
       };
       return {
         distancia: visible(cota) ? n(cota!.value) : null,
-        angulo: visible(ang) ? n(ang!.textContent) : null,
+        angulo: visible(ang) ? n((ang as HTMLInputElement).value ?? ang!.textContent) : null,   // desde el 26-nov-2026 es un <input> editable
         referencia: visible(osn) ? (osn!.textContent ?? "").trim() : null,
       };
     },

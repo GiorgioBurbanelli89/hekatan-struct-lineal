@@ -675,17 +675,66 @@ export function drawing({
     "pointer-events:none",
   ].join(";") + ";";
   document.body.appendChild(rubberLabelInput);
-  // Cuadro de ÁNGULO junto al extremo (el «0°» de la foto de AutoCAD): solo lectura.
-  const rubberAngle = document.createElement("div");
+  // Cuadro de ÁNGULO junto al extremo (el «0°» de la foto de AutoCAD). Desde el 26-nov-2026 es
+  // EDITABLE, como la entrada dinámica de Math Studio (LispCad.js: longitud en el medio de la goma y
+  // ángulo bajo el cursor): Tab salta de la longitud al ángulo; el ángulo tecleado se FIJA (la goma
+  // solo se estira en esa dirección) y Enter pone el punto. El ángulo es el del PLANO DE TRABAJO
+  // (XY: desde +X hacia +Y; XZ: desde +X hacia +Z; YZ: desde +Y hacia +Z), no el de la pantalla:
+  // en planta y alzado coinciden, y en la isométrica es el que se puede teclear.
+  const rubberAngle = document.createElement("input");
   rubberAngle.id = "hk-rubber-angle";
+  rubberAngle.type = "text";
+  rubberAngle.spellcheck = false;
+  rubberAngle.tabIndex = -1;
+  rubberAngle.title = "Ángulo en el plano de trabajo (Tab: longitud ⇄ ángulo · Enter: poner el punto · Esc: cancelar)";
   rubberAngle.style.cssText = [
     "position:fixed", "z-index:99996", "pointer-events:none",
     "padding:0 4px", "background:rgba(15,23,42,0.85)",
     "color:#22d3ee", "border:1px solid #22d3ee", "border-radius:3px",
-    "font-family:Consolas,monospace", "font-size:10px", "line-height:14px",
+    "font-family:Consolas,monospace", "font-size:10px", "line-height:14px", "height:16px", "box-sizing:border-box",
+    "width:46px", "text-align:center", "outline:none",
     "transform:translate(-50%,0)", "white-space:nowrap", "display:none",
   ].join(";") + ";";
   document.body.appendChild(rubberAngle);
+  // ── Ejes del PLANO DE TRABAJO y ángulos en él ──
+  const ejesPlano = (): { wp: string; U: [number, number, number]; V: [number, number, number] } => {
+    const wp = String((window as any).__hekatanCadState?.get?.()?.workPlane ?? "xy");
+    if (wp === "xz") return { wp, U: [1, 0, 0], V: [0, 0, 1] };
+    if (wp === "yz") return { wp, U: [0, 1, 0], V: [0, 0, 1] };
+    return { wp: "xy", U: [1, 0, 0], V: [0, 1, 0] };
+  };
+  /** Ángulo (grados, 0..360) de una dirección dentro del plano de trabajo; null si sale de él (una columna en planta). */
+  const anguloEnPlano = (dx: number, dy: number, dz: number): number | null => {
+    const { U, V } = ejesPlano();
+    const u = dx * U[0] + dy * U[1] + dz * U[2], v = dx * V[0] + dy * V[1] + dz * V[2];
+    const L = Math.hypot(dx, dy, dz);
+    if (L < 1e-12 || Math.hypot(u, v) < 1e-6 * L) return null;
+    let a = Math.atan2(v, u) * 180 / Math.PI;
+    if (a < 0) a += 360;
+    return a;
+  };
+  /** Dirección unitaria (3D) del ángulo `a` (grados) en el plano de trabajo. */
+  const dirDeAngulo = (a: number): [number, number, number] => {
+    const { U, V } = ejesPlano();
+    const r = a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    const d: [number, number, number] = [c * U[0] + s * V[0], c * U[1] + s * V[1], c * U[2] + s * V[2]];
+    return d.map((x) => (Math.abs(x) < 1e-12 ? 0 : x)) as [number, number, number];
+  };
+  // Ángulo FIJADO al teclearlo (null = libre, sigue al cursor) y si el usuario está escribiendo en el cuadro.
+  let anguloFijo: number | null = null;
+  let anguloFijoDesde: number[] | null = null;      // el punto desde el que se fijó: al pasar a otro, se suelta
+  let anguloEditando = false;
+  (window as any).__hekatanAnguloFijo = () => anguloFijo;
+  // El último puntero real sobre el lienzo (ratón / dedo / lápiz): decide si la cota del segundo punto
+  // va como en AutoCAD (junto al cursor, se escribe sin tocarla) o como en el celular (caja tocable).
+  let ultimoPuntero = "mouse";
+  rendererElm.addEventListener("pointerdown", (e: PointerEvent) => { ultimoPuntero = e.pointerType || "mouse"; }, { capture: true });
+  /** Vuelve a calcular la goma desde donde está el cursor (tras poner un punto TECLEADO no se ha movido el ratón). */
+  const refrescarGoma = () => {
+    const c = (window as any).__hekatanCursorPx as { x: number; y: number } | undefined;
+    if (!c || ultimoPuntero !== "mouse") return;
+    try { rendererElm.dispatchEvent(new PointerEvent("pointermove", { clientX: c.x, clientY: c.y, bubbles: true, pointerType: "mouse" })); } catch {}
+  };
   // State para "AutoCAD direct distance entry":
   //   - rubberStart: punto inicial del rubber band (último click)
   //   - rubberDir: dirección unitaria desde rubberStart al cursor
@@ -773,12 +822,18 @@ export function drawing({
     const _pb = new THREE.Vector3(bx, by, bz).project(getActiveCamera());
     const ax2 = rect.left + (_pa.x * 0.5 + 0.5) * rect.width, ay2 = rect.top + (-_pa.y * 0.5 + 0.5) * rect.height;
     const bx2 = rect.left + (_pb.x * 0.5 + 0.5) * rect.width, by2 = rect.top + (-_pb.y * 0.5 + 0.5) * rect.height;
-    let ang = Math.atan2(-(by2 - ay2), bx2 - ax2) * 180 / Math.PI;
+    // el ángulo del PLANO de trabajo (si el tramo sale del plano —una columna en planta— el de pantalla)
+    let ang = anguloEnPlano(dx, dy, dz) ?? Math.atan2(-(by2 - ay2), bx2 - ax2) * 180 / Math.PI;
     if (ang < 0) ang += 360;
-    rubberAngle.textContent = `${Math.round(ang) % 360}°`;
+    if (!anguloEditando) {
+      rubberAngle.value = anguloFijo !== null ? `🔒${+anguloFijo.toFixed(2)}°` : `${Math.round(ang) % 360}°`;
+    }
+    rubberAngle.style.borderColor = anguloFijo !== null ? "#facc15" : "#22d3ee";
     rubberAngle.style.left = bx2 + "px";
     rubberAngle.style.top = (by2 + 16) + "px";
     rubberAngle.style.display = "block";
+    // con el ángulo en edición el foco es suyo: no se lo quita la longitud
+    if (document.activeElement === rubberAngle) return;
     // Live update del value mientras el usuario NO esté editando manualmente.
     if (!rubberUserEditing) {
       rubberLabelInput.value = `${dL.toFixed(2)} m`;
@@ -790,7 +845,8 @@ export function drawing({
         const ae = document.activeElement;
         const isOtherInput = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")
                               && ae !== rubberLabelInput;
-        if (!isOtherInput) rubberLabelInput.focus({ preventScroll: true });
+        // con el DEDO no: enfocar un campo abre el teclado del teléfono a cada movimiento (la caja tocable es otra)
+        if (!isOtherInput && ultimoPuntero === "mouse") rubberLabelInput.focus({ preventScroll: true });
       }
       // Seleccionar todo el texto: tipear lo reemplaza directamente
       try { rubberLabelInput.select(); } catch {}
@@ -802,7 +858,10 @@ export function drawing({
     rubberStart = null;
     rubberDir = null;
     rubberUserEditing = false;
+    anguloFijo = null;
+    anguloEditando = false;
     if (document.activeElement === rubberLabelInput) rubberLabelInput.blur();
+    if (document.activeElement === rubberAngle) rubberAngle.blur();
   };
   // Confirma el endpoint a la distancia tipeada: nuevo punto = start + dir*L
   // ARCO por 2 PUNTOS + ALTURA (flecha): el arco simétrico cuya cima está sobre el centro de la cuerda.
@@ -885,9 +944,11 @@ export function drawing({
     if (axisLock === "x") { dx = Math.sign(dx) || 1; dy = 0; dz = 0; }
     else if (axisLock === "y") { dx = 0; dy = Math.sign(dy) || 1; dz = 0; }
     else if (axisLock === "z") { dx = 0; dy = 0; dz = Math.sign(dz) || 1; }
-    const ex = rubberStart[0] + dx * lengthM;
-    const ey = rubberStart[1] + dy * lengthM;
-    const ez = rubberStart[2] + dz * lengthM;
+    else if (anguloFijo !== null) [dx, dy, dz] = dirDeAngulo(anguloFijo);   // ángulo tecleado (Tab)
+    const r9 = (v: number) => Math.round(v * 1e9) / 1e9 + 0;
+    const ex = r9(rubberStart[0] + dx * lengthM);
+    const ey = r9(rubberStart[1] + dy * lengthM);
+    const ez = r9(rubberStart[2] + dz * lengthM);
     // Agregar punto + extender la polilínea actual (mismo flujo que click)
     if ((window as any).__hekatanPushUndo) (window as any).__hekatanPushUndo();
     drawingObj.points.val = [...drawingObj.points.rawVal, [ex, ey, ez]];
@@ -898,8 +959,15 @@ export function drawing({
       [...last, drawingObj.points.rawVal.length - 1],
     ];
     rubberLabelInput.blur();
+    // ENCADENAR: el tramo siguiente sale del punto recién puesto. Antes rubberStart se quedaba en el
+    // punto VIEJO hasta mover el ratón, y «3.5 Enter 2 Enter» tecleado de corrido medía los dos
+    // tramos desde el mismo origen. El ángulo fijado se suelta (como AutoCAD) y la goma se redibuja.
+    rubberStart = [ex, ey, ez];
+    rubberUserEditing = false;
+    anguloFijo = null; anguloEditando = false;
     try { (window as any).__hekatanRebuild?.(); } catch {}
     viewerRender();
+    refrescarGoma();
   };
   // ── Parser estilo AutoCAD para el input del rubber label ──
   // Acepta:
@@ -1048,12 +1116,24 @@ export function drawing({
   // handler global para axis lock, y cualquier dígito marca "userEditing"
   // para que el value no se pise con la cota live mientras el user tipea.
   rubberLabelInput.addEventListener("keydown", (ev: KeyboardEvent) => {
+    // Tab: de la LONGITUD al ÁNGULO (entrada dinámica de AutoCAD / Math Studio)
+    if (ev.key === "Tab" && rubberAngle.style.display === "block") {
+      ev.preventDefault(); ev.stopPropagation();
+      irAlAngulo();
+      return;
+    }
     if (ev.key === "Enter") {
       ev.preventDefault();
       // ⚠️ Enter SIN haber tecleado nada = terminar, como en AutoCAD. La cota viva
       // («1.41») se tomaba como distancia tecleada (DDE) y ponía un punto más en la
       // dirección del cursor: dos barras sobrantes en la esquina de la cercha
       // (medido en el Tutorial 9, 13-sep-2026).
+      // …salvo con el ÁNGULO fijado (Tab): ahí Enter acepta la longitud viva en esa dirección
+      if (!rubberUserEditing && anguloFijo !== null) {
+        const Lv = leerNum(rubberLabelInput.value);
+        if (Lv > 0) { const a = anguloFijo; commitTypedDistance(Lv); updateStatus(`✏ ${+Lv.toFixed(4)} m a ${+a.toFixed(2)}°`); }
+        return;
+      }
       if (!rubberUserEditing) { (window as any).__hekatanFinalizeDraw?.(); try { (window as any).__hekatanCadState?.setTool?.("select"); } catch {} return; }
       const parsed = parseAutoCadInput(rubberLabelInput.value);
       if (!parsed) return;
@@ -1103,6 +1183,60 @@ export function drawing({
       rubberUserEditing = true;
     }
   });
+  // ── EL ÁNGULO EDITABLE (Tab) ──────────────────────────────────────────────
+  // Tab en la longitud → el ángulo queda seleccionado; se teclea («30», «-45», «90»); Tab vuelve a la
+  // longitud con el ángulo FIJADO (🔒, borde amarillo: la goma solo se estira en esa dirección) y Enter
+  // pone el punto con la longitud del cuadro (la tecleada o la viva). Esc suelta el ángulo.
+  const leerNum = (t: string): number => parseFloat(String(t).replace(/[^0-9.,\-+eE]/g, "").replace(",", "."));
+  const irAlAngulo = () => {
+    anguloEditando = false;
+    rubberAngle.style.pointerEvents = "auto";
+    try { rubberAngle.focus({ preventScroll: true }); rubberAngle.select(); } catch {}
+  };
+  const fijarAnguloTecleado = (): boolean => {
+    if (!anguloEditando) return anguloFijo !== null;
+    const a = leerNum(rubberAngle.value);
+    anguloEditando = false;
+    if (!isFinite(a)) { anguloFijo = null; return false; }
+    anguloFijo = ((a % 360) + 360) % 360;
+    anguloFijoDesde = rubberStart ? [...rubberStart] : null;
+    rubberAngle.value = `🔒${+anguloFijo.toFixed(2)}°`;
+    rubberAngle.style.borderColor = "#facc15";
+    return true;
+  };
+  rubberAngle.addEventListener("keydown", (ev: KeyboardEvent) => {
+    ev.stopPropagation();                         // las teclas 1-4 / A S D F de la cinta no son atajos aquí
+    if (ev.key === "Tab") {
+      ev.preventDefault();
+      fijarAnguloTecleado();
+      rubberAngle.style.pointerEvents = "none";
+      try { rubberLabelInput.focus({ preventScroll: true }); if (!rubberUserEditing) rubberLabelInput.select(); } catch {}
+      refrescarGoma();
+      return;
+    }
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      anguloFijo = null; anguloEditando = false;
+      rubberAngle.style.pointerEvents = "none";
+      try { rubberLabelInput.focus({ preventScroll: true }); rubberLabelInput.select(); } catch {}
+      refrescarGoma();
+      return;
+    }
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      if (!fijarAnguloTecleado()) { updateStatus("⚠ Ángulo no válido: escribe grados, p. ej. 30 o -45."); return; }
+      rubberAngle.style.pointerEvents = "none";
+      const L = leerNum(rubberLabelInput.value);
+      if (!(L > 0)) { try { rubberLabelInput.focus(); rubberLabelInput.select(); } catch {} refrescarGoma(); return; }
+      const a = anguloFijo!;
+      commitTypedDistance(L);
+      updateStatus(`✏ ${+L.toFixed(4)} m a ${+a.toFixed(2)}° (plano ${ejesPlano().wp.toUpperCase()})`);
+      return;
+    }
+    if (/^[0-9.,\-+]$/.test(ev.key) || ev.key === "Backspace" || ev.key === "Delete") anguloEditando = true;
+  });
+  rubberAngle.addEventListener("blur", () => { rubberAngle.style.pointerEvents = "none"; });
+
   // Auto-focus + intercept cuando el usuario tipea un dígito durante rubber band
   // activo (igual a AutoCAD: empezás a tipear y el "campo de distancia" agarra
   // el foco automáticamente sin tener que clickear nada).
@@ -1121,6 +1255,144 @@ export function drawing({
       ev.preventDefault();
     }
   });
+
+  // ════════════════════════════════════════════════════════════════════
+  // COTA DEL SEGUNDO PUNTO EN EL CELULAR (26-nov-2026)
+  // ════════════════════════════════════════════════════════════════════
+  // Jorge: «Struct no tiene lo que sí tiene Math Studio móvil: al dibujar, la línea ya referencia el
+  // segundo punto con un valor editable». En el celular no hay hover (la goma no existe entre dos
+  // toques) ni teclado físico, y la cota de la goma es `pointer-events:none`: no había forma de
+  // escribir la longitud. Es la cota que se TOCA del Croquis / Sketcher de Abaqus: tras el primer
+  // nudo aparece junto a él una caja con L (m) y ∠ (° en el plano de trabajo) que abre el teclado
+  // numérico del teléfono; ✓ pone el nudo a esa distancia exacta y la caja salta al nudo nuevo
+  // (encadena: polilínea de barras); ✕ termina. Acepta también «@dx,dy,dz» (una columna: @0,0,3).
+  // El toque-toque sigue igual: la caja solo tapa su propio rectángulo.
+  const cotaTactil = document.createElement("div");
+  cotaTactil.id = "hk-cota-tactil";
+  cotaTactil.style.cssText = [
+    "position:fixed", "z-index:99997", "display:none", "align-items:center", "gap:4px",
+    "padding:4px 6px", "background:rgba(15,23,42,0.94)", "border:1.5px solid #22d3ee", "border-radius:8px",
+    "box-shadow:0 4px 14px rgba(0,0,0,.5)", "font:600 14px Consolas,monospace", "color:#22d3ee",
+    "touch-action:manipulation", "user-select:none",
+  ].join(";") + ";";
+  const campoT = (id: string, ph: string, w: number) => {
+    const i = document.createElement("input");
+    i.id = id; i.type = "text"; i.placeholder = ph; i.autocomplete = "off"; i.spellcheck = false;
+    i.setAttribute("inputmode", "decimal"); i.setAttribute("enterkeyhint", "done");
+    // 16 px: con menos, el navegador del iPhone hace zoom al enfocar
+    i.style.cssText = `width:${w}px;height:36px;box-sizing:border-box;padding:0 6px;font:600 16px Consolas,monospace;` +
+      "color:#fff;background:#0b1220;border:1px solid #22d3ee;border-radius:5px;outline:none;text-align:right";
+    return i;
+  };
+  const rotT = (t: string) => { const l = document.createElement("span"); l.textContent = t; l.style.cssText = "pointer-events:none"; return l; };
+  const botonT = (id: string, t: string, tit: string, fondo: string) => {
+    const b = document.createElement("button");
+    b.id = id; b.type = "button"; b.textContent = t; b.title = tit;
+    b.style.cssText = `width:40px;height:40px;border-radius:6px;border:none;background:${fondo};color:#fff;font:700 18px system-ui;cursor:pointer;flex:none`;
+    return b;
+  };
+  const tL = campoT("hk-cota-tactil-L", "L", 76);
+  const tA = campoT("hk-cota-tactil-A", "∠", 56);
+  const tOk = botonT("hk-cota-tactil-ok", "✓", "Poner el nudo a esa distancia", "#0e9f6e");
+  const tFin = botonT("hk-cota-tactil-fin", "✕", "Terminar la línea", "#64748b");
+  cotaTactil.append(rotT("L"), tL, rotT("m ∠"), tA, rotT("°"), tOk, tFin);
+  document.body.appendChild(cotaTactil);
+  // los toques en la caja no llegan al lienzo (no ponen nudos ni giran la cámara)
+  ["pointerdown", "pointerup", "click", "touchstart"].forEach((t) => cotaTactil.addEventListener(t, (e) => e.stopPropagation()));
+  /** El nudo desde el que sale el tramo en curso (último de la polilínea abierta), o null. */
+  const nudoEnCurso = (): [number, number, number] | null => {
+    const tool = ((window as any).__hekatanCadState?.get?.() as any)?.tool;
+    if (tool !== "line" && tool !== "polyline" && tool !== "area") return null;
+    const polys = drawingObj.polylines?.rawVal ?? [];
+    const last = polys[polys.length - 1] ?? [];
+    const P = drawingObj.points.rawVal ?? [];
+    const q = last.length ? P[last[last.length - 1]] : null;
+    return q ? [q[0], q[1], q[2]] : null;
+  };
+  /** «3,5» del teclado del teléfono es 3.5; «@0,0,3» o «2,0,3» son coordenadas. */
+  const decimalComa = (t: string) => (/^\s*[-+]?\d+,\d+\s*$/.test(t) ? t.replace(",", ".") : t);
+  const ponerDesdeCaja = (): boolean => {
+    const a0 = nudoEnCurso();
+    if (!a0) return false;
+    const txt = decimalComa(tL.value.trim());
+    let pt: [number, number, number] | null = null;
+    if (/[@<]/.test(txt) || (txt.match(/,/g) || []).length >= 1) {
+      rubberStart = a0;
+      const parsed = parseAutoCadInput(txt);
+      pt = parsed && parsed.kind !== "length" ? resolveParsedInput(parsed) : null;
+      if (!pt) { updateStatus("⚠ No entiendo «" + txt + "»: escribe una longitud (3.5) o @dx,dy,dz."); return false; }
+    } else {
+      const L = parseFloat(txt);
+      if (!(L > 0)) { updateStatus("⚠ Escribe la LONGITUD de la barra (m), p. ej. 3.5"); try { tL.focus(); } catch {} return false; }
+      const aTxt = decimalComa(tA.value.trim());
+      const a = aTxt === "" ? 0 : parseFloat(aTxt);
+      if (!isFinite(a)) { updateStatus("⚠ Ángulo no válido (grados)."); return false; }
+      const u = dirDeAngulo(a);
+      const r9 = (v: number) => Math.round(v * 1e9) / 1e9 + 0;
+      pt = [r9(a0[0] + u[0] * L), r9(a0[1] + u[1] * L), r9(a0[2] + u[2] * L)];
+    }
+    commitAbsolutePoint(pt);
+    try { rubberLabelInput.blur(); } catch {}
+    const d = Math.hypot(pt[0] - a0[0], pt[1] - a0[1], pt[2] - a0[2]);
+    updateStatus(`✓ Nudo a ${+d.toFixed(4)} m → (${+pt[0].toFixed(4)}, ${+pt[1].toFixed(4)}, ${+pt[2].toFixed(4)}). Sigue con la cota o ✕ para terminar.`);
+    tL.value = "";
+    cotaFirmaT = "";
+    return true;
+  };
+  tOk.addEventListener("click", () => { ponerDesdeCaja(); });
+  tFin.addEventListener("click", () => {
+    tL.blur(); tA.blur();
+    (window as any).__hekatanFinalizeDraw?.();
+  });
+  [tL, tA].forEach((i) => i.addEventListener("keydown", (ev: KeyboardEvent) => {
+    ev.stopPropagation();                         // ni atajos de la cinta ni el DDE del ratón
+    if (ev.key === "Enter") { ev.preventDefault(); ponerDesdeCaja(); }
+    else if (ev.key === "Escape") { ev.preventDefault(); i.blur(); (window as any).__hekatanFinalizeDraw?.(); }
+    else if (ev.key === "Tab") { ev.preventDefault(); (i === tL ? tA : tL).focus(); }
+  }));
+  (window as any).__hekatanCotaTactil = { poner: ponerDesdeCaja, caja: cotaTactil };
+  // Colocación: junto al nudo en curso, dentro del lienzo y SIN tapar ningún botón (se prueban sitios
+  // alrededor del nudo y se mira con elementsFromPoint que no haya otro botón/campo debajo).
+  let cotaFirmaT = "";
+  const chocaConMando = (x: number, y: number, w: number, h: number): boolean => {
+    for (const [px, py] of [[x + 2, y + 2], [x + w - 2, y + 2], [x + 2, y + h - 2], [x + w - 2, y + h - 2], [x + w / 2, y + h / 2]]) {
+      for (const el of document.elementsFromPoint(px, py)) {
+        if (cotaTactil.contains(el)) continue;
+        if (el === rendererElm || el === document.body || el === document.documentElement) break;
+        const tg = (el as HTMLElement).tagName;
+        if (tg === "BUTTON" || tg === "INPUT" || tg === "SELECT" || tg === "TEXTAREA" || (el as HTMLElement).id === "hk3-cmdline") return true;
+        if (getComputedStyle(el).pointerEvents !== "none" && (el as HTMLElement).offsetWidth > 0) return true;
+      }
+    }
+    return false;
+  };
+  const colocarCotaTactil = () => {
+    const a0 = ultimoPuntero !== "mouse" ? nudoEnCurso() : null;
+    if (!a0) { if (cotaTactil.style.display !== "none") { cotaTactil.style.display = "none"; cotaFirmaT = ""; } return; }
+    const enEdicion = document.activeElement === tL || document.activeElement === tA;
+    const v = new THREE.Vector3(a0[0], a0[1], a0[2]).project(getActiveCamera());
+    const R = rendererElm.getBoundingClientRect();
+    const sx = R.left + (v.x * 0.5 + 0.5) * R.width, sy = R.top + (-v.y * 0.5 + 0.5) * R.height;
+    const firma = `${Math.round(sx)},${Math.round(sy)},${window.innerWidth},${window.innerHeight}`;
+    if (cotaTactil.style.display === "flex" && (firma === cotaFirmaT || enEdicion)) return;
+    cotaFirmaT = firma;
+    cotaTactil.style.display = "flex";
+    if (!tA.value) tA.value = "0";
+    const w = cotaTactil.offsetWidth, h = cotaTactil.offsetHeight;
+    const vw = Math.min(window.innerWidth, R.right), vh = Math.min(window.innerHeight, R.bottom);
+    const sitios = [[sx + 22, sy - h - 22], [sx - w - 22, sy - h - 22], [sx + 22, sy + 22], [sx - w - 22, sy + 22],
+                    [sx - w / 2, sy - h - 60], [sx - w / 2, sy + 60]];
+    let mejor: number[] | null = null;
+    for (const [x0, y0] of sitios) {
+      const x = Math.max(R.left + 6, Math.min(x0, vw - w - 6)), y = Math.max(R.top + 6, Math.min(y0, vh - h - 6));
+      cotaTactil.style.left = x + "px"; cotaTactil.style.top = y + "px";
+      if (!chocaConMando(x, y, w, h)) { mejor = [x, y]; break; }
+      if (!mejor) mejor = [x, y];
+    }
+    cotaTactil.style.left = mejor![0] + "px"; cotaTactil.style.top = mejor![1] + "px";
+  };
+  const bucleCotaTactil = () => { try { colocarCotaTactil(); } catch {} requestAnimationFrame(bucleCotaTactil); };
+  requestAnimationFrame(bucleCotaTactil);
 
   // ── COORD READOUT — texto flotante con coord del cursor (X, Y, Z) ──
   const coordReadout = document.createElement("div");
@@ -4224,6 +4496,17 @@ export function drawing({
           mostrarEtiquetaOsnap("track", event.clientX, event.clientY);
         } else {
           trackLine.visible = false;
+        }
+        // ÁNGULO FIJADO (tecleado con Tab): el punto se lleva sobre esa recta (proyección del cursor);
+        // el clic también lo respeta, como en AutoCAD.
+        if (anguloFijo !== null && anguloFijoDesde
+            && Math.hypot(anguloFijoDesde[0] - lastPt[0], anguloFijoDesde[1] - lastPt[1], anguloFijoDesde[2] - lastPt[2]) > 1e-9) {
+          anguloFijo = null; anguloFijoDesde = null;      // ya se puso el punto (clic): el tramo nuevo sale libre
+        }
+        if (anguloFijo !== null) {
+          const u = dirDeAngulo(anguloFijo);
+          const t = Math.max(0.05, (p.x - lastPt[0]) * u[0] + (p.y - lastPt[1]) * u[1] + (p.z - lastPt[2]) * u[2]);
+          p.set(lastPt[0] + u[0] * t, lastPt[1] + u[1] * t, lastPt[2] + u[2] * t);
         }
         _puntoPrevisto = { p: p.clone(), x: event.clientX, y: event.clientY };
         const dL = Math.hypot(p.x - lastPt[0], p.y - lastPt[1], p.z - lastPt[2]);
