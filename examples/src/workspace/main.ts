@@ -8696,6 +8696,8 @@ try {
         return;
       }
     }
+    // 1 bis. POLILÍNEA que arranca en el último nudo: «N» (Nuevo) la suelta para empezar en otro sitio
+    if (tool === "polyline" && (cmd === "n" || cmd === "nuevo" || cmd === "nuevo inicio") && (window as any).__hekatanCadOption?.(cmd)) return;
     // 1 ter. DIVIDIR: con la barra ya designada, lo que se teclea son los tramos («2,3,4», «4», «2,3 s»)
     if (tool === "divide" && (window as any).__hekatanDividirEspera?.()) {
       if (cmd === "esc" || cmd === "cancelar") { (window as any).__hekatanDividirCancela?.(); (window as any).__hekatanCadRefreshPrompt?.(); return; }

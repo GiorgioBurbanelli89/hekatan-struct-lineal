@@ -973,7 +973,7 @@ export function drawing({
     rubberAngle.classList.toggle("hk-bloq", bloqueado);
     rubberAngle.style.display = "block";
     void bx2; void by2;
-    ocultarDistBarra();
+    ocultarDistBarra(); ocultarDistNudo();
     colocarGrupo(ax2, ay2, bx2, by2);
     // en el CELULAR la entrada es la caja tocable (L / ∠ / ✓ / ✕): el grupo del ratón no se enseña
     if (ultimoPuntero !== "mouse") { grupoDyn.style.display = "none"; rubberLabelInput.style.display = "none"; rubberAngle.style.display = "none"; return; }
@@ -1000,7 +1000,7 @@ export function drawing({
   const hideRubberLabel = () => {
     rubberLabelInput.style.display = "none";
     grupoDyn.style.display = "none";
-    ocultarDistBarra();
+    ocultarDistBarra(); ocultarDistNudo();
     rubberAngle.style.display = "none";
     rubberStart = null;
     rubberDir = null;
@@ -1298,6 +1298,12 @@ export function drawing({
     if (ev.key === "Tab" && inD.style.display === "block") {
       ev.preventDefault(); ev.stopPropagation();
       try { inD.focus({ preventScroll: true }); inD.select(); } catch {}
+      return;
+    }
+    // …o cerca de un nudo: Tab lleva a d (distancia desde el nudo)
+    if (ev.key === "Tab" && inN.style.display === "block") {
+      ev.preventDefault(); ev.stopPropagation();
+      try { inN.focus({ preventScroll: true }); inN.select(); } catch {}
       return;
     }
     if (ev.key === "Enter" && /^(d|desde|from|fr)$/i.test(rubberLabelInput.value.trim()) && empezarDesde()) {
@@ -1634,7 +1640,7 @@ export function drawing({
       u[0] /= lu; u[1] /= lu; u[2] /= lu;
       const w = [p.x - A[0], p.y - A[1], p.z - A[2]];
       const t = w[0] * u[0] + w[1] * u[1] + w[2] * u[2];
-      if (t < -1e-9 || t > lu + 1e-9) continue;                         // solo frente a la barra
+      if (t <= 1e-6 || t >= lu - 1e-6) continue;                          // solo frente a la barra (en su extremo manda la cota desde el NUDO)
       const f = [A[0] + u[0] * t, A[1] + u[1] * t, A[2] + u[2] * t];
       const nv = [p.x - f[0], p.y - f[1], p.z - f[2]], d = Math.hypot(nv[0], nv[1], nv[2]);
       if (d < 0.01) continue;
@@ -1680,6 +1686,90 @@ export function drawing({
   [inD, inA].forEach((inp) => inp.addEventListener("blur", () => setTimeout(() => {
     if (document.activeElement !== inD && document.activeElement !== inA) distEdit = { d: false, a: false };
   }, 0)));
+
+  // ════════════════════════════════════════════════════════════════════
+  // COTA PROVISIONAL DESDE UN NUDO (como las cotas temporales de Revit) — 27-nov-2026
+  // ════════════════════════════════════════════════════════════════════
+  // Jorge: «LÍNEA puede dibujar y una cota ficticia editable permite dibujar al inicio desde el otro nudo inicial».
+  // Antes del primer clic, con el cursor cerca de un nudo (y lejos de toda barra), sale [ d 3.00 m ∥ nudo k ]
+  // con la cota dibujada del nudo al cursor. Tab lleva a d; Enter pone el PRIMER punto a esa distancia exacta en la
+  // dirección del cursor (con ORTO, sobre el eje del plano de trabajo más cercano). Luego sigue la goma L/∠.
+  const nudoGrupo = document.createElement("div");
+  nudoGrupo.id = "hk-dist-nudo";
+  nudoGrupo.style.cssText = distGrupo.style.cssText;
+  nudoGrupo.style.display = "none";
+  const NG_W = DB.pad + DB.lbl + DB.inp + DB.uni + 86 + DB.pad;
+  { const a = document.createElement("span"); a.textContent = "d"; a.style.cssText = `position:absolute;left:${DB.pad + 2}px;top:0;line-height:30px`; nudoGrupo.appendChild(a);
+    const b = document.createElement("span"); b.textContent = "m"; b.style.cssText = `position:absolute;left:${DB.pad + DB.lbl + DB.inp + 3}px;top:0;line-height:30px`; nudoGrupo.appendChild(b); }
+  const rotNudo = document.createElement("span");
+  rotNudo.style.cssText = `position:absolute;left:${DB.pad + DB.lbl + DB.inp + DB.uni + 4}px;top:0;line-height:30px;color:#94a3b8;font-weight:500`;
+  nudoGrupo.appendChild(rotNudo);
+  document.body.appendChild(nudoGrupo);
+  const inN = campoDB("hk-dist-n", "d: distancia desde el nudo (m) en la dirección del cursor · Enter pone el primer punto");
+  { const st = document.createElement("style");
+    st.textContent = "#hk-dist-n{background:#f8fafc!important;color:#0f172a!important;border:1.5px solid #0ea5e9!important;border-radius:4px!important;" +
+      "font:700 12px Consolas,monospace!important;height:22px!important;line-height:19px!important;text-align:right!important;padding:0 5px!important;box-sizing:border-box}" +
+      "#hk-dist-n:focus{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.45)}";
+    document.head.appendChild(st); }
+  let nudoInfo: { k: number; O: number[]; u: number[]; d: number } | null = null;
+  let nudoEdit = false;
+  (window as any).__hekatanDistNudo = () => nudoInfo && { ...nudoInfo };
+  const ocultarDistNudo = () => {
+    if (document.activeElement === inN) return;
+    nudoGrupo.style.display = "none"; inN.style.display = "none";
+    if (!distInfo) distLinea.visible = false;
+    nudoInfo = null; nudoEdit = false;
+  };
+  const actualizarDistNudo = (p: THREE.Vector3, cx: number, cy: number) => {
+    if (document.activeElement === inN) return;
+    if (distInfo) { ocultarDistNudo(); return; }               // junto a una barra manda [d | a] de la barra
+    const P = drawingObj.points.rawVal ?? [];
+    let k = -1, mejorPx = 260;
+    for (let i = 0; i < P.length; i++) {
+      const q = P[i]; if (!q) continue;
+      const s = aPixeles(q[0], q[1], q[2]); if (!s) continue;
+      const px = Math.hypot(s.x - cx, s.y - cy);
+      if (px < mejorPx && px > 6) { mejorPx = px; k = i; }      // encima del nudo (≤ 6 px) es el osnap: no hay cota
+    }
+    if (k < 0) { ocultarDistNudo(); return; }
+    const O = P[k];
+    let u = [p.x - O[0], p.y - O[1], p.z - O[2]];
+    if ((window as any).__hekatanOrthoMode) {                  // ORTO: el eje del plano de trabajo más cercano
+      const { U, V } = ejesPlano();
+      const cu = u[0] * U[0] + u[1] * U[1] + u[2] * U[2], cv = u[0] * V[0] + u[1] * V[1] + u[2] * V[2];
+      u = Math.abs(cu) >= Math.abs(cv) ? U.map((x) => x * cu) : V.map((x) => x * cv);
+    }
+    const d = Math.hypot(u[0], u[1], u[2]); if (d < 1e-6) { ocultarDistNudo(); return; }
+    nudoInfo = { k, O: [O[0], O[1], O[2]], u: u.map((x) => x / d), d };
+    const F = new THREE.Vector3(O[0] + nudoInfo.u[0] * d, O[1] + nudoInfo.u[1] * d, O[2] + nudoInfo.u[2] * d);
+    distLinea.geometry.setFromPoints([new THREE.Vector3(O[0], O[1], O[2]), F]); (distLinea as any).computeLineDistances?.(); distLinea.visible = true;
+    if (!nudoEdit) inN.value = d.toFixed(2);
+    rotNudo.textContent = `desde nudo ${k + 1}`;
+    const r = rendererElm.getBoundingClientRect();
+    const gx = Math.round(Math.max(r.left + 4, Math.min(r.right - NG_W - 4, cx - NG_W - 18)));
+    const gy = Math.round(Math.max(r.top + 4, Math.min(r.bottom - 36, cy + 22)));
+    nudoGrupo.style.left = gx + "px"; nudoGrupo.style.top = gy + "px"; nudoGrupo.style.width = NG_W + "px"; nudoGrupo.style.display = "block";
+    inN.style.left = (gx + DB.pad + DB.lbl) + "px"; inN.style.top = (gy + 5) + "px"; inN.style.display = "block";
+  };
+  const ponerPrimerPuntoDesdeNudo = (): boolean => {
+    if (!nudoInfo) return false;
+    const d = leerNum(inN.value);
+    if (!(d >= 0)) { updateStatus("⚠ d tiene que ser un número (m)."); return false; }
+    const { O, u, k } = nudoInfo, r9 = (v: number) => Math.round(v * 1e9) / 1e9 + 0;
+    const pt: [number, number, number] = [0, 1, 2].map((i) => r9(O[i] + u[i] * d)) as any;
+    inN.blur(); nudoEdit = false; ocultarDistNudo();
+    commitAbsolutePoint(pt);
+    updateStatus(`✓ Primer punto a d = ${+d.toFixed(4)} m del nudo ${k + 1}. Ahora el segundo: L / ∠.`);
+    try { rubberLabelInput.focus({ preventScroll: true }); } catch {}
+    return true;
+  };
+  inN.addEventListener("keydown", (ev: KeyboardEvent) => {
+    ev.stopPropagation();
+    if (ev.key === "Enter") { ev.preventDefault(); ponerPrimerPuntoDesdeNudo(); return; }
+    if (ev.key === "Escape" || ev.key === "Tab") { ev.preventDefault(); nudoEdit = false; inN.blur(); try { rubberLabelInput.focus(); rubberLabelInput.select(); } catch {} return; }
+    if (/^[0-9.,\-+]$/.test(ev.key) || ev.key === "Backspace" || ev.key === "Delete") nudoEdit = true;
+  });
+  inN.addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== inN) nudoEdit = false; }, 0));
 
   // ── COORD READOUT — texto flotante con coord del cursor (X, Y, Z) ──
   const coordReadout = document.createElement("div");
@@ -4920,7 +5010,8 @@ export function drawing({
           rubberStart = null;  // primer punto: no hay rubber start aún
           rubberDir = null;
           estiloCoordenada();
-          if (curTool === "line" || curTool === "polyline") actualizarDistBarra(p, event.clientX, event.clientY); else ocultarDistBarra();
+          if (curTool === "line" || curTool === "polyline") { actualizarDistBarra(p, event.clientX, event.clientY); actualizarDistNudo(p, event.clientX, event.clientY); }
+          else { ocultarDistBarra(); ocultarDistNudo(); }
           rubberLabelInput.style.left = (event.clientX + 20) + "px";
           rubberLabelInput.style.top = (event.clientY - 28) + "px";
           rubberLabelInput.style.display = "block";
@@ -7415,7 +7506,7 @@ export function drawing({
              : P("LÍNEA Precise primer punto:");
       case "polyline":
         return last.length >= 2 ? P("POLILÍNEA Precise punto siguiente o", ["Cerrar", "desHacer"])
-             : last.length === 1 ? P("POLILÍNEA Precise punto siguiente o", ["desHacer"])
+             : last.length === 1 ? P("POLILÍNEA Precise punto siguiente o", ["Nuevo inicio", "desHacer"])
              : P("POLILÍNEA Precise punto inicial:");
       case "node": return P("NUDO Precise punto:");
       case "area": return P(`LOSA Precise vértice ${Math.min(last.length + 1, 4)} de 4 (en orden, antihorario):`);
@@ -7503,8 +7594,24 @@ export function drawing({
     divObjetivo = null;
     viewerRender();
     updateStatus("🛠 Tool cambiado — clicks pendientes limpiados");
+    // POLILÍNEA SIGUE DESDE EL ÚLTIMO NUDO (Jorge, 27-nov-2026: «la línea dibuja elementos separados, la polilínea
+    // seguidos desde donde quedó el último nodo»). Al elegirla, la polilínea ya arranca en el último nudo dibujado:
+    // la goma sale de ahí y lo tecleado (@dx,dy · L) cuenta desde él. «N» (Nuevo) la suelta para empezar en otro sitio.
+    if ((window as any).__hekatanCadState?.get?.()?.tool === "polyline") sembrarPolilinea();
     refreshPrompt();
   };
+  function sembrarPolilinea(): void {
+    if (!drawingObj.polylines) return;
+    const P = drawingObj.points?.rawVal ?? [], polys = drawingObj.polylines.rawVal ?? [];
+    const k = P.length - 1;
+    if (k < 0 || !P[k]) return;
+    const last = polys[polys.length - 1];
+    if (last && last.length) return;                       // ya hay un trazo en curso
+    drawingObj.polylines.val = [...polys.slice(0, -1), [k]];
+    rubberStart = [P[k][0], P[k][1], P[k][2]];
+    updateStatus(`⌐ POLILÍNEA sigue desde el nudo ${k + 1} (${+P[k][0].toFixed(3)}, ${+P[k][1].toFixed(3)}, ${+P[k][2].toFixed(3)}) · N = empezar en otro punto.`);
+  }
+  (window as any).__hekatanSembrarPolilinea = sembrarPolilinea;
 
   /**
    * Cierra la polilínea en curso y tira las que no llegan a ser nada.
@@ -7637,6 +7744,14 @@ export function drawing({
     if (tool !== "line" && tool !== "polyline") {
       if (o === "u" || o === "deshacer" || o === "undo") { undo(); return true; }
       return false;
+    }
+    // POLILÍNEA con solo el nudo de arranque: «N» la suelta (el próximo punto es el inicio de una nueva)
+    if (tool === "polyline" && last.length === 1 && (o === "n" || o === "nuevo" || o === "nuevo inicio" || o === "new")) {
+      drawingObj.polylines.val = [...polys.slice(0, -1), []];
+      rubberStart = null; rubberBand.visible = false; hideRubberLabel();
+      updateStatus("⌐ POLILÍNEA — precise el punto inicial (nueva, suelta).");
+      viewerRender(); refreshPrompt();
+      return true;
     }
     // LÍNEA: los tramos son sueltos ([a,b], [b,c], … y [c] abierto): Cerrar une el último con el
     // PRIMERO de la cadena; desHacer quita el último tramo entero.
