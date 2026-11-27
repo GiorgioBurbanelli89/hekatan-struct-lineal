@@ -3368,6 +3368,10 @@ if (window.innerWidth > 600) {
   };
   montarAccesoRapido();
   montarBarraRapida();
+} else {
+  // En el CELULAR (≤ 600 px) también: la barra de dibujo no existía y solo se podía dibujar tecleando. En la web su CSS la
+  // sigue ocultando en pantallas estrechas; el APK de Struct (struct_movil.css) la muestra como tira deslizable (27-nov-2026).
+  montarBarraRapida();
 }
 
 // ── Botón «← Volver» al ejemplo anterior (navegación que no existía) ──
