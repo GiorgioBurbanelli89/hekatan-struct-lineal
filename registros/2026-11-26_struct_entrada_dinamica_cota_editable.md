@@ -24,3 +24,8 @@ Pedido de Jorge: «al dibujar la línea ya referencia el segundo punto con un va
 - ✅ Otros UI: copiar_cota, paralelas, colisiones, cerchas (52), alinear, niveles, cargas_deformada, unir_porticos, galpon_parametrico, cubierta_zapatas: todos OK.
 - ❌ 1.er intento del test de choques: medía rects de botones RECORTADOS por overflow (Tweakpane) → falsos choques; ahora hit-test real.
 - ❌ clic-clic del test fallaba: los puntos caían fuera de pantalla tras el reencuadre (no era el código).
+- ⚠️ `npm test` completo: 1561/1712 — las 151 FALLAS son del entorno (RAM: «fatal error: out of memory», esbuild «service is no longer running»; otro agente renderiza manim). Repetidos sueltos: paz-6-3, k-local-barra, itw-seis, mesa-torsion-fuerzas, placa-auricchio → todos OK.
+- ✅ Build (con `newBlank.ts` de OTRA sesión —modal del lienzo, sin commit— cambiado a HEAD solo durante el build y restaurado, md5 igual) → gh-pages 0ceafd632, main 0551f2e34. Chunk público = local (cmp IDÉNTICO). El SEO del workspace ya no estaba en gh-pages (el script avisa; el index publicado es el del build, solo cambian los hashes).
+- ✅ Test contra el DEPLOY PÚBLICO: 20/20, 0 errores.
+- ⏳ APK de Math Studio móvil: copia Struct de /c/hkpub_struct (gh-pages) en copia_web.sh → hay que reconstruirlo para que lleve la caja tocable.
+- ⏳ Disco C: estuvo en 0.14 GB (libere caché de Edge y perfiles viejos de puppeteer).
